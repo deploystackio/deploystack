@@ -4,8 +4,14 @@ import path from 'node:path'
 import { loggerConfig } from './fastify/config/logger'
 import { registerRequestLoggerHooks } from './fastify/hooks/request-logger'
 import { registerFastifyPlugins } from './fastify/plugins'
+import fastifyCookie from '@fastify/cookie';
 import { registerRoutes } from './routes'
 import { PluginManager } from './plugin-system'
+import { authHook } from './hooks/authHook' // Import the auth hook
+import registerEmailRoute from './routes/auth/registerEmail'
+import loginEmailRoute from './routes/auth/loginEmail'
+import githubAuthRoutes from './routes/auth/github'
+import logoutRoute from './routes/auth/logout'
 import { 
   initializeDatabase, 
   registerPluginTables, 
@@ -30,7 +36,20 @@ export const createServer = async () => {
   })
 
   registerRequestLoggerHooks(server)
-  await registerFastifyPlugins(server)
+  
+  // Register @fastify/cookie
+  await server.register(fastifyCookie, {
+    secret: process.env.COOKIE_SECRET || 'a-very-secret-and-strong-secret-for-cookies', // Replace with a strong secret from env
+    parseOptions: {} 
+  });
+  server.log.info('@fastify/cookie registered.');
+
+  await registerFastifyPlugins(server) // Existing plugin registrations
+
+  // Register the global authentication hook
+  // This hook will run on every request to populate request.user and request.session
+  server.addHook('onRequest', authHook);
+  server.log.info('Global auth hook registered.');
 
   // Create and configure the plugin manager
   const isDevelopment = process.env.NODE_ENV !== 'production';
@@ -87,7 +106,18 @@ export const createServer = async () => {
   await pluginManager.initializePlugins();
   
   server.decorate('pluginManager', pluginManager);
-  registerRoutes(server); // Register core routes and API for DB setup
+  
+  // Register core routes and API for DB setup
+  registerRoutes(server); 
+  
+  // Register Authentication Routes
+  server.register(async (authInstance) => {
+    authInstance.register(registerEmailRoute, { prefix: '/email' });
+    authInstance.register(loginEmailRoute, { prefix: '/email' }); // loginEmailRoute handles /login/email
+    authInstance.register(githubAuthRoutes, { prefix: '/github' }); // githubAuthRoutes handles /login/github and /login/github/callback
+    authInstance.register(logoutRoute); // logoutRoute handles /logout
+  }, { prefix: '/api/auth' });
+  server.log.info('Authentication routes registered under /api/auth.');
   
   server.addHook('onClose', async () => {
     await pluginManager.shutdownPlugins();

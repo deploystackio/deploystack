@@ -28,11 +28,15 @@ for (const [tableName, tableColumnDefinitions] of Object.entries(baseTableDefini
     let builderType: 'text' | 'integer' | 'timestamp' = 'text';
     if (columnName.toLowerCase().includes('at') || columnName.toLowerCase().includes('date')) {
       builderType = 'timestamp';
-    } else if (['count', 'age', 'quantity', 'order', 'status', 'number'].some(keyword => columnName.toLowerCase().includes(keyword)) && !columnName.toLowerCase().includes('text')) {
-      const idIsText = tableName === 'users' && columnName === 'id';
-      if (!idIsText) builderType = 'integer';
+    } else if (columnName === 'expires_at') {
+      builderType = 'integer'; // expires_at should be bigint/integer for timestamps
+    } else if (columnName === 'expires') {
+      builderType = 'integer'; // expires should be bigint/integer for timestamps
     }
-    if (tableName === 'users' && columnName === 'id') builderType = 'text'; // users.id is text
+    // All IDs in auth tables should be text
+    if (columnName === 'id' || columnName === 'user_id') {
+      builderType = 'text';
+    }
     
     const builder = getSqliteColumnBuilder(builderType);
     columns[columnName] = columnDefFunc(builder);
@@ -59,6 +63,7 @@ for (const [tableName, tableColumnDefinitions] of Object.entries(pluginTableDefi
 
 // Export all tables for drizzle-kit to find.
 // Drizzle Kit expects top-level exports of table objects.
-export const { users, ...otherBaseTables } = tables; // Assuming 'users' is a key in tables
-// Similar to schema.pg.ts, explicit exports might be needed for all tables if the spread doesn't work.
-// For now, relying on destructuring for known tables like 'users'.
+export const users = tables.users;
+export const authUser = tables.authUser;
+export const authSession = tables.authSession;
+export const authKey = tables.authKey;

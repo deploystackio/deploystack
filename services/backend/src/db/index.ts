@@ -6,7 +6,7 @@ import { type Plugin, type DatabaseExtension } from '../plugin-system/types'; //
 import { getDbConfig, saveDbConfig, type DbConfig, type SQLiteConfig, type PostgresConfig } from './config';
 
 // Schema Definitions
-import { baseTableDefinitions, pluginTableDefinitions as inputPluginTableDefinitions } from './schema';
+import { baseTableDefinitions, pluginTableDefinitions as inputPluginTableDefinitions, authTypeEnumValues } from './schema';
 
 // Drizzle SQLite
 import { drizzle as drizzleSqliteAdapter, type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
@@ -16,7 +16,7 @@ import { sqliteTable, text as sqliteText, integer as sqliteInteger } from 'drizz
 // Drizzle PostgreSQL
 import { drizzle as drizzlePgAdapter, type NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { Pool as PgPool } from 'pg';
-import { pgTable, text as pgText, integer as pgInteger, timestamp as pgTimestamp } from 'drizzle-orm/pg-core';
+import { pgTable, text as pgText, integer as pgInteger, timestamp as pgTimestamp, pgEnum } from 'drizzle-orm/pg-core';
 
 // Types for Drizzle instance and schema
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -52,20 +52,40 @@ function getColumnBuilder(dialect: 'sqlite' | 'postgres', type: 'text' | 'intege
 function generateSchema(dialect: 'sqlite' | 'postgres'): AnySchema {
   const generatedSchema: AnySchema = {};
 
+  // Create enum for PostgreSQL auth_type
+  let authTypeEnum: any = null;
+  if (dialect === 'postgres') {
+    authTypeEnum = pgEnum('auth_type', authTypeEnumValues);
+  }
+
   for (const [tableName, tableColumns] of Object.entries(baseTableDefinitions)) {
     const columns: Record<string, ReturnType<typeof tableColumns[keyof typeof tableColumns]>> = {};
     for (const [columnName, columnDefFunc] of Object.entries(tableColumns)) {
       let builderType: 'text' | 'integer' | 'timestamp' = 'text';
-      if (columnName.toLowerCase().includes('at') || columnName.toLowerCase().includes('date')) {
+      
+      // Special handling for specific columns
+      if (columnName === 'id') {
+        builderType = 'text'; // All IDs are text (Lucia uses string IDs)
+      } else if (columnName === 'expires_at') {
+        builderType = 'integer'; // Lucia uses number for expires_at
+      } else if (columnName.toLowerCase().includes('at') || columnName.toLowerCase().includes('date')) {
         builderType = 'timestamp';
       } else if (['count', 'age', 'quantity', 'order', 'status', 'number'].some(keyword => columnName.toLowerCase().includes(keyword)) && !columnName.toLowerCase().includes('text')) {
-        const idIsText = tableName === 'users' && columnName === 'id';
-        if (!idIsText) builderType = 'integer';
+        builderType = 'integer';
       }
-      if (tableName === 'users' && columnName === 'id') builderType = 'text'; // users.id is text
       
       const builder = getColumnBuilder(dialect, builderType);
-      columns[columnName] = columnDefFunc(builder);
+      
+      // Special handling for auth_type enum
+      if (columnName === 'auth_type' && tableName === 'authUser') {
+        if (dialect === 'postgres' && authTypeEnum) {
+          columns[columnName] = authTypeEnum('auth_type').notNull();
+        } else {
+          columns[columnName] = columnDefFunc(builder);
+        }
+      } else {
+        columns[columnName] = columnDefFunc(builder);
+      }
     }
     generatedSchema[tableName] = dialect === 'sqlite' ? sqliteTable(tableName, columns) : pgTable(tableName, columns);
   }
@@ -307,6 +327,15 @@ export function getSchema(): AnySchema {
     throw new Error('Database schema not generated. Call initializeDatabase() first.');
   }
   return dbSchema;
+}
+
+// Helper function to safely execute database operations with proper typing
+export function executeDbOperation<T>(
+  operation: (db: any, schema: any) => Promise<T> | T
+): Promise<T> | T {
+  const db = getDb();
+  const schema = getSchema();
+  return operation(db, schema);
 }
 
 export function getDbConnection(): SqliteDriver.Database | PgPool { // Corrected return type

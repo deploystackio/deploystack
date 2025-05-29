@@ -20,9 +20,41 @@ export const usersTableColumns = {
   updatedAt: (columnBuilder: any) => columnBuilder('updated_at', { mode: 'timestamp' }).notNull().defaultNow(),
 };
 
+// Enum for authentication types
+// This will be translated to pgEnum or similar in db/index.ts
+export const authTypeEnumValues = ['email_signup', 'github'] as const;
+
+export const authUserTableColumns = {
+  id: (columnBuilder: any) => columnBuilder('id').primaryKey(), // Lucia typically uses string IDs
+  username: (columnBuilder: any) => columnBuilder('username').notNull().unique(),
+  email: (columnBuilder: any) => columnBuilder('email').notNull().unique(),
+  auth_type: (columnBuilder: any) => columnBuilder('auth_type').notNull(), // Will be handled specially in db/index.ts for enums
+  first_name: (columnBuilder: any) => columnBuilder('first_name'),
+  last_name: (columnBuilder: any) => columnBuilder('last_name'),
+  github_id: (columnBuilder: any) => columnBuilder('github_id').unique(),
+  hashed_password: (columnBuilder: any) => columnBuilder('hashed_password'), // For email auth
+};
+
+export const authSessionTableColumns = {
+  id: (columnBuilder: any) => columnBuilder('id').primaryKey(),
+  user_id: (columnBuilder: any) => columnBuilder('user_id').notNull(), // Foreign key to authUser.id
+  expires_at: (columnBuilder: any) => columnBuilder('expires_at', { mode: 'number' }).notNull(), // Lucia v3 uses expires_at
+};
+
+export const authKeyTableColumns = {
+  id: (columnBuilder: any) => columnBuilder('id').primaryKey(), // e.g., 'email:user@example.com' or 'github:123456'
+  user_id: (columnBuilder: any) => columnBuilder('user_id').notNull(), // Foreign key to authUser.id
+  primary_key: (columnBuilder: any) => columnBuilder('primary_key').notNull(),
+  hashed_password: (columnBuilder: any) => columnBuilder('hashed_password'), // Nullable for OAuth keys
+  expires: (columnBuilder: any) => columnBuilder('expires', { mode: 'number' }), // Nullable, for things like password reset
+};
+
 // This object will hold definitions for all base tables.
 export const baseTableDefinitions = {
-  users: usersTableColumns,
+  users: usersTableColumns, // Keeping existing users table for now, can be deprecated/merged later
+  authUser: authUserTableColumns,
+  authSession: authSessionTableColumns,
+  authKey: authKeyTableColumns,
   // e.g., posts: postsTableColumns,
 };
 
