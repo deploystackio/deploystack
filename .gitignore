@@ -54,3 +54,4 @@ fastly-events.log
 .cache
 
 deploystack.db
+services/backend/persistent_data/*

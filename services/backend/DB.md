@@ -4,6 +4,55 @@
 
 DeployStack uses SQLite with Drizzle ORM for database operations. This combination provides excellent performance, type safety, and a modern, developer-friendly experience without the need for external database dependencies.
 
+## Database Setup and Configuration
+
+The backend server provides API endpoints for managing the initial database setup and checking its status.
+
+### Database Status
+
+You can check the current status of the database (whether it's configured and initialized) using the following endpoint:
+
+- **Endpoint:** `GET /api/db/status`
+- **Method:** `GET`
+- **Response:** A JSON object indicating the database `configured` status (boolean), `initialized` status (boolean), and current `dialect` (e.g., "sqlite" or "postgres", or null if not configured).
+
+### Initial Database Setup
+
+To perform the initial setup of the database, use the following endpoint:
+
+- **Endpoint:** `POST /api/db/setup`
+- **Method:** `POST`
+- **Request Body:** A JSON object specifying the database type and configuration.
+
+**For SQLite:**
+The server will automatically manage the database file location. The request body should be:
+```json
+{
+  "type": "sqlite"
+}
+```
+The SQLite database file will be created and stored at: `services/backend/persistent_data/database/deploystack.db`.
+
+**For PostgreSQL:**
+The request body should be:
+```json
+{
+  "type": "postgres",
+  "connectionString": "postgresql://username:password@host:port/mydatabase"
+}
+```
+Replace the `connectionString` with your actual PostgreSQL connection URI.
+
+**Important:** After the initial database setup via this API, you **must restart the backend server** for the changes to take full effect and for the application to connect to the newly configured database.
+
+### Database Configuration File
+
+The choice of database (SQLite or PostgreSQL) and its specific configuration (like the connection string for PostgreSQL) is stored in a JSON file located at:
+
+- `services/backend/persistent_data/db.selection.json`
+
+This file is automatically managed by the setup API. You typically do not need to edit it manually.
+
 ## Key Components
 
 - **SQLite**: Embedded SQL database engine
@@ -117,8 +166,9 @@ You can inspect the SQLite database directly using various tools:
 - **SQLite CLI**:
 
   ```bash
-  sqlite3 ./data/deploystack.db
+  sqlite3 services/backend/persistent_data/database/deploystack.db
   ```
+  (Assuming the command is run from the project root directory)
 
 - **Visual Tools**: [DB Browser for SQLite](https://sqlitebrowser.org/) or VSCode extensions like SQLite Viewer
 
@@ -126,4 +176,4 @@ You can inspect the SQLite database directly using various tools:
 
 - If you get a "table already exists" error, check if you've already applied the migration
 - For complex schema changes, you may need to create multiple migrations
-- To reset the database, delete the `./data/deploystack.db` file and restart the server
+- To reset the database, delete the `services/backend/persistent_data/database/deploystack.db` file and restart the server

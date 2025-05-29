@@ -79,6 +79,20 @@ services/backend/
 └── tsconfig.json       # TypeScript configuration
 ```
 
+## 💾 Persistent Data
+
+The `services/backend/persistent_data/` directory is designated for storing all data that needs to persist across application restarts or deployments.
+
+**Purpose:**
+- To provide a single, consistent location for all persistent backend data.
+- When developing backend features that require data persistence (e.g., database files, configuration files that should not be in version control but are generated/modified at runtime), use this directory exclusively.
+
+**Examples of data stored here:**
+- SQLite database file (e.g., `persistent_data/database/deploystack.db`)
+- Database selection configuration (e.g., `persistent_data/db.selection.json`)
+
+This ensures that persistent data is managed in a predictable way and is not scattered across the project.
+
 ## 🌍 Environment Variables
 
 Create a `.env` file in the `services/backend` directory with the following variables:

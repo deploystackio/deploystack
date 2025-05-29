@@ -1,6 +1,7 @@
 import { type FastifyInstance } from 'fastify';
-import { type SQLiteTable } from 'drizzle-orm/sqlite-core';
-import { type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
+// import { type SQLiteTable } from 'drizzle-orm/sqlite-core'; // Replaced by tableDefinitions
+// import { type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3'; // Replaced by AnyDatabase
+import { type AnyDatabase } from '../db'; // Import AnyDatabase
 
 /**
  * Plugin metadata interface
@@ -19,15 +20,19 @@ export interface PluginMeta {
  */
 export interface DatabaseExtension {
   /**
-   * Tables to be added to the database schema
+   * Table definitions to be added to the database schema.
+   * Key: Preferred table name (plugin manager might prefix this).
+   * Value: Column definitions object, similar to baseTableDefinitions in schema.ts.
+   * e.g., { id: (b:any)=>b('id'), name: (b:any)=>b('name') }
    */
-  tables: SQLiteTable[];
+  tableDefinitions?: Record<string, Record<string, (columnBuilder: any) => any>>;
   
   /**
-   * Run after the tables are created
-   * Can be used for seeding or additional setup
+   * Run after the database (and its tables, including plugin tables) is initialized.
+   * Can be used for seeding or additional setup.
+   * This is called only if the main database initializes successfully.
    */
-  onDatabaseInit?: (db: BetterSQLite3Database) => Promise<void>;
+  onDatabaseInit?: (db: AnyDatabase) => Promise<void>; // db here will be non-null
 }
 
 /**
@@ -47,9 +52,9 @@ export interface Plugin {
   /**
    * Initialize the plugin
    * @param app The Fastify instance
-   * @param db The database instance
+   * @param db The database instance (can be null if not configured/initialized)
    */
-  initialize: (app: FastifyInstance, db: BetterSQLite3Database) => Promise<void>;
+  initialize: (app: FastifyInstance, db: AnyDatabase | null) => Promise<void>;
   
   /**
    * Shutdown the plugin gracefully
