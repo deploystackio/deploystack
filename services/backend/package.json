@@ -11,13 +11,20 @@
     "release": "release-it --config=.release-it.js"
   },
   "dependencies": {
+    "@fastify/cookie": "^11.0.2",
+    "@lucia-auth/adapter-drizzle": "^1.1.0",
+    "@node-rs/argon2": "^2.0.2",
+    "arctic": "^3.7.0",
+    "argon2": "^0.43.0",
     "better-sqlite3": "^11.10.0",
     "drizzle-orm": "^0.43.1",
     "fastify": "^5.3.3",
     "fastify-favicon": "^5.0.0",
+    "lucia": "^3.2.2",
     "pg": "^8.16.0",
     "pino": "^9.7.0",
-    "pino-pretty": "^13.0.0"
+    "pino-pretty": "^13.0.0",
+    "zod": "^3.25.36"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.8.1",
