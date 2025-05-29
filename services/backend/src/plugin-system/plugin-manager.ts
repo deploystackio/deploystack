@@ -13,6 +13,7 @@ import {
 } from './types';
 import { 
   PluginLoadError, 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   PluginInitializeError, 
   PluginDuplicateError,
   PluginNotFoundError 

@@ -5,6 +5,7 @@
 import { sqliteTable, text as sqliteText, integer as sqliteInteger } from 'drizzle-orm/sqlite-core';
 import { baseTableDefinitions, pluginTableDefinitions } from './schema'; // Central definitions
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const tables: Record<string, any> = {};
 
 // Helper to get the correct SQLite column builder
@@ -20,6 +21,7 @@ function getSqliteColumnBuilder(type: 'text' | 'integer' | 'timestamp') {
 
 // Instantiate base tables for SQLite
 for (const [tableName, tableColumnDefinitions] of Object.entries(baseTableDefinitions)) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const columns: Record<string, any> = {};
   for (const [columnName, columnDefFunc] of Object.entries(tableColumnDefinitions)) {
     // Determine builder type (heuristic, same as in db/index.ts and schema.pg.ts)
@@ -40,6 +42,7 @@ for (const [tableName, tableColumnDefinitions] of Object.entries(baseTableDefini
 
 // Instantiate plugin tables for SQLite (similar logic)
 for (const [tableName, tableColumnDefinitions] of Object.entries(pluginTableDefinitions)) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const columns: Record<string, any> = {};
   for (const [columnName, columnDefFunc] of Object.entries(tableColumnDefinitions)) {
     let builderType: 'text' | 'integer' | 'timestamp' = 'text';

@@ -25,6 +25,7 @@ export interface DatabaseExtension {
    * Value: Column definitions object, similar to baseTableDefinitions in schema.ts.
    * e.g., { id: (b:any)=>b('id'), name: (b:any)=>b('name') }
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   tableDefinitions?: Record<string, Record<string, (columnBuilder: any) => any>>;
   
   /**

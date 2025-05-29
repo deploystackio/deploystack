@@ -1,6 +1,5 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { type SQL } from 'drizzle-orm'; // Removed 'sql' import as we'll use strings for raw exec
 import { type Plugin, type DatabaseExtension } from '../plugin-system/types'; // Added DatabaseExtension
 
 // Config
@@ -327,6 +326,7 @@ export function getDbStatus() {
 
 // Define a more specific type for DatabaseExtension if possible, or use 'any' for now.
 interface DatabaseExtensionWithTables extends DatabaseExtension {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     tableDefinitions?: Record<string, Record<string, (columnBuilder: any) => any>>;
     onDatabaseInit?: (db: AnyDatabase) => Promise<void>; // Ensure onDatabaseInit accepts AnyDatabase
 }
@@ -359,7 +359,7 @@ export async function createPluginTables(_db: AnyDatabase, plugins: Plugin[]) { 
     const ext = plugin.databaseExtension as DatabaseExtensionWithTables | undefined; // Cast here
     if (!ext || !ext.tableDefinitions) continue;
 
-    for (const [defName, _tableDef] of Object.entries(ext.tableDefinitions)) { // _tableDef not used
+    for (const [defName] of Object.entries(ext.tableDefinitions)) {
       const fullTableName = `${plugin.meta.id}_${defName}`;
       if (dbSchema && dbSchema[fullTableName]) {
         console.log(`[INFO] Table ${fullTableName} already defined in schema. Creation should be handled by migrations.`);

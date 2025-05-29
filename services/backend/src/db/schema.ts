@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // This file exports table column definitions.
 // The actual Drizzle table objects (sqliteTable, pgTable) will be constructed
 // in db/index.ts based on the selected database dialect.

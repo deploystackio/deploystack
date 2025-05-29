@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import fastify from 'fastify'
 import path from 'node:path'
 import { loggerConfig } from './fastify/config/logger'
@@ -12,8 +13,7 @@ import {
   createPluginTables,
   getDb,
   getDbConnection,
-  getDbStatus,
-  type AnyDatabase // Make sure AnyDatabase is exported from db/index.ts
+  getDbStatus
 } from './db'
 import type SqliteDriver from 'better-sqlite3'; // For type checking in onClose
 import type { Pool as PgPool } from 'pg';      // For type checking in onClose
