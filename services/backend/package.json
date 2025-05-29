@@ -17,7 +17,7 @@
     "arctic": "^3.7.0",
     "argon2": "^0.43.0",
     "better-sqlite3": "^11.10.0",
-    "drizzle-orm": "^0.43.1",
+    "drizzle-orm": "^0.44.0",
     "fastify": "^5.3.3",
     "fastify-favicon": "^5.0.0",
     "lucia": "^3.2.2",
