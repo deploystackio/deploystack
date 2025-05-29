@@ -5,7 +5,19 @@ import { registerRequestLoggerHooks } from './fastify/hooks/request-logger'
 import { registerFastifyPlugins } from './fastify/plugins'
 import { registerRoutes } from './routes'
 import { PluginManager } from './plugin-system'
-import { initializeDatabase, registerPluginTables, initializePluginDatabases, createPluginTables } from './db'
+import { 
+  initializeDatabase, 
+  registerPluginTables, 
+  initializePluginDatabases, 
+  createPluginTables,
+  getDb,
+  getDbConnection,
+  getDbStatus,
+  type AnyDatabase // Make sure AnyDatabase is exported from db/index.ts
+} from './db'
+import type SqliteDriver from 'better-sqlite3'; // For type checking in onClose
+import type { Pool as PgPool } from 'pg';      // For type checking in onClose
+
 
 // Import type extensions
 import './types/fastify'
@@ -14,71 +26,83 @@ import './types/fastify'
 export const createServer = async () => {
   const server = fastify({
     logger: loggerConfig,
-    disableRequestLogging: true // We'll add our own custom request logging
+    disableRequestLogging: true 
   })
 
-  // Register request logger hooks
   registerRequestLoggerHooks(server)
-  
-  // Register plugins
   await registerFastifyPlugins(server)
-  
-  // Initialize the database
-  const dbPath = process.env.DB_PATH || path.join(process.cwd(), 'data', 'deploystack.db')
-  const migrationsPath = path.join(process.cwd(), 'migrations')
-  
-  const { db, sqlite } = await initializeDatabase(dbPath, migrationsPath)
-  
-  // Store database in Fastify instance for use in routes
-  server.decorate('db', db)
-  server.decorate('sqlite', sqlite)
-  
+
   // Create and configure the plugin manager
   const isDevelopment = process.env.NODE_ENV !== 'production';
   const pluginManager = new PluginManager({
     paths: [
-      // Look for built-in plugins - adjust the path for development mode
       isDevelopment 
         ? path.join(process.cwd(), 'src', 'plugins')
         : path.join(__dirname, 'plugins'),
-      // Look for external plugins
       process.env.PLUGINS_PATH || path.join(process.cwd(), 'plugins'),
     ],
-    plugins: {
-      // Plugin configurations can be loaded from config file or env vars
-    }
+    plugins: {}
   })
   
-  // Set the Fastify app and database instances
-  pluginManager.setApp(server)
-  pluginManager.setDatabase(db)
-  
-  // Discover available plugins
-  await pluginManager.discoverPlugins()
-  
-  // Register plugin tables to schema
-  registerPluginTables(pluginManager.getAllPlugins())
+  pluginManager.setApp(server); // Set app early for plugins that might need it
 
-  // Create plugin tables in the database
-  await createPluginTables(db, pluginManager.getAllPlugins());
+  // Discover available plugins first
+  await pluginManager.discoverPlugins();
   
-  // Initialize plugin databases
-  await initializePluginDatabases(db, pluginManager.getDatabaseExtensions())
+  // Register plugin table definitions (populates inputPluginTableDefinitions in db/index.ts)
+  // This must happen before initializeDatabase, which generates the actual schema
+  registerPluginTables(pluginManager.getAllPlugins());
+
+  // Initialize the database using the new mechanism
+  const dbSuccessfullyInitialized = await initializeDatabase();
+
+  if (dbSuccessfullyInitialized) {
+    const dbInstance = getDb();
+    const rawConnection = getDbConnection();
+
+    server.decorate('db', dbInstance as any);
+    server.decorate('rawDbConnection', rawConnection as any);
+    server.log.info('Database connection established and decorated.');
+
+    pluginManager.setDatabase(dbInstance as any); // Set Drizzle instance for plugins
+
+    // Create plugin tables in the database (Note: better handled by migrations)
+    // This function might need dbInstance if it's to do anything beyond logging
+    await createPluginTables(dbInstance, pluginManager.getAllPlugins());
+  
+    // Initialize plugin database extensions (e.g., run plugin-specific setup)
+    // Ensure getDatabaseExtensions() returns plugins that have a DB extension
+    const dbExtensions = pluginManager.getAllPlugins().filter(p => p.databaseExtension);
+    await initializePluginDatabases(dbInstance, dbExtensions);
+    
+  } else {
+    server.decorate('db', null as any);
+    server.decorate('rawDbConnection', null as any);
+    server.log.warn('Database is not configured or failed to initialize. Some features may be unavailable. Please use the setup API.');
+    pluginManager.setDatabase(null as any); 
+  }
   
   // Initialize plugins (routes, hooks, etc.)
-  await pluginManager.initializePlugins()
+  // This should happen after DB and other core services are ready (or known to be unavailable)
+  await pluginManager.initializePlugins();
   
-  // Store plugin manager in Fastify instance
-  server.decorate('pluginManager', pluginManager)
+  server.decorate('pluginManager', pluginManager);
+  registerRoutes(server); // Register core routes and API for DB setup
   
-  // Register routes
-  registerRoutes(server)
-  
-  // Handle server close event for cleanup
   server.addHook('onClose', async () => {
-    await pluginManager.shutdownPlugins()
-    sqlite.close()
-  })
+    await pluginManager.shutdownPlugins();
+    const rawConn = server.rawDbConnection as SqliteDriver.Database | PgPool | null; // Get from decoration
+    if (rawConn) {
+      const status = getDbStatus();
+      if (status.dialect === 'sqlite' && 'close' in rawConn) {
+        (rawConn as SqliteDriver.Database).close();
+        server.log.info('SQLite connection closed.');
+      } else if (status.dialect === 'postgres' && 'end' in rawConn) {
+        await (rawConn as PgPool).end();
+        server.log.info('PostgreSQL connection pool closed.');
+      }
+    }
+  });
   
-  return server
+  return server;
 }

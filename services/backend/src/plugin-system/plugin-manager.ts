@@ -2,7 +2,8 @@ import path from 'node:path';
 import fs from 'node:fs';
 import fsPromises from 'node:fs/promises';
 import { type FastifyInstance } from 'fastify';
-import { type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
+// import { type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3'; // Replaced by AnyDatabase
+import { type AnyDatabase } from '../db'; // Import the AnyDatabase union type
 
 import { 
   type Plugin, 
@@ -24,7 +25,7 @@ export class PluginManager {
   private plugins: Map<string, Plugin> = new Map();
   private pluginOptions: Map<string, PluginOptions> = new Map();
   private app: FastifyInstance | null = null;
-  private db: BetterSQLite3Database | null = null;
+  private db: AnyDatabase | null = null; // Updated type
   private pluginPaths: string[] = [];
   private initialized = false;
 
@@ -54,7 +55,7 @@ export class PluginManager {
   /**
    * Set the database instance that plugins will be initialized with
    */
-  setDatabase(db: BetterSQLite3Database): void {
+  setDatabase(db: AnyDatabase | null): void { // Updated type
     this.db = db;
   }
 
@@ -272,15 +273,25 @@ export class PluginManager {
       throw new Error('Cannot initialize plugins: Fastify app not set');
     }
     
-    if (!this.db) {
-      throw new Error('Cannot initialize plugins: Database not set');
-    }
+    // Do not throw if db is not set. Plugins should handle a null db if they need it.
+    // if (!this.db) {
+    //   throw new Error('Cannot initialize plugins: Database not set');
+    // }
     
     for (const plugin of this.plugins.values()) {
       try {
-        await plugin.initialize(this.app, this.db);
+        // Pass the potentially null db instance to plugins.
+        // Plugin's initialize method must be able to handle db: AnyDatabase | null.
+        if (!this.app) { // Should not happen if initial check passes
+            throw new Error("Fastify app became null unexpectedly during plugin initialization.");
+        }
+        await plugin.initialize(this.app, this.db); 
       } catch (error) {
-        throw new PluginInitializeError(plugin.meta.id, error);
+        // Log individual plugin initialization errors but continue with others.
+        // If a single plugin failure should halt everything, re-throw the error.
+        const typedError = error as Error;
+        console.error(`[ERROR] Failed to initialize plugin ${plugin.meta.id}: ${typedError.message}`, typedError.stack);
+        // Optionally, re-throw: throw new PluginInitializeError(plugin.meta.id, error);
       }
     }
     
