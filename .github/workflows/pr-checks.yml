@@ -1,0 +1,39 @@
+name: PR Checks
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened]
+
+jobs:
+  validate:
+    name: Validate Changes
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Lint Markdown
+        run: npm run lint:md
+        
+      - name: Frontend Build
+        run: npm run build:frontend
+        
+      - name: Backend Build
+        run: npm run build:backend
+        
+      - name: Frontend Lint
+        run: npm run lint:frontend
+        
+      - name: Backend Lint
+        run: npm run lint:backend

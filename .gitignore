@@ -1,0 +1,56 @@
+# OS Files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Node.js dependencies
+node_modules
+dist
+dist-ssr
+coverage
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+.env.development
+.env.test
+.env.production
+
+# Build output
+/packages/*/dist/
+/packages/*/build/
+/packages/*/out/
+/packages/*/output/
+/packages/*/coverage/
+
+# Vue specific
+*.local
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Fastly specific
+fastly-errors.log
+fastly-events.log
+.fastly
+
+# Build artifacts
+.turbo
+.cache
+
+deploystack.db
