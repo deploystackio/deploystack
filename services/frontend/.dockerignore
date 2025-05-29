@@ -1,0 +1,25 @@
+# Node modules and dependencies
+node_modules
+npm-debug.log
+
+# Build artifacts
+dist
+
+# Version control
+.git
+.gitignore
+
+# Editor files
+.vscode
+.idea
+*.swp
+*.swo
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Other files
+*.log
+.DS_Store

@@ -1,0 +1,97 @@
+name: Backend Release PR
+on:
+  workflow_dispatch:
+    inputs:
+      type:
+        type: choice
+        description: Choose release type
+        options:
+          - auto
+          - patch
+          - minor
+          - major
+        default: auto
+      beta:
+        type: boolean
+        description: Prerelease
+        default: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  releaseIt:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/backend
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: git config
+        run: |
+          git config user.name "${GITHUB_ACTOR}"
+          git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
+      - name: Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Prepare release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TYPE_ARG: ${{ fromJSON('{"auto":"", "patch":"patch", "minor":"minor", "major":"major"}')[github.event.inputs.type] }}
+          BETA_ARG: ${{ github.event.inputs.beta == 'true' && '--preRelease=beta' || '' }}
+        run: npm run release -- $TYPE_ARG --ci --verbose --no-git.push --no-git.commit --no-git.tag --no-github $BETA_ARG
+      - name: get-npm-version
+        id: package-version
+        uses: martinbeentjes/npm-get-version-action@main
+        with:
+          path: services/backend
+      - name: Extract release notes
+        id: extract-release-notes
+        uses: ffurrer2/extract-release-notes@v2
+        with:
+          changelog_file: services/backend/CHANGELOG.md
+      - name: Create pull request
+        uses: peter-evans/create-pull-request@v7
+        id: cpr
+        with:
+          branch: backend-release
+          delete-branch: true
+          commit-message: 'chore(backend): release v${{ steps.package-version.outputs.current-version}}'
+          title: '[Backend Release] v${{ steps.package-version.outputs.current-version}}'
+          body: |
+            ## Backend Release v${{ steps.package-version.outputs.current-version}}
+            
+            This PR prepares a new backend release.
+            
+            When merged, this will:
+            1. Create a release tag
+            2. Build and publish a multi-architecture Docker image to Docker Hub
+            
+            The Docker image will be available at:
+            - `deploystack/backend:latest`
+            - `deploystack/backend:v${{ steps.package-version.outputs.current-version}}`
+            
+            ### Supported Architectures
+            - `linux/amd64` (Intel/AMD)
+            - `linux/arm64` (Apple Silicon, AWS Graviton)
+            
+            ### Environment Variables
+            The Docker image will include `DEPLOYSTACK_BACKEND_VERSION` environment variable set to the current version.
+            
+            ## Release notes:
+            ${{ steps.extract-release-notes.outputs.release_notes }}
+          labels: |
+            backend
+            release
+            automated pr
+          draft: false
+      - name: Show PR link
+        if: ${{ steps.cpr.outputs.pull-request-url }}
+        run: |
+          echo "Backend Release v${{ steps.package-version.outputs.current-version}}' pull request - ${{ steps.cpr.outputs.pull-request-url }}"

@@ -1,0 +1,41 @@
+The DeployStack License (DSL)
+Version 1.0, March 2025
+
+Copyright (c) 2025 DeployStack
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+WITHOUT LIMITING OTHER CONDITIONS IN THIS LICENSE, THE GRANT OF RIGHTS
+UNDER THIS LICENSE WILL NOT INCLUDE, AND THIS LICENSE DOES NOT GRANT TO
+YOU, THE RIGHT TO SELL THE SOFTWARE.
+
+For purposes of the foregoing, "Sell" means practicing any or all of the rights
+granted to you under this License to provide to third parties, for a fee or
+other consideration (including without limitation fees for hosting or
+consulting/support services related to the Software), a product or service
+whose value derives, entirely or substantially, from the functionality of
+the Software. This includes, without limitation, providing the Software
+as a software-as-a-service, platform-as-a-service, infrastructure-as-a-service,
+or any similar hosted service that competes with products or services offered
+by the copyright holder.
+
+This License does not prohibit selling the Software as a part of a larger
+product or solution where the Software is used internally, nor does it
+prohibit charging for support, installation, or maintenance services
+related to the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

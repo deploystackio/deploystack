@@ -1,0 +1,112 @@
+name: Frontend Release
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - main
+    paths:
+      - 'services/frontend/**'
+  
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release:
+    if: github.event.pull_request.merged == true && contains(github.event.pull_request.labels.*.name, 'frontend') && contains(github.event.pull_request.labels.*.name, 'release')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: git config
+        run: |
+          git config user.name "${GITHUB_ACTOR}"
+          git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
+          
+      - name: Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      
+      # Install dependencies at root level for workspaces
+      - name: Install dependencies
+        run: |
+          rm -f package-lock.json
+          npm install
+      
+      # Run release-it with conventional changelog
+      - name: Prepare release
+        working-directory: services/frontend
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm run release -- --ci --verbose --no-git.requireCleanWorkingDir
+        
+      # Get the version after release-it has run
+      - name: Get version
+        id: package-version
+        uses: martinbeentjes/npm-get-version-action@main
+        with:
+          path: services/frontend
+          
+      # Update .env file with version
+      - name: Update .env with version
+        working-directory: services/frontend
+        run: |
+          # If .env doesn't exist, create it
+          if [ ! -f .env ]; then
+            touch .env
+          fi
+          
+          # Check if VITE_DEPLOYSTACK_APP_VERSION already exists in .env
+          if grep -q "VITE_DEPLOYSTACK_APP_VERSION" .env; then
+            # Update existing env var
+            sed -i "s/VITE_DEPLOYSTACK_APP_VERSION=.*/VITE_DEPLOYSTACK_APP_VERSION=${{ steps.package-version.outputs.current-version }}/" .env
+          else
+            # Add new env var
+            echo "VITE_DEPLOYSTACK_APP_VERSION=${{ steps.package-version.outputs.current-version }}" >> .env
+          fi
+          
+          # Show the updated .env (without sensitive values)
+          echo "Updated .env file:"
+          grep VITE_DEPLOYSTACK_APP_VERSION .env
+      
+      # Build the frontend with version env var
+      - name: Build frontend
+        working-directory: services/frontend
+        env:
+          VITE_DEPLOYSTACK_APP_VERSION: ${{ steps.package-version.outputs.current-version }}
+        run: |
+          # First try a clean install instead of using cached dependencies
+          # npm run build || mkdir -p dist && echo '<html><body><h1>DeployStack Frontend</h1><p>Version ${{ steps.package-version.outputs.current-version }}</p></body></html>' > dist/index.html
+          npm run build
+          ls -al ./dist
+      
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./services/frontend/Dockerfile
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
+          push: true
+          tags: |
+            deploystack/frontend:latest
+            deploystack/frontend:v${{ steps.package-version.outputs.current-version }}
+          build-args: |
+            DEPLOYSTACK_FRONTEND_VERSION=${{ steps.package-version.outputs.current-version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

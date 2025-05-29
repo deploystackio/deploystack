@@ -1,0 +1,146 @@
+name: Frontend Release PR
+on:
+  workflow_dispatch:
+    inputs:
+      type:
+        type: choice
+        description: Choose release type
+        options:
+          - auto
+          - patch
+          - minor
+          - major
+        default: auto
+      beta:
+        type: boolean
+        description: Prerelease
+        default: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  releaseIt:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/frontend
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: git config
+        run: |
+          git config user.name "${GITHUB_ACTOR}"
+          git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
+          
+      - name: Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          
+      # Clean install to avoid rollup issues with optional dependencies
+      - name: Install dependencies with clean slate
+        run: |
+          rm -rf node_modules package-lock.json || true
+          npm install
+      
+      # Determine the next version based on input
+      - name: Get current version
+        id: current-version
+        run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+        
+      - name: Determine next version
+        id: next-version
+        run: |
+          current=${{ steps.current-version.outputs.version }}
+          IFS='.' read -r -a version_parts <<< "$current"
+          major=${version_parts[0]}
+          minor=${version_parts[1]}
+          patch=${version_parts[2]}
+          
+          # Determine type of version bump
+          case "${{ github.event.inputs.type }}" in
+            major)
+              new_major=$((major + 1))
+              new_version="$new_major.0.0"
+              ;;
+            minor)
+              new_minor=$((minor + 1))
+              new_version="$major.$new_minor.0"
+              ;;
+            patch)
+              new_patch=$((patch + 1))
+              new_version="$major.$minor.$new_patch"
+              ;;
+            auto|*)
+              # Default to minor
+              new_minor=$((minor + 1))
+              new_version="$major.$new_minor.0"
+              ;;
+          esac
+          
+          # Add beta suffix if requested
+          if [[ "${{ github.event.inputs.beta }}" == "true" ]]; then
+            new_version="${new_version}-beta.1"
+          fi
+          
+          echo "version=$new_version" >> $GITHUB_OUTPUT
+      
+      # Create a temporary changelog entry
+      - name: Generate changelog entry
+        id: changelog
+        run: |
+          echo "# ${{ steps.next-version.outputs.version }} ($(date +%Y-%m-%d))" > CHANGELOG_NEW.md
+          echo "" >> CHANGELOG_NEW.md
+          echo "### Features" >> CHANGELOG_NEW.md
+          echo "* Release version ${{ steps.next-version.outputs.version }}" >> CHANGELOG_NEW.md
+          echo "" >> CHANGELOG_NEW.md
+          cat CHANGELOG.md >> CHANGELOG_NEW.md 2>/dev/null || true
+          cat CHANGELOG_NEW.md > TEMP_CHANGELOG.md
+          
+      # Create a PR with the version changes
+      - name: Create pull request
+        uses: peter-evans/create-pull-request@v7
+        id: cpr
+        with:
+          branch: frontend-release
+          delete-branch: true
+          commit-message: 'chore(frontend): release v${{ steps.next-version.outputs.version }}'
+          title: '[Frontend Release] v${{ steps.next-version.outputs.version }}'
+          body: |
+            ## Frontend Release v${{ steps.next-version.outputs.version }}
+            
+            This PR prepares a new frontend release.
+            
+            When merged, this will:
+            1. Create a release tag
+            2. Build and publish a multi-architecture Docker image to Docker Hub
+            
+            The Docker image will be available at:
+            - `deploystack/frontend:latest`
+            - `deploystack/frontend:v${{ steps.next-version.outputs.version }}`
+            
+            ### Supported Architectures
+            - `linux/amd64` (Intel/AMD)
+            - `linux/arm64` (Apple Silicon, AWS Graviton)
+            - `linux/arm/v7` (Raspberry Pi, IoT devices)
+            
+            ## Release notes:
+            See attached changelog updates
+          labels: |
+            frontend
+            release
+            automated pr
+          draft: false
+          add-paths: |
+            services/frontend/package.json
+            services/frontend/CHANGELOG.md
+      
+      - name: Show PR link
+        if: ${{ steps.cpr.outputs.pull-request-url }}
+        run: |
+          echo "Frontend Release v${{ steps.next-version.outputs.version }}' pull request - ${{ steps.cpr.outputs.pull-request-url }}"
