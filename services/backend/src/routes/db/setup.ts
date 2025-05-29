@@ -1,5 +1,6 @@
 import { type FastifyInstance, type FastifyRequest, type FastifyReply } from 'fastify';
 import { setupNewDatabase } from '../../db';
+import { getDbConfig } from '../../db/config';
 import { 
   InternalDbConfigSchema,
   DbSetupRequestBodySchema, 
@@ -16,6 +17,13 @@ async function setupDbHandler(
   server: FastifyInstance
 ) {
   try {
+    // Check if DB is already configured
+    const existingConfig = await getDbConfig();
+    if (existingConfig) {
+      server.log.warn('Attempt to set up an already configured database.');
+      return reply.status(409).send({ message: 'Database setup has already been performed.' });
+    }
+
     const clientRequestBody = DbSetupRequestBodySchema.parse(request.body);
     
     let internalConfigObject: InternalDbConfig;
