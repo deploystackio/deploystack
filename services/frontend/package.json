@@ -14,7 +14,7 @@
     "release": "release-it --config=.release-it.js"
   },
   "dependencies": {
-    "@tailwindcss/vite": "^4.1.7",
+    "@tailwindcss/vite": "^4.1.8",
     "@tanstack/vue-table": "^8.21.3",
     "@vee-validate/zod": "^4.15.0",
     "@vueuse/core": "^13.3.0",
