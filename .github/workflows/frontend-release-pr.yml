@@ -23,46 +23,54 @@ permissions:
 jobs:
   releaseIt:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: services/frontend
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          # Use the app token for checkout as well
           token: ${{ secrets.APP_INSTALLATION_TOKEN }}
+          
       - name: git config
         run: |
           git config user.name "${GITHUB_ACTOR}"
           git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
+          
       - name: Setup node
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
-      - run: npm ci
+          
+      # Try normal install first, fallback to clean install only if needed
+      - name: Install dependencies
+        run: |
+          npm ci || {
+            echo "npm ci failed, trying clean install with rollup fix..."
+            rm -rf node_modules services/frontend/node_modules
+            npm install --no-optional
+          }
+          
       - name: Prepare release
+        working-directory: services/frontend
         env:
           GITHUB_TOKEN: ${{ secrets.APP_INSTALLATION_TOKEN }}
           TYPE_ARG: ${{ fromJSON('{"patch":"patch", "minor":"minor", "major":"major"}')[github.event.inputs.type] }}
           BETA_ARG: ${{ github.event.inputs.beta == 'true' && '--preRelease=beta' || '' }}
         run: npm run release -- $TYPE_ARG --ci --verbose --no-git.push --no-git.commit --no-git.tag --no-github $BETA_ARG
+        
       - name: get-npm-version
         id: package-version
         uses: martinbeentjes/npm-get-version-action@main
         with:
           path: services/frontend
+          
       - name: Extract release notes
         id: extract-release-notes
+        working-directory: services/frontend
         run: |
-          # Get the current version from the package.json in the current working directory
           VERSION=$(cat package.json | grep '"version"' | cut -d'"' -f4)
           echo "Extracting release notes for version $VERSION"
           
-          # Extract the changelog section for this version
           if [ -f CHANGELOG.md ]; then
-            # Look for the version header and extract content until the next version or end of file
             RELEASE_NOTES=$(awk -v version="$VERSION" '
               BEGIN { found=0; content="" }
               /^##? [0-9]+\.[0-9]+\.[0-9]+/ { 
@@ -74,10 +82,8 @@ jobs:
               END { print content }
             ' CHANGELOG.md)
             
-            # Clean up empty markdown links and remove empty lines
             CLEAN_NOTES=$(echo "$RELEASE_NOTES" | sed 's/(\[\]([^)]*))//g' | sed '/^$/d')
             
-            # Save to output
             echo "release_notes<<EOF" >> $GITHUB_OUTPUT
             echo "$CLEAN_NOTES" >> $GITHUB_OUTPUT
             echo "EOF" >> $GITHUB_OUTPUT
@@ -88,12 +94,11 @@ jobs:
             echo "No CHANGELOG.md found"
             echo "release_notes=" >> $GITHUB_OUTPUT
           fi
-        working-directory: services/frontend
+          
       - name: Create pull request
         uses: peter-evans/create-pull-request@v7
         id: cpr
         with:
-          # This is the key change - use the app token
           token: ${{ secrets.APP_INSTALLATION_TOKEN }}
           branch: frontend-release
           delete-branch: true
@@ -127,6 +132,7 @@ jobs:
             release
             automated pr
           draft: false
+          
       - name: Show PR link
         if: ${{ steps.cpr.outputs.pull-request-url }}
         run: |
