@@ -6,6 +6,7 @@ import { getDb, getSchema } from '../../db';
 import { eq, or } from 'drizzle-orm';
 import { generateId } from 'lucia'; // Lucia's utility for generating IDs
 import { hash } from '@node-rs/argon2';
+import { UserService } from '../../services/userService';
 
 export default async function registerEmailRoute(fastify: FastifyInstance) {
   fastify.post<{ Body: RegisterEmailInput }>( // Use Fastify's generic type for request body
@@ -50,6 +51,11 @@ export default async function registerEmailRoute(fastify: FastifyInstance) {
         });
         const userId = generateId(15); // Generate a 15-character unique ID
 
+        // Check if this is the first user (will become global_admin)
+        const allUsers = await (db as any).select().from(authUserTable).limit(1);
+        const isFirstUser = allUsers.length === 0;
+        const defaultRole = isFirstUser ? 'global_admin' : 'global_user';
+
         // Insert user directly into database (Lucia v3 doesn't have createUser with keys)
         await (db as any).insert(authUserTable).values({
           id: userId,
@@ -60,6 +66,7 @@ export default async function registerEmailRoute(fastify: FastifyInstance) {
           last_name: last_name || null,
           github_id: null,
           hashed_password: hashedPassword, // Store password in user table
+          role_id: defaultRole, // Assign role (no default in schema, so we must provide it)
         });
 
         // Verify user was created successfully before creating session
@@ -74,7 +81,7 @@ export default async function registerEmailRoute(fastify: FastifyInstance) {
           return reply.status(500).send({ error: 'User creation failed.' });
         }
 
-        fastify.log.info(`User created successfully: ${userId}`);
+        fastify.log.info(`User created successfully: ${userId} with role: ${defaultRole}`);
 
         // Create session manually (Lucia's createSession has issues with our schema)
         const sessionId = generateId(40); // Generate session ID

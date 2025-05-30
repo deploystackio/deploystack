@@ -12,6 +12,16 @@ export const users = sqliteTable('users', {
   updated_at: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 });
 
+export const roles = sqliteTable('roles', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull().unique(),
+  description: text('description'),
+  permissions: text('permissions').notNull(),
+  is_system_role: integer('is_system_role', { mode: 'boolean' }).notNull().default(false),
+  created_at: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  updated_at: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+});
+
 export const authUser = sqliteTable('authUser', {
   id: text('id').primaryKey(),
   username: text('username').notNull().unique(),
@@ -21,6 +31,7 @@ export const authUser = sqliteTable('authUser', {
   last_name: text('last_name'),
   github_id: text('github_id').unique(),
   hashed_password: text('hashed_password'),
+  role_id: text('role_id').references(() => roles.id),
 });
 
 export const authSession = sqliteTable('authSession', {

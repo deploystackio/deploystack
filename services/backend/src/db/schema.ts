@@ -24,6 +24,16 @@ export const usersTableColumns = {
 // This will be translated to pgEnum or similar in db/index.ts
 export const authTypeEnumValues = ['email_signup', 'github'] as const;
 
+export const rolesTableColumns = {
+  id: (columnBuilder: any) => columnBuilder('id').primaryKey(),
+  name: (columnBuilder: any) => columnBuilder('name').notNull().unique(),
+  description: (columnBuilder: any) => columnBuilder('description'),
+  permissions: (columnBuilder: any) => columnBuilder('permissions').notNull(), // JSON string
+  is_system_role: (columnBuilder: any) => columnBuilder('is_system_role').notNull().default(false),
+  created_at: (columnBuilder: any) => columnBuilder('created_at', { mode: 'timestamp' }).notNull().defaultNow(),
+  updated_at: (columnBuilder: any) => columnBuilder('updated_at', { mode: 'timestamp' }).notNull().defaultNow(),
+};
+
 export const authUserTableColumns = {
   id: (columnBuilder: any) => columnBuilder('id').primaryKey(), // Lucia typically uses string IDs
   username: (columnBuilder: any) => columnBuilder('username').notNull().unique(),
@@ -33,6 +43,7 @@ export const authUserTableColumns = {
   last_name: (columnBuilder: any) => columnBuilder('last_name'),
   github_id: (columnBuilder: any) => columnBuilder('github_id').unique(),
   hashed_password: (columnBuilder: any) => columnBuilder('hashed_password'), // For email auth
+  role_id: (columnBuilder: any) => columnBuilder('role_id'), // Foreign key to roles.id
 };
 
 export const authSessionTableColumns = {
@@ -52,6 +63,7 @@ export const authKeyTableColumns = {
 // This object will hold definitions for all base tables.
 export const baseTableDefinitions = {
   users: usersTableColumns, // Keeping existing users table for now, can be deprecated/merged later
+  roles: rolesTableColumns,
   authUser: authUserTableColumns,
   authSession: authSessionTableColumns,
   authKey: authKeyTableColumns,
