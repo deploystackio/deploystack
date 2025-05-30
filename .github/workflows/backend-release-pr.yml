@@ -6,11 +6,10 @@ on:
         type: choice
         description: Choose release type
         options:
-          - auto
           - patch
           - minor
           - major
-        default: auto
+        default: patch
       beta:
         type: boolean
         description: Prerelease
@@ -46,7 +45,7 @@ jobs:
       - name: Prepare release
         env:
           GITHUB_TOKEN: ${{ secrets.APP_INSTALLATION_TOKEN }}
-          TYPE_ARG: ${{ fromJSON('{"auto":"", "patch":"patch", "minor":"minor", "major":"major"}')[github.event.inputs.type] }}
+          TYPE_ARG: ${{ fromJSON('{"patch":"patch", "minor":"minor", "major":"major"}')[github.event.inputs.type] }}
           BETA_ARG: ${{ github.event.inputs.beta == 'true' && '--preRelease=beta' || '' }}
         run: npm run release -- $TYPE_ARG --ci --verbose --no-git.push --no-git.commit --no-git.tag --no-github $BETA_ARG
       - name: get-npm-version
