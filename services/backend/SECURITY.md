@@ -44,7 +44,8 @@ All incoming data from clients (e.g., API request bodies, URL parameters) is rig
 
 We strive to keep our dependencies up-to-date and regularly review them for known vulnerabilities. Automated tools may be used to scan for vulnerabilities in our dependency tree.
 
-### Key Security Dependencies:
+### Key Security Dependencies
+
 - `@node-rs/argon2`: Password hashing
 - `lucia`: Session management
 - `drizzle-orm`: Database ORM with parameterized queries

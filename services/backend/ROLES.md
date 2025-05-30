@@ -14,6 +14,7 @@ The RBAC system provides fine-grained access control through roles and permissio
 ## Default Roles
 
 ### Global Administrator (`global_admin`)
+
 - **Description**: Full system access with user management capabilities
 - **Permissions**:
   - `users.list` - List all users
@@ -25,6 +26,7 @@ The RBAC system provides fine-grained access control through roles and permissio
   - `system.admin` - Administrative system access
 
 ### Global User (`global_user`)
+
 - **Description**: Standard user with basic profile access
 - **Permissions**:
   - `profile.view` - View own profile
@@ -33,6 +35,7 @@ The RBAC system provides fine-grained access control through roles and permissio
 ## Database Schema
 
 ### Roles Table
+
 ```sql
 CREATE TABLE roles (
   id TEXT PRIMARY KEY,                    -- Role identifier (e.g., 'global_admin')
@@ -46,7 +49,9 @@ CREATE TABLE roles (
 ```
 
 ### User Role Assignment
+
 The `authUser` table includes a `role_id` column that references the `roles` table:
+
 ```sql
 ALTER TABLE authUser ADD COLUMN role_id TEXT DEFAULT 'global_user' REFERENCES roles(id);
 ```
@@ -56,12 +61,14 @@ ALTER TABLE authUser ADD COLUMN role_id TEXT DEFAULT 'global_user' REFERENCES ro
 ### Role Management
 
 #### List Roles
+
 ```http
 GET /api/roles
 Authorization: Required (roles.manage permission)
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -80,12 +87,14 @@ Authorization: Required (roles.manage permission)
 ```
 
 #### Get Role by ID
+
 ```http
 GET /api/roles/:id
 Authorization: Required (roles.manage permission)
 ```
 
 #### Create Role
+
 ```http
 POST /api/roles
 Authorization: Required (roles.manage permission)
@@ -100,6 +109,7 @@ Content-Type: application/json
 ```
 
 #### Update Role
+
 ```http
 PUT /api/roles/:id
 Authorization: Required (roles.manage permission)
@@ -115,16 +125,19 @@ Content-Type: application/json
 **Note:** System roles (`is_system_role: true`) cannot be updated or deleted.
 
 #### Delete Role
+
 ```http
 DELETE /api/roles/:id
 Authorization: Required (roles.manage permission)
 ```
 
 **Restrictions:**
+
 - Cannot delete system roles
 - Cannot delete roles that are assigned to users
 
 #### Get Available Permissions
+
 ```http
 GET /api/roles/permissions
 Authorization: Required (roles.manage permission)
@@ -133,18 +146,21 @@ Authorization: Required (roles.manage permission)
 ### User Management
 
 #### List Users
+
 ```http
 GET /api/users
 Authorization: Required (users.list permission)
 ```
 
 #### Get User by ID
+
 ```http
 GET /api/users/:id
 Authorization: Required (own profile or system.admin permission)
 ```
 
 #### Update User
+
 ```http
 PUT /api/users/:id
 Authorization: Required (own profile or system.admin permission)
@@ -160,20 +176,24 @@ Content-Type: application/json
 ```
 
 **Restrictions:**
+
 - Users cannot change their own role (only admins can)
 - Email and username must be unique
 
 #### Delete User
+
 ```http
 DELETE /api/users/:id
 Authorization: Required (users.delete permission)
 ```
 
 **Restrictions:**
+
 - Cannot delete your own account
 - Cannot delete the last global administrator
 
 #### Assign Role to User
+
 ```http
 PUT /api/users/:id/role
 Authorization: Required (users.edit permission)
@@ -185,21 +205,25 @@ Content-Type: application/json
 ```
 
 **Restrictions:**
+
 - Cannot change your own role
 
 #### Get Current User Profile
+
 ```http
 GET /api/users/me
 Authorization: Required (authenticated user)
 ```
 
 #### Get User Statistics
+
 ```http
 GET /api/users/stats
 Authorization: Required (users.list permission)
 ```
 
 #### Get Users by Role
+
 ```http
 GET /api/users/role/:roleId
 Authorization: Required (users.list permission)
@@ -226,6 +250,7 @@ Authorization: Required (users.list permission)
 The system provides several ways to check permissions:
 
 #### Middleware Functions
+
 ```typescript
 import { requirePermission, requireRole, requireGlobalAdmin } from '../middleware/roleMiddleware';
 
@@ -246,6 +271,7 @@ fastify.get('/global-admin', {
 ```
 
 #### Utility Functions
+
 ```typescript
 import { checkUserPermission, getUserRole } from '../middleware/roleMiddleware';
 
@@ -259,14 +285,18 @@ const userRole = await getUserRole(userId);
 ## User Registration Flow
 
 ### First User
+
 When the first user registers in the system:
+
 1. They are automatically assigned the `global_admin` role
 2. This ensures there's always at least one administrator
 
 ### Subsequent Users
+
 All subsequent users are assigned the `global_user` role by default.
 
 ### Registration Code Example
+
 ```typescript
 // Check if this is the first user
 const allUsers = await db.select().from(authUserTable).limit(1);
@@ -283,17 +313,20 @@ await db.insert(authUserTable).values({
 ## Security Considerations
 
 ### Role Protection
+
 - **System Roles**: Cannot be modified or deleted
 - **Last Admin Protection**: Cannot delete the last global administrator
 - **Self-Role Protection**: Users cannot change their own roles
 - **Self-Delete Protection**: Users cannot delete their own accounts
 
 ### Permission Validation
+
 - All permissions are validated against a whitelist
 - Invalid permissions are rejected during role creation/update
 - Database constraints ensure referential integrity
 
 ### Session Security
+
 - Role information is fetched fresh for each permission check
 - No role caching to prevent stale permission issues
 - Lucia v3 handles secure session management
@@ -301,6 +334,7 @@ await db.insert(authUserTable).values({
 ## Adding New Roles
 
 ### 1. Define Permissions
+
 First, add any new permissions to the available permissions list:
 
 ```typescript
@@ -314,6 +348,7 @@ export const AVAILABLE_PERMISSIONS = [
 ```
 
 ### 2. Create Role via API
+
 Use the role creation API to add new roles:
 
 ```http
@@ -327,6 +362,7 @@ POST /api/roles
 ```
 
 ### 3. Update Default Permissions (Optional)
+
 If you want to include the role in default setups:
 
 ```typescript
@@ -343,6 +379,7 @@ static getDefaultPermissions() {
 ## Migration and Setup
 
 ### Database Migration
+
 The role system is set up through migration `0003_huge_prism.sql` (generated using `npm run db:generate`):
 
 1. Creates the `roles` table
@@ -352,6 +389,7 @@ The role system is set up through migration `0003_huge_prism.sql` (generated usi
 5. Promotes the first user to `global_admin`
 
 ### Manual Setup
+
 If you need to manually set up roles:
 
 ```sql
@@ -370,16 +408,19 @@ UPDATE authUser SET role_id = 'global_admin' WHERE id = (SELECT id FROM authUser
 ### Common Issues
 
 #### Permission Denied Errors
+
 - Verify the user has the required permission
 - Check if the user's role includes the necessary permission
 - Ensure the role exists and is properly assigned
 
 #### Role Assignment Failures
+
 - Verify the target role exists
 - Check if you're trying to assign a role to yourself (not allowed)
 - Ensure you have `users.edit` permission
 
 #### Migration Issues
+
 - Ensure the database is properly initialized
 - Check that previous migrations have been applied
 - Verify foreign key constraints are working
@@ -403,6 +444,7 @@ console.log('All roles:', allRoles);
 ## Future Enhancements
 
 ### Planned Features
+
 - **Hierarchical Roles**: Parent-child role relationships
 - **Temporary Permissions**: Time-limited access grants
 - **Permission Groups**: Logical grouping of related permissions
@@ -410,6 +452,7 @@ console.log('All roles:', allRoles);
 - **Role Templates**: Predefined role configurations
 
 ### Extension Points
+
 The system is designed to be extensible:
 
 - Add new permissions by updating the `AVAILABLE_PERMISSIONS` array
@@ -420,23 +463,27 @@ The system is designed to be extensible:
 ## Best Practices
 
 ### Role Design
+
 - Keep roles focused and specific
 - Use descriptive names and descriptions
 - Group related permissions logically
 - Avoid overly broad permissions
 
 ### Permission Naming
+
 - Use dot notation for hierarchy (`users.edit`, `content.moderate`)
 - Be specific about the action (`view`, `edit`, `delete`, `create`)
 - Use consistent naming patterns
 
 ### Security
+
 - Always check permissions at the API level
 - Don't rely solely on frontend permission checks
 - Regularly audit role assignments
 - Monitor for privilege escalation attempts
 
 ### Performance
+
 - Permission checks are lightweight but avoid excessive calls
 - Consider caching user roles for high-frequency operations
 - Use middleware for route-level protection
