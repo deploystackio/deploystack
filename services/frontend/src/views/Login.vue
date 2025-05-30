@@ -62,15 +62,27 @@ const clearError = () => {
   errorMessage.value = ''
 }
 
+interface LoginError {
+  name?: string;
+  message?: string;
+  status?: number;
+}
+
+interface PotentialError {
+  name?: unknown;
+  message?: unknown;
+  status?: unknown;
+}
+
 // Handle different types of errors
-const handleError = (error: any) => {
-  if (error.name === 'TypeError' && error.message.includes('fetch')) {
+const handleError = (error: LoginError) => {
+  if (error.name === 'TypeError' && error.message && error.message.includes('fetch')) {
     // Network error - backend is down
     errorMessage.value = t('login.errors.networkError')
-  } else if (error.status === 401) {
+  } else if (error.status && error.status === 401) {
     // Unauthorized - invalid credentials
     errorMessage.value = t('login.errors.invalidCredentials')
-  } else if (error.status >= 500) {
+  } else if (error.status && error.status >= 500) {
     // Server error
     errorMessage.value = t('login.errors.serverError')
   } else if (error.name === 'AbortError') {
@@ -118,9 +130,32 @@ const onSubmit = form.handleSubmit(async (values) => {
     // Handle successful login - redirect to dashboard or home
     router.push('/dashboard')
 
-  } catch (error) {
-    console.error('Login error:', error)
-    handleError(error)
+  } catch (e) {
+    console.error('Login error:', e);
+    const errorToHandle: LoginError = { message: t('login.errors.unknownError') };
+    const potentialError = e as PotentialError;
+
+    if (typeof potentialError.name === 'string') {
+      errorToHandle.name = potentialError.name;
+    }
+    if (typeof potentialError.message === 'string') {
+      errorToHandle.message = potentialError.message;
+    }
+    if (typeof potentialError.status === 'number') {
+      errorToHandle.status = potentialError.status;
+    }
+
+    // If it's a standard Error instance, prefer its properties
+    if (e instanceof Error) {
+      errorToHandle.name = e.name;
+      errorToHandle.message = e.message;
+    }
+
+    // Ensure message is always set if not already by previous checks
+    if (!errorToHandle.message) {
+        errorToHandle.message = t('login.errors.unknownError');
+    }
+    handleError(errorToHandle);
   } finally {
     isLoading.value = false
   }

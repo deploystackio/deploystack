@@ -91,15 +91,27 @@ const clearError = () => {
   successMessage.value = ''
 }
 
+interface RegisterError {
+  name?: string;
+  message?: string;
+  status?: number;
+}
+
+interface PotentialError {
+  name?: unknown;
+  message?: unknown;
+  status?: unknown;
+}
+
 // Handle different types of errors
-const handleError = (error: any) => {
-  if (error.name === 'TypeError' && error.message.includes('fetch')) {
+const handleError = (error: RegisterError) => {
+  if (error.name === 'TypeError' && error.message && error.message.includes('fetch')) {
     // Network error - backend is down
     errorMessage.value = 'Unable to connect to server. Please try again later.'
-  } else if (error.status === 409) {
+  } else if (error.status && error.status === 409) {
     // Conflict - username or email already exists
     errorMessage.value = error.message || 'Username or email already exists.'
-  } else if (error.status >= 500) {
+  } else if (error.status && error.status >= 500) {
     // Server error
     errorMessage.value = 'Server error occurred. Please try again later.'
   } else if (error.name === 'AbortError') {
@@ -157,9 +169,32 @@ const onSubmit = form.handleSubmit(async (values) => {
       router.push('/login')
     }, 2000)
 
-  } catch (error) {
-    console.error('Registration error:', error)
-    handleError(error)
+  } catch (e) {
+    console.error('Registration error:', e);
+    const errorToHandle: RegisterError = { message: t('register.errors.unknownError', 'An unexpected error occurred during registration.') }; // Default message
+    const potentialError = e as PotentialError;
+
+    if (typeof potentialError.name === 'string') {
+      errorToHandle.name = potentialError.name;
+    }
+    if (typeof potentialError.message === 'string') {
+      errorToHandle.message = potentialError.message;
+    }
+    if (typeof potentialError.status === 'number') {
+      errorToHandle.status = potentialError.status;
+    }
+
+    // If it's a standard Error instance, prefer its properties
+    if (e instanceof Error) {
+      errorToHandle.name = e.name;
+      errorToHandle.message = e.message;
+    }
+
+    // Ensure message is always set if not already by previous checks
+    if (!errorToHandle.message) {
+        errorToHandle.message = t('register.errors.unknownError', 'An unexpected error occurred during registration.');
+    }
+    handleError(errorToHandle);
   } finally {
     isLoading.value = false
   }
