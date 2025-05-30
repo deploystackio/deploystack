@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { getDb, getSchema } from '../db';
 import { eq } from 'drizzle-orm';
 import { RoleService } from './roleService';

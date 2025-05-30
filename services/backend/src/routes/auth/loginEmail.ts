@@ -66,6 +66,7 @@ export default async function loginEmailRoute(fastify: FastifyInstance) {
         const authSessionTable = schema.authSession;
         
         // Insert session directly into database
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         await (db as any).insert(authSessionTable).values({
           id: sessionId,
           user_id: user.id,

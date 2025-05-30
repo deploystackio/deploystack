@@ -69,6 +69,7 @@ export default async function rolesRoute(fastify: FastifyInstance) {
       
       // Validate permissions
       const invalidPermissions = validatedData.permissions.filter(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         perm => !AVAILABLE_PERMISSIONS.includes(perm as any)
       );
       
@@ -123,6 +124,7 @@ export default async function rolesRoute(fastify: FastifyInstance) {
       // Validate permissions if provided
       if (validatedData.permissions) {
         const invalidPermissions = validatedData.permissions.filter(
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           perm => !AVAILABLE_PERMISSIONS.includes(perm as any)
         );
         

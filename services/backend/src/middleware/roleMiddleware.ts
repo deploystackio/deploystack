@@ -1,6 +1,5 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import { RoleService } from '../services/roleService';
-import type { User } from 'lucia';
 
 // FastifyRequest already has user: User | null from authHook
 // We'll use the existing type
