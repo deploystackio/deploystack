@@ -20,6 +20,8 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          # Use the app token for checkout as well
+          token: ${{ secrets.APP_INSTALLATION_TOKEN }}
           
       - name: git config
         run: |
@@ -36,11 +38,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
       
-      # Now run release-it with the --no-git.requireCleanWorkingDir flag
+      # Now run release-it with the APP_INSTALLATION_TOKEN
       - name: Prepare release
         working-directory: services/backend
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.APP_INSTALLATION_TOKEN }}
         run: npm run release -- --ci --verbose --no-git.requireCleanWorkingDir
         
       # Get the version after release-it has run
