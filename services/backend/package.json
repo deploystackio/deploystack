@@ -33,7 +33,7 @@
     "@eslint/js": "^9.27.0",
     "@release-it/conventional-changelog": "^10.0.1",
     "@types/pg": "^8.15.2",
-    "@typescript-eslint/eslint-plugin": "^8.32.0",
+    "@typescript-eslint/eslint-plugin": "^8.33.0",
     "@typescript-eslint/parser": "^8.33.0",
     "drizzle-kit": "^0.31.1",
     "eslint": "^9.27.0",
