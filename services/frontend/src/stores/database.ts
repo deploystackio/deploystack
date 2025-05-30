@@ -10,6 +10,7 @@ export const useDatabaseStore = defineStore('database', () => {
   const dialect = ref<DatabaseType | null>(null);
   const isLoading = ref(false);
   const error = ref<string | null>(null);
+  const errorAddress = ref<string | null>(null); // Added
   const setupCompleted = ref(false);
 
   // Computed
@@ -41,8 +42,16 @@ export const useDatabaseStore = defineStore('database', () => {
       setupCompleted.value = status.configured && status.initialized;
 
       return canProceedToApp.value;
-    } catch (err) {
-      error.value = err instanceof Error ? err.message : 'setup.errors.connectionFailed';
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (err: any) { // Modified
+      if (err && err.isCustomError && err.i18nKey === 'setup.errors.failedToConnectWithAddress') {
+        error.value = err.i18nKey;
+        errorAddress.value = err.address;
+      } else {
+        // Fallback for other errors
+        error.value = err instanceof Error ? err.message : 'setup.errors.connectionFailed';
+        errorAddress.value = null; // Clear if not our specific error
+      }
       return false;
     } finally {
       isLoading.value = false;
@@ -96,6 +105,7 @@ export const useDatabaseStore = defineStore('database', () => {
     dialect,
     isLoading,
     error,
+    errorAddress, // Added
     setupCompleted,
 
     // Computed

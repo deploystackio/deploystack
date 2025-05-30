@@ -76,7 +76,7 @@
               <AlertCircle class="h-4 w-4" />
               <AlertTitle>{{ $t('setup.errors.title') }}</AlertTitle>
               <AlertDescription>
-                {{ getErrorMessage(databaseStore.error) }}
+                {{ getErrorMessage(databaseStore.error, databaseStore.errorAddress) }}
               </AlertDescription>
             </Alert>
 
@@ -187,13 +187,18 @@ function goToLogin() {
 }
 
 // Function to get translated error message
-function getErrorMessage(error: string): string {
-  // Check if error is a translation key
-  if (error.startsWith('setup.errors.')) {
-    return t(error);
+function getErrorMessage(errorKey: string | null, address: string | null): string {
+  if (!errorKey) return ''; // Handle null errorKey
+
+  if (errorKey === 'setup.errors.failedToConnectWithAddress' && address) {
+    return t(errorKey, { address });
+  }
+  // Check if error is a translation key (existing logic)
+  if (errorKey.startsWith('setup.errors.')) {
+    return t(errorKey);
   }
   // Return the error as-is if it's not a translation key
-  return error;
+  return errorKey;
 }
 
 // Check database status on component mount

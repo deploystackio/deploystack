@@ -29,7 +29,12 @@ class DatabaseService {
       return data;
     } catch (error) {
       console.error('Failed to check database status:', error);
-      throw new Error('setup.errors.connectionFailed');
+      // Throw an error object that the store can inspect
+      throw {
+        isCustomError: true,
+        i18nKey: 'setup.errors.failedToConnectWithAddress',
+        address: this.baseUrl
+      };
     }
   }
 
