@@ -7,7 +7,7 @@ class DatabaseService {
   private baseUrl: string;
 
   constructor() {
-    this.baseUrl = getEnv('VITE_API_URL') || 'http://localhost:3000';
+    this.baseUrl = getEnv('VITE_DEPLOYSTACK_APP_URL') || 'http://localhost:3000';
   }
 
   /**

@@ -100,6 +100,45 @@ You can also run DeployStack on your own infrastructure for maximum control:
    npm run dev:backend
    ```
 
+#### Deploying with Docker
+
+Alternatively, you can deploy the pre-built Docker images for the frontend and backend services.
+
+1. **Pull the latest images from Docker Hub:**
+
+    ```bash
+    docker pull deploystack/frontend:latest
+    docker pull deploystack/backend:latest
+    ```
+
+2. **Run the Backend Service:**
+
+    The backend requires a persistent volume for its data (like database configuration and SQLite files). The following command maps a local directory (`./services/backend/persistent_data`) to the container's data directory. It's recommended to run this command from the root of the cloned DeployStack project directory.
+
+    ```bash
+    docker run -d \
+      -p 3000:3000 \
+      -v $(pwd)/services/backend/persistent_data:/app/persistent_data \
+      deploystack/backend:latest
+    ```
+
+3. **Run the Frontend Service:**
+
+    The frontend requires environment variables to connect to the backend and for other configurations.
+
+    ```bash
+    docker run -d \
+      -p 8080:80 \ # Exposes frontend on host port 8080, container runs on 80
+      -e VITE_DEPLOYSTACK_APP_URL="http://localhost:3000" \ # URL of your backend service
+      -e VITE_APP_TITLE="Your DeployStack Title" \
+      # Add any other environment variables as needed
+      deploystack/frontend:latest
+    ```
+
+    **Note:**
+    - Ensure the `VITE_DEPLOYSTACK_APP_URL` points to where your backend service is accessible. If running both containers on the same Docker host, `http://localhost:3000` (or the host's IP/hostname if `localhost` doesn't resolve correctly from within the frontend container's network to the backend's exposed port) should work.
+    - The `$(pwd)` in the backend command assumes you are in the root of the `deploystack` project directory. Adjust the path to `services/backend/persistent_data` if running from elsewhere, or use an absolute path or a Docker named volume.
+
 ## Project Structure
 
 This repository uses a monorepo structure optimized for MCP server deployment:
