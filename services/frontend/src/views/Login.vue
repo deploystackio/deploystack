@@ -91,13 +91,13 @@ const onSubmit = form.handleSubmit(async (values) => {
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
 
-    const response = await fetch(`${apiUrl}/auth/login`, {
+    const response = await fetch(`${apiUrl}/api/auth/email/login/email`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        email: values.email,
+        login: values.email,
         password: values.password,
       }),
       signal: controller.signal,
