@@ -9,7 +9,7 @@ import { hash } from '@node-rs/argon2';
 
 export default async function registerEmailRoute(fastify: FastifyInstance) {
   fastify.post<{ Body: RegisterEmailInput }>( // Use Fastify's generic type for request body
-    '/register/email',
+    '/register',
     async (request, reply: FastifyReply) => { // request type will be inferred by Fastify
       const { username, email, password, first_name, last_name } = request.body; // request.body should now be typed as RegisterEmailInput
 
@@ -62,9 +62,37 @@ export default async function registerEmailRoute(fastify: FastifyInstance) {
           hashed_password: hashedPassword, // Store password in user table
         });
 
-        const session = await getLucia().createSession(userId, {}); // Empty object for session attributes
-        const sessionCookie = getLucia().createSessionCookie(session.id);
+        // Verify user was created successfully before creating session
+        const createdUser = await (db as any)
+          .select()
+          .from(authUserTable)
+          .where(eq(authUserTable.id, userId))
+          .limit(1);
 
+        if (createdUser.length === 0) {
+          fastify.log.error('User creation failed - user not found after insert');
+          return reply.status(500).send({ error: 'User creation failed.' });
+        }
+
+        fastify.log.info(`User created successfully: ${userId}`);
+
+        // Create session manually (Lucia's createSession has issues with our schema)
+        const sessionId = generateId(40); // Generate session ID
+        const expiresAt = Date.now() + 1000 * 60 * 60 * 24 * 30; // 30 days
+        
+        const authSessionTable = schema.authSession;
+        
+        // Insert session directly into database
+        await (db as any).insert(authSessionTable).values({
+          id: sessionId,
+          user_id: userId,
+          expires_at: expiresAt
+        });
+        
+        fastify.log.info(`Session created successfully for user: ${userId}`);
+        
+        const sessionCookie = getLucia().createSessionCookie(sessionId);
+        
         reply.setCookie(sessionCookie.name, sessionCookie.value, sessionCookie.attributes);
         return reply.status(201).send({ message: 'User registered successfully.' });
 

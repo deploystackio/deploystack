@@ -21,18 +21,35 @@ This approach ensures that even if the database were compromised, recovering the
 
 ## Session Management
 
-User sessions are managed using `lucia-auth`.
+User sessions are managed using `lucia-auth` v3.
 
-- Session identifiers are cryptographically random and stored in secure, HTTP-only cookies to prevent XSS attacks from accessing them.
-- Sessions have defined expiration times (both active and idle timeouts) to limit the window of opportunity for session hijacking.
+- Session identifiers are cryptographically random (40 characters) generated using Lucia's `generateId()` function and stored in secure, HTTP-only cookies to prevent XSS attacks from accessing them.
+- Sessions have defined expiration times (30 days from creation) to limit the window of opportunity for session hijacking.
+- Session data is stored in the `authSession` table with proper foreign key constraints to the `authUser` table.
+- Session cookies are configured with appropriate security attributes:
+  - `httpOnly`: true (prevents JavaScript access)
+  - `secure`: true in production (HTTPS only)
+  - `sameSite`: 'lax' (CSRF protection)
 
 ## Data Validation
 
 All incoming data from clients (e.g., API request bodies, URL parameters) is rigorously validated using `zod` schemas on the server-side before being processed. This helps prevent common vulnerabilities such as injection attacks and unexpected data handling errors.
 
+- Registration endpoint validates: username, email, password, first_name, last_name
+- Email addresses are normalized to lowercase before storage
+- Duplicate username and email checks are performed before user creation
+- All database operations use parameterized queries via Drizzle ORM to prevent SQL injection
+
 ## Dependencies
 
 We strive to keep our dependencies up-to-date and regularly review them for known vulnerabilities. Automated tools may be used to scan for vulnerabilities in our dependency tree.
+
+### Key Security Dependencies:
+- `@node-rs/argon2`: Password hashing
+- `lucia`: Session management
+- `drizzle-orm`: Database ORM with parameterized queries
+- `zod`: Input validation and sanitization
+- `@fastify/cookie`: Secure cookie handling
 
 ## Infrastructure Security
 

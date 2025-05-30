@@ -13,7 +13,7 @@ const GITHUB_SCOPES = ['user:email']; // Request access to user's email
 export default async function githubAuthRoutes(fastify: FastifyInstance) {
   // Route to initiate GitHub login
   fastify.get(
-    '/login/github',
+    '/login',
     async (_request, reply: FastifyReply) => { // _request type can be FastifyRequest if no specific generics needed here
       const state = generateState();
       // PKCE is recommended for OAuth 2.0 public clients, but for confidential clients (server-side),
@@ -42,7 +42,7 @@ export default async function githubAuthRoutes(fastify: FastifyInstance) {
 
   // Route to handle GitHub callback
   fastify.get<{ Querystring: GithubCallbackInput }>(
-    '/login/github/callback',
+    '/callback',
     async (request, reply: FastifyReply) => { // request.query will be typed as GithubCallbackInput by Fastify
       const storedState = request.cookies?.oauth_state; // Access cookies safely, ensure @fastify/cookie is registered
       // const storedCodeVerifier = request.cookies?.oauth_code_verifier; // if using PKCE

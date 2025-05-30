@@ -1,5 +1,6 @@
 import type { FastifyRequest, FastifyReply, HookHandlerDoneFunction } from 'fastify';
 import { getLucia } from '../lib/lucia';
+import { getDbStatus } from '../db';
 import type { User, Session } from 'lucia';
 
 // Augment FastifyRequest to include user and session
@@ -15,24 +16,34 @@ export async function authHook(
   reply: FastifyReply
   // No done: HookHandlerDoneFunction needed if the hook doesn't explicitly call done()
 ) {
-  const sessionId = getLucia().readSessionCookie(request.headers.cookie ?? '');
-  if (!sessionId) {
+  // Check if database is configured before attempting authentication
+  const dbStatus = getDbStatus();
+  if (!dbStatus.configured || !dbStatus.initialized) {
+    // Database not ready, skip authentication
     request.user = null;
     request.session = null;
-    return; // Proceed as unauthenticated
+    return;
   }
 
   try {
-    const { session, user } = await getLucia().validateSession(sessionId);
+    const lucia = getLucia();
+    const sessionId = lucia.readSessionCookie(request.headers.cookie ?? '');
+    if (!sessionId) {
+      request.user = null;
+      request.session = null;
+      return; // Proceed as unauthenticated
+    }
+
+    const { session, user } = await lucia.validateSession(sessionId);
 
     if (session && session.fresh) {
       // Session was refreshed, send new cookie
-      const sessionCookie = getLucia().createSessionCookie(session.id);
+      const sessionCookie = lucia.createSessionCookie(session.id);
       reply.setCookie(sessionCookie.name, sessionCookie.value, sessionCookie.attributes);
     }
     if (!session) {
       // Invalid session, clear cookie
-      const sessionCookie = getLucia().createBlankSessionCookie();
+      const sessionCookie = lucia.createBlankSessionCookie();
       reply.setCookie(sessionCookie.name, sessionCookie.value, sessionCookie.attributes);
     }
 

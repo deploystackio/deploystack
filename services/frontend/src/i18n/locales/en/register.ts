@@ -7,7 +7,7 @@ export default {
     },
     email: {
       label: 'Email address',
-      placeholder: 'name@example.com',
+      placeholder: 'Enter your email address',
     },
     password: {
       label: 'Password',

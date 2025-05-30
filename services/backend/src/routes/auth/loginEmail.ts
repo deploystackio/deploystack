@@ -8,7 +8,7 @@ import { eq, or } from 'drizzle-orm';
 
 export default async function loginEmailRoute(fastify: FastifyInstance) {
   fastify.post<{ Body: LoginEmailInput }>(
-    '/login/email',
+    '/login',
     async (request, reply: FastifyReply) => {
       const { login, password } = request.body;
 

@@ -1,69 +1,38 @@
 // This file is specifically for drizzle-kit when generating SQLite migrations.
-// It imports table definitions from the central schema.ts and instantiates them
-// using sqliteTable and SQLite-specific column types/builders.
+// It defines the actual SQLite tables with proper foreign key relationships.
 
-import { sqliteTable, text as sqliteText, integer as sqliteInteger } from 'drizzle-orm/sqlite-core';
-import { baseTableDefinitions, pluginTableDefinitions } from './schema'; // Central definitions
+import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const tables: Record<string, any> = {};
+// Define tables with proper foreign key relationships
+export const users = sqliteTable('users', {
+  id: text('id').primaryKey(),
+  email: text('email').notNull().unique(),
+  name: text('name'),
+  created_at: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  updated_at: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+});
 
-// Helper to get the correct SQLite column builder
-function getSqliteColumnBuilder(type: 'text' | 'integer' | 'timestamp') {
-  if (type === 'text') return sqliteText;
-  if (type === 'integer') return sqliteInteger;
-  // For SQLite, timestamp is often handled as integer with mode, or text.
-  // The columnDefFunc from schema.ts for createdAt/updatedAt already includes { mode: 'timestamp' }
-  // when using sqliteInteger.
-  if (type === 'timestamp') return sqliteInteger; 
-  throw new Error(`Unsupported column type for SQLite: ${type}`);
-}
+export const authUser = sqliteTable('authUser', {
+  id: text('id').primaryKey(),
+  username: text('username').notNull().unique(),
+  email: text('email').notNull().unique(),
+  auth_type: text('auth_type').notNull(),
+  first_name: text('first_name'),
+  last_name: text('last_name'),
+  github_id: text('github_id').unique(),
+  hashed_password: text('hashed_password'),
+});
 
-// Instantiate base tables for SQLite
-for (const [tableName, tableColumnDefinitions] of Object.entries(baseTableDefinitions)) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const columns: Record<string, any> = {};
-  for (const [columnName, columnDefFunc] of Object.entries(tableColumnDefinitions)) {
-    // Determine builder type (heuristic, same as in db/index.ts and schema.pg.ts)
-    let builderType: 'text' | 'integer' | 'timestamp' = 'text';
-    if (columnName.toLowerCase().includes('at') || columnName.toLowerCase().includes('date')) {
-      builderType = 'timestamp';
-    } else if (columnName === 'expires_at') {
-      builderType = 'integer'; // expires_at should be bigint/integer for timestamps
-    } else if (columnName === 'expires') {
-      builderType = 'integer'; // expires should be bigint/integer for timestamps
-    }
-    // All IDs in auth tables should be text
-    if (columnName === 'id' || columnName === 'user_id') {
-      builderType = 'text';
-    }
-    
-    const builder = getSqliteColumnBuilder(builderType);
-    columns[columnName] = columnDefFunc(builder);
-  }
-  tables[tableName] = sqliteTable(tableName, columns);
-}
+export const authSession = sqliteTable('authSession', {
+  id: text('id').primaryKey(),
+  user_id: text('user_id').notNull().references(() => authUser.id, { onDelete: 'cascade' }),
+  expires_at: integer('expires_at', { mode: 'number' }).notNull(),
+});
 
-// Instantiate plugin tables for SQLite (similar logic)
-for (const [tableName, tableColumnDefinitions] of Object.entries(pluginTableDefinitions)) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const columns: Record<string, any> = {};
-  for (const [columnName, columnDefFunc] of Object.entries(tableColumnDefinitions)) {
-    let builderType: 'text' | 'integer' | 'timestamp' = 'text';
-    if (columnName.toLowerCase().includes('at') || columnName.toLowerCase().includes('date')) {
-      builderType = 'timestamp';
-    } else if (['id', 'count', 'age', 'quantity', 'order', 'status', 'number'].some(keyword => columnName.toLowerCase().includes(keyword))) {
-      builderType = 'integer';
-    }
-    const builder = getSqliteColumnBuilder(builderType);
-    columns[columnName] = columnDefFunc(builder);
-  }
-  tables[tableName] = sqliteTable(tableName, columns);
-}
-
-// Export all tables for drizzle-kit to find.
-// Drizzle Kit expects top-level exports of table objects.
-export const users = tables.users;
-export const authUser = tables.authUser;
-export const authSession = tables.authSession;
-export const authKey = tables.authKey;
+export const authKey = sqliteTable('authKey', {
+  id: text('id').primaryKey(),
+  user_id: text('user_id').notNull().references(() => authUser.id, { onDelete: 'cascade' }),
+  primary_key: text('primary_key').notNull(),
+  hashed_password: text('hashed_password'),
+  expires: integer('expires', { mode: 'number' }),
+});

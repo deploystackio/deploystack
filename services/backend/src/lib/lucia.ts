@@ -100,6 +100,11 @@ export function getLucia(): Lucia {
   return luciaInstance;
 }
 
+// Function to reset Lucia instance (useful for testing or config changes)
+export function resetLucia(): void {
+  luciaInstance = null;
+}
+
 // Getter function for GitHub OAuth instance
 export function getGithubAuth(): GitHub {
   if (!githubAuthInstance) {

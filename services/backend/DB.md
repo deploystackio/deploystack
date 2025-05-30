@@ -162,6 +162,8 @@ Tables defined by plugins are automatically created when the plugin is loaded an
 - Include proper foreign key constraints for relational data
 - Add explicit types for all columns
 - Always use migrations for schema changes in development and production
+- **Important**: When adding foreign key relationships, update the dialect-specific schema files (e.g., `src/db/schema.sqlite.ts`) rather than the central `schema.ts` file, as Drizzle Kit uses these files for migration generation
+- Never manually create migration files - always use `npm run db:generate` to ensure proper migration structure
 
 ## Inspecting the Database
 

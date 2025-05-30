@@ -65,7 +65,7 @@ function generateSchema(dialect: 'sqlite' | 'postgres'): AnySchema {
       let builderType: 'text' | 'integer' | 'timestamp' = 'text';
       
       // Special handling for specific columns
-      if (columnName === 'id') {
+      if (columnName === 'id' || columnName === 'user_id') {
         builderType = 'text'; // All IDs are text (Lucia uses string IDs)
       } else if (columnName === 'expires_at') {
         builderType = 'integer'; // Lucia uses number for expires_at
