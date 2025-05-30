@@ -26,21 +26,25 @@ To perform the initial setup of the database, use the following endpoint:
 
 **For SQLite:**
 The server will automatically manage the database file location. The request body should be:
+
 ```json
 {
   "type": "sqlite"
 }
 ```
+
 The SQLite database file will be created and stored at: `services/backend/persistent_data/database/deploystack.db`.
 
 **For PostgreSQL:**
 The request body should be:
+
 ```json
 {
   "type": "postgres",
   "connectionString": "postgresql://username:password@host:port/mydatabase"
 }
 ```
+
 Replace the `connectionString` with your actual PostgreSQL connection URI.
 
 **Important:** After the initial database setup via this API, you **must restart the backend server** for the changes to take full effect and for the application to connect to the newly configured database.
@@ -168,6 +172,7 @@ You can inspect the SQLite database directly using various tools:
   ```bash
   sqlite3 services/backend/persistent_data/database/deploystack.db
   ```
+
   (Assuming the command is run from the project root directory)
 
 - **Visual Tools**: [DB Browser for SQLite](https://sqlitebrowser.org/) or VSCode extensions like SQLite Viewer
