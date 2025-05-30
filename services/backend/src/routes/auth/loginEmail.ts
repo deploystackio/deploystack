@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import { getLucia } from '../../lib/lucia'; // Corrected import
-import { LoginEmailSchema, type LoginEmailInput } from './schemas';
+import { type LoginEmailInput } from './schemas';
 // argon2 is not directly used here as lucia.useKey handles password verification
 import { verify } from '@node-rs/argon2';
 import { getDb, getSchema } from '../../db';
@@ -23,6 +23,7 @@ export default async function loginEmailRoute(fastify: FastifyInstance) {
         }
 
         // Find user by email or username
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const users = await (db as any)
           .select()
           .from(authUserTable)

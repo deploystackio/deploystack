@@ -1,6 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import { getLucia, getGithubAuth } from '../../lib/lucia';
-import { GithubCallbackSchema, type GithubCallbackInput } from './schemas';
+import { type GithubCallbackInput } from './schemas';
 import { getDb, getSchema } from '../../db';
 import { eq } from 'drizzle-orm';
 import { generateId } from 'lucia';
