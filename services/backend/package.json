@@ -40,7 +40,6 @@
     "release-it": "^19.0.2",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.3",
-<<<<<<< HEAD
     "typescript-eslint": "^8.32.1"
   },
   "overrides": {
@@ -52,8 +51,6 @@
         "esbuild": "0.25.2"
       }
     }
-=======
     "typescript-eslint": "^8.33.0"
->>>>>>> e0ca107906160249b5c194039d3c60d5692813ab
   }
 }
