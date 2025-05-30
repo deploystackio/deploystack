@@ -127,7 +127,7 @@ Alternatively, you can deploy the pre-built Docker images for the frontend and b
     The frontend requires environment variables to connect to the backend and for other configurations.
 
     ```bash
-    docker run -d -p 8080:8080 \
+    docker run -d -p 8080:80 \
       -e VITE_DEPLOYSTACK_APP_URL="http://localhost:3000" \
       -e VITE_APP_TITLE="DeployStack Instance" \
       deploystack/frontend:latest
