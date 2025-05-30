@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.20.3](https://github.com/deploystackio/deploystack/compare/backend-v0.20.2...backend-v0.20.3) (2025-05-30)
+
+
+### chore
+
+* update backend version to 0.20.2 and typescript-eslint to 8.33.0 ([](https://github.com/deploystackio/deploystack/commit/bc015afd966ad8b304c619e00de57d57dcf583b8))
+
 ## 0.20.2 (2025-05-30)
 
 
