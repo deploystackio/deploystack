@@ -19,10 +19,12 @@ module.exports = {
   },
   "plugins": {
     "@release-it/conventional-changelog": {
-      "preset": "angular",
+      "preset": {
+        "name": "angular"
+      },
       "infile": "CHANGELOG.md",
       "ignoreRecommendedBump": true,
-      "commitPath": ".",
+      "path": "services/backend",
       "writerOpts": {
         "commitsFilter": ["feat", "fix", "perf", "revert"],
         "transform": function(commit, context) {
