@@ -1,6 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import { getLucia } from '../../lib/lucia';
-import { RegisterEmailSchema, type RegisterEmailInput } from './schemas';
+import { type RegisterEmailInput } from './schemas';
 import { getDb, getSchema } from '../../db';
 import { eq, or } from 'drizzle-orm';
 import { generateId } from 'lucia'; // Lucia's utility for generating IDs
