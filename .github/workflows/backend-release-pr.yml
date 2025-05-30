@@ -75,13 +75,16 @@ jobs:
               END { print content }
             ' CHANGELOG.md)
             
-            # Remove leading/trailing whitespace and save to output
+            # Clean up empty markdown links and remove empty lines
+            CLEAN_NOTES=$(echo "$RELEASE_NOTES" | sed 's/(\[\]([^)]*))//g' | sed '/^$/d')
+            
+            # Save to output
             echo "release_notes<<EOF" >> $GITHUB_OUTPUT
-            echo "$RELEASE_NOTES" | sed '/^$/d' >> $GITHUB_OUTPUT
+            echo "$CLEAN_NOTES" >> $GITHUB_OUTPUT
             echo "EOF" >> $GITHUB_OUTPUT
             
             echo "Release notes extracted:"
-            echo "$RELEASE_NOTES"
+            echo "$CLEAN_NOTES"
           else
             echo "No CHANGELOG.md found"
             echo "release_notes=" >> $GITHUB_OUTPUT
