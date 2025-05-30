@@ -52,8 +52,29 @@ export default async function loginEmailRoute(fastify: FastifyInstance) {
           return reply.status(400).send({ error: 'Invalid email/username or password.' });
         }
 
-        const session = await getLucia().createSession(user.id, {});
-        const sessionCookie = getLucia().createSessionCookie(session.id);
+        // Check if user ID exists
+        if (!user.id) {
+          fastify.log.error('User ID is null or undefined:', user.id);
+          return reply.status(500).send({ error: 'User ID not found.' });
+        }
+        
+        // Use manual session creation like in registration to avoid Lucia adapter issues
+        const { generateId } = await import('lucia');
+        const sessionId = generateId(40); // Generate session ID
+        const expiresAt = Date.now() + 1000 * 60 * 60 * 24 * 30; // 30 days
+        
+        const authSessionTable = schema.authSession;
+        
+        // Insert session directly into database
+        await (db as any).insert(authSessionTable).values({
+          id: sessionId,
+          user_id: user.id,
+          expires_at: expiresAt
+        });
+        
+        fastify.log.info(`Session created successfully for user: ${user.id}`);
+        
+        const sessionCookie = getLucia().createSessionCookie(sessionId);
 
         reply.setCookie(sessionCookie.name, sessionCookie.value, sessionCookie.attributes);
         return reply.status(200).send({ message: 'Logged in successfully.' });
