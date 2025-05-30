@@ -1,5 +1,38 @@
 # Changelog
 
+## [0.12.4](https://github.com/deploystackio/deploystack/compare/frontend-v0.12.2...frontend-v0.12.4) (2025-05-30)
+
+
+### chore
+
+* **frontend:** release v0.12.3 ([](https://github.com/deploystackio/deploystack/commit/82e896cbb1911753834dee0482abf674b9bcfbab))
+
+
+### fix
+
+* enhance error handling for database connection and update error messages ([](https://github.com/deploystackio/deploystack/commit/b25524556ed0aa92b3873f2460d1f9cd622f8e5f))
+* update conventional changelog plugin configuration for backend and frontend ([](https://github.com/deploystackio/deploystack/commit/bbcfbf4da3edec1de943605fa1482aa6bab5b9fd))
+* update Docker run command for frontend environment variables ([](https://github.com/deploystackio/deploystack/commit/348b77aaf69c170e6e57184406270e9e55c728ac))
+
+
+### frontend
+
+* update environment variable references to use VITE_DEPLOYSTACK_APP_URL ([](https://github.com/deploystackio/deploystack/commit/d7361d562a0a22569cc910fd422bdb91318b6595))
+
+## [0.12.3](https://github.com/deploystackio/deploystack/compare/frontend-v0.12.2...frontend-v0.12.3) (2025-05-30)
+
+
+### fix
+
+* enhance error handling for database connection and update error messages ([](https://github.com/deploystackio/deploystack/commit/b25524556ed0aa92b3873f2460d1f9cd622f8e5f))
+* update conventional changelog plugin configuration for backend and frontend ([](https://github.com/deploystackio/deploystack/commit/bbcfbf4da3edec1de943605fa1482aa6bab5b9fd))
+* update Docker run command for frontend environment variables ([](https://github.com/deploystackio/deploystack/commit/348b77aaf69c170e6e57184406270e9e55c728ac))
+
+
+### frontend
+
+* update environment variable references to use VITE_DEPLOYSTACK_APP_URL ([](https://github.com/deploystackio/deploystack/commit/d7361d562a0a22569cc910fd422bdb91318b6595))
+
 ## 0.12.2 (2025-05-30)
 
 
