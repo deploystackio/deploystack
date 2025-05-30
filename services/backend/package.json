@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@fastify/cookie": "^11.0.2",
+    "@fastify/cors": "^11.0.1",
     "@lucia-auth/adapter-drizzle": "^1.1.0",
     "@node-rs/argon2": "^2.0.2",
     "arctic": "^3.7.0",
