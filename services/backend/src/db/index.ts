@@ -53,6 +53,7 @@ function generateSchema(dialect: 'sqlite' | 'postgres'): AnySchema {
   const generatedSchema: AnySchema = {};
 
   // Create enum for PostgreSQL auth_type
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let authTypeEnum: any = null;
   if (dialect === 'postgres') {
     authTypeEnum = pgEnum('auth_type', authTypeEnumValues);
@@ -331,6 +332,7 @@ export function getSchema(): AnySchema {
 
 // Helper function to safely execute database operations with proper typing
 export function executeDbOperation<T>(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   operation: (db: any, schema: any) => Promise<T> | T
 ): Promise<T> | T {
   const db = getDb();
