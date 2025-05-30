@@ -14,7 +14,9 @@ module.exports = {
   },
   "hooks": {
     "before:init": ["npm run lint"],
-    "after:bump": "npm run build",
+    // Only run build when NOT in CI mode (i.e., during actual release merge)
+    // During PR creation (CI=true), skip build to avoid rollup issues
+    "after:bump": process.env.CI ? [] : ["npm run build"],
     "after:release": "echo 'Frontend ${version} released!'"
   },
   "plugins": {
