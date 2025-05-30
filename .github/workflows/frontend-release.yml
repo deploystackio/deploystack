@@ -19,6 +19,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          token: ${{ secrets.APP_INSTALLATION_TOKEN }}
           
       - name: git config
         run: |
@@ -31,17 +32,25 @@ jobs:
           node-version: 20
           cache: npm
       
-      # Install dependencies at root level for workspaces
+      # Clean install dependencies
       - name: Install dependencies
         run: |
-          rm -f package-lock.json
-          npm install
+          npm ci || {
+            echo "npm ci failed, trying clean install with rollup fix..."
+            rm -rf node_modules services/frontend/node_modules
+            npm install --no-optional
+          }
+          
+      # Force install the missing rollup platform package if needed
+      - name: Fix Rollup platform package
+        run: |
+          npm install @rollup/rollup-linux-x64-gnu --save-optional || echo "Rollup package already installed"
       
       # Run release-it with conventional changelog
       - name: Prepare release
         working-directory: services/frontend
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.APP_INSTALLATION_TOKEN }}
         run: npm run release -- --ci --verbose --no-git.requireCleanWorkingDir
         
       # Get the version after release-it has run
@@ -73,15 +82,20 @@ jobs:
           echo "Updated .env file:"
           grep VITE_DEPLOYSTACK_APP_VERSION .env
       
-      # Build the frontend with version env var
+      # Build the frontend with version env var - with rollup fix
       - name: Build frontend
         working-directory: services/frontend
         env:
           VITE_DEPLOYSTACK_APP_VERSION: ${{ steps.package-version.outputs.current-version }}
         run: |
-          # First try a clean install instead of using cached dependencies
-          # npm run build || mkdir -p dist && echo '<html><body><h1>DeployStack Frontend</h1><p>Version ${{ steps.package-version.outputs.current-version }}</p></body></html>' > dist/index.html
-          npm run build
+          # Try build, if it fails due to rollup, try to fix and rebuild
+          npm run build || {
+            echo "Build failed, attempting rollup fix..."
+            cd ../..
+            npm install @rollup/rollup-linux-x64-gnu --save-optional --force
+            cd services/frontend
+            npm run build
+          }
           ls -al ./dist
       
       - name: Set up QEMU
