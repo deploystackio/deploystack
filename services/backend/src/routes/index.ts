@@ -2,11 +2,27 @@ import { type FastifyInstance } from 'fastify'
 // Import the individual database setup routes
 import dbStatusRoute from './db/status'
 import dbSetupRoute from './db/setup'
+// Import auth routes
+import registerEmailRoute from './auth/registerEmail'
+import loginEmailRoute from './auth/loginEmail'
+import logoutRoute from './auth/logout'
+// Import role and user management routes
+import rolesRoute from './roles'
+import usersRoute from './users'
 
 export const registerRoutes = (server: FastifyInstance): void => {
   // Register the individual database setup routes
   server.register(dbStatusRoute);
   server.register(dbSetupRoute);
+  
+  // Register auth routes
+  server.register(registerEmailRoute);
+  server.register(loginEmailRoute);
+  server.register(logoutRoute);
+  
+  // Register role and user management routes
+  server.register(rolesRoute);
+  server.register(usersRoute);
 
   // Define a default route (example)
   server.get('/', async () => {

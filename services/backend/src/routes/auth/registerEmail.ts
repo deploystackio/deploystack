@@ -1,6 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import { getLucia } from '../../lib/lucia';
-import { RegisterEmailSchema, type RegisterEmailInput } from './schemas';
+import { type RegisterEmailInput } from './schemas';
 import { getDb, getSchema } from '../../db';
 import { eq, or } from 'drizzle-orm';
 import { generateId } from 'lucia'; // Lucia's utility for generating IDs
@@ -8,7 +9,7 @@ import { hash } from '@node-rs/argon2';
 
 export default async function registerEmailRoute(fastify: FastifyInstance) {
   fastify.post<{ Body: RegisterEmailInput }>( // Use Fastify's generic type for request body
-    '/register/email',
+    '/register',
     async (request, reply: FastifyReply) => { // request type will be inferred by Fastify
       const { username, email, password, first_name, last_name } = request.body; // request.body should now be typed as RegisterEmailInput
 
@@ -49,6 +50,11 @@ export default async function registerEmailRoute(fastify: FastifyInstance) {
         });
         const userId = generateId(15); // Generate a 15-character unique ID
 
+        // Check if this is the first user (will become global_admin)
+        const allUsers = await (db as any).select().from(authUserTable).limit(1);
+        const isFirstUser = allUsers.length === 0;
+        const defaultRole = isFirstUser ? 'global_admin' : 'global_user';
+
         // Insert user directly into database (Lucia v3 doesn't have createUser with keys)
         await (db as any).insert(authUserTable).values({
           id: userId,
@@ -59,11 +65,40 @@ export default async function registerEmailRoute(fastify: FastifyInstance) {
           last_name: last_name || null,
           github_id: null,
           hashed_password: hashedPassword, // Store password in user table
+          role_id: defaultRole, // Assign role (no default in schema, so we must provide it)
         });
 
-        const session = await getLucia().createSession(userId, {}); // Empty object for session attributes
-        const sessionCookie = getLucia().createSessionCookie(session.id);
+        // Verify user was created successfully before creating session
+        const createdUser = await (db as any)
+          .select()
+          .from(authUserTable)
+          .where(eq(authUserTable.id, userId))
+          .limit(1);
 
+        if (createdUser.length === 0) {
+          fastify.log.error('User creation failed - user not found after insert');
+          return reply.status(500).send({ error: 'User creation failed.' });
+        }
+
+        fastify.log.info(`User created successfully: ${userId} with role: ${defaultRole}`);
+
+        // Create session manually (Lucia's createSession has issues with our schema)
+        const sessionId = generateId(40); // Generate session ID
+        const expiresAt = Date.now() + 1000 * 60 * 60 * 24 * 30; // 30 days
+        
+        const authSessionTable = schema.authSession;
+        
+        // Insert session directly into database
+        await (db as any).insert(authSessionTable).values({
+          id: sessionId,
+          user_id: userId,
+          expires_at: expiresAt
+        });
+        
+        fastify.log.info(`Session created successfully for user: ${userId}`);
+        
+        const sessionCookie = getLucia().createSessionCookie(sessionId);
+        
         reply.setCookie(sessionCookie.name, sessionCookie.value, sessionCookie.attributes);
         return reply.status(201).send({ message: 'User registered successfully.' });
 

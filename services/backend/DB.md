@@ -26,21 +26,25 @@ To perform the initial setup of the database, use the following endpoint:
 
 **For SQLite:**
 The server will automatically manage the database file location. The request body should be:
+
 ```json
 {
   "type": "sqlite"
 }
 ```
+
 The SQLite database file will be created and stored at: `services/backend/persistent_data/database/deploystack.db`.
 
 **For PostgreSQL:**
 The request body should be:
+
 ```json
 {
   "type": "postgres",
   "connectionString": "postgresql://username:password@host:port/mydatabase"
 }
 ```
+
 Replace the `connectionString` with your actual PostgreSQL connection URI.
 
 **Important:** After the initial database setup via this API, you **must restart the backend server** for the changes to take full effect and for the application to connect to the newly configured database.
@@ -158,6 +162,8 @@ Tables defined by plugins are automatically created when the plugin is loaded an
 - Include proper foreign key constraints for relational data
 - Add explicit types for all columns
 - Always use migrations for schema changes in development and production
+- **Important**: When adding foreign key relationships, update the dialect-specific schema files (e.g., `src/db/schema.sqlite.ts`) rather than the central `schema.ts` file, as Drizzle Kit uses these files for migration generation
+- Never manually create migration files - always use `npm run db:generate` to ensure proper migration structure
 
 ## Inspecting the Database
 
@@ -168,6 +174,7 @@ You can inspect the SQLite database directly using various tools:
   ```bash
   sqlite3 services/backend/persistent_data/database/deploystack.db
   ```
+
   (Assuming the command is run from the project root directory)
 
 - **Visual Tools**: [DB Browser for SQLite](https://sqlitebrowser.org/) or VSCode extensions like SQLite Viewer

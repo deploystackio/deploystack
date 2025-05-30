@@ -30,6 +30,8 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          # Use the app token for checkout as well
+          token: ${{ secrets.APP_INSTALLATION_TOKEN }}
       - name: git config
         run: |
           git config user.name "${GITHUB_ACTOR}"
@@ -42,7 +44,7 @@ jobs:
       - run: npm ci
       - name: Prepare release
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.APP_INSTALLATION_TOKEN }}
           TYPE_ARG: ${{ fromJSON('{"auto":"", "patch":"patch", "minor":"minor", "major":"major"}')[github.event.inputs.type] }}
           BETA_ARG: ${{ github.event.inputs.beta == 'true' && '--preRelease=beta' || '' }}
         run: npm run release -- $TYPE_ARG --ci --verbose --no-git.push --no-git.commit --no-git.tag --no-github $BETA_ARG
@@ -60,6 +62,8 @@ jobs:
         uses: peter-evans/create-pull-request@v7
         id: cpr
         with:
+          # This is the key change - use the app token
+          token: ${{ secrets.APP_INSTALLATION_TOKEN }}
           branch: backend-release
           delete-branch: true
           commit-message: 'chore(backend): release v${{ steps.package-version.outputs.current-version}}'
