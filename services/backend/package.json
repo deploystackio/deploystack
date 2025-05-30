@@ -1,6 +1,6 @@
 {
   "name": "@deploystack/backend",
-  "version": "0.19.0",
+  "version": "0.20.0",
   "scripts": {
     "dev": "node --env-file=.env --require ts-node/register src/index.ts",
     "build": "tsc",
