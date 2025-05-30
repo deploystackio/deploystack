@@ -4,7 +4,7 @@ import { toTypedSchema } from '@vee-validate/zod'
 import * as z from 'zod'
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { Mail, Lock } from 'lucide-vue-next'
+import { Mail, Lock, AlertTriangle } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 
 import {
@@ -12,6 +12,12 @@ import {
   CardContent,
   CardFooter,
 } from '@/components/ui/card'
+
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from '@/components/ui/alert'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -25,6 +31,7 @@ import { Input } from '@/components/ui/input'
 
 const router = useRouter()
 const isLoading = ref(false)
+const errorMessage = ref('')
 const { t } = useI18n() // Initialize i18n composable
 
 // Define validation schema using Zod
@@ -50,16 +57,73 @@ const form = useForm({
   },
 })
 
-const onSubmit = form.handleSubmit((values) => {
-  // Mock login functionality
-  isLoading.value = true
+// Clear error when user starts typing
+const clearError = () => {
+  errorMessage.value = ''
+}
 
-  // Simulate API call
-  setTimeout(() => {
-    console.log('Login submitted!', values)
+// Handle different types of errors
+const handleError = (error: any) => {
+  if (error.name === 'TypeError' && error.message.includes('fetch')) {
+    // Network error - backend is down
+    errorMessage.value = t('login.errors.networkError')
+  } else if (error.status === 401) {
+    // Unauthorized - invalid credentials
+    errorMessage.value = t('login.errors.invalidCredentials')
+  } else if (error.status >= 500) {
+    // Server error
+    errorMessage.value = t('login.errors.serverError')
+  } else if (error.name === 'AbortError') {
+    // Request timeout
+    errorMessage.value = t('login.errors.timeout')
+  } else {
+    // Unknown error
+    errorMessage.value = t('login.errors.unknownError')
+  }
+}
+
+const onSubmit = form.handleSubmit(async (values) => {
+  isLoading.value = true
+  errorMessage.value = ''
+
+  try {
+    // Create AbortController for timeout handling
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
+
+    const response = await fetch(`${apiUrl}/auth/login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email: values.email,
+        password: values.password,
+      }),
+      signal: controller.signal,
+    })
+
+    clearTimeout(timeoutId)
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      const error = new Error(errorData.message || 'Login failed') as Error & { status: number }
+      error.status = response.status
+      throw error
+    }
+
+    const data = await response.json()
+    console.log('Login successful!', data)
+
+    // Handle successful login - redirect to dashboard or home
+    router.push('/dashboard')
+
+  } catch (error) {
+    console.error('Login error:', error)
+    handleError(error)
+  } finally {
     isLoading.value = false
-    // In a real app, you would handle authentication here
-  }, 1000)
+  }
 })
 
 import { getEnv, getAllEnv } from '@/utils/env';
@@ -87,6 +151,15 @@ const navigateToRegister = () => {
     </div>
 
     <div class="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
+      <!-- Error Alert -->
+      <Alert v-if="errorMessage" variant="destructive" class="mb-6">
+        <AlertTriangle class="h-4 w-4" />
+        <AlertTitle>{{ $t('login.errors.title') }}</AlertTitle>
+        <AlertDescription>
+          {{ errorMessage }}
+        </AlertDescription>
+      </Alert>
+
       <Card>
         <CardContent class="pt-6">
           <form @submit="onSubmit" class="space-y-6">
@@ -102,6 +175,7 @@ const navigateToRegister = () => {
                       v-bind="componentField"
                       class="pl-10"
                       autocomplete="email"
+                      @input="clearError"
                     />
                   </div>
                 </FormControl>
@@ -128,6 +202,7 @@ const navigateToRegister = () => {
                       v-bind="componentField"
                       class="pl-10"
                       autocomplete="current-password"
+                      @input="clearError"
                     />
                   </div>
                 </FormControl>
