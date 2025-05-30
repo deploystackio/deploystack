@@ -18,14 +18,14 @@
     "arctic": "^3.7.0",
     "argon2": "^0.43.0",
     "better-sqlite3": "^11.10.0",
-    "drizzle-orm": "^0.43.1",
+    "drizzle-orm": "^0.44.0",
     "fastify": "^5.3.3",
     "fastify-favicon": "^5.0.0",
     "lucia": "^3.2.2",
     "pg": "^8.16.0",
     "pino": "^9.7.0",
     "pino-pretty": "^13.0.0",
-    "zod": "^3.25.36"
+    "zod": "^3.25.42"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.8.1",
@@ -33,13 +33,14 @@
     "@eslint/js": "^9.27.0",
     "@release-it/conventional-changelog": "^10.0.1",
     "@types/pg": "^8.15.2",
-    "@typescript-eslint/eslint-plugin": "^8.32.0",
-    "@typescript-eslint/parser": "^8.32.1",
+    "@typescript-eslint/eslint-plugin": "^8.33.0",
+    "@typescript-eslint/parser": "^8.33.0",
     "drizzle-kit": "^0.31.1",
     "eslint": "^9.27.0",
     "release-it": "^19.0.2",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.3",
+<<<<<<< HEAD
     "typescript-eslint": "^8.32.1"
   },
   "overrides": {
@@ -51,5 +52,8 @@
         "esbuild": "0.25.2"
       }
     }
+=======
+    "typescript-eslint": "^8.33.0"
+>>>>>>> e0ca107906160249b5c194039d3c60d5692813ab
   }
 }
