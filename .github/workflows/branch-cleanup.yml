@@ -1,0 +1,62 @@
+name: Clean Release Branches
+
+on:
+  pull_request_target:
+    types: [closed]
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  clean-release-branches:
+    runs-on: ubuntu-latest
+    # Only run if the PR is from backend-release or frontend-release branches
+    if: github.event.pull_request.head.ref == 'backend-release' || github.event.pull_request.head.ref == 'frontend-release'
+    steps:
+      - name: Delete release branch
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.APP_INSTALLATION_TOKEN }}
+          script: |
+            const branchName = context.payload.pull_request.head.ref;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            
+            console.log(`Attempting to delete branch: ${branchName}`);
+            
+            try {
+              // Delete the branch
+              await github.rest.git.deleteRef({
+                owner: owner,
+                repo: repo,
+                ref: `heads/${branchName}`
+              });
+              
+              console.log(`Successfully deleted branch: ${branchName}`);
+              
+              // Add a comment to the PR about the branch deletion
+              const status = context.payload.pull_request.merged ? 'merged' : 'closed';
+              const emoji = context.payload.pull_request.merged ? '✅' : '❌';
+              
+              await github.rest.issues.createComment({
+                issue_number: context.payload.pull_request.number,
+                owner: owner,
+                repo: repo,
+                body: `## Release Branch Cleanup ${emoji}\n\nBranch \`${branchName}\` has been automatically deleted after PR was ${status}.`
+              });
+              
+            } catch (error) {
+              console.error(`Error deleting branch ${branchName}:`, error);
+              
+              // Add a comment about the failure
+              await github.rest.issues.createComment({
+                issue_number: context.payload.pull_request.number,
+                owner: owner,
+                repo: repo,
+                body: `## Release Branch Cleanup Failed ⚠️\n\nFailed to automatically delete branch \`${branchName}\`. Manual cleanup may be required.\n\nError: ${error.message}`
+              });
+            }

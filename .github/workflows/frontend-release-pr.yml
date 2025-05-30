@@ -6,11 +6,10 @@ on:
         type: choice
         description: Choose release type
         options:
-          - auto
           - patch
           - minor
           - major
-        default: auto
+        default: patch
       beta:
         type: boolean
         description: Prerelease
@@ -19,6 +18,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  issues: write
 
 jobs:
   releaseIt:
@@ -30,89 +30,77 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          
+          # Use the app token for checkout as well
+          token: ${{ secrets.APP_INSTALLATION_TOKEN }}
       - name: git config
         run: |
           git config user.name "${GITHUB_ACTOR}"
           git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
-          
       - name: Setup node
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
-          
-      # Clean install to avoid rollup issues with optional dependencies
-      - name: Install dependencies with clean slate
+      - run: npm ci
+      - name: Prepare release
+        env:
+          GITHUB_TOKEN: ${{ secrets.APP_INSTALLATION_TOKEN }}
+          TYPE_ARG: ${{ fromJSON('{"patch":"patch", "minor":"minor", "major":"major"}')[github.event.inputs.type] }}
+          BETA_ARG: ${{ github.event.inputs.beta == 'true' && '--preRelease=beta' || '' }}
+        run: npm run release -- $TYPE_ARG --ci --verbose --no-git.push --no-git.commit --no-git.tag --no-github $BETA_ARG
+      - name: get-npm-version
+        id: package-version
+        uses: martinbeentjes/npm-get-version-action@main
+        with:
+          path: services/frontend
+      - name: Extract release notes
+        id: extract-release-notes
         run: |
-          rm -rf node_modules package-lock.json || true
-          npm install
-      
-      # Determine the next version based on input
-      - name: Get current version
-        id: current-version
-        run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
-        
-      - name: Determine next version
-        id: next-version
-        run: |
-          current=${{ steps.current-version.outputs.version }}
-          IFS='.' read -r -a version_parts <<< "$current"
-          major=${version_parts[0]}
-          minor=${version_parts[1]}
-          patch=${version_parts[2]}
+          # Get the current version from the package.json in the current working directory
+          VERSION=$(cat package.json | grep '"version"' | cut -d'"' -f4)
+          echo "Extracting release notes for version $VERSION"
           
-          # Determine type of version bump
-          case "${{ github.event.inputs.type }}" in
-            major)
-              new_major=$((major + 1))
-              new_version="$new_major.0.0"
-              ;;
-            minor)
-              new_minor=$((minor + 1))
-              new_version="$major.$new_minor.0"
-              ;;
-            patch)
-              new_patch=$((patch + 1))
-              new_version="$major.$minor.$new_patch"
-              ;;
-            auto|*)
-              # Default to minor
-              new_minor=$((minor + 1))
-              new_version="$major.$new_minor.0"
-              ;;
-          esac
-          
-          # Add beta suffix if requested
-          if [[ "${{ github.event.inputs.beta }}" == "true" ]]; then
-            new_version="${new_version}-beta.1"
+          # Extract the changelog section for this version
+          if [ -f CHANGELOG.md ]; then
+            # Look for the version header and extract content until the next version or end of file
+            RELEASE_NOTES=$(awk -v version="$VERSION" '
+              BEGIN { found=0; content="" }
+              /^##? [0-9]+\.[0-9]+\.[0-9]+/ { 
+                if (found) exit
+                if ($0 ~ version) { found=1; next }
+              }
+              found && /^##? [0-9]+\.[0-9]+\.[0-9]+/ { exit }
+              found { content = content $0 "\n" }
+              END { print content }
+            ' CHANGELOG.md)
+            
+            # Clean up empty markdown links and remove empty lines
+            CLEAN_NOTES=$(echo "$RELEASE_NOTES" | sed 's/(\[\]([^)]*))//g' | sed '/^$/d')
+            
+            # Save to output
+            echo "release_notes<<EOF" >> $GITHUB_OUTPUT
+            echo "$CLEAN_NOTES" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+            
+            echo "Release notes extracted:"
+            echo "$CLEAN_NOTES"
+          else
+            echo "No CHANGELOG.md found"
+            echo "release_notes=" >> $GITHUB_OUTPUT
           fi
-          
-          echo "version=$new_version" >> $GITHUB_OUTPUT
-      
-      # Create a temporary changelog entry
-      - name: Generate changelog entry
-        id: changelog
-        run: |
-          echo "# ${{ steps.next-version.outputs.version }} ($(date +%Y-%m-%d))" > CHANGELOG_NEW.md
-          echo "" >> CHANGELOG_NEW.md
-          echo "### Features" >> CHANGELOG_NEW.md
-          echo "* Release version ${{ steps.next-version.outputs.version }}" >> CHANGELOG_NEW.md
-          echo "" >> CHANGELOG_NEW.md
-          cat CHANGELOG.md >> CHANGELOG_NEW.md 2>/dev/null || true
-          cat CHANGELOG_NEW.md > TEMP_CHANGELOG.md
-          
-      # Create a PR with the version changes
+        working-directory: services/frontend
       - name: Create pull request
         uses: peter-evans/create-pull-request@v7
         id: cpr
         with:
+          # This is the key change - use the app token
+          token: ${{ secrets.APP_INSTALLATION_TOKEN }}
           branch: frontend-release
           delete-branch: true
-          commit-message: 'chore(frontend): release v${{ steps.next-version.outputs.version }}'
-          title: '[Frontend Release] v${{ steps.next-version.outputs.version }}'
+          commit-message: 'chore(frontend): release v${{ steps.package-version.outputs.current-version}}'
+          title: '[Frontend Release] v${{ steps.package-version.outputs.current-version}}'
           body: |
-            ## Frontend Release v${{ steps.next-version.outputs.version }}
+            ## Frontend Release v${{ steps.package-version.outputs.current-version}}
             
             This PR prepares a new frontend release.
             
@@ -122,25 +110,24 @@ jobs:
             
             The Docker image will be available at:
             - `deploystack/frontend:latest`
-            - `deploystack/frontend:v${{ steps.next-version.outputs.version }}`
+            - `deploystack/frontend:v${{ steps.package-version.outputs.current-version}}`
             
             ### Supported Architectures
             - `linux/amd64` (Intel/AMD)
             - `linux/arm64` (Apple Silicon, AWS Graviton)
             - `linux/arm/v7` (Raspberry Pi, IoT devices)
             
+            ### Environment Variables
+            The Docker image will include `DEPLOYSTACK_FRONTEND_VERSION` environment variable set to the current version.
+            
             ## Release notes:
-            See attached changelog updates
+            ${{ steps.extract-release-notes.outputs.release_notes }}
           labels: |
             frontend
             release
             automated pr
           draft: false
-          add-paths: |
-            services/frontend/package.json
-            services/frontend/CHANGELOG.md
-      
       - name: Show PR link
         if: ${{ steps.cpr.outputs.pull-request-url }}
         run: |
-          echo "Frontend Release v${{ steps.next-version.outputs.version }}' pull request - ${{ steps.cpr.outputs.pull-request-url }}"
+          echo "Frontend Release v${{ steps.package-version.outputs.current-version}}' pull request - ${{ steps.cpr.outputs.pull-request-url }}"
