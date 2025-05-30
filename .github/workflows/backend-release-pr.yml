@@ -56,9 +56,36 @@ jobs:
           path: services/backend
       - name: Extract release notes
         id: extract-release-notes
-        uses: ffurrer2/extract-release-notes@v2
-        with:
-          changelog_file: services/backend/CHANGELOG.md
+        run: |
+          # Get the current version
+          VERSION=$(cat services/backend/package.json | grep '"version"' | cut -d'"' -f4)
+          echo "Extracting release notes for version $VERSION"
+          
+          # Extract the changelog section for this version
+          if [ -f services/backend/CHANGELOG.md ]; then
+            # Look for the version header and extract content until the next version or end of file
+            RELEASE_NOTES=$(awk -v version="$VERSION" '
+              BEGIN { found=0; content="" }
+              /^##? [0-9]+\.[0-9]+\.[0-9]+/ { 
+                if (found) exit
+                if ($0 ~ version) { found=1; next }
+              }
+              found && /^##? [0-9]+\.[0-9]+\.[0-9]+/ { exit }
+              found { content = content $0 "\n" }
+              END { print content }
+            ' services/backend/CHANGELOG.md)
+            
+            # Remove leading/trailing whitespace and save to output
+            echo "release_notes<<EOF" >> $GITHUB_OUTPUT
+            echo "$RELEASE_NOTES" | sed '/^$/d' >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+            
+            echo "Release notes extracted:"
+            echo "$RELEASE_NOTES"
+          else
+            echo "No CHANGELOG.md found"
+            echo "release_notes=" >> $GITHUB_OUTPUT
+          fi
       - name: Create pull request
         uses: peter-evans/create-pull-request@v7
         id: cpr
