@@ -1,0 +1,103 @@
+import { getEnv } from '@/utils/env';
+import type { DbStatusResponse, DbSetupRequest, DbSetupResponse } from '@/types/database';
+
+const STORAGE_KEY = 'deploystack_db_setup_status';
+
+class DatabaseService {
+  private baseUrl: string;
+
+  constructor() {
+    this.baseUrl = getEnv('VITE_API_URL') || 'http://localhost:3000';
+  }
+
+  /**
+   * Check database status from backend
+   */
+  async checkStatus(): Promise<DbStatusResponse> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/db/status`);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      // Cache the result in localStorage
+      this.cacheSetupStatus(data.configured && data.initialized);
+
+      return data;
+    } catch (error) {
+      console.error('Failed to check database status:', error);
+      throw new Error('setup.errors.connectionFailed');
+    }
+  }
+
+  /**
+   * Setup database with given configuration
+   */
+  async setupDatabase(config: DbSetupRequest): Promise<DbSetupResponse> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/db/setup`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(config),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || data.message || `HTTP error! status: ${response.status}`);
+      }
+
+      // Cache successful setup
+      this.cacheSetupStatus(true);
+
+      return data;
+    } catch (error) {
+      console.error('Failed to setup database:', error);
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('setup.errors.setupFailed');
+    }
+  }
+
+  /**
+   * Get cached setup status from localStorage
+   */
+  getCachedSetupStatus(): boolean | null {
+    try {
+      const cached = localStorage.getItem(STORAGE_KEY);
+      return cached ? JSON.parse(cached) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Cache setup status in localStorage
+   */
+  private cacheSetupStatus(isSetup: boolean): void {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(isSetup));
+    } catch (error) {
+      console.warn('Failed to cache setup status:', error);
+    }
+  }
+
+  /**
+   * Clear cached setup status (useful for testing)
+   */
+  clearCache(): void {
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch (error) {
+      console.warn('Failed to clear setup status cache:', error);
+    }
+  }
+}
+
+export const databaseService = new DatabaseService();
