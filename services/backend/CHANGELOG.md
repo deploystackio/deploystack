@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.20.5](https://github.com/deploystackio/deploystack/compare/backend-v0.20.4...backend-v0.20.5) (2025-05-31)
+
+
+### fix
+
+* enhance error handling for database connection and update error messages ([](https://github.com/deploystackio/deploystack/commit/b25524556ed0aa92b3873f2460d1f9cd622f8e5f))
+* enhance frontend release workflow with improved dependency installation and build handling ([](https://github.com/deploystackio/deploystack/commit/4eaca2e3658460096e06bc8c16070d664ebb153a))
+* improve frontend release workflow with enhanced dependency installation and release notes extraction ([](https://github.com/deploystackio/deploystack/commit/d50e10a846f93380d3f31201bc1557934bbede59))
+* update conventional changelog plugin configuration for backend and frontend ([](https://github.com/deploystackio/deploystack/commit/bbcfbf4da3edec1de943605fa1482aa6bab5b9fd))
+* update Docker run command for frontend environment variables ([](https://github.com/deploystackio/deploystack/commit/348b77aaf69c170e6e57184406270e9e55c728ac))
+* update Docker run command to map port 8080 to 80 for frontend ([](https://github.com/deploystackio/deploystack/commit/538d5fc28f8e3b74fa6b71cf112e328ec0d97f57))
+* update environment variable names for frontend and backend URLs in Docker commands and CORS configuration ([](https://github.com/deploystackio/deploystack/commit/07111a4a75ea1d23ac9e0f3a6a75745e0d87bc7f))
+* update favicon.ico for improved branding ([](https://github.com/deploystackio/deploystack/commit/e5d3ba5b0744ee05ac7253ca2538bff06a16e6ac))
+* update storage key handling in DatabaseService to use dynamic baseUrl ([](https://github.com/deploystackio/deploystack/commit/9b613f5d4633f1b89fcdb08f1274c6dce43ff088))
+
+
+### frontend
+
+* update environment variable references to use VITE_DEPLOYSTACK_APP_URL ([](https://github.com/deploystackio/deploystack/commit/d7361d562a0a22569cc910fd422bdb91318b6595))
+
 ## [0.20.4](https://github.com/deploystackio/deploystack/compare/backend-v0.20.2...backend-v0.20.4) (2025-05-30)
 
 
