@@ -34,12 +34,15 @@ module.exports = {
             return;
           }
           
+          // Create a new commit object to avoid modifying immutable object
+          const newCommit = Object.assign({}, commit);
+          
           // Ensure commit hash is available for link text
-          if (commit.hash) {
-            commit.shortHash = commit.hash.substring(0, 7);
+          if (newCommit.hash) {
+            newCommit.shortHash = newCommit.hash.substring(0, 7);
           }
           
-          return commit;
+          return newCommit;
         },
         "commitPartial": "* {{subject}} ([{{shortHash}}]({{commitUrlFormat}}))"
       }
