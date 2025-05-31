@@ -118,6 +118,7 @@ Alternatively, you can deploy the pre-built Docker images for the frontend and b
     ```bash
     docker run -d \
       -p 3000:3000 \
+      -e DEPLOYSTACK_FRONTEND_URL="http://localhost:8080" \
       -v $(pwd)/services/backend/persistent_data:/app/persistent_data \
       deploystack/backend:latest
     ```
@@ -128,14 +129,35 @@ Alternatively, you can deploy the pre-built Docker images for the frontend and b
 
     ```bash
     docker run -d -p 8080:80 \
-      -e VITE_DEPLOYSTACK_APP_URL="http://localhost:3000" \
+      -e VITE_DEPLOYSTACK_BACKEND_URL="http://localhost:3000" \
       -e VITE_APP_TITLE="DeployStack Instance" \
       deploystack/frontend:latest
     ```
 
     **Note:**
-    - Ensure the `VITE_DEPLOYSTACK_APP_URL` points to where your backend service is accessible. If running both containers on the same Docker host, `http://localhost:3000` (or the host's IP/hostname if `localhost` doesn't resolve correctly from within the frontend container's network to the backend's exposed port) should work.
+    - Ensure the `VITE_DEPLOYSTACK_BACKEND_URL` points to where your backend service is accessible. If running both containers on the same Docker host, `http://localhost:3000` (or the host's IP/hostname if `localhost` doesn't resolve correctly from within the frontend container's network to the backend's exposed port) should work.
     - The `$(pwd)` in the backend command assumes you are in the root of the `deploystack` project directory. Adjust the path to `services/backend/persistent_data` if running from elsewhere, or use an absolute path or a Docker named volume.
+
+#### Production Deployment
+
+For production deployments on a VPS or remote server, update the environment variables to use your server's IP address:
+
+**Backend:**
+```bash
+docker run -d \
+  -p 3000:3000 \
+  -e DEPLOYSTACK_FRONTEND_URL="http://YOUR_SERVER_IP:8080" \
+  -v $(pwd)/services/backend/persistent_data:/app/persistent_data \
+  deploystack/backend:latest
+```
+
+**Frontend:**
+```bash
+docker run -d -p 8080:80 \
+  -e VITE_DEPLOYSTACK_BACKEND_URL="http://YOUR_SERVER_IP:3000" \
+  -e VITE_APP_TITLE="DeployStack Instance" \
+  deploystack/frontend:latest
+```
 
 ## Project Structure
 

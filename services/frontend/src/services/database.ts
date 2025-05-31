@@ -6,7 +6,7 @@ class DatabaseService {
   private storageKey: string;
 
   constructor() {
-    this.baseUrl = getEnv('VITE_DEPLOYSTACK_APP_URL') || 'http://localhost:3000';
+    this.baseUrl = getEnv('VITE_DEPLOYSTACK_BACKEND_URL') || 'http://localhost:3000';
     this.storageKey = `deploystack_db_setup_status_${this.baseUrl}`;
   }
 
