@@ -1,37 +1,57 @@
+// @/i18n/locales/en/setup.ts
+// English translations specifically for the Setup page
 export default {
-  title: 'Database Setup',
-  description: 'Configure your database to get started with DeployStack',
-  alreadyConfigured: {
-    title: 'Setup Complete',
-    description: 'Database has already been configured and initialized.',
-    button: 'Continue to Login',
-  },
-  form: {
-    databaseType: {
-      label: 'Database Type',
-      placeholder: 'Select database type',
-      description: 'Choose SQLite for quick setup or PostgreSQL for production use.',
-      options: {
-        sqlite: 'SQLite',
-        postgres: 'PostgreSQL',
+  setup: {
+    title: 'Setup DeployStack',
+    description: 'Configure your DeployStack instance to get started.',
+    form: {
+      databaseType: {
+        label: 'Database Type',
+        placeholder: 'Select database type',
+        description: 'Choose the type of database you want to use for DeployStack.',
+        options: {
+          sqlite: 'SQLite',
+          postgres: 'PostgreSQL',
+        },
+      },
+      connectionString: {
+        label: 'Connection String',
+        placeholder: 'Enter database connection string',
+        description: 'Provide the connection string for your database.',
       },
     },
-    connectionString: {
-      label: 'Connection String',
-      placeholder: 'postgresql://username:password@host:port/database',
-      description: 'Enter your PostgreSQL connection string.',
+    errors: {
+      title: 'Setup Error',
+      validationRequired: 'This field is required for setup.',
+      connectionStringRequired: 'Database connection string is required.',
+      failedToConnectWithAddress: 'Failed to connect to the database with the provided address.',
     },
-  },
-  buttons: {
-    submit: 'Setup Database',
-    loading: 'Setting up...',
-  },
-  errors: {
-    title: 'Setup Failed',
-    connectionFailed: 'Failed to connect to backend. Please ensure the server is running.',
-    failedToConnectWithAddress: 'Failed to connect to backend. Please ensure the server is running (remote address {address}).',
-    setupFailed: 'Failed to setup database. Please try again.',
-    validationRequired: 'Please select a database type',
-    connectionStringRequired: 'Connection string is required for PostgreSQL',
+    alreadyConfigured: {
+      title: 'Already Configured',
+      description: 'Your DeployStack instance appears to be already configured. If you need to change settings, please consult the documentation or environment variables.',
+      button: 'Go to Dashboard',
+    },
+    buttons: {
+      submit: 'Save Configuration',
+      loading: 'Saving Configuration...',
+      testConnection: 'Test Connection',
+    },
+    // Legacy structure for backward compatibility
+    database: {
+      title: 'Database Configuration',
+      typeLabel: 'Database Type',
+      sqliteLabel: 'SQLite',
+      postgresLabel: 'PostgreSQL',
+      sqlitePathLabel: 'SQLite Database Path',
+      sqlitePathPlaceholder: 'e.g., persistent_data/database.db',
+      postgresConnectionLabel: 'PostgreSQL Connection String',
+      postgresConnectionPlaceholder: 'postgresql://user:password@host:port/database',
+    },
+    adminUser: {
+      title: 'Administrator Account',
+      nameLabel: 'Admin Name',
+      emailLabel: 'Admin Email',
+      passwordLabel: 'Admin Password',
+    },
   },
 }

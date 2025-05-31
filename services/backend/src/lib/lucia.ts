@@ -2,7 +2,7 @@ import { Lucia } from 'lucia';
 import { DrizzlePostgreSQLAdapter, DrizzleSQLiteAdapter } from '@lucia-auth/adapter-drizzle';
 import { GitHub } from 'arctic';
 
-import { getDb, getSchema, getDbStatus } from '../db'; // Assuming db/index.ts exports these
+import { getDb, getSchema, getDbStatus, regenerateSchema } from '../db'; // Assuming db/index.ts exports these
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 
@@ -25,6 +25,14 @@ function initializeLucia(): Lucia {
     throw new Error('Database dialect not determined. Ensure database is initialized before using Lucia.');
   }
 
+  // Force schema regeneration to pick up any schema fixes
+  try {
+    regenerateSchema();
+    console.log('[INFO] Schema regenerated for Lucia initialization');
+  } catch (error) {
+    console.log('[INFO] Schema regeneration skipped - using existing schema');
+  }
+
   const db = getDb();
   const schema = getSchema();
 
@@ -43,6 +51,9 @@ function initializeLucia(): Lucia {
       authUserTable
     );
   } else if (dialect === 'sqlite') {
+    // For SQLite, ensure we're using the correct table structure
+    // Lucia expects: session table with id, user_id, expires_at
+    // and user table with id
     adapter = new DrizzleSQLiteAdapter(
       db as BetterSQLite3Database, // Cast based on dialect
       authSessionTable,
@@ -57,10 +68,13 @@ function initializeLucia(): Lucia {
       name: 'session', // Important to use a generic name for production
       expires: false, // session cookies have very long lifespan (2 years)
       attributes: {
-        // set to `true` when using HTTPS
+        // For development: use secure: false with sameSite: 'lax' and domain: 'localhost'
+        // For production: use secure: true with sameSite: 'none' for cross-origin
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        // domain: 'yourdomain.com' // set if using a custom domain
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+        path: '/', // Explicitly set path to root
+        // Set domain to localhost in development to allow cross-port communication
+        domain: process.env.NODE_ENV === 'production' ? undefined : 'localhost',
       },
     },
     getUserAttributes: (attributes: DatabaseUserAttributes) => {
@@ -103,6 +117,11 @@ export function getLucia(): Lucia {
 // Function to reset Lucia instance (useful for testing or config changes)
 export function resetLucia(): void {
   luciaInstance = null;
+}
+
+// Force reset on module reload in development
+if (process.env.NODE_ENV !== 'production') {
+  resetLucia();
 }
 
 // Getter function for GitHub OAuth instance

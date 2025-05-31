@@ -12,6 +12,11 @@ export default async function loginEmailRoute(fastify: FastifyInstance) {
     async (request, reply: FastifyReply) => {
       const { login, password } = request.body;
 
+      // Validate required fields
+      if (!login || !password) {
+        return reply.status(400).send({ error: 'Email/username and password are required.' });
+      }
+
       try {
         const db = getDb();
         const schema = getSchema();

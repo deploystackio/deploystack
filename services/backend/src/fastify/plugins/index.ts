@@ -5,7 +5,8 @@ import fastifyCors from '@fastify/cors'
 export const registerFastifyPlugins = async (server: FastifyInstance): Promise<void> => {
   // Build allowed origins array
   const defaultOrigins = [
-    'http://localhost:5174', // Vite dev server (actual dev port)
+    'http://localhost:5173', // Vite dev server (correct dev port)
+    'http://localhost:5174', // Alternative Vite dev server port
     'http://localhost:3000', // Frontend production (if served from same port)
     'http://localhost:4173', // Vite preview
   ];

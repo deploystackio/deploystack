@@ -37,7 +37,7 @@ export const authUser = sqliteTable('authUser', {
 export const authSession = sqliteTable('authSession', {
   id: text('id').primaryKey(),
   user_id: text('user_id').notNull().references(() => authUser.id, { onDelete: 'cascade' }),
-  expires_at: integer('expires_at', { mode: 'number' }).notNull(),
+  expires_at: integer('expires_at').notNull(),
 });
 
 export const authKey = sqliteTable('authKey', {
@@ -45,7 +45,7 @@ export const authKey = sqliteTable('authKey', {
   user_id: text('user_id').notNull().references(() => authUser.id, { onDelete: 'cascade' }),
   primary_key: text('primary_key').notNull(),
   hashed_password: text('hashed_password'),
-  expires: integer('expires', { mode: 'number' }),
+  expires: integer('expires'),
 });
 
 export const teams = sqliteTable('teams', {

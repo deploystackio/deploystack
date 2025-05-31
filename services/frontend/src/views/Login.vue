@@ -108,6 +108,7 @@ const onSubmit = form.handleSubmit(async (values) => {
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include', // Include cookies for session management
       body: JSON.stringify({
         login: values.email,
         password: values.password,
