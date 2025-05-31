@@ -143,6 +143,7 @@ Alternatively, you can deploy the pre-built Docker images for the frontend and b
 For production deployments on a VPS or remote server, update the environment variables to use your server's IP address:
 
 **Backend:**
+
 ```bash
 docker run -d \
   -p 3000:3000 \
@@ -152,6 +153,7 @@ docker run -d \
 ```
 
 **Frontend:**
+
 ```bash
 docker run -d -p 8080:80 \
   -e VITE_DEPLOYSTACK_BACKEND_URL="http://YOUR_SERVER_IP:3000" \
