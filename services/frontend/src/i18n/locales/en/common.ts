@@ -1,26 +1,14 @@
+// @/i18n/locales/en/common.ts
 export default {
-  app: {
-    name: 'My Application',
-    title: 'Welcome to My Application',
-  },
-  navigation: {
-    home: 'Home',
-    login: 'Login',
-    register: 'Register',
-    dashboard: 'Dashboard',
-    settings: 'Settings',
-  },
-  buttons: {
-    submit: 'Submit',
-    cancel: 'Cancel',
-    save: 'Save',
-    delete: 'Delete',
-  },
   validation: {
-    required: '{field} is required',
-    email: 'Please enter a valid email address',
-    minLength: '{field} must be at least {length} characters',
-    maxLength: '{field} must be less than {length} characters',
-    passwordMatch: 'Passwords do not match',
+    required: 'This field is required.',
+    email: 'Please enter a valid email address.',
+    minLength: 'This field must be at least {length} characters long.',
+    maxLength: 'This field must be at most {length} characters long.',
+    passwordMatch: 'Passwords do not match.',
+  },
+  common: {
+    loading: 'Loading...',
+    error: 'An error occurred.',
   },
 }

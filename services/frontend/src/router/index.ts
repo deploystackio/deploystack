@@ -25,6 +25,12 @@ const routes = [
     meta: { requiresSetup: true },
   },
   {
+    path: '/logout',
+    name: 'Logout',
+    component: () => import('../views/Logout.vue'),
+    meta: { requiresSetup: true }, // Or false, depending on whether logout should be accessible if setup isn't complete
+  },
+  {
     path: '/plugin-demo',
     name: 'PluginDemo',
     component: () => import('../views/PluginDemo.vue'),

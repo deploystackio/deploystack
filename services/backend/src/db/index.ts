@@ -364,6 +364,23 @@ export function getDbStatus() {
     };
 }
 
+// Function to force schema regeneration (useful for development)
+export function regenerateSchema(): void {
+  if (currentDbConfig) {
+    console.log('[INFO] Forcing schema regeneration...');
+    dbSchema = generateSchema(currentDbConfig.type);
+    
+    // Recreate the database instance with new schema
+    if (dbConnection && currentDbConfig.type === 'sqlite') {
+      dbInstance = drizzleSqliteAdapter(dbConnection as SqliteDriver.Database, { schema: dbSchema, logger: false });
+    } else if (dbConnection && currentDbConfig.type === 'postgres') {
+      dbInstance = drizzlePgAdapter(dbConnection as PgPool, { schema: dbSchema, logger: false });
+    }
+    
+    console.log('[INFO] Schema regenerated successfully.');
+  }
+}
+
 // Define a more specific type for DatabaseExtension if possible, or use 'any' for now.
 interface DatabaseExtensionWithTables extends DatabaseExtension {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

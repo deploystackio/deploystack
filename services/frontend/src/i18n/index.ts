@@ -1,5 +1,6 @@
 import { createI18n } from 'vue-i18n'
-import en from './locales/en'
+// Import the merged English messages from the new structure
+import enMessages from './locales/en' // This will now import from locales/en/index.ts
 
 // Create i18n instance with English as the default language
 const i18n = createI18n({
@@ -7,7 +8,7 @@ const i18n = createI18n({
   locale: 'en',
   fallbackLocale: 'en',
   messages: {
-    en,
+    en: enMessages, // Use the merged messages directly
   },
 })
 

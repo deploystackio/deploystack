@@ -1,39 +1,84 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { getLucia } from '../../lib/lucia';
+import { getDb, getSchema } from '../../db';
+import { eq } from 'drizzle-orm';
 
 export default async function logoutRoute(fastify: FastifyInstance) {
   fastify.post(
     '/logout',
     async (request: FastifyRequest, reply: FastifyReply) => {
-      const sessionId = getLucia().readSessionCookie(request.headers.cookie ?? '');
+      // The global authHook should have already populated request.session if a valid session exists.
+      // It also handles creating a blank session cookie if the session was invalid.
+      const lucia = getLucia();
 
-      if (!sessionId) {
-        // No session cookie, so user is effectively logged out or was never logged in.
-        // It's good practice to still clear any potential lingering cookie on the client.
-        const sessionCookie = getLucia().createBlankSessionCookie();
-        reply.setCookie(sessionCookie.name, sessionCookie.value, sessionCookie.attributes);
+      // Log session information for debugging
+      fastify.log.info(`Logout attempt - Session exists: ${!!request.session}, Session ID: ${request.session?.id || 'none'}`);
+
+      if (!request.session) {
+        // No active session found by authHook, but let's check if there's a session cookie
+        // and manually clean it up if Lucia validation failed
+        const sessionId = lucia.readSessionCookie(request.headers.cookie ?? '');
+        
+        if (sessionId) {
+          fastify.log.info(`Found session cookie ${sessionId} but authHook couldn't validate it - attempting manual cleanup`);
+          
+          try {
+            // Try to manually delete the session from database
+            const db = getDb();
+            const schema = getSchema();
+            const authSessionTable = schema.authSession;
+            
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const result = await (db as any).delete(authSessionTable).where(eq(authSessionTable.id, sessionId));
+            fastify.log.info(`Manually deleted session ${sessionId} from database`);
+          } catch (dbError) {
+            fastify.log.error(dbError, 'Failed to manually delete session from database');
+          }
+        }
+        
+        // Send a blank cookie to ensure client-side cookie is cleared
+        const blankCookie = lucia.createBlankSessionCookie();
+        reply.setCookie(blankCookie.name, blankCookie.value, blankCookie.attributes);
+        fastify.log.info('No active session to logout - sending blank cookie');
         return reply.status(200).send({ message: 'No active session to logout or already logged out.' });
       }
 
       try {
-        const { session } = await getLucia().validateSession(sessionId);
-
-        if (session) {
-          await getLucia().invalidateSession(session.id);
-        }
+        const sessionId = request.session.id;
+        fastify.log.info(`Attempting to invalidate session: ${sessionId}`);
         
-        // Always send a blank cookie to ensure client-side cookie is cleared
-        const sessionCookie = getLucia().createBlankSessionCookie();
-        reply.setCookie(sessionCookie.name, sessionCookie.value, sessionCookie.attributes);
+        // Invalidate the session identified by authHook.
+        await lucia.invalidateSession(sessionId);
+        fastify.log.info(`Session ${sessionId} invalidated successfully`);
+        
+        // Send a blank cookie to ensure client-side cookie is cleared.
+        const blankCookie = lucia.createBlankSessionCookie();
+        reply.setCookie(blankCookie.name, blankCookie.value, blankCookie.attributes);
+        fastify.log.info('Blank cookie sent to clear client session');
         
         return reply.status(200).send({ message: 'Logged out successfully.' });
 
       } catch (error) {
-        fastify.log.error(error, 'Error during logout:');
-        // Even if there's an error (e.g., session already invalid), try to clear the cookie.
-        const sessionCookie = getLucia().createBlankSessionCookie();
-        reply.setCookie(sessionCookie.name, sessionCookie.value, sessionCookie.attributes);
-        return reply.status(500).send({ error: 'An error occurred during logout.' });
+        fastify.log.error(error, 'Error during logout (invalidating session from authHook):');
+        
+        // If Lucia invalidation failed, try manual database cleanup
+        const sessionId = request.session.id;
+        try {
+          const db = getDb();
+          const schema = getSchema();
+          const authSessionTable = schema.authSession;
+          
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          await (db as any).delete(authSessionTable).where(eq(authSessionTable.id, sessionId));
+          fastify.log.info(`Manually deleted session ${sessionId} after Lucia invalidation failed`);
+        } catch (dbError) {
+          fastify.log.error(dbError, 'Failed to manually delete session after Lucia error');
+        }
+        
+        // Even if there's an error, try to clear the cookie.
+        const blankCookie = lucia.createBlankSessionCookie();
+        reply.setCookie(blankCookie.name, blankCookie.value, blankCookie.attributes);
+        return reply.status(200).send({ message: 'Logged out successfully (with fallback cleanup).' });
       }
     }
   );

@@ -1,6 +1,6 @@
 import type { FastifyRequest, FastifyReply, HookHandlerDoneFunction } from 'fastify';
 import { getLucia } from '../lib/lucia';
-import { getDbStatus } from '../db';
+import { getDbStatus, getSchema } from '../db';
 import type { User, Session } from 'lucia';
 
 // Augment FastifyRequest to include user and session
@@ -28,23 +28,30 @@ export async function authHook(
   try {
     const lucia = getLucia();
     const sessionId = lucia.readSessionCookie(request.headers.cookie ?? '');
+    
     if (!sessionId) {
+      request.log.debug('Auth hook: No session cookie found');
       request.user = null;
       request.session = null;
       return; // Proceed as unauthenticated
     }
 
+    request.log.debug(`Auth hook: Found session ID: ${sessionId}`);
     const { session, user } = await lucia.validateSession(sessionId);
 
     if (session && session.fresh) {
       // Session was refreshed, send new cookie
+      request.log.debug(`Auth hook: Session ${sessionId} is fresh, sending new cookie`);
       const sessionCookie = lucia.createSessionCookie(session.id);
       reply.setCookie(sessionCookie.name, sessionCookie.value, sessionCookie.attributes);
     }
     if (!session) {
       // Invalid session, clear cookie
+      request.log.debug(`Auth hook: Session ${sessionId} is invalid, clearing cookie`);
       const sessionCookie = lucia.createBlankSessionCookie();
       reply.setCookie(sessionCookie.name, sessionCookie.value, sessionCookie.attributes);
+    } else {
+      request.log.debug(`Auth hook: Session ${sessionId} is valid for user ${user?.id}`);
     }
 
     request.user = user;

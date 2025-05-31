@@ -1,11 +1,13 @@
-import common from './common.ts'
-import login from './login.ts'
-import register from './register.ts'
-import setup from './setup.ts'
+// @/i18n/locales/en/index.ts
+import commonMessages from './common'
+import authMessages from './auth'
+import setupMessages from './setup'
 
 export default {
-  ...common,
-  login,
-  register,
-  setup,
+  ...commonMessages,
+  ...authMessages,
+  ...setupMessages,
+  // If there are any top-level keys directly under 'en', they can be added here.
+  // For example, if you had a global 'appName': 'My Application'
+  // appName: 'DeployStack Application',
 }

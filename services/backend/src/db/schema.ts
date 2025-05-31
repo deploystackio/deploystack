@@ -49,7 +49,7 @@ export const authUserTableColumns = {
 export const authSessionTableColumns = {
   id: (columnBuilder: any) => columnBuilder('id').primaryKey(),
   user_id: (columnBuilder: any) => columnBuilder('user_id').notNull(), // Foreign key to authUser.id
-  expires_at: (columnBuilder: any) => columnBuilder('expires_at', { mode: 'number' }).notNull(), // Lucia v3 uses expires_at
+  expires_at: (columnBuilder: any) => columnBuilder('expires_at').notNull(), // Lucia v3 uses expires_at as integer timestamp
 };
 
 export const authKeyTableColumns = {
@@ -57,7 +57,7 @@ export const authKeyTableColumns = {
   user_id: (columnBuilder: any) => columnBuilder('user_id').notNull(), // Foreign key to authUser.id
   primary_key: (columnBuilder: any) => columnBuilder('primary_key').notNull(),
   hashed_password: (columnBuilder: any) => columnBuilder('hashed_password'), // Nullable for OAuth keys
-  expires: (columnBuilder: any) => columnBuilder('expires', { mode: 'number' }), // Nullable, for things like password reset
+  expires: (columnBuilder: any) => columnBuilder('expires'), // Nullable, for things like password reset
 };
 
 export const teamsTableColumns = {
