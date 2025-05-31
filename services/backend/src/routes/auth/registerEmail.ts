@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { FastifyInstance, FastifyReply } from 'fastify';
-import { getLucia } from '../../lib/lucia';
+
 import { type RegisterEmailInput } from './schemas';
 import { getDb, getSchema } from '../../db';
 import { eq, or } from 'drizzle-orm';
@@ -69,7 +69,7 @@ export default async function registerEmailRoute(fastify: FastifyInstance) {
           role_id: defaultRole, // Assign role (no default in schema, so we must provide it)
         });
 
-        // Verify user was created successfully before creating session
+        // Verify user was created successfully
         const createdUser = await (db as any)
           .select()
           .from(authUserTable)
@@ -92,25 +92,9 @@ export default async function registerEmailRoute(fastify: FastifyInstance) {
           // Don't fail registration if team creation fails, just log the error
         }
 
-        // Create session manually (Lucia's createSession has issues with our schema)
-        const sessionId = generateId(40); // Generate session ID
-        const expiresAt = Date.now() + 1000 * 60 * 60 * 24 * 30; // 30 days
-        
-        const authSessionTable = schema.authSession;
-        
-        // Insert session directly into database
-        await (db as any).insert(authSessionTable).values({
-          id: sessionId,
-          user_id: userId,
-          expires_at: expiresAt
+        return reply.status(201).send({ 
+          message: 'User registered successfully. Please log in to continue.' 
         });
-        
-        fastify.log.info(`Session created successfully for user: ${userId}`);
-        
-        const sessionCookie = getLucia().createSessionCookie(sessionId);
-        
-        reply.setCookie(sessionCookie.name, sessionCookie.value, sessionCookie.attributes);
-        return reply.status(201).send({ message: 'User registered successfully.' });
 
       } catch (error) {
         fastify.log.error(error, 'Error during email registration:');
