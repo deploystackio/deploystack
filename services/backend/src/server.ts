@@ -54,10 +54,9 @@ export const createServer = async () => {
   const isDevelopment = process.env.NODE_ENV !== 'production';
   const pluginManager = new PluginManager({
     paths: [
-      isDevelopment 
+      process.env.PLUGINS_PATH || (isDevelopment 
         ? path.join(process.cwd(), 'src', 'plugins')
-        : path.join(__dirname, 'plugins'),
-      process.env.PLUGINS_PATH || path.join(process.cwd(), 'plugins'),
+        : path.join(__dirname, 'plugins')),
     ],
     plugins: {}
   })
