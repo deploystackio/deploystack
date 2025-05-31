@@ -15,9 +15,9 @@ export const usersTableColumns = {
   id: (columnBuilder: any) => columnBuilder('id').primaryKey(),
   email: (columnBuilder: any) => columnBuilder('email').notNull().unique(),
   name: (columnBuilder: any) => columnBuilder('name'),
-  // Added .defaultNow() to let Drizzle handle dialect-specific default timestamp generation
-  createdAt: (columnBuilder: any) => columnBuilder('created_at', { mode: 'timestamp' }).notNull().defaultNow(),
-  updatedAt: (columnBuilder: any) => columnBuilder('updated_at', { mode: 'timestamp' }).notNull().defaultNow(),
+  // Use $defaultFn for SQLite timestamp generation
+  createdAt: (columnBuilder: any) => columnBuilder('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  updatedAt: (columnBuilder: any) => columnBuilder('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 };
 
 // Enum for authentication types
@@ -30,8 +30,8 @@ export const rolesTableColumns = {
   description: (columnBuilder: any) => columnBuilder('description'),
   permissions: (columnBuilder: any) => columnBuilder('permissions').notNull(), // JSON string
   is_system_role: (columnBuilder: any) => columnBuilder('is_system_role').notNull().default(false),
-  created_at: (columnBuilder: any) => columnBuilder('created_at', { mode: 'timestamp' }).notNull().defaultNow(),
-  updated_at: (columnBuilder: any) => columnBuilder('updated_at', { mode: 'timestamp' }).notNull().defaultNow(),
+  created_at: (columnBuilder: any) => columnBuilder('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  updated_at: (columnBuilder: any) => columnBuilder('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 };
 
 export const authUserTableColumns = {
@@ -66,8 +66,8 @@ export const teamsTableColumns = {
   slug: (columnBuilder: any) => columnBuilder('slug').notNull().unique(),
   description: (columnBuilder: any) => columnBuilder('description'),
   owner_id: (columnBuilder: any) => columnBuilder('owner_id').notNull(), // Foreign key to authUser.id
-  created_at: (columnBuilder: any) => columnBuilder('created_at', { mode: 'timestamp' }).notNull().defaultNow(),
-  updated_at: (columnBuilder: any) => columnBuilder('updated_at', { mode: 'timestamp' }).notNull().defaultNow(),
+  created_at: (columnBuilder: any) => columnBuilder('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  updated_at: (columnBuilder: any) => columnBuilder('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 };
 
 // Enum for team member roles
@@ -78,7 +78,7 @@ export const teamMembershipsTableColumns = {
   team_id: (columnBuilder: any) => columnBuilder('team_id').notNull(), // Foreign key to teams.id
   user_id: (columnBuilder: any) => columnBuilder('user_id').notNull(), // Foreign key to authUser.id
   role: (columnBuilder: any) => columnBuilder('role').notNull(), // team_admin or team_user
-  joined_at: (columnBuilder: any) => columnBuilder('joined_at', { mode: 'timestamp' }).notNull().defaultNow(),
+  joined_at: (columnBuilder: any) => columnBuilder('joined_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 };
 
 // This object will hold definitions for all base tables.

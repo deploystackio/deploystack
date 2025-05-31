@@ -37,35 +37,17 @@ function getColumnBuilder(type: 'text' | 'integer' | 'timestamp') {
 }
 
 function generateSchema(): AnySchema {
-  const generatedSchema: AnySchema = {};
+  // Import the static schema instead of generating it dynamically
+  // This avoids SQL syntax errors caused by dynamic schema generation
+  const staticSchema = require('./schema.sqlite');
+  const generatedSchema = { ...staticSchema };
 
-  for (const [tableName, tableColumns] of Object.entries(baseTableDefinitions)) {
+  // Add plugin tables to the static schema
+  for (const [tableName, tableColumns] of Object.entries(inputPluginTableDefinitions)) {
     const columns: Record<string, ReturnType<typeof tableColumns[keyof typeof tableColumns]>> = {};
     for (const [columnName, columnDefFunc] of Object.entries(tableColumns)) {
       let builderType: 'text' | 'integer' | 'timestamp' = 'text';
-      
-      // Special handling for specific columns
-      if (columnName === 'id' || columnName === 'user_id') {
-        builderType = 'text'; // All IDs are text (Lucia uses string IDs)
-      } else if (columnName === 'expires_at') {
-        builderType = 'integer'; // Lucia uses number for expires_at
-      } else if (columnName.toLowerCase().includes('at') || columnName.toLowerCase().includes('date')) {
-        builderType = 'timestamp';
-      } else if (['count', 'age', 'quantity', 'order', 'status', 'number'].some(keyword => columnName.toLowerCase().includes(keyword)) && !columnName.toLowerCase().includes('text')) {
-        builderType = 'integer';
-      }
-      
-      const builder = getColumnBuilder(builderType);
-      columns[columnName] = columnDefFunc(builder);
-    }
-    generatedSchema[tableName] = sqliteTable(tableName, columns);
-  }
-
-  for (const [tableName, tableColumns] of Object.entries(inputPluginTableDefinitions)) {
-    const columns: Record<string, ReturnType<typeof tableColumns[keyof typeof tableColumns]>> = {};
-     for (const [columnName, columnDefFunc] of Object.entries(tableColumns)) {
-      let builderType: 'text' | 'integer' | 'timestamp' = 'text';
-       if (columnName.toLowerCase().includes('at') || columnName.toLowerCase().includes('date')) {
+      if (columnName.toLowerCase().includes('at') || columnName.toLowerCase().includes('date')) {
         builderType = 'timestamp';
       } else if (['id', 'count', 'age', 'quantity', 'order', 'status', 'number'].some(keyword => columnName.toLowerCase().includes(keyword))) {
         builderType = 'integer';

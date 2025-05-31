@@ -1,6 +1,7 @@
 import type { FastifyRequest, FastifyReply, HookHandlerDoneFunction } from 'fastify';
 import { getLucia } from '../lib/lucia';
-import { getDbStatus, getSchema } from '../db';
+import { getDbStatus, getSchema, getDb } from '../db';
+import { eq } from 'drizzle-orm';
 import type { User, Session } from 'lucia';
 
 // Augment FastifyRequest to include user and session
@@ -37,23 +38,80 @@ export async function authHook(
     }
 
     request.log.debug(`Auth hook: Found session ID: ${sessionId}`);
-    const { session, user } = await lucia.validateSession(sessionId);
-
-    if (session && session.fresh) {
-      // Session was refreshed, send new cookie
-      request.log.debug(`Auth hook: Session ${sessionId} is fresh, sending new cookie`);
-      const sessionCookie = lucia.createSessionCookie(session.id);
-      reply.setCookie(sessionCookie.name, sessionCookie.value, sessionCookie.attributes);
+    
+    // Manual session validation to avoid Lucia SQL syntax issues
+    const db = getDb();
+    const schema = getSchema();
+    const authSessionTable = schema.authSession;
+    const authUserTable = schema.authUser;
+    
+    if (!authSessionTable || !authUserTable) {
+      request.log.error('Auth tables not found in schema');
+      request.user = null;
+      request.session = null;
+      return;
     }
-    if (!session) {
-      // Invalid session, clear cookie
-      request.log.debug(`Auth hook: Session ${sessionId} is invalid, clearing cookie`);
+    
+    // Query session and user manually
+    const sessionResult = await db.select({
+      sessionId: authSessionTable.id,
+      userId: authSessionTable.user_id,
+      expiresAt: authSessionTable.expires_at,
+      username: authUserTable.username,
+      email: authUserTable.email,
+      firstName: authUserTable.first_name,
+      lastName: authUserTable.last_name,
+      authType: authUserTable.auth_type,
+      githubId: authUserTable.github_id
+    })
+    .from(authSessionTable)
+    .innerJoin(authUserTable, eq(authSessionTable.user_id, authUserTable.id))
+    .where(eq(authSessionTable.id, sessionId))
+    .limit(1);
+    
+    if (sessionResult.length === 0) {
+      request.log.debug(`Auth hook: Session ${sessionId} not found`);
       const sessionCookie = lucia.createBlankSessionCookie();
       reply.setCookie(sessionCookie.name, sessionCookie.value, sessionCookie.attributes);
-    } else {
-      request.log.debug(`Auth hook: Session ${sessionId} is valid for user ${user?.id}`);
+      request.user = null;
+      request.session = null;
+      return;
     }
+    
+    const sessionData = sessionResult[0];
+    
+    // Check if session is expired
+    if (sessionData.expiresAt < Date.now()) {
+      request.log.debug(`Auth hook: Session ${sessionId} is expired`);
+      // Delete expired session
+      await db.delete(authSessionTable).where(eq(authSessionTable.id, sessionId));
+      const sessionCookie = lucia.createBlankSessionCookie();
+      reply.setCookie(sessionCookie.name, sessionCookie.value, sessionCookie.attributes);
+      request.user = null;
+      request.session = null;
+      return;
+    }
+    
+    // Create user and session objects
+    const user = {
+      id: sessionData.userId,
+      username: sessionData.username,
+      email: sessionData.email,
+      firstName: sessionData.firstName,
+      lastName: sessionData.lastName,
+      authType: sessionData.authType,
+      githubId: sessionData.githubId
+    };
+    
+    const session = {
+      id: sessionData.sessionId,
+      userId: sessionData.userId,
+      expiresAt: new Date(sessionData.expiresAt),
+      fresh: false
+    };
 
+    request.log.debug(`Auth hook: Session ${sessionId} is valid for user ${user.id}`);
+    
     request.user = user;
     request.session = session;
     // No explicit done() call, Fastify awaits the promise
