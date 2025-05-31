@@ -46,7 +46,7 @@ module.exports = {
 
           return newCommit;
         },
-        "commitPartial": "* {{subject}} ([{{shortHash}}]({{commitUrlFormat}}))"
+        "commitPartial": "* {{subject}} ([{{shortHash}}]({{host}}/{{owner}}/{{repository}}/commit/{{hash}}))"
       }
     }
   }
