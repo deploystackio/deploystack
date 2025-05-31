@@ -1,13 +1,13 @@
 import { getEnv } from '@/utils/env';
 import type { DbStatusResponse, DbSetupRequest, DbSetupResponse } from '@/types/database';
 
-const STORAGE_KEY = 'deploystack_db_setup_status';
-
 class DatabaseService {
   private baseUrl: string;
+  private storageKey: string;
 
   constructor() {
     this.baseUrl = getEnv('VITE_DEPLOYSTACK_APP_URL') || 'http://localhost:3000';
+    this.storageKey = `deploystack_db_setup_status_${this.baseUrl}`;
   }
 
   /**
@@ -75,7 +75,7 @@ class DatabaseService {
    */
   getCachedSetupStatus(): boolean | null {
     try {
-      const cached = localStorage.getItem(STORAGE_KEY);
+      const cached = localStorage.getItem(this.storageKey);
       return cached ? JSON.parse(cached) : null;
     } catch {
       return null;
@@ -87,7 +87,7 @@ class DatabaseService {
    */
   private cacheSetupStatus(isSetup: boolean): void {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(isSetup));
+      localStorage.setItem(this.storageKey, JSON.stringify(isSetup));
     } catch (error) {
       console.warn('Failed to cache setup status:', error);
     }
@@ -98,7 +98,7 @@ class DatabaseService {
    */
   clearCache(): void {
     try {
-      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(this.storageKey);
     } catch (error) {
       console.warn('Failed to clear setup status cache:', error);
     }
