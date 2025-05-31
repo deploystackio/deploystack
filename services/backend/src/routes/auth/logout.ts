@@ -1,7 +1,8 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { getLucia } from '../../lib/lucia';
-import { getDb, getSchema } from '../../db';
+import { getDb, getSchema, getDbStatus } from '../../db';
 import { eq } from 'drizzle-orm';
+import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 
 export default async function logoutRoute(fastify: FastifyInstance) {
   fastify.post(
@@ -28,9 +29,17 @@ export default async function logoutRoute(fastify: FastifyInstance) {
             const schema = getSchema();
             const authSessionTable = schema.authSession;
             
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const result = await (db as any).delete(authSessionTable).where(eq(authSessionTable.id, sessionId));
-            fastify.log.info(`Manually deleted session ${sessionId} from database`);
+            // Verify table and column exist before attempting deletion
+            if (authSessionTable && authSessionTable.id) {
+              const dbStatus = getDbStatus();
+              if (dbStatus.dialect === 'sqlite') {
+                const sqliteDb = db as BetterSQLite3Database<any>;
+                await sqliteDb.delete(authSessionTable).where(eq(authSessionTable.id, sessionId));
+              }
+              fastify.log.info(`Manually deleted session ${sessionId} from database`);
+            } else {
+              fastify.log.warn('authSession table or id column not found in schema');
+            }
           } catch (dbError) {
             fastify.log.error(dbError, 'Failed to manually delete session from database');
           }
@@ -68,9 +77,17 @@ export default async function logoutRoute(fastify: FastifyInstance) {
           const schema = getSchema();
           const authSessionTable = schema.authSession;
           
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          await (db as any).delete(authSessionTable).where(eq(authSessionTable.id, sessionId));
-          fastify.log.info(`Manually deleted session ${sessionId} after Lucia invalidation failed`);
+          // Verify table and column exist before attempting deletion
+          if (authSessionTable && authSessionTable.id) {
+            const dbStatus = getDbStatus();
+            if (dbStatus.dialect === 'sqlite') {
+              const sqliteDb = db as BetterSQLite3Database<any>;
+              await sqliteDb.delete(authSessionTable).where(eq(authSessionTable.id, sessionId));
+            }
+            fastify.log.info(`Manually deleted session ${sessionId} after Lucia invalidation failed`);
+          } else {
+            fastify.log.warn('authSession table or id column not found in schema');
+          }
         } catch (dbError) {
           fastify.log.error(dbError, 'Failed to manually delete session after Lucia error');
         }

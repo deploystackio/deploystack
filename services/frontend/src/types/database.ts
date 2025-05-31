@@ -1,6 +1,5 @@
 export enum DatabaseType {
   SQLite = 'sqlite',
-  Postgres = 'postgres',
 }
 
 export interface DbStatusResponse {
@@ -11,7 +10,6 @@ export interface DbStatusResponse {
 
 export interface DbSetupRequest {
   type: DatabaseType;
-  connectionString?: string;
 }
 
 export interface DbSetupResponse {

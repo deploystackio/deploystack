@@ -31,13 +31,8 @@ async function setupDbHandler(
 
     if (clientRequestBody.type === DatabaseType.SQLite) {
       internalConfigObject = { type: DatabaseType.SQLite, dbPath: fixedSQLiteDbPath };
-    } else if (clientRequestBody.type === DatabaseType.Postgres) {
-      if (!clientRequestBody.connectionString) {
-        return reply.status(400).send({ error: 'connectionString is required for postgres' });
-      }
-      internalConfigObject = { type: DatabaseType.Postgres, connectionString: clientRequestBody.connectionString };
     } else {
-      return reply.status(400).send({ error: 'Invalid database type specified' });
+      return reply.status(400).send({ error: 'Invalid database type specified. Only SQLite is supported.' });
     }
 
     const validatedInternalConfig = InternalDbConfigSchema.parse(internalConfigObject);
