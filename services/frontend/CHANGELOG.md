@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.12.5](https://github.com/deploystackio/deploystack/compare/frontend-v0.12.4...frontend-v0.12.5) (2025-05-31)
+
+
+### fix
+
+* update Docker run command to map port 8080 to 80 for frontend ([](https://github.com/deploystackio/deploystack/commit/538d5fc28f8e3b74fa6b71cf112e328ec0d97f57))
+* update favicon.ico for improved branding ([](https://github.com/deploystackio/deploystack/commit/e5d3ba5b0744ee05ac7253ca2538bff06a16e6ac))
+* update storage key handling in DatabaseService to use dynamic baseUrl ([](https://github.com/deploystackio/deploystack/commit/9b613f5d4633f1b89fcdb08f1274c6dce43ff088))
+
 ## [0.12.4](https://github.com/deploystackio/deploystack/compare/frontend-v0.12.2...frontend-v0.12.4) (2025-05-30)
 
 
