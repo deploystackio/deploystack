@@ -6,7 +6,7 @@ class DatabaseService {
   private storageKey: string;
 
   constructor() {
-    this.baseUrl = getEnv('VITE_DEPLOYSTACK_BACKEND_URL') || 'http://localhost:3000';
+    this.baseUrl = getEnv('VITE_DEPLOYSTACK_APP_URL') || 'http://localhost:3000';
     this.storageKey = `deploystack_db_setup_status_${this.baseUrl}`;
   }
 
@@ -15,7 +15,13 @@ class DatabaseService {
    */
   async checkStatus(): Promise<DbStatusResponse> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/db/status`);
+      const response = await fetch(`${this.baseUrl}/api/db/status`, {
+        method: 'GET',
+        credentials: 'include', // Include cookies for session management
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -45,6 +51,7 @@ class DatabaseService {
     try {
       const response = await fetch(`${this.baseUrl}/api/db/setup`, {
         method: 'POST',
+        credentials: 'include', // Include cookies for session management
         headers: {
           'Content-Type': 'application/json',
         },
