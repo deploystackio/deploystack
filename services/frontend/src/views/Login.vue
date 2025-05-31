@@ -261,8 +261,6 @@ const navigateToRegister = () => {
             >
               {{ $t('login.createAccount') }}
 
-              <p>Test env: {{ apiUrl }}</p>
-
             </Button>
           </p>
         </CardFooter>

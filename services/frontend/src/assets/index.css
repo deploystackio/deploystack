@@ -115,3 +115,25 @@ body {
   color: var(--foreground);
 }
 
+/* Global cursor pointer for buttons and interactive elements */
+button,
+[role="button"],
+[type="button"],
+[type="submit"],
+[type="reset"] {
+  cursor: pointer;
+}
+
+/* Ensure disabled buttons don't show pointer cursor */
+button:disabled,
+[role="button"]:disabled,
+[type="button"]:disabled,
+[type="submit"]:disabled,
+[type="reset"]:disabled {
+  cursor: not-allowed;
+}
+
+/* Specifically target elements that might be styled as buttons */
+a[role="button"] {
+  cursor: pointer;
+}
