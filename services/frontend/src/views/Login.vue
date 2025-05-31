@@ -79,8 +79,8 @@ const handleError = (error: LoginError) => {
   if (error.name === 'TypeError' && error.message && error.message.includes('fetch')) {
     // Network error - backend is down
     errorMessage.value = t('login.errors.networkError')
-  } else if (error.status && error.status === 401) {
-    // Unauthorized - invalid credentials
+  } else if (error.status && (error.status === 400 || error.status === 401)) {
+    // Bad Request or Unauthorized - invalid credentials
     errorMessage.value = t('login.errors.invalidCredentials')
   } else if (error.status && error.status >= 500) {
     // Server error
