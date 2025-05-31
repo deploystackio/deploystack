@@ -92,6 +92,12 @@ You can also run DeployStack on your own infrastructure for maximum control:
 
 3. Start development servers:
 
+  Create a `services/backend/.env` file in the root directory with the following content:
+
+   ```env
+   DEPLOYSTACK_FRONTEND_URL=http://localhost:5173
+   ```
+
    ```bash
    # Start frontend development server
    npm run dev:frontend
