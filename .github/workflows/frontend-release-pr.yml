@@ -82,7 +82,7 @@ jobs:
               END { print content }
             ' CHANGELOG.md)
             
-            CLEAN_NOTES=$(echo "$RELEASE_NOTES" | sed 's/(\[\]([^)]*))//g' | sed '/^$/d')
+            CLEAN_NOTES=$(echo "$RELEASE_NOTES" | sed '/^$/d')
             
             echo "release_notes<<EOF" >> $GITHUB_OUTPUT
             echo "$CLEAN_NOTES" >> $GITHUB_OUTPUT

@@ -74,8 +74,8 @@ jobs:
               END { print content }
             ' CHANGELOG.md)
             
-            # Clean up empty markdown links and remove empty lines
-            CLEAN_NOTES=$(echo "$RELEASE_NOTES" | sed 's/(\[\]([^)]*))//g' | sed '/^$/d')
+            # Remove empty lines
+            CLEAN_NOTES=$(echo "$RELEASE_NOTES" | sed '/^$/d')
             
             # Save to output
             echo "release_notes<<EOF" >> $GITHUB_OUTPUT
