@@ -22,7 +22,6 @@ import {
   getDbStatus
 } from './db'
 import type SqliteDriver from 'better-sqlite3'; // For type checking in onClose
-import type { Pool as PgPool } from 'pg';      // For type checking in onClose
 
 
 // Import type extensions
@@ -121,15 +120,12 @@ export const createServer = async () => {
   
   server.addHook('onClose', async () => {
     await pluginManager.shutdownPlugins();
-    const rawConn = server.rawDbConnection as SqliteDriver.Database | PgPool | null; // Get from decoration
+    const rawConn = server.rawDbConnection as SqliteDriver.Database | null; // Get from decoration
     if (rawConn) {
       const status = getDbStatus();
       if (status.dialect === 'sqlite' && 'close' in rawConn) {
         (rawConn as SqliteDriver.Database).close();
         server.log.info('SQLite connection closed.');
-      } else if (status.dialect === 'postgres' && 'end' in rawConn) {
-        await (rawConn as PgPool).end();
-        server.log.info('PostgreSQL connection pool closed.');
       }
     }
   });

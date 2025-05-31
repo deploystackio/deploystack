@@ -12,12 +12,7 @@ export interface SQLiteConfig {
   dbPath: string; // Relative to services/backend directory
 }
 
-export interface PostgresConfig {
-  type: 'postgres';
-  connectionString: string;
-}
-
-export type DbConfig = SQLiteConfig | PostgresConfig;
+export type DbConfig = SQLiteConfig;
 
 /**
  * Reads the database configuration.

@@ -27,7 +27,7 @@
 
           <!-- Setup form -->
           <form v-else @submit="onSubmit" class="space-y-4">
-            <!-- Database Type Selection -->
+            <!-- Database Type (SQLite only) -->
             <FormField v-slot="{ componentField }" name="type">
               <FormItem>
                 <FormLabel>{{ $t('setup.form.databaseType.label') }}</FormLabel>
@@ -41,31 +41,10 @@
                     <SelectItem value="sqlite">
                       {{ $t('setup.form.databaseType.options.sqlite') }}
                     </SelectItem>
-                    <SelectItem value="postgres">
-                      {{ $t('setup.form.databaseType.options.postgres') }}
-                    </SelectItem>
                   </SelectContent>
                 </Select>
                 <FormDescription>
                   {{ $t('setup.form.databaseType.description') }}
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            </FormField>
-
-            <!-- Connection String for PostgreSQL -->
-            <FormField v-slot="{ componentField }" name="connectionString">
-              <FormItem v-show="selectedType === 'postgres'">
-                <FormLabel>{{ $t('setup.form.connectionString.label') }}</FormLabel>
-                <FormControl>
-                  <Input
-                    v-bind="componentField"
-                    type="text"
-                    :placeholder="$t('setup.form.connectionString.placeholder')"
-                  />
-                </FormControl>
-                <FormDescription>
-                  {{ $t('setup.form.connectionString.description') }}
                 </FormDescription>
                 <FormMessage />
               </FormItem>
@@ -97,7 +76,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useForm } from 'vee-validate';
 import { toTypedSchema } from '@vee-validate/zod';
@@ -110,7 +89,6 @@ import { DatabaseType } from '@/types/database';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
   FormControl,
@@ -132,40 +110,20 @@ const router = useRouter();
 const databaseStore = useDatabaseStore();
 const { t } = useI18n();
 
-// Form validation schema
+// Form validation schema (simplified for SQLite only)
 const formSchema = toTypedSchema(
   z.object({
     type: z.nativeEnum(DatabaseType, {
       required_error: t('setup.errors.validationRequired'),
     }),
-    connectionString: z.string().optional(),
-  }).refine((data) => {
-    if (data.type === DatabaseType.Postgres) {
-      return data.connectionString && data.connectionString.trim().length > 0;
-    }
-    return true;
-  }, {
-    message: t('setup.errors.connectionStringRequired'),
-    path: ['connectionString'],
   })
 );
 
 const form = useForm({
   validationSchema: formSchema,
   initialValues: {
-    type: undefined,
-    connectionString: '',
+    type: DatabaseType.SQLite, // Default to SQLite since it's the only option
   },
-});
-
-const selectedType = ref<DatabaseType | undefined>();
-
-// Watch for type changes to show/hide connection string field
-watch(() => form.values.type, (newType) => {
-  selectedType.value = newType as DatabaseType;
-  if (newType !== DatabaseType.Postgres) {
-    form.setFieldValue('connectionString', '');
-  }
 });
 
 const onSubmit = form.handleSubmit(async (values) => {
@@ -173,7 +131,6 @@ const onSubmit = form.handleSubmit(async (values) => {
 
   const success = await databaseStore.setupDatabase({
     type: values.type,
-    connectionString: values.connectionString || undefined,
   });
 
   if (success) {

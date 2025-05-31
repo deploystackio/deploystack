@@ -3,64 +3,41 @@ import path from 'node:path';
 import { type Plugin, type DatabaseExtension } from '../plugin-system/types'; // Added DatabaseExtension
 
 // Config
-import { getDbConfig, saveDbConfig, type DbConfig, type SQLiteConfig, type PostgresConfig } from './config';
+import { getDbConfig, saveDbConfig, type DbConfig, type SQLiteConfig } from './config';
 
 // Schema Definitions
-import { baseTableDefinitions, pluginTableDefinitions as inputPluginTableDefinitions, authTypeEnumValues, teamRoleEnumValues } from './schema';
+import { baseTableDefinitions, pluginTableDefinitions as inputPluginTableDefinitions } from './schema';
 
 // Drizzle SQLite
 import { drizzle as drizzleSqliteAdapter, type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import SqliteDriver from 'better-sqlite3'; // Default import is the constructor
 import { sqliteTable, text as sqliteText, integer as sqliteInteger } from 'drizzle-orm/sqlite-core';
 
-// Drizzle PostgreSQL
-import { drizzle as drizzlePgAdapter, type NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { Pool as PgPool } from 'pg';
-import { pgTable, text as pgText, integer as pgInteger, timestamp as pgTimestamp, pgEnum } from 'drizzle-orm/pg-core';
-
 // Types for Drizzle instance and schema
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type AnyDatabase = BetterSQLite3Database<any> | NodePgDatabase<any>;
+export type AnyDatabase = BetterSQLite3Database<any>;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnySchema = Record<string, any>; // Represents the schema object Drizzle uses
 
 // Global state for database instance and schema
 let dbInstance: AnyDatabase | null = null;
 let dbSchema: AnySchema | null = null;
-let dbConnection: SqliteDriver.Database | PgPool | null = null; // Correct type for better-sqlite3 instance
+let dbConnection: SqliteDriver.Database | null = null; // SQLite connection only
 let currentDbConfig: DbConfig | null = null;
 let isDbInitialized = false;
 let isDbConfigured = false;
 
-// const MIGRATIONS_DIR_NAME = 'migrations'; // This is now dialect-specific
 const MIGRATIONS_TABLE_NAME = '__drizzle_migrations';
 
-
-function getColumnBuilder(dialect: 'sqlite' | 'postgres', type: 'text' | 'integer' | 'timestamp') {
-  if (dialect === 'sqlite') {
-    if (type === 'text') return sqliteText;
-    if (type === 'integer') return sqliteInteger;
-    if (type === 'timestamp') return sqliteInteger; 
-  } else { // postgres
-    if (type === 'text') return pgText;
-    if (type === 'integer') return pgInteger;
-    if (type === 'timestamp') return pgTimestamp;
-  }
-  throw new Error(`Unsupported column type ${type} for dialect ${dialect}`);
+function getColumnBuilder(type: 'text' | 'integer' | 'timestamp') {
+  if (type === 'text') return sqliteText;
+  if (type === 'integer') return sqliteInteger;
+  if (type === 'timestamp') return sqliteInteger; // SQLite uses integer for timestamps
+  throw new Error(`Unsupported column type ${type}`);
 }
 
-function generateSchema(dialect: 'sqlite' | 'postgres'): AnySchema {
+function generateSchema(): AnySchema {
   const generatedSchema: AnySchema = {};
-
-  // Create enums for PostgreSQL
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let authTypeEnum: any = null;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let teamRoleEnum: any = null;
-  if (dialect === 'postgres') {
-    authTypeEnum = pgEnum('auth_type', authTypeEnumValues);
-    teamRoleEnum = pgEnum('team_role', teamRoleEnumValues);
-  }
 
   for (const [tableName, tableColumns] of Object.entries(baseTableDefinitions)) {
     const columns: Record<string, ReturnType<typeof tableColumns[keyof typeof tableColumns]>> = {};
@@ -78,26 +55,10 @@ function generateSchema(dialect: 'sqlite' | 'postgres'): AnySchema {
         builderType = 'integer';
       }
       
-      const builder = getColumnBuilder(dialect, builderType);
-      
-      // Special handling for enums
-      if (columnName === 'auth_type' && tableName === 'authUser') {
-        if (dialect === 'postgres' && authTypeEnum) {
-          columns[columnName] = authTypeEnum('auth_type').notNull();
-        } else {
-          columns[columnName] = columnDefFunc(builder);
-        }
-      } else if (columnName === 'role' && tableName === 'teamMemberships') {
-        if (dialect === 'postgres' && teamRoleEnum) {
-          columns[columnName] = teamRoleEnum('role').notNull();
-        } else {
-          columns[columnName] = columnDefFunc(builder);
-        }
-      } else {
-        columns[columnName] = columnDefFunc(builder);
-      }
+      const builder = getColumnBuilder(builderType);
+      columns[columnName] = columnDefFunc(builder);
     }
-    generatedSchema[tableName] = dialect === 'sqlite' ? sqliteTable(tableName, columns) : pgTable(tableName, columns);
+    generatedSchema[tableName] = sqliteTable(tableName, columns);
   }
 
   for (const [tableName, tableColumns] of Object.entries(inputPluginTableDefinitions)) {
@@ -109,37 +70,27 @@ function generateSchema(dialect: 'sqlite' | 'postgres'): AnySchema {
       } else if (['id', 'count', 'age', 'quantity', 'order', 'status', 'number'].some(keyword => columnName.toLowerCase().includes(keyword))) {
         builderType = 'integer';
       }
-      const builder = getColumnBuilder(dialect, builderType);
+      const builder = getColumnBuilder(builderType);
       columns[columnName] = columnDefFunc(builder);
     }
-    generatedSchema[tableName] = dialect === 'sqlite' ? sqliteTable(tableName, columns) : pgTable(tableName, columns);
+    generatedSchema[tableName] = sqliteTable(tableName, columns);
   }
   return generatedSchema;
 }
 
-
-async function ensureMigrationsTable(_db: AnyDatabase, dialect: 'sqlite' | 'postgres') { // db param not used due to raw exec
-  const idColumnType = dialect === 'sqlite' ? 'INTEGER PRIMARY KEY AUTOINCREMENT' : 'SERIAL PRIMARY KEY';
-  const nameColumnType = 'TEXT UNIQUE';
-  const appliedAtType = dialect === 'sqlite' ? `INTEGER DEFAULT (strftime('%s', 'now'))` : 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP';
-
-  // Use string directly for raw execution
+async function ensureMigrationsTable(_db: AnyDatabase) { // db param not used due to raw exec
   const createTableQuery = `
     CREATE TABLE IF NOT EXISTS ${MIGRATIONS_TABLE_NAME} (
-      id ${idColumnType},
-      migration_name ${nameColumnType} NOT NULL,
-      applied_at ${appliedAtType} NOT NULL
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      migration_name TEXT UNIQUE NOT NULL,
+      applied_at INTEGER DEFAULT (strftime('%s', 'now')) NOT NULL
     )
   `;
   
-  if (dialect === 'sqlite') {
-    (dbConnection as SqliteDriver.Database).exec(createTableQuery);
-  } else {
-    await (dbConnection as PgPool).query(createTableQuery);
-  }
+  (dbConnection as SqliteDriver.Database).exec(createTableQuery);
 }
 
-async function applyMigrations(db: AnyDatabase, dialect: 'sqlite' | 'postgres') {
+async function applyMigrations(db: AnyDatabase) {
   const projectRootMigrationsDir = path.join(process.cwd(), 'drizzle');
 
   // fs.stat is async with fs/promises, so await it or use fs.existsSync
@@ -150,8 +101,7 @@ async function applyMigrations(db: AnyDatabase, dialect: 'sqlite' | 'postgres') 
      // console.warn(`[WARN] Base Drizzle directory not found at: ${projectRootMigrationsDir}.`);
   }
   
-  const dialectMigrationsSubDir = dialect === 'sqlite' ? 'migrations_sqlite' : 'migrations_pg';
-  const migrationsPath = path.join(projectRootMigrationsDir, dialectMigrationsSubDir);
+  const migrationsPath = path.join(projectRootMigrationsDir, 'migrations_sqlite');
 
   try {
     await fs.access(migrationsPath);
@@ -161,17 +111,12 @@ async function applyMigrations(db: AnyDatabase, dialect: 'sqlite' | 'postgres') 
   }
 
   console.log(`[INFO] Checking for new migrations in ${migrationsPath}...`);
-  await ensureMigrationsTable(db, dialect);
+  await ensureMigrationsTable(db);
 
   let appliedMigrations: { name: string }[] = [];
   const selectAppliedQuery = `SELECT migration_name as name FROM ${MIGRATIONS_TABLE_NAME}`;
 
-  if (dialect === 'sqlite') {
-    appliedMigrations = (dbConnection as SqliteDriver.Database).prepare(selectAppliedQuery).all() as {name: string}[];
-  } else {
-    const result = await (dbConnection as PgPool).query(selectAppliedQuery);
-    appliedMigrations = result.rows as {name: string}[];
-  }
+  appliedMigrations = (dbConnection as SqliteDriver.Database).prepare(selectAppliedQuery).all() as {name: string}[];
   const appliedMigrationNames = appliedMigrations.map(row => row.name);
 
   const migrationFiles = (await fs.readdir(migrationsPath))
@@ -186,33 +131,14 @@ async function applyMigrations(db: AnyDatabase, dialect: 'sqlite' | 'postgres') 
       const statements = sqlContent.split('--> statement-breakpoint');
 
       try {
-        if (dialect === 'sqlite') {
-          const sqliteConn = dbConnection as SqliteDriver.Database;
-          sqliteConn.exec('BEGIN');
-          for (const statement of statements) {
-            const trimmedStatement = statement.trim();
-            if (trimmedStatement) sqliteConn.exec(trimmedStatement);
-          }
-          sqliteConn.prepare(`INSERT INTO ${MIGRATIONS_TABLE_NAME} (migration_name) VALUES (?)`).run(file);
-          sqliteConn.exec('COMMIT');
-        } else { 
-          const pgConn = dbConnection as PgPool;
-          const client = await pgConn.connect();
-          try {
-            await client.query('BEGIN');
-            for (const statement of statements) {
-              const trimmedStatement = statement.trim();
-              if (trimmedStatement) await client.query(trimmedStatement);
-            }
-            await client.query(`INSERT INTO ${MIGRATIONS_TABLE_NAME} (migration_name) VALUES ($1)`, [file]);
-            await client.query('COMMIT');
-          } catch (e) {
-            await client.query('ROLLBACK');
-            throw e;
-          } finally {
-            client.release();
-          }
+        const sqliteConn = dbConnection as SqliteDriver.Database;
+        sqliteConn.exec('BEGIN');
+        for (const statement of statements) {
+          const trimmedStatement = statement.trim();
+          if (trimmedStatement) sqliteConn.exec(trimmedStatement);
         }
+        sqliteConn.prepare(`INSERT INTO ${MIGRATIONS_TABLE_NAME} (migration_name) VALUES (?)`).run(file);
+        sqliteConn.exec('COMMIT');
         console.log(`[INFO] Applied migration: ${file}`);
       } catch (error) {
         const typedError = error as Error;
@@ -239,52 +165,33 @@ export async function initializeDatabase(): Promise<boolean> {
   }
   isDbConfigured = true;
 
-  const dialect = currentDbConfig.type;
-  dbSchema = generateSchema(dialect);
+  dbSchema = generateSchema();
 
   let dbExists = false;
 
-  if (dialect === 'sqlite') {
-    const sqliteConfig = currentDbConfig as SQLiteConfig;
-    // process.cwd() is .../services/backend due to the npm script `cd services/backend && ...`
-    // sqliteConfig.dbPath is 'persistent_data/database/deploystack.db'
-    // So, this correctly resolves to .../services/backend/persistent_data/database/deploystack.db
-    const absoluteDbPath = path.join(process.cwd(), sqliteConfig.dbPath);
-    const dbDir = path.dirname(absoluteDbPath);
-    await fs.mkdir(dbDir, { recursive: true });
-    
-    try {
-        await fs.access(absoluteDbPath);
-        dbExists = true;
-    } catch {
-        dbExists = false;
-    }
-
-    const sqliteConn = new SqliteDriver(absoluteDbPath); // Use constructor
-    dbConnection = sqliteConn;
-    dbInstance = drizzleSqliteAdapter(sqliteConn, { schema: dbSchema, logger: false });
-    console.log(`[INFO] Connected to SQLite database at: ${absoluteDbPath}`);
-    if (!dbExists) console.log(`[INFO] SQLite database created at: ${absoluteDbPath}`);
-
-  } else { 
-    const pgConfig = currentDbConfig as PostgresConfig;
-    const pool = new PgPool({ connectionString: pgConfig.connectionString });
-    try {
-      const client = await pool.connect();
-      console.log('[INFO] Successfully connected to PostgreSQL.');
-      client.release();
-      dbExists = true; 
-    } catch (error) {
-        const typedError = error as Error;
-        console.error('[ERROR] Failed to connect to PostgreSQL:', typedError.message);
-        throw new Error(`Failed to connect to PostgreSQL: ${typedError.message}`);
-    }
-    dbConnection = pool;
-    dbInstance = drizzlePgAdapter(pool, { schema: dbSchema, logger: false });
+  const sqliteConfig = currentDbConfig as SQLiteConfig;
+  // process.cwd() is .../services/backend due to the npm script `cd services/backend && ...`
+  // sqliteConfig.dbPath is 'persistent_data/database/deploystack.db'
+  // So, this correctly resolves to .../services/backend/persistent_data/database/deploystack.db
+  const absoluteDbPath = path.join(process.cwd(), sqliteConfig.dbPath);
+  const dbDir = path.dirname(absoluteDbPath);
+  await fs.mkdir(dbDir, { recursive: true });
+  
+  try {
+      await fs.access(absoluteDbPath);
+      dbExists = true;
+  } catch {
+      dbExists = false;
   }
 
+  const sqliteConn = new SqliteDriver(absoluteDbPath); // Use constructor
+  dbConnection = sqliteConn;
+  dbInstance = drizzleSqliteAdapter(sqliteConn, { schema: dbSchema, logger: false });
+  console.log(`[INFO] Connected to SQLite database at: ${absoluteDbPath}`);
+  if (!dbExists) console.log(`[INFO] SQLite database created at: ${absoluteDbPath}`);
+
   if (dbInstance) { // Ensure dbInstance is not null
-    await applyMigrations(dbInstance, dialect);
+    await applyMigrations(dbInstance);
   } else {
     throw new Error("Database instance could not be created.");
   }
@@ -312,18 +219,12 @@ export async function setupNewDatabase(config: DbConfig): Promise<boolean> {
   dbInstance = null;
   dbSchema = null;
   if (dbConnection) {
-    // Check type before calling close/end
-    if (currentDbConfig?.type === 'sqlite' && 'close' in dbConnection) {
-       (dbConnection as SqliteDriver.Database).close();
-    } else if (currentDbConfig?.type === 'postgres' && 'end' in dbConnection) {
-      await (dbConnection as PgPool).end();
-    }
+    (dbConnection as SqliteDriver.Database).close();
     dbConnection = null;
   }
 
   return initializeDatabase();
 }
-
 
 export function getDb(): AnyDatabase {
   if (!dbInstance || !isDbInitialized) {
@@ -349,7 +250,7 @@ export function executeDbOperation<T>(
   return operation(db, schema);
 }
 
-export function getDbConnection(): SqliteDriver.Database | PgPool { // Corrected return type
+export function getDbConnection(): SqliteDriver.Database {
    if (!dbConnection || !isDbInitialized) {
     throw new Error('Database connection not established. Call initializeDatabase() first.');
   }
@@ -368,13 +269,11 @@ export function getDbStatus() {
 export function regenerateSchema(): void {
   if (currentDbConfig) {
     console.log('[INFO] Forcing schema regeneration...');
-    dbSchema = generateSchema(currentDbConfig.type);
+    dbSchema = generateSchema();
     
     // Recreate the database instance with new schema
-    if (dbConnection && currentDbConfig.type === 'sqlite') {
+    if (dbConnection) {
       dbInstance = drizzleSqliteAdapter(dbConnection as SqliteDriver.Database, { schema: dbSchema, logger: false });
-    } else if (dbConnection && currentDbConfig.type === 'postgres') {
-      dbInstance = drizzlePgAdapter(dbConnection as PgPool, { schema: dbSchema, logger: false });
     }
     
     console.log('[INFO] Schema regenerated successfully.');
@@ -409,7 +308,6 @@ export async function createPluginTables(_db: AnyDatabase, plugins: Plugin[]) { 
       console.error("[ERROR] Cannot create plugin tables: DB config unknown.");
       return;
   }
-  // const dialect = currentDbConfig.type; // Not used currently
 
   const dbPlugins = plugins.filter(plugin => plugin.databaseExtension);
   for (const plugin of dbPlugins) {

@@ -8,23 +8,18 @@ export default {
       databaseType: {
         label: 'Database Type',
         placeholder: 'Select database type',
-        description: 'Choose the type of database you want to use for DeployStack.',
+        description: 'DeployStack uses SQLite for data storage.',
         options: {
           sqlite: 'SQLite',
-          postgres: 'PostgreSQL',
         },
-      },
-      connectionString: {
-        label: 'Connection String',
-        placeholder: 'Enter database connection string',
-        description: 'Provide the connection string for your database.',
       },
     },
     errors: {
       title: 'Setup Error',
       validationRequired: 'This field is required for setup.',
-      connectionStringRequired: 'Database connection string is required.',
       failedToConnectWithAddress: 'Failed to connect to the database with the provided address.',
+      setupFailed: 'Database setup failed. Please try again.',
+      connectionFailed: 'Failed to connect to the backend server.',
     },
     alreadyConfigured: {
       title: 'Already Configured',
@@ -41,11 +36,8 @@ export default {
       title: 'Database Configuration',
       typeLabel: 'Database Type',
       sqliteLabel: 'SQLite',
-      postgresLabel: 'PostgreSQL',
       sqlitePathLabel: 'SQLite Database Path',
       sqlitePathPlaceholder: 'e.g., persistent_data/database.db',
-      postgresConnectionLabel: 'PostgreSQL Connection String',
-      postgresConnectionPlaceholder: 'postgresql://user:password@host:port/database',
     },
     adminUser: {
       title: 'Administrator Account',
