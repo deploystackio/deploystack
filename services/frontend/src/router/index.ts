@@ -31,6 +31,12 @@ const routes = [
     meta: { requiresSetup: true }, // Or false, depending on whether logout should be accessible if setup isn't complete
   },
   {
+    path: '/dashboard',
+    name: 'Dashboard',
+    component: () => import('../views/Dashboard.vue'),
+    meta: { requiresSetup: true },
+  },
+  {
     path: '/plugin-demo',
     name: 'PluginDemo',
     component: () => import('../views/PluginDemo.vue'),
