@@ -33,8 +33,15 @@ module.exports = {
           if (commit.scope && !scopes.includes('backend') && !scopes.includes('all')) {
             return;
           }
+          
+          // Ensure commit hash is available for link text
+          if (commit.hash) {
+            commit.shortHash = commit.hash.substring(0, 7);
+          }
+          
           return commit;
-        }
+        },
+        "commitPartial": "* {{subject}} ([{{shortHash}}]({{commitUrlFormat}}))"
       }
     }
   }
