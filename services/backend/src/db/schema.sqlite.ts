@@ -47,3 +47,21 @@ export const authKey = sqliteTable('authKey', {
   hashed_password: text('hashed_password'),
   expires: integer('expires', { mode: 'number' }),
 });
+
+export const teams = sqliteTable('teams', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  slug: text('slug').notNull().unique(),
+  description: text('description'),
+  owner_id: text('owner_id').notNull().references(() => authUser.id, { onDelete: 'cascade' }),
+  created_at: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  updated_at: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+});
+
+export const teamMemberships = sqliteTable('teamMemberships', {
+  id: text('id').primaryKey(),
+  team_id: text('team_id').notNull().references(() => teams.id, { onDelete: 'cascade' }),
+  user_id: text('user_id').notNull().references(() => authUser.id, { onDelete: 'cascade' }),
+  role: text('role').notNull(), // 'team_admin' or 'team_user'
+  joined_at: integer('joined_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+});

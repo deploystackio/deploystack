@@ -6,6 +6,7 @@ import { getDb, getSchema } from '../../db';
 import { eq, or } from 'drizzle-orm';
 import { generateId } from 'lucia'; // Lucia's utility for generating IDs
 import { hash } from '@node-rs/argon2';
+import { TeamService } from '../../services/teamService';
 
 export default async function registerEmailRoute(fastify: FastifyInstance) {
   fastify.post<{ Body: RegisterEmailInput }>( // Use Fastify's generic type for request body
@@ -81,6 +82,15 @@ export default async function registerEmailRoute(fastify: FastifyInstance) {
         }
 
         fastify.log.info(`User created successfully: ${userId} with role: ${defaultRole}`);
+
+        // Create default team for the user
+        try {
+          const team = await TeamService.createDefaultTeamForUser(userId, username);
+          fastify.log.info(`Default team created successfully for user ${userId}: ${team.id}`);
+        } catch (teamError) {
+          fastify.log.error(teamError, `Failed to create default team for user ${userId}:`);
+          // Don't fail registration if team creation fails, just log the error
+        }
 
         // Create session manually (Lucia's createSession has issues with our schema)
         const sessionId = generateId(40); // Generate session ID

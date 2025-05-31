@@ -60,6 +60,27 @@ export const authKeyTableColumns = {
   expires: (columnBuilder: any) => columnBuilder('expires', { mode: 'number' }), // Nullable, for things like password reset
 };
 
+export const teamsTableColumns = {
+  id: (columnBuilder: any) => columnBuilder('id').primaryKey(),
+  name: (columnBuilder: any) => columnBuilder('name').notNull(),
+  slug: (columnBuilder: any) => columnBuilder('slug').notNull().unique(),
+  description: (columnBuilder: any) => columnBuilder('description'),
+  owner_id: (columnBuilder: any) => columnBuilder('owner_id').notNull(), // Foreign key to authUser.id
+  created_at: (columnBuilder: any) => columnBuilder('created_at', { mode: 'timestamp' }).notNull().defaultNow(),
+  updated_at: (columnBuilder: any) => columnBuilder('updated_at', { mode: 'timestamp' }).notNull().defaultNow(),
+};
+
+// Enum for team member roles
+export const teamRoleEnumValues = ['team_admin', 'team_user'] as const;
+
+export const teamMembershipsTableColumns = {
+  id: (columnBuilder: any) => columnBuilder('id').primaryKey(),
+  team_id: (columnBuilder: any) => columnBuilder('team_id').notNull(), // Foreign key to teams.id
+  user_id: (columnBuilder: any) => columnBuilder('user_id').notNull(), // Foreign key to authUser.id
+  role: (columnBuilder: any) => columnBuilder('role').notNull(), // team_admin or team_user
+  joined_at: (columnBuilder: any) => columnBuilder('joined_at', { mode: 'timestamp' }).notNull().defaultNow(),
+};
+
 // This object will hold definitions for all base tables.
 export const baseTableDefinitions = {
   users: usersTableColumns, // Keeping existing users table for now, can be deprecated/merged later
@@ -67,6 +88,8 @@ export const baseTableDefinitions = {
   authUser: authUserTableColumns,
   authSession: authSessionTableColumns,
   authKey: authKeyTableColumns,
+  teams: teamsTableColumns,
+  teamMemberships: teamMembershipsTableColumns,
   // e.g., posts: postsTableColumns,
 };
 

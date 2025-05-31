@@ -6,7 +6,7 @@ import { type Plugin, type DatabaseExtension } from '../plugin-system/types'; //
 import { getDbConfig, saveDbConfig, type DbConfig, type SQLiteConfig, type PostgresConfig } from './config';
 
 // Schema Definitions
-import { baseTableDefinitions, pluginTableDefinitions as inputPluginTableDefinitions, authTypeEnumValues } from './schema';
+import { baseTableDefinitions, pluginTableDefinitions as inputPluginTableDefinitions, authTypeEnumValues, teamRoleEnumValues } from './schema';
 
 // Drizzle SQLite
 import { drizzle as drizzleSqliteAdapter, type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
@@ -52,11 +52,14 @@ function getColumnBuilder(dialect: 'sqlite' | 'postgres', type: 'text' | 'intege
 function generateSchema(dialect: 'sqlite' | 'postgres'): AnySchema {
   const generatedSchema: AnySchema = {};
 
-  // Create enum for PostgreSQL auth_type
+  // Create enums for PostgreSQL
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let authTypeEnum: any = null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let teamRoleEnum: any = null;
   if (dialect === 'postgres') {
     authTypeEnum = pgEnum('auth_type', authTypeEnumValues);
+    teamRoleEnum = pgEnum('team_role', teamRoleEnumValues);
   }
 
   for (const [tableName, tableColumns] of Object.entries(baseTableDefinitions)) {
@@ -77,10 +80,16 @@ function generateSchema(dialect: 'sqlite' | 'postgres'): AnySchema {
       
       const builder = getColumnBuilder(dialect, builderType);
       
-      // Special handling for auth_type enum
+      // Special handling for enums
       if (columnName === 'auth_type' && tableName === 'authUser') {
         if (dialect === 'postgres' && authTypeEnum) {
           columns[columnName] = authTypeEnum('auth_type').notNull();
+        } else {
+          columns[columnName] = columnDefFunc(builder);
+        }
+      } else if (columnName === 'role' && tableName === 'teamMemberships') {
+        if (dialect === 'postgres' && teamRoleEnum) {
+          columns[columnName] = teamRoleEnum('role').notNull();
         } else {
           columns[columnName] = columnDefFunc(builder);
         }

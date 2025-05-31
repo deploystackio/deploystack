@@ -24,6 +24,13 @@ The RBAC system provides fine-grained access control through roles and permissio
   - `users.create` - Create new users
   - `roles.manage` - Manage roles and permissions
   - `system.admin` - Administrative system access
+  - `teams.create` - Create new teams
+  - `teams.view` - View team details
+  - `teams.edit` - Edit team settings
+  - `teams.delete` - Delete teams
+  - `teams.manage` - Full team management
+  - `team.members.view` - View team members
+  - `team.members.manage` - Manage team member roles
 
 ### Global User (`global_user`)
 
@@ -31,6 +38,184 @@ The RBAC system provides fine-grained access control through roles and permissio
 - **Permissions**:
   - `profile.view` - View own profile
   - `profile.edit` - Edit own profile
+  - `teams.create` - Create new teams (up to 3)
+  - `teams.view` - View team details
+  - `teams.edit` - Edit own team settings
+  - `teams.delete` - Delete own teams
+  - `team.members.view` - View team members
+
+### Team Administrator (`team_admin`)
+
+- **Description**: Full management access within a specific team
+- **Permissions**:
+  - `teams.view` - View team details
+  - `teams.edit` - Edit team settings
+  - `teams.delete` - Delete team (if owner)
+  - `teams.manage` - Full team management
+  - `team.members.view` - View team members
+  - `team.members.manage` - Manage team member roles
+
+### Team User (`team_user`)
+
+- **Description**: Basic team member with limited access
+- **Permissions**:
+  - `teams.view` - View team details
+  - `team.members.view` - View team members
+
+## Team System
+
+DeployStack includes a comprehensive team management system that allows users to organize their work into teams. Each user automatically gets their own team upon registration and can create up to 3 teams total.
+
+### Team Features
+
+- **Automatic Team Creation**: Every new user gets a default team created with their username
+- **Team Ownership**: Each team has an owner who has full administrative control
+- **Single User Teams**: Currently, teams support only one user per team
+- **Team Limits**: Users can create up to 3 teams maximum
+- **Unique Slugs**: Teams have URL-friendly slugs with automatic conflict resolution
+
+### Team Database Schema
+
+#### Teams Table
+
+```sql
+CREATE TABLE teams (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  slug TEXT NOT NULL UNIQUE,
+  description TEXT,
+  owner_id TEXT NOT NULL REFERENCES authUser(id) ON DELETE CASCADE,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+);
+```
+
+#### Team Memberships Table
+
+```sql
+CREATE TABLE teamMemberships (
+  id TEXT PRIMARY KEY,
+  team_id TEXT NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL REFERENCES authUser(id) ON DELETE CASCADE,
+  role TEXT NOT NULL, -- 'team_admin' or 'team_user'
+  joined_at INTEGER NOT NULL,
+  UNIQUE(team_id, user_id)
+);
+```
+
+### Team Registration Flow
+
+When a user registers:
+
+1. User account is created with appropriate global role
+2. A default team is automatically created using the user's username
+3. The user is added as `team_admin` of their new team
+4. If username conflicts exist, slug gets incremented (e.g., `john-doe-2`)
+
+### Team Management
+
+#### Team Creation
+
+- Users can create up to 3 teams
+- Team names are converted to URL-friendly slugs
+- Automatic conflict resolution for duplicate slugs
+- Team owner becomes `team_admin` automatically
+
+#### Team Roles
+
+- **Team Admin**: Full control over team settings and management
+- **Team User**: Basic team member (for future expansion)
+
+#### Team Permissions
+
+| Permission | Description |
+|------------|-------------|
+| `teams.create` | Create new teams (up to limit) |
+| `teams.view` | View team details |
+| `teams.edit` | Edit team settings |
+| `teams.delete` | Delete team |
+| `teams.manage` | Full team management |
+| `team.members.view` | View team members |
+| `team.members.manage` | Manage team member roles |
+
+### Team API Endpoints
+
+#### Get User's Teams
+
+```http
+GET /api/users/me/teams
+Authorization: Required (authenticated user)
+```
+
+#### Create Team
+
+```http
+POST /api/teams
+Authorization: Required (teams.create permission)
+Content-Type: application/json
+
+{
+  "name": "My New Team",
+  "description": "Team description"
+}
+```
+
+#### Get Team by ID
+
+```http
+GET /api/teams/:id
+Authorization: Required (teams.view permission)
+```
+
+#### Update Team
+
+```http
+PUT /api/teams/:id
+Authorization: Required (teams.edit permission)
+Content-Type: application/json
+
+{
+  "name": "Updated Team Name",
+  "description": "Updated description"
+}
+```
+
+#### Delete Team
+
+```http
+DELETE /api/teams/:id
+Authorization: Required (teams.delete permission)
+```
+
+#### Get Team Members
+
+```http
+GET /api/teams/:id/members
+Authorization: Required (team.members.view permission)
+```
+
+### Team Service Methods
+
+The `TeamService` class provides comprehensive team management:
+
+```typescript
+// Create team
+const team = await TeamService.createTeam({
+  name: 'My Team',
+  owner_id: userId,
+  description: 'Team description'
+});
+
+// Get user's teams
+const teams = await TeamService.getUserTeams(userId);
+
+// Check team limits
+const canCreate = await TeamService.canUserCreateTeam(userId);
+
+// Team membership checks
+const isAdmin = await TeamService.isTeamAdmin(teamId, userId);
+const isOwner = await TeamService.isTeamOwner(teamId, userId);
+```
 
 ## Database Schema
 
