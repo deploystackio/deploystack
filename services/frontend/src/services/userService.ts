@@ -3,6 +3,10 @@ import { getEnv } from '@/utils/env';
 export interface User {
   id: string;
   email: string;
+  username?: string;
+  role_id: string;
+  first_name?: string;
+  last_name?: string;
   // Add other user properties as needed
 }
 

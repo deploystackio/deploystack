@@ -7,6 +7,10 @@ export default {
       provider: 'Provider',
       credentials: 'Credentials',
     },
+    adminArea: {
+      title: 'Admin Area',
+      globalSettings: 'Global Settings',
+    },
     teams: {
       selectTeam: 'Select Team',
       noTeams: 'No teams available',

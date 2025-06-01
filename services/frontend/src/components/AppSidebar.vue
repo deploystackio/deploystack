@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, defineProps } from 'vue' // Added defineProps
+import { ref, onMounted, defineProps, computed } from 'vue' // Added defineProps
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { getEnv } from '@/utils/env' // Import getEnv
@@ -30,14 +30,16 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { TeamService, type Team } from '@/services/teamService'
+import { UserService, type User } from '@/services/userService'
 import {
   Server,
   Settings,
   Key,
   ChevronDown,
-  User,
+  User as UserIcon,
   LogOut,
-  Users
+  Users,
+  FileSliders
 } from 'lucide-vue-next'
 
 // Define props, including variant
@@ -51,9 +53,15 @@ const router = useRouter()
 const { t } = useI18n()
 
 // User data
+const currentUser = ref<User | null>(null)
 const userEmail = ref('')
 const userName = ref('')
 const userLoading = ref(true)
+
+// Role checking
+const isGlobalAdmin = computed(() => {
+  return currentUser.value?.role_id === 'global_admin'
+})
 
 // Teams data
 const teams = ref<Team[]>([])
@@ -80,21 +88,24 @@ const navigationItems = [
   },
 ]
 
-// Fetch user data logic (remains the same)
+// Fetch user data logic using UserService
 const fetchUserData = async () => {
   try {
-    const apiUrl = getEnv('VITE_DEPLOYSTACK_BACKEND_URL') // Use getEnv with the correct key
-    if (!apiUrl) {
-      throw new Error('API URL not configured. Make sure VITE_DEPLOYSTACK_BACKEND_URL is set.')
+    const user = await UserService.getCurrentUser()
+    if (user) {
+      currentUser.value = user
+      userEmail.value = user.email
+      userName.value = user.username || ''
+    } else {
+      // User not logged in, redirect to login
+      router.push('/login')
     }
-    const response = await fetch(`${apiUrl}/api/users/me`, { method: 'GET', headers: { 'Content-Type': 'application/json' }, credentials: 'include' })
-    if (!response.ok) {
-      if (response.status === 401) { router.push('/login'); return }
-      throw new Error(`Failed to fetch user data: ${response.status}`)
-    }
-    const data = await response.json()
-    if (data.success && data.data) { userEmail.value = data.data.email; userName.value = data.data.username; }
-  } catch (error) { console.error('Error fetching user data:', error) } finally { userLoading.value = false }
+  } catch (error) {
+    console.error('Error fetching user data:', error)
+    currentUser.value = null
+  } finally {
+    userLoading.value = false
+  }
 }
 
 // Fetch teams logic (remains the same)
@@ -197,6 +208,26 @@ onMounted(() => {
           </SidebarMenu>
         </SidebarGroupContent>
       </SidebarGroup>
+
+      <!-- Admin Area section - only visible to global_admin -->
+      <SidebarGroup v-if="isGlobalAdmin">
+        <SidebarGroupLabel>{{ t('sidebar.adminArea.title') }}</SidebarGroupLabel>
+        <SidebarGroupContent>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                @click="navigateTo('/global-settings')"
+                :is-active="router.currentRoute.value.path === '/global-settings'"
+                class="w-full justify-start"
+                :aria-current="router.currentRoute.value.path === '/global-settings' ? 'page' : undefined"
+              >
+                <FileSliders class="mr-2 h-4 w-4 shrink-0" />
+                <span>{{ t('sidebar.adminArea.globalSettings') }}</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroupContent>
+      </SidebarGroup>
     </SidebarContent>
 
     <SidebarFooter>
@@ -224,7 +255,7 @@ onMounted(() => {
               align="start"
             >
               <DropdownMenuItem @click="goToAccount" class="gap-2">
-                <User class="size-4" />
+                <UserIcon class="size-4" />
                 {{ t('sidebar.user.account') }}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
