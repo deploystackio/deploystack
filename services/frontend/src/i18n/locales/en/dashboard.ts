@@ -2,6 +2,7 @@
 export default {
   sidebar: {
     navigation: {
+      title: 'Navigation',
       mcpServer: 'MCP Server',
       provider: 'Provider',
       credentials: 'Credentials',
