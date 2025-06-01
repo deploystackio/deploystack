@@ -107,14 +107,16 @@ export const pluginTableDefinitions: Record<string, Record<string, (columnBuilde
 // Example of how it will be used in db/index.ts:
 //
 // import { baseTableDefinitions } from './schema';
-// import { pgTable, text as pgTextColumnBuilder, integer as pgIntegerColumnBuilder } from 'drizzle-orm/pg-core';
+// import { sqliteTable, text as sqliteTextColumnBuilder, integer as sqliteIntegerColumnBuilder } from 'drizzle-orm/sqlite-core';
 //
-// const users = pgTable('users', {
-//   id: baseTableDefinitions.users.id(pgTextColumnBuilder),
-//   email: baseTableDefinitions.users.email(pgTextColumnBuilder),
-//   name: baseTableDefinitions.users.name(pgTextColumnBuilder),
-//   createdAt: baseTableDefinitions.users.createdAt(pgIntegerColumnBuilder),
-//   updatedAt: baseTableDefinitions.users.updatedAt(pgIntegerColumnBuilder),
+// const users = sqliteTable('users', {
+//   id: baseTableDefinitions.users.id(sqliteTextColumnBuilder),
+//   email: baseTableDefinitions.users.email(sqliteTextColumnBuilder),
+//   name: baseTableDefinitions.users.name(sqliteTextColumnBuilder),
+//   createdAt: baseTableDefinitions.users.createdAt(sqliteIntegerColumnBuilder),
+//   updatedAt: baseTableDefinitions.users.updatedAt(sqliteIntegerColumnBuilder),
 // });
 //
-// export const schema = { users };
+// // The actual schema is built in 'services/backend/src/db/schema.sqlite.ts'
+// // and augmented with plugin tables in 'services/backend/src/db/index.ts'
+// // export const schema = { users };

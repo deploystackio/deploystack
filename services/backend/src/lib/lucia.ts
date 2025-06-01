@@ -30,6 +30,7 @@ function initializeLucia(): Lucia {
   }
 
   // Use existing database connection and schema
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = getDb() as BetterSQLite3Database<any>;
   const schema = getSchema();
   

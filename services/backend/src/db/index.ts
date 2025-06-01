@@ -6,7 +6,7 @@ import { type Plugin, type DatabaseExtension } from '../plugin-system/types'; //
 import { getDbConfig, saveDbConfig, type DbConfig, type SQLiteConfig } from './config';
 
 // Schema Definitions
-import { baseTableDefinitions, pluginTableDefinitions as inputPluginTableDefinitions } from './schema';
+import { /* baseTableDefinitions, */ pluginTableDefinitions as inputPluginTableDefinitions } from './schema';
 
 // Drizzle SQLite
 import { drizzle as drizzleSqliteAdapter, type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
@@ -36,11 +36,12 @@ function getColumnBuilder(type: 'text' | 'integer' | 'timestamp') {
   throw new Error(`Unsupported column type ${type}`);
 }
 
+import * as staticSchema from './schema.sqlite';
+
 function generateSchema(): AnySchema {
   // Import the static schema instead of generating it dynamically
   // This avoids SQL syntax errors caused by dynamic schema generation
-  const staticSchema = require('./schema.sqlite');
-  const generatedSchema = { ...staticSchema };
+  const generatedSchema: AnySchema = { ...staticSchema };
 
   // Add plugin tables to the static schema
   for (const [tableName, tableColumns] of Object.entries(inputPluginTableDefinitions)) {
@@ -60,7 +61,7 @@ function generateSchema(): AnySchema {
   return generatedSchema;
 }
 
-async function ensureMigrationsTable(_db: AnyDatabase) { // db param not used due to raw exec
+async function ensureMigrationsTable() { // db param not used due to raw exec
   const createTableQuery = `
     CREATE TABLE IF NOT EXISTS ${MIGRATIONS_TABLE_NAME} (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -72,7 +73,7 @@ async function ensureMigrationsTable(_db: AnyDatabase) { // db param not used du
   (dbConnection as SqliteDriver.Database).exec(createTableQuery);
 }
 
-async function applyMigrations(db: AnyDatabase) {
+async function applyMigrations() {
   const projectRootMigrationsDir = path.join(process.cwd(), 'drizzle');
 
   // fs.stat is async with fs/promises, so await it or use fs.existsSync
@@ -93,7 +94,7 @@ async function applyMigrations(db: AnyDatabase) {
   }
 
   console.log(`[INFO] Checking for new migrations in ${migrationsPath}...`);
-  await ensureMigrationsTable(db);
+  await ensureMigrationsTable();
 
   let appliedMigrations: { name: string }[] = [];
   const selectAppliedQuery = `SELECT migration_name as name FROM ${MIGRATIONS_TABLE_NAME}`;
@@ -173,7 +174,7 @@ export async function initializeDatabase(): Promise<boolean> {
   if (!dbExists) console.log(`[INFO] SQLite database created at: ${absoluteDbPath}`);
 
   if (dbInstance) { // Ensure dbInstance is not null
-    await applyMigrations(dbInstance);
+    await applyMigrations();
   } else {
     throw new Error("Database instance could not be created.");
   }
@@ -284,7 +285,7 @@ export function registerPluginTables(plugins: Plugin[]) {
   }
 }
 
-export async function createPluginTables(_db: AnyDatabase, plugins: Plugin[]) { // db param not used
+export async function createPluginTables(plugins: Plugin[]) { // db param not used
   console.log('[INFO] Attempting to create plugin tables (Note: Better handled by migrations)...');
   if (!currentDbConfig) {
       console.error("[ERROR] Cannot create plugin tables: DB config unknown.");
