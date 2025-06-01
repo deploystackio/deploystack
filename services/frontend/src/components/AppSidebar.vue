@@ -29,7 +29,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Button } from '@/components/ui/button' // Still used for DropdownMenuTrigger as-child
 import { TeamService, type Team } from '@/services/teamService'
 import {
   Server,
