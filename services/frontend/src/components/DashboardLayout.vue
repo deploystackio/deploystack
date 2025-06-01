@@ -28,12 +28,12 @@ const sidebarStyle = computed(() => ({
 <template>
   <div class="flex h-screen w-full overflow-hidden"> {/* Ensure full screen and no body scroll */}
     <SidebarProvider :default-open="defaultOpen" :style="sidebarStyle">
-      <AppSidebar variant="inset" /> {/* AppSidebar needs to handle this variant prop */}
+      <AppSidebar variant="inset" />
       <SidebarInset>
         <!-- SiteHeader equivalent -->
         <header class="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b bg-background px-4 sm:px-6">
           <div class="flex items-center gap-2">
-            <SidebarTrigger class="-ml-1 lg:hidden" /> {/* Trigger for mobile/collapsible, hidden on lg if sidebar is always inset */}
+            <SidebarTrigger class="-ml-1 lg:hidden" />
             <h1 class="text-lg font-semibold md:text-xl">{{ props.title }}</h1>
           </div>
           <!-- Add other header elements like user menu, search, etc. here if needed -->

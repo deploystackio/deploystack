@@ -119,7 +119,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <Sidebar :variant="props.variant" :class="$attrs.class" collapsible="icon"> {/* Defaulting to collapsible icon, can be prop */}
+  <Sidebar :variant="props.variant" :class="$attrs.class" collapsible="icon">
     <SidebarHeader>
       <SidebarMenu>
         <SidebarMenuItem>
@@ -179,7 +179,7 @@ onMounted(() => {
       </SidebarMenu>
     </SidebarHeader>
 
-    <SidebarContent> {/* This should be scrollable by default if content overflows */}
+    <SidebarContent>
       <SidebarGroup>
         <SidebarGroupLabel>{{ t('sidebar.navigation.title', 'Navigation') }}</SidebarGroupLabel>
         <SidebarGroupContent>
