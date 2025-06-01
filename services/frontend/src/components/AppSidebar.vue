@@ -2,6 +2,7 @@
 import { ref, onMounted, defineProps } from 'vue' // Added defineProps
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import { getEnv } from '@/utils/env' // Import getEnv
 // import { cn } from '@/lib/utils' // cn might not be needed for root if $attrs.class is used directly
 // import { ScrollArea } from '@/components/ui/scroll-area' // SidebarContent should handle scrolling
 
@@ -83,9 +84,9 @@ const navigationItems = [
 // Fetch user data logic (remains the same)
 const fetchUserData = async () => {
   try {
-    const apiUrl = import.meta.env.VITE_DEPLOYSTACK_APP_URL
+    const apiUrl = getEnv('VITE_DEPLOYSTACK_BACKEND_URL') // Use getEnv with the correct key
     if (!apiUrl) {
-      throw new Error('API URL not configured')
+      throw new Error('API URL not configured. Make sure VITE_DEPLOYSTACK_BACKEND_URL is set.')
     }
     const response = await fetch(`${apiUrl}/api/users/me`, { method: 'GET', headers: { 'Content-Type': 'application/json' }, credentials: 'include' })
     if (!response.ok) {
