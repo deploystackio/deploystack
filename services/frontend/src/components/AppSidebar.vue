@@ -225,6 +225,17 @@ onMounted(() => {
                 <span>{{ t('sidebar.adminArea.globalSettings') }}</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                @click="navigateTo('/admin/users')"
+                :is-active="router.currentRoute.value.path === '/admin/users'"
+                class="w-full justify-start"
+                :aria-current="router.currentRoute.value.path === '/admin/users' ? 'page' : undefined"
+              >
+                <Users class="mr-2 h-4 w-4 shrink-0" />
+                <span>{{ t('sidebar.adminArea.users') }}</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
           </SidebarMenu>
         </SidebarGroupContent>
       </SidebarGroup>

@@ -5,6 +5,8 @@ import setupMessages from './setup'
 import dashboardMessages from './dashboard'
 import globalSettingsMessages from './globalSettings'
 import notFoundMessages from './notFound'
+import adminUsersMessages from './adminUsers'
+import sidebarMessages from './sidebar'
 
 export default {
   ...commonMessages,
@@ -13,6 +15,8 @@ export default {
   ...dashboardMessages,
   ...globalSettingsMessages,
   ...notFoundMessages,
+  ...adminUsersMessages,
+  ...sidebarMessages,
   // If there are any top-level keys directly under 'en', they can be added here.
   // For example, if you had a global 'appName': 'My Application'
   // appName: 'DeployStack Application',

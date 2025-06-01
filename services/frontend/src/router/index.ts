@@ -79,6 +79,11 @@ const routes = [
         name: 'AdminSettings',
         component: () => import('../views/GlobalSettings.vue'),
       },
+      {
+        path: 'users',
+        name: 'AdminUsers',
+        component: () => import('../views/admin/Users.vue'), // Assuming the new component will be in views/admin/
+      },
     ],
   },
   {
