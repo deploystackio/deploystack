@@ -85,7 +85,7 @@ export const createServer = async () => {
 
     // Create plugin tables in the database (Note: better handled by migrations)
     // This function might need dbInstance if it's to do anything beyond logging
-    await createPluginTables(dbInstance, pluginManager.getAllPlugins());
+    await createPluginTables(pluginManager.getAllPlugins());
   
     // Initialize plugin database extensions (e.g., run plugin-specific setup)
     // Ensure getDatabaseExtensions() returns plugins that have a DB extension
