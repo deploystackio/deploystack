@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue' // Added ref
+import { computed } from 'vue'
 import type { StyleValue } from 'vue'
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar' // Assuming SidebarTrigger might be needed
 import AppSidebar from '@/components/AppSidebar.vue'
@@ -11,7 +11,7 @@ const props = defineProps<Props>()
 
 // TODO: Implement cookie-based persistence for defaultOpen if needed, like in the shadcn/ui example.
 // For now, defaulting to true.
-const defaultOpen = ref(true)
+const defaultOpen = true
 
 // Define sidebar width using custom values
 // Override the collapsed width to 30rem for testing
