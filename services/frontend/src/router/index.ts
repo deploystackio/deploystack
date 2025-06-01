@@ -42,6 +42,30 @@ const routes = [
     component: () => import('../views/PluginDemo.vue'),
     meta: { requiresSetup: true },
   },
+  {
+    path: '/user/account',
+    name: 'UserAccount',
+    component: () => import('../views/UserAccount.vue'),
+    meta: { requiresSetup: true },
+  },
+  {
+    path: '/mcp-server',
+    name: 'McpServer',
+    component: () => import('../views/McpServer.vue'),
+    meta: { requiresSetup: true },
+  },
+  {
+    path: '/provider',
+    name: 'Provider',
+    component: () => import('../views/Provider.vue'),
+    meta: { requiresSetup: true },
+  },
+  {
+    path: '/credentials',
+    name: 'Credentials',
+    component: () => import('../views/Credentials.vue'),
+    meta: { requiresSetup: true },
+  },
 ]
 
 const router = createRouter({

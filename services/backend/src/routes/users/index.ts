@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { ZodError } from 'zod';
 import { UserService } from '../../services/userService';
+import { TeamService } from '../../services/teamService';
 import { requirePermission, requireOwnershipOrAdmin, getUserIdFromParams } from '../../middleware/roleMiddleware';
 import {
   UpdateUserSchema,
@@ -290,6 +291,31 @@ export default async function usersRoute(fastify: FastifyInstance) {
       return reply.status(500).send({
         success: false,
         error: 'Failed to fetch user profile',
+      });
+    }
+  });
+
+  // GET /api/users/me/teams - Get current user's teams
+  fastify.get('/api/users/me/teams', async (request, reply) => {
+    try {
+      if (!request.user) {
+        return reply.status(401).send({
+          success: false,
+          error: 'Authentication required',
+        });
+      }
+
+      const teams = await TeamService.getUserTeams(request.user.id);
+      
+      return reply.status(200).send({
+        success: true,
+        data: teams,
+      });
+    } catch (error) {
+      fastify.log.error(error, 'Error fetching user teams');
+      return reply.status(500).send({
+        success: false,
+        error: 'Failed to fetch user teams',
       });
     }
   });
