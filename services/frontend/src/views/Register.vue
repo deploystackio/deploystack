@@ -37,7 +37,7 @@ const successMessage = ref('')
 const { t } = useI18n() // Initialize i18n composable
 
 // Get API URL from environment
-const apiUrl = getEnv('VITE_DEPLOYSTACK_APP_URL')
+const apiUrl = getEnv('VITE_DEPLOYSTACK_BACKEND_URL')
 
 // Define validation schema using Zod
 const formSchema = toTypedSchema(
