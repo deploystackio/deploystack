@@ -58,9 +58,14 @@ const sidebarStyle = computed(() => ({
   width: 100%;
 }
 
-/* Ensure the spacer div actually takes up space */
-.group\/sidebar-wrapper .group.peer [class*="w-[--sidebar-width]"] {
-  width: var(--sidebar-width) !important;
+/* Ensure the spacer div actually takes up space when expanded */
+.group\/sidebar-wrapper .group.peer[data-state="expanded"] [class*="w-[--sidebar-width]"] {
+  width: var(--sidebar-width);
+}
+
+/* Allow the spacer to collapse when sidebar is collapsed */
+.group\/sidebar-wrapper .group.peer[data-state="collapsed"] [class*="w-[--sidebar-width]"] {
+  width: var(--sidebar-width-icon);
 }
 
 /* Force the main content to account for sidebar space */
