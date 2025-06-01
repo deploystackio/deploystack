@@ -1,7 +1,6 @@
 import { getDb, getSchema } from '../db';
 import { eq, like } from 'drizzle-orm';
-import { encrypt, decrypt, isEncrypted } from '../utils/encryption';
-import { generateId } from 'lucia';
+import { encrypt, decrypt } from '../utils/encryption';
 
 export interface GlobalSetting {
   key: string;
