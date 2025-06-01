@@ -9,6 +9,8 @@ import logoutRoute from './auth/logout'
 // Import role and user management routes
 import rolesRoute from './roles'
 import usersRoute from './users'
+// Import global settings routes
+import globalSettingsRoute from './globalSettings'
 
 export const registerRoutes = (server: FastifyInstance): void => {
   // Register the individual database setup routes
@@ -23,6 +25,9 @@ export const registerRoutes = (server: FastifyInstance): void => {
   // Register role and user management routes
   server.register(rolesRoute);
   server.register(usersRoute);
+  
+  // Register global settings routes
+  server.register(globalSettingsRoute);
 
   // Define a default route (example)
   server.get('/', async () => {

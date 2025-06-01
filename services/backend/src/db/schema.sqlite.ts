@@ -65,3 +65,13 @@ export const teamMemberships = sqliteTable('teamMemberships', {
   role: text('role').notNull(), // 'team_admin' or 'team_user'
   joined_at: integer('joined_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 });
+
+export const globalSettings = sqliteTable('globalSettings', {
+  key: text('key').primaryKey(),
+  value: text('value').notNull(),
+  description: text('description'),
+  is_encrypted: integer('is_encrypted', { mode: 'boolean' }).notNull().default(false),
+  category: text('category'),
+  created_at: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  updated_at: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+});

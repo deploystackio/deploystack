@@ -81,6 +81,16 @@ export const teamMembershipsTableColumns = {
   joined_at: (columnBuilder: any) => columnBuilder('joined_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 };
 
+export const globalSettingsTableColumns = {
+  key: (columnBuilder: any) => columnBuilder('key').primaryKey(),
+  value: (columnBuilder: any) => columnBuilder('value').notNull(),
+  description: (columnBuilder: any) => columnBuilder('description'),
+  is_encrypted: (columnBuilder: any) => columnBuilder('is_encrypted').notNull().default(false),
+  category: (columnBuilder: any) => columnBuilder('category'),
+  created_at: (columnBuilder: any) => columnBuilder('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  updated_at: (columnBuilder: any) => columnBuilder('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+};
+
 // This object will hold definitions for all base tables.
 export const baseTableDefinitions = {
   users: usersTableColumns, // Keeping existing users table for now, can be deprecated/merged later
@@ -90,6 +100,7 @@ export const baseTableDefinitions = {
   authKey: authKeyTableColumns,
   teams: teamsTableColumns,
   teamMemberships: teamMembershipsTableColumns,
+  globalSettings: globalSettingsTableColumns,
   // e.g., posts: postsTableColumns,
 };
 

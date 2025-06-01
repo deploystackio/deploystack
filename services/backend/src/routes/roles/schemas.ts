@@ -68,8 +68,18 @@ export const AVAILABLE_PERMISSIONS = [
   'users.create',
   'roles.manage',
   'system.admin',
+  'settings.view',
+  'settings.edit',
+  'settings.delete',
   'profile.view',
   'profile.edit',
+  'teams.create',
+  'teams.view',
+  'teams.edit',
+  'teams.delete',
+  'teams.manage',
+  'team.members.view',
+  'team.members.manage',
 ] as const;
 
 export type Permission = typeof AVAILABLE_PERMISSIONS[number];
