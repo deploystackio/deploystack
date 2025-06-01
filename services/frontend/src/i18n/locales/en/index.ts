@@ -2,11 +2,13 @@
 import commonMessages from './common'
 import authMessages from './auth'
 import setupMessages from './setup'
+import dashboardMessages from './dashboard'
 
 export default {
   ...commonMessages,
   ...authMessages,
   ...setupMessages,
+  ...dashboardMessages,
   // If there are any top-level keys directly under 'en', they can be added here.
   // For example, if you had a global 'appName': 'My Application'
   // appName: 'DeployStack Application',
