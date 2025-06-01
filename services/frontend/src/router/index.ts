@@ -68,13 +68,18 @@ const routes = [
     meta: { requiresSetup: true },
   },
   {
-    path: '/global-settings',
-    name: 'GlobalSettings',
-    component: () => import('../views/GlobalSettings.vue'),
+    path: '/admin',
     meta: { 
       requiresSetup: true,
       requiresRole: 'global_admin'
     },
+    children: [
+      {
+        path: 'settings',
+        name: 'AdminSettings',
+        component: () => import('../views/GlobalSettings.vue'),
+      },
+    ],
   },
   {
     path: '/:pathMatch(.*)*',

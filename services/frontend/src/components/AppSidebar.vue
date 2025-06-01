@@ -216,10 +216,10 @@ onMounted(() => {
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton
-                @click="navigateTo('/global-settings')"
-                :is-active="router.currentRoute.value.path === '/global-settings'"
+                @click="navigateTo('/admin/settings')"
+                :is-active="router.currentRoute.value.path === '/admin/settings'"
                 class="w-full justify-start"
-                :aria-current="router.currentRoute.value.path === '/global-settings' ? 'page' : undefined"
+                :aria-current="router.currentRoute.value.path === '/admin/settings' ? 'page' : undefined"
               >
                 <FileSliders class="mr-2 h-4 w-4 shrink-0" />
                 <span>{{ t('sidebar.adminArea.globalSettings') }}</span>
