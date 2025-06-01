@@ -126,21 +126,20 @@ onMounted(() => {
         <SidebarMenuItem>
           <DropdownMenu>
             <DropdownMenuTrigger as-child>
-              <!-- Using Button for consistency with shadcn-vue SidebarMenuButton structure -->
-              <Button variant="ghost" size="lg" class="w-full justify-start items-center data-[state=open]:bg-accent data-[state=open]:text-accent-foreground px-2 h-auto py-2.5">
-                <div class="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground mr-2 shrink-0">
+              <SidebarMenuButton size="lg" class="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground">
+                <div class="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
                   <Users class="size-4" />
                 </div>
                 <div class="grid flex-1 text-left text-sm leading-tight">
                   <span class="truncate font-semibold">
                     {{ selectedTeam?.name || t('sidebar.teams.selectTeam') }}
                   </span>
-                  <span class="truncate text-xs text-muted-foreground">
+                  <span class="truncate text-xs text-sidebar-foreground/70">
                     {{ teamsLoading ? t('sidebar.teams.loading') : teams.length > 0 ? `${teams.length} team${teams.length !== 1 ? 's' : ''}` : t('sidebar.teams.noTeams') }}
                   </span>
                 </div>
-                <ChevronDown class="ml-2 size-4 text-muted-foreground shrink-0" />
-              </Button>
+                <ChevronDown class="ml-auto size-4" />
+              </SidebarMenuButton>
             </DropdownMenuTrigger>
             <DropdownMenuContent
               class="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
@@ -206,9 +205,8 @@ onMounted(() => {
         <SidebarMenuItem>
           <DropdownMenu>
             <DropdownMenuTrigger as-child>
-              <!-- Using Button for consistency -->
-              <Button variant="ghost" size="lg" class="w-full justify-start items-center data-[state=open]:bg-accent data-[state=open]:text-accent-foreground px-2 h-auto py-2.5">
-                <Avatar class="h-8 w-8 rounded-lg mr-2 shrink-0">
+              <SidebarMenuButton size="lg" class="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground">
+                <Avatar class="h-8 w-8 rounded-lg">
                   <AvatarImage src="https://www.shadcn-vue.com/avatars/shadcn.jpg" :alt="userName" />
                   <AvatarFallback class="rounded-lg">
                     {{ userLoading ? '...' : getUserInitials(userName || userEmail) }}
@@ -216,10 +214,10 @@ onMounted(() => {
                 </Avatar>
                 <div class="grid flex-1 text-left text-sm leading-tight">
                   <span class="truncate font-semibold">{{ userName || userEmail }}</span>
-                  <span class="truncate text-xs text-muted-foreground">{{ userEmail }}</span>
+                  <span class="truncate text-xs text-sidebar-foreground/70">{{ userEmail }}</span>
                 </div>
-                <ChevronDown class="ml-2 size-4 text-muted-foreground shrink-0" />
-              </Button>
+                <ChevronDown class="ml-auto size-4" />
+              </SidebarMenuButton>
             </DropdownMenuTrigger>
             <DropdownMenuContent
               class="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"

@@ -13,12 +13,12 @@ const props = defineProps<Props>()
 // For now, defaulting to true.
 const defaultOpen = ref(true)
 
-// Define sidebar width using the default values from the sidebar utils
-// The sidebar components expect these specific CSS variables
+// Define sidebar width using custom values
+// Override the collapsed width to 30rem for testing
 const sidebarStyle = computed(() => ({
   '--sidebar-width': '16rem',
   '--sidebar-width-mobile': '18rem',
-  '--sidebar-width-icon': '3rem',
+  '--sidebar-width-icon': '4rem',
 } as StyleValue))
 
 // A simple ref for the SiteHeader, can be expanded later
