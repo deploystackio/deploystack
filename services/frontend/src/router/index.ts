@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useDatabaseStore } from '@/stores/database'
+import { UserService } from '@/services/userService'
 
 const routes = [
   {
@@ -76,6 +77,15 @@ const router = createRouter({
 // Navigation guard to check database setup
 router.beforeEach(async (to, from, next) => {
   const databaseStore = useDatabaseStore()
+  const user = await UserService.getCurrentUser()
+
+  // If user is logged in and trying to access Login or Register, redirect to Dashboard
+  if (user) {
+    if (to.name === 'Login' || to.name === 'Register') {
+      next('/dashboard')
+      return
+    }
+  }
 
   // Skip setup check for the setup route itself
   if (to.name === 'Setup') {

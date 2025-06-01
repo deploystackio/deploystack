@@ -44,11 +44,11 @@ onMounted(async () => {
   message.value = t('logout.inProgressMessage');
   console.log('Attempting to logout from backend...');
 
-  const backendBaseUrl = getEnv('VITE_DEPLOYSTACK_APP_URL');
+  const backendBaseUrl = getEnv('VITE_DEPLOYSTACK_BACKEND_URL');
 
   if (!backendBaseUrl) {
     console.error(
-      'VITE_DEPLOYSTACK_APP_URL is not set in your environment. ' +
+      'VITE_DEPLOYSTACK_BACKEND_URL is not set in your environment. ' + 
       'Please ensure it is defined in .env.local (for local development) or as a runtime environment variable (for Docker). ' +
       'API call to logout will likely fail.'
     );
