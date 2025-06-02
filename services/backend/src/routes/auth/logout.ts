@@ -33,6 +33,7 @@ export default async function logoutRoute(fastify: FastifyInstance) {
             if (authSessionTable && authSessionTable.id) {
               const dbStatus = getDbStatus();
               if (dbStatus.dialect === 'sqlite') {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const sqliteDb = db as BetterSQLite3Database<any>;
                 await sqliteDb.delete(authSessionTable).where(eq(authSessionTable.id, sessionId));
               }
@@ -81,6 +82,7 @@ export default async function logoutRoute(fastify: FastifyInstance) {
           if (authSessionTable && authSessionTable.id) {
             const dbStatus = getDbStatus();
             if (dbStatus.dialect === 'sqlite') {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               const sqliteDb = db as BetterSQLite3Database<any>;
               await sqliteDb.delete(authSessionTable).where(eq(authSessionTable.id, sessionId));
             }

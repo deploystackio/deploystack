@@ -21,6 +21,7 @@ import {
   getDbConnection,
   getDbStatus
 } from './db'
+import { GlobalSettingsInitService } from './global-settings'
 import type SqliteDriver from 'better-sqlite3'; // For type checking in onClose
 
 
@@ -85,13 +86,21 @@ export const createServer = async () => {
 
     // Create plugin tables in the database (Note: better handled by migrations)
     // This function might need dbInstance if it's to do anything beyond logging
-    await createPluginTables(dbInstance, pluginManager.getAllPlugins());
+    await createPluginTables(pluginManager.getAllPlugins());
   
     // Initialize plugin database extensions (e.g., run plugin-specific setup)
     // Ensure getDatabaseExtensions() returns plugins that have a DB extension
     const dbExtensions = pluginManager.getAllPlugins().filter(p => p.databaseExtension);
     await initializePluginDatabases(dbInstance, dbExtensions);
     
+    // Initialize global settings
+    try {
+      await GlobalSettingsInitService.loadSettingsDefinitions();
+      await GlobalSettingsInitService.initializeSettings();
+      server.log.info('Global settings initialization completed.');
+    } catch (error) {
+      server.log.error('Failed to initialize global settings:', error);
+    }
   } else {
     server.decorate('db', null as any);
     server.decorate('rawDbConnection', null as any);

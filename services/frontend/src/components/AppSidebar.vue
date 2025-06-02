@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, defineProps } from 'vue' // Added defineProps
+import { ref, onMounted, defineProps, computed } from 'vue' // Added defineProps
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 // import { cn } from '@/lib/utils' // cn might not be needed for root if $attrs.class is used directly
@@ -28,16 +28,17 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Button } from '@/components/ui/button' // Still used for DropdownMenuTrigger as-child
 import { TeamService, type Team } from '@/services/teamService'
+import { UserService, type User } from '@/services/userService'
 import {
   Server,
   Settings,
   Key,
   ChevronDown,
-  User,
+  User as UserIcon,
   LogOut,
-  Users
+  Users,
+  FileSliders
 } from 'lucide-vue-next'
 
 // Define props, including variant
@@ -51,9 +52,15 @@ const router = useRouter()
 const { t } = useI18n()
 
 // User data
+const currentUser = ref<User | null>(null)
 const userEmail = ref('')
 const userName = ref('')
 const userLoading = ref(true)
+
+// Role checking
+const isGlobalAdmin = computed(() => {
+  return currentUser.value?.role_id === 'global_admin'
+})
 
 // Teams data
 const teams = ref<Team[]>([])
@@ -80,21 +87,24 @@ const navigationItems = [
   },
 ]
 
-// Fetch user data logic (remains the same)
+// Fetch user data logic using UserService
 const fetchUserData = async () => {
   try {
-    const apiUrl = import.meta.env.VITE_DEPLOYSTACK_APP_URL
-    if (!apiUrl) {
-      throw new Error('API URL not configured')
+    const user = await UserService.getCurrentUser()
+    if (user) {
+      currentUser.value = user
+      userEmail.value = user.email
+      userName.value = user.username || ''
+    } else {
+      // User not logged in, redirect to login
+      router.push('/login')
     }
-    const response = await fetch(`${apiUrl}/api/users/me`, { method: 'GET', headers: { 'Content-Type': 'application/json' }, credentials: 'include' })
-    if (!response.ok) {
-      if (response.status === 401) { router.push('/login'); return }
-      throw new Error(`Failed to fetch user data: ${response.status}`)
-    }
-    const data = await response.json()
-    if (data.success && data.data) { userEmail.value = data.data.email; userName.value = data.data.username; }
-  } catch (error) { console.error('Error fetching user data:', error) } finally { userLoading.value = false }
+  } catch (error) {
+    console.error('Error fetching user data:', error)
+    currentUser.value = null
+  } finally {
+    userLoading.value = false
+  }
 }
 
 // Fetch teams logic (remains the same)
@@ -119,27 +129,26 @@ onMounted(() => {
 </script>
 
 <template>
-  <Sidebar :variant="props.variant" :class="$attrs.class" collapsible="icon"> {/* Defaulting to collapsible icon, can be prop */}
+  <Sidebar :variant="props.variant" :class="$attrs.class" collapsible="icon">
     <SidebarHeader>
       <SidebarMenu>
         <SidebarMenuItem>
           <DropdownMenu>
             <DropdownMenuTrigger as-child>
-              <!-- Using Button for consistency with shadcn-vue SidebarMenuButton structure -->
-              <Button variant="ghost" size="lg" class="w-full justify-start items-center data-[state=open]:bg-accent data-[state=open]:text-accent-foreground px-2 h-auto py-2.5">
-                <div class="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground mr-2 shrink-0">
+              <SidebarMenuButton size="lg" class="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground">
+                <div class="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
                   <Users class="size-4" />
                 </div>
                 <div class="grid flex-1 text-left text-sm leading-tight">
                   <span class="truncate font-semibold">
                     {{ selectedTeam?.name || t('sidebar.teams.selectTeam') }}
                   </span>
-                  <span class="truncate text-xs text-muted-foreground">
+                  <span class="truncate text-xs text-sidebar-foreground/70">
                     {{ teamsLoading ? t('sidebar.teams.loading') : teams.length > 0 ? `${teams.length} team${teams.length !== 1 ? 's' : ''}` : t('sidebar.teams.noTeams') }}
                   </span>
                 </div>
-                <ChevronDown class="ml-2 size-4 text-muted-foreground shrink-0" />
-              </Button>
+                <ChevronDown class="ml-auto size-4" />
+              </SidebarMenuButton>
             </DropdownMenuTrigger>
             <DropdownMenuContent
               class="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
@@ -179,7 +188,7 @@ onMounted(() => {
       </SidebarMenu>
     </SidebarHeader>
 
-    <SidebarContent> {/* This should be scrollable by default if content overflows */}
+    <SidebarContent>
       <SidebarGroup>
         <SidebarGroupLabel>{{ t('sidebar.navigation.title', 'Navigation') }}</SidebarGroupLabel>
         <SidebarGroupContent>
@@ -198,6 +207,37 @@ onMounted(() => {
           </SidebarMenu>
         </SidebarGroupContent>
       </SidebarGroup>
+
+      <!-- Admin Area section - only visible to global_admin -->
+      <SidebarGroup v-if="isGlobalAdmin">
+        <SidebarGroupLabel>{{ t('sidebar.adminArea.title') }}</SidebarGroupLabel>
+        <SidebarGroupContent>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                @click="navigateTo('/admin/settings')"
+                :is-active="router.currentRoute.value.path === '/admin/settings'"
+                class="w-full justify-start"
+                :aria-current="router.currentRoute.value.path === '/admin/settings' ? 'page' : undefined"
+              >
+                <FileSliders class="mr-2 h-4 w-4 shrink-0" />
+                <span>{{ t('sidebar.adminArea.globalSettings') }}</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                @click="navigateTo('/admin/users')"
+                :is-active="router.currentRoute.value.path === '/admin/users'"
+                class="w-full justify-start"
+                :aria-current="router.currentRoute.value.path === '/admin/users' ? 'page' : undefined"
+              >
+                <Users class="mr-2 h-4 w-4 shrink-0" />
+                <span>{{ t('sidebar.adminArea.users') }}</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroupContent>
+      </SidebarGroup>
     </SidebarContent>
 
     <SidebarFooter>
@@ -205,9 +245,8 @@ onMounted(() => {
         <SidebarMenuItem>
           <DropdownMenu>
             <DropdownMenuTrigger as-child>
-              <!-- Using Button for consistency -->
-              <Button variant="ghost" size="lg" class="w-full justify-start items-center data-[state=open]:bg-accent data-[state=open]:text-accent-foreground px-2 h-auto py-2.5">
-                <Avatar class="h-8 w-8 rounded-lg mr-2 shrink-0">
+              <SidebarMenuButton size="lg" class="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground">
+                <Avatar class="h-8 w-8 rounded-lg">
                   <AvatarImage src="https://www.shadcn-vue.com/avatars/shadcn.jpg" :alt="userName" />
                   <AvatarFallback class="rounded-lg">
                     {{ userLoading ? '...' : getUserInitials(userName || userEmail) }}
@@ -215,10 +254,10 @@ onMounted(() => {
                 </Avatar>
                 <div class="grid flex-1 text-left text-sm leading-tight">
                   <span class="truncate font-semibold">{{ userName || userEmail }}</span>
-                  <span class="truncate text-xs text-muted-foreground">{{ userEmail }}</span>
+                  <span class="truncate text-xs text-sidebar-foreground/70">{{ userEmail }}</span>
                 </div>
-                <ChevronDown class="ml-2 size-4 text-muted-foreground shrink-0" />
-              </Button>
+                <ChevronDown class="ml-auto size-4" />
+              </SidebarMenuButton>
             </DropdownMenuTrigger>
             <DropdownMenuContent
               class="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
@@ -226,7 +265,7 @@ onMounted(() => {
               align="start"
             >
               <DropdownMenuItem @click="goToAccount" class="gap-2">
-                <User class="size-4" />
+                <UserIcon class="size-4" />
                 {{ t('sidebar.user.account') }}
               </DropdownMenuItem>
               <DropdownMenuSeparator />

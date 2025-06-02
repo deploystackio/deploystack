@@ -3,7 +3,6 @@ import 'fastify'
 import { type AnyDatabase } from '../db' 
 // Import types for raw connections/pools
 import type SqliteDriver from 'better-sqlite3'
-import type { Pool as PgPool } from 'pg'
 import { type PluginManager } from '../plugin-system'
 
 declare module 'fastify' {
@@ -11,8 +10,8 @@ declare module 'fastify' {
     // 'db' can now be a Drizzle instance for SQLite or PostgreSQL, or null if not initialized
     db: AnyDatabase | null
     
-    // 'rawDbConnection' holds the underlying driver connection (better-sqlite3) or pool (pg)
-    rawDbConnection: SqliteDriver.Database | PgPool | null
+    // 'rawDbConnection' holds the underlying driver connection (better-sqlite3)
+    rawDbConnection: SqliteDriver.Database | null
     
     // The 'sqlite' property is deprecated in favor of 'rawDbConnection' to avoid ambiguity.
     // If some parts of the application still rely on it, it should be:

@@ -24,6 +24,9 @@ The RBAC system provides fine-grained access control through roles and permissio
   - `users.create` - Create new users
   - `roles.manage` - Manage roles and permissions
   - `system.admin` - Administrative system access
+  - `settings.view` - View global application settings
+  - `settings.edit` - Create and update global application settings
+  - `settings.delete` - Delete global application settings
   - `teams.create` - Create new teams
   - `teams.view` - View team details
   - `teams.edit` - Edit team settings
@@ -427,8 +430,18 @@ Authorization: Required (users.list permission)
 | `users.create` | Create new user accounts |
 | `roles.manage` | Create, update, and delete roles |
 | `system.admin` | Administrative system access |
+| `settings.view` | View global application settings |
+| `settings.edit` | Create and update global application settings |
+| `settings.delete` | Delete global application settings |
 | `profile.view` | View own profile information |
 | `profile.edit` | Edit own profile information |
+| `teams.create` | Create new teams (up to limit) |
+| `teams.view` | View team details |
+| `teams.edit` | Edit team settings |
+| `teams.delete` | Delete team |
+| `teams.manage` | Full team management |
+| `team.members.view` | View team members |
+| `team.members.manage` | Manage team member roles |
 
 ### Permission Checking
 

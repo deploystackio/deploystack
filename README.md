@@ -96,6 +96,7 @@ You can also run DeployStack on your own infrastructure for maximum control:
 
    ```env
    DEPLOYSTACK_FRONTEND_URL=http://localhost:5173
+   DEPLOYSTACK_ENCRYPTION_SECRET=your-very-secure-32-character-secret-key-here
    ```
 
    ```bash
@@ -125,6 +126,7 @@ Alternatively, you can deploy the pre-built Docker images for the frontend and b
     docker run -d \
       -p 3000:3000 \
       -e DEPLOYSTACK_FRONTEND_URL="http://localhost:8080" \
+      -e DEPLOYSTACK_ENCRYPTION_SECRET="your-very-secure-32-character-secret-key-here" \
       -v $(pwd)/services/backend/persistent_data:/app/persistent_data \
       deploystack/backend:latest
     ```
@@ -154,6 +156,7 @@ For production deployments on a VPS or remote server, update the environment var
 docker run -d \
   -p 3000:3000 \
   -e DEPLOYSTACK_FRONTEND_URL="http://YOUR_SERVER_IP:8080" \
+  -e DEPLOYSTACK_ENCRYPTION_SECRET="your-very-secure-32-character-secret-key-here" \
   -v $(pwd)/services/backend/persistent_data:/app/persistent_data \
   deploystack/backend:latest
 ```

@@ -2,9 +2,14 @@
 export default {
   sidebar: {
     navigation: {
+      title: 'Navigation',
       mcpServer: 'MCP Server',
       provider: 'Provider',
       credentials: 'Credentials',
+    },
+    adminArea: {
+      title: 'Admin Area',
+      globalSettings: 'Global Settings',
     },
     teams: {
       selectTeam: 'Select Team',

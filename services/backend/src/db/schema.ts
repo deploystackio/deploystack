@@ -81,6 +81,26 @@ export const teamMembershipsTableColumns = {
   joined_at: (columnBuilder: any) => columnBuilder('joined_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 };
 
+export const globalSettingGroupsTableColumns = {
+  id: (columnBuilder: any) => columnBuilder('id').primaryKey(),
+  name: (columnBuilder: any) => columnBuilder('name').notNull(),
+  description: (columnBuilder: any) => columnBuilder('description'),
+  icon: (columnBuilder: any) => columnBuilder('icon'),
+  sort_order: (columnBuilder: any) => columnBuilder('sort_order').notNull().default(0),
+  created_at: (columnBuilder: any) => columnBuilder('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  updated_at: (columnBuilder: any) => columnBuilder('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+};
+
+export const globalSettingsTableColumns = {
+  key: (columnBuilder: any) => columnBuilder('key').primaryKey(),
+  value: (columnBuilder: any) => columnBuilder('value').notNull(),
+  description: (columnBuilder: any) => columnBuilder('description'),
+  is_encrypted: (columnBuilder: any) => columnBuilder('is_encrypted').notNull().default(false),
+  group_id: (columnBuilder: any) => columnBuilder('group_id'), // Foreign key to globalSettingGroups.id
+  created_at: (columnBuilder: any) => columnBuilder('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  updated_at: (columnBuilder: any) => columnBuilder('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+};
+
 // This object will hold definitions for all base tables.
 export const baseTableDefinitions = {
   users: usersTableColumns, // Keeping existing users table for now, can be deprecated/merged later
@@ -90,6 +110,8 @@ export const baseTableDefinitions = {
   authKey: authKeyTableColumns,
   teams: teamsTableColumns,
   teamMemberships: teamMembershipsTableColumns,
+  globalSettingGroups: globalSettingGroupsTableColumns,
+  globalSettings: globalSettingsTableColumns,
   // e.g., posts: postsTableColumns,
 };
 
@@ -107,14 +129,16 @@ export const pluginTableDefinitions: Record<string, Record<string, (columnBuilde
 // Example of how it will be used in db/index.ts:
 //
 // import { baseTableDefinitions } from './schema';
-// import { pgTable, text as pgTextColumnBuilder, integer as pgIntegerColumnBuilder } from 'drizzle-orm/pg-core';
+// import { sqliteTable, text as sqliteTextColumnBuilder, integer as sqliteIntegerColumnBuilder } from 'drizzle-orm/sqlite-core';
 //
-// const users = pgTable('users', {
-//   id: baseTableDefinitions.users.id(pgTextColumnBuilder),
-//   email: baseTableDefinitions.users.email(pgTextColumnBuilder),
-//   name: baseTableDefinitions.users.name(pgTextColumnBuilder),
-//   createdAt: baseTableDefinitions.users.createdAt(pgIntegerColumnBuilder),
-//   updatedAt: baseTableDefinitions.users.updatedAt(pgIntegerColumnBuilder),
+// const users = sqliteTable('users', {
+//   id: baseTableDefinitions.users.id(sqliteTextColumnBuilder),
+//   email: baseTableDefinitions.users.email(sqliteTextColumnBuilder),
+//   name: baseTableDefinitions.users.name(sqliteTextColumnBuilder),
+//   createdAt: baseTableDefinitions.users.createdAt(sqliteIntegerColumnBuilder),
+//   updatedAt: baseTableDefinitions.users.updatedAt(sqliteIntegerColumnBuilder),
 // });
 //
-// export const schema = { users };
+// // The actual schema is built in 'services/backend/src/db/schema.sqlite.ts'
+// // and augmented with plugin tables in 'services/backend/src/db/index.ts'
+// // export const schema = { users };

@@ -17,9 +17,9 @@ export interface TeamResponse {
 
 export class TeamService {
   private static getApiUrl(): string {
-    const apiUrl = getEnv('VITE_DEPLOYSTACK_APP_URL')
+    const apiUrl = getEnv('VITE_DEPLOYSTACK_BACKEND_URL') // Corrected key
     if (!apiUrl) {
-      throw new Error('API URL not configured')
+      throw new Error('API URL not configured. Make sure VITE_DEPLOYSTACK_BACKEND_URL is set.')
     }
     return apiUrl
   }

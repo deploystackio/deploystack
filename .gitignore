@@ -57,3 +57,4 @@ deploystack.db
 services/backend/persistent_data/*
 
 ._*.ts
+cookies.txt

@@ -40,6 +40,19 @@ All incoming data from clients (e.g., API request bodies, URL parameters) is rig
 - Duplicate username and email checks are performed before user creation
 - All database operations use parameterized queries via Drizzle ORM to prevent SQL injection
 
+## Global Settings Encryption
+
+Sensitive global application settings (SMTP credentials, API keys, etc.) are encrypted at rest using industry-standard encryption.
+
+- **Algorithm:** AES-256-GCM (Galois/Counter Mode)
+- **Key Derivation:** Scrypt with salt for key derivation from environment secret
+- **Authenticated Encryption:** Prevents tampering with encrypted data
+- **Unique Initialization Vectors:** Each encryption operation uses a unique IV
+- **Environment-Based Key:** Encryption key derived from `DEPLOYSTACK_ENCRYPTION_SECRET` environment variable
+- **Additional Authenticated Data (AAD):** Extra security layer to prevent data manipulation
+
+This approach ensures that sensitive configuration data remains secure even if the database is compromised. The encryption system is separate from password hashing to maintain proper separation of concerns.
+
 ## Dependencies
 
 We strive to keep our dependencies up-to-date and regularly review them for known vulnerabilities. Automated tools may be used to scan for vulnerabilities in our dependency tree.
@@ -51,6 +64,7 @@ We strive to keep our dependencies up-to-date and regularly review them for know
 - `drizzle-orm`: Database ORM with parameterized queries
 - `zod`: Input validation and sanitization
 - `@fastify/cookie`: Secure cookie handling
+- `node:crypto`: Built-in cryptographic functions for global settings encryption
 
 ## Infrastructure Security
 
