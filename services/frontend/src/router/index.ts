@@ -101,19 +101,54 @@ const router = createRouter({
 // Navigation guard to check database setup
 router.beforeEach(async (to, from, next) => {
   const databaseStore = useDatabaseStore()
-  const user = await UserService.getCurrentUser()
-
-  // If user is logged in and trying to access Login or Register, redirect to Dashboard
-  if (user) {
-    if (to.name === 'Login' || to.name === 'Register') {
-      next('/dashboard')
-      return
-    }
-  }
-
+  
+  // Define public routes that don't need user authentication checks
+  const publicRoutes = ['Setup', 'Login', 'Register']
+  const isPublicRoute = publicRoutes.includes(to.name as string)
+  
   // Skip setup check for the setup route itself
   if (to.name === 'Setup') {
     next()
+    return
+  }
+
+  // For public routes (Login/Register), only check database setup, skip user checks
+  if (isPublicRoute) {
+    // Check if route requires setup
+    if (to.meta.requiresSetup !== false) {
+      try {
+        // Check database status (use cache for performance)
+        const isSetup = await databaseStore.checkDatabaseStatus(true)
+
+        if (!isSetup) {
+          // Database not setup, redirect to setup page
+          next('/setup')
+          return
+        }
+      } catch (error) {
+        console.error('Failed to check database status:', error)
+        // On error, redirect to setup page to be safe
+        next('/setup')
+        return
+      }
+    }
+    
+    // For public routes, proceed without user checks
+    next()
+    return
+  }
+
+  // For protected routes, check user authentication (single call)
+  let currentUser: any = null
+  try {
+    currentUser = await UserService.getCurrentUser()
+  } catch (error) {
+    console.error('Failed to get current user:', error)
+  }
+
+  // If user is logged in and trying to access Login or Register, redirect to Dashboard
+  if (currentUser && (to.name === 'Login' || to.name === 'Register')) {
+    next('/dashboard')
     return
   }
 
@@ -136,9 +171,8 @@ router.beforeEach(async (to, from, next) => {
     }
   }
 
-  // Check role requirements
+  // Check role requirements (reuse the currentUser from above)
   if (to.meta.requiresRole) {
-    const currentUser = await UserService.getCurrentUser()
     if (!currentUser || currentUser.role_id !== to.meta.requiresRole) {
       next({ name: 'NotFound' })
       return

@@ -24,7 +24,7 @@ import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { getEnv } from '@/utils/env' // Import the getEnv utility
+import { UserService } from '@/services/userService'
 
 const router = useRouter()
 const { t } = useI18n()
@@ -33,57 +33,17 @@ const isLoading = ref(true)
 const message = ref(t('logout.inProgressMessage'))
 
 onMounted(async () => {
-  // TODO: Implement a more robust check for frontend auth state if available
-  // For example, check a Pinia store or localStorage for an auth token.
-  // If (!isUserLoggedInFrontend()) {
-  //   router.push('/login');
-  //   return;
-  // }
-
   isLoading.value = true;
   message.value = t('logout.inProgressMessage');
   console.log('Attempting to logout from backend...');
 
-  const backendBaseUrl = getEnv('VITE_DEPLOYSTACK_BACKEND_URL');
-
-  if (!backendBaseUrl) {
-    console.error(
-      'VITE_DEPLOYSTACK_BACKEND_URL is not set in your environment. ' + 
-      'Please ensure it is defined in .env.local (for local development) or as a runtime environment variable (for Docker). ' +
-      'API call to logout will likely fail.'
-    );
-    // Set error message and stop loading, then redirect
-    message.value = t('common.error') + ' (Configuration error: Backend URL not set)';
-    isLoading.value = false;
-    setTimeout(() => {
-      router.push('/login');
-    }, 3000);
-    return;
-  }
-
-  const apiUrl = `${backendBaseUrl}/api/auth/logout`;
-
   try {
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include', // Send cookies with the request for session management
-      body: JSON.stringify({}), // Send an empty JSON object as the body
-    });
-
-    if (response.ok) {
-      const data = await response.json();
-      console.log('Logout successful:', data.message);
-      message.value = data.message || t('logout.inProgressMessage'); // Use backend message if available
-    } else {
-      const errorData = await response.json().catch(() => ({ error: 'Failed to parse error response from server' }));
-      console.error('Logout failed:', response.status, errorData.error || 'Unknown server error');
-      message.value = t('common.error'); // Generic error message
-    }
+    // Use the UserService logout method which handles cache clearing
+    await UserService.logout();
+    console.log('Logout successful');
+    message.value = t('logout.successMessage') || t('logout.inProgressMessage');
   } catch (error) {
-    console.error('Error during logout API call:', error);
+    console.error('Error during logout:', error);
     message.value = t('common.error');
   } finally {
     isLoading.value = false;
