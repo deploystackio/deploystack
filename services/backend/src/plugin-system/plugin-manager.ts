@@ -9,7 +9,10 @@ import {
   type Plugin, 
   type PluginPackage, 
   type PluginConfiguration,
-  type PluginOptions 
+  type PluginOptions,
+  type GlobalSettingsExtension,
+  type GlobalSettingDefinitionForPlugin,
+  type GlobalSettingGroupForPlugin
 } from './types';
 import { 
   PluginLoadError, 
@@ -18,6 +21,7 @@ import {
   PluginDuplicateError,
   PluginNotFoundError 
 } from './errors';
+import { GlobalSettingsService } from '../services/globalSettingsService';
 
 /**
  * Plugin manager class responsible for loading and managing plugins
@@ -260,6 +264,106 @@ export class PluginManager {
    */
   getDatabaseExtensions(): Plugin[] {
     return this.getAllPlugins().filter(plugin => plugin.databaseExtension);
+  }
+
+  /**
+   * Get all global setting groups defined by plugins
+   */
+  getPluginGlobalSettingGroups(): GlobalSettingGroupForPlugin[] {
+    const allGroups: GlobalSettingGroupForPlugin[] = [];
+    const groupIds = new Set<string>();
+
+    for (const plugin of this.plugins.values()) {
+      if (plugin.globalSettingsExtension?.groups) {
+        for (const group of plugin.globalSettingsExtension.groups) {
+          if (!groupIds.has(group.id)) {
+            allGroups.push(group);
+            groupIds.add(group.id);
+          } else {
+            console.warn(`[PluginManager] Duplicate group ID '${group.id}' defined by plugin '${plugin.meta.id}'. Ignoring subsequent definition.`);
+          }
+        }
+      }
+    }
+    return allGroups;
+  }
+
+  /**
+   * Get all global setting definitions from plugins
+   */
+  getPluginGlobalSettingDefinitions(): { pluginId: string, definition: GlobalSettingDefinitionForPlugin }[] {
+    const allDefinitions: { pluginId: string, definition: GlobalSettingDefinitionForPlugin }[] = [];
+    for (const plugin of this.plugins.values()) {
+      if (plugin.globalSettingsExtension?.settings) {
+        plugin.globalSettingsExtension.settings.forEach(definition => {
+          allDefinitions.push({ pluginId: plugin.meta.id, definition });
+        });
+      }
+    }
+    return allDefinitions;
+  }
+  
+  /**
+   * Initialize global settings defined by plugins.
+   * This should be called after core settings are initialized.
+   */
+  async initializePluginGlobalSettings(): Promise<void> {
+    console.log('[PluginManager] Initializing global settings from plugins...');
+    const pluginGroups = this.getPluginGlobalSettingGroups();
+    const pluginSettings = this.getPluginGlobalSettingDefinitions();
+
+    // Initialize groups first
+    for (const group of pluginGroups) {
+      try {
+        // Check if group exists (this logic might need to be in GlobalSettingsService or InitService)
+        // For now, we assume GlobalSettingsService.set will handle linking to existing group or we manage group creation here.
+        // Let's try to create/ensure group exists. This is a simplified version.
+        // A more robust solution would use a method like GlobalSettingsInitService.createGroup
+        const existingGroup = await GlobalSettingsService.getGroup(group.id); // Assuming getGroup exists
+        if (!existingGroup) {
+          // Attempt to create the group if it doesn't exist.
+          await GlobalSettingsService.createGroup(group); 
+          console.log(`[PluginManager] Created global setting group ID '${group.id}' (Name: "${group.name}") as defined by a plugin.`);
+        } else {
+          // Group ID already exists. Log that the plugin's definition for this group ID (name, description, etc.) is ignored.
+          console.warn(`[PluginManager] Global setting group ID '${group.id}' already exists (Existing Name: "${existingGroup.name}"). Plugin's attempt to define a group with this ID (Plugin's proposed Name: "${group.name}") will use the existing group. Plugin-specific metadata for this group ID (name, description, icon, sort_order) is ignored.`);
+        }
+      } catch (error) {
+        console.error(`[PluginManager] Error processing plugin-defined group '${group.id}' (Plugin's proposed Name: "${group.name}"):`, error);
+      }
+    }
+
+    // Initialize settings
+    const initializedKeys = new Set<string>();
+    // First, get all existing core setting keys to ensure precedence
+    try {
+      const coreSettings = await GlobalSettingsService.getAll();
+      coreSettings.forEach(cs => initializedKeys.add(cs.key));
+    } catch (error) {
+      console.error('[PluginManager] Failed to get all core settings for precedence check:', error);
+      // If this fails, we might risk overwriting, but proceed with caution.
+    }
+
+
+    for (const { pluginId, definition } of pluginSettings) {
+      if (initializedKeys.has(definition.key)) {
+        console.warn(`[PluginManager] Global setting key '${definition.key}' from plugin '${pluginId}' already exists (core or another plugin). Skipping.`);
+        continue;
+      }
+
+      try {
+        await GlobalSettingsService.set(definition.key, definition.defaultValue, {
+          description: definition.description,
+          encrypted: definition.encrypted,
+          group_id: definition.groupId,
+        });
+        initializedKeys.add(definition.key); // Add to set after successful initialization
+        console.log(`[PluginManager] Initialized global setting '${definition.key}' from plugin '${pluginId}'.`);
+      } catch (error) {
+        console.error(`[PluginManager] Failed to initialize global setting '${definition.key}' from plugin '${pluginId}':`, error);
+      }
+    }
+    console.log('[PluginManager] Plugin global settings initialization complete.');
   }
 
   /**

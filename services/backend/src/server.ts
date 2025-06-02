@@ -97,9 +97,15 @@ export const createServer = async () => {
     try {
       await GlobalSettingsInitService.loadSettingsDefinitions();
       await GlobalSettingsInitService.initializeSettings();
-      server.log.info('Global settings initialization completed.');
+      server.log.info('Core global settings initialization completed.');
+
+      // Initialize global settings defined by plugins
+      // This should happen after core settings are initialized
+      await pluginManager.initializePluginGlobalSettings();
+      server.log.info('Plugin global settings initialization completed.');
+
     } catch (error) {
-      server.log.error('Failed to initialize global settings:', error);
+      server.log.error('Failed to initialize global settings (core or plugin):', error);
     }
   } else {
     server.decorate('db', null as any);
