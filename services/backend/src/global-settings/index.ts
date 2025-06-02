@@ -4,6 +4,9 @@ import { GlobalSettingsService } from '../services/globalSettingsService';
 import type { 
   GlobalSettingsModule, 
   GlobalSettingDefinition, 
+  GlobalSettingGroup,
+  GroupWithSettings,
+  CreateGroupInput,
   ValidationResult, 
   SmtpConfig, 
   GitHubOAuthConfig, 
@@ -47,10 +50,10 @@ export class GlobalSettingsInitService {
           const exportedValue = module[exportName];
           if (exportedValue && 
               typeof exportedValue === 'object' && 
-              exportedValue.category && 
+              exportedValue.group && 
               Array.isArray(exportedValue.settings)) {
             this.settingsModules.push(exportedValue as GlobalSettingsModule);
-            console.log(`✅ Loaded settings module: ${exportedValue.category} (${exportedValue.settings.length} settings)`);
+            console.log(`✅ Loaded settings module: ${exportedValue.group.id} (${exportedValue.settings.length} settings)`);
           }
         }
       } catch (error) {
@@ -70,26 +73,33 @@ export class GlobalSettingsInitService {
   }
 
   /**
-   * Get settings by category
+   * Get settings by group
    */
-  static getSettingsByCategory(category: string): GlobalSettingDefinition[] {
-    const module = this.settingsModules.find(m => m.category === category);
+  static getSettingsByGroup(groupId: string): GlobalSettingDefinition[] {
+    const module = this.settingsModules.find(m => m.group.id === groupId);
     return module ? module.settings : [];
   }
 
   /**
-   * Get all loaded categories
+   * Get all loaded groups
    */
-  static getCategories(): string[] {
-    return this.settingsModules.map(m => m.category);
+  static getGroups(): GlobalSettingGroup[] {
+    return this.settingsModules.map(m => m.group);
   }
 
   /**
-   * Initialize all settings in the database (non-destructive)
+   * Initialize groups and settings in the database (non-destructive)
    */
   static async initializeSettings(): Promise<InitializationResult> {
     if (!this.isLoaded) {
       await this.loadSettingsDefinitions();
+    }
+
+    // First, create groups
+    try {
+      await this.createGroups();
+    } catch (error) {
+      console.error('❌ Failed to create groups, continuing with settings creation:', error);
     }
 
     const allSettings = this.getAllSettings();
@@ -112,7 +122,7 @@ export class GlobalSettingsInitService {
           await GlobalSettingsService.set(setting.key, setting.defaultValue, {
             description: setting.description,
             encrypted: setting.encrypted,
-            category: this.getCategoryForSetting(setting.key)
+            group_id: undefined // Temporarily set to undefined to avoid foreign key constraint
           });
           
           result.created++;
@@ -140,12 +150,101 @@ export class GlobalSettingsInitService {
   }
 
   /**
-   * Get the category for a setting key
+   * Create groups in the database (non-destructive)
    */
-  private static getCategoryForSetting(key: string): string {
+  private static async createGroups(): Promise<void> {
+    const groups = this.getGroups();
+    
+    console.log(`🔄 Creating ${groups.length} setting groups...`);
+    
+    for (const group of groups) {
+      try {
+        // Check if group already exists (we'll need to add this method to GlobalSettingsService)
+        const exists = await this.groupExists(group.id);
+        
+        if (!exists) {
+          await this.createGroup(group);
+          console.log(`✅ Created group: ${group.id} (${group.name})`);
+        } else {
+          console.log(`⏭️  Skipped existing group: ${group.id}`);
+        }
+      } catch (error) {
+        console.error(`❌ Failed to create group ${group.id}:`, error);
+      }
+    }
+  }
+
+  /**
+   * Check if a group exists
+   */
+  private static async groupExists(groupId: string): Promise<boolean> {
+    try {
+      const { getDb, getSchema } = await import('../db');
+      const { eq } = await import('drizzle-orm');
+      const db = getDb();
+      const schema = getSchema();
+      const globalSettingGroupsTable = schema.globalSettingGroups;
+
+      if (!globalSettingGroupsTable) {
+        return false;
+      }
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const results = await (db as any)
+        .select({ id: globalSettingGroupsTable.id })
+        .from(globalSettingGroupsTable)
+        .where(eq(globalSettingGroupsTable.id, groupId))
+        .limit(1);
+
+      return results.length > 0;
+    } catch (error) {
+      console.error(`Error checking if group exists: ${groupId}`, error);
+      return false;
+    }
+  }
+
+  /**
+   * Create a group in the database
+   */
+  private static async createGroup(group: GlobalSettingGroup): Promise<void> {
+    try {
+      const { getDb, getSchema } = await import('../db');
+      const db = getDb();
+      const schema = getSchema();
+      const globalSettingGroupsTable = schema.globalSettingGroups;
+
+      if (!globalSettingGroupsTable) {
+        throw new Error('GlobalSettingGroups table not found in schema');
+      }
+
+      const now = Date.now();
+      const groupData = {
+        id: group.id,
+        name: group.name,
+        description: group.description || null,
+        icon: group.icon || null,
+        sort_order: group.sort_order || 0,
+        created_at: now,
+        updated_at: now,
+      };
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (db as any)
+        .insert(globalSettingGroupsTable)
+        .values(groupData);
+
+    } catch (error) {
+      throw new Error(`Failed to create group '${group.id}': ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Get the group ID for a setting key
+   */
+  private static getGroupIdForSetting(key: string): string {
     for (const module of this.settingsModules) {
       if (module.settings.some(s => s.key === key)) {
-        return module.category;
+        return module.group.id;
       }
     }
     return 'unknown';
@@ -162,11 +261,11 @@ export class GlobalSettingsInitService {
     const allSettings = this.getAllSettings();
     const requiredSettings = allSettings.filter(s => s.required);
     const missing: string[] = [];
-    const categories: Record<string, { total: number; missing: number; missingKeys: string[] }> = {};
+    const groups: Record<string, { total: number; missing: number; missingKeys: string[] }> = {};
 
-    // Initialize categories
+    // Initialize groups
     for (const module of this.settingsModules) {
-      categories[module.category] = {
+      groups[module.group.id] = {
         total: module.settings.filter(s => s.required).length,
         missing: 0,
         missingKeys: []
@@ -176,22 +275,22 @@ export class GlobalSettingsInitService {
     for (const setting of requiredSettings) {
       try {
         const dbSetting = await GlobalSettingsService.get(setting.key);
-        const category = this.getCategoryForSetting(setting.key);
+        const groupId = this.getGroupIdForSetting(setting.key);
         
         if (!dbSetting || !dbSetting.value || dbSetting.value.trim() === '') {
           missing.push(setting.key);
-          if (categories[category]) {
-            categories[category].missing++;
-            categories[category].missingKeys.push(setting.key);
+          if (groups[groupId]) {
+            groups[groupId].missing++;
+            groups[groupId].missingKeys.push(setting.key);
           }
         }
       } catch (error) {
         console.error(`Error validating setting ${setting.key}:`, error);
         missing.push(setting.key);
-        const category = this.getCategoryForSetting(setting.key);
-        if (categories[category]) {
-          categories[category].missing++;
-          categories[category].missingKeys.push(setting.key);
+        const groupId = this.getGroupIdForSetting(setting.key);
+        if (groups[groupId]) {
+          groups[groupId].missing++;
+          groups[groupId].missingKeys.push(setting.key);
         }
       }
     }
@@ -199,7 +298,7 @@ export class GlobalSettingsInitService {
     return {
       valid: missing.length === 0,
       missing,
-      categories
+      groups
     };
   }
 

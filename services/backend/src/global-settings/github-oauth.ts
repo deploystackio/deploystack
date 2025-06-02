@@ -1,7 +1,13 @@
 import type { GlobalSettingsModule } from './types';
 
 export const githubOAuthSettings: GlobalSettingsModule = {
-  category: 'github-oauth',
+  group: {
+    id: 'github-oauth',
+    name: 'GitHub OAuth Configuration',
+    description: 'GitHub authentication settings for user login',
+    icon: 'github',
+    sort_order: 2
+  },
   settings: [
     {
       key: 'github.oauth.client_id',

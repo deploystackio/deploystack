@@ -6,15 +6,51 @@ export interface GlobalSettingDefinition {
   required: boolean;
 }
 
+export interface GlobalSettingGroup {
+  id: string;
+  name: string;
+  description?: string;
+  icon?: string;
+  sort_order: number;
+}
+
 export interface GlobalSettingsModule {
-  category: string;
+  group: GlobalSettingGroup;
   settings: GlobalSettingDefinition[];
+}
+
+export interface GroupWithSettings extends GlobalSettingGroup {
+  settings: {
+    key: string;
+    value: string;
+    description?: string;
+    is_encrypted: boolean;
+    created_at: Date;
+    updated_at: Date;
+  }[];
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface CreateGroupInput {
+  id: string;
+  name: string;
+  description?: string;
+  icon?: string;
+  sort_order?: number;
+}
+
+export interface UpdateGroupInput {
+  name?: string;
+  description?: string;
+  icon?: string;
+  sort_order?: number;
 }
 
 export interface ValidationResult {
   valid: boolean;
   missing: string[];
-  categories: Record<string, {
+  groups: Record<string, {
     total: number;
     missing: number;
     missingKeys: string[];

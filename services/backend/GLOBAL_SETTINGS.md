@@ -1,33 +1,44 @@
 # Global Settings Management
 
-This document describes the global key-value store system for managing application-wide configuration and credentials in DeployStack.
+This document describes the global key-value store system with group-based organization for managing application-wide configuration and credentials in DeployStack.
 
 ## Overview
 
-The global settings system provides secure storage for application-wide configuration values such as:
+The global settings system provides secure storage for application-wide configuration values organized into logical groups for better management and frontend display:
 
-- **SMTP Server Credentials**: Host, port, username, password for email functionality
-- **OAuth Credentials**: GitHub OAuth client ID and secret for authentication
+- **SMTP Mail Settings**: Host, port, username, password for email functionality
+- **GitHub OAuth Configuration**: GitHub OAuth client ID and secret for authentication
 - **API Keys**: External service credentials (OpenAI, AWS, etc.)
 - **System Configuration**: Application-wide settings and feature flags
 - **Integration Credentials**: Third-party service authentication tokens
 - **Environment Variables**: Dynamic configuration that can be changed without code deployment
 
+### Group-Based Organization
+
+The system now uses **groups** to organize settings into logical categories that can be displayed as tabs in the frontend:
+
+- **Group ID**: Technical identifier used for API queries (e.g., `smtp`)
+- **Group Name**: Human-readable display name (e.g., `SMTP Mail Settings`)
+- **Group Metadata**: Description, icon, and sort order for frontend display
+
 ### Auto-Initialization System
 
-The system includes an **auto-initialization feature** that automatically creates missing global settings when the server starts. Settings are defined in modular files within the `src/global-settings/` directory, and the system will:
+The system includes an **auto-initialization feature** that automatically creates missing groups and global settings when the server starts. Settings are defined in modular files within the `src/global-settings/` directory, and the system will:
 
 - Scan for setting definition files on startup
+- Create missing groups with metadata
 - Check which settings exist in the database
 - Create missing settings with default values (non-destructive)
+- Link settings to their appropriate groups
 - Preserve existing settings and their values
 - Log initialization results for transparency
 
 ## Key Features
 
+- **Group-Based Organization**: Settings organized into logical groups for frontend tabs
 - **Hierarchical Keys**: Dot notation organization (e.g., `smtp.host`, `api.openai.key`)
 - **Encryption Support**: Automatic encryption for sensitive values using AES-256-GCM
-- **Categorization**: Group related settings together for better organization
+- **Group Metadata**: Display names, descriptions, icons, and sort order for groups
 - **Admin-Only Access**: Only `global_admin` users can manage settings
 - **Type Safety**: Zod schema validation for all inputs
 - **Audit Trail**: Track setting changes with timestamps
@@ -66,12 +77,24 @@ DEPLOYSTACK_ENCRYPTION_SECRET=your-very-secure-32-character-secret-key-here
 ## Database Schema
 
 ```sql
+-- Groups table for organizing settings
+CREATE TABLE globalSettingGroups (
+  id TEXT PRIMARY KEY,                     -- Group identifier (e.g., 'smtp')
+  name TEXT NOT NULL,                      -- Display name (e.g., 'SMTP Mail Settings')
+  description TEXT,                        -- Group description
+  icon TEXT,                               -- Optional icon (lucide) for frontend 
+  sort_order INTEGER DEFAULT 0 NOT NULL,  -- Display order for tabs
+  created_at INTEGER NOT NULL,             -- Creation timestamp
+  updated_at INTEGER NOT NULL              -- Last update timestamp
+);
+
+-- Settings table with group reference
 CREATE TABLE globalSettings (
   key TEXT PRIMARY KEY,                    -- Setting identifier (e.g., 'smtp.host')
   value TEXT NOT NULL,                     -- Setting value (encrypted if sensitive)
   description TEXT,                        -- Human-readable description
   is_encrypted BOOLEAN NOT NULL DEFAULT FALSE, -- Whether value is encrypted
-  category TEXT,                           -- Grouping category (e.g., 'smtp', 'api')
+  group_id TEXT REFERENCES globalSettingGroups(id), -- Group reference
   created_at INTEGER NOT NULL,             -- Creation timestamp
   updated_at INTEGER NOT NULL              -- Last update timestamp
 );
@@ -87,10 +110,12 @@ All endpoints require authentication and appropriate permissions:
 - **Create/Update Settings**: Requires `settings.edit` permission  
 - **Delete Settings**: Requires `settings.delete` permission
 
-### List All Settings
+### Group Management
+
+#### Get All Groups with Settings
 
 ```http
-GET /api/settings
+GET /api/settings/groups
 Authorization: Bearer <token>
 ```
 
@@ -101,11 +126,21 @@ Authorization: Bearer <token>
   "success": true,
   "data": [
     {
-      "key": "smtp.host",
-      "value": "smtp.gmail.com",
-      "description": "SMTP server hostname",
-      "is_encrypted": false,
-      "category": "smtp",
+      "id": "smtp",
+      "name": "SMTP Mail Settings",
+      "description": "Email server configuration for sending notifications",
+      "icon": "mail",
+      "sort_order": 1,
+      "settings": [
+        {
+          "key": "smtp.host",
+          "value": "smtp.gmail.com",
+          "description": "SMTP server hostname",
+          "is_encrypted": false,
+          "created_at": "2025-01-06T20:00:00.000Z",
+          "updated_at": "2025-01-06T20:00:00.000Z"
+        }
+      ],
       "created_at": "2025-01-06T20:00:00.000Z",
       "updated_at": "2025-01-06T20:00:00.000Z"
     }
@@ -113,20 +148,73 @@ Authorization: Bearer <token>
 }
 ```
 
-### Get Specific Setting
+#### Get Specific Group
 
 ```http
-GET /api/settings/:key
+GET /api/settings/groups/:groupId
+Authorization: Bearer <token>
+```
+
+#### Create Group
+
+```http
+POST /api/settings/groups
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "id": "api-keys",
+  "name": "API Keys",
+  "description": "External service API keys and credentials",
+  "icon": "key",
+  "sort_order": 3
+}
+```
+
+#### Update Group
+
+```http
+PUT /api/settings/groups/:groupId
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "name": "Updated Group Name",
+  "description": "Updated description",
+  "sort_order": 2
+}
+```
+
+### Settings Management
+
+#### List All Settings
+
+```http
+GET /api/settings
+Authorization: Bearer <token>
+```
+
+#### Get Settings by Group
+
+```http
+GET /api/settings/group/:groupId
 Authorization: Bearer <token>
 ```
 
 **Example:**
 
 ```http
-GET /api/settings/smtp.host
+GET /api/settings/group/smtp
 ```
 
-### Create New Setting
+#### Get Specific Setting
+
+```http
+GET /api/settings/:key
+Authorization: Bearer <token>
+```
+
+#### Create New Setting
 
 ```http
 POST /api/settings
@@ -138,29 +226,11 @@ Content-Type: application/json
   "value": "secret123",
   "description": "SMTP server password",
   "encrypted": true,
-  "category": "smtp"
+  "group_id": "smtp"
 }
 ```
 
-**Response:**
-
-```json
-{
-  "success": true,
-  "data": {
-    "key": "smtp.password",
-    "value": "secret123",
-    "description": "SMTP server password",
-    "is_encrypted": true,
-    "category": "smtp",
-    "created_at": "2025-01-06T20:00:00.000Z",
-    "updated_at": "2025-01-06T20:00:00.000Z"
-  },
-  "message": "Global setting created successfully"
-}
-```
-
-### Update Existing Setting
+#### Update Existing Setting
 
 ```http
 PUT /api/settings/:key
@@ -170,56 +240,19 @@ Content-Type: application/json
 {
   "value": "new-secret-value",
   "description": "Updated SMTP password",
-  "encrypted": true
+  "encrypted": true,
+  "group_id": "smtp"
 }
 ```
 
-### Delete Setting
+#### Delete Setting
 
 ```http
 DELETE /api/settings/:key
 Authorization: Bearer <token>
 ```
 
-**Response:**
-
-```json
-{
-  "success": true,
-  "message": "Global setting deleted successfully"
-}
-```
-
-### Get Settings by Category
-
-```http
-GET /api/settings/category/:category
-Authorization: Bearer <token>
-```
-
-**Example:**
-
-```http
-GET /api/settings/category/smtp
-```
-
-### Get All Categories
-
-```http
-GET /api/settings/categories
-Authorization: Bearer <token>
-```
-
-**Response:**
-
-```json
-{
-  "success": true,
-  "data": ["smtp", "api", "system"]
-}
-```
-
-### Search Settings
+#### Search Settings
 
 ```http
 POST /api/settings/search
@@ -231,7 +264,7 @@ Content-Type: application/json
 }
 ```
 
-### Bulk Create/Update Settings
+#### Bulk Create/Update Settings
 
 ```http
 POST /api/settings/bulk
@@ -243,41 +276,28 @@ Content-Type: application/json
     {
       "key": "smtp.host",
       "value": "smtp.gmail.com",
-      "category": "smtp"
+      "group_id": "smtp"
     },
     {
       "key": "smtp.port",
       "value": "587",
-      "category": "smtp"
+      "group_id": "smtp"
     },
     {
       "key": "smtp.password",
       "value": "secret123",
       "encrypted": true,
-      "category": "smtp"
+      "group_id": "smtp"
     }
   ]
 }
 ```
 
-### Health Check
+#### Health Check
 
 ```http
 GET /api/settings/health
 Authorization: Bearer <token>
-```
-
-**Response:**
-
-```json
-{
-  "success": true,
-  "data": {
-    "encryption_working": true,
-    "timestamp": "2025-01-06T20:00:00.000Z"
-  },
-  "message": "Global settings system is healthy"
-}
 ```
 
 ## Usage Examples
@@ -289,28 +309,28 @@ import { GlobalSettingsService } from '../services/globalSettingsService';
 
 // Set SMTP configuration
 await GlobalSettingsService.set('smtp.host', 'smtp.gmail.com', { 
-  category: 'smtp',
+  group_id: 'smtp',
   description: 'SMTP server hostname'
 });
 
 await GlobalSettingsService.set('smtp.port', '587', { 
-  category: 'smtp',
+  group_id: 'smtp',
   description: 'SMTP server port'
 });
 
 await GlobalSettingsService.set('smtp.username', 'user@gmail.com', { 
-  category: 'smtp',
+  group_id: 'smtp',
   description: 'SMTP authentication username'
 });
 
 await GlobalSettingsService.set('smtp.password', 'app-password', { 
-  category: 'smtp',
+  group_id: 'smtp',
   description: 'SMTP authentication password',
   encrypted: true
 });
 
-// Retrieve SMTP configuration
-const smtpSettings = await GlobalSettingsService.getByCategory('smtp');
+// Retrieve SMTP configuration by group
+const smtpSettings = await GlobalSettingsService.getByGroup('smtp');
 const smtpConfig = {
   host: smtpSettings.find(s => s.key === 'smtp.host')?.value,
   port: parseInt(smtpSettings.find(s => s.key === 'smtp.port')?.value || '587'),
@@ -326,183 +346,27 @@ const smtpConfig = {
 ```typescript
 // Store encrypted API keys
 await GlobalSettingsService.set('api.openai.key', 'sk-...', { 
-  category: 'api',
+  group_id: 'api-keys',
   description: 'OpenAI API key for AI integrations',
   encrypted: true
 });
 
 await GlobalSettingsService.set('api.aws.access_key', 'AKIA...', { 
-  category: 'api',
+  group_id: 'api-keys',
   description: 'AWS access key for cloud services',
   encrypted: true
 });
 
-await GlobalSettingsService.set('api.aws.secret_key', 'secret...', { 
-  category: 'api',
-  description: 'AWS secret key for cloud services',
-  encrypted: true
-});
-
-// Retrieve API configuration
-const openaiKey = await GlobalSettingsService.get('api.openai.key');
-const awsConfig = {
-  accessKeyId: (await GlobalSettingsService.get('api.aws.access_key'))?.value,
-  secretAccessKey: (await GlobalSettingsService.get('api.aws.secret_key'))?.value,
-};
-```
-
-### System Configuration
-
-```typescript
-// System-wide feature flags and configuration
-await GlobalSettingsService.set('system.maintenance_mode', 'false', { 
-  category: 'system',
-  description: 'Enable/disable maintenance mode'
-});
-
-await GlobalSettingsService.set('system.max_upload_size', '10485760', { 
-  category: 'system',
-  description: 'Maximum file upload size in bytes (10MB)'
-});
-
-await GlobalSettingsService.set('system.debug_logging', 'false', { 
-  category: 'system',
-  description: 'Enable debug logging'
-});
-
-// Check system configuration
-const maintenanceMode = (await GlobalSettingsService.get('system.maintenance_mode'))?.value === 'true';
-const maxUploadSize = parseInt((await GlobalSettingsService.get('system.max_upload_size'))?.value || '5242880');
-```
-
-## Best Practices
-
-### Key Naming Conventions
-
-- Use dot notation for hierarchy: `category.subcategory.setting`
-- Use lowercase with underscores for readability: `smtp.max_retry_count`
-- Be descriptive but concise: `api.openai.key` not `api.openai.api_key`
-- Group related settings: `database.host`, `database.port`, `database.name`
-
-### Security Guidelines
-
-- **Always encrypt sensitive data**: Passwords, API keys, tokens, secrets
-- **Use descriptive descriptions**: Help other administrators understand the purpose
-- **Categorize settings**: Group related settings for better organization
-- **Regular audits**: Review settings periodically for unused or outdated values
-- **Environment separation**: Use different encryption secrets for different environments
-
-### Performance Considerations
-
-- **Cache frequently accessed settings**: Consider caching non-sensitive, frequently used settings
-- **Batch operations**: Use bulk endpoints when creating multiple related settings
-- **Minimize database calls**: Retrieve settings by category when you need multiple related values
-
-### Error Handling
-
-```typescript
-try {
-  const setting = await GlobalSettingsService.get('api.openai.key');
-  if (!setting) {
-    throw new Error('OpenAI API key not configured');
-  }
-  // Use the setting
-} catch (error) {
-  console.error('Failed to retrieve setting:', error);
-  // Handle the error appropriately
-}
-```
-
-## Migration and Setup
-
-### Initial Setup
-
-1. **Environment Variable**: Set `DEPLOYSTACK_ENCRYPTION_SECRET` in your environment
-2. **Database Migration**: Run `npm run db:generate` and restart the server
-3. **Admin Access**: Ensure you have a user with `global_admin` role
-
-### Migrating Existing Configuration
-
-If you have existing configuration in environment variables or config files:
-
-```typescript
-// Example migration script
-const existingConfig = {
-  SMTP_HOST: process.env.SMTP_HOST,
-  SMTP_PORT: process.env.SMTP_PORT,
-  SMTP_USER: process.env.SMTP_USER,
-  SMTP_PASS: process.env.SMTP_PASS,
-  OPENAI_API_KEY: process.env.OPENAI_API_KEY,
-};
-
-// Migrate to global settings
-for (const [envKey, value] of Object.entries(existingConfig)) {
-  if (value) {
-    const settingKey = envKey.toLowerCase().replace(/_/g, '.');
-    const isSecret = envKey.includes('PASS') || envKey.includes('KEY') || envKey.includes('SECRET');
-    
-    await GlobalSettingsService.set(settingKey, value, {
-      encrypted: isSecret,
-      category: settingKey.split('.')[0],
-      description: `Migrated from ${envKey} environment variable`
-    });
-  }
-}
-```
-
-## Troubleshooting
-
-### Common Issues
-
-#### Encryption Errors
-
-**Problem**: `Decryption failed` errors when retrieving settings
-
-**Solutions**:
-
-- Verify `DEPLOYSTACK_ENCRYPTION_SECRET` environment variable is set correctly
-- Ensure the same encryption secret is used across all instances
-- Check the health endpoint: `GET /api/settings/health`
-
-#### Permission Denied
-
-**Problem**: `403 Forbidden` when accessing settings endpoints
-
-**Solutions**:
-
-- Verify user has `global_admin` role
-- Check user permissions include `settings.view`, `settings.edit`, or `settings.delete`
-- Ensure authentication token is valid
-
-#### Setting Not Found
-
-**Problem**: Settings return `null` or `404 Not Found`
-
-**Solutions**:
-
-- Verify the setting key exists and is spelled correctly
-- Check if the setting was accidentally deleted
-- Use search endpoint to find similar keys
-
-### Debug Commands
-
-```bash
-# Check encryption health
-curl -H "Authorization: Bearer <token>" http://localhost:3000/api/settings/health
-
-# List all settings
-curl -H "Authorization: Bearer <token>" http://localhost:3000/api/settings
-
-# Search for settings
-curl -X POST -H "Content-Type: application/json" -H "Authorization: Bearer <token>" \
-  -d '{"pattern":"smtp"}' http://localhost:3000/api/settings/search
+// Retrieve API configuration by group
+const apiSettings = await GlobalSettingsService.getByGroup('api-keys');
+const openaiKey = apiSettings.find(s => s.key === 'api.openai.key')?.value;
 ```
 
 ## Auto-Initialization System
 
 ### Overview
 
-The auto-initialization system automatically creates missing global settings when the server starts. This ensures that all required settings are available without manual configuration, while preserving existing values.
+The auto-initialization system automatically creates missing groups and global settings when the server starts. This ensures that all required groups and settings are available without manual configuration, while preserving existing values.
 
 ### File-Based Setting Definitions
 
@@ -519,14 +383,20 @@ src/global-settings/
 
 ### Setting Definition Format
 
-Each setting file exports a `GlobalSettingsModule`:
+Each setting file exports a `GlobalSettingsModule` with group metadata:
 
 ```typescript
 // src/global-settings/smtp.ts
 import type { GlobalSettingsModule } from './types';
 
 export const smtpSettings: GlobalSettingsModule = {
-  category: 'smtp',
+  group: {
+    id: 'smtp',
+    name: 'SMTP Mail Settings',
+    description: 'Email server configuration for sending notifications',
+    icon: 'mail',
+    sort_order: 1
+  },
   settings: [
     {
       key: 'smtp.host',
@@ -554,10 +424,11 @@ When the server starts:
 1. **Discovery**: Scans `src/global-settings/` for `.ts` files
 2. **Loading**: Dynamically imports each settings module
 3. **Validation**: Ensures each module has the correct structure
-4. **Database Check**: Checks which settings exist in the database
-5. **Creation**: Creates missing settings with default values
-6. **Preservation**: Skips existing settings (non-destructive)
-7. **Logging**: Reports initialization results
+4. **Group Creation**: Creates missing groups with metadata
+5. **Database Check**: Checks which settings exist in the database
+6. **Creation**: Creates missing settings with default values and group links
+7. **Preservation**: Skips existing settings (non-destructive)
+8. **Logging**: Reports initialization results
 
 ### Example Startup Output
 
@@ -567,6 +438,9 @@ When the server starts:
 ✅ Loaded settings module: smtp (7 settings)
 ✅ Loaded settings module: github-oauth (5 settings)
 🎉 Loaded 2 settings modules with 12 total settings
+🔄 Creating 2 setting groups...
+✅ Created group: smtp (SMTP Mail Settings)
+✅ Created group: github-oauth (GitHub OAuth Configuration)
 🔄 Initializing 12 global settings...
 ✅ Created setting: smtp.host
 ✅ Created setting: smtp.port
@@ -579,9 +453,9 @@ When the server starts:
 ⚠️  Missing required settings: smtp.host, smtp.username, smtp.password
 ```
 
-### Built-in Setting Categories
+### Built-in Setting Groups
 
-#### SMTP Settings
+#### SMTP Settings (Group ID: `smtp`)
 
 | Key | Default | Required | Encrypted | Description |
 |-----|---------|----------|-----------|-------------|
@@ -593,7 +467,7 @@ When the server starts:
 | `smtp.from_name` | `'DeployStack'` | ❌ | ❌ | Default sender name |
 | `smtp.from_email` | `''` | ❌ | ❌ | Default sender email |
 
-#### GitHub OAuth Settings
+#### GitHub OAuth Settings (Group ID: `github-oauth`)
 
 | Key | Default | Required | Encrypted | Description |
 |-----|---------|----------|-----------|-------------|
@@ -627,9 +501,9 @@ const isSmtpReady = await GlobalSettingsInitService.isSmtpConfigured();
 const isGitHubReady = await GlobalSettingsInitService.isGitHubOAuthConfigured();
 ```
 
-### Adding New Setting Categories
+### Adding New Setting Groups
 
-To add a new setting category:
+To add a new setting group:
 
 1. **Create Setting File**: Add a new `.ts` file in `src/global-settings/`
 
@@ -638,7 +512,13 @@ To add a new setting category:
 import type { GlobalSettingsModule } from './types';
 
 export const myServiceSettings: GlobalSettingsModule = {
-  category: 'my-service',
+  group: {
+    id: 'my-service',
+    name: 'My Service Configuration',
+    description: 'Settings for My Service integration',
+    icon: 'service',
+    sort_order: 3
+  },
   settings: [
     {
       key: 'my-service.api_key',
@@ -658,102 +538,173 @@ export const myServiceSettings: GlobalSettingsModule = {
 };
 ```
 
-2. **Restart Server**: The new settings will be automatically discovered and initialized
+2. **Restart Server**: The new group and settings will be automatically discovered and initialized
 
 3. **Add Helper Method** (optional): Add a helper method to `GlobalSettingsInitService`
 
 ```typescript
 // In src/global-settings/index.ts
 static async getMyServiceConfiguration(): Promise<MyServiceConfig | null> {
-  const settings = await Promise.all([
-    GlobalSettingsService.get('my-service.api_key'),
-    GlobalSettingsService.get('my-service.enabled')
-  ]);
+  const settings = await GlobalSettingsService.getByGroup('my-service');
   
-  const [apiKey, enabled] = settings;
+  const apiKey = settings.find(s => s.key === 'my-service.api_key')?.value;
+  const enabled = settings.find(s => s.key === 'my-service.enabled')?.value;
   
-  if (enabled?.value !== 'true' || !apiKey?.value) {
+  if (enabled !== 'true' || !apiKey) {
     return null;
   }
   
   return {
-    apiKey: apiKey.value,
-    enabled: enabled.value === 'true'
+    apiKey,
+    enabled: enabled === 'true'
   };
 }
 ```
 
-### Validation and Health Checks
+## Frontend Integration
 
-The system provides validation for required settings:
+The group-based system is designed for easy frontend integration:
+
+### Dynamic Tab Creation
 
 ```typescript
-// Check all required settings
-const validation = await GlobalSettingsInitService.validateRequiredSettings();
+// Frontend can easily create tabs from groups
+const response = await fetch('/api/settings/groups');
+const { data: groups } = await response.json();
 
-if (!validation.valid) {
-  console.log('Missing required settings:', validation.missing);
-  
-  // Check by category
-  for (const [category, info] of Object.entries(validation.categories)) {
-    if (info.missing > 0) {
-      console.log(`${category}: ${info.missing}/${info.total} missing`);
-      console.log('Missing keys:', info.missingKeys);
-    }
+groups.forEach(group => {
+  createTab({
+    id: group.id,           // For routing: /settings/smtp
+    label: group.name,      // Display: "SMTP Mail Settings"
+    icon: group.icon,       // UI icon
+    description: group.description,
+    settings: group.settings, // Tab content
+    sortOrder: group.sort_order
+  });
+});
+```
+
+### Group Management
+
+```typescript
+// Get settings for a specific tab/group
+const smtpSettings = await fetch('/api/settings/group/smtp');
+
+// Update a setting within a group
+await fetch('/api/settings/smtp.host', {
+  method: 'PUT',
+  body: JSON.stringify({
+    value: 'new-smtp-host.com',
+    group_id: 'smtp'
+  })
+});
+```
+
+### System Configuration
+
+```typescript
+// System-wide feature flags and configuration
+await GlobalSettingsService.set('system.maintenance_mode', 'false', { 
+  group_id: 'system',
+  description: 'Enable/disable maintenance mode'
+});
+
+await GlobalSettingsService.set('system.max_upload_size', '10485760', { 
+  group_id: 'system',
+  description: 'Maximum file upload size in bytes (10MB)'
+});
+
+await GlobalSettingsService.set('system.debug_logging', 'false', { 
+  group_id: 'system',
+  description: 'Enable debug logging'
+});
+
+// Check system configuration
+const maintenanceMode = (await GlobalSettingsService.get('system.maintenance_mode'))?.value === 'true';
+const maxUploadSize = parseInt((await GlobalSettingsService.get('system.max_upload_size'))?.value || '5242880');
+```
+
+## Best Practices
+
+### Key Naming Conventions
+
+- Use dot notation for hierarchy: `category.subcategory.setting`
+- Use lowercase with underscores for readability: `smtp.max_retry_count`
+- Be descriptive but concise: `api.openai.key` not `api.openai.api_key`
+- Group related settings: `database.host`, `database.port`, `database.name`
+
+### Group Design
+
+- **Logical Grouping**: Group related settings together (e.g., all SMTP settings)
+- **Clear Names**: Use descriptive group names for frontend display
+- **Consistent Icons**: Use consistent iconography across groups
+- **Proper Ordering**: Set sort_order to control tab display sequence
+
+### Setting Organization
+
+- **Hierarchical Keys**: Use dot notation within groups: `group.subcategory.setting`
+- **Group Consistency**: Keep all related settings in the same group
+- **Clear Descriptions**: Provide helpful descriptions for administrators
+
+### Security Guidelines
+
+- **Always encrypt sensitive data**: Passwords, API keys, tokens, secrets
+- **Use descriptive descriptions**: Help other administrators understand the purpose
+- **Group sensitive settings**: Keep all sensitive settings for a service in one group
+- **Regular audits**: Review settings periodically for unused or outdated values
+- **Environment separation**: Use different encryption secrets for different environments
+
+### Performance Considerations
+
+- **Cache frequently accessed settings**: Consider caching non-sensitive, frequently used settings
+- **Batch operations**: Use bulk endpoints when creating multiple related settings
+- **Minimize database calls**: Retrieve settings by group when you need multiple related values
+
+### Error Handling
+
+```typescript
+try {
+  const setting = await GlobalSettingsService.get('api.openai.key');
+  if (!setting) {
+    throw new Error('OpenAI API key not configured');
   }
+  // Use the setting
+} catch (error) {
+  console.error('Failed to retrieve setting:', error);
+  // Handle the error appropriately
 }
 ```
 
-### Best Practices for Setting Definitions
+## Migration and Setup
 
-- **Use Clear Keys**: Follow the `category.subcategory.setting` pattern
-- **Provide Descriptions**: Include helpful descriptions for administrators
-- **Mark Sensitive Data**: Set `encrypted: true` for passwords, API keys, secrets
-- **Set Appropriate Defaults**: Use sensible default values when possible
-- **Mark Required Settings**: Set `required: true` for essential settings
-- **Group Related Settings**: Use consistent category names
+### Initial Setup
 
-### Non-Destructive Behavior
+1. **Environment Variable**: Set `DEPLOYSTACK_ENCRYPTION_SECRET` in your environment
+2. **Database Migration**: Run `npm run db:generate` and restart the server
+3. **Admin Access**: Ensure you have a user with `global_admin` role
 
-The auto-initialization system is **completely non-destructive**:
+### Migrating from Category-Based System
 
-- ✅ **Preserves existing settings**: Never overwrites existing values
-- ✅ **Only creates missing settings**: Skips settings that already exist
-- ✅ **Maintains user configurations**: Respects administrator changes
-- ✅ **Safe to run repeatedly**: Can be run multiple times without issues
-- ✅ **Logs all actions**: Transparent about what was created vs. skipped
+The new group-based system replaces the old category-based approach. The migration is handled automatically:
 
-## Future Enhancements
-
-### Planned Features
-
-- **Setting Templates**: Predefined setting groups for common configurations
-- **Environment Overrides**: Allow environment variables to override specific settings
-- **Setting Validation**: Custom validation rules for setting values
-- **Change History**: Track all changes to settings with full audit trail
-- **Setting Dependencies**: Define relationships between settings
-- **Backup/Restore**: Export and import setting configurations
-- **Setting Notifications**: Alert when critical settings are changed
-
-### Integration Points
-
-- **Email Service**: Automatic SMTP configuration from settings
-- **Cloud Providers**: Dynamic API credential management
-- **Feature Flags**: Runtime feature toggling
-- **Monitoring**: Integration with health check systems
-- **CI/CD**: Automated setting deployment and validation
+1. **Database Migration**: The `category` column is renamed to `group_id`
+2. **Auto-Initialization**: Groups are created automatically from setting definitions
+3. **Setting Linking**: Existing settings are linked to appropriate groups
 
 ## API Reference Summary
 
 | Endpoint | Method | Permission | Description |
 |----------|--------|------------|-------------|
+| `/api/settings/groups` | GET | `settings.view` | List all groups with settings |
+| `/api/settings/groups/:groupId` | GET | `settings.view` | Get specific group |
+| `/api/settings/groups` | POST | `settings.edit` | Create new group |
+| `/api/settings/groups/:groupId` | PUT | `settings.edit` | Update group |
 | `/api/settings` | GET | `settings.view` | List all settings |
 | `/api/settings/:key` | GET | `settings.view` | Get specific setting |
 | `/api/settings` | POST | `settings.edit` | Create new setting |
 | `/api/settings/:key` | PUT | `settings.edit` | Update setting |
 | `/api/settings/:key` | DELETE | `settings.delete` | Delete setting |
-| `/api/settings/category/:category` | GET | `settings.view` | Get settings by category |
-| `/api/settings/categories` | GET | `settings.view` | List all categories |
+| `/api/settings/group/:groupId` | GET | `settings.view` | Get settings by group |
 | `/api/settings/search` | POST | `settings.view` | Search settings |
 | `/api/settings/bulk` | POST | `settings.edit` | Bulk create/update |
 | `/api/settings/health` | GET | `settings.view` | System health check |

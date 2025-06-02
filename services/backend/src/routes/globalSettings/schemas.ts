@@ -6,7 +6,7 @@ export const GlobalSettingSchema = z.object({
   value: z.string(),
   description: z.string().optional(),
   is_encrypted: z.boolean(),
-  category: z.string().optional(),
+  group_id: z.string().optional(),
   created_at: z.date(),
   updated_at: z.date(),
 });
@@ -17,7 +17,7 @@ export const CreateGlobalSettingSchema = z.object({
   value: z.string().min(1, 'Value is required'),
   description: z.string().optional(),
   encrypted: z.boolean().optional().default(false),
-  category: z.string().optional(),
+  group_id: z.string().optional(),
 });
 
 // Schema for updating a global setting
@@ -25,7 +25,7 @@ export const UpdateGlobalSettingSchema = z.object({
   value: z.string().min(1).optional(),
   description: z.string().optional(),
   encrypted: z.boolean().optional(),
-  category: z.string().optional(),
+  group_id: z.string().optional(),
 }).refine(data => Object.keys(data).length > 0, {
   message: 'At least one field must be provided for update',
 });

@@ -83,7 +83,7 @@ export default async function globalSettingsRoute(fastify: FastifyInstance) {
         {
           description: validatedData.description,
           encrypted: validatedData.encrypted,
-          category: validatedData.category,
+          group_id: validatedData.group_id,
         }
       );
 
@@ -177,23 +177,23 @@ export default async function globalSettingsRoute(fastify: FastifyInstance) {
     }
   });
 
-  // GET /api/settings/category/:category - Get settings by category (admin only)
-  fastify.get<{ Params: { category: string } }>('/api/settings/category/:category', {
+  // GET /api/settings/group/:groupId - Get settings by group (admin only)
+  fastify.get<{ Params: { groupId: string } }>('/api/settings/group/:groupId', {
     preHandler: requirePermission('settings.view'),
   }, async (request, reply) => {
     try {
-      const { category } = request.params;
-      const settings = await GlobalSettingsService.getByCategory(category);
+      const { groupId } = request.params;
+      const settings = await GlobalSettingsService.getByGroup(groupId);
       
       return reply.status(200).send({
         success: true,
         data: settings,
       });
     } catch (error) {
-      fastify.log.error(error, 'Error fetching settings by category');
+      fastify.log.error(error, 'Error fetching settings by group');
       return reply.status(500).send({
         success: false,
-        error: 'Failed to fetch settings by category',
+        error: 'Failed to fetch settings by group',
       });
     }
   });
@@ -265,7 +265,7 @@ export default async function globalSettingsRoute(fastify: FastifyInstance) {
             {
               description: settingData.description,
               encrypted: settingData.encrypted,
-              category: settingData.category,
+              group_id: settingData.group_id,
             }
           );
           results.push(setting);

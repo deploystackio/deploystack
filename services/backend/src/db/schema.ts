@@ -81,12 +81,22 @@ export const teamMembershipsTableColumns = {
   joined_at: (columnBuilder: any) => columnBuilder('joined_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 };
 
+export const globalSettingGroupsTableColumns = {
+  id: (columnBuilder: any) => columnBuilder('id').primaryKey(),
+  name: (columnBuilder: any) => columnBuilder('name').notNull(),
+  description: (columnBuilder: any) => columnBuilder('description'),
+  icon: (columnBuilder: any) => columnBuilder('icon'),
+  sort_order: (columnBuilder: any) => columnBuilder('sort_order').notNull().default(0),
+  created_at: (columnBuilder: any) => columnBuilder('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  updated_at: (columnBuilder: any) => columnBuilder('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+};
+
 export const globalSettingsTableColumns = {
   key: (columnBuilder: any) => columnBuilder('key').primaryKey(),
   value: (columnBuilder: any) => columnBuilder('value').notNull(),
   description: (columnBuilder: any) => columnBuilder('description'),
   is_encrypted: (columnBuilder: any) => columnBuilder('is_encrypted').notNull().default(false),
-  category: (columnBuilder: any) => columnBuilder('category'),
+  group_id: (columnBuilder: any) => columnBuilder('group_id'), // Foreign key to globalSettingGroups.id
   created_at: (columnBuilder: any) => columnBuilder('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
   updated_at: (columnBuilder: any) => columnBuilder('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 };
@@ -100,6 +110,7 @@ export const baseTableDefinitions = {
   authKey: authKeyTableColumns,
   teams: teamsTableColumns,
   teamMemberships: teamMembershipsTableColumns,
+  globalSettingGroups: globalSettingGroupsTableColumns,
   globalSettings: globalSettingsTableColumns,
   // e.g., posts: postsTableColumns,
 };

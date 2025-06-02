@@ -1,7 +1,13 @@
 import type { GlobalSettingsModule } from './types';
 
 export const smtpSettings: GlobalSettingsModule = {
-  category: 'smtp',
+  group: {
+    id: 'smtp',
+    name: 'SMTP Mail Settings',
+    description: 'Email server configuration for sending notifications',
+    icon: 'mail',
+    sort_order: 1
+  },
   settings: [
     {
       key: 'smtp.host',

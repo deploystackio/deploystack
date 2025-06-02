@@ -7,7 +7,7 @@ export interface GlobalSetting {
   value: string;
   description?: string;
   is_encrypted: boolean;
-  category?: string;
+  group_id?: string;
   created_at: Date;
   updated_at: Date;
 }
@@ -17,14 +17,14 @@ export interface CreateGlobalSettingInput {
   value: string;
   description?: string;
   encrypted?: boolean;
-  category?: string;
+  group_id?: string;
 }
 
 export interface UpdateGlobalSettingInput {
   value?: string;
   description?: string;
   encrypted?: boolean;
-  category?: string;
+  group_id?: string;
 }
 
 export class GlobalSettingsService {
@@ -137,11 +137,11 @@ export class GlobalSettingsService {
   }
 
   /**
-   * Get settings by category
+   * Get settings by group
    */
-  static async getByCategory(category: string): Promise<GlobalSetting[]> {
-    if (!category || typeof category !== 'string') {
-      throw new Error('Category is required and must be a string');
+  static async getByGroup(groupId: string): Promise<GlobalSetting[]> {
+    if (!groupId || typeof groupId !== 'string') {
+      throw new Error('Group ID is required and must be a string');
     }
 
     const db = getDb();
@@ -157,7 +157,7 @@ export class GlobalSettingsService {
       const results = await (db as any)
         .select()
         .from(globalSettingsTable)
-        .where(eq(globalSettingsTable.category, category))
+        .where(eq(globalSettingsTable.group_id, groupId))
         .orderBy(globalSettingsTable.key);
 
       // Decrypt encrypted values
@@ -173,18 +173,18 @@ export class GlobalSettingsService {
         return setting;
       });
     } catch (error) {
-      throw new Error(`Failed to get settings for category '${category}': ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(`Failed to get settings for group '${groupId}': ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
   /**
    * Create or update a setting
    */
-  static async set(key: string, value: string, options: { description?: string; encrypted?: boolean; category?: string } = {}): Promise<GlobalSetting> {
+  static async set(key: string, value: string, options: { description?: string; encrypted?: boolean; group_id?: string } = {}): Promise<GlobalSetting> {
     this.validateKey(key);
     this.validateValue(value);
 
-    const { description, encrypted = false, category } = options;
+    const { description, encrypted = false, group_id } = options;
 
     const db = getDb();
     const schema = getSchema();
@@ -210,7 +210,7 @@ export class GlobalSettingsService {
         value: finalValue,
         description: description || null,
         is_encrypted: encrypted,
-        category: category || null,
+        group_id: group_id || null,
         updated_at: now,
       };
 
@@ -270,8 +270,8 @@ export class GlobalSettingsService {
       updateData.description = updates.description;
     }
 
-    if (updates.category !== undefined) {
-      updateData.category = updates.category;
+    if (updates.group_id !== undefined) {
+      updateData.group_id = updates.group_id;
     }
 
     const db = getDb();

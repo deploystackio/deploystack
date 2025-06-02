@@ -66,12 +66,22 @@ export const teamMemberships = sqliteTable('teamMemberships', {
   joined_at: integer('joined_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 });
 
+export const globalSettingGroups = sqliteTable('globalSettingGroups', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  description: text('description'),
+  icon: text('icon'),
+  sort_order: integer('sort_order').notNull().default(0),
+  created_at: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  updated_at: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+});
+
 export const globalSettings = sqliteTable('globalSettings', {
   key: text('key').primaryKey(),
   value: text('value').notNull(),
   description: text('description'),
   is_encrypted: integer('is_encrypted', { mode: 'boolean' }).notNull().default(false),
-  category: text('category'),
+  group_id: text('group_id').references(() => globalSettingGroups.id),
   created_at: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
   updated_at: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 });
