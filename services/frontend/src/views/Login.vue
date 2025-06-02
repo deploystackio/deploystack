@@ -6,6 +6,7 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { Mail, Lock, AlertTriangle } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
+import { UserService } from '@/services/userService'
 
 import {
   Card,
@@ -99,33 +100,8 @@ const onSubmit = form.handleSubmit(async (values) => {
   errorMessage.value = ''
 
   try {
-    // Create AbortController for timeout handling
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
-
-    const response = await fetch(`${apiUrl}/api/auth/email/login`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include', // Include cookies for session management
-      body: JSON.stringify({
-        login: values.email,
-        password: values.password,
-      }),
-      signal: controller.signal,
-    })
-
-    clearTimeout(timeoutId)
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}))
-      const error = new Error(errorData.message || 'Login failed') as Error & { status: number }
-      error.status = response.status
-      throw error
-    }
-
-    const data = await response.json()
+    // Use the UserService login method which handles cache clearing
+    const data = await UserService.login(values.email, values.password)
     console.log('Login successful!', data)
 
     // Handle successful login - redirect to dashboard or home

@@ -88,9 +88,9 @@ const navigationItems = [
 ]
 
 // Fetch user data logic using UserService
-const fetchUserData = async () => {
+const fetchUserData = async (forceRefresh = false) => {
   try {
-    const user = await UserService.getCurrentUser()
+    const user = await UserService.getCurrentUser(forceRefresh)
     if (user) {
       currentUser.value = user
       userEmail.value = user.email
@@ -107,11 +107,11 @@ const fetchUserData = async () => {
   }
 }
 
-// Fetch teams logic (remains the same)
-const fetchTeams = async () => {
+// Fetch teams logic with smart caching
+const fetchTeams = async (forceRefresh = false) => {
   try {
     teamsLoading.value = true; teamsError.value = '';
-    const userTeams = await TeamService.getUserTeams(); teams.value = userTeams;
+    const userTeams = await TeamService.getUserTeams(forceRefresh); teams.value = userTeams;
     if (userTeams.length > 0) { selectedTeam.value = userTeams[0]; }
   } catch (error) { console.error('Error fetching teams:', error); teamsError.value = error instanceof Error ? error.message : 'Failed to load teams'; } finally { teamsLoading.value = false; }
 }
@@ -119,7 +119,17 @@ const fetchTeams = async () => {
 const selectTeam = (team: Team) => { selectedTeam.value = team }
 const navigateTo = (url: string) => { router.push(url) }
 const goToAccount = () => { router.push('/user/account') }
-const logout = () => { router.push('/logout') }
+const logout = async () => {
+  try {
+    // Clear user cache and logout
+    await UserService.logout()
+    router.push('/login')
+  } catch (error) {
+    console.error('Error during logout:', error)
+    // Still redirect to logout page to handle any cleanup
+    router.push('/logout')
+  }
+}
 const getUserInitials = (name: string) => { return name.split(' ').map(word => word.charAt(0)).join('').toUpperCase().slice(0, 2) }
 
 onMounted(() => {
