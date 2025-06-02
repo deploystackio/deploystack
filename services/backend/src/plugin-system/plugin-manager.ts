@@ -10,7 +10,6 @@ import {
   type PluginPackage, 
   type PluginConfiguration,
   type PluginOptions,
-  type GlobalSettingsExtension,
   type GlobalSettingDefinitionForPlugin,
   type GlobalSettingGroupForPlugin
 } from './types';

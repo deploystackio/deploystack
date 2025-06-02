@@ -5,8 +5,6 @@ import type {
   GlobalSettingsModule, 
   GlobalSettingDefinition, 
   GlobalSettingGroup,
-  GroupWithSettings,
-  CreateGroupInput,
   ValidationResult, 
   SmtpConfig, 
   GitHubOAuthConfig, 

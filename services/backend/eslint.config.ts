@@ -1,12 +1,11 @@
 // services/backend/eslint.config.ts
-import { FlatConfig } from 'eslint';
 import ts from '@typescript-eslint/eslint-plugin';
 import tsParser from '@typescript-eslint/parser';
 
-const config: FlatConfig[] = [
+const config = [
   {
     files: ['**/*.ts'],
-    ignores: ['**/node_modules/**', '**/dist/**'],
+    ignores: ['**/node_modules/**', '**/dist/**', '**/._*.ts'],
     languageOptions: {
       parser: tsParser,
       parserOptions: {

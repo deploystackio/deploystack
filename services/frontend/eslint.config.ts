@@ -20,7 +20,8 @@ export default defineConfigWithVueTs(
       '**/dist-ssr/**',
       '**/coverage/**',
       '**/src/components/ui/**',
-      '**/src/lib/utils.ts'
+      '**/src/lib/utils.ts',
+      '**/._*.ts'
     ]
   },
 

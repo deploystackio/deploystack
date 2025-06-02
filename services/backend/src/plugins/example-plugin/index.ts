@@ -2,9 +2,7 @@
 import { 
   type Plugin, 
   type DatabaseExtension,
-  type GlobalSettingsExtension,
-  type GlobalSettingDefinitionForPlugin,
-  type GlobalSettingGroupForPlugin
+  type GlobalSettingsExtension
 } from '../../plugin-system/types';
 import { type FastifyInstance } from 'fastify';
 import { type AnyDatabase, getSchema } from '../../db'; // Import getSchema
