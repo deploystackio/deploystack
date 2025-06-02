@@ -217,7 +217,7 @@ export class GlobalSettingsInitService {
         throw new Error('GlobalSettingGroups table not found in schema');
       }
 
-      const now = Date.now();
+      const now = new Date();
       const groupData = {
         id: group.id,
         name: group.name,
