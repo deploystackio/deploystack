@@ -2,7 +2,6 @@
 import { ref, onMounted, defineProps, computed } from 'vue' // Added defineProps
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { getEnv } from '@/utils/env' // Import getEnv
 // import { cn } from '@/lib/utils' // cn might not be needed for root if $attrs.class is used directly
 // import { ScrollArea } from '@/components/ui/scroll-area' // SidebarContent should handle scrolling
 

@@ -10,8 +10,23 @@
         </CardHeader>
 
         <CardContent>
+          <!-- Setup success message -->
+          <div v-if="setupSuccessMessageVisible" class="text-center">
+            <Alert class="mb-4" variant="default">
+              <CheckCircle class="h-4 w-4" />
+              <AlertTitle>{{ $t('setup.success.title') }}</AlertTitle>
+              <AlertDescription>
+                {{ $t('setup.success.description') }}
+              </AlertDescription>
+            </Alert>
+            <!-- Optionally, add a button to go to login or elsewhere -->
+            <Button @click="goToLogin" class="w-full mt-4">
+              {{ $t('setup.success.buttonAcknowledge') }}
+            </Button>
+          </div>
+
           <!-- Already configured message -->
-          <div v-if="databaseStore.canProceedToApp" class="text-center">
+          <div v-else-if="databaseStore.canProceedToApp" class="text-center">
             <Alert class="mb-4">
               <CheckCircle class="h-4 w-4" />
               <AlertTitle>{{ $t('setup.alreadyConfigured.title') }}</AlertTitle>
@@ -76,7 +91,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue';
+import { onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useForm } from 'vee-validate';
 import { toTypedSchema } from '@vee-validate/zod';
@@ -119,6 +134,8 @@ const formSchema = toTypedSchema(
   })
 );
 
+const setupSuccessMessageVisible = ref(false);
+
 const form = useForm({
   validationSchema: formSchema,
   initialValues: {
@@ -128,14 +145,17 @@ const form = useForm({
 
 const onSubmit = form.handleSubmit(async (values) => {
   databaseStore.clearError();
+  setupSuccessMessageVisible.value = false; // Reset on new submission
 
   const success = await databaseStore.setupDatabase({
     type: values.type,
   });
 
   if (success) {
-    // Redirect to login after successful setup
-    router.push('/login');
+    // Display success message instead of immediate redirect
+    setupSuccessMessageVisible.value = true;
+    // Optionally, still check status to update canProceedToApp if needed
+    await databaseStore.checkDatabaseStatus(true);
   }
 });
 

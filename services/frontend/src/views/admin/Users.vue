@@ -7,10 +7,6 @@
 </template>
 
 <script setup lang="ts">
-import { useI18n } from 'vue-i18n'
-
-const { t } = useI18n()
-
 // Define page title for use in DashboardLayout or similar
 // This is a common pattern but might need adjustment based on your layout component
 // definePageMeta({

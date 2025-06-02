@@ -26,6 +26,11 @@ export default {
       description: 'Your DeployStack instance appears to be already configured. If you need to change settings, please consult the documentation or environment variables.',
       button: 'Go to Dashboard',
     },
+    success: {
+      title: 'Setup Successful',
+      description: 'Setup was successful. Please restart the backend service to apply changes.',
+      buttonAcknowledge: 'Go to Login',
+    },
     buttons: {
       submit: 'Save Configuration',
       loading: 'Saving Configuration...',
