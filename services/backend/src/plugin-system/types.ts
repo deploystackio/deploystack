@@ -4,6 +4,40 @@ import { type FastifyInstance } from 'fastify';
 import { type AnyDatabase } from '../db'; // Import AnyDatabase
 
 /**
+ * Definition for a global setting that can be provided by a plugin.
+ * Mirrors parts of GlobalSettingDefinition from global-settings/types.ts
+ * but is defined here to avoid circular dependencies.
+ */
+export interface GlobalSettingDefinitionForPlugin {
+  key: string;
+  defaultValue: string;
+  description: string;
+  encrypted: boolean;
+  required?: boolean; // Optional: if the setting must have a value
+  groupId?: string; // Optional: if this setting belongs to a specific group
+}
+
+/**
+ * Definition for a global setting group that can be provided by a plugin.
+ * Mirrors GlobalSettingGroup from global-settings/types.ts
+ */
+export interface GlobalSettingGroupForPlugin {
+  id: string;
+  name: string;
+  description?: string;
+  icon?: string;
+  sort_order?: number;
+}
+
+/**
+ * Interface for plugins to declare global settings and groups.
+ */
+export interface GlobalSettingsExtension {
+  groups?: GlobalSettingGroupForPlugin[];
+  settings: GlobalSettingDefinitionForPlugin[];
+}
+
+/**
  * Plugin metadata interface
  */
 export interface PluginMeta {
@@ -49,6 +83,11 @@ export interface Plugin {
    * Optional database extension
    */
   databaseExtension?: DatabaseExtension;
+
+  /**
+   * Optional global settings extension
+   */
+  globalSettingsExtension?: GlobalSettingsExtension;
   
   /**
    * Initialize the plugin

@@ -210,6 +210,7 @@ Plugins receive access to:
 - **Fastify instance** (`app`) - For registering routes, hooks, and decorations
 - **Database instance** (`db`) - For database operations
 - **Configuration** - Through the plugin manager (if provided)
+- **Global Settings** - Plugins can define their own global settings
 
 ## Plugin Lifecycle
 
@@ -307,6 +308,112 @@ See the `plugins/example-plugin` directory for a working example.
 ## Plugin API Reference
 
 The complete Plugin interface is defined in `src/plugin-system/types.ts`.
+
+## Defining Global Settings via Plugins
+
+Plugins can contribute their own global settings to the DeployStack system. These settings will be managed alongside core global settings and will be editable by users with the `global_admin` role.
+
+### How it Works
+
+1. **Define `globalSettingsExtension`**: In your plugin class, add an optional property `globalSettingsExtension`.
+2. **Structure**: This property should be an object implementing the `GlobalSettingsExtension` interface (defined in `src/plugin-system/types.ts`). It can contain:
+
+- `groups`: An optional array of `GlobalSettingGroupForPlugin` objects to define new setting groups.
+- `settings`: A mandatory array of `GlobalSettingDefinitionForPlugin` objects to define individual settings.
+
+3. **Initialization**: During server startup, the `PluginManager` will:
+
+- Collect all group and setting definitions from active plugins.
+- Create any new groups defined by plugins if they don't already exist. If a group ID already exists, the plugin's group definition is ignored for that specific group, and the existing group is used.
+- Initialize the plugin's global settings with their default values, but only if a setting with the same key doesn't already exist (either from core settings or another plugin). Core settings always take precedence.
+
+4. **Access Control**: All plugin-defined global settings are subject to the same access control as core settings (i.e., manageable by `global_admin`).
+
+5. **Security**:
+
+- **Core Precedence**: Core global settings (defined in `services/backend/src/global-settings/`) cannot be overridden by plugins.
+- **Duplicate Keys**: If a plugin attempts to register a setting with a key that already exists (from core or another plugin), the plugin's setting will be ignored, and a warning will be logged.
+
+### Example: Defining Global Settings in a Plugin
+
+```typescript
+// In your plugin's index.ts
+
+import { 
+  type Plugin, 
+  type GlobalSettingsExtension,
+  // ... other imports
+} from '../../plugin-system/types';
+
+class MyAwesomePlugin implements Plugin {
+  meta = {
+    id: 'my-awesome-plugin',
+    name: 'My Awesome Plugin',
+    version: '1.0.0',
+    // ... other metadata
+  };
+
+  globalSettingsExtension: GlobalSettingsExtension = {
+    groups: [
+      {
+        id: 'my_awesome_plugin_group', // Unique ID for the group
+        name: 'My Awesome Plugin Config',
+        description: 'Settings specific to My Awesome Plugin.',
+        icon: 'settings-2', // Example: Lucide icon name
+        sort_order: 150,    // Controls tab order in UI
+      }
+    ],
+    settings: [
+      {
+        key: 'myAwesomePlugin.features.enableSuperFeature',
+        defaultValue: 'true',
+        description: 'Enables the super feature of this plugin.',
+        encrypted: false,
+        required: false,
+        groupId: 'my_awesome_plugin_group', // Link to the group defined above
+      },
+      {
+        key: 'myAwesomePlugin.credentials.externalApiKey',
+        defaultValue: '',
+        description: 'API key for an external service used by this plugin.',
+        encrypted: true, // Sensitive value, will be encrypted
+        required: true,
+        groupId: 'my_awesome_plugin_group',
+      },
+      {
+        // Example of a setting not belonging to a new custom group
+        // It might appear in a default group or ungrouped in the UI,
+        // or you can assign it to an existing core group ID if appropriate.
+        key: 'myAwesomePlugin.performance.cacheDurationSeconds',
+        defaultValue: '3600',
+        description: 'Cache duration in seconds for plugin data.',
+        encrypted: false,
+        required: false,
+        // groupId: 'system', // Example: if you want to add to an existing core group
+      }
+    ]
+  };
+
+  // ... rest of your plugin implementation (databaseExtension, initialize, etc.)
+  async initialize(app: FastifyInstance, db: AnyDatabase | null) {
+    console.log(`[${this.meta.id}] Initializing...`);
+    
+    // You can try to access your plugin's settings here if needed during init,
+    // using GlobalSettingsService.get('myAwesomePlugin.features.enableSuperFeature')
+    // Note: Ensure GlobalSettingsService is available or handle potential errors.
+  }
+}
+
+export default MyAwesomePlugin;
+```
+
+### Important Considerations
+
+- **Key Uniqueness**: Ensure your setting keys are unique, preferably prefixed with your plugin ID (e.g., `yourPluginId.category.settingName`) to avoid conflicts.
+- **Group IDs**: If defining new groups, ensure their IDs are unique.
+- **Default Values**: Provide sensible default values.
+- **Encryption**: Mark sensitive settings (API keys, passwords) with `encrypted: true`.
+- **Documentation**: Document any global settings your plugin introduces in its own README or documentation.
 
 ---
 

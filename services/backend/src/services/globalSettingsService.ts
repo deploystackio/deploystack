@@ -12,6 +12,16 @@ export interface GlobalSetting {
   updated_at: Date;
 }
 
+export interface GlobalSettingGroup {
+  id: string;
+  name: string;
+  description?: string | null;
+  icon?: string | null;
+  sort_order: number;
+  created_at: Date;
+  updated_at: Date;
+}
+
 export interface CreateGlobalSettingInput {
   key: string;
   value: string;
@@ -377,10 +387,10 @@ export class GlobalSettingsService {
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const results = await (db as any)
-        .selectDistinct({ category: globalSettingsTable.category })
+        .selectDistinct({ category: (globalSettingsTable as any).category }) // Add type assertion if category is removed
         .from(globalSettingsTable)
-        .where(eq(globalSettingsTable.category, globalSettingsTable.category)) // Only non-null categories
-        .orderBy(globalSettingsTable.category);
+        .where(eq((globalSettingsTable as any).category, (globalSettingsTable as any).category)) // Only non-null categories
+        .orderBy((globalSettingsTable as any).category);
 
       return results
         .map((row: { category: string | null }) => row.category)
@@ -390,6 +400,86 @@ export class GlobalSettingsService {
     }
   }
 
+  /**
+   * Get a specific group by ID
+   */
+  static async getGroup(groupId: string): Promise<GlobalSettingGroup | null> {
+    if (!groupId || typeof groupId !== 'string') {
+      throw new Error('Group ID is required and must be a string');
+    }
+
+    const db = getDb();
+    const schema = getSchema();
+    const globalSettingGroupsTable = schema.globalSettingGroups;
+
+    if (!globalSettingGroupsTable) {
+      throw new Error('GlobalSettingGroups table not found in schema');
+    }
+
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const results = await (db as any)
+        .select()
+        .from(globalSettingGroupsTable)
+        .where(eq(globalSettingGroupsTable.id, groupId))
+        .limit(1);
+      
+      return results.length > 0 ? results[0] as GlobalSettingGroup : null;
+    } catch (error) {
+      throw new Error(`Failed to get group '${groupId}': ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Create a new global setting group
+   */
+  static async createGroup(groupData: { id: string; name: string; description?: string; icon?: string; sort_order?: number }): Promise<GlobalSettingGroup> {
+    const { id, name, description, icon, sort_order } = groupData;
+
+    if (!id || typeof id !== 'string') {
+      throw new Error('Group ID is required and must be a string');
+    }
+    if (!name || typeof name !== 'string') {
+      throw new Error('Group name is required and must be a string');
+    }
+
+    const db = getDb();
+    const schema = getSchema();
+    const globalSettingGroupsTable = schema.globalSettingGroups;
+
+    if (!globalSettingGroupsTable) {
+      throw new Error('GlobalSettingGroups table not found in schema');
+    }
+
+    const now = new Date();
+    const newGroup = {
+      id,
+      name,
+      description: description || null,
+      icon: icon || null,
+      sort_order: sort_order || 0,
+      created_at: now,
+      updated_at: now,
+    };
+
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (db as any)
+        .insert(globalSettingGroupsTable)
+        .values(newGroup);
+      
+      // Drizzle's insert doesn't return the created object by default for all drivers in a simple way.
+      // We'll re-fetch it. This also confirms creation.
+      const createdGroup = await this.getGroup(id);
+      if (!createdGroup) {
+        throw new Error(`Failed to retrieve group '${id}' after creation.`);
+      }
+      return createdGroup;
+    } catch (error) {
+      throw new Error(`Failed to create group '${id}': ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+  
   /**
    * Check if a setting exists
    */

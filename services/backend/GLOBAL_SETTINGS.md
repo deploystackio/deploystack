@@ -501,9 +501,9 @@ const isSmtpReady = await GlobalSettingsInitService.isSmtpConfigured();
 const isGitHubReady = await GlobalSettingsInitService.isGitHubOAuthConfigured();
 ```
 
-### Adding New Setting Groups
+### Adding New Setting Groups (Core)
 
-To add a new setting group:
+To add a new core setting group (managed directly by the application):
 
 1. **Create Setting File**: Add a new `.ts` file in `src/global-settings/`
 
@@ -690,6 +690,17 @@ The new group-based system replaces the old category-based approach. The migrati
 1. **Database Migration**: The `category` column is renamed to `group_id`
 2. **Auto-Initialization**: Groups are created automatically from setting definitions
 3. **Setting Linking**: Existing settings are linked to appropriate groups
+
+## Plugin-Contributed Global Settings
+
+In addition to core global settings, plugins can also define and register their own global settings and setting groups. These are managed through the same system and are subject to the same access controls (i.e., editable by `global_admin`).
+
+Key points for plugin-contributed settings:
+
+- **Declaration**: Plugins declare global settings via a `globalSettingsExtension` property in their main class.
+- **Initialization**: The `PluginManager` processes these definitions at startup, creating new groups and settings if they don't already exist.
+- **Precedence**: Core global settings always take precedence. If a plugin tries to define a setting with a key that already exists (either from core or another plugin), the plugin's definition for that specific key is ignored.
+- **Documentation**: For details on how plugins can define global settings, refer to the [PLUGINS.MD](PLUGINS.MD) document.
 
 ## API Reference Summary
 
