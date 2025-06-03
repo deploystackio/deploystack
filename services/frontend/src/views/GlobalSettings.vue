@@ -190,28 +190,30 @@ async function handleSubmit(event: Event) {
 <template>
   <DashboardLayout :title="t('globalSettings.title')">
     <div class="hidden space-y-6 pb-16 md:block">
-      <Alert v-if="showSuccessAlert" variant="default" class="mb-4 border-green-500 bg-green-50 text-green-700 relative">
-        <CheckCircle2Icon class="h-5 w-5 text-green-600" />
-        <AlertTitle class="font-semibold text-green-800">{{ t('globalSettings.alerts.successTitle') }}</AlertTitle>
-        <AlertDescription>
-          {{ successAlertMessage }}
-        </AlertDescription>
-        <Button
-          variant="ghost"
-          size="sm"
-          class="absolute top-2 right-2 p-1 h-auto text-green-700 hover:bg-green-100"
-          @click="showSuccessAlert = false"
-          aria-label="Dismiss success alert"
-        >
-          <XIcon class="h-4 w-4" />
-        </Button>
-      </Alert>
 
       <div class="flex flex-col space-y-8 lg:flex-row lg:space-x-12 lg:space-y-0">
         <aside class="-mx-4 lg:w-1/5">
           <GlobalSettingsSidebarNav :groups="settingGroups" />
         </aside>
-        <div class="flex-1 lg:max-w-2xl">
+        <div class="flex-1 lg:max-w-3xl">
+
+          <Alert v-if="showSuccessAlert" variant="default" class="mb-8 border-green-500 bg-green-50 text-green-700 relative">
+            <CheckCircle2Icon class="h-5 w-5 text-green-600" />
+            <AlertTitle class="font-semibold text-green-800">{{ t('globalSettings.alerts.successTitle') }}</AlertTitle>
+            <AlertDescription>
+              {{ successAlertMessage }}
+            </AlertDescription>
+            <Button
+              variant="ghost"
+              size="sm"
+              class="absolute top-2 right-2 p-1 h-auto text-green-700 hover:bg-green-100"
+              @click="showSuccessAlert = false"
+              aria-label="Dismiss success alert"
+            >
+              <XIcon class="h-4 w-4" />
+            </Button>
+          </Alert>
+
           <div v-if="isLoading" class="text-muted-foreground">Loading settings...</div>
           <div v-else-if="error" class="text-red-500">Error loading settings: {{ error }}</div>
           <div v-else-if="selectedGroup" class="space-y-6">
