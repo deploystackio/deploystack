@@ -197,7 +197,7 @@ async function handleSubmit(event: Event) {
     <div class="hidden space-y-6 pb-16 md:block">
 
       <div class="flex flex-col space-y-8 lg:flex-row lg:space-x-12 lg:space-y-0">
-        <aside class="-mx-4 lg:w-1/5">
+        <aside class="lg:w-1/5">
           <GlobalSettingsSidebarNav :groups="settingGroups" />
         </aside>
         <div class="flex-1 lg:max-w-3xl">
