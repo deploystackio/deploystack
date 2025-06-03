@@ -177,6 +177,7 @@ export class GlobalSettingsService {
         .orderBy(schema.globalSettings.key);
 
       // Decrypt encrypted values
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return results.map((setting: any) => {
         if (setting.is_encrypted && setting.value) {
           try {
@@ -213,6 +214,7 @@ export class GlobalSettingsService {
         .orderBy(schema.globalSettings.key);
 
       // Decrypt encrypted values
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return results.map((setting: any) => {
         if (setting.is_encrypted && setting.value) {
           try {
@@ -321,6 +323,7 @@ export class GlobalSettingsService {
     }
 
     // Prepare update data
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const updateData: any = {
       updated_at: new Date(),
     };
@@ -403,6 +406,7 @@ export class GlobalSettingsService {
         .orderBy(schema.globalSettings.key);
 
       // Decrypt encrypted values
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return results.map((setting: any) => {
         if (setting.is_encrypted && setting.value) {
           try {

@@ -1,0 +1,16 @@
+//- Email footer component
+.footer
+  p
+    | © #{currentYear} #{appName || 'DeployStack'}. All rights reserved.
+  
+  p
+    | You received this email because you have an account with us.
+    br
+    if supportEmail
+      | If you have any questions, please contact us at 
+      a(href=`mailto:${supportEmail}`)= supportEmail
+    else
+      | If you have any questions, please contact our support team.
+  
+  p.text-muted.mb-0
+    | This email was sent from an automated system. Please do not reply to this email.

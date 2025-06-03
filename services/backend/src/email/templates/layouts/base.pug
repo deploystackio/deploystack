@@ -1,0 +1,162 @@
+//- @description Base email template layout
+//- @variables title, preheader
+doctype html
+html(lang="en")
+  head
+    meta(charset="UTF-8")
+    meta(name="viewport" content="width=device-width, initial-scale=1.0")
+    meta(http-equiv="X-UA-Compatible" content="IE=edge")
+    title= title || 'DeployStack'
+    if preheader
+      //- Preheader text for email clients
+      style.
+        .preheader { display: none !important; visibility: hidden; opacity: 0; color: transparent; height: 0; width: 0; }
+    style.
+      /* Reset styles */
+      body, table, td, p, a, li, blockquote {
+        -webkit-text-size-adjust: 100%;
+        -ms-text-size-adjust: 100%;
+      }
+      table, td {
+        mso-table-lspace: 0pt;
+        mso-table-rspace: 0pt;
+      }
+      img {
+        -ms-interpolation-mode: bicubic;
+        border: 0;
+        height: auto;
+        line-height: 100%;
+        outline: none;
+        text-decoration: none;
+      }
+      
+      /* Base styles */
+      body {
+        margin: 0 !important;
+        padding: 0 !important;
+        background-color: #f4f4f4;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        font-size: 16px;
+        line-height: 1.6;
+        color: #333333;
+      }
+      
+      /* Container */
+      .email-container {
+        max-width: 600px;
+        margin: 0 auto;
+        background-color: #ffffff;
+      }
+      
+      /* Header */
+      .header {
+        background-color: #2563eb;
+        padding: 20px;
+        text-align: center;
+      }
+      .header h1 {
+        color: #ffffff;
+        margin: 0;
+        font-size: 24px;
+        font-weight: 600;
+      }
+      
+      /* Content */
+      .content {
+        padding: 40px 30px;
+      }
+      .content h1 {
+        color: #1f2937;
+        font-size: 28px;
+        font-weight: 700;
+        margin: 0 0 20px 0;
+        line-height: 1.2;
+      }
+      .content h2 {
+        color: #374151;
+        font-size: 22px;
+        font-weight: 600;
+        margin: 30px 0 15px 0;
+      }
+      .content p {
+        margin: 0 0 20px 0;
+        color: #4b5563;
+      }
+      
+      /* Buttons */
+      .button {
+        display: inline-block;
+        padding: 14px 28px;
+        background-color: #2563eb;
+        color: #ffffff !important;
+        text-decoration: none;
+        border-radius: 6px;
+        font-weight: 600;
+        margin: 20px 0;
+        text-align: center;
+      }
+      .button:hover {
+        background-color: #1d4ed8;
+      }
+      .button-secondary {
+        background-color: #6b7280;
+      }
+      .button-secondary:hover {
+        background-color: #4b5563;
+      }
+      
+      /* Footer */
+      .footer {
+        background-color: #f9fafb;
+        padding: 30px;
+        text-align: center;
+        border-top: 1px solid #e5e7eb;
+      }
+      .footer p {
+        margin: 0 0 10px 0;
+        font-size: 14px;
+        color: #6b7280;
+      }
+      .footer a {
+        color: #2563eb;
+        text-decoration: none;
+      }
+      
+      /* Utility classes */
+      .text-center { text-align: center; }
+      .text-muted { color: #6b7280; }
+      .mb-0 { margin-bottom: 0 !important; }
+      .mt-0 { margin-top: 0 !important; }
+      
+      /* Responsive */
+      @media only screen and (max-width: 600px) {
+        .email-container {
+          width: 100% !important;
+        }
+        .content {
+          padding: 30px 20px !important;
+        }
+        .content h1 {
+          font-size: 24px !important;
+        }
+        .button {
+          display: block !important;
+          width: 100% !important;
+          box-sizing: border-box;
+        }
+      }
+
+  body
+    if preheader
+      .preheader= preheader
+    
+    table(role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%")
+      tr
+        td
+          .email-container
+            include header.pug
+            
+            .content
+              block content
+            
+            include footer.pug

@@ -1,6 +1,5 @@
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import { getLucia } from '../../lib/lucia'; // Corrected import
-import { type LoginEmailInput } from './schemas';
 // argon2 is not directly used here as lucia.useKey handles password verification
 import { verify } from '@node-rs/argon2';
 import { getDb, getSchema } from '../../db';
