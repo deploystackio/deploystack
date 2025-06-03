@@ -57,6 +57,7 @@ describe('User Registration E2E Tests', () => {
       firstUserId: user.id,
       firstUserCookie: registerResponse.headers['set-cookie'][0]
     });
+    // SMTP settings are now expected to be set by default in test env via src/global-settings/smtp.ts
   });
 
   it('should register second user and assign global_user role', async () => {
