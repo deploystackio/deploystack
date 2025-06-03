@@ -6,7 +6,8 @@ class CustomSequencer extends Sequencer {
     const testOrder = [
       '1-setup.e2e.test.ts',
       '2-user-registration.e2e.test.ts', 
-      '3-email-login.e2e.test.ts'
+      '3-email-login.e2e.test.ts',
+      '4-global-settings-check.e2e.test.ts'
     ];
 
     return tests.sort((testA, testB) => {
