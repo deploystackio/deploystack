@@ -24,7 +24,6 @@ async function fetchSettingGroupsApi(): Promise<GlobalSettingGroup[]> {
   if (!apiUrl) {
     throw new Error('VITE_DEPLOYSTACK_BACKEND_URL is not configured.')
   }
-  console.log(`Fetching all global setting groups with settings from ${apiUrl}/api/settings/groups...`)
   const response = await fetch(`${apiUrl}/api/settings/groups`, { credentials: 'include' })
 
   if (!response.ok) {
@@ -54,7 +53,6 @@ onMounted(async () => {
     settingGroups.value = fetchedGroups // Direct assignment is fine now
     error.value = null
   } catch (err) {
-    console.error('Failed to fetch setting groups:', err)
     error.value = err instanceof Error ? err.message : 'An unknown error occurred'
     settingGroups.value = [] // Clear or set to empty on error
   } finally {
@@ -80,100 +78,58 @@ import { type Setting } from '@/components/settings/GlobalSettingsSidebarNav.vue
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
-import {
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form'
-// VeeValidate and Zod for form validation
-import { toTypedSchema } from '@vee-validate/zod'
-import { useForm } from 'vee-validate'
-import * as z from 'zod'
+import { Label } from '@/components/ui/label'
 
-// Create dynamic Zod schema based on settings
-function createSettingsSchema(settings: Setting[]) {
-  const schemaObject: Record<string, z.ZodTypeAny> = {}
-
-  settings.forEach(setting => {
-    switch (setting.type) {
-      case 'string':
-        schemaObject[setting.key] = z.string()
-        break
-      case 'number':
-        schemaObject[setting.key] = z.number()
-        break
-      case 'boolean':
-        schemaObject[setting.key] = z.boolean()
-        break
-    }
-  })
-
-  return z.object(schemaObject)
-}
+// Reactive form values
+const formValues = ref<Record<string, any>>({})
 
 // Create initial form values from settings
 function createInitialValues(settings: Setting[]) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const values: Record<string, any> = {}
   settings.forEach(setting => {
+    // Handle cases where setting.value might be undefined
+    const settingValue = setting.value ?? ''
+
     switch (setting.type) {
       case 'number':
-        values[setting.key] = Number(setting.value) || 0
+        values[setting.key] = settingValue ? Number(settingValue) : 0
         break
       case 'boolean':
-        values[setting.key] = setting.value === 'true' || setting.value === true
+        values[setting.key] = settingValue === 'true' || settingValue === true
         break
       case 'string':
       default:
-        values[setting.key] = setting.value || ''
+        values[setting.key] = settingValue
         break
     }
   })
   return values
 }
 
-// Form setup
-const formSchema = computed(() => {
-  if (!selectedGroup.value?.settings) return z.object({})
-  return createSettingsSchema(selectedGroup.value.settings)
-})
-
-const initialValues = computed(() => {
-  if (!selectedGroup.value?.settings) return {}
-  return createInitialValues(selectedGroup.value.settings)
-})
-
-const form = useForm({
-  validationSchema: computed(() => toTypedSchema(formSchema.value)),
-  initialValues: initialValues
-})
-
-// Watch for group changes and reset form
+// Watch for group changes and set form values
 watch(() => selectedGroup.value, (newGroup) => {
   if (newGroup?.settings) {
     const newInitialValues = createInitialValues(newGroup.settings)
-    form.resetForm({ values: newInitialValues })
+    formValues.value = newInitialValues
   }
 }, { immediate: true, deep: true })
 
-const onSubmit = form.handleSubmit(async (values) => {
+// Form submission
+async function handleSubmit(event: Event) {
+  event.preventDefault()
+
   if (!selectedGroup.value) return
 
-  console.log('Form values:', values)
-
   // Convert form values to API format
-  const settingsToUpdate = Object.entries(values).map(([key, value]) => {
+  const settingsToUpdate = Object.entries(formValues.value).map(([key, value]) => {
     const setting = selectedGroup.value?.settings?.find(s => s.key === key)
     return {
       key,
-      value: String(value), // API expects string values
+      value: value, // API expects typed values (string, number, boolean)
       type: setting?.type,
       group_id: selectedGroup.value?.id,
       description: setting?.description,
-      encrypted: setting?.is_encrypted
+      encrypted: setting?.is_encrypted || false
     }
   })
 
@@ -182,26 +138,27 @@ const onSubmit = form.handleSubmit(async (values) => {
       throw new Error('VITE_DEPLOYSTACK_BACKEND_URL is not configured for saving settings.')
     }
 
+    const requestBody = { settings: settingsToUpdate }
+
     const response = await fetch(`${apiUrl}/api/settings/bulk`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       credentials: 'include',
-      body: JSON.stringify({ settings: settingsToUpdate }),
+      body: JSON.stringify(requestBody),
     })
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))
-      throw new Error(errorData.message || `Failed to save settings: ${response.statusText} (status: ${response.status})`)
+      throw new Error(errorData.error || errorData.message || `Failed to save settings: ${response.statusText} (status: ${response.status})`)
     }
 
     const result = await response.json()
+
     if (!result.success) {
       throw new Error(result.message || 'Failed to save settings due to an API error.')
     }
-
-    console.log('Settings saved successfully via API.')
     successAlertMessage.value = t('globalSettings.alerts.saveSuccess')
     showSuccessAlert.value = true
 
@@ -210,8 +167,7 @@ const onSubmit = form.handleSubmit(async (values) => {
     if (groupIndex !== -1) {
       const updatedSettings = selectedGroup.value.settings?.map(setting => ({
         ...setting,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        value: String((values as Record<string, any>)[setting.key])
+        value: String(formValues.value[setting.key])
       }))
 
       const updatedGroup = {
@@ -225,9 +181,9 @@ const onSubmit = form.handleSubmit(async (values) => {
     }
 
   } catch (saveError) {
-    console.error('Failed to save settings via API:', saveError)
+    // Handle save error silently or show user-friendly error message
   }
-})
+}
 
 </script>
 
@@ -251,79 +207,74 @@ const onSubmit = form.handleSubmit(async (values) => {
         </Button>
       </Alert>
 
+      <div class="flex flex-col space-y-8 lg:flex-row lg:space-x-12 lg:space-y-0">
+        <aside class="-mx-4 lg:w-1/5">
+          <GlobalSettingsSidebarNav :groups="settingGroups" />
+        </aside>
+        <div class="flex-1 lg:max-w-2xl">
+          <div v-if="isLoading" class="text-muted-foreground">Loading settings...</div>
+          <div v-else-if="error" class="text-red-500">Error loading settings: {{ error }}</div>
+          <div v-else-if="selectedGroup" class="space-y-6">
+            <div>
+              <h3 class="text-lg font-medium">
+                {{ selectedGroup.name }}
+              </h3>
+              <p v-if="selectedGroup.description" class="text-sm text-muted-foreground">
+                {{ selectedGroup.description }}
+              </p>
+            </div>
+            <form v-if="selectedGroup.settings && selectedGroup.settings.length > 0" class="space-y-6" @submit="handleSubmit">
+              <div v-for="setting in selectedGroup.settings" :key="setting.key" class="space-y-2">
+                <Label :for="`setting-${setting.key}`">{{ setting.description || setting.key }}</Label>
 
-    <div class="flex flex-col space-y-8 lg:flex-row lg:space-x-12 lg:space-y-0">
-      <aside class="-mx-4 lg:w-1/5">
-        <GlobalSettingsSidebarNav :groups="settingGroups" />
-      </aside>
-      <div class="flex-1 lg:max-w-2xl">
-        <div v-if="isLoading" class="text-muted-foreground">Loading settings...</div>
-        <div v-else-if="error" class="text-red-500">Error loading settings: {{ error }}</div>
-        <div v-else-if="selectedGroup" class="space-y-6">
-          <div>
-            <h3 class="text-lg font-medium">
-              {{ selectedGroup.name }}
-            </h3>
-            <p v-if="selectedGroup.description" class="text-sm text-muted-foreground">
-              {{ selectedGroup.description }}
-            </p>
+
+                <!-- String Input (text or password) -->
+                <Input
+                  v-if="setting.type === 'string'"
+                  :id="`setting-${setting.key}`"
+                  :type="setting.is_encrypted ? 'password' : 'text'"
+                  v-model="formValues[setting.key]"
+                  class="w-full"
+                />
+
+                <!-- Number Input -->
+                <Input
+                  v-else-if="setting.type === 'number'"
+                  :id="`setting-${setting.key}`"
+                  type="number"
+                  v-model.number="formValues[setting.key]"
+                  class="w-full"
+                />
+
+                <!-- Boolean Toggle Switch -->
+                <Switch
+                  v-else-if="setting.type === 'boolean'"
+                  :id="`setting-${setting.key}`"
+                  v-model:checked="formValues[setting.key]"
+                />
+
+                <p v-if="setting.is_encrypted" class="text-xs text-muted-foreground">This value is encrypted.</p>
+              </div>
+
+              <Button type="submit">
+                Save Changes
+              </Button>
+            </form>
+            <div v-else-if="selectedGroup && (!selectedGroup.settings || selectedGroup.settings.length === 0)">
+              <p class="text-sm text-muted-foreground">No settings in this group.</p>
+            </div>
+            <div v-else>
+              <p class="text-sm text-muted-foreground">Group not found or settings unavailable.</p>
+            </div>
           </div>
-          <form v-if="selectedGroup.settings && selectedGroup.settings.length > 0" class="space-y-6" @submit="onSubmit">
-            <FormField
-              v-for="setting in selectedGroup.settings"
-              :key="setting.key"
-              v-slot="{ componentField }"
-              :name="setting.key"
-            >
-              <FormItem>
-                <FormLabel>{{ setting.description || setting.key }}</FormLabel>
-                <FormControl>
-                  <!-- String Input (text or password) -->
-                  <Input
-                    v-if="setting.type === 'string'"
-                    :type="setting.is_encrypted ? 'password' : 'text'"
-                    v-bind="componentField"
-                  />
-
-                  <!-- Number Input -->
-                  <Input
-                    v-else-if="setting.type === 'number'"
-                    type="number"
-                    v-bind="componentField"
-                  />
-
-                  <!-- Boolean Toggle Switch -->
-                  <Switch
-                    v-else-if="setting.type === 'boolean'"
-                    v-bind="componentField"
-                  />
-                </FormControl>
-                <FormDescription v-if="setting.is_encrypted">
-                  This value is encrypted.
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            </FormField>
-
-            <Button type="submit">
-              Save Changes
-            </Button>
-          </form>
-          <div v-else-if="selectedGroup && (!selectedGroup.settings || selectedGroup.settings.length === 0)">
-            <p class="text-sm text-muted-foreground">No settings in this group.</p>
+          <div v-else-if="!currentGroupId && settingGroups.length > 0">
+            <p class="text-muted-foreground">Select a category from the sidebar to view its settings.</p>
           </div>
-          <div v-else>
-            <p class="text-sm text-muted-foreground">Group not found or settings unavailable.</p>
+          <div v-else-if="!currentGroupId && settingGroups.length === 0 && !isLoading">
+              <p class="text-muted-foreground">No setting groups found.</p>
           </div>
-        </div>
-        <div v-else-if="!currentGroupId && settingGroups.length > 0">
-          <p class="text-muted-foreground">Select a category from the sidebar to view its settings.</p>
-        </div>
-        <div v-else-if="!currentGroupId && settingGroups.length === 0 && !isLoading">
-            <p class="text-muted-foreground">No setting groups found.</p>
         </div>
       </div>
     </div>
-  </div>
   </DashboardLayout>
 </template>
