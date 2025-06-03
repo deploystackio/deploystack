@@ -22,6 +22,10 @@ export interface GlobalSettingGroup {
   updated_at: Date;
 }
 
+export interface GlobalSettingGroupWithSettings extends GlobalSettingGroup {
+  settings: GlobalSetting[];
+}
+
 export interface CreateGlobalSettingInput {
   key: string;
   value: string;
@@ -351,6 +355,42 @@ export class GlobalSettingsService {
     } catch (error) {
       throw new Error(`Failed to get categories: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
+  }
+
+  /**
+   * Get all groups with their metadata from the globalSettingGroups table.
+   * Does not include the settings themselves.
+   */
+  static async getAllGroupMetadata(): Promise<GlobalSettingGroup[]> {
+    const db = getDb();
+    const schema = getSchema();
+    try {
+      const results = await db
+        .select()
+        .from(schema.globalSettingGroups)
+        .orderBy(schema.globalSettingGroups.sort_order, schema.globalSettingGroups.name); // Sort by sort_order, then name
+      return results as GlobalSettingGroup[];
+    } catch (error) {
+      throw new Error(`Failed to get all group metadata: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Get all groups with their metadata and their associated settings.
+   */
+  static async getAllGroupsWithSettings(): Promise<GlobalSettingGroupWithSettings[]> {
+    const groupMetadatas = await this.getAllGroupMetadata();
+    const groupsWithSettings: GlobalSettingGroupWithSettings[] = [];
+
+    for (const groupMetadata of groupMetadatas) {
+      const settings = await this.getByGroup(groupMetadata.id);
+      groupsWithSettings.push({
+        ...groupMetadata,
+        settings: settings,
+      });
+    }
+    // The groups are already sorted by getAllGroupMetadata
+    return groupsWithSettings;
   }
 
   /**

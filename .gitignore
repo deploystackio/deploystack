@@ -65,3 +65,4 @@ services/backend/tests/.test-context.json
 ._*.js
 ._*.json
 cookies.txt
+cookiejar.txt

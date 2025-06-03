@@ -15,6 +15,25 @@ import {
 } from './schemas';
 
 export default async function globalSettingsRoute(fastify: FastifyInstance) {
+  // GET /api/settings/groups - List all groups with their settings (admin only)
+  fastify.get('/api/settings/groups', {
+    preHandler: requirePermission('settings.view'),
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const groupsWithSettings = await GlobalSettingsService.getAllGroupsWithSettings();
+      return reply.status(200).send({
+        success: true,
+        data: groupsWithSettings,
+      });
+    } catch (error) {
+      fastify.log.error(error, 'Error fetching all global setting groups with settings');
+      return reply.status(500).send({
+        success: false,
+        error: 'Failed to fetch all global setting groups with settings',
+      });
+    }
+  });
+
   // GET /api/settings - List all global settings (admin only)
   fastify.get('/api/settings', {
     preHandler: requirePermission('settings.view'),

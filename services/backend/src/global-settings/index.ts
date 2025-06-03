@@ -119,10 +119,11 @@ export class GlobalSettingsInitService {
         const exists = await GlobalSettingsService.exists(setting.key);
         
         if (!exists) {
+          const groupIdForThisSetting = this.getGroupIdForSetting(setting.key);
           await GlobalSettingsService.set(setting.key, setting.defaultValue, {
             description: setting.description,
             encrypted: setting.encrypted,
-            group_id: undefined // Temporarily set to undefined to avoid foreign key constraint
+            group_id: groupIdForThisSetting === 'unknown' ? undefined : groupIdForThisSetting // Pass correct group_id
           });
           
           result.created++;
