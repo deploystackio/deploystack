@@ -300,7 +300,222 @@ GET /api/settings/health
 Authorization: Bearer <token>
 ```
 
-## Usage Examples
+## Helper Methods (Recommended)
+
+The GlobalSettings helper class provides simple, type-safe methods for retrieving setting values. These helpers are designed for common use cases where you just need the value of a setting, similar to the Email service helper methods.
+
+### Import the Helper Class
+
+```typescript
+import { GlobalSettings } from '../global-settings';
+// or
+import { GlobalSettings } from '../global-settings/helpers';
+```
+
+### Basic Usage
+
+#### Get Setting Values
+
+```typescript
+// Get a string value
+const smtpHost = await GlobalSettings.get('smtp.host');
+const smtpHostWithDefault = await GlobalSettings.get('smtp.host', 'localhost');
+
+// Get typed values
+const maxRetries = await GlobalSettings.getNumber('system.max_retries', 3);
+const debugMode = await GlobalSettings.getBoolean('system.debug', false);
+const apiUrl = await GlobalSettings.getUrl('api.base_url');
+const supportEmail = await GlobalSettings.getEmail('support.email');
+
+// Get required values (throws if missing)
+const databaseUrl = await GlobalSettings.getRequired('database.url');
+```
+
+#### Type-Safe Getters
+
+```typescript
+// Boolean values (accepts: 'true', 'false', '1', '0', 'yes', 'no', 'on', 'off', 'enabled', 'disabled')
+const maintenanceMode = await GlobalSettings.getBoolean('system.maintenance_mode', false);
+const emailEnabled = await GlobalSettings.getBoolean('email.enabled', true);
+
+// Numeric values
+const uploadLimit = await GlobalSettings.getNumber('upload.max_size_mb', 10);
+const retryCount = await GlobalSettings.getInteger('api.retry_count', 3);
+
+// URL validation
+const webhookUrl = await GlobalSettings.getUrl('webhook.endpoint');
+const callbackUrl = await GlobalSettings.getUrl('oauth.callback', 'http://localhost:3000/callback');
+
+// Email validation
+const adminEmail = await GlobalSettings.getEmail('admin.email');
+const fromEmail = await GlobalSettings.getEmail('smtp.from_email', 'noreply@example.com');
+```
+
+#### Advanced Data Types
+
+```typescript
+// JSON objects
+interface ApiConfig {
+  timeout: number;
+  retries: number;
+  endpoints: string[];
+}
+const apiConfig = await GlobalSettings.getJson<ApiConfig>('api.config');
+
+// Arrays (comma-separated values)
+const allowedDomains = await GlobalSettings.getArray('security.allowed_domains');
+const adminEmails = await GlobalSettings.getArray('admin.emails', ['admin@example.com']);
+```
+
+### Batch Operations
+
+#### Get Multiple Settings
+
+```typescript
+// Get multiple settings at once
+const settings = await GlobalSettings.getMultiple([
+  'smtp.host',
+  'smtp.port', 
+  'smtp.username'
+]);
+// Returns: { 'smtp.host': 'smtp.gmail.com', 'smtp.port': '587', 'smtp.username': 'user@gmail.com' }
+
+// Get all settings in a group (without group prefix)
+const smtpConfig = await GlobalSettings.getGroupValues('smtp');
+// Returns: { 'host': 'smtp.gmail.com', 'port': '587', 'username': 'user@gmail.com', ... }
+
+// Get all settings in a group (with full keys)
+const smtpSettings = await GlobalSettings.getGroupValuesWithFullKeys('smtp');
+// Returns: { 'smtp.host': 'smtp.gmail.com', 'smtp.port': '587', 'smtp.username': 'user@gmail.com', ... }
+```
+
+### Utility Methods
+
+#### Check Setting Status
+
+```typescript
+// Check if setting exists and has a value
+if (await GlobalSettings.isSet('smtp.host')) {
+  console.log('SMTP host is configured');
+}
+
+// Check if setting is empty
+if (await GlobalSettings.isEmpty('api.key')) {
+  console.log('API key needs to be configured');
+}
+
+// Check if setting exists in database (regardless of value)
+if (await GlobalSettings.exists('feature.new_ui')) {
+  console.log('New UI feature flag exists');
+}
+```
+
+#### Error Handling
+
+```typescript
+try {
+  // This will throw if the setting is missing or empty
+  const requiredApiKey = await GlobalSettings.getRequired('api.secret_key');
+  
+  // Use the API key
+  const response = await fetch('/api/data', {
+    headers: { 'Authorization': `Bearer ${requiredApiKey}` }
+  });
+} catch (error) {
+  console.error('Required setting missing:', error.message);
+  // Handle missing configuration
+}
+```
+
+### Real-World Examples
+
+#### SMTP Configuration
+
+```typescript
+import { GlobalSettings } from '../global-settings';
+
+// Simple approach using helpers
+const smtpConfig = {
+  host: await GlobalSettings.getRequired('smtp.host'),
+  port: await GlobalSettings.getNumber('smtp.port', 587),
+  secure: await GlobalSettings.getBoolean('smtp.secure', true),
+  auth: {
+    user: await GlobalSettings.getRequired('smtp.username'),
+    pass: await GlobalSettings.getRequired('smtp.password'),
+  },
+  from: {
+    name: await GlobalSettings.get('smtp.from_name', 'DeployStack'),
+    address: await GlobalSettings.get('smtp.from_email') || await GlobalSettings.getRequired('smtp.username'),
+  }
+};
+
+// Or get all SMTP settings at once
+const smtpSettings = await GlobalSettings.getGroupValues('smtp');
+const smtpConfigFromGroup = {
+  host: smtpSettings.host,
+  port: parseInt(smtpSettings.port || '587'),
+  secure: smtpSettings.secure === 'true',
+  auth: {
+    user: smtpSettings.username,
+    pass: smtpSettings.password,
+  }
+};
+```
+
+#### Feature Flags
+
+```typescript
+// Check feature flags
+const features = {
+  newDashboard: await GlobalSettings.getBoolean('features.new_dashboard', false),
+  apiV2: await GlobalSettings.getBoolean('features.api_v2', false),
+  debugMode: await GlobalSettings.getBoolean('system.debug', false),
+  maintenanceMode: await GlobalSettings.getBoolean('system.maintenance', false),
+};
+
+if (features.maintenanceMode) {
+  return res.status(503).json({ error: 'System under maintenance' });
+}
+```
+
+#### API Configuration
+
+```typescript
+// API service configuration
+const apiConfig = {
+  baseUrl: await GlobalSettings.getUrl('api.base_url', 'https://api.example.com'),
+  timeout: await GlobalSettings.getNumber('api.timeout_ms', 30000),
+  retries: await GlobalSettings.getInteger('api.max_retries', 3),
+  apiKey: await GlobalSettings.getRequired('api.secret_key'),
+  allowedOrigins: await GlobalSettings.getArray('api.allowed_origins', ['localhost']),
+};
+
+// Use in API client
+const response = await fetch(`${apiConfig.baseUrl}/data`, {
+  timeout: apiConfig.timeout,
+  headers: {
+    'Authorization': `Bearer ${apiConfig.apiKey}`,
+    'Content-Type': 'application/json'
+  }
+});
+```
+
+#### System Configuration
+
+```typescript
+// System-wide settings
+const systemConfig = {
+  maxUploadSize: await GlobalSettings.getNumber('system.max_upload_mb', 10),
+  sessionTimeout: await GlobalSettings.getNumber('system.session_timeout_hours', 24),
+  logLevel: await GlobalSettings.get('system.log_level', 'info'),
+  adminEmails: await GlobalSettings.getArray('system.admin_emails'),
+  supportEmail: await GlobalSettings.getEmail('system.support_email', 'support@example.com'),
+};
+```
+
+## Usage Examples (GlobalSettingsService)
+
+For more complex operations like creating, updating, or searching settings, use the GlobalSettingsService directly:
 
 ### SMTP Configuration
 
@@ -702,7 +917,69 @@ Key points for plugin-contributed settings:
 - **Precedence**: Core global settings always take precedence. If a plugin tries to define a setting with a key that already exists (either from core or another plugin), the plugin's definition for that specific key is ignored.
 - **Documentation**: For details on how plugins can define global settings, refer to the [PLUGINS.MD](PLUGINS.MD) document.
 
-## API Reference Summary
+## Helper Methods API Reference
+
+### GlobalSettings Class Methods
+
+| Method | Description | Returns |
+|--------|-------------|---------|
+| `get(key, defaultValue?)` | Get a setting value as string | `Promise<string \| null>` |
+| `getString(key, defaultValue?)` | Get a setting value as string (alias) | `Promise<string \| null>` |
+| `getBoolean(key, defaultValue?)` | Get a setting value as boolean | `Promise<boolean \| null>` |
+| `getNumber(key, defaultValue?)` | Get a setting value as number | `Promise<number \| null>` |
+| `getInteger(key, defaultValue?)` | Get a setting value as integer | `Promise<number \| null>` |
+| `getUrl(key, defaultValue?)` | Get and validate setting as URL | `Promise<string \| null>` |
+| `getEmail(key, defaultValue?)` | Get and validate setting as email | `Promise<string \| null>` |
+| `getJson<T>(key, defaultValue?)` | Get and parse setting as JSON | `Promise<T \| null>` |
+| `getArray(key, defaultValue?)` | Get setting as array (comma-separated) | `Promise<string[]>` |
+| `getRequired(key)` | Get required setting (throws if missing) | `Promise<string>` |
+| `getMultiple(keys)` | Get multiple settings at once | `Promise<Record<string, string \| null>>` |
+| `getGroupValues(groupId)` | Get group settings (without prefix) | `Promise<Record<string, string \| null>>` |
+| `getGroupValuesWithFullKeys(groupId)` | Get group settings (with full keys) | `Promise<Record<string, string \| null>>` |
+| `isSet(key)` | Check if setting exists and has value | `Promise<boolean>` |
+| `isEmpty(key)` | Check if setting is empty | `Promise<boolean>` |
+| `exists(key)` | Check if setting exists in database | `Promise<boolean>` |
+| `getRaw(key)` | Get raw setting object with metadata | `Promise<GlobalSetting \| null>` |
+| `refreshCaches()` | Refresh any cached configurations | `Promise<void>` |
+
+### Boolean Value Parsing
+
+The `getBoolean()` method accepts these string values:
+
+| Value | Result |
+|-------|--------|
+| `'true'`, `'1'`, `'yes'`, `'on'`, `'enabled'` | `true` |
+| `'false'`, `'0'`, `'no'`, `'off'`, `'disabled'` | `false` |
+
+### Usage Patterns
+
+#### Simple Value Retrieval
+```typescript
+const value = await GlobalSettings.get('key.name');
+const valueWithDefault = await GlobalSettings.get('key.name', 'default');
+```
+
+#### Type-Safe Retrieval
+```typescript
+const isEnabled = await GlobalSettings.getBoolean('feature.enabled', false);
+const maxSize = await GlobalSettings.getNumber('upload.max_size', 10);
+const apiUrl = await GlobalSettings.getUrl('api.endpoint');
+```
+
+#### Batch Retrieval
+```typescript
+const settings = await GlobalSettings.getMultiple(['key1', 'key2', 'key3']);
+const groupSettings = await GlobalSettings.getGroupValues('smtp');
+```
+
+#### Validation and Checks
+```typescript
+if (await GlobalSettings.isSet('api.key')) {
+  const apiKey = await GlobalSettings.getRequired('api.key');
+}
+```
+
+## REST API Reference Summary
 
 | Endpoint | Method | Permission | Description |
 |----------|--------|------------|-------------|

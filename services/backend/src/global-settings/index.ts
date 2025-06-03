@@ -399,6 +399,9 @@ export class GlobalSettingsInitService {
   }
 }
 
+// Export the helper class
+export { GlobalSettings } from './helpers';
+
 // Export types for external use
 export type {
   GlobalSettingDefinition,
