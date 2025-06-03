@@ -2,12 +2,11 @@
 import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Separator } from '@/components/ui/separator' // Adjusted path
 import GlobalSettingsSidebarNav, { type GlobalSettingGroup } from '@/components/settings/GlobalSettingsSidebarNav.vue'
-import DashboardLayout from '@/components/DashboardLayout.vue' // Reinstated
+import DashboardLayout from '@/components/DashboardLayout.vue'
 import { getEnv } from '@/utils/env'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { CheckCircle2Icon, XIcon } from 'lucide-vue-next' // Added XIcon
+import { CheckCircle2Icon, XIcon } from 'lucide-vue-next'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -212,7 +211,7 @@ async function handleSaveChanges() {
 
 <template>
   <DashboardLayout :title="t('globalSettings.title')">
-    <div class="hidden space-y-6 p-10 pb-16 md:block">
+    <div class="hidden space-y-6 pb-16 md:block">
       <Alert v-if="showSuccessAlert" variant="default" class="mb-4 border-green-500 bg-green-50 text-green-700 relative">
         <CheckCircle2Icon class="h-5 w-5 text-green-600" />
         <AlertTitle class="font-semibold text-green-800">{{ t('globalSettings.alerts.successTitle') }}</AlertTitle>
@@ -230,15 +229,7 @@ async function handleSaveChanges() {
         </Button>
       </Alert>
 
-      <div class="space-y-0.5">
-        <h2 class="text-2xl font-bold tracking-tight">
-        {{ t('globalSettings.title') }}
-      </h2>
-      <p class="text-muted-foreground">
-        {{ t('globalSettings.description') }}
-      </p>
-    </div>
-    <Separator class="my-6" />
+
     <div class="flex flex-col space-y-8 lg:flex-row lg:space-x-12 lg:space-y-0">
       <aside class="-mx-4 lg:w-1/5">
         <GlobalSettingsSidebarNav :groups="settingGroups" />
@@ -255,7 +246,6 @@ async function handleSaveChanges() {
               {{ selectedGroup.description }}
             </p>
           </div>
-          <Separator />
           <form v-if="editableSettings.length > 0" class="space-y-6" @submit.prevent="handleSaveChanges">
             <div v-for="(setting, index) in editableSettings" :key="setting.key" class="space-y-2">
               <Label :for="`setting-${setting.key}`">{{ setting.description || setting.key }}</Label>

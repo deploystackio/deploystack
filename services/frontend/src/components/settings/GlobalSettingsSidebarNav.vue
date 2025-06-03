@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, RouterLink } from 'vue-router'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button' // Adjusted path assuming shadcn/ui components are in @/components/ui
 
@@ -31,7 +31,7 @@ const props = defineProps<{
   groups: GlobalSettingGroup[]
 }>()
 
-const $route = useRoute()
+const route = useRoute()
 
 const sidebarNavItems = computed((): NavItem[] => {
   return props.groups.map(group => ({
@@ -50,15 +50,16 @@ const sidebarNavItems = computed((): NavItem[] => {
     <Button
       v-for="item in sidebarNavItems"
       :key="item.title"
-      as="router-link"
-      :to="item.href"
+      as-child
       variant="ghost"
       :class="cn(
         'w-full text-left justify-start',
-        $route.path === item.href && 'bg-muted hover:bg-muted',
+        route.path === item.href && 'bg-muted hover:bg-muted',
       )"
     >
-      {{ item.title }}
+      <RouterLink :to="item.href">
+        {{ item.title }}
+      </RouterLink>
     </Button>
   </nav>
 </template>

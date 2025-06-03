@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { StyleValue } from 'vue'
-import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar' // Assuming SidebarTrigger might be needed
+import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar'
+import { Separator } from '@/components/ui/separator'
 import AppSidebar from '@/components/AppSidebar.vue'
 
 interface Props {
@@ -28,7 +29,7 @@ const sidebarStyle = computed(() => ({
 <template>
   <SidebarProvider :default-open="defaultOpen" :style="sidebarStyle">
     <AppSidebar variant="inset" />
-    <SidebarInset>
+    <SidebarInset class="px-5">
       <!-- SiteHeader equivalent -->
       <header class="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
         <div class="flex items-center gap-2 px-4">
@@ -36,7 +37,9 @@ const sidebarStyle = computed(() => ({
           <h1 class="text-lg font-semibold md:text-xl">{{ props.title }}</h1>
         </div>
       </header>
-      
+
+      <Separator class="my-6" />
+
       <!-- Content area -->
       <div class="flex flex-1 flex-col gap-4 p-4 pt-0">
         <slot />
@@ -76,7 +79,7 @@ const sidebarStyle = computed(() => ({
     border-radius: 0.75rem;
     box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
   }
-  
+
   /* Ensure the sidebar spacer works */
   .group\/sidebar-wrapper .group.peer {
     flex-shrink: 0;
