@@ -366,7 +366,8 @@ class MyAwesomePlugin implements Plugin {
     settings: [
       {
         key: 'myAwesomePlugin.features.enableSuperFeature',
-        defaultValue: 'true',
+        defaultValue: true,
+        type: 'boolean',
         description: 'Enables the super feature of this plugin.',
         encrypted: false,
         required: false,
@@ -375,9 +376,19 @@ class MyAwesomePlugin implements Plugin {
       {
         key: 'myAwesomePlugin.credentials.externalApiKey',
         defaultValue: '',
+        type: 'string',
         description: 'API key for an external service used by this plugin.',
         encrypted: true, // Sensitive value, will be encrypted
         required: true,
+        groupId: 'my_awesome_plugin_group',
+      },
+      {
+        key: 'myAwesomePlugin.performance.maxRetries',
+        defaultValue: 5,
+        type: 'number',
+        description: 'Maximum number of retries for API calls.',
+        encrypted: false,
+        required: false,
         groupId: 'my_awesome_plugin_group',
       },
       {
@@ -385,7 +396,8 @@ class MyAwesomePlugin implements Plugin {
         // It might appear in a default group or ungrouped in the UI,
         // or you can assign it to an existing core group ID if appropriate.
         key: 'myAwesomePlugin.performance.cacheDurationSeconds',
-        defaultValue: '3600',
+        defaultValue: 3600,
+        type: 'number',
         description: 'Cache duration in seconds for plugin data.',
         encrypted: false,
         required: false,

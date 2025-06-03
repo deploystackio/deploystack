@@ -1,6 +1,9 @@
+export type GlobalSettingType = 'string' | 'number' | 'boolean';
+
 export interface GlobalSettingDefinition {
   key: string;
-  defaultValue: string;
+  defaultValue: string | number | boolean;
+  type: GlobalSettingType;
   description: string;
   encrypted: boolean;
   required: boolean;

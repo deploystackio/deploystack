@@ -351,7 +351,7 @@ export class PluginManager {
       }
 
       try {
-        await GlobalSettingsService.set(definition.key, definition.defaultValue, {
+        await GlobalSettingsService.setTyped(definition.key, definition.defaultValue, definition.type, {
           description: definition.description,
           encrypted: definition.encrypted,
           group_id: definition.groupId,

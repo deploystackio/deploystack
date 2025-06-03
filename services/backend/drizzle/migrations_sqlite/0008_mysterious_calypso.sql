@@ -1,0 +1,1 @@
+ALTER TABLE `globalSettings` ADD `type` text DEFAULT 'string' NOT NULL;

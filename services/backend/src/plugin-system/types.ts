@@ -4,13 +4,19 @@ import { type FastifyInstance } from 'fastify';
 import { type AnyDatabase } from '../db'; // Import AnyDatabase
 
 /**
+ * Type for global setting values
+ */
+export type GlobalSettingType = 'string' | 'number' | 'boolean';
+
+/**
  * Definition for a global setting that can be provided by a plugin.
  * Mirrors parts of GlobalSettingDefinition from global-settings/types.ts
  * but is defined here to avoid circular dependencies.
  */
 export interface GlobalSettingDefinitionForPlugin {
   key: string;
-  defaultValue: string;
+  defaultValue: string | number | boolean;
+  type: GlobalSettingType;
   description: string;
   encrypted: boolean;
   required?: boolean; // Optional: if the setting must have a value

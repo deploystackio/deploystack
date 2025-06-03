@@ -5,6 +5,7 @@ import { encrypt, decrypt } from '../utils/encryption';
 export interface GlobalSetting {
   key: string;
   value: string;
+  type: 'string' | 'number' | 'boolean';
   description: string | null;
   is_encrypted: boolean;
   group_id: string | null;
@@ -28,14 +29,16 @@ export interface GlobalSettingGroupWithSettings extends GlobalSettingGroup {
 
 export interface CreateGlobalSettingInput {
   key: string;
-  value: string;
+  value: string | number | boolean;
+  type: 'string' | 'number' | 'boolean';
   description?: string;
   encrypted?: boolean;
   group_id?: string;
 }
 
 export interface UpdateGlobalSettingInput {
-  value?: string;
+  value?: string | number | boolean;
+  type?: 'string' | 'number' | 'boolean';
   description?: string;
   encrypted?: boolean;
   group_id?: string;
@@ -65,6 +68,59 @@ export class GlobalSettingsService {
     
     if (typeof value !== 'string') {
       throw new Error('Setting value must be a string');
+    }
+  }
+
+  /**
+   * Convert a typed value to string for database storage
+   */
+  private static convertValueToString(value: string | number | boolean): string {
+    return String(value);
+  }
+
+  /**
+   * Convert a string value from database to its proper type
+   */
+  private static convertValueToType(value: string, type: 'string' | 'number' | 'boolean'): string | number | boolean {
+    switch (type) {
+      case 'number':
+        const num = Number(value);
+        if (isNaN(num)) {
+          throw new Error(`Invalid number value: ${value}`);
+        }
+        return num;
+      case 'boolean':
+        if (value === 'true') return true;
+        if (value === 'false') return false;
+        throw new Error(`Invalid boolean value: ${value}. Must be 'true' or 'false'`);
+      case 'string':
+      default:
+        return value;
+    }
+  }
+
+  /**
+   * Validate that a value matches its declared type
+   */
+  private static validateValueType(value: string | number | boolean, type: 'string' | 'number' | 'boolean'): void {
+    switch (type) {
+      case 'string':
+        if (typeof value !== 'string') {
+          throw new Error(`Value must be a string, got ${typeof value}`);
+        }
+        break;
+      case 'number':
+        if (typeof value !== 'number' || isNaN(value)) {
+          throw new Error(`Value must be a number, got ${typeof value}`);
+        }
+        break;
+      case 'boolean':
+        if (typeof value !== 'boolean') {
+          throw new Error(`Value must be a boolean, got ${typeof value}`);
+        }
+        break;
+      default:
+        throw new Error(`Invalid type: ${type}`);
     }
   }
 
@@ -174,11 +230,23 @@ export class GlobalSettingsService {
   }
 
   /**
-   * Create or update a setting
+   * Create or update a setting (legacy method for backward compatibility)
    */
   static async set(key: string, value: string, options: { description?: string; encrypted?: boolean; group_id?: string } = {}): Promise<GlobalSetting> {
+    return this.setTyped(key, value, 'string', options);
+  }
+
+  /**
+   * Create or update a setting with type support
+   */
+  static async setTyped(
+    key: string, 
+    value: string | number | boolean, 
+    type: 'string' | 'number' | 'boolean',
+    options: { description?: string; encrypted?: boolean; group_id?: string } = {}
+  ): Promise<GlobalSetting> {
     this.validateKey(key);
-    this.validateValue(value);
+    this.validateValueType(value, type);
 
     const { description, encrypted = false, group_id } = options;
     const db = getDb();
@@ -194,15 +262,19 @@ export class GlobalSettingsService {
       const existing = existingResults.length > 0 ? existingResults[0] : null;
       const now = new Date();
 
+      // Convert value to string for storage
+      const stringValue = this.convertValueToString(value);
+      
       // Prepare the value (encrypt if needed)
-      let finalValue = value;
+      let finalValue = stringValue;
       if (encrypted) {
-        finalValue = encrypt(value);
+        finalValue = encrypt(stringValue);
       }
 
       const settingData = {
         key,
         value: finalValue,
+        type,
         description: description || null,
         is_encrypted: encrypted,
         group_id: group_id || null,
@@ -254,9 +326,20 @@ export class GlobalSettingsService {
     };
 
     if (updates.value !== undefined) {
-      this.validateValue(updates.value);
-      updateData.value = updates.encrypted ? encrypt(updates.value) : updates.value;
+      // Validate value type if type is provided
+      if (updates.type) {
+        this.validateValueType(updates.value, updates.type);
+      }
+      
+      // Convert value to string for storage
+      const stringValue = this.convertValueToString(updates.value);
+      updateData.value = updates.encrypted ? encrypt(stringValue) : stringValue;
       updateData.is_encrypted = updates.encrypted || false;
+      
+      // Update type if provided
+      if (updates.type) {
+        updateData.type = updates.type;
+      }
     }
 
     if (updates.description !== undefined) {

@@ -79,6 +79,7 @@ export const globalSettingGroups = sqliteTable('globalSettingGroups', {
 export const globalSettings = sqliteTable('globalSettings', {
   key: text('key').primaryKey(),
   value: text('value').notNull(),
+  type: text('type').notNull().default('string'),
   description: text('description'),
   is_encrypted: integer('is_encrypted', { mode: 'boolean' }).notNull().default(false),
   group_id: text('group_id').references(() => globalSettingGroups.id),

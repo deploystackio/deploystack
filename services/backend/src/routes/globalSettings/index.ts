@@ -97,9 +97,10 @@ export default async function globalSettingsRoute(fastify: FastifyInstance) {
         });
       }
 
-      const setting = await GlobalSettingsService.set(
+      const setting = await GlobalSettingsService.setTyped(
         validatedData.key,
         validatedData.value,
+        validatedData.type,
         {
           description: validatedData.description,
           encrypted: validatedData.encrypted,
@@ -279,9 +280,10 @@ export default async function globalSettingsRoute(fastify: FastifyInstance) {
 
       for (const settingData of settings) {
         try {
-          const setting = await GlobalSettingsService.set(
+          const setting = await GlobalSettingsService.setTyped(
             settingData.key,
             settingData.value,
+            settingData.type,
             {
               description: settingData.description,
               encrypted: settingData.encrypted,

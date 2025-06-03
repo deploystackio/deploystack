@@ -111,6 +111,7 @@ describe('Global Settings Access Control E2E Tests', () => {
       const settingData = {
         key: 'test.setting.key',
         value: 'test-value',
+        type: 'string',
         description: 'Test setting for E2E testing',
         encrypted: false,
         group_id: targetGroupId 
@@ -125,6 +126,7 @@ describe('Global Settings Access Control E2E Tests', () => {
       expect(response.body).toHaveProperty('success', true);
       expect(response.body.data.key).toBe(settingData.key);
       expect(response.body.data.value).toBe(settingData.value);
+      expect(response.body.data.type).toBe(settingData.type);
       expect(response.body.data.group_id).toBe(settingData.group_id);
     });
 
@@ -162,6 +164,7 @@ describe('Global Settings Access Control E2E Tests', () => {
       const encryptedSettingData = {
         key: 'test.secret.key',
         value: 'super-secret-value',
+        type: 'string',
         description: 'Test encrypted setting',
         encrypted: true,
         group_id: targetGroupId
@@ -175,6 +178,7 @@ describe('Global Settings Access Control E2E Tests', () => {
       expect(response.status).toBe(201);
       expect(response.body).toHaveProperty('success', true);
       expect(response.body.data.key).toBe(encryptedSettingData.key);
+      expect(response.body.data.type).toBe(encryptedSettingData.type);
       expect(response.body.data.is_encrypted).toBe(true);
       // Value should be decrypted in response for admin
       expect(response.body.data.value).toBe(encryptedSettingData.value);
@@ -218,12 +222,14 @@ describe('Global Settings Access Control E2E Tests', () => {
           {
             key: 'test.bulk.setting1',
             value: 'bulk-value-1',
+            type: 'string',
             description: 'Bulk test setting 1',
             group_id: targetGroupId
           },
           {
             key: 'test.bulk.setting2',
             value: 'bulk-value-2',
+            type: 'string',
             description: 'Bulk test setting 2',
             group_id: targetGroupId
           }

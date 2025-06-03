@@ -94,6 +94,7 @@ export const globalSettingGroupsTableColumns = {
 export const globalSettingsTableColumns = {
   key: (columnBuilder: any) => columnBuilder('key').primaryKey(),
   value: (columnBuilder: any) => columnBuilder('value').notNull(),
+  type: (columnBuilder: any) => columnBuilder('type').notNull().default('string'),
   description: (columnBuilder: any) => columnBuilder('description'),
   is_encrypted: (columnBuilder: any) => columnBuilder('is_encrypted').notNull().default(false),
   group_id: (columnBuilder: any) => columnBuilder('group_id'), // Foreign key to globalSettingGroups.id

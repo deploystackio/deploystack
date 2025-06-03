@@ -57,6 +57,13 @@
       "when": 1748854637220,
       "tag": "0007_open_lethal_legion",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1748962499035,
+      "tag": "0008_mysterious_calypso",
+      "breakpoints": true
     }
   ]
 }

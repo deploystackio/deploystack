@@ -4,6 +4,7 @@ import { z } from 'zod';
 export const GlobalSettingSchema = z.object({
   key: z.string().min(1).max(255).regex(/^[a-zA-Z0-9._-]+$/, 'Key can only contain letters, numbers, dots, underscores, and hyphens'),
   value: z.string(),
+  type: z.enum(['string', 'number', 'boolean']),
   description: z.string().optional(),
   is_encrypted: z.boolean(),
   group_id: z.string().optional(),
@@ -14,10 +15,26 @@ export const GlobalSettingSchema = z.object({
 // Schema for creating a new global setting
 export const CreateGlobalSettingSchema = z.object({
   key: z.string().min(1).max(255).regex(/^[a-zA-Z0-9._-]+$/, 'Key can only contain letters, numbers, dots, underscores, and hyphens'),
-  value: z.string().min(1, 'Value is required'),
+  value: z.union([z.string(), z.number(), z.boolean()]),
+  type: z.enum(['string', 'number', 'boolean']),
   description: z.string().optional(),
   encrypted: z.boolean().optional().default(false),
   group_id: z.string().optional(),
+}).refine(data => {
+  // Validate that value matches the specified type
+  switch (data.type) {
+    case 'string':
+      return typeof data.value === 'string';
+    case 'number':
+      return typeof data.value === 'number';
+    case 'boolean':
+      return typeof data.value === 'boolean';
+    default:
+      return false;
+  }
+}, {
+  message: 'Value must match the specified type',
+  path: ['value'],
 });
 
 // Schema for updating a global setting
@@ -84,17 +101,25 @@ export const DeleteResponseSchema = z.object({
 // Validation helper functions
 export function validateSettingKey(key: string): boolean {
   try {
-    CreateGlobalSettingSchema.pick({ key: true }).parse({ key });
+    z.string().min(1).max(255).regex(/^[a-zA-Z0-9._-]+$/, 'Key can only contain letters, numbers, dots, underscores, and hyphens').parse(key);
     return true;
   } catch {
     return false;
   }
 }
 
-export function validateSettingValue(value: string): boolean {
+export function validateSettingValue(value: string | number | boolean, type: 'string' | 'number' | 'boolean'): boolean {
   try {
-    CreateGlobalSettingSchema.pick({ value: true }).parse({ value });
-    return true;
+    switch (type) {
+      case 'string':
+        return typeof value === 'string' && value.length > 0;
+      case 'number':
+        return typeof value === 'number' && !isNaN(value);
+      case 'boolean':
+        return typeof value === 'boolean';
+      default:
+        return false;
+    }
   } catch {
     return false;
   }
