@@ -64,21 +64,14 @@ onMounted(async () => {
 
 const currentGroupId = computed(() => {
   const groupId = route.params.groupId as string | undefined;
-  console.log('[GlobalSettings.vue] Route param groupId:', groupId);
   return groupId;
 })
 
 const selectedGroup = computed(() => {
   if (!currentGroupId.value || settingGroups.value.length === 0) {
-    console.log('[GlobalSettings.vue] selectedGroup: No currentGroupId or no settingGroups.');
     return null
   }
   const group = settingGroups.value.find(g => g.id === currentGroupId.value)
-  if (group) {
-    console.log('[GlobalSettings.vue] selectedGroup: Found group:', group.name);
-  } else {
-    console.log('[GlobalSettings.vue] selectedGroup: Group not found for id:', currentGroupId.value);
-  }
   return group
 })
 
