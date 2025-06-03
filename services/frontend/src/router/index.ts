@@ -75,7 +75,11 @@ const routes = [
     },
     children: [
       {
-        path: 'settings/:groupId?', // Added :groupId? to make it optional
+        path: 'settings',
+        redirect: '/admin/settings/smtp'
+      },
+      {
+        path: 'settings/:groupId',
         name: 'AdminSettings',
         component: () => import('../views/GlobalSettings.vue'),
       },
