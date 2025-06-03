@@ -234,7 +234,6 @@ async function handleSubmit(event: Event) {
               <div v-for="setting in selectedGroup.settings" :key="setting.key" class="space-y-2">
                 <Label :for="`setting-${setting.key}`">{{ setting.description || setting.key }}</Label>
 
-
                 <!-- String Input (text or password) -->
                 <Input
                   v-if="setting.type === 'string'"
@@ -254,11 +253,12 @@ async function handleSubmit(event: Event) {
                 />
 
                 <!-- Boolean Toggle Switch -->
-                <Switch
-                  v-else-if="setting.type === 'boolean'"
-                  :id="`setting-${setting.key}`"
-                  v-model:checked="formValues[setting.key]"
-                />
+                <div v-else-if="setting.type === 'boolean'">
+                  <Switch
+                    :id="`setting-${setting.key}`"
+                    v-model:checked="formValues[setting.key]"
+                  />
+                </div>
 
                 <p v-if="setting.is_encrypted" class="text-xs text-muted-foreground">This value is encrypted.</p>
               </div>
