@@ -85,65 +85,100 @@ const selectedGroup = computed(() => {
 import { type Setting } from '@/components/settings/GlobalSettingsSidebarNav.vue' // Import Setting interface
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label' // Using Label directly for now, can switch to Form components later
-// import { Switch } from '@/components/ui/switch' // For boolean settings later
-// VeeValidate and Zod for later, more complex validation
-// import { toTypedSchema } from '@vee-validate/zod'
-// import { useForm } from 'vee-validate'
-// import * as z from 'zod'
+import { Switch } from '@/components/ui/switch'
+import {
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form'
+// VeeValidate and Zod for form validation
+import { toTypedSchema } from '@vee-validate/zod'
+import { useForm } from 'vee-validate'
+import * as z from 'zod'
 
-const editableSettings = ref<Setting[]>([])
+// Create dynamic Zod schema based on settings
+function createSettingsSchema(settings: Setting[]) {
+  const schemaObject: Record<string, z.ZodTypeAny> = {}
 
-watch(() => selectedGroup.value, (newGroup) => { // Removed explicit type for newGroup
-  if (newGroup && newGroup.settings) {
-    editableSettings.value = JSON.parse(JSON.stringify(newGroup.settings))
-  } else {
-    editableSettings.value = []
+  settings.forEach(setting => {
+    switch (setting.type) {
+      case 'string':
+        schemaObject[setting.key] = z.string()
+        break
+      case 'number':
+        schemaObject[setting.key] = z.number()
+        break
+      case 'boolean':
+        schemaObject[setting.key] = z.boolean()
+        break
+    }
+  })
+
+  return z.object(schemaObject)
+}
+
+// Create initial form values from settings
+function createInitialValues(settings: Setting[]) {
+  const values: Record<string, any> = {}
+  settings.forEach(setting => {
+    switch (setting.type) {
+      case 'number':
+        values[setting.key] = Number(setting.value) || 0
+        break
+      case 'boolean':
+        values[setting.key] = setting.value === 'true' || setting.value === true
+        break
+      case 'string':
+      default:
+        values[setting.key] = setting.value || ''
+        break
+    }
+  })
+  return values
+}
+
+// Form setup
+const formSchema = computed(() => {
+  if (!selectedGroup.value?.settings) return z.object({})
+  return createSettingsSchema(selectedGroup.value.settings)
+})
+
+const initialValues = computed(() => {
+  if (!selectedGroup.value?.settings) return {}
+  return createInitialValues(selectedGroup.value.settings)
+})
+
+const form = useForm({
+  validationSchema: computed(() => toTypedSchema(formSchema.value)),
+  initialValues: initialValues
+})
+
+// Watch for group changes and reset form
+watch(() => selectedGroup.value, (newGroup) => {
+  if (newGroup?.settings) {
+    const newInitialValues = createInitialValues(newGroup.settings)
+    form.resetForm({ values: newInitialValues })
   }
 }, { immediate: true, deep: true })
 
-function getSettingInputType(setting: Setting): string {
-  if (setting.is_encrypted) {
-    return 'password'
-  }
-  // Add more logic here if type information is available (e.g., for numbers, booleans using Switch)
-  // For now, default to text.
-  // Example: if (setting.value_type === 'boolean') return 'checkbox'; (would need Switch component)
-  // if (typeof setting.value === 'number') return 'number';
-  return 'text'
-}
+const onSubmit = form.handleSubmit(async (values) => {
+  if (!selectedGroup.value) return
 
-async function handleSaveChanges() {
-  if (!selectedGroup.value) return // selectedGroup itself could be null
+  console.log('Form values:', values)
 
-  const originalSettings = selectedGroup.value.settings
-  if (!originalSettings) return // No original settings to compare against
-
-  const changedSettings = editableSettings.value.filter((editedSetting, index) => {
-    const originalSetting = originalSettings[index]
-    return originalSetting && editedSetting.value !== originalSetting.value
-  })
-
-  if (changedSettings.length === 0) {
-    // console.log('No changes to save.') // Removed console log
-    successAlertMessage.value = t('globalSettings.alerts.noChanges'); // New i18n key
-    showSuccessAlert.value = true;
-    // setTimeout for this specific alert could be added if desired, or rely on manual close
-    return
-  }
-
-  console.log('Saving changed settings:', changedSettings)
-
-  // Prepare settings for bulk update, ensuring all necessary fields are present
-  const settingsToUpdate = changedSettings.map(setting => {
-    // Find the original setting to get all its properties, as changedSettings might only have key/value
-    const originalFullSetting = selectedGroup.value?.settings?.find(s => s.key === setting.key)
+  // Convert form values to API format
+  const settingsToUpdate = Object.entries(values).map(([key, value]) => {
+    const setting = selectedGroup.value?.settings?.find(s => s.key === key)
     return {
-      key: setting.key,
-      value: setting.value,
-      group_id: selectedGroup.value?.id, // Add group_id
-      description: originalFullSetting?.description, // Preserve description
-      is_encrypted: originalFullSetting?.is_encrypted, // Preserve encryption status
+      key,
+      value: String(value), // API expects string values
+      type: setting?.type,
+      group_id: selectedGroup.value?.id,
+      description: setting?.description,
+      encrypted: setting?.is_encrypted
     }
   })
 
@@ -151,13 +186,13 @@ async function handleSaveChanges() {
     if (!apiUrl) {
       throw new Error('VITE_DEPLOYSTACK_BACKEND_URL is not configured for saving settings.')
     }
+
     const response = await fetch(`${apiUrl}/api/settings/bulk`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        // Add Authorization header if needed: 'Authorization': `Bearer ${yourAuthToken}`
       },
-      credentials: 'include', // Added credentials include
+      credentials: 'include',
       body: JSON.stringify({ settings: settingsToUpdate }),
     })
 
@@ -168,44 +203,35 @@ async function handleSaveChanges() {
 
     const result = await response.json()
     if (!result.success) {
-      // Handle cases where API returns success: false but HTTP status is 200
       throw new Error(result.message || 'Failed to save settings due to an API error.')
     }
 
-    console.log('API Save Result:', result)
-    // Successfully saved, now update the local state to reflect changes
-    // This ensures the UI is in sync without needing an immediate refetch.
+    console.log('Settings saved successfully via API.')
+    successAlertMessage.value = t('globalSettings.alerts.saveSuccess')
+    showSuccessAlert.value = true
+
+    // Update local state
     const groupIndex = settingGroups.value.findIndex(g => g.id === selectedGroup.value?.id)
     if (groupIndex !== -1) {
-      // Create a new copy of the group with updated settings
+      const updatedSettings = selectedGroup.value.settings?.map(setting => ({
+        ...setting,
+        value: String((values as Record<string, any>)[setting.key])
+      }))
+
       const updatedGroup = {
         ...settingGroups.value[groupIndex],
-        settings: JSON.parse(JSON.stringify(editableSettings.value)) // Use the edited settings
+        settings: updatedSettings
       }
-      // Replace the old group with the updated one
+
       const newSettingGroups = [...settingGroups.value]
       newSettingGroups[groupIndex] = updatedGroup
       settingGroups.value = newSettingGroups
     }
-    console.log('Settings saved successfully via API.')
-    successAlertMessage.value = t('globalSettings.alerts.saveSuccess'); // Assuming you have i18n keys
-    showSuccessAlert.value = true;
-    // Removed setTimeout to make the alert persistent until manually closed or next save
-
-    // Optionally, use a toast notification for success
-    // e.g., toast({ title: 'Settings Saved', description: 'Your changes have been successfully saved.' })
-
-    // Optionally, refetch all groups to ensure data consistency,
-    // or merge changes carefully if the API returns the updated settings.
-    // For now, the local update above handles immediate UI feedback.
-    // await fetchSettingGroupsApi().then(data => settingGroups.value = data); // Example refetch
 
   } catch (saveError) {
     console.error('Failed to save settings via API:', saveError)
-    // Optionally, use a toast notification for error
-    // e.g., toast({ title: 'Error Saving Settings', description: (saveError as Error).message, variant: 'destructive' })
   }
-}
+})
 
 </script>
 
@@ -246,18 +272,43 @@ async function handleSaveChanges() {
               {{ selectedGroup.description }}
             </p>
           </div>
-          <form v-if="editableSettings.length > 0" class="space-y-6" @submit.prevent="handleSaveChanges">
-            <div v-for="(setting, index) in editableSettings" :key="setting.key" class="space-y-2">
-              <Label :for="`setting-${setting.key}`">{{ setting.description || setting.key }}</Label>
-              <Input
-                :id="`setting-${setting.key}`"
-                :type="getSettingInputType(setting)"
-                v-model="editableSettings[index].value"
-                class="w-full"
-              />
-              <p v-if="setting.is_encrypted" class="text-xs text-muted-foreground">This value is encrypted.</p>
-              <!-- Add FormDescription and FormMessage here if using full VeeValidate structure -->
-            </div>
+          <form v-if="selectedGroup.settings && selectedGroup.settings.length > 0" class="space-y-6" @submit="onSubmit">
+            <FormField
+              v-for="setting in selectedGroup.settings"
+              :key="setting.key"
+              v-slot="{ componentField }"
+              :name="setting.key"
+            >
+              <FormItem>
+                <FormLabel>{{ setting.description || setting.key }}</FormLabel>
+                <FormControl>
+                  <!-- String Input (text or password) -->
+                  <Input
+                    v-if="setting.type === 'string'"
+                    :type="setting.is_encrypted ? 'password' : 'text'"
+                    v-bind="componentField"
+                  />
+
+                  <!-- Number Input -->
+                  <Input
+                    v-else-if="setting.type === 'number'"
+                    type="number"
+                    v-bind="componentField"
+                  />
+
+                  <!-- Boolean Toggle Switch -->
+                  <Switch
+                    v-else-if="setting.type === 'boolean'"
+                    v-bind="componentField"
+                  />
+                </FormControl>
+                <FormDescription v-if="setting.is_encrypted">
+                  This value is encrypted.
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            </FormField>
+
             <Button type="submit">
               Save Changes
             </Button>

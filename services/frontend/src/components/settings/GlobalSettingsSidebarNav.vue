@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button' // Adjusted path assuming shadcn
 export interface Setting {
   key: string
   value: any
+  type: 'string' | 'number' | 'boolean'
   description?: string
   is_encrypted?: boolean
   group_id?: string
