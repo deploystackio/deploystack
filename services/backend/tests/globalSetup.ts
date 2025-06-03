@@ -18,16 +18,15 @@ export default async function globalSetup() {
     process.env.COOKIE_SECRET = 'test-cookie-secret-for-jest'; // Add cookie secret for tests
     process.env.DEPLOYSTACK_FRONTEND_URL = 'http://localhost:5174'; // Add dummy frontend URL for tests
     
-    // Clean up persistent data before tests
-    if (await fs.pathExists(TEST_DB_FILE_PATH)) {
-      await fs.remove(TEST_DB_FILE_PATH);
-    }
-    if (await fs.pathExists(TEST_DB_SELECTION_PATH)) {
-      await fs.remove(TEST_DB_SELECTION_PATH);
+    // Clean up the entire persistent_data directory for tests
+    if (await fs.pathExists(PERSISTENT_DATA_PATH)) {
+      await fs.remove(PERSISTENT_DATA_PATH);
+      console.log(`[TEST_SETUP_DEBUG] Removed directory: ${PERSISTENT_DATA_PATH}`);
     }
     
-    // Ensure the database directory exists (it's shared, but files are separate)
+    // Recreate the necessary directory structure
     await fs.ensureDir(path.join(PERSISTENT_DATA_PATH, 'database'));
+    console.log(`[TEST_SETUP_DEBUG] Ensured directory exists: ${path.join(PERSISTENT_DATA_PATH, 'database')}`);
 
     // IMPORTANT: We need to tell the application to USE this test database file.
     // The db/config.ts now uses 'db.selection.test.json' when NODE_ENV is 'test'.
