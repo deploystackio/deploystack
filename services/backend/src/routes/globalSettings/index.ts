@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { ZodError } from 'zod';
 import { GlobalSettingsService } from '../../services/globalSettingsService';
+import { validateEncryption } from '../../utils/encryption'; // Static import
 import { requirePermission } from '../../middleware/roleMiddleware';
 import {
   CreateGlobalSettingSchema,
@@ -310,8 +311,8 @@ export default async function globalSettingsRoute(fastify: FastifyInstance) {
     preHandler: requirePermission('settings.view'),
   }, async (request, reply) => {
     try {
-      const { validateEncryption } = await import('../../utils/encryption');
-      const encryptionWorking = validateEncryption();
+      // const { validateEncryption } = await import('@src/utils/encryption'); // Removed dynamic import
+      const encryptionWorking = validateEncryption(); // Use statically imported function
       
       return reply.status(200).send({
         success: true,

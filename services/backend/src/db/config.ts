@@ -5,7 +5,8 @@ import path from 'node:path';
 // Storing it in the 'persistent_data' directory within services/backend
 // __dirname is services/backend/src/db, so ../../persistent_data points to services/backend/persistent_data
 const CONFIG_DIR = path.join(__dirname, '..', '..', 'persistent_data');
-const CONFIG_FILE_PATH = path.join(CONFIG_DIR, 'db.selection.json');
+const DB_SELECTION_FILE_NAME = process.env.NODE_ENV === 'test' ? 'db.selection.test.json' : 'db.selection.json';
+const CONFIG_FILE_PATH = path.join(CONFIG_DIR, DB_SELECTION_FILE_NAME);
 
 // Helper function to check if we're in test mode
 function isTestMode(): boolean {
