@@ -31,7 +31,7 @@ npm install
 - Test files must follow the naming convention: `<TEST_NAME>.e2e.test.ts`.
 - Tests run sequentially in alphabetical order to ensure proper dependencies.
 
-### Current Test Files (in execution order):
+### Current Test Files (in execution order)
 
 1. **`setup.e2e.test.ts`** - Database setup and initialization
 2. **`user-registration.e2e.test.ts`** - User registration and role assignment

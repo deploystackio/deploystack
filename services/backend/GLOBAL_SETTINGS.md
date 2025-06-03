@@ -954,12 +954,14 @@ The `getBoolean()` method accepts these string values:
 ### Usage Patterns
 
 #### Simple Value Retrieval
+
 ```typescript
 const value = await GlobalSettings.get('key.name');
 const valueWithDefault = await GlobalSettings.get('key.name', 'default');
 ```
 
 #### Type-Safe Retrieval
+
 ```typescript
 const isEnabled = await GlobalSettings.getBoolean('feature.enabled', false);
 const maxSize = await GlobalSettings.getNumber('upload.max_size', 10);
@@ -967,12 +969,14 @@ const apiUrl = await GlobalSettings.getUrl('api.endpoint');
 ```
 
 #### Batch Retrieval
+
 ```typescript
 const settings = await GlobalSettings.getMultiple(['key1', 'key2', 'key3']);
 const groupSettings = await GlobalSettings.getGroupValues('smtp');
 ```
 
 #### Validation and Checks
+
 ```typescript
 if (await GlobalSettings.isSet('api.key')) {
   const apiKey = await GlobalSettings.getRequired('api.key');

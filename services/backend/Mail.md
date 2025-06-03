@@ -14,7 +14,7 @@ The email system provides a comprehensive solution for sending templated emails 
 
 ## Architecture
 
-```
+```text
 src/email/
 ├── emailService.ts       # Main email service with SMTP integration
 ├── templateRenderer.ts   # Pug template compilation and rendering
@@ -540,27 +540,35 @@ export class DeploymentService {
 ### Common Issues
 
 1. **SMTP Configuration Not Found**
-   ```
+
+   ```text
    Error: SMTP configuration is not complete. Please configure SMTP settings in global settings.
    ```
+
    **Solution**: Configure SMTP settings in the global settings interface.
 
 2. **Template Not Found**
-   ```
+
+   ```text
    Error: Template 'welcome' not found at /path/to/templates/welcome.pug
    ```
+
    **Solution**: Ensure the template file exists in the templates directory.
 
 3. **Invalid Email Address**
-   ```
+
+   ```text
    Error: Invalid email address
    ```
+
    **Solution**: Validate email addresses before sending.
 
 4. **SMTP Connection Failed**
-   ```
+
+   ```text
    Error: Connection timeout
    ```
+
    **Solution**: Check SMTP server settings and network connectivity.
 
 ### Debug Mode
