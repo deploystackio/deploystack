@@ -81,11 +81,11 @@ import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 
 // Reactive form values
-const formValues = ref<Record<string, any>>({})
+const formValues = ref<Record<string, string | number | boolean>>({})
 
 // Create initial form values from settings
 function createInitialValues(settings: Setting[]) {
-  const values: Record<string, any> = {}
+  const values: Record<string, string | number | boolean> = {}
   settings.forEach(setting => {
     // Handle cases where setting.value might be undefined
     const settingValue = setting.value ?? ''
@@ -185,7 +185,7 @@ async function handleSubmit(event: Event) {
       settingGroups.value = newSettingGroups
     }
 
-  } catch (saveError) {
+  } catch {
     // Handle save error silently or show user-friendly error message
   }
 }
@@ -240,7 +240,7 @@ async function handleSubmit(event: Event) {
                   v-if="setting.type === 'string'"
                   :id="`setting-${setting.key}`"
                   :type="setting.is_encrypted ? 'password' : 'text'"
-                  v-model="formValues[setting.key]"
+                  v-model="formValues[setting.key] as string"
                   class="w-full"
                 />
 
@@ -249,7 +249,7 @@ async function handleSubmit(event: Event) {
                   v-else-if="setting.type === 'number'"
                   :id="`setting-${setting.key}`"
                   type="number"
-                  v-model.number="formValues[setting.key]"
+                  v-model.number="formValues[setting.key] as number"
                   class="w-full"
                 />
 
