@@ -10,6 +10,7 @@ import type {
   ValidationResult, 
   SmtpConfig, 
   GitHubOAuthConfig, 
+  GlobalConfig,
   InitializationResult 
 } from './types';
 
@@ -397,6 +398,54 @@ export class GlobalSettingsInitService {
     const config = await this.getGitHubOAuthConfiguration();
     return config !== null;
   }
+
+  /**
+   * Get complete Global configuration
+   */
+  static async getGlobalConfiguration(): Promise<GlobalConfig | null> {
+    try {
+      const settings = await Promise.all([
+        GlobalSettingsService.get('global.page_url'),
+        GlobalSettingsService.get('global.send_mail')
+      ]);
+
+      const [pageUrl, sendMail] = settings;
+
+      return {
+        pageUrl: pageUrl?.value || 'http://localhost:5173',
+        sendMail: sendMail?.value === 'true'
+      };
+    } catch (error) {
+      console.error('Failed to get Global configuration:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Check if email sending is enabled
+   */
+  static async isEmailSendingEnabled(): Promise<boolean> {
+    try {
+      const setting = await GlobalSettingsService.get('global.send_mail');
+      return setting?.value === 'true';
+    } catch (error) {
+      console.error('Failed to check if email sending is enabled:', error);
+      return false; // Default to disabled if there's an error
+    }
+  }
+
+  /**
+   * Get the application page URL
+   */
+  static async getPageUrl(): Promise<string> {
+    try {
+      const setting = await GlobalSettingsService.get('global.page_url');
+      return setting?.value || 'http://localhost:5173';
+    } catch (error) {
+      console.error('Failed to get page URL:', error);
+      return 'http://localhost:5173'; // Default fallback
+    }
+  }
 }
 
 // Export the helper class
@@ -409,5 +458,6 @@ export type {
   ValidationResult,
   SmtpConfig,
   GitHubOAuthConfig,
+  GlobalConfig,
   InitializationResult
 };

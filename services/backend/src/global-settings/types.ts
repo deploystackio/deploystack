@@ -78,6 +78,11 @@ export interface GitHubOAuthConfig {
   scope: string;
 }
 
+export interface GlobalConfig {
+  pageUrl: string;
+  sendMail: boolean;
+}
+
 export interface InitializationResult {
   totalModules: number;
   totalSettings: number;
