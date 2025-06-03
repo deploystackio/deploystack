@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button' // Adjusted path assuming shadcn
 
 export interface Setting {
   key: string
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   value: any
   type: 'string' | 'number' | 'boolean'
   description?: string

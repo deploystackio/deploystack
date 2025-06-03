@@ -40,6 +40,7 @@ async function fetchSettingGroupsApi(): Promise<GlobalSettingGroup[]> {
   // Data should be an array of GlobalSettingGroup objects, already sorted by backend if getAllGroupMetadata sorts.
   // The service method GlobalSettingsService.getAllGroupMetadata sorts by sort_order, then name.
   // The frontend GlobalSettingGroup type includes 'settings' as optional, which matches the backend's GlobalSettingGroupWithSettings.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return result.data.map((g: any) => ({
     ...g,
     settings: g.settings || [] // Ensure settings array exists
@@ -122,6 +123,7 @@ function createSettingsSchema(settings: Setting[]) {
 
 // Create initial form values from settings
 function createInitialValues(settings: Setting[]) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const values: Record<string, any> = {}
   settings.forEach(setting => {
     switch (setting.type) {
@@ -215,6 +217,7 @@ const onSubmit = form.handleSubmit(async (values) => {
     if (groupIndex !== -1) {
       const updatedSettings = selectedGroup.value.settings?.map(setting => ({
         ...setting,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         value: String((values as Record<string, any>)[setting.key])
       }))
 

@@ -107,6 +107,7 @@ router.beforeEach(async (to, from, next) => {
   const isPublicRoute = publicRoutes.includes(to.name as string)
 
   // Attempt to get current user status early
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let currentUser: any = null;
   try {
     // Avoid force refreshing cache here unless necessary, to use existing session info

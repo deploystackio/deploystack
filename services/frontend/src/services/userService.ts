@@ -130,6 +130,7 @@ export class UserService {
   /**
    * Login method - clears cache to ensure fresh user data after login
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   static async login(email: string, password: string): Promise<any> {
     try {
       const apiUrl = this.getApiUrl();

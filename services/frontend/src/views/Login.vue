@@ -138,9 +138,7 @@ const onSubmit = form.handleSubmit(async (values) => {
   }
 })
 
-import { getEnv, getAllEnv } from '@/utils/env';
-
-const apiUrl = getEnv('VITE_DEPLOYSTACK_BACKEND_URL');
+import { getAllEnv } from '@/utils/env';
 
 const allEnv = getAllEnv();
 
