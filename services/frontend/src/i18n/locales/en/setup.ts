@@ -24,11 +24,11 @@ export default {
     alreadyConfigured: {
       title: 'Already Configured',
       description: 'Your DeployStack instance appears to be already configured. If you need to change settings, please consult the documentation or environment variables.',
-      button: 'Go to Dashboard',
+      button: 'Go to Login',
     },
     success: {
       title: 'Setup Successful',
-      description: 'Setup was successful. Go to Login and create your first user.',
+      description: 'Setup was successful. Go to Register and create your first user.',
       buttonAcknowledge: 'Go to Login',
     },
     buttons: {

@@ -81,7 +81,7 @@ const routes = [
       {
         path: 'settings/:groupId',
         name: 'AdminSettings',
-        component: () => import('../views/GlobalSettings.vue'),
+        component: () => import('../views/admin/GlobalSettings.vue'),
       },
       {
         path: 'users',
