@@ -102,7 +102,12 @@ function createInitialValues(settings: Setting[]) {
         values[setting.key] = settingValue ? Number(settingValue) : 0
         break
       case 'boolean':
-        values[setting.key] = settingValue === 'true' || settingValue === true
+        // Handle both string and boolean values robustly
+        if (typeof settingValue === 'string') {
+          values[setting.key] = settingValue.toLowerCase() === 'true'
+        } else {
+          values[setting.key] = Boolean(settingValue)
+        }
         break
       case 'string':
       default:
@@ -269,7 +274,7 @@ async function handleSubmit(event: Event) {
                     <div v-else-if="setting.type === 'boolean'">
                       <Switch
                         :id="`setting-${setting.key}`"
-                        v-model:checked="formValues[setting.key]"
+                        v-model="formValues[setting.key] as boolean"
                       />
                     </div>
 
