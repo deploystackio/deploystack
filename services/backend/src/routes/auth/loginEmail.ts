@@ -4,11 +4,21 @@ import { getLucia } from '../../lib/lucia'; // Corrected import
 import { verify } from '@node-rs/argon2';
 import { getDb, getSchema } from '../../db';
 import { eq, or } from 'drizzle-orm';
+import { GlobalSettingsInitService } from '../../global-settings';
 
 export default async function loginEmailRoute(fastify: FastifyInstance) {
   fastify.post(
     '/login',
     async (request, reply: FastifyReply) => {
+      // Check if login is enabled
+      const isLoginEnabled = await GlobalSettingsInitService.isLoginEnabled();
+      if (!isLoginEnabled) {
+        return reply.status(403).send({ 
+          success: false, 
+          error: 'Login is currently disabled by administrator.' 
+        });
+      }
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { login, email, password } = request.body as any;
       

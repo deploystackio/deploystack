@@ -120,7 +120,7 @@ input {
 }
 
 .bg-card {
-  background-color: var(--color-muted);
+  background-color: oklch(96.8% 0.007 247.896)
 }
 
 /* Global cursor pointer for buttons and interactive elements */

@@ -24,6 +24,22 @@ export const globalSettings: GlobalSettingsModule = {
       description: 'Enable or disable email sending functionality',
       encrypted: false,
       required: false
+    },
+    {
+      key: 'global.enable_login',
+      defaultValue: true,
+      type: 'boolean',
+      description: 'Enable or disable all login functionality (email, GitHub, etc.)',
+      encrypted: false,
+      required: false
+    },
+    {
+      key: 'global.enable_email_registration',
+      defaultValue: true,
+      type: 'boolean',
+      description: 'Enable or disable email registration',
+      encrypted: false,
+      required: false
     }
   ]
 };

@@ -6,6 +6,7 @@ import { getDb, getSchema } from '../../db';
 import { eq } from 'drizzle-orm';
 import { generateId } from 'lucia';
 import { generateState } from 'arctic';
+import { GlobalSettingsInitService } from '../../global-settings';
 
 // Define types for requests with specific query parameters
 const GITHUB_SCOPES = ['user:email']; // Request access to user's email
@@ -15,6 +16,14 @@ export default async function githubAuthRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/login',
     async (_request, reply: FastifyReply) => { // _request type can be FastifyRequest if no specific generics needed here
+      // Check if login is enabled
+      const isLoginEnabled = await GlobalSettingsInitService.isLoginEnabled();
+      if (!isLoginEnabled) {
+        return reply.status(403).send({ 
+          error: 'Login is currently disabled by administrator.' 
+        });
+      }
+
       const state = generateState();
       // PKCE is recommended for OAuth 2.0 public clients, but for confidential clients (server-side),
       // state alone is often sufficient for CSRF. Lucia's GitHub provider handles PKCE if code_verifier is passed.
@@ -44,6 +53,14 @@ export default async function githubAuthRoutes(fastify: FastifyInstance) {
   fastify.get<{ Querystring: GithubCallbackInput }>(
     '/callback',
     async (request, reply: FastifyReply) => { // request.query will be typed as GithubCallbackInput by Fastify
+      // Check if login is enabled
+      const isLoginEnabled = await GlobalSettingsInitService.isLoginEnabled();
+      if (!isLoginEnabled) {
+        return reply.status(403).send({ 
+          error: 'Login is currently disabled by administrator.' 
+        });
+      }
+
       const storedState = request.cookies?.oauth_state; // Access cookies safely, ensure @fastify/cookie is registered
       // const storedCodeVerifier = request.cookies?.oauth_code_verifier; // if using PKCE
 

@@ -406,14 +406,18 @@ export class GlobalSettingsInitService {
     try {
       const settings = await Promise.all([
         GlobalSettingsService.get('global.page_url'),
-        GlobalSettingsService.get('global.send_mail')
+        GlobalSettingsService.get('global.send_mail'),
+        GlobalSettingsService.get('global.enable_login'),
+        GlobalSettingsService.get('global.enable_email_registration')
       ]);
 
-      const [pageUrl, sendMail] = settings;
+      const [pageUrl, sendMail, enableLogin, enableEmailRegistration] = settings;
 
       return {
         pageUrl: pageUrl?.value || 'http://localhost:5173',
-        sendMail: sendMail?.value === 'true'
+        sendMail: sendMail?.value === 'true',
+        enableLogin: enableLogin?.value === 'true',
+        enableEmailRegistration: enableEmailRegistration?.value === 'true'
       };
     } catch (error) {
       console.error('Failed to get Global configuration:', error);
@@ -444,6 +448,32 @@ export class GlobalSettingsInitService {
     } catch (error) {
       console.error('Failed to get page URL:', error);
       return 'http://localhost:5173'; // Default fallback
+    }
+  }
+
+  /**
+   * Check if login is enabled (all types: email, GitHub, etc.)
+   */
+  static async isLoginEnabled(): Promise<boolean> {
+    try {
+      const setting = await GlobalSettingsService.get('global.enable_login');
+      return setting?.value === 'true';
+    } catch (error) {
+      console.error('Failed to check if login is enabled:', error);
+      return true; // Default to enabled if there's an error
+    }
+  }
+
+  /**
+   * Check if email registration is enabled
+   */
+  static async isEmailRegistrationEnabled(): Promise<boolean> {
+    try {
+      const setting = await GlobalSettingsService.get('global.enable_email_registration');
+      return setting?.value === 'true';
+    } catch (error) {
+      console.error('Failed to check if email registration is enabled:', error);
+      return true; // Default to enabled if there's an error
     }
   }
 }

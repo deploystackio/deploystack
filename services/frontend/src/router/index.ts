@@ -76,7 +76,7 @@ const routes = [
     children: [
       {
         path: 'settings',
-        redirect: '/admin/settings/smtp'
+        redirect: '/admin/settings/global'
       },
       {
         path: 'settings/:groupId',

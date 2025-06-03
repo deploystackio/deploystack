@@ -81,6 +81,8 @@ export interface GitHubOAuthConfig {
 export interface GlobalConfig {
   pageUrl: string;
   sendMail: boolean;
+  enableLogin: boolean;
+  enableEmailRegistration: boolean;
 }
 
 export interface InitializationResult {

@@ -7,11 +7,21 @@ import { eq, or } from 'drizzle-orm';
 import { generateId } from 'lucia'; // Lucia's utility for generating IDs
 import { hash } from '@node-rs/argon2';
 import { TeamService } from '../../services/teamService';
+import { GlobalSettingsInitService } from '../../global-settings';
 
 export default async function registerEmailRoute(fastify: FastifyInstance) {
   fastify.post<{ Body: RegisterEmailInput }>( // Use Fastify's generic type for request body
     '/register',
     async (request, reply: FastifyReply) => { // request type will be inferred by Fastify
+      // Check if email registration is enabled
+      const isEmailRegistrationEnabled = await GlobalSettingsInitService.isEmailRegistrationEnabled();
+      if (!isEmailRegistrationEnabled) {
+        return reply.status(403).send({ 
+          success: false, 
+          error: 'Email registration is currently disabled by administrator.' 
+        });
+      }
+
       const { username, email, password, first_name, last_name } = request.body; // request.body should now be typed as RegisterEmailInput
 
       const db = getDb();
