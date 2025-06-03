@@ -403,6 +403,44 @@ export class PluginManager {
   }
 
   /**
+   * Re-initialize plugins with database access
+   * This is called after database setup to give plugins access to the database
+   */
+  async reinitializePluginsWithDatabase(): Promise<void> {
+    if (!this.app) {
+      throw new Error('Cannot re-initialize plugins: Fastify app not set');
+    }
+    
+    if (!this.db) {
+      throw new Error('Cannot re-initialize plugins: Database not set');
+    }
+    
+    console.log('[PluginManager] Re-initializing plugins with database access...');
+    
+    for (const plugin of this.plugins.values()) {
+      try {
+        // Only re-initialize plugins that have database extension or explicit reinitialize method
+        if (plugin.databaseExtension || plugin.reinitialize) {
+          if (plugin.reinitialize) {
+            await plugin.reinitialize(this.app, this.db);
+            console.log(`[PluginManager] Re-initialized plugin: ${plugin.meta.id}`);
+          } else {
+            // For plugins with database extension but no reinitialize method,
+            // we assume they can handle the database being available now
+            console.log(`[PluginManager] Plugin ${plugin.meta.id} has database extension but no reinitialize method - database is now available`);
+          }
+        }
+      } catch (error) {
+        const typedError = error as Error;
+        console.error(`[PluginManager] Failed to re-initialize plugin ${plugin.meta.id}: ${typedError.message}`, typedError.stack);
+        // Continue with other plugins even if one fails
+      }
+    }
+    
+    console.log('[PluginManager] Plugin re-initialization completed.');
+  }
+
+  /**
    * Shut down all plugins
    */
   async shutdownPlugins(): Promise<void> {

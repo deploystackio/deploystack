@@ -97,6 +97,14 @@ export interface Plugin {
   initialize: (app: FastifyInstance, db: AnyDatabase | null) => Promise<void>;
   
   /**
+   * Re-initialize the plugin with database access
+   * Called after database setup to give plugins access to the database
+   * @param app The Fastify instance
+   * @param db The database instance (guaranteed to be non-null)
+   */
+  reinitialize?: (app: FastifyInstance, db: AnyDatabase) => Promise<void>;
+  
+  /**
    * Shutdown the plugin gracefully
    */
   shutdown?: () => Promise<void>;

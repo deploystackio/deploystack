@@ -35,11 +35,11 @@ export default async function registerEmailRoute(fastify: FastifyInstance) {
           // Determine if username or email caused the conflict for a more specific message
           const existingUserByUsername = await (db as any).select().from(authUserTable).where(eq(authUserTable.username, username)).limit(1);
           if (existingUserByUsername.length > 0) {
-            return reply.status(409).send({ error: 'Username already taken.' });
+            return reply.status(400).send({ success: false, error: 'Username already taken.' });
           }
           const existingUserByEmail = await (db as any).select().from(authUserTable).where(eq(authUserTable.email, email)).limit(1);
           if (existingUserByEmail.length > 0) {
-            return reply.status(409).send({ error: 'Email address already in use.' });
+            return reply.status(400).send({ success: false, error: 'Email address already in use.' });
           }
         }
 
@@ -83,6 +83,26 @@ export default async function registerEmailRoute(fastify: FastifyInstance) {
 
         fastify.log.info(`User created successfully: ${userId} with role: ${defaultRole}`);
 
+        // Create session for the user
+        const sessionId = generateId(40); // Generate session ID
+        const expiresAt = Date.now() + 1000 * 60 * 60 * 24 * 30; // 30 days
+        
+        const authSessionTable = schema.authSession;
+        
+        // Insert session directly into database
+        await (db as any).insert(authSessionTable).values({
+          id: sessionId,
+          user_id: userId,
+          expires_at: expiresAt
+        });
+        
+        fastify.log.info(`Session created successfully for user: ${userId}`);
+        
+        // Import lucia and create session cookie
+        const { getLucia } = await import('../../lib/lucia');
+        const sessionCookie = getLucia().createSessionCookie(sessionId);
+        reply.setCookie(sessionCookie.name, sessionCookie.value, sessionCookie.attributes);
+
         // Create default team for the user
         try {
           const team = await TeamService.createDefaultTeamForUser(userId, username);
@@ -92,20 +112,32 @@ export default async function registerEmailRoute(fastify: FastifyInstance) {
           // Don't fail registration if team creation fails, just log the error
         }
 
-        return reply.status(201).send({ 
-          message: 'User registered successfully. Please log in to continue.' 
+        // Get the created user data
+        const user = createdUser[0];
+
+        return reply.status(201).send({
+          success: true,
+          message: 'User registered successfully. Please log in to continue.',
+          user: {
+            id: user.id,
+            username: user.username,
+            email: user.email,
+            first_name: user.first_name,
+            last_name: user.last_name,
+            role_id: user.role_id
+          }
         });
 
       } catch (error) {
         fastify.log.error(error, 'Error during email registration:');
         // Drizzle unique constraint errors might need specific handling if not caught above
         if (error instanceof Error && (error.message.includes('UNIQUE constraint failed: authUser.username') || error.message.includes('Key (username)'))) {
-            return reply.status(409).send({ error: 'Username already taken.' });
+            return reply.status(400).send({ success: false, error: 'Username already taken.' });
         }
         if (error instanceof Error && (error.message.includes('UNIQUE constraint failed: authUser.email') || error.message.includes('Key (email)'))) {
-            return reply.status(409).send({ error: 'Email address already in use.' });
+            return reply.status(400).send({ success: false, error: 'Email address already in use.' });
         }
-        return reply.status(500).send({ error: 'An unexpected error occurred during registration.' });
+        return reply.status(500).send({ success: false, error: 'An unexpected error occurred during registration.' });
       }
     }
   );

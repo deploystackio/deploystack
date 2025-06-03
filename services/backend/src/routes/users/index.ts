@@ -47,10 +47,7 @@ export default async function usersRoute(fastify: FastifyInstance) {
         });
       }
 
-      return reply.status(200).send({
-        success: true,
-        data: user,
-      });
+      return reply.status(200).send(user);
     } catch (error) {
       fastify.log.error(error, 'Error fetching user');
       return reply.status(500).send({
@@ -282,10 +279,7 @@ export default async function usersRoute(fastify: FastifyInstance) {
         });
       }
 
-      return reply.status(200).send({
-        success: true,
-        data: user,
-      });
+      return reply.status(200).send(user);
     } catch (error) {
       fastify.log.error(error, 'Error fetching current user');
       return reply.status(500).send({
@@ -309,7 +303,7 @@ export default async function usersRoute(fastify: FastifyInstance) {
       
       return reply.status(200).send({
         success: true,
-        data: teams,
+        teams: teams,
       });
     } catch (error) {
       fastify.log.error(error, 'Error fetching user teams');

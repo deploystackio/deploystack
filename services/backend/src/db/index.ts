@@ -29,6 +29,18 @@ let isDbConfigured = false;
 
 const MIGRATIONS_TABLE_NAME = '__drizzle_migrations';
 
+// Helper function to check if we're in test mode
+function isTestMode(): boolean {
+  return process.env.NODE_ENV === 'test';
+}
+
+// Helper function for conditional logging
+function logInfo(message: string): void {
+  if (!isTestMode()) {
+    console.log(message);
+  }
+}
+
 function getColumnBuilder(type: 'text' | 'integer' | 'timestamp') {
   if (type === 'text') return sqliteText;
   if (type === 'integer') return sqliteInteger;
@@ -89,11 +101,11 @@ async function applyMigrations() {
   try {
     await fs.access(migrationsPath);
   } catch {
-    console.log(`[INFO] Migrations directory not found at: ${migrationsPath}, skipping migrations.`);
+    logInfo(`[INFO] Migrations directory not found at: ${migrationsPath}, skipping migrations.`);
     return;
   }
 
-  console.log(`[INFO] Checking for new migrations in ${migrationsPath}...`);
+  logInfo(`[INFO] Checking for new migrations in ${migrationsPath}...`);
   await ensureMigrationsTable();
 
   let appliedMigrations: { name: string }[] = [];
@@ -108,7 +120,7 @@ async function applyMigrations() {
 
   for (const file of migrationFiles) {
     if (!appliedMigrationNames.includes(file)) {
-      console.log(`[INFO] Applying migration: ${file}`);
+      logInfo(`[INFO] Applying migration: ${file}`);
       const migrationFilePath = path.join(migrationsPath, file);
       const sqlContent = await fs.readFile(migrationFilePath, 'utf8');
       const statements = sqlContent.split('--> statement-breakpoint');
@@ -122,21 +134,21 @@ async function applyMigrations() {
         }
         sqliteConn.prepare(`INSERT INTO ${MIGRATIONS_TABLE_NAME} (migration_name) VALUES (?)`).run(file);
         sqliteConn.exec('COMMIT');
-        console.log(`[INFO] Applied migration: ${file}`);
+        logInfo(`[INFO] Applied migration: ${file}`);
       } catch (error) {
         const typedError = error as Error;
         console.error(`[ERROR] Failed to apply migration ${file}:`, typedError.message, typedError.stack);
         throw error;
       }
     } else {
-      console.log(`[INFO] Migration already applied: ${file}`);
+      logInfo(`[INFO] Migration already applied: ${file}`);
     }
   }
 }
 
 export async function initializeDatabase(): Promise<boolean> {
   if (isDbInitialized) {
-    console.log('[INFO] Database already initialized.');
+    logInfo('[INFO] Database already initialized.');
     return true;
   }
 
@@ -170,8 +182,8 @@ export async function initializeDatabase(): Promise<boolean> {
   const sqliteConn = new SqliteDriver(absoluteDbPath); // Use constructor
   dbConnection = sqliteConn;
   dbInstance = drizzleSqliteAdapter(sqliteConn, { schema: dbSchema, logger: false });
-  console.log(`[INFO] Connected to SQLite database at: ${absoluteDbPath}`);
-  if (!dbExists) console.log(`[INFO] SQLite database created at: ${absoluteDbPath}`);
+  logInfo(`[INFO] Connected to SQLite database at: ${absoluteDbPath}`);
+  if (!dbExists) logInfo(`[INFO] SQLite database created at: ${absoluteDbPath}`);
 
   if (dbInstance) { // Ensure dbInstance is not null
     await applyMigrations();
@@ -180,7 +192,7 @@ export async function initializeDatabase(): Promise<boolean> {
   }
   
   isDbInitialized = true;
-  console.log('[INFO] Database initialized successfully.');
+  logInfo('[INFO] Database initialized successfully.');
   return true;
 }
 
@@ -195,7 +207,7 @@ export async function setupNewDatabase(config: DbConfig): Promise<boolean> {
     await saveDbConfig(config);
     currentDbConfig = config; 
     isDbConfigured = true;
-    console.log(`[INFO] Database configuration saved: ${config.type}`);
+    logInfo(`[INFO] Database configuration saved: ${config.type}`);
   }
   
   isDbInitialized = false; 
@@ -251,7 +263,7 @@ export function getDbStatus() {
 // Function to force schema regeneration (useful for development)
 export function regenerateSchema(): void {
   if (currentDbConfig) {
-    console.log('[INFO] Forcing schema regeneration...');
+    logInfo('[INFO] Forcing schema regeneration...');
     dbSchema = generateSchema();
     
     // Recreate the database instance with new schema
@@ -259,7 +271,7 @@ export function regenerateSchema(): void {
       dbInstance = drizzleSqliteAdapter(dbConnection as SqliteDriver.Database, { schema: dbSchema, logger: false });
     }
     
-    console.log('[INFO] Schema regenerated successfully.');
+    logInfo('[INFO] Schema regenerated successfully.');
   }
 }
 
@@ -286,7 +298,7 @@ export function registerPluginTables(plugins: Plugin[]) {
 }
 
 export async function createPluginTables(plugins: Plugin[]) { // db param not used
-  console.log('[INFO] Attempting to create plugin tables (Note: Better handled by migrations)...');
+  logInfo('[INFO] Attempting to create plugin tables (Note: Better handled by migrations)...');
   if (!currentDbConfig) {
       console.error("[ERROR] Cannot create plugin tables: DB config unknown.");
       return;
@@ -300,7 +312,7 @@ export async function createPluginTables(plugins: Plugin[]) { // db param not us
     for (const [defName] of Object.entries(ext.tableDefinitions)) {
       const fullTableName = `${plugin.meta.id}_${defName}`;
       if (dbSchema && dbSchema[fullTableName]) {
-        console.log(`[INFO] Table ${fullTableName} already defined in schema. Creation should be handled by migrations.`);
+        logInfo(`[INFO] Table ${fullTableName} already defined in schema. Creation should be handled by migrations.`);
       } else {
           console.warn(`[WARN] Table definition for ${fullTableName} not found in generated schema. Skipping creation.`);
       }
@@ -312,7 +324,7 @@ export async function initializePluginDatabases(db: AnyDatabase, plugins: Plugin
   for (const plugin of plugins) {
     const ext = plugin.databaseExtension as DatabaseExtensionWithTables | undefined; // Cast here
     if (ext?.onDatabaseInit) {
-      console.log(`[INFO] Initializing database for plugin: ${plugin.meta.id}`);
+      logInfo(`[INFO] Initializing database for plugin: ${plugin.meta.id}`);
       await ext.onDatabaseInit(db); // db is AnyDatabase, should be compatible
     }
   }

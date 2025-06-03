@@ -28,7 +28,7 @@ export default {
     },
     success: {
       title: 'Setup Successful',
-      description: 'Setup was successful. Please restart the backend service to apply changes.',
+      description: 'Setup was successful. Go to Login and create your first user.',
       buttonAcknowledge: 'Go to Login',
     },
     buttons: {

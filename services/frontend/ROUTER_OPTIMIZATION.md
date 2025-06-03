@@ -7,20 +7,25 @@ This document describes the optimization implemented to eliminate unnecessary AP
 ## Problem Statement
 
 ### Original Issue
+
 The frontend was making unnecessary API calls on every page navigation, including:
+
 - `GET /api/users/me` - When users navigate to `/login` or `/register` (unauthenticated users)
 - `GET /api/users/me/teams` - Multiple calls on every page switch due to AppSidebar component mounting
 - When switching between public routes
 - Duplicate calls within the same navigation cycle
 
 ### Performance Impact
+
 - **2 API calls per navigation**: Router navigation guard was calling `UserService.getCurrentUser()` twice
 - **Backend load**: Unauthenticated requests still hit the backend
 - **Poor UX**: Network requests delayed navigation and cluttered browser console
 - **Unnecessary traffic**: Public routes don't need user authentication checks
 
 ### Root Cause Analysis
+
 In `src/router/index.ts`, the `beforeEach` navigation guard made two separate calls:
+
 1. **Line 67**: `const user = await UserService.getCurrentUser()` - to redirect logged-in users away from login/register
 2. **Line 95**: `const currentUser = await UserService.getCurrentUser()` - to check role requirements
 
@@ -29,12 +34,14 @@ In `src/router/index.ts`, the `beforeEach` navigation guard made two separate ca
 ### 1. Smart Caching Strategy
 
 #### Cache Implementation
+
 - **Short-term memory cache**: 30-second expiration (not persistent storage)
 - **Request deduplication**: Prevents concurrent identical requests
 - **Automatic invalidation**: Cache cleared on login/logout actions
 - **Fresh data guarantee**: Always fetch fresh data for important user actions
 
 #### Cache Configuration
+
 ```typescript
 interface CacheEntry {
   data: User | null;
@@ -50,12 +57,14 @@ private static pendingRequest: Promise<User | null> | null = null;
 ### 2. Route-Specific Optimization
 
 #### Public Routes
+
 - **Routes**: `/setup`, `/login`, `/register`
 - **Behavior**: Skip user authentication checks entirely
 - **Database check**: Only verify database setup status
 - **Performance**: Zero unnecessary API calls
 
 #### Protected Routes
+
 - **Single user check**: Combine authentication and role checks
 - **Cache utilization**: Reuse user data within same navigation
 - **Security maintained**: All authentication logic preserved
@@ -90,6 +99,7 @@ try {
 ### Files Modified
 
 #### 1. `src/services/userService.ts`
+
 - **Added smart caching**: 30-second cache with automatic expiration
 - **Request deduplication**: Prevents multiple concurrent requests
 - **Cache management**: `clearCache()`, `isCacheValid()` methods
@@ -97,22 +107,26 @@ try {
 - **Login/Logout methods**: Automatic cache clearing
 
 #### 2. `src/router/index.ts`
+
 - **Route classification**: Public vs protected route handling
 - **Eliminated duplicate calls**: Single user check for protected routes
 - **Optimized flow**: Skip user checks on public routes
 - **Maintained security**: All authentication logic preserved
 
 #### 3. `src/views/Login.vue`
+
 - **Updated to use**: `UserService.login()` method
 - **Automatic cache clearing**: On successful login
 - **Simplified code**: Removed manual fetch implementation
 
 #### 4. `src/views/Logout.vue`
+
 - **Updated to use**: `UserService.logout()` method
 - **Automatic cache clearing**: On logout
 - **Simplified code**: Removed manual fetch implementation
 
 #### 5. `src/services/teamService.ts`
+
 - **Added smart caching**: 30-second cache with automatic expiration
 - **Request deduplication**: Prevents multiple concurrent requests
 - **Cache management**: `clearUserTeamsCache()`, `isUserTeamsCacheValid()` methods
@@ -120,6 +134,7 @@ try {
 - **CRUD operations**: `createTeam()`, `updateTeam()`, `deleteTeam()` with automatic cache clearing
 
 #### 6. `src/components/AppSidebar.vue`
+
 - **Enhanced user fetching**: Support for `forceRefresh` parameter
 - **Enhanced team fetching**: Support for `forceRefresh` parameter
 - **Optimized logout**: Direct UserService usage
@@ -128,6 +143,7 @@ try {
 ### Cache Behavior
 
 #### Cache Lifecycle
+
 1. **First request**: API call made, result cached
 2. **Subsequent requests**: Return cached data if valid (< 30 seconds)
 3. **Cache expiration**: After 30 seconds, next request triggers fresh API call
@@ -135,6 +151,7 @@ try {
 5. **Force refresh**: `getCurrentUser(true)` bypasses cache
 
 #### Request Deduplication
+
 ```typescript
 // If there's already a pending request, return it
 if (this.pendingRequest) {
@@ -148,18 +165,21 @@ this.pendingRequest = this.fetchCurrentUser();
 ## Performance Benefits
 
 ### Before Optimization
+
 - **Login page navigation**: 2 API calls to `/api/users/me`
 - **Register page navigation**: 2 API calls to `/api/users/me`
 - **Every route change**: Multiple redundant calls
 - **Backend load**: High from unauthenticated requests
 
 ### After Optimization
+
 - **Public routes**: 0 API calls to `/api/users/me`
 - **Protected routes**: 1 API call (cached for 30 seconds)
 - **Login/Register**: No unnecessary authentication checks
 - **Backend load**: Significantly reduced
 
 ### Measured Improvements
+
 - ✅ **100% reduction** in unnecessary calls on public routes
 - ✅ **50% reduction** in API calls on protected routes (due to caching)
 - ✅ **Faster navigation** with eliminated network delays
@@ -171,16 +191,19 @@ this.pendingRequest = this.fetchCurrentUser();
 ### When to Use Cached vs Fresh Data
 
 #### Use Cached Data (Default)
+
 ```typescript
 const user = await UserService.getCurrentUser(); // Uses cache if valid
 ```
 
 #### Force Fresh Data
+
 ```typescript
 const user = await UserService.getCurrentUser(true); // Always fresh from API
 ```
 
 #### Force Fresh Data Scenarios
+
 - User account page loads
 - After role changes
 - After profile updates
@@ -189,12 +212,14 @@ const user = await UserService.getCurrentUser(true); // Always fresh from API
 ### Adding New Routes
 
 #### Public Routes
+
 ```typescript
 // Add to publicRoutes array in router/index.ts
 const publicRoutes = ['Setup', 'Login', 'Register', 'NewPublicRoute']
 ```
 
 #### Protected Routes
+
 - No changes needed - automatically handled
 - Add `meta: { requiresSetup: true }` for database requirement
 - Add `meta: { requiresRole: 'role_name' }` for role requirement
@@ -202,12 +227,14 @@ const publicRoutes = ['Setup', 'Login', 'Register', 'NewPublicRoute']
 ### Cache Management
 
 #### Manual Cache Clearing
+
 ```typescript
 // Clear cache when user data might have changed
 UserService.clearCache();
 ```
 
 #### Cache Invalidation Scenarios
+
 - User login/logout (automatic)
 - Profile updates (manual)
 - Role changes (manual)
@@ -216,18 +243,21 @@ UserService.clearCache();
 ## Security Considerations
 
 ### Authentication Security
+
 - ✅ **All authentication checks preserved**
 - ✅ **Role-based access control maintained**
 - ✅ **Session management unchanged**
 - ✅ **No security compromises made**
 
 ### Cache Security
+
 - ✅ **Memory-only cache** (not persistent)
 - ✅ **Short expiration** (30 seconds)
 - ✅ **Automatic clearing** on auth changes
 - ✅ **No sensitive data exposure**
 
 ### Public Route Security
+
 - ✅ **Database setup still checked**
 - ✅ **No authentication bypass**
 - ✅ **Proper redirects maintained**
@@ -238,26 +268,32 @@ UserService.clearCache();
 ### Common Issues
 
 #### Issue: User data seems stale
+
 **Solution**: Use force refresh
+
 ```typescript
 const user = await UserService.getCurrentUser(true);
 ```
 
 #### Issue: Still seeing API calls on login page
+
 **Cause**: Route name not in `publicRoutes` array
 **Solution**: Add route name to `publicRoutes` in `router/index.ts`
 
 #### Issue: Authentication not working after login
+
 **Cause**: Cache not cleared after login
 **Solution**: Ensure `UserService.login()` is used instead of manual fetch
 
 #### Issue: User redirected to login unexpectedly
+
 **Cause**: Cache expired and user session invalid
 **Solution**: Check backend session management and cookie settings
 
 ### Debugging
 
 #### Enable Cache Debugging
+
 ```typescript
 // Add to UserService for debugging
 console.log('Cache status:', {
@@ -268,6 +304,7 @@ console.log('Cache status:', {
 ```
 
 #### Monitor API Calls
+
 - Open browser DevTools → Network tab
 - Filter by `/api/users/me`
 - Should see zero calls on `/login` and `/register`
@@ -276,12 +313,14 @@ console.log('Cache status:', {
 ### Performance Monitoring
 
 #### Key Metrics
+
 - API calls to `/api/users/me` per navigation
 - Navigation speed (time to route change)
 - Backend load from authentication requests
 - Browser console errors
 
 #### Expected Behavior
+
 - **Public routes**: No `/api/users/me` calls
 - **Protected routes**: 1 call per 30 seconds maximum
 - **Login/Logout**: Immediate cache clearing
@@ -292,12 +331,14 @@ console.log('Cache status:', {
 ### Cache Configuration Updates
 
 #### Adjust Cache Duration
+
 ```typescript
 // In UserService.ts
 private static readonly CACHE_DURATION = 30000; // Modify as needed
 ```
 
 #### Considerations for Cache Duration
+
 - **Shorter (10-15s)**: More fresh data, more API calls
 - **Longer (60s+)**: Less API calls, potentially stale data
 - **Current (30s)**: Balanced approach for most use cases
@@ -305,6 +346,7 @@ private static readonly CACHE_DURATION = 30000; // Modify as needed
 ### Regular Reviews
 
 #### Monthly Review Checklist
+
 - [ ] Monitor API call patterns in production
 - [ ] Review cache hit/miss ratios
 - [ ] Check for new routes needing classification
@@ -312,6 +354,7 @@ private static readonly CACHE_DURATION = 30000; // Modify as needed
 - [ ] Update documentation for new routes
 
 #### Performance Audits
+
 - Measure navigation speed improvements
 - Monitor backend load reduction
 - Track user experience metrics
@@ -320,6 +363,7 @@ private static readonly CACHE_DURATION = 30000; // Modify as needed
 ## Future Enhancements
 
 ### Potential Improvements
+
 1. **Configurable cache duration** via environment variables
 2. **Cache statistics** for monitoring and debugging
 3. **Selective cache invalidation** for specific user properties
@@ -327,6 +371,7 @@ private static readonly CACHE_DURATION = 30000; // Modify as needed
 5. **Cache warming** on application startup
 
 ### Integration Opportunities
+
 1. **Pinia store integration** for reactive user state
 2. **WebSocket integration** for real-time user updates
 3. **Service worker caching** for offline scenarios

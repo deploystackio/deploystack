@@ -56,6 +56,9 @@ fastly-events.log
 deploystack.db
 services/backend/persistent_data/*
 
+# Test files
+services/backend/tests/.test-context.json
+
 ._*.ts
 ._*.vue
 ._*.md

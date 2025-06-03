@@ -41,7 +41,36 @@ async function setupDbHandler(
     const success = await setupNewDatabase(validatedInternalConfig);
     if (success) {
       server.log.info('Database setup/initialization successful.');
-      return reply.status(200).send({ message: 'Database setup successful. Please restart the server if this was the initial setup.' });
+      
+      try {
+        // Re-initialize database-dependent services
+        server.log.info('Re-initializing database-dependent services...');
+        const reinitSuccess = await server.reinitializeDatabaseServices();
+        
+        if (reinitSuccess) {
+          // Re-initialize plugins with database access
+          server.log.info('Re-initializing plugins with database access...');
+          await server.reinitializePluginsWithDatabase();
+          
+          server.log.info('Database setup and re-initialization completed successfully.');
+          return reply.status(200).send({ 
+            message: 'Database setup successful. All services have been initialized and are ready to use.',
+            restart_required: false
+          });
+        } else {
+          server.log.warn('Database setup succeeded but re-initialization failed. Manual restart may be required.');
+          return reply.status(200).send({ 
+            message: 'Database setup successful, but some services may require a server restart to function properly.',
+            restart_required: true
+          });
+        }
+      } catch (reinitError) {
+        server.log.error('Error during re-initialization after database setup:', reinitError);
+        return reply.status(200).send({ 
+          message: 'Database setup successful, but re-initialization failed. Please restart the server to complete setup.',
+          restart_required: true
+        });
+      }
     } else {
       server.log.error('Database setup/initialization failed.');
       return reply.status(500).send({ message: 'Database setup failed. Check server logs.' });

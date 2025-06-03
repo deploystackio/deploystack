@@ -9,11 +9,12 @@
     "dev:backend": "cd services/backend && npm run dev",
     "build:frontend": "cd services/frontend && npm run lint",
     "build:backend": "cd services/backend && npm run lint",
-    "lint:md": "npx markdownlint-cli2 '**/*.md' '#node_modules' '#**/node_modules/**' '#.github' '#**/CHANGELOG.md'",
+    "lint:md": "npx markdownlint-cli2 '**/*.md' '#node_modules' '#**/node_modules/**' '#.github' '#**/CHANGELOG.md' '#**/._*'",
     "lint:frontend": "cd services/frontend && npm run lint",
     "lint:backend": "cd services/backend && npm run lint",
     "release:backend": "cd services/backend && npm run release",
-    "release:frontend": "cd services/frontend && npm run release"    
+    "release:frontend": "cd services/frontend && npm run release",
+    "test:backend": "cd services/backend && npm run test"
   },
   "devDependencies": {
     "markdownlint-cli2": "^0.18.1"

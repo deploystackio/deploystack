@@ -50,7 +50,7 @@ export default async function logoutRoute(fastify: FastifyInstance) {
         const blankCookie = lucia.createBlankSessionCookie();
         reply.setCookie(blankCookie.name, blankCookie.value, blankCookie.attributes);
         fastify.log.info('No active session to logout - sending blank cookie');
-        return reply.status(200).send({ message: 'No active session to logout or already logged out.' });
+        return reply.status(200).send({ success: true, message: 'No active session to logout or already logged out.' });
       }
 
       try {
@@ -66,7 +66,7 @@ export default async function logoutRoute(fastify: FastifyInstance) {
         reply.setCookie(blankCookie.name, blankCookie.value, blankCookie.attributes);
         fastify.log.info('Blank cookie sent to clear client session');
         
-        return reply.status(200).send({ message: 'Logged out successfully.' });
+        return reply.status(200).send({ success: true, message: 'Logged out successfully.' });
 
       } catch (error) {
         fastify.log.error(error, 'Error during logout (invalidating session from authHook):');
@@ -97,7 +97,7 @@ export default async function logoutRoute(fastify: FastifyInstance) {
         // Even if there's an error, try to clear the cookie.
         const blankCookie = lucia.createBlankSessionCookie();
         reply.setCookie(blankCookie.name, blankCookie.value, blankCookie.attributes);
-        return reply.status(200).send({ message: 'Logged out successfully (with fallback cleanup).' });
+        return reply.status(200).send({ success: true, message: 'Logged out successfully (with fallback cleanup).' });
       }
     }
   );

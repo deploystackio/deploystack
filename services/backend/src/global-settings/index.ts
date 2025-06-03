@@ -1,6 +1,8 @@
 import fs from 'fs';
 import path from 'path';
 import { GlobalSettingsService } from '../services/globalSettingsService';
+import { getDb, getSchema } from '../db';
+import { eq } from 'drizzle-orm';
 import type { 
   GlobalSettingsModule, 
   GlobalSettingDefinition, 
@@ -177,13 +179,18 @@ export class GlobalSettingsInitService {
    */
   private static async groupExists(groupId: string): Promise<boolean> {
     try {
-      const { getDb, getSchema } = await import('../db');
-      const { eq } = await import('drizzle-orm');
       const db = getDb();
       const schema = getSchema();
+      
+      // Check if database is available
+      if (!db) {
+        console.warn(`Database not available during group existence check for: ${groupId}`);
+        return false;
+      }
+      
       const globalSettingGroupsTable = schema.globalSettingGroups;
-
       if (!globalSettingGroupsTable) {
+        console.warn(`GlobalSettingGroups table not found in schema for group: ${groupId}`);
         return false;
       }
 
@@ -196,7 +203,7 @@ export class GlobalSettingsInitService {
 
       return results.length > 0;
     } catch (error) {
-      console.error(`Error checking if group exists: ${groupId}`, error);
+      console.warn(`Error checking if group exists: ${groupId}`, error instanceof Error ? error.message : 'Unknown error');
       return false;
     }
   }
@@ -206,11 +213,15 @@ export class GlobalSettingsInitService {
    */
   private static async createGroup(group: GlobalSettingGroup): Promise<void> {
     try {
-      const { getDb, getSchema } = await import('../db');
       const db = getDb();
       const schema = getSchema();
+      
+      // Check if database is available
+      if (!db) {
+        throw new Error(`Database not available during group creation for: ${group.id}`);
+      }
+      
       const globalSettingGroupsTable = schema.globalSettingGroups;
-
       if (!globalSettingGroupsTable) {
         throw new Error('GlobalSettingGroups table not found in schema');
       }
