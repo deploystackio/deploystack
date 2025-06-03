@@ -7,6 +7,13 @@ import DashboardLayout from '@/components/DashboardLayout.vue'
 import { getEnv } from '@/utils/env'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { CheckCircle2Icon, XIcon } from 'lucide-vue-next'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -221,59 +228,72 @@ async function handleSubmit(event: Event) {
 
           <div v-if="isLoading" class="text-muted-foreground">Loading settings...</div>
           <div v-else-if="error" class="text-red-500">Error loading settings: {{ error }}</div>
+
+
           <div v-else-if="selectedGroup" class="space-y-6">
-            <div>
-              <h3 class="text-lg font-medium">
-                {{ selectedGroup.name }}
-              </h3>
-              <p v-if="selectedGroup.description" class="text-sm text-muted-foreground">
-                {{ selectedGroup.description }}
-              </p>
-            </div>
-            <form v-if="selectedGroup.settings && selectedGroup.settings.length > 0" class="space-y-6" @submit="handleSubmit">
-              <div v-for="setting in selectedGroup.settings" :key="setting.key" class="space-y-2">
-                <Label :for="`setting-${setting.key}`">{{ setting.description || setting.key }}</Label>
 
-                <!-- String Input (text or password) -->
-                <Input
-                  v-if="setting.type === 'string'"
-                  :id="`setting-${setting.key}`"
-                  :type="setting.is_encrypted ? 'password' : 'text'"
-                  v-model="formValues[setting.key] as string"
-                  class="w-full"
-                />
+            <Card>
+              <CardHeader>
+                <CardTitle class="text-xl">
+                  {{ selectedGroup.name }}
+                </CardTitle>
+                <CardDescription v-if="selectedGroup.description">
+                  {{ selectedGroup.description }}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
 
-                <!-- Number Input -->
-                <Input
-                  v-else-if="setting.type === 'number'"
-                  :id="`setting-${setting.key}`"
-                  type="number"
-                  v-model.number="formValues[setting.key] as number"
-                  class="w-full"
-                />
+                <form v-if="selectedGroup.settings && selectedGroup.settings.length > 0" class="space-y-6" @submit="handleSubmit">
+                  <div v-for="setting in selectedGroup.settings" :key="setting.key" class="space-y-2">
+                    <Label :for="`setting-${setting.key}`">{{ setting.description || setting.key }}</Label>
 
-                <!-- Boolean Toggle Switch -->
-                <div v-else-if="setting.type === 'boolean'">
-                  <Switch
-                    :id="`setting-${setting.key}`"
-                    v-model:checked="formValues[setting.key]"
-                  />
+                    <!-- String Input (text or password) -->
+                    <Input
+                      v-if="setting.type === 'string'"
+                      :id="`setting-${setting.key}`"
+                      :type="setting.is_encrypted ? 'password' : 'text'"
+                      v-model="formValues[setting.key] as string"
+                      class="w-full"
+                    />
+
+                    <!-- Number Input -->
+                    <Input
+                      v-else-if="setting.type === 'number'"
+                      :id="`setting-${setting.key}`"
+                      type="number"
+                      v-model.number="formValues[setting.key] as number"
+                      class="w-full"
+                    />
+
+                    <!-- Boolean Toggle Switch -->
+                    <div v-else-if="setting.type === 'boolean'">
+                      <Switch
+                        :id="`setting-${setting.key}`"
+                        v-model:checked="formValues[setting.key]"
+                      />
+                    </div>
+
+                    <p v-if="setting.is_encrypted" class="text-xs text-muted-foreground">This value is encrypted.</p>
+                  </div>
+
+                  <Button type="submit">
+                    Save Changes
+                  </Button>
+                </form>
+                <div v-else-if="selectedGroup && (!selectedGroup.settings || selectedGroup.settings.length === 0)">
+                  <p class="text-sm text-muted-foreground">No settings in this group.</p>
+                </div>
+                <div v-else>
+                  <p class="text-sm text-muted-foreground">Group not found or settings unavailable.</p>
                 </div>
 
-                <p v-if="setting.is_encrypted" class="text-xs text-muted-foreground">This value is encrypted.</p>
-              </div>
+              </CardContent>
+            </Card>
 
-              <Button type="submit">
-                Save Changes
-              </Button>
-            </form>
-            <div v-else-if="selectedGroup && (!selectedGroup.settings || selectedGroup.settings.length === 0)">
-              <p class="text-sm text-muted-foreground">No settings in this group.</p>
-            </div>
-            <div v-else>
-              <p class="text-sm text-muted-foreground">Group not found or settings unavailable.</p>
-            </div>
+
           </div>
+
+
           <div v-else-if="!currentGroupId && settingGroups.length > 0">
             <p class="text-muted-foreground">Select a category from the sidebar to view its settings.</p>
           </div>

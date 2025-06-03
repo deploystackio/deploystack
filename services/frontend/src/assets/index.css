@@ -115,6 +115,14 @@ body {
   color: var(--foreground);
 }
 
+input {
+  background-color: hsl(0 0% 100%); /* Corresponds to bg-white */
+}
+
+.bg-card {
+  background-color: var(--color-muted);
+}
+
 /* Global cursor pointer for buttons and interactive elements */
 button,
 [role="button"],
@@ -123,6 +131,8 @@ button,
 [type="reset"] {
   cursor: pointer;
 }
+
+
 
 /* Ensure disabled buttons don't show pointer cursor */
 button:disabled,
@@ -137,3 +147,4 @@ button:disabled,
 a[role="button"] {
   cursor: pointer;
 }
+
