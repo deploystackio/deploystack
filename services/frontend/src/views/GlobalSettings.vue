@@ -106,6 +106,11 @@ function createInitialValues(settings: Setting[]) {
   return values
 }
 
+// Watch for route changes and reset success alert
+watch(() => route.params.groupId, () => {
+  showSuccessAlert.value = false
+})
+
 // Watch for group changes and set form values
 watch(() => selectedGroup.value, (newGroup) => {
   if (newGroup?.settings) {
