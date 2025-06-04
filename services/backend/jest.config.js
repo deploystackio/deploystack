@@ -5,8 +5,8 @@ module.exports = {
   moduleNameMapper: {
     '^@src/(.*)$': '<rootDir>/src/$1',
   },
-  globalSetup: '<rootDir>/tests/globalSetup.ts',
-  globalTeardown: '<rootDir>/tests/globalTeardown.ts',
+  globalSetup: '<rootDir>/tests/e2e/globalSetup.ts',
+  globalTeardown: '<rootDir>/tests/e2e/globalTeardown.ts',
   transform: {
     '^.+\\.ts$': ['ts-jest', {
       useESM: false,
@@ -15,5 +15,5 @@ module.exports = {
   // Run tests sequentially to ensure proper order
   maxWorkers: 1,
   // Use custom test sequencer to ensure correct order
-  testSequencer: '<rootDir>/tests/testSequencer.js',
+  testSequencer: '<rootDir>/tests/e2e/testSequencer.js',
 };

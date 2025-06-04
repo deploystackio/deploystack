@@ -27,10 +27,14 @@ async function setupDbHandler(
     const clientRequestBody = DbSetupRequestBodySchema.parse(request.body);
     
     let internalConfigObject: InternalDbConfig;
-    const fixedSQLiteDbPath = 'persistent_data/database/deploystack.db';
+    // Determine DB path based on environment
+    const isTestEnv = process.env.NODE_ENV === 'test';
+    const sqliteDbFileName = isTestEnv ? 'deploystack.test.db' : 'deploystack.db';
+    // dbPath should be relative to services/backend, and the actual db file is usually in a 'database' subfolder
+    const sqliteDbPath = `database/${sqliteDbFileName}`; 
 
     if (clientRequestBody.type === DatabaseType.SQLite) {
-      internalConfigObject = { type: DatabaseType.SQLite, dbPath: fixedSQLiteDbPath };
+      internalConfigObject = { type: DatabaseType.SQLite, dbPath: sqliteDbPath };
     } else {
       return reply.status(400).send({ error: 'Invalid database type specified. Only SQLite is supported.' });
     }

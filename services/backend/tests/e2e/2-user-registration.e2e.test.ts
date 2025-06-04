@@ -4,8 +4,9 @@ import * as fs from 'fs-extra';
 import * as path from 'path';
 import { getTestContext, updateTestContext } from './testContext';
 
-const PERSISTENT_DATA_PATH = path.join(__dirname, '..', 'persistent_data');
-const DB_FILE_PATH = path.join(PERSISTENT_DATA_PATH, 'database', 'deploystack.db');
+// __dirname is services/backend/tests/e2e
+const APP_BACKEND_ROOT = path.join(__dirname, '..', '..'); // Resolves to services/backend/
+const DB_FILE_PATH = path.join(APP_BACKEND_ROOT, 'database', 'deploystack.test.db'); // Path where the app creates the db
 
 describe('User Registration E2E Tests', () => {
   let server: FastifyInstance;

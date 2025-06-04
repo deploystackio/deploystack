@@ -1,13 +1,16 @@
 import * as fs from 'fs-extra';
 import * as path from 'path';
 import Database from 'better-sqlite3';
-import type { GlobalSettingsModule, GlobalSettingDefinition } from '../src/global-settings/types';
+import type { GlobalSettingsModule, GlobalSettingDefinition } from '../../src/global-settings/types';
 
 // Helper function to dynamically get all defined core setting keys
 async function getDefinedCoreSettingKeys(): Promise<string[]> {
   const definedKeys: string[] = [];
-  // Correct path from 'services/backend/tests/' to 'services/backend/src/global-settings/'
-  const globalSettingsDir = path.join(__dirname, '..', 'src', 'global-settings');
+  // __dirname is services/backend/tests/e2e
+  // '..' -> services/backend/tests
+  // '..' -> services/backend
+  // then 'src/global-settings'
+  const globalSettingsDir = path.join(__dirname, '..', '..', 'src', 'global-settings');
   
   try {
     const files = fs.readdirSync(globalSettingsDir);
@@ -54,7 +57,9 @@ async function getDefinedCoreSettingKeys(): Promise<string[]> {
 }
 
 describe('Global Settings Initialization Check', () => {
-  const dbPath = path.join(__dirname, '..', 'persistent_data', 'database', 'deploystack.db');
+  // __dirname is services/backend/tests/e2e
+  const APP_BACKEND_ROOT = path.join(__dirname, '..', '..'); // Resolves to services/backend/
+  const dbPath = path.join(APP_BACKEND_ROOT, 'database', 'deploystack.test.db'); // Correct path
   let db: Database.Database;
 
   beforeAll(() => {
