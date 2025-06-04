@@ -5,10 +5,12 @@ class CustomSequencer extends Sequencer {
     // Define the order we want tests to run
     const testOrder = [
       '1-setup.e2e.test.ts',
-      '2-user-registration.e2e.test.ts', 
+      '2-user-registration.e2e.test.ts',
       '3-email-login.e2e.test.ts',
       '4-global-settings-check.e2e.test.ts',
-      '5-global-settings-api-access.e2e.test.ts'
+      '5-global-settings-api-access.e2e.test.ts',
+      '6-global-settings-helpers.e2e.test.ts',
+      '7-global-enable-login.e2e.test.ts'
     ];
 
     return tests.sort((testA, testB) => {
