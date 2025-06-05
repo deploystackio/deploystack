@@ -5,8 +5,8 @@ import * as path from 'path';
 import { getTestContext, updateTestContext } from './testContext';
 
 // __dirname is services/backend/tests/e2e
-const APP_BACKEND_ROOT = path.join(__dirname, '..', '..'); // Resolves to services/backend/
-const DB_FILE_PATH = path.join(APP_BACKEND_ROOT, 'database', 'deploystack.test.db'); // Path where the app creates the db
+const TEST_DATA_DIR = path.join(__dirname, 'test-data'); // Resolves to services/backend/tests/e2e/test-data
+const DB_FILE_PATH = path.join(TEST_DATA_DIR, 'deploystack.test.db'); // Path where the app creates the test db
 
 describe('User Registration E2E Tests', () => {
   let server: FastifyInstance;

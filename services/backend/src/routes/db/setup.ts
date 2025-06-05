@@ -30,8 +30,9 @@ async function setupDbHandler(
     // Determine DB path based on environment
     const isTestEnv = process.env.NODE_ENV === 'test';
     const sqliteDbFileName = isTestEnv ? 'deploystack.test.db' : 'deploystack.db';
-    // dbPath should be relative to services/backend, and the actual db file is usually in a 'database' subfolder
-    const sqliteDbPath = `database/${sqliteDbFileName}`; 
+    // dbPath should be relative to services/backend
+    // For tests, use the test-data directory; for production, use the database directory
+    const sqliteDbPath = isTestEnv ? `tests/e2e/test-data/${sqliteDbFileName}` : `database/${sqliteDbFileName}`;
 
     if (clientRequestBody.type === DatabaseType.SQLite) {
       internalConfigObject = { type: DatabaseType.SQLite, dbPath: sqliteDbPath };

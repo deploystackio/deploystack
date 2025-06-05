@@ -59,7 +59,7 @@ async function getDefinedCoreSettingKeys(): Promise<string[]> {
 describe('Global Settings Initialization Check', () => {
   // __dirname is services/backend/tests/e2e
   const APP_BACKEND_ROOT = path.join(__dirname, '..', '..'); // Resolves to services/backend/
-  const dbPath = path.join(APP_BACKEND_ROOT, 'database', 'deploystack.test.db'); // Correct path
+  const dbPath = path.join(__dirname, 'test-data', 'deploystack.test.db'); // Correct path for test data
   let db: Database.Database;
 
   beforeAll(() => {

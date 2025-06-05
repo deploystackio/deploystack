@@ -6,7 +6,7 @@ import { getTestContext } from './testContext';
 
 // __dirname is services/backend/tests/e2e
 const APP_BACKEND_ROOT = path.join(__dirname, '..', '..'); // Resolves to services/backend/
-const DB_FILE_PATH = path.join(APP_BACKEND_ROOT, 'database', 'deploystack.test.db'); // Path where the app creates the db
+const DB_FILE_PATH = path.join(__dirname, 'test-data', 'deploystack.test.db'); // Path where the app creates the test db
 
 describe('Global Settings Access Control E2E Tests', () => {
   let server: FastifyInstance;

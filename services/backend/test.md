@@ -54,9 +54,9 @@ npm run test:backend
 This command will:
 
 1. Trigger Jest to find and execute all `*.e2e.test.ts` files within the `services/backend/tests/` directory.
-2. Execute a global setup script (`services/backend/tests/globalSetup.ts`) before any tests run. This script:
+2. Execute a global setup script (`services/backend/tests/e2e/globalSetup.ts`) before any tests run. This script:
    - Sets necessary environment variables for testing (e.g., `NODE_ENV=test`, a specific test port, a test encryption secret).
-   - Clears any existing test database files (`persistent_data/database/deploystack.db` and `persistent_data/db.selection.json`) to ensure a clean state.
+   - Clears any existing test database files from `tests/e2e/test-data/` and `persistent_data/` directories to ensure a clean state.
    - Programmatically starts the backend server on a dedicated test port.
 3. Run the tests.
 4. Execute a global teardown script (`services/backend/tests/globalTeardown.ts`) after all tests complete. This script stops the backend server.
@@ -109,7 +109,7 @@ When adding new E2E tests:
   - Ensures the test database file does not exist before setup.
   - Calls `POST /api/db/setup` with `{"type": "sqlite"}`.
   - Verifies the API response indicates successful setup initiation.
-  - Checks that the SQLite database file (`persistent_data/database/deploystack.db`) is created.
+  - Checks that the SQLite database file is created in the test data directory (`tests/e2e/test-data/deploystack.test.db`).
   - Calls `GET /api/db/status` and verifies the response shows `configured: true`, `initialized: true`, and `dialect: "sqlite"`.
   - Validates global settings initialization without errors.
   - Confirms all migrations are applied successfully.

@@ -24,20 +24,19 @@ export default async function globalSetup() {
     await fs.ensureDir(PERSISTENT_DATA_PATH); // Ensure persistent_data directory itself exists
     console.log(`[TEST_SETUP_DEBUG] Ensured directory exists: ${PERSISTENT_DATA_PATH}`);
 
-    // Define path to the actual database file and its directory
-    const APP_BACKEND_ROOT = path.join(__dirname, '..', '..'); // services/backend/
-    const ACTUAL_DB_DIR = path.join(APP_BACKEND_ROOT, 'database');
-    const ACTUAL_DB_FILE = path.join(ACTUAL_DB_DIR, 'deploystack.test.db');
+    // Define path to the test database file and its directory
+    const TEST_DATA_DIR = path.join(__dirname, 'test-data'); // services/backend/tests/e2e/test-data
+    const TEST_DB_FILE = path.join(TEST_DATA_DIR, 'deploystack.test.db');
 
-    // Clean up the actual database file if it exists from a previous run
-    if (await fs.pathExists(ACTUAL_DB_FILE)) {
-      await fs.remove(ACTUAL_DB_FILE);
-      console.log(`[TEST_SETUP_DEBUG] Removed actual database file: ${ACTUAL_DB_FILE}`);
+    // Clean up the test database file if it exists from a previous run
+    if (await fs.pathExists(TEST_DB_FILE)) {
+      await fs.remove(TEST_DB_FILE);
+      console.log(`[TEST_SETUP_DEBUG] Removed test database file: ${TEST_DB_FILE}`);
     }
     
-    // Ensure the actual database directory exists
-    await fs.ensureDir(ACTUAL_DB_DIR);
-    console.log(`[TEST_SETUP_DEBUG] Ensured actual database directory exists: ${ACTUAL_DB_DIR}`);
+    // Ensure the test data directory exists
+    await fs.ensureDir(TEST_DATA_DIR);
+    console.log(`[TEST_SETUP_DEBUG] Ensured test data directory exists: ${TEST_DATA_DIR}`);
 
     // IMPORTANT: The /api/db/setup endpoint, called by the first test,
     // will be responsible for creating db.selection.test.json and the actual
