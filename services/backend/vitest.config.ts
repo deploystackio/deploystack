@@ -15,6 +15,7 @@ export default defineConfig({
         'src/**/*.spec.ts',
         'src/test/**',
         'src/types/**',
+        'src/plugins/example-plugin/**', // Exclude example plugin
         'src/index.ts', // Entry point
         'src/server.ts', // Server setup
       ],
