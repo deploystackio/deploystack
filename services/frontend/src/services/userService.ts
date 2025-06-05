@@ -70,16 +70,16 @@ export class UserService {
 
     // Make the API call
     this.pendingRequest = this.fetchCurrentUser();
-    
+
     try {
       const result = await this.pendingRequest;
-      
+
       // Cache the result
       this.cache = {
         data: result,
         timestamp: Date.now()
       };
-      
+
       return result;
     } finally {
       // Clear pending request
@@ -102,11 +102,13 @@ export class UserService {
       });
 
       if (response.ok) {
-        const data = await response.json();
-        if (data.success && data.data) {
-          return data.data as User;
+        const userData = await response.json();
+        // The /api/users/me endpoint returns the user object directly
+        // Ensure it's not an error structure like { success: false, error: '...' }
+        if (userData && typeof userData.id === 'string') {
+          return userData as User;
         }
-        // If success is false or data is missing, treat as not logged in for this check
+        // If it's not a valid user object (e.g., an error response still got 200 OK somehow, or empty)
         return null;
       }
 
@@ -128,6 +130,7 @@ export class UserService {
   /**
    * Login method - clears cache to ensure fresh user data after login
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   static async login(email: string, password: string): Promise<any> {
     try {
       const apiUrl = this.getApiUrl();

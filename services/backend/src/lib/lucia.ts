@@ -17,6 +17,18 @@ type AuthSessionTable = any;
 let luciaInstance: Lucia | null = null;
 let githubAuthInstance: GitHub | null = null;
 
+// Helper function to check if we're in test mode
+function isTestMode(): boolean {
+  return process.env.NODE_ENV === 'test';
+}
+
+// Helper function for conditional logging
+function logInfo(message: string): void {
+  if (!isTestMode()) {
+    console.log(message);
+  }
+}
+
 // Lazy initialization function for Lucia
 function initializeLucia(): Lucia {
   const { dialect, configured, initialized } = getDbStatus();
@@ -48,7 +60,7 @@ function initializeLucia(): Lucia {
     authUserTable
   );
   
-  console.log('[INFO] Lucia SQLite adapter created with existing database instance');
+  logInfo('[INFO] Lucia SQLite adapter created with existing database instance');
 
   return new Lucia(adapter, {
     sessionCookie: {

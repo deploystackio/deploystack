@@ -69,15 +69,19 @@ const routes = [
   },
   {
     path: '/admin',
-    meta: { 
+    meta: {
       requiresSetup: true,
       requiresRole: 'global_admin'
     },
     children: [
       {
         path: 'settings',
+        redirect: '/admin/settings/global'
+      },
+      {
+        path: 'settings/:groupId',
         name: 'AdminSettings',
-        component: () => import('../views/GlobalSettings.vue'),
+        component: () => import('../views/admin/GlobalSettings.vue'),
       },
       {
         path: 'users',
@@ -101,19 +105,38 @@ const router = createRouter({
 // Navigation guard to check database setup
 router.beforeEach(async (to, from, next) => {
   const databaseStore = useDatabaseStore()
-  
+
   // Define public routes that don't need user authentication checks
   const publicRoutes = ['Setup', 'Login', 'Register']
   const isPublicRoute = publicRoutes.includes(to.name as string)
-  
+
+  // Attempt to get current user status early
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let currentUser: any = null;
+  try {
+    // Avoid force refreshing cache here unless necessary, to use existing session info
+    currentUser = await UserService.getCurrentUser();
+  } catch (error) {
+    console.error('Failed to get current user in guard:', error);
+    // currentUser remains null, proceed as unauthenticated for safety
+  }
+
+  // If user is logged in and trying to access Login or Register, redirect to Dashboard
+  if (currentUser && (to.name === 'Login' || to.name === 'Register')) {
+    next('/dashboard');
+    return;
+  }
+
   // Skip setup check for the setup route itself
   if (to.name === 'Setup') {
     next()
     return
   }
 
-  // For public routes (Login/Register), only check database setup, skip user checks
+  // For public routes (Login/Register) that are NOT being accessed by an already logged-in user
   if (isPublicRoute) {
+    // This block is now for genuinely unauthenticated users accessing Login/Register
+    // or for the Setup page (though Setup is handled above, this keeps structure)
     // Check if route requires setup
     if (to.meta.requiresSetup !== false) {
       try {
@@ -132,27 +155,20 @@ router.beforeEach(async (to, from, next) => {
         return
       }
     }
-    
-    // For public routes, proceed without user checks
+
+    // For public routes, proceed without further user checks if not already redirected
     next()
     return
   }
 
-  // For protected routes, check user authentication (single call)
-  let currentUser: any = null
-  try {
-    currentUser = await UserService.getCurrentUser()
-  } catch (error) {
-    console.error('Failed to get current user:', error)
+  // For protected routes (user is not null or trying to access login/register when logged in)
+  // If not logged in and trying to access a protected route, redirect to login
+  if (!currentUser && !isPublicRoute && to.name !== 'Setup') {
+    next('/login');
+    return;
   }
 
-  // If user is logged in and trying to access Login or Register, redirect to Dashboard
-  if (currentUser && (to.name === 'Login' || to.name === 'Register')) {
-    next('/dashboard')
-    return
-  }
-
-  // Check if route requires setup
+  // Check if route requires setup (for protected routes, currentUser should exist here)
   if (to.meta.requiresSetup !== false) {
     try {
       // Check database status (use cache for performance)
@@ -173,8 +189,9 @@ router.beforeEach(async (to, from, next) => {
 
   // Check role requirements (reuse the currentUser from above)
   if (to.meta.requiresRole) {
+    // currentUser should be valid here due to the redirect above if null
     if (!currentUser || currentUser.role_id !== to.meta.requiresRole) {
-      next({ name: 'NotFound' })
+      next({ name: 'NotFound' }) // Or redirect to an 'Unauthorized' page
       return
     }
   }

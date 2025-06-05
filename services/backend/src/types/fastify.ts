@@ -19,6 +19,10 @@ declare module 'fastify' {
     // For now, we remove it to enforce usage of the new property.
     
     pluginManager: PluginManager
+    
+    // Methods for re-initializing database services after setup
+    reinitializeDatabaseServices: () => Promise<boolean>
+    reinitializePluginsWithDatabase: () => Promise<void>
   }
   
   interface FastifyReply {

@@ -1,6 +1,9 @@
+export type GlobalSettingType = 'string' | 'number' | 'boolean';
+
 export interface GlobalSettingDefinition {
   key: string;
-  defaultValue: string;
+  defaultValue: string | number | boolean;
+  type: GlobalSettingType;
   description: string;
   encrypted: boolean;
   required: boolean;
@@ -73,6 +76,13 @@ export interface GitHubOAuthConfig {
   enabled: boolean;
   callbackUrl: string;
   scope: string;
+}
+
+export interface GlobalConfig {
+  pageUrl: string;
+  sendMail: boolean;
+  enableLogin: boolean;
+  enableEmailRegistration: boolean;
 }
 
 export interface InitializationResult {

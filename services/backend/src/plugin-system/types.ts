@@ -4,13 +4,19 @@ import { type FastifyInstance } from 'fastify';
 import { type AnyDatabase } from '../db'; // Import AnyDatabase
 
 /**
+ * Type for global setting values
+ */
+export type GlobalSettingType = 'string' | 'number' | 'boolean';
+
+/**
  * Definition for a global setting that can be provided by a plugin.
  * Mirrors parts of GlobalSettingDefinition from global-settings/types.ts
  * but is defined here to avoid circular dependencies.
  */
 export interface GlobalSettingDefinitionForPlugin {
   key: string;
-  defaultValue: string;
+  defaultValue: string | number | boolean;
+  type: GlobalSettingType;
   description: string;
   encrypted: boolean;
   required?: boolean; // Optional: if the setting must have a value
@@ -95,6 +101,14 @@ export interface Plugin {
    * @param db The database instance (can be null if not configured/initialized)
    */
   initialize: (app: FastifyInstance, db: AnyDatabase | null) => Promise<void>;
+  
+  /**
+   * Re-initialize the plugin with database access
+   * Called after database setup to give plugins access to the database
+   * @param app The Fastify instance
+   * @param db The database instance (guaranteed to be non-null)
+   */
+  reinitialize?: (app: FastifyInstance, db: AnyDatabase) => Promise<void>;
   
   /**
    * Shutdown the plugin gracefully

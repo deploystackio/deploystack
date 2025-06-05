@@ -54,8 +54,18 @@ class ExamplePlugin implements Plugin {
     settings: [
       {
         key: 'examplePlugin.config.featureEnabled',
-        defaultValue: 'false',
+        defaultValue: false,
+        type: 'boolean',
         description: 'Enable or disable a specific feature in the example plugin.',
+        encrypted: false,
+        required: false,
+        groupId: 'example_plugin_settings',
+      },
+      {
+        key: 'examplePlugin.config.maxRetries',
+        defaultValue: 3,
+        type: 'number',
+        description: 'Maximum number of retries for API calls.',
         encrypted: false,
         required: false,
         groupId: 'example_plugin_settings',
@@ -63,6 +73,7 @@ class ExamplePlugin implements Plugin {
       {
         key: 'examplePlugin.secret.apiKey',
         defaultValue: '',
+        type: 'string',
         description: 'API Key for an external service used by the example plugin.',
         encrypted: true,
         required: false,
@@ -71,6 +82,7 @@ class ExamplePlugin implements Plugin {
       { // Example of a setting not in a custom group (will go to default or no group)
         key: 'examplePlugin.general.logLevel',
         defaultValue: 'info',
+        type: 'string',
         description: 'Logging level for the example plugin.',
         encrypted: false,
         required: false,

@@ -11,8 +11,8 @@ export interface Team {
 }
 
 export interface TeamResponse {
-  success: boolean
-  data: Team[]
+  success: boolean;
+  teams: Team[]; // Changed 'data' to 'teams'
 }
 
 interface TeamCacheEntry {
@@ -71,16 +71,16 @@ export class TeamService {
 
     // Make the API call
     this.pendingUserTeamsRequest = this.fetchUserTeams();
-    
+
     try {
       const result = await this.pendingUserTeamsRequest;
-      
+
       // Cache the result
       this.userTeamsCache = {
         data: result,
         timestamp: Date.now()
       };
-      
+
       return result;
     } finally {
       // Clear pending request
@@ -112,8 +112,8 @@ export class TeamService {
 
       const data: TeamResponse = await response.json()
 
-      if (data.success && Array.isArray(data.data)) {
-        return data.data
+      if (data.success && Array.isArray(data.teams)) { // Changed 'data.data' to 'data.teams'
+        return data.teams // Changed 'data.data' to 'data.teams'
       } else {
         throw new Error('Invalid response format')
       }
@@ -129,7 +129,7 @@ export class TeamService {
   static async createTeam(teamData: Partial<Team>): Promise<Team> {
     try {
       const apiUrl = this.getApiUrl();
-      
+
       const response = await fetch(`${apiUrl}/api/teams`, {
         method: 'POST',
         headers: {
@@ -144,10 +144,10 @@ export class TeamService {
       }
 
       const data = await response.json();
-      
+
       // Clear cache on successful team creation
       this.clearUserTeamsCache();
-      
+
       return data.data;
     } catch (error) {
       console.error('Error creating team:', error);
@@ -161,7 +161,7 @@ export class TeamService {
   static async updateTeam(teamId: string, teamData: Partial<Team>): Promise<Team> {
     try {
       const apiUrl = this.getApiUrl();
-      
+
       const response = await fetch(`${apiUrl}/api/teams/${teamId}`, {
         method: 'PUT',
         headers: {
@@ -176,10 +176,10 @@ export class TeamService {
       }
 
       const data = await response.json();
-      
+
       // Clear cache on successful team update
       this.clearUserTeamsCache();
-      
+
       return data.data;
     } catch (error) {
       console.error('Error updating team:', error);
@@ -193,7 +193,7 @@ export class TeamService {
   static async deleteTeam(teamId: string): Promise<void> {
     try {
       const apiUrl = this.getApiUrl();
-      
+
       const response = await fetch(`${apiUrl}/api/teams/${teamId}`, {
         method: 'DELETE',
         headers: {
@@ -205,7 +205,7 @@ export class TeamService {
       if (!response.ok) {
         throw new Error(`Failed to delete team: ${response.status}`);
       }
-      
+
       // Clear cache on successful team deletion
       this.clearUserTeamsCache();
     } catch (error) {

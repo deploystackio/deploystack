@@ -47,7 +47,31 @@ The request body should be:
 
 Replace the `connectionString` with your actual PostgreSQL connection URI.
 
-**Important:** After the initial database setup via this API, you **must restart the backend server** for the changes to take full effect and for the application to connect to the newly configured database.
+**Note:** The database setup is now complete in a single API call. After successful setup, all database-dependent services (global settings, plugins, etc.) are automatically initialized and ready to use immediately. No server restart is required.
+
+#### API Response
+
+The setup endpoint returns a JSON response indicating the success status and whether a restart is required:
+
+**Successful Setup (No Restart Required):**
+
+```json
+{
+  "message": "Database setup successful. All services have been initialized and are ready to use.",
+  "restart_required": false
+}
+```
+
+**Successful Setup (Restart Required - Fallback):**
+
+```json
+{
+  "message": "Database setup successful, but some services may require a server restart to function properly.",
+  "restart_required": true
+}
+```
+
+In most cases, the setup will complete successfully without requiring a restart. The `restart_required: true` response is a fallback for edge cases where the automatic re-initialization fails.
 
 ### Database Configuration File
 
@@ -181,6 +205,19 @@ You can inspect the SQLite database directly using various tools:
 
 ## Troubleshooting
 
+### Database Setup Issues
+
+- **Setup fails with re-initialization error**: If the setup endpoint returns `restart_required: true`, you can manually restart the server to complete the setup process
+- **Database already configured**: If you get a 409 error, the database has already been set up. Use the status endpoint to check the current configuration
+- **Services not working after setup**: Check the server logs for any initialization errors. In rare cases, a manual restart may be needed
+
+### Migration Issues
+
 - If you get a "table already exists" error, check if you've already applied the migration
 - For complex schema changes, you may need to create multiple migrations
 - To reset the database, delete the `services/backend/persistent_data/database/deploystack.db` file and restart the server
+
+### Plugin Issues
+
+- **Plugins not working after setup**: Plugins with database extensions should automatically receive database access after setup. Check server logs for plugin re-initialization messages
+- **Plugin database tables missing**: Ensure plugins are properly loaded before database setup, or restart the server if tables are missing

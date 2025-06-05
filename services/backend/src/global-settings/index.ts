@@ -1,6 +1,8 @@
 import fs from 'fs';
 import path from 'path';
 import { GlobalSettingsService } from '../services/globalSettingsService';
+import { getDb, getSchema } from '../db';
+import { eq } from 'drizzle-orm';
 import type { 
   GlobalSettingsModule, 
   GlobalSettingDefinition, 
@@ -8,6 +10,7 @@ import type {
   ValidationResult, 
   SmtpConfig, 
   GitHubOAuthConfig, 
+  GlobalConfig,
   InitializationResult 
 } from './types';
 
@@ -117,10 +120,11 @@ export class GlobalSettingsInitService {
         const exists = await GlobalSettingsService.exists(setting.key);
         
         if (!exists) {
-          await GlobalSettingsService.set(setting.key, setting.defaultValue, {
+          const groupIdForThisSetting = this.getGroupIdForSetting(setting.key);
+          await GlobalSettingsService.setTyped(setting.key, setting.defaultValue, setting.type, {
             description: setting.description,
             encrypted: setting.encrypted,
-            group_id: undefined // Temporarily set to undefined to avoid foreign key constraint
+            group_id: groupIdForThisSetting === 'unknown' ? undefined : groupIdForThisSetting // Pass correct group_id
           });
           
           result.created++;
@@ -177,13 +181,18 @@ export class GlobalSettingsInitService {
    */
   private static async groupExists(groupId: string): Promise<boolean> {
     try {
-      const { getDb, getSchema } = await import('../db');
-      const { eq } = await import('drizzle-orm');
       const db = getDb();
       const schema = getSchema();
+      
+      // Check if database is available
+      if (!db) {
+        console.warn(`Database not available during group existence check for: ${groupId}`);
+        return false;
+      }
+      
       const globalSettingGroupsTable = schema.globalSettingGroups;
-
       if (!globalSettingGroupsTable) {
+        console.warn(`GlobalSettingGroups table not found in schema for group: ${groupId}`);
         return false;
       }
 
@@ -196,7 +205,7 @@ export class GlobalSettingsInitService {
 
       return results.length > 0;
     } catch (error) {
-      console.error(`Error checking if group exists: ${groupId}`, error);
+      console.warn(`Error checking if group exists: ${groupId}`, error instanceof Error ? error.message : 'Unknown error');
       return false;
     }
   }
@@ -206,11 +215,15 @@ export class GlobalSettingsInitService {
    */
   private static async createGroup(group: GlobalSettingGroup): Promise<void> {
     try {
-      const { getDb, getSchema } = await import('../db');
       const db = getDb();
       const schema = getSchema();
+      
+      // Check if database is available
+      if (!db) {
+        throw new Error(`Database not available during group creation for: ${group.id}`);
+      }
+      
       const globalSettingGroupsTable = schema.globalSettingGroups;
-
       if (!globalSettingGroupsTable) {
         throw new Error('GlobalSettingGroups table not found in schema');
       }
@@ -385,7 +398,88 @@ export class GlobalSettingsInitService {
     const config = await this.getGitHubOAuthConfiguration();
     return config !== null;
   }
+
+  /**
+   * Get complete Global configuration
+   */
+  static async getGlobalConfiguration(): Promise<GlobalConfig | null> {
+    try {
+      const settings = await Promise.all([
+        GlobalSettingsService.get('global.page_url'),
+        GlobalSettingsService.get('global.send_mail'),
+        GlobalSettingsService.get('global.enable_login'),
+        GlobalSettingsService.get('global.enable_email_registration')
+      ]);
+
+      const [pageUrl, sendMail, enableLogin, enableEmailRegistration] = settings;
+
+      return {
+        pageUrl: pageUrl?.value || 'http://localhost:5173',
+        sendMail: sendMail?.value === 'true',
+        enableLogin: enableLogin?.value === 'true',
+        enableEmailRegistration: enableEmailRegistration?.value === 'true'
+      };
+    } catch (error) {
+      console.error('Failed to get Global configuration:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Check if email sending is enabled
+   */
+  static async isEmailSendingEnabled(): Promise<boolean> {
+    try {
+      const setting = await GlobalSettingsService.get('global.send_mail');
+      return setting?.value === 'true';
+    } catch (error) {
+      console.error('Failed to check if email sending is enabled:', error);
+      return false; // Default to disabled if there's an error
+    }
+  }
+
+  /**
+   * Get the application page URL
+   */
+  static async getPageUrl(): Promise<string> {
+    try {
+      const setting = await GlobalSettingsService.get('global.page_url');
+      return setting?.value || 'http://localhost:5173';
+    } catch (error) {
+      console.error('Failed to get page URL:', error);
+      return 'http://localhost:5173'; // Default fallback
+    }
+  }
+
+  /**
+   * Check if login is enabled (all types: email, GitHub, etc.)
+   */
+  static async isLoginEnabled(): Promise<boolean> {
+    try {
+      const setting = await GlobalSettingsService.get('global.enable_login');
+      return setting?.value === 'true';
+    } catch (error) {
+      console.error('Failed to check if login is enabled:', error);
+      return true; // Default to enabled if there's an error
+    }
+  }
+
+  /**
+   * Check if email registration is enabled
+   */
+  static async isEmailRegistrationEnabled(): Promise<boolean> {
+    try {
+      const setting = await GlobalSettingsService.get('global.enable_email_registration');
+      return setting?.value === 'true';
+    } catch (error) {
+      console.error('Failed to check if email registration is enabled:', error);
+      return true; // Default to enabled if there's an error
+    }
+  }
 }
+
+// Export the helper class
+export { GlobalSettings } from './helpers';
 
 // Export types for external use
 export type {
@@ -394,5 +488,6 @@ export type {
   ValidationResult,
   SmtpConfig,
   GitHubOAuthConfig,
+  GlobalConfig,
   InitializationResult
 };

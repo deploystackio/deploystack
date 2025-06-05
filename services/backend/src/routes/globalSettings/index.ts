@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { ZodError } from 'zod';
 import { GlobalSettingsService } from '../../services/globalSettingsService';
+import { validateEncryption } from '../../utils/encryption'; // Static import
 import { requirePermission } from '../../middleware/roleMiddleware';
 import {
   CreateGlobalSettingSchema,
@@ -14,6 +15,25 @@ import {
 } from './schemas';
 
 export default async function globalSettingsRoute(fastify: FastifyInstance) {
+  // GET /api/settings/groups - List all groups with their settings (admin only)
+  fastify.get('/api/settings/groups', {
+    preHandler: requirePermission('settings.view'),
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const groupsWithSettings = await GlobalSettingsService.getAllGroupsWithSettings();
+      return reply.status(200).send({
+        success: true,
+        data: groupsWithSettings,
+      });
+    } catch (error) {
+      fastify.log.error(error, 'Error fetching all global setting groups with settings');
+      return reply.status(500).send({
+        success: false,
+        error: 'Failed to fetch all global setting groups with settings',
+      });
+    }
+  });
+
   // GET /api/settings - List all global settings (admin only)
   fastify.get('/api/settings', {
     preHandler: requirePermission('settings.view'),
@@ -77,9 +97,10 @@ export default async function globalSettingsRoute(fastify: FastifyInstance) {
         });
       }
 
-      const setting = await GlobalSettingsService.set(
+      const setting = await GlobalSettingsService.setTyped(
         validatedData.key,
         validatedData.value,
+        validatedData.type,
         {
           description: validatedData.description,
           encrypted: validatedData.encrypted,
@@ -259,9 +280,10 @@ export default async function globalSettingsRoute(fastify: FastifyInstance) {
 
       for (const settingData of settings) {
         try {
-          const setting = await GlobalSettingsService.set(
+          const setting = await GlobalSettingsService.setTyped(
             settingData.key,
             settingData.value,
+            settingData.type,
             {
               description: settingData.description,
               encrypted: settingData.encrypted,
@@ -310,8 +332,8 @@ export default async function globalSettingsRoute(fastify: FastifyInstance) {
     preHandler: requirePermission('settings.view'),
   }, async (request, reply) => {
     try {
-      const { validateEncryption } = await import('../../utils/encryption');
-      const encryptionWorking = validateEncryption();
+      // const { validateEncryption } = await import('@src/utils/encryption'); // Removed dynamic import
+      const encryptionWorking = validateEncryption(); // Use statically imported function
       
       return reply.status(200).send({
         success: true,

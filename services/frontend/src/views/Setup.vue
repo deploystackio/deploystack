@@ -11,7 +11,7 @@
 
         <CardContent>
           <!-- Setup success message -->
-          <div v-if="setupSuccessMessageVisible" class="text-center">
+          <div v-if="setupSuccessMessageVisible">
             <Alert class="mb-4" variant="default">
               <CheckCircle class="h-4 w-4" />
               <AlertTitle>{{ $t('setup.success.title') }}</AlertTitle>
@@ -20,13 +20,13 @@
               </AlertDescription>
             </Alert>
             <!-- Optionally, add a button to go to login or elsewhere -->
-            <Button @click="goToLogin" class="w-full mt-4">
+            <Button @click="goToRegister" class="w-full mt-4">
               {{ $t('setup.success.buttonAcknowledge') }}
             </Button>
           </div>
 
           <!-- Already configured message -->
-          <div v-else-if="databaseStore.canProceedToApp" class="text-center">
+          <div v-else-if="databaseStore.canProceedToApp">
             <Alert class="mb-4">
               <CheckCircle class="h-4 w-4" />
               <AlertTitle>{{ $t('setup.alreadyConfigured.title') }}</AlertTitle>
@@ -35,7 +35,7 @@
               </AlertDescription>
             </Alert>
 
-            <Button @click="goToLogin" class="w-full">
+            <Button @click="goToRegister" class="w-full">
               {{ $t('setup.alreadyConfigured.button') }}
             </Button>
           </div>
@@ -159,8 +159,8 @@ const onSubmit = form.handleSubmit(async (values) => {
   }
 });
 
-function goToLogin() {
-  router.push('/login');
+function goToRegister() {
+  router.push('/register');
 }
 
 // Function to get translated error message

@@ -10,10 +10,18 @@ const TAG_LENGTH = 16; // 128 bits
  * Uses scrypt for key derivation with a fixed salt
  */
 function getEncryptionKey(): Buffer {
-  const secret = process.env.DEPLOYSTACK_ENCRYPTION_SECRET || 'fallback-secret-key-change-in-production-immediately';
+  const secretFromEnv = process.env.DEPLOYSTACK_ENCRYPTION_SECRET;
+  if (process.env.NODE_ENV === 'test') {
+    console.log(`[TEST_ENV_ENCRYPTION_DEBUG] getEncryptionKey() using DEPLOYSTACK_ENCRYPTION_SECRET: "${secretFromEnv}"`);
+  }
+  const secret = secretFromEnv || 'fallback-secret-key-change-in-production-immediately';
   // Use a fixed salt for consistent key derivation
   const salt = 'deploystack-global-settings-salt';
-  return crypto.scryptSync(secret, salt, KEY_LENGTH);
+  const derivedKey = crypto.scryptSync(secret, salt, KEY_LENGTH);
+  // if (process.env.NODE_ENV === 'test') {
+  //   console.log(`[TEST_ENV_ENCRYPTION_DEBUG] Derived key (first 4 bytes hex): ${derivedKey.subarray(0,4).toString('hex')}`);
+  // }
+  return derivedKey;
 }
 
 /**

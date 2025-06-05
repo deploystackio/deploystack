@@ -1,0 +1,59 @@
+//- @description Welcome email template for new users
+//- @variables userName, userEmail, loginUrl, supportEmail
+extends layouts/base.pug
+
+block content
+  h1 Welcome to DeployStack, #{userName}!
+  
+  p
+    | We're excited to have you join our community. Your account has been successfully created and you're ready to start deploying your applications with ease.
+  
+  p
+    strong Your account details:
+    br
+    | Email: #{userEmail}
+    br
+    | Registration Date: #{new Date().toLocaleDateString()}
+  
+  .text-center
+    a.button(href=loginUrl) Get Started - Login to Your Account
+  
+  h2 What's Next?
+  
+  p Here are some things you can do to get started:
+  
+  ul
+    li
+      strong Set up your first project
+      | - Create your first deployment stack and configure your environment
+    li
+      strong Explore the dashboard
+      | - Familiarize yourself with the interface and available features
+    li
+      strong Configure integrations
+      | - Connect your favorite tools and services to streamline your workflow
+    li
+      strong Join our community
+      | - Connect with other developers and share your experiences
+  
+  h2 Need Help?
+  
+  p
+    | If you have any questions or need assistance getting started, our support team is here to help. You can:
+  
+  ul
+    li Check out our documentation and tutorials
+    li Browse our FAQ section
+    if supportEmail
+      li
+        | Contact our support team at 
+        a(href=`mailto:${supportEmail}`)= supportEmail
+    li Join our community forums for tips and discussions
+  
+  p
+    | Thank you for choosing DeployStack. We look forward to helping you streamline your deployment process!
+  
+  p.text-muted
+    | Best regards,
+    br
+    | The DeployStack Team

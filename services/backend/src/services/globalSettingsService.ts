@@ -5,9 +5,10 @@ import { encrypt, decrypt } from '../utils/encryption';
 export interface GlobalSetting {
   key: string;
   value: string;
-  description?: string;
+  type: 'string' | 'number' | 'boolean';
+  description: string | null;
   is_encrypted: boolean;
-  group_id?: string;
+  group_id: string | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -22,16 +23,22 @@ export interface GlobalSettingGroup {
   updated_at: Date;
 }
 
+export interface GlobalSettingGroupWithSettings extends GlobalSettingGroup {
+  settings: GlobalSetting[];
+}
+
 export interface CreateGlobalSettingInput {
   key: string;
-  value: string;
+  value: string | number | boolean;
+  type: 'string' | 'number' | 'boolean';
   description?: string;
   encrypted?: boolean;
   group_id?: string;
 }
 
 export interface UpdateGlobalSettingInput {
-  value?: string;
+  value?: string | number | boolean;
+  type?: 'string' | 'number' | 'boolean';
   description?: string;
   encrypted?: boolean;
   group_id?: string;
@@ -65,6 +72,59 @@ export class GlobalSettingsService {
   }
 
   /**
+   * Convert a typed value to string for database storage
+   */
+  private static convertValueToString(value: string | number | boolean): string {
+    return String(value);
+  }
+
+  /**
+   * Convert a string value from database to its proper type
+   */
+  private static convertValueToType(value: string, type: 'string' | 'number' | 'boolean'): string | number | boolean {
+    switch (type) {
+      case 'number':
+        const num = Number(value);
+        if (isNaN(num)) {
+          throw new Error(`Invalid number value: ${value}`);
+        }
+        return num;
+      case 'boolean':
+        if (value === 'true') return true;
+        if (value === 'false') return false;
+        throw new Error(`Invalid boolean value: ${value}. Must be 'true' or 'false'`);
+      case 'string':
+      default:
+        return value;
+    }
+  }
+
+  /**
+   * Validate that a value matches its declared type
+   */
+  private static validateValueType(value: string | number | boolean, type: 'string' | 'number' | 'boolean'): void {
+    switch (type) {
+      case 'string':
+        if (typeof value !== 'string') {
+          throw new Error(`Value must be a string, got ${typeof value}`);
+        }
+        break;
+      case 'number':
+        if (typeof value !== 'number' || isNaN(value)) {
+          throw new Error(`Value must be a number, got ${typeof value}`);
+        }
+        break;
+      case 'boolean':
+        if (typeof value !== 'boolean') {
+          throw new Error(`Value must be a boolean, got ${typeof value}`);
+        }
+        break;
+      default:
+        throw new Error(`Invalid type: ${type}`);
+    }
+  }
+
+  /**
    * Get a setting by key
    * Automatically decrypts encrypted values
    */
@@ -73,25 +133,19 @@ export class GlobalSettingsService {
     
     const db = getDb();
     const schema = getSchema();
-    const globalSettingsTable = schema.globalSettings;
-
-    if (!globalSettingsTable) {
-      throw new Error('GlobalSettings table not found in schema');
-    }
 
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const results = await (db as any)
+      const results = await db
         .select()
-        .from(globalSettingsTable)
-        .where(eq(globalSettingsTable.key, key))
+        .from(schema.globalSettings)
+        .where(eq(schema.globalSettings.key, key))
         .limit(1);
 
       if (results.length === 0) {
         return null;
       }
 
-      const setting = results[0];
+      const setting = results[0] as GlobalSetting;
       
       // Decrypt value if it's encrypted
       if (setting.is_encrypted && setting.value) {
@@ -115,21 +169,16 @@ export class GlobalSettingsService {
   static async getAll(): Promise<GlobalSetting[]> {
     const db = getDb();
     const schema = getSchema();
-    const globalSettingsTable = schema.globalSettings;
-
-    if (!globalSettingsTable) {
-      throw new Error('GlobalSettings table not found in schema');
-    }
 
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const results = await (db as any)
+      const results = await db
         .select()
-        .from(globalSettingsTable)
-        .orderBy(globalSettingsTable.key);
+        .from(schema.globalSettings)
+        .orderBy(schema.globalSettings.key);
 
       // Decrypt encrypted values
-      return results.map((setting: GlobalSetting) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return results.map((setting: any) => {
         if (setting.is_encrypted && setting.value) {
           try {
             setting.value = decrypt(setting.value);
@@ -139,7 +188,7 @@ export class GlobalSettingsService {
             setting.value = '[DECRYPTION_FAILED]';
           }
         }
-        return setting;
+        return setting as GlobalSetting;
       });
     } catch (error) {
       throw new Error(`Failed to get all settings: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -156,22 +205,17 @@ export class GlobalSettingsService {
 
     const db = getDb();
     const schema = getSchema();
-    const globalSettingsTable = schema.globalSettings;
-
-    if (!globalSettingsTable) {
-      throw new Error('GlobalSettings table not found in schema');
-    }
 
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const results = await (db as any)
+      const results = await db
         .select()
-        .from(globalSettingsTable)
-        .where(eq(globalSettingsTable.group_id, groupId))
-        .orderBy(globalSettingsTable.key);
+        .from(schema.globalSettings)
+        .where(eq(schema.globalSettings.group_id, groupId))
+        .orderBy(schema.globalSettings.key);
 
       // Decrypt encrypted values
-      return results.map((setting: GlobalSetting) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return results.map((setting: any) => {
         if (setting.is_encrypted && setting.value) {
           try {
             setting.value = decrypt(setting.value);
@@ -180,7 +224,7 @@ export class GlobalSettingsService {
             setting.value = '[DECRYPTION_FAILED]';
           }
         }
-        return setting;
+        return setting as GlobalSetting;
       });
     } catch (error) {
       throw new Error(`Failed to get settings for group '${groupId}': ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -188,36 +232,51 @@ export class GlobalSettingsService {
   }
 
   /**
-   * Create or update a setting
+   * Create or update a setting (legacy method for backward compatibility)
    */
   static async set(key: string, value: string, options: { description?: string; encrypted?: boolean; group_id?: string } = {}): Promise<GlobalSetting> {
+    return this.setTyped(key, value, 'string', options);
+  }
+
+  /**
+   * Create or update a setting with type support
+   */
+  static async setTyped(
+    key: string, 
+    value: string | number | boolean, 
+    type: 'string' | 'number' | 'boolean',
+    options: { description?: string; encrypted?: boolean; group_id?: string } = {}
+  ): Promise<GlobalSetting> {
     this.validateKey(key);
-    this.validateValue(value);
+    this.validateValueType(value, type);
 
     const { description, encrypted = false, group_id } = options;
-
     const db = getDb();
     const schema = getSchema();
-    const globalSettingsTable = schema.globalSettings;
-
-    if (!globalSettingsTable) {
-      throw new Error('GlobalSettings table not found in schema');
-    }
 
     try {
-      // Check if setting already exists
-      const existing = await this.get(key);
+      // Check if setting already exists (avoid recursion)
+      const existingResults = await db
+        .select()
+        .from(schema.globalSettings)
+        .where(eq(schema.globalSettings.key, key))
+        .limit(1);
+      const existing = existingResults.length > 0 ? existingResults[0] : null;
       const now = new Date();
 
+      // Convert value to string for storage
+      const stringValue = this.convertValueToString(value);
+      
       // Prepare the value (encrypt if needed)
-      let finalValue = value;
+      let finalValue = stringValue;
       if (encrypted) {
-        finalValue = encrypt(value);
+        finalValue = encrypt(stringValue);
       }
 
       const settingData = {
         key,
         value: finalValue,
+        type,
         description: description || null,
         is_encrypted: encrypted,
         group_id: group_id || null,
@@ -226,16 +285,14 @@ export class GlobalSettingsService {
 
       if (existing) {
         // Update existing setting
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await (db as any)
-          .update(globalSettingsTable)
+        await db
+          .update(schema.globalSettings)
           .set(settingData)
-          .where(eq(globalSettingsTable.key, key));
+          .where(eq(schema.globalSettings.key, key));
       } else {
         // Create new setting
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await (db as any)
-          .insert(globalSettingsTable)
+        await db
+          .insert(schema.globalSettings)
           .values({
             ...settingData,
             created_at: now,
@@ -266,14 +323,26 @@ export class GlobalSettingsService {
     }
 
     // Prepare update data
-    const updateData: Partial<GlobalSetting> = {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const updateData: any = {
       updated_at: new Date(),
     };
 
     if (updates.value !== undefined) {
-      this.validateValue(updates.value);
-      updateData.value = updates.encrypted ? encrypt(updates.value) : updates.value;
+      // Validate value type if type is provided
+      if (updates.type) {
+        this.validateValueType(updates.value, updates.type);
+      }
+      
+      // Convert value to string for storage
+      const stringValue = this.convertValueToString(updates.value);
+      updateData.value = updates.encrypted ? encrypt(stringValue) : stringValue;
       updateData.is_encrypted = updates.encrypted || false;
+      
+      // Update type if provided
+      if (updates.type) {
+        updateData.type = updates.type;
+      }
     }
 
     if (updates.description !== undefined) {
@@ -286,18 +355,12 @@ export class GlobalSettingsService {
 
     const db = getDb();
     const schema = getSchema();
-    const globalSettingsTable = schema.globalSettings;
-
-    if (!globalSettingsTable) {
-      throw new Error('GlobalSettings table not found in schema');
-    }
 
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (db as any)
-        .update(globalSettingsTable)
+      await db
+        .update(schema.globalSettings)
         .set(updateData)
-        .where(eq(globalSettingsTable.key, key));
+        .where(eq(schema.globalSettings.key, key));
 
       return await this.get(key);
     } catch (error) {
@@ -310,20 +373,13 @@ export class GlobalSettingsService {
    */
   static async delete(key: string): Promise<boolean> {
     this.validateKey(key);
-
     const db = getDb();
     const schema = getSchema();
-    const globalSettingsTable = schema.globalSettings;
-
-    if (!globalSettingsTable) {
-      throw new Error('GlobalSettings table not found in schema');
-    }
 
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const result = await (db as any)
-        .delete(globalSettingsTable)
-        .where(eq(globalSettingsTable.key, key));
+      const result = await db
+        .delete(schema.globalSettings)
+        .where(eq(schema.globalSettings.key, key));
 
       return result.changes > 0;
     } catch (error) {
@@ -341,22 +397,17 @@ export class GlobalSettingsService {
 
     const db = getDb();
     const schema = getSchema();
-    const globalSettingsTable = schema.globalSettings;
-
-    if (!globalSettingsTable) {
-      throw new Error('GlobalSettings table not found in schema');
-    }
 
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const results = await (db as any)
+      const results = await db
         .select()
-        .from(globalSettingsTable)
-        .where(like(globalSettingsTable.key, `%${pattern}%`))
-        .orderBy(globalSettingsTable.key);
+        .from(schema.globalSettings)
+        .where(like(schema.globalSettings.key, `%${pattern}%`))
+        .orderBy(schema.globalSettings.key);
 
       // Decrypt encrypted values
-      return results.map((setting: GlobalSetting) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return results.map((setting: any) => {
         if (setting.is_encrypted && setting.value) {
           try {
             setting.value = decrypt(setting.value);
@@ -365,7 +416,7 @@ export class GlobalSettingsService {
             setting.value = '[DECRYPTION_FAILED]';
           }
         }
-        return setting;
+        return setting as GlobalSetting;
       });
     } catch (error) {
       throw new Error(`Failed to search settings: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -373,31 +424,60 @@ export class GlobalSettingsService {
   }
 
   /**
-   * Get all unique categories
+   * Get all unique group IDs (categories)
    */
   static async getCategories(): Promise<string[]> {
     const db = getDb();
     const schema = getSchema();
-    const globalSettingsTable = schema.globalSettings;
-
-    if (!globalSettingsTable) {
-      throw new Error('GlobalSettings table not found in schema');
-    }
 
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const results = await (db as any)
-        .selectDistinct({ category: (globalSettingsTable as any).category }) // Add type assertion if category is removed
-        .from(globalSettingsTable)
-        .where(eq((globalSettingsTable as any).category, (globalSettingsTable as any).category)) // Only non-null categories
-        .orderBy((globalSettingsTable as any).category);
+      const results = await db
+        .selectDistinct({ group_id: schema.globalSettings.group_id })
+        .from(schema.globalSettings)
+        .orderBy(schema.globalSettings.group_id);
 
       return results
-        .map((row: { category: string | null }) => row.category)
-        .filter((category: string | null): category is string => category !== null);
+        .map((row: { group_id: string | null }) => row.group_id)
+        .filter((group_id: string | null): group_id is string => group_id !== null);
     } catch (error) {
       throw new Error(`Failed to get categories: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
+  }
+
+  /**
+   * Get all groups with their metadata from the globalSettingGroups table.
+   * Does not include the settings themselves.
+   */
+  static async getAllGroupMetadata(): Promise<GlobalSettingGroup[]> {
+    const db = getDb();
+    const schema = getSchema();
+    try {
+      const results = await db
+        .select()
+        .from(schema.globalSettingGroups)
+        .orderBy(schema.globalSettingGroups.sort_order, schema.globalSettingGroups.name); // Sort by sort_order, then name
+      return results as GlobalSettingGroup[];
+    } catch (error) {
+      throw new Error(`Failed to get all group metadata: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Get all groups with their metadata and their associated settings.
+   */
+  static async getAllGroupsWithSettings(): Promise<GlobalSettingGroupWithSettings[]> {
+    const groupMetadatas = await this.getAllGroupMetadata();
+    const groupsWithSettings: GlobalSettingGroupWithSettings[] = [];
+
+    for (const groupMetadata of groupMetadatas) {
+      const settings = await this.getByGroup(groupMetadata.id);
+      groupsWithSettings.push({
+        ...groupMetadata,
+        settings: settings,
+      });
+    }
+    // The groups are already sorted by getAllGroupMetadata
+    return groupsWithSettings;
   }
 
   /**
@@ -410,18 +490,12 @@ export class GlobalSettingsService {
 
     const db = getDb();
     const schema = getSchema();
-    const globalSettingGroupsTable = schema.globalSettingGroups;
-
-    if (!globalSettingGroupsTable) {
-      throw new Error('GlobalSettingGroups table not found in schema');
-    }
 
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const results = await (db as any)
+      const results = await db
         .select()
-        .from(globalSettingGroupsTable)
-        .where(eq(globalSettingGroupsTable.id, groupId))
+        .from(schema.globalSettingGroups)
+        .where(eq(schema.globalSettingGroups.id, groupId))
         .limit(1);
       
       return results.length > 0 ? results[0] as GlobalSettingGroup : null;
@@ -445,12 +519,6 @@ export class GlobalSettingsService {
 
     const db = getDb();
     const schema = getSchema();
-    const globalSettingGroupsTable = schema.globalSettingGroups;
-
-    if (!globalSettingGroupsTable) {
-      throw new Error('GlobalSettingGroups table not found in schema');
-    }
-
     const now = new Date();
     const newGroup = {
       id,
@@ -463,13 +531,11 @@ export class GlobalSettingsService {
     };
 
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (db as any)
-        .insert(globalSettingGroupsTable)
+      await db
+        .insert(schema.globalSettingGroups)
         .values(newGroup);
       
-      // Drizzle's insert doesn't return the created object by default for all drivers in a simple way.
-      // We'll re-fetch it. This also confirms creation.
+      // Re-fetch to confirm creation
       const createdGroup = await this.getGroup(id);
       if (!createdGroup) {
         throw new Error(`Failed to retrieve group '${id}' after creation.`);
@@ -485,21 +551,14 @@ export class GlobalSettingsService {
    */
   static async exists(key: string): Promise<boolean> {
     this.validateKey(key);
-
     const db = getDb();
     const schema = getSchema();
-    const globalSettingsTable = schema.globalSettings;
-
-    if (!globalSettingsTable) {
-      throw new Error('GlobalSettings table not found in schema');
-    }
 
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const results = await (db as any)
-        .select({ key: globalSettingsTable.key })
-        .from(globalSettingsTable)
-        .where(eq(globalSettingsTable.key, key))
+      const results = await db
+        .select({ key: schema.globalSettings.key })
+        .from(schema.globalSettings)
+        .where(eq(schema.globalSettings.key, key))
         .limit(1);
 
       return results.length > 0;
