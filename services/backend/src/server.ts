@@ -180,12 +180,13 @@ export const createServer = async () => {
       deepLinking: false
     },
     uiHooks: {
-      onRequest: function (request, reply, next) { next() },
-      preHandler: function (request, reply, next) { next() }
+      onRequest: function (_request, _reply, next) { next() },
+      preHandler: function (_request, _reply, next) { next() }
     },
     staticCSP: true,
     transformStaticCSP: (header) => header,
-    transformSpecification: (swaggerObject, request, reply) => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    transformSpecification: (swaggerObject, _request, _reply) => {
       // Remove favicon route from the API specification
       if (swaggerObject.paths && swaggerObject.paths['/favicon.ico']) {
         delete swaggerObject.paths['/favicon.ico'];

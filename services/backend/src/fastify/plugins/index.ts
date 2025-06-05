@@ -1,5 +1,4 @@
 import { FastifyInstance } from 'fastify'
-import fastifyFavicon from 'fastify-favicon'
 import fastifyCors from '@fastify/cors'
 
 export const registerFastifyPlugins = async (server: FastifyInstance): Promise<void> => {
