@@ -11,11 +11,16 @@
     "release": "release-it --config=.release-it.js",
     "test:e2e": "jest",
     "test:unit": "vitest",
-    "test:unit:coverage": "vitest --coverage"
+    "test:unit:coverage": "vitest --coverage",
+    "api:spec": "node scripts/generate-api-spec.js",
+    "api:spec:json": "curl -s http://localhost:3000/documentation/json > api-spec.json",
+    "api:spec:yaml": "curl -s http://localhost:3000/documentation/yaml > api-spec.yaml"
   },
   "dependencies": {
     "@fastify/cookie": "^11.0.2",
     "@fastify/cors": "^11.0.1",
+    "@fastify/swagger": "^9.5.1",
+    "@fastify/swagger-ui": "^5.2.3",
     "@lucia-auth/adapter-drizzle": "^1.1.0",
     "@node-rs/argon2": "^2.0.2",
     "arctic": "^3.7.0",

@@ -27,12 +27,7 @@ export const registerFastifyPlugins = async (server: FastifyInstance): Promise<v
   // Log the allowed origins for debugging
   server.log.info(`CORS configured with origins: ${defaultOrigins.join(', ')}`);
   
-  // Register favicon plugin
-  await server.register(fastifyFavicon, {
-    path: '../shared/public/img',
-    name: 'favicon.ico',
-    maxAge: 604800
-  })
+  // Favicon plugin is now registered in server.ts after Swagger to exclude it from documentation
   
   // Register other plugins as needed
 }

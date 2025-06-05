@@ -5,8 +5,42 @@ import { eq } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 
 export default async function logoutRoute(fastify: FastifyInstance) {
+  const logoutSchema = {
+    tags: ['Authentication'],
+    summary: 'User logout',
+    description: 'Invalidates the current user session and clears authentication cookies. This endpoint can be called even without an active session.',
+    security: [{ cookieAuth: [] }],
+    response: {
+      200: {
+        type: 'object',
+        properties: {
+          success: { 
+            type: 'boolean',
+            description: 'Indicates if the logout operation was successful'
+          },
+          message: { 
+            type: 'string',
+            description: 'Human-readable message about the logout result'
+          }
+        },
+        required: ['success', 'message'],
+        examples: [
+          {
+            success: true,
+            message: 'Logged out successfully.'
+          },
+          {
+            success: true,
+            message: 'No active session to logout or already logged out.'
+          }
+        ]
+      }
+    }
+  };
+
   fastify.post(
     '/logout',
+    { schema: logoutSchema },
     async (request: FastifyRequest, reply: FastifyReply) => {
       // The global authHook should have already populated request.session if a valid session exists.
       // It also handles creating a blank session cookie if the session was invalid.

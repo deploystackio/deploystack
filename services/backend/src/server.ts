@@ -5,6 +5,8 @@ import { loggerConfig } from './fastify/config/logger'
 import { registerRequestLoggerHooks } from './fastify/hooks/request-logger'
 import { registerFastifyPlugins } from './fastify/plugins'
 import fastifyCookie from '@fastify/cookie';
+import fastifySwagger from '@fastify/swagger';
+import fastifySwaggerUI from '@fastify/swagger-ui';
 import { registerRoutes } from './routes'
 import { PluginManager } from './plugin-system'
 import { authHook } from './hooks/authHook' // Import the auth hook
@@ -143,7 +145,66 @@ export const createServer = async () => {
   });
   server.log.info('@fastify/cookie registered.');
 
+  // Register Swagger for API documentation
+  await server.register(fastifySwagger, {
+    openapi: {
+      openapi: '3.0.0',
+      info: {
+        title: 'DeployStack Backend API',
+        description: 'API documentation for DeployStack Backend',
+        version: '0.20.5'
+      },
+      servers: [
+        {
+          url: 'http://localhost:3000',
+          description: 'Development server'
+        }
+      ],
+      components: {
+        securitySchemes: {
+          cookieAuth: {
+            type: 'apiKey',
+            in: 'cookie',
+            name: 'auth_session'
+          }
+        }
+      }
+    },
+    hideUntagged: false
+  });
+
+  await server.register(fastifySwaggerUI, {
+    routePrefix: '/documentation',
+    uiConfig: {
+      docExpansion: 'full',
+      deepLinking: false
+    },
+    uiHooks: {
+      onRequest: function (request, reply, next) { next() },
+      preHandler: function (request, reply, next) { next() }
+    },
+    staticCSP: true,
+    transformStaticCSP: (header) => header,
+    transformSpecification: (swaggerObject, request, reply) => {
+      // Remove favicon route from the API specification
+      if (swaggerObject.paths && swaggerObject.paths['/favicon.ico']) {
+        delete swaggerObject.paths['/favicon.ico'];
+      }
+      return swaggerObject;
+    },
+    transformSpecificationClone: true
+  });
+  server.log.info('Swagger documentation registered at /documentation');
+
   await registerFastifyPlugins(server) // Existing plugin registrations
+  
+  // Register favicon after Swagger to exclude it from documentation
+  const fastifyFavicon = await import('fastify-favicon');
+  await server.register(fastifyFavicon.default, {
+    path: '../shared/public/img',
+    name: 'favicon.ico',
+    maxAge: 604800
+  })
 
   // Register the global authentication hook
   // This hook will run on every request to populate request.user and request.session
