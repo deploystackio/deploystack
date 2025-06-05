@@ -10,7 +10,8 @@
     "db:up": "drizzle-kit up",
     "release": "release-it --config=.release-it.js",
     "test:e2e": "jest",
-    "test:unit": "vitest"
+    "test:unit": "vitest",
+    "test:unit:coverage": "vitest --coverage"
   },
   "dependencies": {
     "@fastify/cookie": "^11.0.2",
@@ -43,6 +44,7 @@
     "@types/supertest": "^6.0.3",
     "@typescript-eslint/eslint-plugin": "^8.33.0",
     "@typescript-eslint/parser": "^8.33.0",
+    "@vitest/coverage-v8": "^2.1.9",
     "drizzle-kit": "^0.31.1",
     "eslint": "^9.27.0",
     "fs-extra": "^11.3.0",
