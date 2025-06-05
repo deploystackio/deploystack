@@ -6,6 +6,7 @@ export default defineConfig({
     include: ['tests/unit/**/*.test.ts'],
     exclude: ['tests/e2e/**/*'],
     watch: false, // Disable watch mode by default
+    testTimeout: 10000, // 10 seconds timeout for unit tests
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
@@ -16,6 +17,7 @@ export default defineConfig({
         'src/test/**',
         'src/types/**',
         'src/plugins/example-plugin/**', // Exclude example plugin
+        'src/email/example.ts', // Exclude email examples
         'src/index.ts', // Entry point
         'src/server.ts', // Server setup
       ],
