@@ -43,7 +43,7 @@
     "@types/pug": "^2.0.10",
     "@types/supertest": "^6.0.3",
     "@typescript-eslint/eslint-plugin": "^8.33.0",
-    "@typescript-eslint/parser": "^8.33.0",
+    "@typescript-eslint/parser": "^8.33.1",
     "@vitest/coverage-v8": "^2.1.9",
     "drizzle-kit": "^0.31.1",
     "eslint": "^9.27.0",
