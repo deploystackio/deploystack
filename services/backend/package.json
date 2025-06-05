@@ -9,7 +9,8 @@
     "db:generate": "drizzle-kit generate",
     "db:up": "drizzle-kit up",
     "release": "release-it --config=.release-it.js",
-    "test:e2e": "jest"
+    "test:e2e": "jest",
+    "test:unit": "vitest"
   },
   "dependencies": {
     "@fastify/cookie": "^11.0.2",
@@ -51,7 +52,8 @@
     "ts-jest": "^29.3.4",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.3",
-    "typescript-eslint": "^8.33.0"
+    "typescript-eslint": "^8.33.0",
+    "vitest": "^2.1.8"
   },
   "overrides": {
     "glob": "^10.0.0",
