@@ -17,7 +17,7 @@ import { sqliteTable, text as sqliteText, integer as sqliteInteger } from 'drizz
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type AnyDatabase = BetterSQLite3Database<any>;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-type AnySchema = Record<string, any>; // Represents the schema object Drizzle uses
+export type AnySchema = Record<string, any>; // Represents the schema object Drizzle uses
 
 // Global state for database instance and schema
 let dbInstance: AnyDatabase | null = null;
