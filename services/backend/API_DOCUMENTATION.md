@@ -13,10 +13,13 @@ The DeployStack Backend uses Fastify with Swagger plugins to automatically gener
 ## Available Commands
 
 ### 1. Generate Complete API Specification
+
 ```bash
 npm run api:spec
 ```
+
 This command:
+
 - Starts a temporary server
 - Generates both JSON and YAML specifications
 - Saves files to `api-spec.json` and `api-spec.yaml`
@@ -24,30 +27,37 @@ This command:
 - Automatically shuts down the server
 
 **Output:**
+
 - `api-spec.json` - OpenAPI JSON specification (for Postman import)
 - `api-spec.yaml` - OpenAPI YAML specification
 
 ### 2. Generate JSON Specification (requires running server)
+
 ```bash
 npm run api:spec:json
 ```
+
 Requires the development server to be running (`npm run dev`).
 
 ### 3. Generate YAML Specification (requires running server)
+
 ```bash
 npm run api:spec:yaml
 ```
+
 Requires the development server to be running (`npm run dev`).
 
 ## Usage Examples
 
 ### Complete Generation (Recommended)
+
 ```bash
 cd services/backend
 npm run api:spec
 ```
 
 ### Manual Generation with Running Server
+
 ```bash
 # Terminal 1: Start the server
 cd services/backend
@@ -70,7 +80,7 @@ When the server is running (`npm run dev`), you can access:
 
 1. Run `npm run api:spec` to generate the specification
 2. Open Postman
-3. Click "Import" 
+3. Click "Import"
 4. Select the generated `api-spec.json` file
 5. All API endpoints will be imported with proper documentation
 
@@ -171,12 +181,15 @@ await server.register(fastifySwagger, {
 ## Troubleshooting
 
 ### "Route already declared" Error
+
 This happens when trying to manually add routes that Swagger UI already provides. The `/documentation/json` and `/documentation/yaml` endpoints are automatically created.
 
 ### "Failed to fetch API spec" Error
+
 Ensure the server is fully started before trying to fetch the specification. The generation script includes a 2-second delay to allow for complete initialization.
 
 ### Missing Route Documentation
+
 Routes without schema definitions will appear in the specification but with minimal documentation. Add schema objects to routes for complete documentation.
 
 ## Next Steps
