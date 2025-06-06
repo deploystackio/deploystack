@@ -71,7 +71,6 @@ async function setupDbHandler(
 
     // Fastify has already validated the request body using our Zod schema
     // If we reach here, request.body is guaranteed to be valid
-    const { type } = request.body;
     
     // Determine DB path based on environment
     const isTestEnv = process.env.NODE_ENV === 'test';
