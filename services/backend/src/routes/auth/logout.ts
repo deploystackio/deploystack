@@ -3,6 +3,20 @@ import { getLucia } from '../../lib/lucia';
 import { getDb, getSchema, getDbStatus } from '../../db';
 import { eq } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
+import { z } from 'zod';
+import { zodToJsonSchema, jsonDescription } from 'zod-to-json-schema';
+
+// Zod schema for the logout response
+const logoutResponseSchema = z.object({
+  success: z.boolean().describe("Indicates if the logout operation was successful"),
+  message: z.string().describe("Human-readable message about the logout result")
+}).describe(JSON.stringify({ // Adding examples via describe + jsonDescription postProcess
+  // Fastify's schema validator expects 'examples' at this level to be an array.
+  examples: [ 
+    { success: true, message: 'Logged out successfully.' },
+    { success: true, message: 'No active session to logout or already logged out.' }
+  ]
+}));
 
 export default async function logoutRoute(fastify: FastifyInstance) {
   const logoutSchema = {
@@ -11,30 +25,11 @@ export default async function logoutRoute(fastify: FastifyInstance) {
     description: 'Invalidates the current user session and clears authentication cookies. This endpoint can be called even without an active session.',
     security: [{ cookieAuth: [] }],
     response: {
-      200: {
-        type: 'object',
-        properties: {
-          success: { 
-            type: 'boolean',
-            description: 'Indicates if the logout operation was successful'
-          },
-          message: { 
-            type: 'string',
-            description: 'Human-readable message about the logout result'
-          }
-        },
-        required: ['success', 'message'],
-        examples: [
-          {
-            success: true,
-            message: 'Logged out successfully.'
-          },
-          {
-            success: true,
-            message: 'No active session to logout or already logged out.'
-          }
-        ]
-      }
+      200: zodToJsonSchema(logoutResponseSchema, { // Removed .describe() here as it's on the Zod schema now
+        $refStrategy: 'none', 
+        target: 'openApi3',
+        postProcess: jsonDescription // Use the helper to parse examples from description
+      })
     }
   };
 

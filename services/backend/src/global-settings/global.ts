@@ -40,6 +40,14 @@ export const globalSettings: GlobalSettingsModule = {
       description: 'Enable or disable email registration',
       encrypted: false,
       required: false
+    },
+    {
+      key: 'global.enable_swagger_docs',
+      defaultValue: true,
+      type: 'boolean',
+      description: 'Enable or disable Swagger API documentation endpoint (/documentation)',
+      encrypted: false,
+      required: false
     }
   ]
 };

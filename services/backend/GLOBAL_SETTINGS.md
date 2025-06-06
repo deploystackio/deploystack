@@ -692,6 +692,16 @@ When the server starts:
 | `github.oauth.callback_url` | `'http://localhost:3000/api/auth/github/callback'` | ❌ | ❌ | OAuth callback URL |
 | `github.oauth.scope` | `'user:email'` | ❌ | ❌ | OAuth requested scopes |
 
+#### Global Settings (Group ID: `global`)
+
+| Key | Default | Required | Encrypted | Description |
+|-----|---------|----------|-----------|-------------|
+| `global.page_url` | `'http://localhost:5173'` | ❌ | ❌ | Base URL for the application frontend |
+| `global.send_mail` | `'false'` | ❌ | ❌ | Enable or disable email sending functionality |
+| `global.enable_login` | `'true'` | ❌ | ❌ | Enable or disable all login functionality |
+| `global.enable_email_registration` | `'true'` | ❌ | ❌ | Enable or disable email registration |
+| `global.enable_swagger_docs` | `'true'` | ❌ | ❌ | Enable or disable Swagger API documentation endpoint (/documentation) |
+
 ### Helper Methods
 
 The system provides helper methods for retrieving complete configurations:

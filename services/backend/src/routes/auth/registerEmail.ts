@@ -1,17 +1,70 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { FastifyInstance, FastifyReply } from 'fastify';
 
-import { type RegisterEmailInput } from './schemas';
+import { RegisterEmailSchema, type RegisterEmailInput } from './schemas';
 import { getDb, getSchema } from '../../db';
 import { eq, or } from 'drizzle-orm';
 import { generateId } from 'lucia'; // Lucia's utility for generating IDs
 import { hash } from '@node-rs/argon2';
 import { TeamService } from '../../services/teamService';
 import { GlobalSettingsInitService } from '../../global-settings';
+import { z } from 'zod';
+import { zodToJsonSchema } from 'zod-to-json-schema';
+
+// Response schemas
+const userResponseSchema = z.object({
+  id: z.string().describe('User ID'),
+  username: z.string().describe("User's username"),
+  email: z.string().email().describe("User's email address"),
+  first_name: z.string().nullable().describe("User's first name"),
+  last_name: z.string().nullable().describe("User's last name"),
+  role_id: z.string().describe("User's role ID")
+});
+
+const registerSuccessResponseSchema = z.object({
+  success: z.boolean().describe('Indicates if the registration was successful'),
+  message: z.string().describe('Success message'),
+  user: userResponseSchema.describe('Information about the registered user')
+});
+
+const registerErrorResponseSchema = z.object({
+  success: z.boolean().describe('Indicates if the operation was successful (false for errors)').default(false),
+  error: z.string().describe('Error message describing what went wrong')
+});
+
+// Route schema for OpenAPI documentation
+const registerEmailRouteSchema = {
+  tags: ['Authentication'],
+  summary: 'User registration via email',
+  description: 'Creates a new user account using email and password. The first registered user automatically becomes a global administrator. Automatically creates a session and default team for the user.',
+  body: zodToJsonSchema(RegisterEmailSchema, { 
+    $refStrategy: 'none', 
+    target: 'openApi3' 
+  }),
+  response: {
+    201: zodToJsonSchema(registerSuccessResponseSchema.describe('User registered successfully'), {
+      $refStrategy: 'none',
+      target: 'openApi3'
+    }),
+    400: zodToJsonSchema(registerErrorResponseSchema.describe('Bad Request - Invalid input, username taken, or email already in use'), {
+      $refStrategy: 'none',
+      target: 'openApi3'
+    }),
+    403: zodToJsonSchema(registerErrorResponseSchema.describe('Forbidden - Email registration is disabled by administrator'), {
+      $refStrategy: 'none',
+      target: 'openApi3'
+    }),
+    500: zodToJsonSchema(registerErrorResponseSchema.describe('Internal Server Error - Registration failed'), {
+      $refStrategy: 'none',
+      target: 'openApi3'
+    })
+  }
+};
 
 export default async function registerEmailRoute(fastify: FastifyInstance) {
   fastify.post<{ Body: RegisterEmailInput }>( // Use Fastify's generic type for request body
     '/register',
+    { schema: registerEmailRouteSchema },
     async (request, reply: FastifyReply) => { // request type will be inferred by Fastify
       // Check if email registration is enabled
       const isEmailRegistrationEnabled = await GlobalSettingsInitService.isEmailRegistrationEnabled();

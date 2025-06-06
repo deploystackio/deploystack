@@ -28,7 +28,7 @@ describe('Global Settings Access Control E2E Tests', () => {
     const adminLoginResponse = await request(server.server)
       .post('/api/auth/email/login')
       .send({
-        email: 'admin@example.com',
+        login: 'admin@example.com',
         password: 'SecurePassword123!'
       });
     
@@ -42,7 +42,7 @@ describe('Global Settings Access Control E2E Tests', () => {
     const userLoginResponse = await request(server.server)
       .post('/api/auth/email/login')
       .send({
-        email: 'user@example.com',
+        login: 'user@example.com',
         password: 'SecurePassword456!'
       });
     

@@ -27,7 +27,7 @@ describe('Email Login and Logout E2E Tests', () => {
 
     // Login with first user credentials
     const loginData = {
-      email: 'admin@example.com',
+      login: 'admin@example.com',
       password: 'SecurePassword123!'
     };
 
@@ -62,7 +62,7 @@ describe('Email Login and Logout E2E Tests', () => {
 
     // Login with second user credentials
     const loginData = {
-      email: 'user@example.com',
+      login: 'user@example.com',
       password: 'SecurePassword456!'
     };
 
@@ -114,7 +114,7 @@ describe('Email Login and Logout E2E Tests', () => {
 
   it('should reject login with invalid email', async () => {
     const invalidLoginData = {
-      email: 'nonexistent@example.com',
+      login: 'nonexistent@example.com',
       password: 'SecurePassword123!'
     };
 
@@ -129,7 +129,7 @@ describe('Email Login and Logout E2E Tests', () => {
 
   it('should reject login with invalid password', async () => {
     const invalidLoginData = {
-      email: 'admin@example.com',
+      login: 'admin@example.com',
       password: 'WrongPassword123!'
     };
 
@@ -213,7 +213,7 @@ describe('Email Login and Logout E2E Tests', () => {
     
     // Re-login with first user after logout
     const loginData = {
-      email: 'admin@example.com',
+      login: 'admin@example.com',
       password: 'SecurePassword123!'
     };
 

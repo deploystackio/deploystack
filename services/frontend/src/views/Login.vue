@@ -38,7 +38,7 @@ const { t } = useI18n() // Initialize i18n composable
 // Define validation schema using Zod
 const formSchema = toTypedSchema(
   z.object({
-    email: z
+    login: z
       .string()
       .min(1, { message: t('validation.required', { field: t('login.form.email.label') }) })
       .email({ message: t('validation.email') }),
@@ -53,7 +53,7 @@ const formSchema = toTypedSchema(
 const form = useForm({
   validationSchema: formSchema,
   initialValues: {
-    email: '',
+    login: '',
     password: '',
   },
 })
@@ -101,7 +101,7 @@ const onSubmit = form.handleSubmit(async (values) => {
 
   try {
     // Use the UserService login method which handles cache clearing
-    const data = await UserService.login(values.email, values.password)
+    const data = await UserService.login(values.login, values.password)
     console.log('Login successful!', data)
 
     // Handle successful login - redirect to dashboard or home
@@ -173,7 +173,7 @@ const navigateToRegister = () => {
       <Card>
         <CardContent class="pt-6">
           <form @submit="onSubmit" class="space-y-6">
-            <FormField v-slot="{ componentField }" name="email">
+            <FormField v-slot="{ componentField }" name="login">
               <FormItem>
                 <FormLabel>{{ $t('login.form.email.label') }}</FormLabel>
                 <FormControl>

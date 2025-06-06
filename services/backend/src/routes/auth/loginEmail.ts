@@ -5,10 +5,77 @@ import { verify } from '@node-rs/argon2';
 import { getDb, getSchema } from '../../db';
 import { eq, or } from 'drizzle-orm';
 import { GlobalSettingsInitService } from '../../global-settings';
+import { z } from 'zod';
+import { zodToJsonSchema } from 'zod-to-json-schema';
+
+// Zod Schemas
+const loginEmailBodySchema = z.object({
+  login: z.string().describe("User's registered email address or username."),
+  password: z.string().describe("User's password.")
+});
+
+const userResponseSchema = z.object({
+  id: z.string().describe('User ID'),
+  email: z.string().email().describe("User's primary email address."),
+  username: z.string().optional().nullable().describe("User's username."),
+  first_name: z.string().optional().nullable().describe("User's first name."),
+  last_name: z.string().optional().nullable().describe("User's last name."),
+  role_id: z.string().optional().nullable().describe("User's role ID.")
+});
+
+const successResponseSchema = z.object({
+  success: z.boolean().describe('Indicates if the login operation was successful.'),
+  message: z.string().describe('Human-readable message about the login result.'),
+  user: userResponseSchema.describe('Basic information about the logged-in user.')
+});
+
+const errorResponseSchema = z.object({
+  success: z.boolean().describe('Indicates if the operation was successful (typically false for errors).').default(false),
+  error: z.string().describe('Error message.')
+});
+
+const loginEmailRouteSchema = {
+  tags: ['Authentication'],
+  summary: 'User login via email/password',
+  description: "Authenticates a user using their registered identifier (email or username) and password. This endpoint is accessed via the /api/auth/email/login path due to server-level prefixing. Establishes a session by setting an authentication cookie.",
+  body: zodToJsonSchema(loginEmailBodySchema, { $refStrategy: 'none', target: 'openApi3' }),
+  response: {
+    200: zodToJsonSchema(successResponseSchema.describe('Login successful. Session cookie is set.'), {
+      $refStrategy: 'none',
+      target: 'openApi3'
+    }),
+    400: zodToJsonSchema(errorResponseSchema.describe('Bad Request - Invalid input or invalid credentials.'), {
+      $refStrategy: 'none',
+      target: 'openApi3',
+      // examples: [
+      //   { success: false, error: "Email/username and password are required." },
+      //   { success: false, error: "Invalid email/username or password." }
+      // ]
+    }),
+    403: zodToJsonSchema(errorResponseSchema.describe('Forbidden - Login is disabled by administrator.'), {
+      $refStrategy: 'none',
+      target: 'openApi3',
+      // examples: [
+      //   { success: false, error: "Login is currently disabled by administrator." }
+      // ]
+    }),
+    500: zodToJsonSchema(errorResponseSchema.describe('Internal Server Error - An unexpected error occurred on the server.'), {
+      $refStrategy: 'none',
+      target: 'openApi3',
+      // examples: [
+      //   { success: false, error: "An unexpected error occurred during login." },
+      //   { success: false, error: "Internal server error: User table configuration missing." },
+      //   { success: false, error: "User ID not found." }
+      // ]
+    })
+  },
+  security: [{ cookieAuth: [] }]
+};
 
 export default async function loginEmailRoute(fastify: FastifyInstance) {
-  fastify.post(
+  fastify.post<{ Body: { login: string; password: string } }>(
     '/login',
+    { schema: loginEmailRouteSchema },
     async (request, reply: FastifyReply) => {
       // Check if login is enabled
       const isLoginEnabled = await GlobalSettingsInitService.isLoginEnabled();
@@ -19,16 +86,9 @@ export default async function loginEmailRoute(fastify: FastifyInstance) {
         });
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { login, email, password } = request.body as any;
-      
-      // Support both 'login' field (schema) and 'email' field (for backward compatibility with tests)
-      const loginValue = login || email;
-
-      // Validate required fields
-      if (!loginValue || !password) {
-        return reply.status(400).send({ success: false, error: 'Email/username and password are required.' });
-      }
+      // Fastify has already validated the request body using our Zod schema
+      // If we reach here, request.body is guaranteed to be valid with required fields
+      const { login, password } = request.body;
 
       try {
         const db = getDb();
@@ -45,7 +105,7 @@ export default async function loginEmailRoute(fastify: FastifyInstance) {
         const users = await (db as any)
           .select()
           .from(authUserTable)
-          .where(or(eq(authUserTable.email, loginValue.toLowerCase()), eq(authUserTable.username, loginValue)))
+          .where(or(eq(authUserTable.email, login.toLowerCase()), eq(authUserTable.username, login)))
           .limit(1);
 
         if (users.length === 0) {
@@ -101,8 +161,8 @@ export default async function loginEmailRoute(fastify: FastifyInstance) {
           message: 'Logged in successfully.',
           user: {
             id: user.id,
-            username: user.username,
             email: user.email,
+            username: user.username,
             first_name: user.first_name,
             last_name: user.last_name,
             role_id: user.role_id

@@ -1,8 +1,6 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { GlobalSettings } from '../../../src/global-settings/helpers'
-import { GlobalSettingsService } from '../../../src/services/globalSettingsService'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 
-// Mock the GlobalSettingsService
+// Mock the entire module before any imports
 vi.mock('../../../src/services/globalSettingsService', () => ({
   GlobalSettingsService: {
     get: vi.fn(),
@@ -11,71 +9,86 @@ vi.mock('../../../src/services/globalSettingsService', () => ({
   }
 }))
 
+// Now import the module under test
+import { GlobalSettings } from '../../../src/global-settings/helpers'
+import { GlobalSettingsService } from '../../../src/services/globalSettingsService'
+
+// Get references to the mocked functions
+const mockGet = vi.mocked(GlobalSettingsService.get)
+const mockGetByGroup = vi.mocked(GlobalSettingsService.getByGroup)
+const mockExists = vi.mocked(GlobalSettingsService.exists)
+
 describe('GlobalSettings Helper Class', () => {
-  const mockGlobalSettingsService = GlobalSettingsService as any
+  // Helper function to create complete mock settings
+  const createMockSetting = (key: string, value: string, type: 'string' | 'number' | 'boolean' = 'string') => ({
+    key,
+    value,
+    type,
+    description: null,
+    is_encrypted: false,
+    group_id: null,
+    created_at: new Date(),
+    updated_at: new Date()
+  })
 
   beforeEach(() => {
     vi.clearAllMocks()
+    // Mock console methods to suppress error/warning messages during tests
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+  })
+
+  afterEach(() => {
+    // Restore console methods after each test
+    vi.restoreAllMocks()
   })
 
   describe('get method', () => {
     it('should return setting value when setting exists', async () => {
-      mockGlobalSettingsService.get.mockResolvedValue({
-        key: 'test.key',
-        value: 'test value',
-        type: 'string'
-      })
+      mockGet.mockResolvedValue(createMockSetting('test.key', 'test value'))
 
       const result = await GlobalSettings.get('test.key')
       expect(result).toBe('test value')
-      expect(mockGlobalSettingsService.get).toHaveBeenCalledWith('test.key')
+      expect(mockGet).toHaveBeenCalledWith('test.key')
     })
 
     it('should return null when setting does not exist', async () => {
-      mockGlobalSettingsService.get.mockResolvedValue(null)
+      mockGet.mockResolvedValue(null)
 
       const result = await GlobalSettings.get('nonexistent.key')
       expect(result).toBeNull()
     })
 
     it('should return default value when setting does not exist and default provided', async () => {
-      mockGlobalSettingsService.get.mockResolvedValue(null)
+      mockGet.mockResolvedValue(null)
 
       const result = await GlobalSettings.get('nonexistent.key', 'default value')
       expect(result).toBe('default value')
     })
 
     it('should return null when setting has empty value', async () => {
-      mockGlobalSettingsService.get.mockResolvedValue({
-        key: 'test.key',
-        value: '',
-        type: 'string'
-      })
+      mockGet.mockResolvedValue(createMockSetting('test.key', ''))
 
       const result = await GlobalSettings.get('test.key')
       expect(result).toBeNull()
     })
 
     it('should return default when setting has empty value and default provided', async () => {
-      mockGlobalSettingsService.get.mockResolvedValue({
-        key: 'test.key',
-        value: '   ',
-        type: 'string'
-      })
+      mockGet.mockResolvedValue(createMockSetting('test.key', '   '))
 
       const result = await GlobalSettings.get('test.key', 'default')
       expect(result).toBe('default')
     })
 
     it('should handle service errors gracefully', async () => {
-      mockGlobalSettingsService.get.mockRejectedValue(new Error('Database error'))
+      mockGet.mockRejectedValue(new Error('Database error'))
 
       const result = await GlobalSettings.get('test.key')
       expect(result).toBeNull()
     })
 
     it('should return default value when service throws error', async () => {
-      mockGlobalSettingsService.get.mockRejectedValue(new Error('Database error'))
+      mockGet.mockRejectedValue(new Error('Database error'))
 
       const result = await GlobalSettings.get('test.key', 'fallback')
       expect(result).toBe('fallback')
@@ -84,18 +97,14 @@ describe('GlobalSettings Helper Class', () => {
 
   describe('getString method', () => {
     it('should work as alias for get method', async () => {
-      mockGlobalSettingsService.get.mockResolvedValue({
-        key: 'test.key',
-        value: 'string value',
-        type: 'string'
-      })
+      mockGet.mockResolvedValue(createMockSetting('test.key', 'string value'))
 
       const result = await GlobalSettings.getString('test.key')
       expect(result).toBe('string value')
     })
 
     it('should return default value when provided', async () => {
-      mockGlobalSettingsService.get.mockResolvedValue(null)
+      mockGet.mockResolvedValue(null)
 
       const result = await GlobalSettings.getString('test.key', 'default string')
       expect(result).toBe('default string')
@@ -104,22 +113,14 @@ describe('GlobalSettings Helper Class', () => {
 
   describe('getBoolean method', () => {
     it('should return true for "true" value', async () => {
-      mockGlobalSettingsService.get.mockResolvedValue({
-        key: 'test.bool',
-        value: 'true',
-        type: 'boolean'
-      })
+      mockGet.mockResolvedValue(createMockSetting('test.bool', 'true', 'boolean'))
 
       const result = await GlobalSettings.getBoolean('test.bool')
       expect(result).toBe(true)
     })
 
     it('should return false for "false" value', async () => {
-      mockGlobalSettingsService.get.mockResolvedValue({
-        key: 'test.bool',
-        value: 'false',
-        type: 'boolean'
-      })
+      mockGet.mockResolvedValue(createMockSetting('test.bool', 'false', 'boolean'))
 
       const result = await GlobalSettings.getBoolean('test.bool')
       expect(result).toBe(false)
@@ -129,11 +130,7 @@ describe('GlobalSettings Helper Class', () => {
       const truthyValues = ['1', 'yes', 'on', 'enabled', 'TRUE', 'Yes', 'ON']
       
       for (const value of truthyValues) {
-        mockGlobalSettingsService.get.mockResolvedValue({
-          key: 'test.bool',
-          value: value,
-          type: 'boolean'
-        })
+        mockGet.mockResolvedValue(createMockSetting('test.bool', value, 'boolean'))
 
         const result = await GlobalSettings.getBoolean('test.bool')
         expect(result).toBe(true)
@@ -144,11 +141,7 @@ describe('GlobalSettings Helper Class', () => {
       const falsyValues = ['0', 'no', 'off', 'disabled', 'FALSE', 'No', 'OFF']
       
       for (const value of falsyValues) {
-        mockGlobalSettingsService.get.mockResolvedValue({
-          key: 'test.bool',
-          value: value,
-          type: 'boolean'
-        })
+        mockGet.mockResolvedValue(createMockSetting('test.bool', value, 'boolean'))
 
         const result = await GlobalSettings.getBoolean('test.bool')
         expect(result).toBe(false)
@@ -156,36 +149,28 @@ describe('GlobalSettings Helper Class', () => {
     })
 
     it('should return null for unparseable boolean values', async () => {
-      mockGlobalSettingsService.get.mockResolvedValue({
-        key: 'test.bool',
-        value: 'invalid',
-        type: 'boolean'
-      })
+      mockGet.mockResolvedValue(createMockSetting('test.bool', 'invalid', 'boolean'))
 
       const result = await GlobalSettings.getBoolean('test.bool')
       expect(result).toBeNull()
     })
 
     it('should return default value for unparseable boolean', async () => {
-      mockGlobalSettingsService.get.mockResolvedValue({
-        key: 'test.bool',
-        value: 'invalid',
-        type: 'boolean'
-      })
+      mockGet.mockResolvedValue(createMockSetting('test.bool', 'invalid', 'boolean'))
 
       const result = await GlobalSettings.getBoolean('test.bool', true)
       expect(result).toBe(true)
     })
 
     it('should return null when setting does not exist', async () => {
-      mockGlobalSettingsService.get.mockResolvedValue(null)
+      mockGet.mockResolvedValue(null)
 
       const result = await GlobalSettings.getBoolean('nonexistent.bool')
       expect(result).toBeNull()
     })
 
     it('should return default when setting does not exist', async () => {
-      mockGlobalSettingsService.get.mockResolvedValue(null)
+      mockGet.mockResolvedValue(null)
 
       const result = await GlobalSettings.getBoolean('nonexistent.bool', false)
       expect(result).toBe(false)
@@ -194,62 +179,42 @@ describe('GlobalSettings Helper Class', () => {
 
   describe('getNumber method', () => {
     it('should return number for valid numeric string', async () => {
-      mockGlobalSettingsService.get.mockResolvedValue({
-        key: 'test.number',
-        value: '42',
-        type: 'number'
-      })
+      mockGet.mockResolvedValue(createMockSetting('test.number', '42', 'number'))
 
       const result = await GlobalSettings.getNumber('test.number')
       expect(result).toBe(42)
     })
 
     it('should handle decimal numbers', async () => {
-      mockGlobalSettingsService.get.mockResolvedValue({
-        key: 'test.decimal',
-        value: '3.14',
-        type: 'number'
-      })
+      mockGet.mockResolvedValue(createMockSetting('test.decimal', '3.14', 'number'))
 
       const result = await GlobalSettings.getNumber('test.decimal')
       expect(result).toBe(3.14)
     })
 
     it('should handle negative numbers', async () => {
-      mockGlobalSettingsService.get.mockResolvedValue({
-        key: 'test.negative',
-        value: '-100',
-        type: 'number'
-      })
+      mockGet.mockResolvedValue(createMockSetting('test.negative', '-100', 'number'))
 
       const result = await GlobalSettings.getNumber('test.negative')
       expect(result).toBe(-100)
     })
 
     it('should return null for non-numeric values', async () => {
-      mockGlobalSettingsService.get.mockResolvedValue({
-        key: 'test.invalid',
-        value: 'not a number',
-        type: 'number'
-      })
+      mockGet.mockResolvedValue(createMockSetting('test.invalid', 'not a number', 'number'))
 
       const result = await GlobalSettings.getNumber('test.invalid')
       expect(result).toBeNull()
     })
 
     it('should return default for non-numeric values', async () => {
-      mockGlobalSettingsService.get.mockResolvedValue({
-        key: 'test.invalid',
-        value: 'not a number',
-        type: 'number'
-      })
+      mockGet.mockResolvedValue(createMockSetting('test.invalid', 'not a number', 'number'))
 
       const result = await GlobalSettings.getNumber('test.invalid', 0)
       expect(result).toBe(0)
     })
 
     it('should return null when setting does not exist', async () => {
-      mockGlobalSettingsService.get.mockResolvedValue(null)
+      mockGet.mockResolvedValue(null)
 
       const result = await GlobalSettings.getNumber('nonexistent.number')
       expect(result).toBeNull()
@@ -258,33 +223,21 @@ describe('GlobalSettings Helper Class', () => {
 
   describe('getInteger method', () => {
     it('should return integer for decimal number', async () => {
-      mockGlobalSettingsService.get.mockResolvedValue({
-        key: 'test.decimal',
-        value: '3.14',
-        type: 'number'
-      })
+      mockGet.mockResolvedValue(createMockSetting('test.decimal', '3.14', 'number'))
 
       const result = await GlobalSettings.getInteger('test.decimal')
       expect(result).toBe(3)
     })
 
     it('should return integer for whole number', async () => {
-      mockGlobalSettingsService.get.mockResolvedValue({
-        key: 'test.whole',
-        value: '42',
-        type: 'number'
-      })
+      mockGet.mockResolvedValue(createMockSetting('test.whole', '42', 'number'))
 
       const result = await GlobalSettings.getInteger('test.whole')
       expect(result).toBe(42)
     })
 
     it('should return null for invalid number', async () => {
-      mockGlobalSettingsService.get.mockResolvedValue({
-        key: 'test.invalid',
-        value: 'not a number',
-        type: 'number'
-      })
+      mockGet.mockResolvedValue(createMockSetting('test.invalid', 'not a number', 'number'))
 
       const result = await GlobalSettings.getInteger('test.invalid')
       expect(result).toBeNull()
@@ -293,33 +246,21 @@ describe('GlobalSettings Helper Class', () => {
 
   describe('getUrl method', () => {
     it('should return valid URL', async () => {
-      mockGlobalSettingsService.get.mockResolvedValue({
-        key: 'test.url',
-        value: 'https://example.com',
-        type: 'string'
-      })
+      mockGet.mockResolvedValue(createMockSetting('test.url', 'https://example.com'))
 
       const result = await GlobalSettings.getUrl('test.url')
       expect(result).toBe('https://example.com')
     })
 
     it('should return null for invalid URL', async () => {
-      mockGlobalSettingsService.get.mockResolvedValue({
-        key: 'test.invalid.url',
-        value: 'not-a-url',
-        type: 'string'
-      })
+      mockGet.mockResolvedValue(createMockSetting('test.invalid.url', 'not-a-url'))
 
       const result = await GlobalSettings.getUrl('test.invalid.url')
       expect(result).toBeNull()
     })
 
     it('should return default for invalid URL', async () => {
-      mockGlobalSettingsService.get.mockResolvedValue({
-        key: 'test.invalid.url',
-        value: 'not-a-url',
-        type: 'string'
-      })
+      mockGet.mockResolvedValue(createMockSetting('test.invalid.url', 'not-a-url'))
 
       const result = await GlobalSettings.getUrl('test.invalid.url', 'https://default.com')
       expect(result).toBe('https://default.com')
@@ -334,11 +275,7 @@ describe('GlobalSettings Helper Class', () => {
       ]
 
       for (const url of validUrls) {
-        mockGlobalSettingsService.get.mockResolvedValue({
-          key: 'test.url',
-          value: url,
-          type: 'string'
-        })
+        mockGet.mockResolvedValue(createMockSetting('test.url', url))
 
         const result = await GlobalSettings.getUrl('test.url')
         expect(result).toBe(url)
@@ -348,33 +285,21 @@ describe('GlobalSettings Helper Class', () => {
 
   describe('getEmail method', () => {
     it('should return valid email', async () => {
-      mockGlobalSettingsService.get.mockResolvedValue({
-        key: 'test.email',
-        value: 'user@example.com',
-        type: 'string'
-      })
+      mockGet.mockResolvedValue(createMockSetting('test.email', 'user@example.com'))
 
       const result = await GlobalSettings.getEmail('test.email')
       expect(result).toBe('user@example.com')
     })
 
     it('should return null for invalid email', async () => {
-      mockGlobalSettingsService.get.mockResolvedValue({
-        key: 'test.invalid.email',
-        value: 'not-an-email',
-        type: 'string'
-      })
+      mockGet.mockResolvedValue(createMockSetting('test.invalid.email', 'not-an-email'))
 
       const result = await GlobalSettings.getEmail('test.invalid.email')
       expect(result).toBeNull()
     })
 
     it('should return default for invalid email', async () => {
-      mockGlobalSettingsService.get.mockResolvedValue({
-        key: 'test.invalid.email',
-        value: 'not-an-email',
-        type: 'string'
-      })
+      mockGet.mockResolvedValue(createMockSetting('test.invalid.email', 'not-an-email'))
 
       const result = await GlobalSettings.getEmail('test.invalid.email', 'default@example.com')
       expect(result).toBe('default@example.com')
@@ -389,11 +314,7 @@ describe('GlobalSettings Helper Class', () => {
       ]
 
       for (const email of validEmails) {
-        mockGlobalSettingsService.get.mockResolvedValue({
-          key: 'test.email',
-          value: email,
-          type: 'string'
-        })
+        mockGet.mockResolvedValue(createMockSetting('test.email', email))
 
         const result = await GlobalSettings.getEmail('test.email')
         expect(result).toBe(email)
@@ -404,11 +325,7 @@ describe('GlobalSettings Helper Class', () => {
   describe('getJson method', () => {
     it('should parse valid JSON object', async () => {
       const jsonObject = { key: 'value', number: 42 }
-      mockGlobalSettingsService.get.mockResolvedValue({
-        key: 'test.json',
-        value: JSON.stringify(jsonObject),
-        type: 'string'
-      })
+      mockGet.mockResolvedValue(createMockSetting('test.json', JSON.stringify(jsonObject)))
 
       const result = await GlobalSettings.getJson('test.json')
       expect(result).toEqual(jsonObject)
@@ -416,22 +333,14 @@ describe('GlobalSettings Helper Class', () => {
 
     it('should parse valid JSON array', async () => {
       const jsonArray = ['item1', 'item2', 'item3']
-      mockGlobalSettingsService.get.mockResolvedValue({
-        key: 'test.json.array',
-        value: JSON.stringify(jsonArray),
-        type: 'string'
-      })
+      mockGet.mockResolvedValue(createMockSetting('test.json.array', JSON.stringify(jsonArray)))
 
       const result = await GlobalSettings.getJson('test.json.array')
       expect(result).toEqual(jsonArray)
     })
 
     it('should return null for invalid JSON', async () => {
-      mockGlobalSettingsService.get.mockResolvedValue({
-        key: 'test.invalid.json',
-        value: 'invalid json {',
-        type: 'string'
-      })
+      mockGet.mockResolvedValue(createMockSetting('test.invalid.json', 'invalid json {'))
 
       const result = await GlobalSettings.getJson('test.invalid.json')
       expect(result).toBeNull()
@@ -439,11 +348,7 @@ describe('GlobalSettings Helper Class', () => {
 
     it('should return default for invalid JSON', async () => {
       const defaultValue = { default: true }
-      mockGlobalSettingsService.get.mockResolvedValue({
-        key: 'test.invalid.json',
-        value: 'invalid json {',
-        type: 'string'
-      })
+      mockGet.mockResolvedValue(createMockSetting('test.invalid.json', 'invalid json {'))
 
       const result = await GlobalSettings.getJson('test.invalid.json', defaultValue)
       expect(result).toEqual(defaultValue)
@@ -452,51 +357,35 @@ describe('GlobalSettings Helper Class', () => {
 
   describe('getArray method', () => {
     it('should parse comma-separated values', async () => {
-      mockGlobalSettingsService.get.mockResolvedValue({
-        key: 'test.array',
-        value: 'item1,item2,item3',
-        type: 'string'
-      })
+      mockGet.mockResolvedValue(createMockSetting('test.array', 'item1,item2,item3'))
 
       const result = await GlobalSettings.getArray('test.array')
       expect(result).toEqual(['item1', 'item2', 'item3'])
     })
 
     it('should trim whitespace from items', async () => {
-      mockGlobalSettingsService.get.mockResolvedValue({
-        key: 'test.array.spaces',
-        value: ' item1 , item2 , item3 ',
-        type: 'string'
-      })
+      mockGet.mockResolvedValue(createMockSetting('test.array.spaces', ' item1 , item2 , item3 '))
 
       const result = await GlobalSettings.getArray('test.array.spaces')
       expect(result).toEqual(['item1', 'item2', 'item3'])
     })
 
     it('should filter out empty items', async () => {
-      mockGlobalSettingsService.get.mockResolvedValue({
-        key: 'test.array.empty',
-        value: 'item1,,item3,',
-        type: 'string'
-      })
+      mockGet.mockResolvedValue(createMockSetting('test.array.empty', 'item1,,item3,'))
 
       const result = await GlobalSettings.getArray('test.array.empty')
       expect(result).toEqual(['item1', 'item3'])
     })
 
     it('should return empty array for empty string', async () => {
-      mockGlobalSettingsService.get.mockResolvedValue({
-        key: 'test.array.empty',
-        value: '',
-        type: 'string'
-      })
+      mockGet.mockResolvedValue(createMockSetting('test.array.empty', ''))
 
       const result = await GlobalSettings.getArray('test.array.empty')
       expect(result).toEqual([])
     })
 
     it('should return default array when setting does not exist', async () => {
-      mockGlobalSettingsService.get.mockResolvedValue(null)
+      mockGet.mockResolvedValue(null)
 
       const result = await GlobalSettings.getArray('nonexistent.array', ['default'])
       expect(result).toEqual(['default'])
@@ -505,9 +394,9 @@ describe('GlobalSettings Helper Class', () => {
 
   describe('getMultiple method', () => {
     it('should get multiple settings at once', async () => {
-      mockGlobalSettingsService.get
-        .mockResolvedValueOnce({ key: 'key1', value: 'value1', type: 'string' })
-        .mockResolvedValueOnce({ key: 'key2', value: 'value2', type: 'string' })
+      mockGet
+        .mockResolvedValueOnce(createMockSetting('key1', 'value1'))
+        .mockResolvedValueOnce(createMockSetting('key2', 'value2'))
         .mockResolvedValueOnce(null)
 
       const result = await GlobalSettings.getMultiple(['key1', 'key2', 'key3'])
@@ -526,10 +415,10 @@ describe('GlobalSettings Helper Class', () => {
 
   describe('getGroupValues method', () => {
     it('should get group values without group prefix', async () => {
-      mockGlobalSettingsService.getByGroup.mockResolvedValue([
-        { key: 'smtp.host', value: 'smtp.example.com', type: 'string' },
-        { key: 'smtp.port', value: '587', type: 'number' },
-        { key: 'smtp.secure', value: 'true', type: 'boolean' }
+      mockGetByGroup.mockResolvedValue([
+        createMockSetting('smtp.host', 'smtp.example.com'),
+        createMockSetting('smtp.port', '587', 'number'),
+        createMockSetting('smtp.secure', 'true', 'boolean')
       ])
 
       const result = await GlobalSettings.getGroupValues('smtp')
@@ -541,9 +430,9 @@ describe('GlobalSettings Helper Class', () => {
     })
 
     it('should handle nested group keys', async () => {
-      mockGlobalSettingsService.getByGroup.mockResolvedValue([
-        { key: 'api.openai.key', value: 'sk-123', type: 'string' },
-        { key: 'api.openai.model', value: 'gpt-4', type: 'string' }
+      mockGetByGroup.mockResolvedValue([
+        createMockSetting('api.openai.key', 'sk-123'),
+        createMockSetting('api.openai.model', 'gpt-4')
       ])
 
       const result = await GlobalSettings.getGroupValues('api')
@@ -554,7 +443,7 @@ describe('GlobalSettings Helper Class', () => {
     })
 
     it('should handle service errors gracefully', async () => {
-      mockGlobalSettingsService.getByGroup.mockRejectedValue(new Error('Database error'))
+      mockGetByGroup.mockRejectedValue(new Error('Database error'))
 
       const result = await GlobalSettings.getGroupValues('smtp')
       expect(result).toEqual({})
@@ -563,9 +452,9 @@ describe('GlobalSettings Helper Class', () => {
 
   describe('getGroupValuesWithFullKeys method', () => {
     it('should get group values with full keys', async () => {
-      mockGlobalSettingsService.getByGroup.mockResolvedValue([
-        { key: 'smtp.host', value: 'smtp.example.com', type: 'string' },
-        { key: 'smtp.port', value: '587', type: 'number' }
+      mockGetByGroup.mockResolvedValue([
+        createMockSetting('smtp.host', 'smtp.example.com'),
+        createMockSetting('smtp.port', '587', 'number')
       ])
 
       const result = await GlobalSettings.getGroupValuesWithFullKeys('smtp')
@@ -578,29 +467,21 @@ describe('GlobalSettings Helper Class', () => {
 
   describe('isSet method', () => {
     it('should return true for existing setting with value', async () => {
-      mockGlobalSettingsService.get.mockResolvedValue({
-        key: 'test.key',
-        value: 'some value',
-        type: 'string'
-      })
+      mockGet.mockResolvedValue(createMockSetting('test.key', 'some value'))
 
       const result = await GlobalSettings.isSet('test.key')
       expect(result).toBe(true)
     })
 
     it('should return false for non-existent setting', async () => {
-      mockGlobalSettingsService.get.mockResolvedValue(null)
+      mockGet.mockResolvedValue(null)
 
       const result = await GlobalSettings.isSet('nonexistent.key')
       expect(result).toBe(false)
     })
 
     it('should return false for setting with empty value', async () => {
-      mockGlobalSettingsService.get.mockResolvedValue({
-        key: 'test.key',
-        value: '   ',
-        type: 'string'
-      })
+      mockGet.mockResolvedValue(createMockSetting('test.key', '   '))
 
       const result = await GlobalSettings.isSet('test.key')
       expect(result).toBe(false)
@@ -609,18 +490,14 @@ describe('GlobalSettings Helper Class', () => {
 
   describe('isEmpty method', () => {
     it('should return false for existing setting with value', async () => {
-      mockGlobalSettingsService.get.mockResolvedValue({
-        key: 'test.key',
-        value: 'some value',
-        type: 'string'
-      })
+      mockGet.mockResolvedValue(createMockSetting('test.key', 'some value'))
 
       const result = await GlobalSettings.isEmpty('test.key')
       expect(result).toBe(false)
     })
 
     it('should return true for non-existent setting', async () => {
-      mockGlobalSettingsService.get.mockResolvedValue(null)
+      mockGet.mockResolvedValue(null)
 
       const result = await GlobalSettings.isEmpty('nonexistent.key')
       expect(result).toBe(true)
@@ -629,29 +506,21 @@ describe('GlobalSettings Helper Class', () => {
 
   describe('getRequired method', () => {
     it('should return value for existing setting', async () => {
-      mockGlobalSettingsService.get.mockResolvedValue({
-        key: 'required.key',
-        value: 'required value',
-        type: 'string'
-      })
+      mockGet.mockResolvedValue(createMockSetting('required.key', 'required value'))
 
       const result = await GlobalSettings.getRequired('required.key')
       expect(result).toBe('required value')
     })
 
     it('should throw error for non-existent setting', async () => {
-      mockGlobalSettingsService.get.mockResolvedValue(null)
+      mockGet.mockResolvedValue(null)
 
       await expect(GlobalSettings.getRequired('missing.key'))
         .rejects.toThrow("Required setting 'missing.key' is not configured or is empty")
     })
 
     it('should throw error for empty setting', async () => {
-      mockGlobalSettingsService.get.mockResolvedValue({
-        key: 'empty.key',
-        value: '',
-        type: 'string'
-      })
+      mockGet.mockResolvedValue(createMockSetting('empty.key', ''))
 
       await expect(GlobalSettings.getRequired('empty.key'))
         .rejects.toThrow("Required setting 'empty.key' is not configured or is empty")
@@ -660,22 +529,22 @@ describe('GlobalSettings Helper Class', () => {
 
   describe('exists method', () => {
     it('should return true when setting exists', async () => {
-      mockGlobalSettingsService.exists.mockResolvedValue(true)
+      mockExists.mockResolvedValue(true)
 
       const result = await GlobalSettings.exists('existing.key')
       expect(result).toBe(true)
-      expect(mockGlobalSettingsService.exists).toHaveBeenCalledWith('existing.key')
+      expect(mockExists).toHaveBeenCalledWith('existing.key')
     })
 
     it('should return false when setting does not exist', async () => {
-      mockGlobalSettingsService.exists.mockResolvedValue(false)
+      mockExists.mockResolvedValue(false)
 
       const result = await GlobalSettings.exists('nonexistent.key')
       expect(result).toBe(false)
     })
 
     it('should handle service errors gracefully', async () => {
-      mockGlobalSettingsService.exists.mockRejectedValue(new Error('Database error'))
+      mockExists.mockRejectedValue(new Error('Database error'))
 
       const result = await GlobalSettings.exists('test.key')
       expect(result).toBe(false)
@@ -687,18 +556,19 @@ describe('GlobalSettings Helper Class', () => {
       const rawSetting = {
         key: 'test.key',
         value: 'test value',
-        type: 'string',
+        type: 'string' as const,
         description: 'Test setting',
         is_encrypted: false,
         group_id: 'test',
         created_at: new Date(),
         updated_at: new Date()
       }
-      mockGlobalSettingsService.get.mockResolvedValue(rawSetting)
+      
+      mockGet.mockResolvedValue(rawSetting)
 
       const result = await GlobalSettings.getRaw('test.key')
       expect(result).toEqual(rawSetting)
-      expect(mockGlobalSettingsService.get).toHaveBeenCalledWith('test.key')
+      expect(mockGet).toHaveBeenCalledWith('test.key')
     })
   })
 
