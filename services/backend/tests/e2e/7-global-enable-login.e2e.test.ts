@@ -9,11 +9,11 @@ describe('Global Enable Login E2E Tests', () => {
 
   // User credentials (matching those in 2-user-registration.e2e.test.ts and 3-email-login.e2e.test.ts)
   const adminUserCredentials = {
-    email: 'admin@example.com',
+    login: 'admin@example.com',
     password: 'SecurePassword123!',
   };
   const regularUserCredentials = {
-    email: 'user@example.com',
+    login: 'user@example.com',
     password: 'SecurePassword456!',
   };
 
@@ -82,7 +82,7 @@ describe('Global Enable Login E2E Tests', () => {
 
     expect(loginResponse.status).toBe(200);
     expect(loginResponse.body).toHaveProperty('success', true);
-    expect(loginResponse.body.user.email).toBe(regularUserCredentials.email);
+    expect(loginResponse.body.user.email).toBe(regularUserCredentials.login); // Ensure we check against the correct field if it was 'email' before
   });
 
   it('should prevent login when global.enable_login is set to false', async () => {
@@ -108,6 +108,6 @@ describe('Global Enable Login E2E Tests', () => {
 
     expect(loginResponse.status).toBe(200);
     expect(loginResponse.body).toHaveProperty('success', true);
-    expect(loginResponse.body.user.email).toBe(regularUserCredentials.email);
+    expect(loginResponse.body.user.email).toBe(regularUserCredentials.login);
   });
 });

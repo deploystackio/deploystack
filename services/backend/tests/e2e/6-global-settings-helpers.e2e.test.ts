@@ -35,7 +35,7 @@ describe('Global Settings Helper Methods E2E Tests', () => {
     const adminLoginResponse = await request(server.server)
       .post('/api/auth/email/login')
       .send({
-        email: 'admin@example.com',
+        login: 'admin@example.com',
         password: 'SecurePassword123!'
       });
     
