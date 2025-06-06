@@ -3,7 +3,7 @@ import { ZodError, z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import { GlobalSettingsService } from '../../services/globalSettingsService';
 import { validateEncryption } from '../../utils/encryption'; // Static import
-import { requirePermission } from '../../middleware/roleMiddleware';
+import { requireGlobalAdmin } from '../../middleware/roleMiddleware';
 import {
   CreateGlobalSettingSchema,
   UpdateGlobalSettingSchema,
@@ -114,7 +114,7 @@ export default async function globalSettingsRoute(fastify: FastifyInstance) {
         })
       }
     },
-    preHandler: requirePermission('settings.view'),
+    preHandler: requireGlobalAdmin(),
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const groupsWithSettings = await GlobalSettingsService.getAllGroupsWithSettings();
@@ -157,7 +157,7 @@ export default async function globalSettingsRoute(fastify: FastifyInstance) {
         })
       }
     },
-    preHandler: requirePermission('settings.view'),
+    preHandler: requireGlobalAdmin(),
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const settings = await GlobalSettingsService.getAll();
@@ -208,7 +208,7 @@ export default async function globalSettingsRoute(fastify: FastifyInstance) {
         })
       }
     },
-    preHandler: requirePermission('settings.view'),
+    preHandler: requireGlobalAdmin(),
   }, async (request, reply) => {
     try {
       const { key } = request.params;
@@ -272,7 +272,7 @@ export default async function globalSettingsRoute(fastify: FastifyInstance) {
         })
       }
     },
-    preHandler: requirePermission('settings.edit'),
+    onRequest: requireGlobalAdmin(),
   }, async (request, reply) => {
     try {
       // Fastify has already validated request.body using CreateGlobalSettingSchema
@@ -362,7 +362,7 @@ export default async function globalSettingsRoute(fastify: FastifyInstance) {
         })
       }
     },
-    preHandler: requirePermission('settings.edit'),
+    preHandler: requireGlobalAdmin(),
   }, async (request, reply) => {
     try {
       const { key } = request.params;
@@ -434,7 +434,7 @@ export default async function globalSettingsRoute(fastify: FastifyInstance) {
         })
       }
     },
-    preHandler: requirePermission('settings.delete'),
+    preHandler: requireGlobalAdmin(),
   }, async (request, reply) => {
     try {
       const { key } = request.params;
@@ -491,7 +491,7 @@ export default async function globalSettingsRoute(fastify: FastifyInstance) {
         })
       }
     },
-    preHandler: requirePermission('settings.view'),
+    preHandler: requireGlobalAdmin(),
   }, async (request, reply) => {
     try {
       const { groupId } = request.params;
@@ -536,7 +536,7 @@ export default async function globalSettingsRoute(fastify: FastifyInstance) {
         })
       }
     },
-    preHandler: requirePermission('settings.view'),
+    preHandler: requireGlobalAdmin(),
   }, async (request, reply) => {
     try {
       const categories = await GlobalSettingsService.getCategories();
@@ -588,7 +588,7 @@ export default async function globalSettingsRoute(fastify: FastifyInstance) {
         })
       }
     },
-    preHandler: requirePermission('settings.view'),
+    preHandler: requireGlobalAdmin(),
   }, async (request, reply) => {
     try {
       // Fastify has already validated request.body using SearchGlobalSettingsSchema
@@ -654,7 +654,7 @@ export default async function globalSettingsRoute(fastify: FastifyInstance) {
         })
       }
     },
-    preHandler: requirePermission('settings.edit'),
+    onRequest: requireGlobalAdmin(),
   }, async (request, reply) => {
     try {
       // Fastify has already validated request.body using BulkGlobalSettingsSchema
@@ -738,7 +738,7 @@ export default async function globalSettingsRoute(fastify: FastifyInstance) {
         })
       }
     },
-    preHandler: requirePermission('settings.view'),
+    preHandler: requireGlobalAdmin(),
   }, async (request, reply) => {
     try {
       // const { validateEncryption } = await import('@src/utils/encryption'); // Removed dynamic import
