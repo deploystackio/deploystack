@@ -1,7 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { FastifyInstance, FastifyReply } from 'fastify';
+import { z } from 'zod';
+import { zodToJsonSchema } from 'zod-to-json-schema';
 import { getLucia, getGithubAuth } from '../../lib/lucia';
-import { type GithubCallbackInput } from './schemas';
+import { GithubCallbackSchema, type GithubCallbackInput } from './schemas';
 import { getDb, getSchema } from '../../db';
 import { eq } from 'drizzle-orm';
 import { generateId } from 'lucia';
@@ -11,11 +13,41 @@ import { GlobalSettingsInitService } from '../../global-settings';
 // Define types for requests with specific query parameters
 const GITHUB_SCOPES = ['user:email']; // Request access to user's email
 
+// Response schemas for GitHub OAuth API
+const errorResponseSchema = z.object({
+  error: z.string().describe('Error message')
+});
+
+const redirectResponseSchema = z.object({
+  statusCode: z.number().describe('HTTP status code'),
+  headers: z.object({
+    location: z.string().describe('Redirect URL')
+  }).describe('Response headers')
+});
+
 export default async function githubAuthRoutes(fastify: FastifyInstance) {
   // Route to initiate GitHub login
-  fastify.get(
-    '/login',
-    async (_request, reply: FastifyReply) => { // _request type can be FastifyRequest if no specific generics needed here
+  fastify.get('/login', {
+    schema: {
+      tags: ['Authentication'],
+      summary: 'Initiate GitHub OAuth login',
+      description: 'Redirects the user to GitHub for OAuth authentication. This endpoint generates a state parameter for CSRF protection and redirects to GitHub\'s authorization URL.',
+      response: {
+        302: zodToJsonSchema(redirectResponseSchema.describe('Redirect to GitHub OAuth authorization URL'), {
+          $refStrategy: 'none',
+          target: 'openApi3'
+        }),
+        403: zodToJsonSchema(errorResponseSchema.describe('Forbidden - Login is disabled by administrator'), {
+          $refStrategy: 'none',
+          target: 'openApi3'
+        }),
+        500: zodToJsonSchema(errorResponseSchema.describe('Internal Server Error'), {
+          $refStrategy: 'none',
+          target: 'openApi3'
+        })
+      }
+    }
+  }, async (_request, reply: FastifyReply) => { // _request type can be FastifyRequest if no specific generics needed here
       // Check if login is enabled
       const isLoginEnabled = await GlobalSettingsInitService.isLoginEnabled();
       if (!isLoginEnabled) {
@@ -50,9 +82,39 @@ export default async function githubAuthRoutes(fastify: FastifyInstance) {
   );
 
   // Route to handle GitHub callback
-  fastify.get<{ Querystring: GithubCallbackInput }>(
-    '/callback',
-    async (request, reply: FastifyReply) => { // request.query will be typed as GithubCallbackInput by Fastify
+  fastify.get<{ Querystring: GithubCallbackInput }>('/callback', {
+    schema: {
+      tags: ['Authentication'],
+      summary: 'GitHub OAuth callback',
+      description: 'Handles the OAuth callback from GitHub after user authorization. Validates the state parameter, exchanges the authorization code for tokens, retrieves user information, and creates or links user accounts. Sets authentication session cookie on success.',
+      querystring: zodToJsonSchema(GithubCallbackSchema, {
+        $refStrategy: 'none',
+        target: 'openApi3'
+      }),
+      response: {
+        302: zodToJsonSchema(redirectResponseSchema.describe('Redirect to frontend after successful authentication'), {
+          $refStrategy: 'none',
+          target: 'openApi3'
+        }),
+        400: zodToJsonSchema(errorResponseSchema.describe('Bad Request - Invalid state parameter, OAuth error, or GitHub email not available'), {
+          $refStrategy: 'none',
+          target: 'openApi3'
+        }),
+        403: zodToJsonSchema(errorResponseSchema.describe('Forbidden - Login is disabled by administrator'), {
+          $refStrategy: 'none',
+          target: 'openApi3'
+        }),
+        409: zodToJsonSchema(errorResponseSchema.describe('Conflict - User account conflict'), {
+          $refStrategy: 'none',
+          target: 'openApi3'
+        }),
+        500: zodToJsonSchema(errorResponseSchema.describe('Internal Server Error'), {
+          $refStrategy: 'none',
+          target: 'openApi3'
+        })
+      }
+    }
+  }, async (request, reply: FastifyReply) => { // request.query will be typed as GithubCallbackInput by Fastify
       // Check if login is enabled
       const isLoginEnabled = await GlobalSettingsInitService.isLoginEnabled();
       if (!isLoginEnabled) {
