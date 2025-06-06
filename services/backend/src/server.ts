@@ -282,7 +282,7 @@ export const createServer = async () => {
     },
     staticCSP: true,
     transformStaticCSP: (header) => header,
-    transformSpecification: (swaggerObject, _request, _reply) => {
+    transformSpecification: (swaggerObject) => {
       // Remove favicon route from the API specification
       if (swaggerObject.paths && swaggerObject.paths['/favicon.ico']) {
         delete swaggerObject.paths['/favicon.ico'];

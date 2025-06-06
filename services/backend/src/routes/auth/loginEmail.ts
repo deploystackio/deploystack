@@ -5,101 +5,69 @@ import { verify } from '@node-rs/argon2';
 import { getDb, getSchema } from '../../db';
 import { eq, or } from 'drizzle-orm';
 import { GlobalSettingsInitService } from '../../global-settings';
+import { z } from 'zod';
+import { zodToJsonSchema } from 'zod-to-json-schema';
+
+// Zod Schemas
+const loginEmailBodySchema = z.object({
+  login: z.string().describe("User's registered email address or username."),
+  password: z.string().describe("User's password.")
+});
+
+const userResponseSchema = z.object({
+  id: z.string().describe('User ID'),
+  email: z.string().email().describe("User's primary email address."),
+  username: z.string().optional().nullable().describe("User's username."),
+  first_name: z.string().optional().nullable().describe("User's first name."),
+  last_name: z.string().optional().nullable().describe("User's last name."),
+  role_id: z.string().optional().nullable().describe("User's role ID.")
+});
+
+const successResponseSchema = z.object({
+  success: z.boolean().describe('Indicates if the login operation was successful.'),
+  message: z.string().describe('Human-readable message about the login result.'),
+  user: userResponseSchema.describe('Basic information about the logged-in user.')
+});
+
+const errorResponseSchema = z.object({
+  success: z.boolean().describe('Indicates if the operation was successful (typically false for errors).').default(false),
+  error: z.string().describe('Error message.')
+});
 
 const loginEmailRouteSchema = {
   tags: ['Authentication'],
   summary: 'User login via email/password',
   description: "Authenticates a user using their registered identifier (email or username) and password. This endpoint is accessed via the /api/auth/email/login path due to server-level prefixing. Establishes a session by setting an authentication cookie.",
-  body: {
-    type: 'object',
-    properties: {
-      login: {
-        type: 'string',
-        description: "User's registered email address or username."
-      },
-      password: {
-        type: 'string',
-        description: "User's password."
-      }
-    },
-    required: ['login', 'password']
-  },
+  body: zodToJsonSchema(loginEmailBodySchema, { $refStrategy: 'none', target: 'openApi3' }),
   response: {
-    200: {
-      description: 'Login successful. Session cookie is set.',
-      type: 'object',
-      properties: {
-        success: { type: 'boolean', description: 'Indicates if the login operation was successful.' },
-        message: { type: 'string', description: 'Human-readable message about the login result.' },
-        user: {
-          type: 'object',
-          description: 'Basic information about the logged-in user.',
-          properties: {
-            id: { type: 'string', description: 'User ID' },
-            email: { type: 'string', format: 'email', description: "User's primary email address." },
-            username: { type: 'string', nullable: true },
-            first_name: { type: 'string', nullable: true },
-            last_name: { type: 'string', nullable: true },
-            role_id: { type: 'string', nullable: true }
-          },
-          required: ['id', 'email']
-        }
-      },
-      required: ['success', 'message', 'user'],
-      examples: [
-        {
-          success: true,
-          message: "Logged in successfully.",
-          user: {
-            id: "clxyz1234000008l3abcde123",
-            email: "user@example.com",
-            username: "testuser",
-            first_name: "Test",
-            last_name: "User",
-            role_id: "user_role_id"
-          }
-        }
-      ]
-    },
-    400: {
-      description: 'Bad Request - Invalid input or invalid credentials.',
-      type: 'object',
-      properties: {
-        success: { type: 'boolean' },
-        error: { type: 'string', description: 'Error message.' }
-      },
-      required: ['success', 'error'],
-      examples: [
-        { success: false, error: "Email/username and password are required." },
-        { success: false, error: "Invalid email/username or password." }
-      ]
-    },
-    403: {
-      description: 'Forbidden - Login is disabled by administrator.',
-      type: 'object',
-      properties: {
-        success: { type: 'boolean' },
-        error: { type: 'string' }
-      },
-      required: ['success', 'error'],
-      examples: [
-        { success: false, error: "Login is currently disabled by administrator." }
-      ]
-    },
-    500: {
-      description: 'Internal Server Error - An unexpected error occurred on the server.',
-      type: 'object',
-      properties: {
-        success: { type: 'boolean' },
-        error: { type: 'string' }
-      },
-      required: ['success', 'error'],
-      examples: [
-        { success: false, error: "An unexpected error occurred during login." },
-        { success: false, error: "Internal server error: User table configuration missing." },
-        { success: false, error: "User ID not found." }
-      ]
-    }
+    200: zodToJsonSchema(successResponseSchema.describe('Login successful. Session cookie is set.'), {
+      $refStrategy: 'none',
+      target: 'openApi3'
+    }),
+    400: zodToJsonSchema(errorResponseSchema.describe('Bad Request - Invalid input or invalid credentials.'), {
+      $refStrategy: 'none',
+      target: 'openApi3',
+      // examples: [
+      //   { success: false, error: "Email/username and password are required." },
+      //   { success: false, error: "Invalid email/username or password." }
+      // ]
+    }),
+    403: zodToJsonSchema(errorResponseSchema.describe('Forbidden - Login is disabled by administrator.'), {
+      $refStrategy: 'none',
+      target: 'openApi3',
+      // examples: [
+      //   { success: false, error: "Login is currently disabled by administrator." }
+      // ]
+    }),
+    500: zodToJsonSchema(errorResponseSchema.describe('Internal Server Error - An unexpected error occurred on the server.'), {
+      $refStrategy: 'none',
+      target: 'openApi3',
+      // examples: [
+      //   { success: false, error: "An unexpected error occurred during login." },
+      //   { success: false, error: "Internal server error: User table configuration missing." },
+      //   { success: false, error: "User ID not found." }
+      // ]
+    })
   },
   security: [{ cookieAuth: [] }]
 };
@@ -118,8 +86,15 @@ export default async function loginEmailRoute(fastify: FastifyInstance) {
         });
       }
 
+      // Validate request body with Zod (optional, Fastify does this with the schema)
+      // const parsedBody = loginEmailBodySchema.safeParse(request.body);
+      // if (!parsedBody.success) {
+      //   return reply.status(400).send({ success: false, error: 'Invalid request body.', issues: parsedBody.error.issues });
+      // }
+      // const { login, password } = parsedBody.data;
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { login, email, password } = request.body as any;
+      const { login, email, password } = request.body as any; // Keep existing logic for now
       
       // Support both 'login' field (schema) and 'email' field (for backward compatibility with tests)
       const loginValue = login || email;
@@ -200,8 +175,8 @@ export default async function loginEmailRoute(fastify: FastifyInstance) {
           message: 'Logged in successfully.',
           user: {
             id: user.id,
-            username: user.username,
             email: user.email,
+            username: user.username,
             first_name: user.first_name,
             last_name: user.last_name,
             role_id: user.role_id

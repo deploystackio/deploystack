@@ -259,6 +259,7 @@ paths:
               required:
                 - login
                 - password
+              additionalProperties: false
         required: true
       security:
         - cookieAuth: []
@@ -268,7 +269,6 @@ paths:
           content:
             application/json:
               schema:
-                description: Login successful. Session cookie is set.
                 type: object
                 properties:
                   success:
@@ -279,7 +279,6 @@ paths:
                     description: Human-readable message about the login result.
                   user:
                     type: object
-                    description: Basic information about the logged-in user.
                     properties:
                       id:
                         type: string
@@ -291,103 +290,87 @@ paths:
                       username:
                         type: string
                         nullable: true
+                        description: User's username.
                       first_name:
                         type: string
                         nullable: true
+                        description: User's first name.
                       last_name:
                         type: string
                         nullable: true
+                        description: User's last name.
                       role_id:
                         type: string
                         nullable: true
+                        description: User's role ID.
                     required:
                       - id
                       - email
+                    additionalProperties: false
+                    description: Basic information about the logged-in user.
                 required:
                   - success
                   - message
                   - user
-              example:
-                success: true
-                message: Logged in successfully.
-                user:
-                  id: clxyz1234000008l3abcde123
-                  email: user@example.com
-                  username: testuser
-                  first_name: Test
-                  last_name: User
-                  role_id: user_role_id
+                additionalProperties: false
+                description: Login successful. Session cookie is set.
         "400":
           description: Bad Request - Invalid input or invalid credentials.
           content:
             application/json:
               schema:
-                description: Bad Request - Invalid input or invalid credentials.
                 type: object
                 properties:
                   success:
                     type: boolean
+                    description: Indicates if the operation was successful (typically false for
+                      errors).
+                    default: false
                   error:
                     type: string
                     description: Error message.
                 required:
-                  - success
                   - error
-              examples:
-                example1:
-                  value:
-                    success: false
-                    error: Email/username and password are required.
-                example2:
-                  value:
-                    success: false
-                    error: Invalid email/username or password.
+                additionalProperties: false
+                description: Bad Request - Invalid input or invalid credentials.
         "403":
           description: Forbidden - Login is disabled by administrator.
           content:
             application/json:
               schema:
-                description: Forbidden - Login is disabled by administrator.
                 type: object
                 properties:
                   success:
                     type: boolean
+                    description: Indicates if the operation was successful (typically false for
+                      errors).
+                    default: false
                   error:
                     type: string
+                    description: Error message.
                 required:
-                  - success
                   - error
-              example:
-                success: false
-                error: Login is currently disabled by administrator.
+                additionalProperties: false
+                description: Forbidden - Login is disabled by administrator.
         "500":
           description: Internal Server Error - An unexpected error occurred on the server.
           content:
             application/json:
               schema:
-                description: Internal Server Error - An unexpected error occurred on the server.
                 type: object
                 properties:
                   success:
                     type: boolean
+                    description: Indicates if the operation was successful (typically false for
+                      errors).
+                    default: false
                   error:
                     type: string
+                    description: Error message.
                 required:
-                  - success
                   - error
-              examples:
-                example1:
-                  value:
-                    success: false
-                    error: An unexpected error occurred during login.
-                example2:
-                  value:
-                    success: false
-                    error: "Internal server error: User table configuration missing."
-                example3:
-                  value:
-                    success: false
-                    error: User ID not found.
+                additionalProperties: false
+                description: Internal Server Error - An unexpected error occurred on the server.
   /api/auth/github/login:
     get:
       responses:
@@ -409,7 +392,9 @@ paths:
         - cookieAuth: []
       responses:
         "200":
-          description: Default Response
+          description: '{"examples":[{"success":true,"message":"Logged out
+            successfully."},{"success":true,"message":"No active session to
+            logout or already logged out."}]}'
           content:
             application/json:
               schema:
@@ -424,6 +409,10 @@ paths:
                 required:
                   - success
                   - message
+                additionalProperties: false
+                description: '{"examples":[{"success":true,"message":"Logged out
+                  successfully."},{"success":true,"message":"No active session
+                  to logout or already logged out."}]}'
               examples:
                 example1:
                   value:

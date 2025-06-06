@@ -4,7 +4,7 @@ This document explains how to generate and use the OpenAPI specification for the
 
 ## Overview
 
-The DeployStack Backend uses Fastify with Swagger plugins to automatically generate OpenAPI 3.0 specifications from route definitions. This provides:
+The DeployStack Backend uses Fastify with Swagger plugins to automatically generate OpenAPI 3.0 specifications. Route schemas are defined using [Zod](https://zod.dev/) for type safety and expressiveness, and then converted to JSON Schema using the [zod-to-json-schema](https://www.npmjs.com/package/zod-to-json-schema) library. This provides:
 
 - **Interactive Documentation**: Swagger UI interface for testing APIs
 - **Postman Integration**: JSON/YAML specs that can be imported into Postman
@@ -86,30 +86,72 @@ When the server is running (`npm run dev`), you can access:
 
 ## Adding Documentation to Routes
 
-To add OpenAPI documentation to your routes, include a schema object:
+To add OpenAPI documentation to your routes, define your request body and response schemas using Zod. Then, use the `zodToJsonSchema` utility to convert these Zod schemas into the JSON Schema format expected by Fastify.
+
+Make sure you have `zod` and `zod-to-json-schema` installed in your backend service.
 
 ```typescript
+import { z } from 'zod';
+import { zodToJsonSchema } from 'zod-to-json-schema';
+
+// 1. Define your Zod schemas for request body, responses, etc.
+const myRequestBodySchema = z.object({
+  name: z.string().min(3).describe("The name of the item (min 3 chars)"),
+  count: z.number().positive().describe("How many items (must be positive)")
+});
+
+const mySuccessResponseSchema = z.object({
+  success: z.boolean().describe("Indicates if the operation was successful"),
+  itemId: z.string().uuid().describe("The UUID of the created/affected item"),
+  message: z.string().optional().describe("Optional success message")
+});
+
+const myErrorResponseSchema = z.object({
+  success: z.boolean().default(false).describe("Indicates failure"),
+  error: z.string().describe("Error message detailing what went wrong")
+});
+
+// 2. Construct the Fastify route schema using zodToJsonSchema
 const routeSchema = {
-  tags: ['Category'],
-  summary: 'Brief description',
-  description: 'Detailed description of what this endpoint does',
-  security: [{ cookieAuth: [] }], // If authentication required
+  tags: ['Category'], // Your API category
+  summary: 'Brief description of your endpoint',
+  description: 'Detailed description of what this endpoint does, its parameters, and expected outcomes.',
+  security: [{ cookieAuth: [] }], // Include if authentication is required
+  body: zodToJsonSchema(myRequestBodySchema, { 
+    $refStrategy: 'none', // Keeps definitions inline, often simpler for Fastify
+    target: 'openApi3'   // Ensures compatibility with OpenAPI 3.0
+  }),
   response: {
-    200: {
-      type: 'object',
-      properties: {
-        success: { type: 'boolean' },
-        message: { type: 'string' }
-      },
-      required: ['success', 'message']
-    }
+    200: zodToJsonSchema(mySuccessResponseSchema.describe("Successful operation"), { 
+      $refStrategy: 'none', 
+      target: 'openApi3' 
+    }),
+    400: zodToJsonSchema(myErrorResponseSchema.describe("Bad Request - Invalid input"), { 
+      $refStrategy: 'none', 
+      target: 'openApi3' 
+    }),
+    // Define other responses (e.g., 401, 403, 404, 500) similarly
   }
 };
 
+// 3. Use the schema in your Fastify route definition
 fastify.post('/your-route', { schema: routeSchema }, async (request, reply) => {
-  // Your route handler
+  // Your route handler logic here
+  // Fastify will automatically validate request.body against myRequestBodySchema
+  
+  // Example of returning a success response:
+  // return reply.status(200).send({ 
+  //   success: true, 
+  //   itemId: 'some-uuid-v4-here', 
+  //   message: 'Item processed successfully.' 
+  // });
+
+  // Example of returning an error response:
+  // return reply.status(400).send({ success: false, error: "Invalid name provided." });
 });
 ```
+
+**Note**: Older examples in this document (like the "Logout Route Documentation" below) might still show manually crafted JSON schemas. The recommended approach is now to use Zod with `zod-to-json-schema` as shown above for better type safety and maintainability.
 
 ## Example: Logout Route Documentation
 

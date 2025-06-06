@@ -4,8 +4,6 @@ import dbStatusRoute from './db/status'
 import dbSetupRoute from './db/setup'
 // Import auth routes
 import registerEmailRoute from './auth/registerEmail'
-import loginEmailRoute from './auth/loginEmail'
-import logoutRoute from './auth/logout'
 // Import role and user management routes
 import rolesRoute from './roles'
 import usersRoute from './users'
