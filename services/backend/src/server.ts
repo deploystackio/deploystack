@@ -24,6 +24,8 @@ import {
   getDbStatus
 } from './db'
 import { GlobalSettingsInitService } from './global-settings'
+import { GlobalSettings } from './global-settings/helpers';
+import { GlobalSettingsService } from './services/globalSettingsService'; // Import the service
 import type SqliteDriver from 'better-sqlite3'; // For type checking in onClose
 import type { FastifyInstance } from 'fastify'
 
@@ -145,58 +147,6 @@ export const createServer = async () => {
   });
   server.log.info('@fastify/cookie registered.');
 
-  // Register Swagger for API documentation
-  await server.register(fastifySwagger, {
-    openapi: {
-      openapi: '3.0.0',
-      info: {
-        title: 'DeployStack Backend API',
-        description: 'API documentation for DeployStack Backend',
-        version: '0.20.5'
-      },
-      servers: [
-        {
-          url: 'http://localhost:3000',
-          description: 'Development server'
-        }
-      ],
-      components: {
-        securitySchemes: {
-          cookieAuth: {
-            type: 'apiKey',
-            in: 'cookie',
-            name: 'auth_session'
-          }
-        }
-      }
-    },
-    hideUntagged: false
-  });
-
-  await server.register(fastifySwaggerUI, {
-    routePrefix: '/documentation',
-    uiConfig: {
-      docExpansion: 'full',
-      deepLinking: false
-    },
-    uiHooks: {
-      onRequest: function (_request, _reply, next) { next() },
-      preHandler: function (_request, _reply, next) { next() }
-    },
-    staticCSP: true,
-    transformStaticCSP: (header) => header,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    transformSpecification: (swaggerObject, _request, _reply) => {
-      // Remove favicon route from the API specification
-      if (swaggerObject.paths && swaggerObject.paths['/favicon.ico']) {
-        delete swaggerObject.paths['/favicon.ico'];
-      }
-      return swaggerObject;
-    },
-    transformSpecificationClone: true
-  });
-  server.log.info('Swagger documentation registered at /documentation');
-
   await registerFastifyPlugins(server) // Existing plugin registrations
   
   // Register favicon after Swagger to exclude it from documentation
@@ -234,6 +184,116 @@ export const createServer = async () => {
 
   // Initialize database-dependent services
   await initializeDatabaseDependentServices(server, pluginManager);
+
+  // Conditionally register Swagger for API documentation
+  // This is placed after DB & global settings initialization to ensure settings are available
+  let swaggerEnabled: boolean;
+  if ((server as any).db === null) {
+    server.log.info('Database not available. Enabling Swagger documentation by default during setup phase.');
+    swaggerEnabled = true;
+  } else {
+    try {
+      server.log.info('Database is available. Checking "global.enable_swagger_docs" setting.');
+      swaggerEnabled = await GlobalSettings.getBoolean('global.enable_swagger_docs', true);
+      // The log message below was removed as it's covered by more specific logs later.
+    } catch (error) {
+      server.log.error('Error fetching "global.enable_swagger_docs" setting. Defaulting to true.', error);
+      swaggerEnabled = true;
+    }
+  }
+
+  // Always register Swagger and SwaggerUI. Access will be controlled by the preHandler.
+  // The swaggerEnabled variable is now only used for an initial log message.
+  if (swaggerEnabled) {
+    server.log.info('Initial check: Swagger documentation will be attempted to register. Access controlled by preHandler.');
+  } else {
+    server.log.info('Initial check: Swagger documentation was disabled by setting at startup, but routes will still be registered. Access controlled by preHandler.');
+  }
+
+  const host = process.env.HOST || 'localhost';
+  const port = process.env.PORT || '3000';
+  const serverUrl = `http://${host}:${port}`;
+
+  await server.register(fastifySwagger, {
+    openapi: {
+      openapi: '3.0.0',
+      info: {
+        title: 'DeployStack Backend API',
+        description: 'API documentation for DeployStack Backend',
+        version: '0.20.5' // We need to make this dynamic from package.json
+      },
+      servers: [
+        {
+          url: serverUrl,
+          description: process.env.NODE_ENV === 'development' ? 'Development server' : 'Server'
+        }
+      ],
+      components: {
+        securitySchemes: {
+          cookieAuth: {
+            type: 'apiKey',
+            in: 'cookie',
+            name: 'auth_session'
+          }
+        }
+      }
+    },
+    hideUntagged: false
+  });
+
+  await server.register(fastifySwaggerUI, {
+    routePrefix: '/documentation',
+    uiConfig: {
+      docExpansion: 'full',
+      deepLinking: false
+    },
+    uiHooks: {
+      onRequest: function (_request, _reply, next) { next() },
+      preHandler: async function (request, reply, next) {
+        // On-the-fly check for swagger documentation
+        let showSwagger = true; // Default to true if setting is missing or error occurs
+        if ((request.server as any).db !== null) {
+          try {
+            await GlobalSettings.refreshCaches(); // Attempt to refresh any underlying caches
+            const setting = await GlobalSettingsService.get('global.enable_swagger_docs');
+            if (setting && typeof setting.value === 'string') {
+              const valueLower = setting.value.toLowerCase();
+              showSwagger = !(valueLower === 'false' || valueLower === '0' || valueLower === 'no' || valueLower === 'off' || valueLower === 'disabled');
+            } else {
+              // If setting is not found or value is not a string, default to true (as per defaultValue in global.ts)
+              showSwagger = true; 
+            }
+            request.server.log.info(`Swagger UI access check (using Service): "global.enable_swagger_docs" is ${showSwagger}. Raw value: ${setting ? setting.value : 'Not found'}`);
+          } catch (err) {
+            request.server.log.error('Error fetching "global.enable_swagger_docs" with Service in preHandler. Defaulting to show Swagger.', err);
+            showSwagger = true;
+          }
+        } else {
+          request.server.log.info('Swagger UI access check: Database not available, showing Swagger UI by default.');
+          showSwagger = true;
+        }
+
+        if (!showSwagger) {
+          reply.code(404).send({ error: 'Not Found', message: 'API documentation is disabled.' });
+        } else {
+          next();
+        }
+      }
+    },
+    staticCSP: true,
+    transformStaticCSP: (header) => header,
+    transformSpecification: (swaggerObject, _request, _reply) => {
+      // Remove favicon route from the API specification
+      if (swaggerObject.paths && swaggerObject.paths['/favicon.ico']) {
+        delete swaggerObject.paths['/favicon.ico'];
+      }
+      return swaggerObject;
+    },
+    transformSpecificationClone: true
+  });
+    // Log registration; preHandler will control access dynamically
+    server.log.info('Swagger documentation routes registered at /documentation. Access is dynamically controlled by the "global.enable_swagger_docs" setting via a preHandler.');
+  // The `else` block related to initial swaggerEnabled check is no longer needed here as routes are always registered.
   
   // Initialize plugins (routes, hooks, etc.)
   // This should happen after DB and other core services are ready (or known to be unavailable)
