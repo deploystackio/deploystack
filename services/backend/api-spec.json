@@ -36,27 +36,393 @@
     },
     "/api/db/status": {
       "get": {
+        "summary": "Get database status",
+        "tags": [
+          "Database"
+        ],
+        "description": "Returns the current status of the database configuration and initialization. This endpoint checks whether the database has been configured and properly initialized.",
         "responses": {
           "200": {
-            "description": "Default Response"
+            "description": "Database status information",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "configured": {
+                      "type": "boolean"
+                    },
+                    "initialized": {
+                      "type": "boolean"
+                    },
+                    "dialect": {
+                      "type": "string",
+                      "enum": [
+                        "sqlite"
+                      ],
+                      "nullable": true
+                    }
+                  },
+                  "required": [
+                    "configured",
+                    "initialized",
+                    "dialect"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Database status information"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error - Failed to fetch database status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong."
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Internal Server Error - Failed to fetch database status"
+                }
+              }
+            }
           }
         }
       }
     },
     "/api/db/setup": {
       "post": {
+        "summary": "Setup database",
+        "tags": [
+          "Database"
+        ],
+        "description": "Initializes and configures the database for the DeployStack application. This endpoint sets up the database schema, creates necessary tables, and initializes database-dependent services. Can only be called once - subsequent calls will return a conflict error.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "sqlite"
+                    ]
+                  }
+                },
+                "required": [
+                  "type"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
-            "description": "Default Response"
+            "description": "Database setup completed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "Success message indicating the database setup status."
+                    },
+                    "restart_required": {
+                      "type": "boolean",
+                      "description": "Indicates whether a server restart is required to complete the setup."
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "restart_required"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Database setup completed successfully"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - Invalid input or unsupported database type",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong."
+                    },
+                    "details": {
+                      "type": "array",
+                      "description": "Additional error details (validation errors)."
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Bad Request - Invalid input or unsupported database type"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict - Database setup has already been performed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "Message indicating that database setup has already been performed."
+                    }
+                  },
+                  "required": [
+                    "message"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Conflict - Database setup has already been performed"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error - Database setup failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong."
+                    },
+                    "details": {
+                      "type": "array",
+                      "description": "Additional error details (validation errors)."
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Internal Server Error - Database setup failed"
+                }
+              }
+            }
           }
         }
       }
     },
     "/register": {
       "post": {
+        "summary": "User registration via email",
+        "tags": [
+          "Authentication"
+        ],
+        "description": "Creates a new user account using email and password. The first registered user automatically becomes a global administrator. Automatically creates a session and default team for the user.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "username": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 30,
+                    "pattern": "^[a-zA-Z0-9_]+$"
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 8,
+                    "maxLength": 100
+                  },
+                  "first_name": {
+                    "type": "string",
+                    "maxLength": 50
+                  },
+                  "last_name": {
+                    "type": "string",
+                    "maxLength": 50
+                  }
+                },
+                "required": [
+                  "username",
+                  "email",
+                  "password"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
-          "200": {
-            "description": "Default Response"
+          "201": {
+            "description": "User registered successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the registration was successful"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Success message"
+                    },
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "User ID"
+                        },
+                        "username": {
+                          "type": "string",
+                          "description": "User's username"
+                        },
+                        "email": {
+                          "type": "string",
+                          "format": "email",
+                          "description": "User's email address"
+                        },
+                        "first_name": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "User's first name"
+                        },
+                        "last_name": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "User's last name"
+                        },
+                        "role_id": {
+                          "type": "string",
+                          "description": "User's role ID"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "username",
+                        "email",
+                        "first_name",
+                        "last_name",
+                        "role_id"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Information about the registered user"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "message",
+                    "user"
+                  ],
+                  "additionalProperties": false,
+                  "description": "User registered successfully"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - Invalid input, username taken, or email already in use",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Bad Request - Invalid input, username taken, or email already in use"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Email registration is disabled by administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Forbidden - Email registration is disabled by administrator"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error - Registration failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Internal Server Error - Registration failed"
+                }
+              }
+            }
           }
         }
       }
@@ -401,9 +767,199 @@
     },
     "/api/auth/email/register": {
       "post": {
+        "summary": "User registration via email",
+        "tags": [
+          "Authentication"
+        ],
+        "description": "Creates a new user account using email and password. The first registered user automatically becomes a global administrator. Automatically creates a session and default team for the user.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "username": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 30,
+                    "pattern": "^[a-zA-Z0-9_]+$"
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 8,
+                    "maxLength": 100
+                  },
+                  "first_name": {
+                    "type": "string",
+                    "maxLength": 50
+                  },
+                  "last_name": {
+                    "type": "string",
+                    "maxLength": 50
+                  }
+                },
+                "required": [
+                  "username",
+                  "email",
+                  "password"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
-          "200": {
-            "description": "Default Response"
+          "201": {
+            "description": "User registered successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the registration was successful"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Success message"
+                    },
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "User ID"
+                        },
+                        "username": {
+                          "type": "string",
+                          "description": "User's username"
+                        },
+                        "email": {
+                          "type": "string",
+                          "format": "email",
+                          "description": "User's email address"
+                        },
+                        "first_name": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "User's first name"
+                        },
+                        "last_name": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "User's last name"
+                        },
+                        "role_id": {
+                          "type": "string",
+                          "description": "User's role ID"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "username",
+                        "email",
+                        "first_name",
+                        "last_name",
+                        "role_id"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Information about the registered user"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "message",
+                    "user"
+                  ],
+                  "additionalProperties": false,
+                  "description": "User registered successfully"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - Invalid input, username taken, or email already in use",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Bad Request - Invalid input, username taken, or email already in use"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Email registration is disabled by administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Forbidden - Email registration is disabled by administrator"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error - Registration failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Internal Server Error - Registration failed"
+                }
+              }
+            }
           }
         }
       }

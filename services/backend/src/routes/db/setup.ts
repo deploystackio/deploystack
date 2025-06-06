@@ -8,7 +8,52 @@ import {
   type InternalDbConfig,
   type DbSetupRequestBody
 } from './schemas';
-import { ZodError } from 'zod';
+import { ZodError, z } from 'zod';
+import { zodToJsonSchema } from 'zod-to-json-schema';
+
+// Response schemas for different scenarios
+const setupSuccessResponseSchema = z.object({
+  message: z.string().describe('Success message indicating the database setup status.'),
+  restart_required: z.boolean().describe('Indicates whether a server restart is required to complete the setup.')
+});
+
+const setupErrorResponseSchema = z.object({
+  error: z.string().describe('Error message describing what went wrong.'),
+  details: z.array(z.any()).optional().describe('Additional error details (validation errors).')
+});
+
+const setupConflictResponseSchema = z.object({
+  message: z.string().describe('Message indicating that database setup has already been performed.')
+});
+
+// Route schema for OpenAPI documentation
+const dbSetupRouteSchema = {
+  tags: ['Database'],
+  summary: 'Setup database',
+  description: 'Initializes and configures the database for the DeployStack application. This endpoint sets up the database schema, creates necessary tables, and initializes database-dependent services. Can only be called once - subsequent calls will return a conflict error.',
+  body: zodToJsonSchema(DbSetupRequestBodySchema, { 
+    $refStrategy: 'none', 
+    target: 'openApi3' 
+  }),
+  response: {
+    200: zodToJsonSchema(setupSuccessResponseSchema.describe('Database setup completed successfully'), {
+      $refStrategy: 'none',
+      target: 'openApi3'
+    }),
+    400: zodToJsonSchema(setupErrorResponseSchema.describe('Bad Request - Invalid input or unsupported database type'), {
+      $refStrategy: 'none',
+      target: 'openApi3'
+    }),
+    409: zodToJsonSchema(setupConflictResponseSchema.describe('Conflict - Database setup has already been performed'), {
+      $refStrategy: 'none',
+      target: 'openApi3'
+    }),
+    500: zodToJsonSchema(setupErrorResponseSchema.describe('Internal Server Error - Database setup failed'), {
+      $refStrategy: 'none',
+      target: 'openApi3'
+    })
+  }
+};
 
 // Handler for POST /api/db/setup
 async function setupDbHandler(
@@ -24,9 +69,10 @@ async function setupDbHandler(
       return reply.status(409).send({ message: 'Database setup has already been performed.' });
     }
 
-    const clientRequestBody = DbSetupRequestBodySchema.parse(request.body);
+    // Fastify has already validated the request body using our Zod schema
+    // If we reach here, request.body is guaranteed to be valid
+    const { type } = request.body;
     
-    let internalConfigObject: InternalDbConfig;
     // Determine DB path based on environment
     const isTestEnv = process.env.NODE_ENV === 'test';
     const sqliteDbFileName = isTestEnv ? 'deploystack.test.db' : 'deploystack.db';
@@ -34,11 +80,11 @@ async function setupDbHandler(
     // For tests, use the test-data directory; for production, use the database directory
     const sqliteDbPath = isTestEnv ? `tests/e2e/test-data/${sqliteDbFileName}` : `database/${sqliteDbFileName}`;
 
-    if (clientRequestBody.type === DatabaseType.SQLite) {
-      internalConfigObject = { type: DatabaseType.SQLite, dbPath: sqliteDbPath };
-    } else {
-      return reply.status(400).send({ error: 'Invalid database type specified. Only SQLite is supported.' });
-    }
+    // Since Zod validation ensures type is valid DatabaseType.SQLite, we can trust it
+    const internalConfigObject: InternalDbConfig = { 
+      type: DatabaseType.SQLite, 
+      dbPath: sqliteDbPath 
+    };
 
     const validatedInternalConfig = InternalDbConfigSchema.parse(internalConfigObject);
 
@@ -95,10 +141,7 @@ async function setupDbHandler(
 export default async function dbSetupRoute(server: FastifyInstance) {
   server.post<{ Body: DbSetupRequestBody }>(
     '/api/db/setup',
-    // Removed Fastify's schema validation block to prevent conflict
-    // as Zod validation is done manually within the handler.
-    // If a Zod validator (like fastify-type-provider-zod) is configured
-    // for Fastify, this block could be reinstated.
+    { schema: dbSetupRouteSchema },
     async (request, reply) => setupDbHandler(request, reply, server)
   );
 }

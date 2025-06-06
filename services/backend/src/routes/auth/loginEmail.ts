@@ -73,7 +73,7 @@ const loginEmailRouteSchema = {
 };
 
 export default async function loginEmailRoute(fastify: FastifyInstance) {
-  fastify.post(
+  fastify.post<{ Body: { login: string; password: string } }>(
     '/login',
     { schema: loginEmailRouteSchema },
     async (request, reply: FastifyReply) => {
@@ -86,23 +86,9 @@ export default async function loginEmailRoute(fastify: FastifyInstance) {
         });
       }
 
-      // Validate request body with Zod (optional, Fastify does this with the schema)
-      // const parsedBody = loginEmailBodySchema.safeParse(request.body);
-      // if (!parsedBody.success) {
-      //   return reply.status(400).send({ success: false, error: 'Invalid request body.', issues: parsedBody.error.issues });
-      // }
-      // const { login, password } = parsedBody.data;
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { login, email, password } = request.body as any; // Keep existing logic for now
-      
-      // Support both 'login' field (schema) and 'email' field (for backward compatibility with tests)
-      const loginValue = login || email;
-
-      // Validate required fields
-      if (!loginValue || !password) {
-        return reply.status(400).send({ success: false, error: 'Email/username and password are required.' });
-      }
+      // Fastify has already validated the request body using our Zod schema
+      // If we reach here, request.body is guaranteed to be valid with required fields
+      const { login, password } = request.body;
 
       try {
         const db = getDb();
@@ -119,7 +105,7 @@ export default async function loginEmailRoute(fastify: FastifyInstance) {
         const users = await (db as any)
           .select()
           .from(authUserTable)
-          .where(or(eq(authUserTable.email, loginValue.toLowerCase()), eq(authUserTable.username, loginValue)))
+          .where(or(eq(authUserTable.email, login.toLowerCase()), eq(authUserTable.username, login)))
           .limit(1);
 
         if (users.length === 0) {
