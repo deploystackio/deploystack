@@ -299,15 +299,210 @@
     },
     "/api/users": {
       "get": {
+        "summary": "List all users",
+        "tags": [
+          "Users"
+        ],
+        "description": "Retrieves a list of all users in the system. Requires admin permissions.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
         "responses": {
           "200": {
-            "description": "Default Response"
+            "description": "Successfully retrieved users list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "username": {
+                            "type": "string"
+                          },
+                          "email": {
+                            "type": "string"
+                          },
+                          "auth_type": {
+                            "type": "string"
+                          },
+                          "first_name": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "last_name": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "github_id": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "role_id": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "role": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "permissions": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name",
+                              "permissions"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "username",
+                          "email",
+                          "auth_type",
+                          "first_name",
+                          "last_name",
+                          "github_id",
+                          "role_id"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "description": "Array of users"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Successfully retrieved users list"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "details": {
+                      "type": "array",
+                      "description": "Additional error details (validation errors)"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Unauthorized - Authentication required"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Insufficient permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "details": {
+                      "type": "array",
+                      "description": "Additional error details (validation errors)"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Forbidden - Insufficient permissions"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "details": {
+                      "type": "array",
+                      "description": "Additional error details (validation errors)"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Internal Server Error"
+                }
+              }
+            }
           }
         }
       }
     },
     "/api/users/{id}": {
       "get": {
+        "summary": "Get user by ID",
+        "tags": [
+          "Users"
+        ],
+        "description": "Retrieves a specific user by their ID. Users can access their own profile, admins can access any user.",
         "parameters": [
           {
             "schema": {
@@ -315,16 +510,248 @@
             },
             "in": "path",
             "name": "id",
-            "required": true
+            "required": true,
+            "description": "User ID"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
           }
         ],
         "responses": {
           "200": {
-            "description": "Default Response"
+            "description": "User data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "username": {
+                      "type": "string"
+                    },
+                    "email": {
+                      "type": "string"
+                    },
+                    "auth_type": {
+                      "type": "string"
+                    },
+                    "first_name": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "last_name": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "github_id": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "role_id": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "role": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "permissions": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name",
+                        "permissions"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "username",
+                    "email",
+                    "auth_type",
+                    "first_name",
+                    "last_name",
+                    "github_id",
+                    "role_id"
+                  ],
+                  "additionalProperties": false,
+                  "description": "User data"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "details": {
+                      "type": "array",
+                      "description": "Additional error details (validation errors)"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Unauthorized - Authentication required"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Cannot access this user",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "details": {
+                      "type": "array",
+                      "description": "Additional error details (validation errors)"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Forbidden - Cannot access this user"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found - User not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "details": {
+                      "type": "array",
+                      "description": "Additional error details (validation errors)"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Not Found - User not found"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "details": {
+                      "type": "array",
+                      "description": "Additional error details (validation errors)"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Internal Server Error"
+                }
+              }
+            }
           }
         }
       },
       "put": {
+        "summary": "Update user",
+        "tags": [
+          "Users"
+        ],
+        "description": "Updates user information. Users can update their own profile, admins can update any user.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "username": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "first_name": {
+                    "type": "string"
+                  },
+                  "last_name": {
+                    "type": "string"
+                  },
+                  "role_id": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
         "parameters": [
           {
             "schema": {
@@ -332,16 +759,297 @@
             },
             "in": "path",
             "name": "id",
-            "required": true
+            "required": true,
+            "description": "User ID"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
           }
         ],
         "responses": {
           "200": {
-            "description": "Default Response"
+            "description": "User updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "username": {
+                          "type": "string"
+                        },
+                        "email": {
+                          "type": "string"
+                        },
+                        "auth_type": {
+                          "type": "string"
+                        },
+                        "first_name": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "last_name": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "github_id": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "role_id": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "role": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            },
+                            "name": {
+                              "type": "string"
+                            },
+                            "permissions": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name",
+                            "permissions"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "username",
+                        "email",
+                        "auth_type",
+                        "first_name",
+                        "last_name",
+                        "github_id",
+                        "role_id"
+                      ],
+                      "additionalProperties": false,
+                      "description": "User data"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Success message"
+                    }
+                  },
+                  "required": [
+                    "success"
+                  ],
+                  "additionalProperties": false,
+                  "description": "User updated successfully"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - Validation error or invalid role ID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "details": {
+                      "type": "array",
+                      "description": "Additional error details (validation errors)"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Bad Request - Validation error or invalid role ID"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "details": {
+                      "type": "array",
+                      "description": "Additional error details (validation errors)"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Unauthorized - Authentication required"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Cannot update this user or change own role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "details": {
+                      "type": "array",
+                      "description": "Additional error details (validation errors)"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Forbidden - Cannot update this user or change own role"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found - User not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "details": {
+                      "type": "array",
+                      "description": "Additional error details (validation errors)"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Not Found - User not found"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict - Username or email already exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "details": {
+                      "type": "array",
+                      "description": "Additional error details (validation errors)"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Conflict - Username or email already exists"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "details": {
+                      "type": "array",
+                      "description": "Additional error details (validation errors)"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Internal Server Error"
+                }
+              }
+            }
           }
         }
       },
       "delete": {
+        "summary": "Delete user",
+        "tags": [
+          "Users"
+        ],
+        "description": "Deletes a user from the system. Requires admin permissions. Users cannot delete themselves.",
         "parameters": [
           {
             "schema": {
@@ -349,18 +1057,192 @@
             },
             "in": "path",
             "name": "id",
-            "required": true
+            "required": true,
+            "description": "User ID"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
           }
         ],
         "responses": {
           "200": {
-            "description": "Default Response"
+            "description": "User deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Success message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "message"
+                  ],
+                  "additionalProperties": false,
+                  "description": "User deleted successfully"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "details": {
+                      "type": "array",
+                      "description": "Additional error details (validation errors)"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Unauthorized - Authentication required"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Insufficient permissions or cannot delete own account",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "details": {
+                      "type": "array",
+                      "description": "Additional error details (validation errors)"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Forbidden - Insufficient permissions or cannot delete own account"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found - User not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "details": {
+                      "type": "array",
+                      "description": "Additional error details (validation errors)"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Not Found - User not found"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "details": {
+                      "type": "array",
+                      "description": "Additional error details (validation errors)"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Internal Server Error"
+                }
+              }
+            }
           }
         }
       }
     },
     "/api/users/{id}/role": {
       "put": {
+        "summary": "Assign role to user",
+        "tags": [
+          "Users"
+        ],
+        "description": "Assigns a role to a specific user. Requires admin permissions. Users cannot change their own role.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "role_id": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "role_id"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": true
+        },
         "parameters": [
           {
             "schema": {
@@ -368,27 +1250,414 @@
             },
             "in": "path",
             "name": "id",
-            "required": true
+            "required": true,
+            "description": "User ID"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
           }
         ],
         "responses": {
           "200": {
-            "description": "Default Response"
+            "description": "Role assigned successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "username": {
+                          "type": "string"
+                        },
+                        "email": {
+                          "type": "string"
+                        },
+                        "auth_type": {
+                          "type": "string"
+                        },
+                        "first_name": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "last_name": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "github_id": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "role_id": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "role": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            },
+                            "name": {
+                              "type": "string"
+                            },
+                            "permissions": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name",
+                            "permissions"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "username",
+                        "email",
+                        "auth_type",
+                        "first_name",
+                        "last_name",
+                        "github_id",
+                        "role_id"
+                      ],
+                      "additionalProperties": false,
+                      "description": "User data"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Success message"
+                    }
+                  },
+                  "required": [
+                    "success"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Role assigned successfully"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "details": {
+                      "type": "array",
+                      "description": "Additional error details (validation errors)"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Bad Request - Validation error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "details": {
+                      "type": "array",
+                      "description": "Additional error details (validation errors)"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Unauthorized - Authentication required"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Insufficient permissions or cannot change own role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "details": {
+                      "type": "array",
+                      "description": "Additional error details (validation errors)"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Forbidden - Insufficient permissions or cannot change own role"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found - User or role not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "details": {
+                      "type": "array",
+                      "description": "Additional error details (validation errors)"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Not Found - User or role not found"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "details": {
+                      "type": "array",
+                      "description": "Additional error details (validation errors)"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Internal Server Error"
+                }
+              }
+            }
           }
         }
       }
     },
     "/api/users/stats": {
       "get": {
+        "summary": "Get user statistics",
+        "tags": [
+          "Users"
+        ],
+        "description": "Retrieves user statistics including count by role. Requires admin permissions.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
         "responses": {
           "200": {
-            "description": "Default Response"
+            "description": "User statistics retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "user_count_by_role": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "number"
+                          },
+                          "description": "Count of users by role"
+                        }
+                      },
+                      "required": [
+                        "user_count_by_role"
+                      ],
+                      "additionalProperties": false,
+                      "description": "User statistics data"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "additionalProperties": false,
+                  "description": "User statistics retrieved successfully"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "details": {
+                      "type": "array",
+                      "description": "Additional error details (validation errors)"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Unauthorized - Authentication required"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Insufficient permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "details": {
+                      "type": "array",
+                      "description": "Additional error details (validation errors)"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Forbidden - Insufficient permissions"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "details": {
+                      "type": "array",
+                      "description": "Additional error details (validation errors)"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Internal Server Error"
+                }
+              }
+            }
           }
         }
       }
     },
     "/api/users/role/{roleId}": {
       "get": {
+        "summary": "Get users by role",
+        "tags": [
+          "Users"
+        ],
+        "description": "Retrieves all users with a specific role. Requires admin permissions.",
         "parameters": [
           {
             "schema": {
@@ -396,30 +1665,527 @@
             },
             "in": "path",
             "name": "roleId",
-            "required": true
+            "required": true,
+            "description": "Role ID"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
           }
         ],
         "responses": {
           "200": {
-            "description": "Default Response"
+            "description": "Users with specified role retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "username": {
+                            "type": "string"
+                          },
+                          "email": {
+                            "type": "string"
+                          },
+                          "auth_type": {
+                            "type": "string"
+                          },
+                          "first_name": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "last_name": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "github_id": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "role_id": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "role": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "permissions": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name",
+                              "permissions"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "username",
+                          "email",
+                          "auth_type",
+                          "first_name",
+                          "last_name",
+                          "github_id",
+                          "role_id"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "description": "Array of users"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Users with specified role retrieved successfully"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "details": {
+                      "type": "array",
+                      "description": "Additional error details (validation errors)"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Unauthorized - Authentication required"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Insufficient permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "details": {
+                      "type": "array",
+                      "description": "Additional error details (validation errors)"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Forbidden - Insufficient permissions"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "details": {
+                      "type": "array",
+                      "description": "Additional error details (validation errors)"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Internal Server Error"
+                }
+              }
+            }
           }
         }
       }
     },
     "/api/users/me": {
       "get": {
+        "summary": "Get current user profile",
+        "tags": [
+          "Users"
+        ],
+        "description": "Retrieves the profile of the currently authenticated user.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
         "responses": {
           "200": {
-            "description": "Default Response"
+            "description": "Current user profile data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "username": {
+                      "type": "string"
+                    },
+                    "email": {
+                      "type": "string"
+                    },
+                    "auth_type": {
+                      "type": "string"
+                    },
+                    "first_name": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "last_name": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "github_id": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "role_id": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "role": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "permissions": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name",
+                        "permissions"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "username",
+                    "email",
+                    "auth_type",
+                    "first_name",
+                    "last_name",
+                    "github_id",
+                    "role_id"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Current user profile data"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "details": {
+                      "type": "array",
+                      "description": "Additional error details (validation errors)"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Unauthorized - Authentication required"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found - User not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "details": {
+                      "type": "array",
+                      "description": "Additional error details (validation errors)"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Not Found - User not found"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "details": {
+                      "type": "array",
+                      "description": "Additional error details (validation errors)"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Internal Server Error"
+                }
+              }
+            }
           }
         }
       }
     },
     "/api/users/me/teams": {
       "get": {
+        "summary": "Get current user teams",
+        "tags": [
+          "Users"
+        ],
+        "description": "Retrieves all teams that the currently authenticated user belongs to.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
         "responses": {
           "200": {
-            "description": "Default Response"
+            "description": "User teams retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful"
+                    },
+                    "teams": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "Team ID"
+                          },
+                          "name": {
+                            "type": "string",
+                            "description": "Team name"
+                          },
+                          "slug": {
+                            "type": "string",
+                            "description": "Team slug"
+                          },
+                          "description": {
+                            "type": "string",
+                            "nullable": true,
+                            "description": "Team description"
+                          },
+                          "owner_id": {
+                            "type": "string",
+                            "description": "Team owner ID"
+                          },
+                          "created_at": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Team creation date"
+                          },
+                          "updated_at": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Team last update date"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "slug",
+                          "description",
+                          "owner_id",
+                          "created_at",
+                          "updated_at"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "description": "Array of user teams"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "teams"
+                  ],
+                  "additionalProperties": false,
+                  "description": "User teams retrieved successfully"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "details": {
+                      "type": "array",
+                      "description": "Additional error details (validation errors)"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Unauthorized - Authentication required"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "details": {
+                      "type": "array",
+                      "description": "Additional error details (validation errors)"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Internal Server Error"
+                }
+              }
+            }
           }
         }
       }

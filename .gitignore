@@ -67,3 +67,4 @@ services/backend/tests/e2e/test-data/*.db
 ._*.json
 cookies.txt
 cookiejar.txt
+services/backend/tests/e2e/.test-context.json
