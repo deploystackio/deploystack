@@ -19,8 +19,8 @@ export const registerRoutes = (server: FastifyInstance): void => {
   
   // Register auth routes
   server.register(registerEmailRoute);
-  server.register(loginEmailRoute);
-  server.register(logoutRoute);
+  // loginEmailRoute is now registered with /api/auth prefix in server.ts
+  // logoutRoute is now registered with /api/auth prefix in server.ts
   
   // Register role and user management routes
   server.register(rolesRoute);
