@@ -174,4 +174,76 @@ export class UserService {
       this.clearCache();
     }
   }
+
+  /**
+   * Request password reset for email users
+   */
+  static async requestPasswordReset(email: string): Promise<{ success: boolean; message: string }> {
+    try {
+      const apiUrl = this.getApiUrl();
+      const response = await fetch(`${apiUrl}/api/auth/email/forgot-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        return data;
+      }
+
+      // Handle different error status codes
+      if (response.status === 503) {
+        throw new Error('SERVICE_UNAVAILABLE');
+      }
+
+      throw new Error(`Password reset request failed with status: ${response.status}`);
+    } catch (error) {
+      console.error('Password reset request error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Reset password using token
+   */
+  static async resetPassword(token: string, newPassword: string): Promise<{ success: boolean; message: string }> {
+    try {
+      const apiUrl = this.getApiUrl();
+      const response = await fetch(`${apiUrl}/api/auth/email/reset-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ token, new_password: newPassword }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        return data;
+      }
+
+      // Handle different error status codes
+      if (response.status === 400) {
+        throw new Error('INVALID_TOKEN');
+      }
+      if (response.status === 403) {
+        throw new Error('FORBIDDEN');
+      }
+      if (response.status === 503) {
+        throw new Error('SERVICE_UNAVAILABLE');
+      }
+
+      throw new Error(`Password reset failed with status: ${response.status}`);
+    } catch (error) {
+      console.error('Password reset error:', error);
+      throw error;
+    }
+  }
 }
