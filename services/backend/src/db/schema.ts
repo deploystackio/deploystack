@@ -100,6 +100,14 @@ export const emailVerificationTokensTableColumns = {
   created_at: (columnBuilder: any) => columnBuilder('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 };
 
+export const passwordResetTokensTableColumns = {
+  id: (columnBuilder: any) => columnBuilder('id').primaryKey(),
+  user_id: (columnBuilder: any) => columnBuilder('user_id').notNull(), // Foreign key to authUser.id
+  token_hash: (columnBuilder: any) => columnBuilder('token_hash').notNull(), // Hashed reset token
+  expires_at: (columnBuilder: any) => columnBuilder('expires_at', { mode: 'timestamp' }).notNull(), // Token expiration (10 minutes)
+  created_at: (columnBuilder: any) => columnBuilder('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+};
+
 // This object will hold definitions for all base tables.
 export const baseTableDefinitions = {
   roles: rolesTableColumns,
@@ -111,6 +119,7 @@ export const baseTableDefinitions = {
   globalSettingGroups: globalSettingGroupsTableColumns,
   globalSettings: globalSettingsTableColumns,
   emailVerificationTokens: emailVerificationTokensTableColumns,
+  passwordResetTokens: passwordResetTokensTableColumns,
 };
 
 // This object will hold definitions for plugin tables, to be populated dynamically.

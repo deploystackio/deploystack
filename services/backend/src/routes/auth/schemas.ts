@@ -59,3 +59,18 @@ export const ResendVerificationSchema = z.object({
 });
 
 export type ResendVerificationInput = z.infer<typeof ResendVerificationSchema>;
+
+export const ForgotPasswordSchema = z.object({
+  email: z.string().email({ message: 'Valid email address is required' }),
+});
+
+export type ForgotPasswordInput = z.infer<typeof ForgotPasswordSchema>;
+
+export const ResetPasswordSchema = z.object({
+  token: z.string().min(1, { message: 'Reset token is required' }),
+  new_password: z.string()
+    .min(8, { message: 'Password must be at least 8 characters long' })
+    .max(100, { message: 'Password cannot be longer than 100 characters' }),
+});
+
+export type ResetPasswordInput = z.infer<typeof ResetPasswordSchema>;

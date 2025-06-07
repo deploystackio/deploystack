@@ -87,3 +87,11 @@ export const emailVerificationTokens = sqliteTable('emailVerificationTokens', {
   expires_at: integer('expires_at', { mode: 'timestamp' }).notNull(),
   created_at: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 });
+
+export const passwordResetTokens = sqliteTable('passwordResetTokens', {
+  id: text('id').primaryKey(),
+  user_id: text('user_id').notNull().references(() => authUser.id, { onDelete: 'cascade' }),
+  token_hash: text('token_hash').notNull(),
+  expires_at: integer('expires_at', { mode: 'timestamp' }).notNull(),
+  created_at: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+});
