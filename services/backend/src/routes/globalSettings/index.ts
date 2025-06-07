@@ -665,9 +665,17 @@ export default async function globalSettingsRoute(fastify: FastifyInstance) {
 
       for (const settingData of settings) {
         try {
+          // Convert value to proper type if needed
+          let processedValue = settingData.value;
+          if (settingData.type === 'boolean' && typeof settingData.value === 'string') {
+            processedValue = settingData.value.toLowerCase() === 'true';
+          } else if (settingData.type === 'number' && typeof settingData.value === 'string') {
+            processedValue = Number(settingData.value);
+          }
+          
           const setting = await GlobalSettingsService.setTyped(
             settingData.key,
-            settingData.value,
+            processedValue,
             settingData.type,
             {
               description: settingData.description,
@@ -677,6 +685,7 @@ export default async function globalSettingsRoute(fastify: FastifyInstance) {
           );
           results.push(setting);
         } catch (error) {
+          fastify.log.error(`Error processing setting ${settingData.key}:`, error);
           errors.push({
             key: settingData.key,
             error: error instanceof Error ? error.message : 'Unknown error',

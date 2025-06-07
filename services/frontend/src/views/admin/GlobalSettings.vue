@@ -140,9 +140,20 @@ async function handleSubmit(event: Event) {
   // Convert form values to API format
   const settingsToUpdate = Object.entries(formValues.value).map(([key, value]) => {
     const setting = selectedGroup.value?.settings?.find(s => s.key === key)
+
+    // Ensure proper type conversion based on setting type
+    let typedValue = value
+    if (setting?.type === 'boolean') {
+      typedValue = Boolean(value)
+    } else if (setting?.type === 'number') {
+      typedValue = Number(value)
+    } else {
+      typedValue = String(value)
+    }
+
     return {
       key,
-      value: value, // API expects typed values (string, number, boolean)
+      value: typedValue, // API expects typed values (string, number, boolean)
       type: setting?.type,
       group_id: selectedGroup.value?.id,
       description: setting?.description,
@@ -274,7 +285,10 @@ async function handleSubmit(event: Event) {
                     <div v-else-if="setting.type === 'boolean'">
                       <Switch
                         :id="`setting-${setting.key}`"
-                        v-model="formValues[setting.key] as boolean"
+                        :model-value="formValues[setting.key] as boolean"
+                        @update:model-value="(value: boolean) => {
+                          formValues[setting.key] = value
+                        }"
                       />
                     </div>
 
