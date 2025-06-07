@@ -11,6 +11,7 @@ export interface TestContext {
   secondUserCookie?: string;
   firstUserLoginCookie?: string;
   secondUserLoginCookie?: string;
+  secondUserProfileCookie?: string;
 }
 
 const CONTEXT_FILE = path.join(__dirname, '.test-context.json');
@@ -30,6 +31,7 @@ export function setTestContext(context: TestContext): void {
       secondUserCookie: context.secondUserCookie,
       firstUserLoginCookie: context.firstUserLoginCookie,
       secondUserLoginCookie: context.secondUserLoginCookie,
+      secondUserProfileCookie: context.secondUserProfileCookie,
     }, null, 2));
   } catch (error) {
     console.warn('Failed to save test context to file:', error);
