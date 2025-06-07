@@ -9,17 +9,6 @@
 // The functions for columns expect a Drizzle column builder function
 // (e.g., sqliteText, pgText, sqliteInteger, pgInteger) as their argument.
 
-export const usersTableColumns = {
-  // Parameter 'columnBuilder' is expected to be a function like `text` or `integer`
-  // from the appropriate Drizzle dialect module (e.g., drizzle-orm/sqlite-core or drizzle-orm/pg-core)
-  id: (columnBuilder: any) => columnBuilder('id').primaryKey(),
-  email: (columnBuilder: any) => columnBuilder('email').notNull().unique(),
-  name: (columnBuilder: any) => columnBuilder('name'),
-  // Use $defaultFn for SQLite timestamp generation
-  createdAt: (columnBuilder: any) => columnBuilder('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
-  updatedAt: (columnBuilder: any) => columnBuilder('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
-};
-
 // Enum for authentication types
 // This will be translated to pgEnum or similar in db/index.ts
 export const authTypeEnumValues = ['email_signup', 'github'] as const;
@@ -104,7 +93,6 @@ export const globalSettingsTableColumns = {
 
 // This object will hold definitions for all base tables.
 export const baseTableDefinitions = {
-  users: usersTableColumns, // Keeping existing users table for now, can be deprecated/merged later
   roles: rolesTableColumns,
   authUser: authUserTableColumns,
   authSession: authSessionTableColumns,
@@ -113,7 +101,6 @@ export const baseTableDefinitions = {
   teamMemberships: teamMembershipsTableColumns,
   globalSettingGroups: globalSettingGroupsTableColumns,
   globalSettings: globalSettingsTableColumns,
-  // e.g., posts: postsTableColumns,
 };
 
 // This object will hold definitions for plugin tables, to be populated dynamically.
@@ -127,19 +114,5 @@ export const pluginTableDefinitions: Record<string, Record<string, (columnBuilde
 // in `services/backend/src/db/index.ts`. This file, `schema.ts`, now only
 // provides the definitions (column names, types, constraints via chained methods).
 //
-// Example of how it will be used in db/index.ts:
-//
-// import { baseTableDefinitions } from './schema';
-// import { sqliteTable, text as sqliteTextColumnBuilder, integer as sqliteIntegerColumnBuilder } from 'drizzle-orm/sqlite-core';
-//
-// const users = sqliteTable('users', {
-//   id: baseTableDefinitions.users.id(sqliteTextColumnBuilder),
-//   email: baseTableDefinitions.users.email(sqliteTextColumnBuilder),
-//   name: baseTableDefinitions.users.name(sqliteTextColumnBuilder),
-//   createdAt: baseTableDefinitions.users.createdAt(sqliteIntegerColumnBuilder),
-//   updatedAt: baseTableDefinitions.users.updatedAt(sqliteIntegerColumnBuilder),
-// });
-//
-// // The actual schema is built in 'services/backend/src/db/schema.sqlite.ts'
-// // and augmented with plugin tables in 'services/backend/src/db/index.ts'
-// // export const schema = { users };
+// The actual schema is built in 'services/backend/src/db/schema.sqlite.ts'
+// and augmented with plugin tables in 'services/backend/src/db/index.ts'
