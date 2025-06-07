@@ -4,14 +4,6 @@
 import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
 
 // Define tables with proper foreign key relationships
-export const users = sqliteTable('users', {
-  id: text('id').primaryKey(),
-  email: text('email').notNull().unique(),
-  name: text('name'),
-  created_at: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
-  updated_at: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
-});
-
 export const roles = sqliteTable('roles', {
   id: text('id').primaryKey(),
   name: text('name').notNull().unique(),
