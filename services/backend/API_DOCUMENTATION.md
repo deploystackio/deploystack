@@ -316,6 +316,48 @@ To extend API documentation:
 4. Include error response schemas (400, 401, 500, etc.)
 5. Add parameter validation schemas
 
+## Plugin API Routes
+
+### Plugin Route Structure
+
+All plugin routes are automatically namespaced under `/api/plugin/<plugin-name>/` for security and isolation:
+
+- **Core Routes**: `/api/auth/*`, `/api/users/*`, `/api/settings/*` (protected from plugins)
+- **Plugin Routes**: `/api/plugin/<plugin-name>/*` (isolated per plugin)
+
+### Example Plugin Routes
+
+For a plugin with ID `example-plugin`:
+
+```
+GET    /api/plugin/example-plugin/examples
+GET    /api/plugin/example-plugin/examples/:id
+POST   /api/plugin/example-plugin/examples
+PUT    /api/plugin/example-plugin/examples/:id
+DELETE /api/plugin/example-plugin/examples/:id
+```
+
+### Security Benefits
+
+1. **Route Isolation**: Plugins cannot interfere with core routes or each other
+2. **Predictable Structure**: All plugin APIs follow the same pattern
+3. **Easy Identification**: Plugin ownership is clear from the URL
+4. **Automatic Namespacing**: No manual prefix management required
+
+### Plugin Route Registration
+
+Plugins register routes using the `PluginRouteManager`:
+
+```typescript
+// In plugin's routes.ts file
+export async function registerRoutes(routeManager: PluginRouteManager, db: AnyDatabase | null) {
+  // This becomes /api/plugin/my-plugin/data
+  routeManager.get('/data', async () => {
+    return { message: 'Hello from plugin!' };
+  });
+}
+```
+
 ## Files Generated
 
 - `api-spec.json` - Complete OpenAPI 3.0 specification in JSON format

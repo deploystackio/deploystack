@@ -2,6 +2,10 @@ import { type FastifyInstance } from 'fastify';
 // import { type SQLiteTable } from 'drizzle-orm/sqlite-core'; // Replaced by tableDefinitions
 // import { type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3'; // Replaced by AnyDatabase
 import { type AnyDatabase } from '../db'; // Import AnyDatabase
+import { type PluginRouteManager } from './route-manager';
+
+// Re-export PluginRouteManager for plugins to use
+export { PluginRouteManager } from './route-manager';
 
 /**
  * Type for global setting values
@@ -78,6 +82,10 @@ export interface DatabaseExtension {
 
 /**
  * Core plugin interface that all plugins must implement
+ * 
+ * BREAKING CHANGE: Plugins no longer have direct access to the Fastify app instance
+ * in the initialize method. Routes must be registered using the registerRoutes method
+ * with the provided PluginRouteManager for security and isolation.
  */
 export interface Plugin {
   /**
@@ -96,11 +104,25 @@ export interface Plugin {
   globalSettingsExtension?: GlobalSettingsExtension;
   
   /**
-   * Initialize the plugin
-   * @param app The Fastify instance
+   * Initialize the plugin (non-route initialization only)
+   * 
+   * BREAKING CHANGE: No longer receives the Fastify app instance.
+   * Use this method for database setup, configuration, and other non-route initialization.
+   * 
    * @param db The database instance (can be null if not configured/initialized)
    */
-  initialize: (app: FastifyInstance, db: AnyDatabase | null) => Promise<void>;
+  initialize: (db: AnyDatabase | null) => Promise<void>;
+  
+  /**
+   * Register plugin routes using the isolated route manager
+   * 
+   * This is the ONLY way for plugins to register API routes. All routes are automatically
+   * namespaced under /api/plugin/<plugin-id>/ for security and isolation.
+   * 
+   * @param routeManager The isolated route manager for this plugin
+   * @param db The database instance (can be null if not configured/initialized)
+   */
+  registerRoutes?: (routeManager: PluginRouteManager, db: AnyDatabase | null) => Promise<void>;
   
   /**
    * Re-initialize the plugin with database access

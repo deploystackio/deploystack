@@ -11,12 +11,12 @@ components:
       name: auth_session
   schemas: {}
 paths:
-  /api/examples:
+  /api/plugin/example-plugin/examples:
     get:
       responses:
         "200":
           description: Default Response
-  /api/examples/{id}:
+  /api/plugin/example-plugin/examples/{id}:
     get:
       parameters:
         - schema:
