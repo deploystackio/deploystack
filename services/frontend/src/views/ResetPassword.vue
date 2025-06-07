@@ -2,16 +2,15 @@
 import { useForm } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
 import * as z from 'zod'
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { Mail, Lock, AlertTriangle } from 'lucide-vue-next'
+import { ref, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { Lock, AlertTriangle, CheckCircle } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 import { UserService } from '@/services/userService'
 
 import {
   Card,
   CardContent,
-  CardFooter,
 } from '@/components/ui/card'
 
 import {
@@ -31,30 +30,33 @@ import {
 import { Input } from '@/components/ui/input'
 
 const router = useRouter()
+const route = useRoute()
 const isLoading = ref(false)
 const errorMessage = ref('')
-const { t } = useI18n() // Initialize i18n composable
+const showSuccess = ref(false)
+const token = ref('')
+const { t } = useI18n()
 
 // Define validation schema using Zod
 const formSchema = toTypedSchema(
   z.object({
-    login: z
-      .string()
-      .min(1, { message: t('validation.required', { field: t('login.form.email.label') }) })
-      .email({ message: t('validation.email') }),
     password: z
       .string()
-      .min(6, {
-        message: t('validation.minLength', { field: t('login.form.password.label'), length: 6 }),
-      }),
+      .min(8, { message: t('validation.minLength', { length: 8 }) }),
+    confirmPassword: z
+      .string()
+      .min(1, { message: t('validation.required') }),
+  }).refine((data) => data.password === data.confirmPassword, {
+    message: t('validation.passwordMatch'),
+    path: ['confirmPassword'],
   })
 )
 
 const form = useForm({
   validationSchema: formSchema,
   initialValues: {
-    login: '',
     password: '',
+    confirmPassword: '',
   },
 })
 
@@ -63,7 +65,7 @@ const clearError = () => {
   errorMessage.value = ''
 }
 
-interface LoginError {
+interface ResetPasswordError {
   name?: string;
   message?: string;
   status?: number;
@@ -76,40 +78,54 @@ interface PotentialError {
 }
 
 // Handle different types of errors
-const handleError = (error: LoginError) => {
+const handleError = (error: ResetPasswordError) => {
   if (error.name === 'TypeError' && error.message && error.message.includes('fetch')) {
     // Network error - backend is down
-    errorMessage.value = t('login.errors.networkError')
-  } else if (error.status && (error.status === 400 || error.status === 401)) {
-    // Bad Request or Unauthorized - invalid credentials
-    errorMessage.value = t('login.errors.invalidCredentials')
+    errorMessage.value = t('resetPassword.errors.networkError')
+  } else if (error.message === 'INVALID_TOKEN') {
+    // Invalid or expired token
+    errorMessage.value = t('resetPassword.errors.invalidToken')
+  } else if (error.message === 'FORBIDDEN') {
+    // User not eligible for password reset
+    errorMessage.value = t('resetPassword.errors.invalidToken')
+  } else if (error.message === 'SERVICE_UNAVAILABLE') {
+    // Service unavailable
+    errorMessage.value = t('resetPassword.errors.serviceUnavailable')
   } else if (error.status && error.status >= 500) {
     // Server error
-    errorMessage.value = t('login.errors.serverError')
+    errorMessage.value = t('resetPassword.errors.serverError')
   } else if (error.name === 'AbortError') {
     // Request timeout
-    errorMessage.value = t('login.errors.timeout')
+    errorMessage.value = t('resetPassword.errors.networkError')
   } else {
     // Unknown error
-    errorMessage.value = t('login.errors.unknownError')
+    errorMessage.value = t('resetPassword.errors.unknownError')
   }
 }
 
 const onSubmit = form.handleSubmit(async (values) => {
+  if (!token.value) {
+    errorMessage.value = t('resetPassword.errors.invalidToken')
+    return
+  }
+
   isLoading.value = true
   errorMessage.value = ''
 
   try {
-    // Use the UserService login method which handles cache clearing
-    const data = await UserService.login(values.login, values.password)
-    console.log('Login successful!', data)
+    await UserService.resetPassword(token.value, values.password)
+    
+    // Show success message
+    showSuccess.value = true
 
-    // Handle successful login - redirect to dashboard or home
-    router.push('/dashboard')
+    // Redirect to login after 3 seconds
+    setTimeout(() => {
+      router.push('/login')
+    }, 3000)
 
   } catch (e) {
-    console.error('Login error:', e);
-    const errorToHandle: LoginError = { message: t('login.errors.unknownError') };
+    console.error('Password reset error:', e);
+    const errorToHandle: ResetPasswordError = { message: t('resetPassword.errors.unknownError') };
     const potentialError = e as PotentialError;
 
     if (typeof potentialError.name === 'string') {
@@ -130,7 +146,7 @@ const onSubmit = form.handleSubmit(async (values) => {
 
     // Ensure message is always set if not already by previous checks
     if (!errorToHandle.message) {
-        errorToHandle.message = t('login.errors.unknownError');
+        errorToHandle.message = t('resetPassword.errors.unknownError');
     }
     handleError(errorToHandle);
   } finally {
@@ -138,17 +154,19 @@ const onSubmit = form.handleSubmit(async (values) => {
   }
 })
 
-import { getAllEnv } from '@/utils/env';
-
-const allEnv = getAllEnv();
-
-const navigateToRegister = () => {
-  router.push('/register')
+const navigateToLogin = () => {
+  router.push('/login')
 }
 
-const navigateToForgotPassword = () => {
-  router.push('/forgot-password')
-}
+// Extract token from URL on component mount
+onMounted(() => {
+  const urlToken = route.query.token as string
+  if (!urlToken) {
+    errorMessage.value = t('resetPassword.errors.invalidToken')
+    return
+  }
+  token.value = urlToken
+})
 </script>
 
 <template>
@@ -160,35 +178,50 @@ const navigateToForgotPassword = () => {
         alt="Your Company"
       />
       <h2 class="mt-10 text-center text-2xl font-bold tracking-tight text-gray-900">
-        {{ $t('login.title') }}
+        {{ $t('resetPassword.title') }}
       </h2>
+      <p class="mt-2 text-center text-sm text-gray-600">
+        {{ $t('resetPassword.subtitle') }}
+      </p>
     </div>
 
     <div class="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
+      <!-- Success Alert -->
+      <Alert v-if="showSuccess" class="mb-6">
+        <CheckCircle class="h-4 w-4" />
+        <AlertTitle>{{ $t('resetPassword.success.title') }}</AlertTitle>
+        <AlertDescription>
+          <div class="space-y-2">
+            <p>{{ $t('resetPassword.success.message') }}</p>
+            <p class="text-sm">{{ $t('resetPassword.success.instruction') }}</p>
+          </div>
+        </AlertDescription>
+      </Alert>
+
       <!-- Error Alert -->
       <Alert v-if="errorMessage" variant="destructive" class="mb-6">
         <AlertTriangle class="h-4 w-4" />
-        <AlertTitle>{{ $t('login.errors.title') }}</AlertTitle>
+        <AlertTitle>{{ $t('resetPassword.errors.title') }}</AlertTitle>
         <AlertDescription>
           {{ errorMessage }}
         </AlertDescription>
       </Alert>
 
-      <Card>
+      <Card v-if="!showSuccess && token">
         <CardContent class="pt-6">
           <form @submit="onSubmit" class="space-y-6">
-            <FormField v-slot="{ componentField }" name="login">
+            <FormField v-slot="{ componentField }" name="password">
               <FormItem>
-                <FormLabel>{{ $t('login.form.email.label') }}</FormLabel>
+                <FormLabel>{{ $t('resetPassword.form.password.label') }}</FormLabel>
                 <FormControl>
                   <div class="relative">
-                    <Mail class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
+                    <Lock class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
                     <Input
-                      type="email"
-                      :placeholder="$t('login.form.email.placeholder')"
+                      type="password"
+                      :placeholder="$t('resetPassword.form.password.placeholder')"
                       v-bind="componentField"
                       class="pl-10"
-                      autocomplete="email"
+                      autocomplete="new-password"
                       @input="clearError"
                     />
                   </div>
@@ -197,29 +230,18 @@ const navigateToForgotPassword = () => {
               </FormItem>
             </FormField>
 
-            <FormField v-slot="{ componentField }" name="password">
+            <FormField v-slot="{ componentField }" name="confirmPassword">
               <FormItem>
-                <div class="flex items-center justify-between">
-                  <FormLabel>{{ $t('login.form.password.label') }}</FormLabel>
-                  <div class="text-sm">
-                    <Button
-                      variant="link"
-                      class="font-medium text-indigo-600 hover:text-indigo-500 p-0 h-auto"
-                      @click="navigateToForgotPassword"
-                    >
-                      {{ $t('login.form.forgotPassword') }}
-                    </Button>
-                  </div>
-                </div>
+                <FormLabel>{{ $t('resetPassword.form.confirmPassword.label') }}</FormLabel>
                 <FormControl>
                   <div class="relative">
                     <Lock class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
                     <Input
                       type="password"
-                      :placeholder="$t('login.form.password.placeholder')"
+                      :placeholder="$t('resetPassword.form.confirmPassword.placeholder')"
                       v-bind="componentField"
                       class="pl-10"
-                      autocomplete="current-password"
+                      autocomplete="new-password"
                       @input="clearError"
                     />
                   </div>
@@ -229,31 +251,22 @@ const navigateToForgotPassword = () => {
             </FormField>
 
             <Button type="submit" class="w-full" :disabled="isLoading">
-              {{ isLoading ? $t('login.buttons.loading') : $t('login.buttons.submit') }}
+              {{ isLoading ? $t('resetPassword.buttons.loading') : $t('resetPassword.buttons.submit') }}
             </Button>
           </form>
         </CardContent>
-        <CardFooter class="flex justify-center border-t p-6">
-          <p class="text-center text-sm text-gray-500">
-            {{ $t('login.noAccount') }}
-            <Button
-              variant="link"
-              class="font-semibold text-indigo-600 hover:text-indigo-500 pl-1 pr-0"
-              @click="navigateToRegister"
-            >
-              {{ $t('login.createAccount') }}
-
-            </Button>
-          </p>
-        </CardFooter>
       </Card>
+
+      <!-- Back to Login -->
+      <div class="mt-6 text-center">
+        <Button
+          variant="link"
+          class="font-medium text-indigo-600 hover:text-indigo-500"
+          @click="navigateToLogin"
+        >
+          {{ $t('resetPassword.buttons.backToLogin') }}
+        </Button>
+      </div>
     </div>
-
-<div>
-  <pre>
-    {{ allEnv }}
-  </pre>
-</div>
-
   </div>
 </template>
