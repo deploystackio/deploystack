@@ -121,7 +121,7 @@ export class PasswordResetService {
         return { success: false, error: 'User not found or not eligible for password reset' };
       }
 
-      const user = users[0];
+      // const user = users[0];
 
       // Hash new password
       const hashedNewPassword = await hash(newPassword, {
