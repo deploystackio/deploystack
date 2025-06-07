@@ -11,7 +11,8 @@ import {
   type PluginConfiguration,
   type PluginOptions,
   type GlobalSettingDefinitionForPlugin,
-  type GlobalSettingGroupForPlugin
+  type GlobalSettingGroupForPlugin,
+  PluginRouteManager
 } from './types';
 import { 
   PluginLoadError, 
@@ -384,15 +385,17 @@ export class PluginManager {
     
     for (const plugin of this.plugins.values()) {
       try {
-        // Pass the potentially null db instance to plugins.
-        // Plugin's initialize method must be able to handle db: AnyDatabase | null.
-        if (!this.app) { // Should not happen if initial check passes
-            throw new Error("Fastify app became null unexpectedly during plugin initialization.");
+        // Initialize plugin (non-route initialization only)
+        await plugin.initialize(this.db);
+        
+        // Register plugin routes using the isolated route manager
+        if (plugin.registerRoutes) {
+          const routeManager = new PluginRouteManager(this.app, plugin.meta.id);
+          await plugin.registerRoutes(routeManager, this.db);
+          console.log(`[PluginManager] Registered routes for plugin: ${plugin.meta.id}`);
         }
-        await plugin.initialize(this.app, this.db); 
       } catch (error) {
         // Log individual plugin initialization errors but continue with others.
-        // If a single plugin failure should halt everything, re-throw the error.
         const typedError = error as Error;
         console.error(`[ERROR] Failed to initialize plugin ${plugin.meta.id}: ${typedError.message}`, typedError.stack);
         // Optionally, re-throw: throw new PluginInitializeError(plugin.meta.id, error);

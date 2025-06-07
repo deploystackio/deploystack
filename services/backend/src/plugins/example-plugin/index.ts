@@ -2,7 +2,8 @@
 import { 
   type Plugin, 
   type DatabaseExtension,
-  type GlobalSettingsExtension
+  type GlobalSettingsExtension,
+  type PluginRouteManager
 } from '../../plugin-system/types';
 import { type FastifyInstance } from 'fastify';
 import { type AnyDatabase, getSchema } from '../../db'; // Import getSchema
@@ -142,65 +143,17 @@ class ExamplePlugin implements Plugin {
     },
   };
   
-  // Initialize the plugin
-  async initialize(app: FastifyInstance, db: AnyDatabase | null) {
+  // Initialize the plugin (non-route initialization only)
+  async initialize(db: AnyDatabase | null) {
     console.log(`[${this.meta.id}] Initializing...`);
-
-    if (!db) {
-      console.warn(`[${this.meta.id}] Database not available, skipping database-dependent routes.`);
-      return;
-    }
-
-    const currentSchema = getSchema();
-    const tableNameInSchema = `${this.meta.id}_example_entities`;
-    const table = currentSchema[tableNameInSchema];
-
-    if (!table) {
-      console.error(`[${this.meta.id}] Critical: Table ${tableNameInSchema} not found in global schema! Cannot register API routes.`);
-      return;
-    }
-    
-    // Register plugin routes
-    app.get('/api/examples', async () => {
-      if (isSQLiteDB(db)) {
-        const examples = await db.select().from(table as SQLiteTable).all();
-        return examples;
-      } else {
-        // Assume NodePgDatabase-like behavior
-        const examples = await (db as NodePgDatabase).select().from(table as PgTable);
-        return examples;
-      }
-    });
-    
-    app.get('/api/examples/:id', async (request, reply) => {
-      const { id } = request.params as { id: string };
-      let example;
-
-      if (isSQLiteDB(db)) {
-        // Cast to SQLiteTable to access its 'id' column for the 'eq' condition
-        const typedTable = table as SQLiteTable & { id: any }; 
-        example = await db
-          .select()
-          .from(typedTable)
-          .where(eq(typedTable.id, id))
-          .get();
-      } else {
-        // Cast to PgTable to access its 'id' column for the 'eq' condition
-        const typedTable = table as PgTable & { id: any };
-        const rows = await (db as NodePgDatabase)
-          .select()
-          .from(typedTable)
-          .where(eq(typedTable.id, id));
-        example = rows[0] ?? null;
-      }
-      
-      if (!example) {
-        return reply.status(404).send({ error: 'Example entity not found' });
-      }
-      return example;
-    });
-    
+    // Non-route initialization only - routes are now registered via registerRoutes method
     console.log(`[${this.meta.id}] Initialized successfully`);
+  }
+  
+  // Register plugin routes using the isolated route manager
+  async registerRoutes(routeManager: PluginRouteManager, db: AnyDatabase | null) {
+    const { registerRoutes } = await import('./routes');
+    await registerRoutes(routeManager, db);
   }
   
   // Optional cleanup

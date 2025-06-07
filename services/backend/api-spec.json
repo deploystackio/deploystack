@@ -16,7 +16,7 @@
     "schemas": {}
   },
   "paths": {
-    "/api/examples": {
+    "/api/plugin/example-plugin/examples": {
       "get": {
         "responses": {
           "200": {
@@ -25,7 +25,7 @@
         }
       }
     },
-    "/api/examples/{id}": {
+    "/api/plugin/example-plugin/examples/{id}": {
       "get": {
         "parameters": [
           {
