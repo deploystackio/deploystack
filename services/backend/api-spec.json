@@ -6237,6 +6237,178 @@
         }
       }
     },
+    "/api/auth/email/change-password": {
+      "put": {
+        "summary": "Change user password",
+        "tags": [
+          "Authentication"
+        ],
+        "description": "Allows authenticated users to change their password by providing their current password and a new password. Requires an active session.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "current_password": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "new_password": {
+                    "type": "string",
+                    "minLength": 8,
+                    "maxLength": 100
+                  }
+                },
+                "required": [
+                  "current_password",
+                  "new_password"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Password changed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the password change was successful"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Success message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "message"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Password changed successfully"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - Invalid input or incorrect current password",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Bad Request - Invalid input or incorrect current password"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Unauthorized - Authentication required"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Cannot change password for non-email users",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Forbidden - Cannot change password for non-email users"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error - Password change failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Internal Server Error - Password change failed"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/auth/github/login": {
       "get": {
         "summary": "Initiate GitHub OAuth login",

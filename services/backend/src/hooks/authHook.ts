@@ -1,4 +1,4 @@
-import type { FastifyRequest, FastifyReply, HookHandlerDoneFunction } from 'fastify';
+import type { FastifyRequest, FastifyReply } from 'fastify';
 import { getLucia } from '../lib/lucia';
 import { getDbStatus, getSchema, getDb } from '../db';
 import { eq } from 'drizzle-orm';
@@ -127,12 +127,11 @@ export async function authHook(
 // Example of a hook that requires authentication
 export async function requireAuthHook(
   request: FastifyRequest,
-  reply: FastifyReply,
-  done: HookHandlerDoneFunction
+  reply: FastifyReply
 ) {
   // This hook assumes authHook has already run and populated request.user/session
   if (!request.user || !request.session) {
     return reply.status(401).send({ error: 'Unauthorized: Authentication required.' });
   }
-  return done();
+  // No need to call done() in modern Fastify async hooks
 }

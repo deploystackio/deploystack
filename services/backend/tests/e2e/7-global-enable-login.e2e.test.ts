@@ -51,7 +51,6 @@ describe('Global Enable Login E2E Tests', () => {
     if (adminCookie) {
       try {
         await setEnableLogin(true, adminCookie);
-        console.log('Successfully reset global.enable_login to true in afterAll.');
       } catch (error) {
         console.error('Failed to reset global.enable_login in afterAll:', error);
       }

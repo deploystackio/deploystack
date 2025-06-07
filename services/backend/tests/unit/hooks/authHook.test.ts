@@ -316,7 +316,6 @@ describe('authHook', () => {
 describe('requireAuthHook', () => {
   let mockRequest: Partial<FastifyRequest>;
   let mockReply: Partial<FastifyReply>;
-  let mockDone: HookHandlerDoneFunction;
 
   beforeEach(() => {
     mockRequest = {
@@ -328,8 +327,6 @@ describe('requireAuthHook', () => {
       status: vi.fn().mockReturnThis(),
       send: vi.fn(),
     };
-
-    mockDone = vi.fn();
   });
 
   it('should return 401 when user is not authenticated', async () => {
@@ -338,15 +335,13 @@ describe('requireAuthHook', () => {
 
     const result = await requireAuthHook(
       mockRequest as FastifyRequest,
-      mockReply as FastifyReply,
-      mockDone
+      mockReply as FastifyReply
     );
 
     expect(mockReply.status).toHaveBeenCalledWith(401);
     expect(mockReply.send).toHaveBeenCalledWith({
       error: 'Unauthorized: Authentication required.',
     });
-    expect(mockDone).not.toHaveBeenCalled();
   });
 
   it('should return 401 when user exists but session is null', async () => {
@@ -355,15 +350,13 @@ describe('requireAuthHook', () => {
 
     const result = await requireAuthHook(
       mockRequest as FastifyRequest,
-      mockReply as FastifyReply,
-      mockDone
+      mockReply as FastifyReply
     );
 
     expect(mockReply.status).toHaveBeenCalledWith(401);
     expect(mockReply.send).toHaveBeenCalledWith({
       error: 'Unauthorized: Authentication required.',
     });
-    expect(mockDone).not.toHaveBeenCalled();
   });
 
   it('should return 401 when session exists but user is null', async () => {
@@ -372,29 +365,27 @@ describe('requireAuthHook', () => {
 
     const result = await requireAuthHook(
       mockRequest as FastifyRequest,
-      mockReply as FastifyReply,
-      mockDone
+      mockReply as FastifyReply
     );
 
     expect(mockReply.status).toHaveBeenCalledWith(401);
     expect(mockReply.send).toHaveBeenCalledWith({
       error: 'Unauthorized: Authentication required.',
     });
-    expect(mockDone).not.toHaveBeenCalled();
   });
 
-  it('should call done when user and session are both present', async () => {
+  it('should complete successfully when user and session are both present', async () => {
     mockRequest.user = { id: 'user-123' } as User;
     mockRequest.session = { id: 'session-123' } as Session;
 
     const result = await requireAuthHook(
       mockRequest as FastifyRequest,
-      mockReply as FastifyReply,
-      mockDone
+      mockReply as FastifyReply
     );
 
     expect(mockReply.status).not.toHaveBeenCalled();
     expect(mockReply.send).not.toHaveBeenCalled();
-    expect(mockDone).toHaveBeenCalled();
+    // In modern Fastify async hooks, no done() callback is needed
+    expect(result).toBeUndefined();
   });
 });

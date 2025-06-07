@@ -28,3 +28,11 @@ export const GithubCallbackSchema = z.object({
 });
 
 export type GithubCallbackInput = z.infer<typeof GithubCallbackSchema>;
+
+export const ChangePasswordSchema = z.object({
+  current_password: z.string().min(1, { message: 'Current password is required' }),
+  new_password: z.string().min(8, { message: 'New password must be at least 8 characters long' })
+    .max(100, { message: 'New password cannot be longer than 100 characters long' }),
+});
+
+export type ChangePasswordInput = z.infer<typeof ChangePasswordSchema>;

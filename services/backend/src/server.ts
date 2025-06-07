@@ -14,6 +14,7 @@ import registerEmailRoute from './routes/auth/registerEmail'
 import loginEmailRoute from './routes/auth/loginEmail'
 import githubAuthRoutes from './routes/auth/github'
 import logoutRoute from './routes/auth/logout'
+import changePasswordRoute from './routes/auth/changePassword'
 import { 
   initializeDatabase, 
   registerPluginTables, 
@@ -317,6 +318,7 @@ export const createServer = async () => {
   server.register(async (authInstance) => {
     authInstance.register(registerEmailRoute, { prefix: '/email' });
     authInstance.register(loginEmailRoute, { prefix: '/email' }); // loginEmailRoute handles /login/email
+    authInstance.register(changePasswordRoute, { prefix: '/email' }); // changePasswordRoute handles /email/change-password
     authInstance.register(githubAuthRoutes, { prefix: '/github' }); // githubAuthRoutes handles /login/github and /login/github/callback
     authInstance.register(logoutRoute); // logoutRoute handles /logout
   }, { prefix: '/api/auth' });
