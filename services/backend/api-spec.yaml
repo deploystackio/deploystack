@@ -11,6 +11,22 @@ components:
       name: auth_session
   schemas: {}
 paths:
+  /api/examples:
+    get:
+      responses:
+        "200":
+          description: Default Response
+  /api/examples/{id}:
+    get:
+      parameters:
+        - schema:
+            type: string
+          in: path
+          name: id
+          required: true
+      responses:
+        "200":
+          description: Default Response
   /:
     get:
       summary: API health check
@@ -4470,6 +4486,147 @@ paths:
                   - error
                 additionalProperties: false
                 description: Internal Server Error - Password change failed
+  /api/auth/profile/update:
+    put:
+      summary: Update user profile
+      tags:
+        - Authentication
+      description: Allows authenticated users to update their profile information
+        including username, first name, and last name. Requires an active
+        session. At least one field must be provided.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                  minLength: 3
+                  maxLength: 30
+                  pattern: ^[a-zA-Z0-9_]+$
+                first_name:
+                  type: string
+                  maxLength: 50
+                last_name:
+                  type: string
+                  maxLength: 50
+              additionalProperties: false
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Indicates if the profile update was successful
+                  message:
+                    type: string
+                    description: Success message
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        description: User ID
+                      username:
+                        type: string
+                        description: Updated username
+                      email:
+                        type: string
+                        description: User email
+                      first_name:
+                        type: string
+                        nullable: true
+                        description: Updated first name
+                      last_name:
+                        type: string
+                        nullable: true
+                        description: Updated last name
+                      auth_type:
+                        type: string
+                        description: Authentication type
+                      role_id:
+                        type: string
+                        nullable: true
+                        description: User role ID
+                    required:
+                      - id
+                      - username
+                      - email
+                      - first_name
+                      - last_name
+                      - auth_type
+                      - role_id
+                    additionalProperties: false
+                    description: Updated user information
+                required:
+                  - success
+                  - message
+                  - user
+                additionalProperties: false
+                description: Profile updated successfully
+        "400":
+          description: Bad Request - Invalid input, no fields provided, or username
+            already taken
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Indicates if the operation was successful (false for errors)
+                    default: false
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                required:
+                  - error
+                additionalProperties: false
+                description: Bad Request - Invalid input, no fields provided, or username
+                  already taken
+        "401":
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Indicates if the operation was successful (false for errors)
+                    default: false
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                required:
+                  - error
+                additionalProperties: false
+                description: Unauthorized - Authentication required
+        "500":
+          description: Internal Server Error - Profile update failed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Indicates if the operation was successful (false for errors)
+                    default: false
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                required:
+                  - error
+                additionalProperties: false
+                description: Internal Server Error - Profile update failed
   /api/auth/github/login:
     get:
       summary: Initiate GitHub OAuth login

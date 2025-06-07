@@ -36,3 +36,14 @@ export const ChangePasswordSchema = z.object({
 });
 
 export type ChangePasswordInput = z.infer<typeof ChangePasswordSchema>;
+
+export const UpdateProfileSchema = z.object({
+  username: z.string().min(3, { message: 'Username must be at least 3 characters long' })
+    .max(30, { message: 'Username cannot be longer than 30 characters' })
+    .regex(/^[a-zA-Z0-9_]+$/, { message: 'Username can only contain alphanumeric characters and underscores' })
+    .optional(),
+  first_name: z.string().max(50, { message: 'First name cannot be longer than 50 characters' }).optional(),
+  last_name: z.string().max(50, { message: 'Last name cannot be longer than 50 characters' }).optional(),
+});
+
+export type UpdateProfileInput = z.infer<typeof UpdateProfileSchema>;

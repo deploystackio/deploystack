@@ -255,7 +255,7 @@ describe('Database Setup Route', () => {
 
         expect(mockSetupNewDatabase).toHaveBeenCalledWith({
           type: DatabaseType.SQLite,
-          dbPath: 'database/deploystack.db',
+          dbPath: 'persistent_data/database/deploystack.db',
         });
 
         process.env.NODE_ENV = originalEnv;
@@ -270,7 +270,7 @@ describe('Database Setup Route', () => {
 
         expect(mockSetupNewDatabase).toHaveBeenCalledWith({
           type: DatabaseType.SQLite,
-          dbPath: 'database/deploystack.db',
+          dbPath: 'persistent_data/database/deploystack.db',
         });
 
         process.env.NODE_ENV = originalEnv;
@@ -285,7 +285,7 @@ describe('Database Setup Route', () => {
 
         expect(mockSetupNewDatabase).toHaveBeenCalledWith({
           type: DatabaseType.SQLite,
-          dbPath: 'database/deploystack.db',
+          dbPath: 'persistent_data/database/deploystack.db',
         });
 
         process.env.NODE_ENV = originalEnv;
