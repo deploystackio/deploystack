@@ -78,6 +78,13 @@
       "when": 1749289899716,
       "tag": "0010_premium_medusa",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1749298979404,
+      "tag": "0011_regular_pandemic",
+      "breakpoints": true
     }
   ]
 }

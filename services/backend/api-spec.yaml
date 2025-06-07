@@ -4654,6 +4654,219 @@ paths:
                   - error
                 additionalProperties: false
                 description: Internal Server Error - Failed to send email
+  /api/auth/email/forgot-password:
+    post:
+      summary: Request password reset for email users
+      tags:
+        - Authentication
+      description: Sends a password reset email to users with email authentication.
+        Always returns success for security (does not reveal if email exists).
+        Requires email functionality to be enabled via global.send_mail setting.
+        Reset tokens expire in 10 minutes.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+              required:
+                - email
+              additionalProperties: false
+        required: true
+      responses:
+        "200":
+          description: Request processed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Indicates if the request was processed successfully
+                  message:
+                    type: string
+                    description: Success message (always returned for security)
+                required:
+                  - success
+                  - message
+                additionalProperties: false
+                description: Request processed successfully
+        "400":
+          description: Bad Request - Invalid email format
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Indicates if the operation was successful (false for errors)
+                    default: false
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                required:
+                  - error
+                additionalProperties: false
+                description: Bad Request - Invalid email format
+        "500":
+          description: Internal Server Error - Password reset failed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Indicates if the operation was successful (false for errors)
+                    default: false
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                required:
+                  - error
+                additionalProperties: false
+                description: Internal Server Error - Password reset failed
+        "503":
+          description: Service Unavailable - Email functionality disabled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Indicates if the operation was successful (false for errors)
+                    default: false
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                required:
+                  - error
+                additionalProperties: false
+                description: Service Unavailable - Email functionality disabled
+  /api/auth/email/reset-password:
+    post:
+      summary: Reset password using reset token
+      tags:
+        - Authentication
+      description: Resets the password for email users using a valid reset token. The
+        token must be valid and not expired (10-minute expiration). After
+        successful reset, all user sessions are invalidated for security. Only
+        works for users with email authentication.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                token:
+                  type: string
+                  minLength: 1
+                new_password:
+                  type: string
+                  minLength: 8
+                  maxLength: 100
+              required:
+                - token
+                - new_password
+              additionalProperties: false
+        required: true
+      responses:
+        "200":
+          description: Password reset successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Indicates if the password reset was successful
+                  message:
+                    type: string
+                    description: Success message
+                required:
+                  - success
+                  - message
+                additionalProperties: false
+                description: Password reset successfully
+        "400":
+          description: Bad Request - Invalid token, expired token, or invalid password
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Indicates if the operation was successful (false for errors)
+                    default: false
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                required:
+                  - error
+                additionalProperties: false
+                description: Bad Request - Invalid token, expired token, or invalid password
+        "403":
+          description: Forbidden - User not eligible for password reset
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Indicates if the operation was successful (false for errors)
+                    default: false
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                required:
+                  - error
+                additionalProperties: false
+                description: Forbidden - User not eligible for password reset
+        "500":
+          description: Internal Server Error - Password reset failed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Indicates if the operation was successful (false for errors)
+                    default: false
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                required:
+                  - error
+                additionalProperties: false
+                description: Internal Server Error - Password reset failed
+        "503":
+          description: Service Unavailable - Email functionality disabled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Indicates if the operation was successful (false for errors)
+                    default: false
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                required:
+                  - error
+                additionalProperties: false
+                description: Service Unavailable - Email functionality disabled
   /api/auth/profile/update:
     put:
       summary: Update user profile
