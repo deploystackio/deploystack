@@ -112,11 +112,20 @@ export interface NotificationEmailVariables {
   userName?: string;
 }
 
+export interface EmailVerificationVariables {
+  userName: string;
+  userEmail: string;
+  verificationUrl: string;
+  expirationTime?: string;
+  supportEmail?: string;
+}
+
 // Template registry for type safety
 export interface TemplateVariableMap {
   welcome: WelcomeEmailVariables;
   'password-reset': PasswordResetEmailVariables;
   notification: NotificationEmailVariables;
+  'email-verification': EmailVerificationVariables;
 }
 
 export type TemplateNames = keyof TemplateVariableMap;

@@ -119,6 +119,10 @@ export default async function registerEmailRoute(fastify: FastifyInstance) {
         const isFirstUser = allUsers.length === 0;
         const defaultRole = isFirstUser ? 'global_admin' : 'global_user';
 
+        // For first user (global_admin), email is automatically verified
+        // For subsequent users, email verification depends on global.send_mail setting
+        const emailVerified = isFirstUser;
+
         // Insert user directly into database (Lucia v3 doesn't have createUser with keys)
         await (db as any).insert(authUserTable).values({
           id: userId,
@@ -130,6 +134,7 @@ export default async function registerEmailRoute(fastify: FastifyInstance) {
           github_id: null,
           hashed_password: hashedPassword, // Store password in user table
           role_id: defaultRole, // Assign role (no default in schema, so we must provide it)
+          email_verified: emailVerified, // Set email verification status
         });
 
         // Verify user was created successfully
@@ -175,12 +180,56 @@ export default async function registerEmailRoute(fastify: FastifyInstance) {
           // Don't fail registration if team creation fails, just log the error
         }
 
+        // Send verification email for non-first users when email sending is enabled
+        if (!isFirstUser) {
+          try {
+            const { EmailVerificationService } = await import('../../services/emailVerificationService');
+            const isEmailEnabled = await EmailVerificationService.isVerificationRequired();
+            
+            if (isEmailEnabled) {
+              const emailResult = await EmailVerificationService.sendVerificationEmail(
+                userId,
+                email.toLowerCase(),
+                username
+              );
+              
+              if (!emailResult.success) {
+                fastify.log.warn(`Failed to send verification email to ${email}: ${emailResult.error}`);
+                // Don't fail registration if email sending fails
+              } else {
+                fastify.log.info(`Verification email sent successfully to ${email}`);
+              }
+            }
+          } catch (emailError) {
+            fastify.log.error(emailError, `Error sending verification email to ${email}:`);
+            // Don't fail registration if email sending fails
+          }
+        }
+
         // Get the created user data
         const user = createdUser[0];
 
+        // Customize message based on email verification status
+        let message = 'User registered successfully.';
+        if (isFirstUser) {
+          message += ' You are now logged in as the global administrator.';
+        } else {
+          try {
+            const { EmailVerificationService } = await import('../../services/emailVerificationService');
+            const isEmailEnabled = await EmailVerificationService.isVerificationRequired();
+            if (isEmailEnabled) {
+              message += ' Please check your email and verify your address before logging in.';
+            } else {
+              message += ' You can now log in to your account.';
+            }
+          } catch {
+            message += ' You can now log in to your account.';
+          }
+        }
+
         return reply.status(201).send({
           success: true,
-          message: 'User registered successfully. Please log in to continue.',
+          message,
           user: {
             id: user.id,
             username: user.username,

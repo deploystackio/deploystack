@@ -130,6 +130,24 @@ export default async function loginEmailRoute(fastify: FastifyInstance) {
           return reply.status(400).send({ success: false, error: 'Invalid email/username or password.' });
         }
 
+        // Check email verification status for email users when verification is required
+        if (user.auth_type === 'email_signup') {
+          try {
+            const { EmailVerificationService } = await import('../../services/emailVerificationService');
+            const isVerificationRequired = await EmailVerificationService.isVerificationRequired();
+            
+            if (isVerificationRequired && !user.email_verified) {
+              return reply.status(400).send({ 
+                success: false, 
+                error: 'Please verify your email address before logging in. Check your inbox for a verification email.' 
+              });
+            }
+          } catch (verificationError) {
+            fastify.log.error(verificationError, 'Error checking email verification status:');
+            // Continue with login if verification check fails
+          }
+        }
+
         // Check if user ID exists
         if (!user.id) {
           fastify.log.error('User ID is null or undefined:', user.id);

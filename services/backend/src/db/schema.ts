@@ -33,6 +33,7 @@ export const authUserTableColumns = {
   github_id: (columnBuilder: any) => columnBuilder('github_id').unique(),
   hashed_password: (columnBuilder: any) => columnBuilder('hashed_password'), // For email auth
   role_id: (columnBuilder: any) => columnBuilder('role_id'), // Foreign key to roles.id
+  email_verified: (columnBuilder: any) => columnBuilder('email_verified').notNull().default(false), // Email verification status
 };
 
 export const authSessionTableColumns = {
@@ -91,6 +92,14 @@ export const globalSettingsTableColumns = {
   updated_at: (columnBuilder: any) => columnBuilder('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 };
 
+export const emailVerificationTokensTableColumns = {
+  id: (columnBuilder: any) => columnBuilder('id').primaryKey(),
+  user_id: (columnBuilder: any) => columnBuilder('user_id').notNull(), // Foreign key to authUser.id
+  token_hash: (columnBuilder: any) => columnBuilder('token_hash').notNull(), // Hashed verification token
+  expires_at: (columnBuilder: any) => columnBuilder('expires_at', { mode: 'timestamp' }).notNull(), // Token expiration
+  created_at: (columnBuilder: any) => columnBuilder('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+};
+
 // This object will hold definitions for all base tables.
 export const baseTableDefinitions = {
   roles: rolesTableColumns,
@@ -101,6 +110,7 @@ export const baseTableDefinitions = {
   teamMemberships: teamMembershipsTableColumns,
   globalSettingGroups: globalSettingGroupsTableColumns,
   globalSettings: globalSettingsTableColumns,
+  emailVerificationTokens: emailVerificationTokensTableColumns,
 };
 
 // This object will hold definitions for plugin tables, to be populated dynamically.

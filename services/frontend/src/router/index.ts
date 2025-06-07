@@ -26,6 +26,12 @@ const routes = [
     meta: { requiresSetup: true },
   },
   {
+    path: '/verify-email',
+    name: 'VerifyEmail',
+    component: () => import('../views/VerifyEmail.vue'),
+    meta: { requiresSetup: true },
+  },
+  {
     path: '/logout',
     name: 'Logout',
     component: () => import('../views/Logout.vue'),
@@ -107,7 +113,7 @@ router.beforeEach(async (to, from, next) => {
   const databaseStore = useDatabaseStore()
 
   // Define public routes that don't need user authentication checks
-  const publicRoutes = ['Setup', 'Login', 'Register']
+  const publicRoutes = ['Setup', 'Login', 'Register', 'VerifyEmail']
   const isPublicRoute = publicRoutes.includes(to.name as string)
 
   // Attempt to get current user status early

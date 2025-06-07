@@ -47,3 +47,15 @@ export const UpdateProfileSchema = z.object({
 });
 
 export type UpdateProfileInput = z.infer<typeof UpdateProfileSchema>;
+
+export const EmailVerificationSchema = z.object({
+  token: z.string().min(1, { message: 'Verification token is required' }),
+});
+
+export type EmailVerificationInput = z.infer<typeof EmailVerificationSchema>;
+
+export const ResendVerificationSchema = z.object({
+  email: z.string().email({ message: 'Valid email address is required' }),
+});
+
+export type ResendVerificationInput = z.infer<typeof ResendVerificationSchema>;
