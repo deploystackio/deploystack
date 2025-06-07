@@ -5,14 +5,14 @@ import {
   type GlobalSettingsExtension,
   type PluginRouteManager
 } from '../../plugin-system/types';
-import { type FastifyInstance } from 'fastify';
+
 import { type AnyDatabase, getSchema } from '../../db'; // Import getSchema
 import { type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3'; // For type guard
 import { type NodePgDatabase } from 'drizzle-orm/node-postgres'; // For casting db
 import { type SQLiteTable } from 'drizzle-orm/sqlite-core';     // For casting table from schema
 import { type PgTable } from 'drizzle-orm/pg-core';         // For casting table from schema
 // import { exampleEntities } from './schema'; // No longer directly used for queries
-import { eq, sql } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
 
 // Helper type guard to check for BetterSQLite3Database specific methods
 function isSQLiteDB(db: AnyDatabase): db is BetterSQLite3Database<any> {
@@ -144,6 +144,7 @@ class ExamplePlugin implements Plugin {
   };
   
   // Initialize the plugin (non-route initialization only)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async initialize(db: AnyDatabase | null) {
     console.log(`[${this.meta.id}] Initializing...`);
     // Non-route initialization only - routes are now registered via registerRoutes method

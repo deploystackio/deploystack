@@ -7,6 +7,7 @@ import { type PgTable } from 'drizzle-orm/pg-core';
 import { eq } from 'drizzle-orm';
 
 // Helper type guard to check for BetterSQLite3Database specific methods
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function isSQLiteDB(db: AnyDatabase): db is BetterSQLite3Database<any> {
   return typeof (db as BetterSQLite3Database).get === 'function' &&
          typeof (db as BetterSQLite3Database).all === 'function' &&
@@ -58,6 +59,7 @@ export async function registerRoutes(routeManager: PluginRouteManager, db: AnyDa
 
     if (isSQLiteDB(db)) {
       // Cast to SQLiteTable to access its 'id' column for the 'eq' condition
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const typedTable = table as SQLiteTable & { id: any }; 
       example = await db
         .select()
@@ -66,6 +68,7 @@ export async function registerRoutes(routeManager: PluginRouteManager, db: AnyDa
         .get();
     } else {
       // Cast to PgTable to access its 'id' column for the 'eq' condition
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const typedTable = table as PgTable & { id: any };
       const rows = await (db as NodePgDatabase)
         .select()

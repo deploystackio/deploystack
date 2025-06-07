@@ -178,6 +178,7 @@ fastify.post<{ Body: RequestBody }>(
 ### What NOT to Do (Anti-patterns)
 
 ❌ **Don't do manual validation in handlers:**
+
 ```typescript
 // BAD: Manual validation (redundant)
 const parsedBody = myRequestBodySchema.safeParse(request.body);
@@ -197,6 +198,7 @@ if (request.body.type !== 'mysql' && request.body.type !== 'sqlite') {
 ```
 
 ✅ **Do trust Fastify's automatic validation:**
+
 ```typescript
 // GOOD: Trust the validation - if handler runs, data is valid
 const { name, count, type } = request.body; // Already validated by Fastify
@@ -206,7 +208,7 @@ const { name, count, type } = request.body; // Already validated by Fastify
 
 The validation chain works as follows:
 
-**Zod Schema → JSON Schema → Fastify Validation → Handler**
+#### Zod Schema → JSON Schema → Fastify Validation → Handler
 
 1. **Zod Schema**: Define validation rules using Zod
 2. **JSON Schema**: Convert to OpenAPI format using `zodToJsonSchema()`
@@ -218,6 +220,7 @@ If validation fails, Fastify automatically returns a 400 error **before** your h
 ### Real-World Examples
 
 See these files for complete examples of proper Zod validation:
+
 - `src/routes/db/setup.ts` - Database setup with enum validation
 - `src/routes/db/status.ts` - Simple GET endpoint with response schemas
 - `src/routes/auth/loginEmail.ts` - Login with required string fields
@@ -329,7 +332,7 @@ All plugin routes are automatically namespaced under `/api/plugin/<plugin-name>/
 
 For a plugin with ID `example-plugin`:
 
-```
+```bash
 GET    /api/plugin/example-plugin/examples
 GET    /api/plugin/example-plugin/examples/:id
 POST   /api/plugin/example-plugin/examples

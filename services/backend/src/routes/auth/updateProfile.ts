@@ -135,6 +135,7 @@ export default async function updateProfileRoute(fastify: FastifyInstance) {
         }
 
         // Prepare update data - only include fields that are provided
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const updateData: any = {
           updated_at: new Date()
         };

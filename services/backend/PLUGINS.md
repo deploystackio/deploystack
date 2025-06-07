@@ -16,6 +16,7 @@ DeployStack's plugin architecture allows for extensible, modular development wit
 ## Security Features
 
 ### Route Isolation & Security
+
 DeployStack implements strict route isolation to ensure plugins cannot interfere with core functionality or each other:
 
 - **Automatic Namespacing**: All plugin routes are automatically prefixed with `/api/plugin/<plugin-id>/`
@@ -24,6 +25,7 @@ DeployStack implements strict route isolation to ensure plugins cannot interfere
 - **Core Route Protection**: Plugins cannot access or modify core routes (`/api/auth/*`, `/api/users/*`, etc.)
 
 ### Security Benefits
+
 1. **Prevents Route Hijacking**: Malicious plugins cannot override authentication or user management routes
 2. **Eliminates Route Conflicts**: Multiple plugins cannot register conflicting routes
 3. **Predictable API Surface**: All plugin APIs follow consistent `/api/plugin/<name>/` structure
@@ -31,6 +33,7 @@ DeployStack implements strict route isolation to ensure plugins cannot interfere
 5. **Fail-Safe Design**: Plugins that don't follow the new system simply won't have routes registered
 
 ### Example Security Enforcement
+
 ```typescript
 // ❌ This will NOT work - no direct app access
 async initialize(app: FastifyInstance, db: AnyDatabase | null) {

@@ -6,6 +6,7 @@ import { hash } from '@node-rs/argon2';
 import { generateId } from 'lucia';
 import { TeamService } from '../../../../src/services/teamService';
 import { GlobalSettingsInitService } from '../../../../src/global-settings';
+import { EmailVerificationService } from '../../../../src/services/emailVerificationService';
 
 // Mock dependencies
 vi.mock('../../../../src/db');
@@ -13,6 +14,7 @@ vi.mock('@node-rs/argon2');
 vi.mock('lucia');
 vi.mock('../../../../src/services/teamService');
 vi.mock('../../../../src/global-settings');
+vi.mock('../../../../src/services/emailVerificationService');
 vi.mock('../../../../src/lib/lucia', () => ({
   getLucia: vi.fn(() => ({
     createSessionCookie: vi.fn(() => ({
@@ -30,6 +32,7 @@ const mockHash = hash as MockedFunction<typeof hash>;
 const mockGenerateId = generateId as MockedFunction<typeof generateId>;
 const mockTeamService = TeamService as any;
 const mockGlobalSettingsInitService = GlobalSettingsInitService as any;
+const mockEmailVerificationService = EmailVerificationService as any;
 
 describe('Register Email Route', () => {
   let mockFastify: Partial<FastifyInstance>;
@@ -86,6 +89,7 @@ describe('Register Email Route', () => {
     mockGenerateId.mockReturnValueOnce('user-id-123').mockReturnValueOnce('session-id-123');
     mockGlobalSettingsInitService.isEmailRegistrationEnabled = vi.fn().mockResolvedValue(true);
     mockTeamService.createDefaultTeamForUser = vi.fn().mockResolvedValue({ id: 'team-123', name: 'Default Team' });
+    mockEmailVerificationService.isVerificationRequired = vi.fn().mockResolvedValue(false);
 
     // Setup route handlers storage
     routeHandlers = {};
@@ -179,7 +183,7 @@ describe('Register Email Route', () => {
       expect(mockReply.status).toHaveBeenCalledWith(201);
       expect(mockReply.send).toHaveBeenCalledWith({
         success: true,
-        message: 'User registered successfully. Please log in to continue.',
+        message: 'User registered successfully. You are now logged in as the global administrator.',
         user: {
           id: 'user-id-123',
           username: 'testuser',
@@ -235,7 +239,7 @@ describe('Register Email Route', () => {
       expect(mockReply.status).toHaveBeenCalledWith(201);
       expect(mockReply.send).toHaveBeenCalledWith({
         success: true,
-        message: 'User registered successfully. Please log in to continue.',
+        message: 'User registered successfully. You can now log in to your account.',
         user: expect.objectContaining({
           role_id: 'global_user',
         }),
@@ -285,7 +289,7 @@ describe('Register Email Route', () => {
       expect(mockReply.status).toHaveBeenCalledWith(201);
       expect(mockReply.send).toHaveBeenCalledWith({
         success: true,
-        message: 'User registered successfully. Please log in to continue.',
+        message: 'User registered successfully. You are now logged in as the global administrator.',
         user: expect.objectContaining({
           first_name: null,
           last_name: null,
