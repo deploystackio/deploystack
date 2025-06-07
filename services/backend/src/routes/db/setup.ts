@@ -76,8 +76,8 @@ async function setupDbHandler(
     const isTestEnv = process.env.NODE_ENV === 'test';
     const sqliteDbFileName = isTestEnv ? 'deploystack.test.db' : 'deploystack.db';
     // dbPath should be relative to services/backend
-    // For tests, use the test-data directory; for production, use the database directory
-    const sqliteDbPath = isTestEnv ? `tests/e2e/test-data/${sqliteDbFileName}` : `database/${sqliteDbFileName}`;
+    // For tests, use the test-data directory; for production, use the persistent_data directory
+    const sqliteDbPath = isTestEnv ? `tests/e2e/test-data/${sqliteDbFileName}` : `persistent_data/database/${sqliteDbFileName}`;
 
     // Since Zod validation ensures type is valid DatabaseType.SQLite, we can trust it
     const internalConfigObject: InternalDbConfig = { 

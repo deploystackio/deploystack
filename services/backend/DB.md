@@ -35,6 +35,8 @@ The server will automatically manage the database file location. The request bod
 
 The SQLite database file will be created and stored at: `services/backend/persistent_data/database/deploystack.db`.
 
+**Important:** All database files must be stored within the `persistent_data` directory to ensure proper data persistence and backup capabilities.
+
 **For PostgreSQL:**
 The request body should be:
 
