@@ -1,0 +1,30 @@
+//- @description Email verification template
+//- @variables userName, userEmail, verificationUrl, expirationTime
+extends layouts/base.pug
+
+block content
+  h1 Verify Your Email Address
+  
+  p Hello #{userName}!
+  
+  p Thank you for registering with #{appName || 'DeployStack'}. To complete your account setup, please verify your email address by clicking the button below.
+  
+  .text-center
+    a.button(href=verificationUrl style="display: inline-block; padding: 12px 24px; background-color: #007bff; color: white; text-decoration: none; border-radius: 4px; font-weight: bold; margin: 20px 0;") Verify Email Address
+  
+  p If the button above doesn't work, you can also copy and paste the following link into your browser:
+  
+  p.link-text(style="word-break: break-all; color: #666; font-size: 14px;")= verificationUrl
+  
+  p This verification link will expire in #{expirationTime || '24 hours'} for security reasons.
+  
+  p If you didn't create an account with us, you can safely ignore this email.
+  
+  hr(style="margin: 30px 0; border: none; border-top: 1px solid #eee;")
+  
+  p.small-text(style="font-size: 12px; color: #999;") 
+    | This is an automated message. Please do not reply to this email.
+    if supportEmail
+      |  If you need assistance, please contact us at 
+      a(href=`mailto:${supportEmail}`)= supportEmail
+      | .

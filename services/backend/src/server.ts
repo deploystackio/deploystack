@@ -16,6 +16,8 @@ import githubAuthRoutes from './routes/auth/github'
 import logoutRoute from './routes/auth/logout'
 import changePasswordRoute from './routes/auth/changePassword'
 import updateProfileRoute from './routes/auth/updateProfile'
+import verifyEmailRoute from './routes/auth/verifyEmail'
+import resendVerificationRoute from './routes/auth/resendVerification'
 import { 
   initializeDatabase, 
   registerPluginTables, 
@@ -320,6 +322,8 @@ export const createServer = async () => {
     authInstance.register(registerEmailRoute, { prefix: '/email' });
     authInstance.register(loginEmailRoute, { prefix: '/email' }); // loginEmailRoute handles /login/email
     authInstance.register(changePasswordRoute, { prefix: '/email' }); // changePasswordRoute handles /email/change-password
+    authInstance.register(verifyEmailRoute, { prefix: '/email' }); // verifyEmailRoute handles /email/verify
+    authInstance.register(resendVerificationRoute, { prefix: '/email' }); // resendVerificationRoute handles /email/resend-verification
     authInstance.register(updateProfileRoute); // updateProfileRoute handles /profile/update
     authInstance.register(githubAuthRoutes, { prefix: '/github' }); // githubAuthRoutes handles /login/github and /login/github/callback
     authInstance.register(logoutRoute); // logoutRoute handles /logout

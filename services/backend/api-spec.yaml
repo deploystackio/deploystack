@@ -4486,6 +4486,174 @@ paths:
                   - error
                 additionalProperties: false
                 description: Internal Server Error - Password change failed
+  /api/auth/email/verify:
+    get:
+      summary: Verify email address
+      tags:
+        - Authentication
+      description: Verifies a user's email address using a verification token sent via
+        email. This endpoint is public and does not require authentication. Once
+        verified, the user's email_verified status is set to true.
+      parameters:
+        - schema:
+            type: string
+            minLength: 1
+          in: query
+          name: token
+          required: true
+      responses:
+        "200":
+          description: Email verified successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Indicates if the verification was successful
+                  message:
+                    type: string
+                    description: Success message
+                  userId:
+                    type: string
+                    description: ID of the verified user
+                required:
+                  - success
+                  - message
+                  - userId
+                additionalProperties: false
+                description: Email verified successfully
+        "400":
+          description: Bad Request - Invalid or expired token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Indicates if the operation was successful (false for errors)
+                    default: false
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                required:
+                  - error
+                additionalProperties: false
+                description: Bad Request - Invalid or expired token
+        "500":
+          description: Internal Server Error - Verification failed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Indicates if the operation was successful (false for errors)
+                    default: false
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                required:
+                  - error
+                additionalProperties: false
+                description: Internal Server Error - Verification failed
+  /api/auth/email/resend-verification:
+    post:
+      summary: Resend email verification
+      tags:
+        - Authentication
+      description: Resends a verification email to the specified email address. This
+        endpoint is public and does not require authentication. Only works if
+        the email address exists and is not already verified.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+              required:
+                - email
+              additionalProperties: false
+        required: true
+      responses:
+        "200":
+          description: Verification email sent successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Indicates if the resend was successful
+                  message:
+                    type: string
+                    description: Success message
+                required:
+                  - success
+                  - message
+                additionalProperties: false
+                description: Verification email sent successfully
+        "400":
+          description: Bad Request - Email not found or already verified
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Indicates if the operation was successful (false for errors)
+                    default: false
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                required:
+                  - error
+                additionalProperties: false
+                description: Bad Request - Email not found or already verified
+        "403":
+          description: Forbidden - Email sending is disabled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Indicates if the operation was successful (false for errors)
+                    default: false
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                required:
+                  - error
+                additionalProperties: false
+                description: Forbidden - Email sending is disabled
+        "500":
+          description: Internal Server Error - Failed to send email
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Indicates if the operation was successful (false for errors)
+                    default: false
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                required:
+                  - error
+                additionalProperties: false
+                description: Internal Server Error - Failed to send email
   /api/auth/profile/update:
     put:
       summary: Update user profile

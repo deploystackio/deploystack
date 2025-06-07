@@ -36,9 +36,26 @@ User sessions are managed using `lucia-auth` v3.
 All incoming data from clients (e.g., API request bodies, URL parameters) is rigorously validated using `zod` schemas on the server-side before being processed. This helps prevent common vulnerabilities such as injection attacks and unexpected data handling errors.
 
 - Registration endpoint validates: username, email, password, first_name, last_name
+- **Email verification endpoint validates: verification token format and expiration**
 - Email addresses are normalized to lowercase before storage
 - Duplicate username and email checks are performed before user creation
+- **Email verification status is checked during login when verification is enabled**
 - All database operations use parameterized queries via Drizzle ORM to prevent SQL injection
+
+## Email Verification
+
+Email verification is implemented to ensure account ownership and prevent unauthorized account creation.
+
+- **Verification Tokens:** Cryptographically secure tokens generated using `generateId(32)` (256-bit entropy)
+- **Token Expiration:** Verification tokens expire after 24 hours to limit exposure window
+- **Token Storage:** Tokens are stored hashed in the database using the same argon2 parameters as passwords
+- **Secure Links:** Verification links use HTTPS in production and include the full token in query parameters
+- **Token Validation:** Constant-time comparison used for token verification to prevent timing attacks
+- **Single Use:** Tokens are invalidated immediately after successful verification
+- **Account Security:** Unverified accounts cannot log in when email verification is enabled via `global.send_mail` setting
+- **Global Administrator Exception:** The first registered user (global administrator) is automatically verified for system access
+- **Database Schema Security:** `email_verified` boolean field with secure default (false)
+- **Cleanup Mechanism:** Expired tokens are automatically cleaned up to prevent database bloat
 
 ## Global Settings Encryption
 

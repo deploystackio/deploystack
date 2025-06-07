@@ -45,11 +45,14 @@ const formSchema = toTypedSchema(
     .object({
       name: z
         .string()
-        .min(2, {
-          message: t('validation.minLength', { field: t('register.form.name.label'), length: 2 }),
+        .min(3, {
+          message: t('validation.minLength', { field: t('register.form.name.label'), length: 3 }),
         })
-        .max(50, {
-          message: t('validation.maxLength', { field: t('register.form.name.label'), length: 50 }),
+        .max(30, {
+          message: t('validation.maxLength', { field: t('register.form.name.label'), length: 30 }),
+        })
+        .regex(/^[a-zA-Z0-9_]+$/, {
+          message: 'Username can only contain letters, numbers, and underscores (no spaces)',
         }),
       email: z
         .string()
@@ -57,10 +60,16 @@ const formSchema = toTypedSchema(
         .email({ message: t('validation.email') }),
       password: z
         .string()
-        .min(6, {
+        .min(8, {
           message: t('validation.minLength', {
             field: t('register.form.password.label'),
-            length: 6,
+            length: 8,
+          }),
+        })
+        .max(100, {
+          message: t('validation.maxLength', {
+            field: t('register.form.password.label'),
+            length: 100,
           }),
         }),
       confirmPassword: z
@@ -242,27 +251,27 @@ const navigateToLogin = () => {
           <form @submit="onSubmit" class="space-y-4">
             <FormField v-slot="{ componentField }" name="name">
               <FormItem>
-                <FormLabel>{{ $t('register.form.name.label') }}</FormLabel>
+                <FormLabel class="text-gray-900 font-medium">{{ $t('register.form.name.label') }}</FormLabel>
                 <FormControl>
                   <div class="relative">
                     <User class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
                     <Input
                       type="text"
-                      :placeholder="$t('register.form.name.placeholder')"
+                      placeholder="Enter username (letters, numbers, underscores only)"
                       v-bind="componentField"
                       class="pl-10"
-                      autocomplete="name"
+                      autocomplete="username"
                       @input="clearError"
                     />
                   </div>
                 </FormControl>
-                <FormMessage />
+                <FormMessage class="text-red-600 text-sm mt-1" />
               </FormItem>
             </FormField>
 
             <FormField v-slot="{ componentField }" name="email">
               <FormItem>
-                <FormLabel>{{ $t('register.form.email.label') }}</FormLabel>
+                <FormLabel class="text-gray-900 font-medium">{{ $t('register.form.email.label') }}</FormLabel>
                 <FormControl>
                   <div class="relative">
                     <Mail class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
@@ -276,13 +285,13 @@ const navigateToLogin = () => {
                     />
                   </div>
                 </FormControl>
-                <FormMessage />
+                <FormMessage class="text-red-600 text-sm mt-1" />
               </FormItem>
             </FormField>
 
             <FormField v-slot="{ componentField }" name="password">
               <FormItem>
-                <FormLabel>{{ $t('register.form.password.label') }}</FormLabel>
+                <FormLabel class="text-gray-900 font-medium">{{ $t('register.form.password.label') }}</FormLabel>
                 <FormControl>
                   <div class="relative">
                     <Lock class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
@@ -296,13 +305,13 @@ const navigateToLogin = () => {
                     />
                   </div>
                 </FormControl>
-                <FormMessage />
+                <FormMessage class="text-red-600 text-sm mt-1" />
               </FormItem>
             </FormField>
 
             <FormField v-slot="{ componentField }" name="confirmPassword">
               <FormItem>
-                <FormLabel>{{ $t('register.form.confirmPassword.label') }}</FormLabel>
+                <FormLabel class="text-gray-900 font-medium">{{ $t('register.form.confirmPassword.label') }}</FormLabel>
                 <FormControl>
                   <div class="relative">
                     <Lock class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
@@ -316,7 +325,7 @@ const navigateToLogin = () => {
                     />
                   </div>
                 </FormControl>
-                <FormMessage />
+                <FormMessage class="text-red-600 text-sm mt-1" />
               </FormItem>
             </FormField>
 

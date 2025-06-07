@@ -24,6 +24,7 @@ export const authUser = sqliteTable('authUser', {
   github_id: text('github_id').unique(),
   hashed_password: text('hashed_password'),
   role_id: text('role_id').references(() => roles.id),
+  email_verified: integer('email_verified', { mode: 'boolean' }).notNull().default(false),
 });
 
 export const authSession = sqliteTable('authSession', {
@@ -77,4 +78,12 @@ export const globalSettings = sqliteTable('globalSettings', {
   group_id: text('group_id').references(() => globalSettingGroups.id),
   created_at: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
   updated_at: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+});
+
+export const emailVerificationTokens = sqliteTable('emailVerificationTokens', {
+  id: text('id').primaryKey(),
+  user_id: text('user_id').notNull().references(() => authUser.id, { onDelete: 'cascade' }),
+  token_hash: text('token_hash').notNull(),
+  expires_at: integer('expires_at', { mode: 'timestamp' }).notNull(),
+  created_at: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 });
