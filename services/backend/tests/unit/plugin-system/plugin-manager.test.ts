@@ -143,8 +143,8 @@ describe('PluginManager', () => {
     describe('initializePlugins', () => {
       it('should initialize all loaded plugins', async () => {
         await pluginManager.initializePlugins();
-        expect(plugin1.initialize).toHaveBeenCalledWith(mockApp, mockDb);
-        expect(plugin2.initialize).toHaveBeenCalledWith(mockApp, mockDb);
+        expect(plugin1.initialize).toHaveBeenCalledWith(mockDb);
+        expect(plugin2.initialize).toHaveBeenCalledWith(mockDb);
         expect(pluginManager['initialized']).toBe(true);
       });
 

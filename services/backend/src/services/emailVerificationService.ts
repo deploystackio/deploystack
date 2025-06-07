@@ -1,5 +1,5 @@
 import { getDb, getSchema } from '../db';
-import { eq, and, lt, gt } from 'drizzle-orm';
+import { eq, lt, gt } from 'drizzle-orm';
 import { generateId } from 'lucia';
 import { hash, verify } from '@node-rs/argon2';
 import { EmailService } from '../email';
