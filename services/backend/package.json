@@ -61,7 +61,7 @@
     "ts-node": "^10.9.2",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.33.0",
-    "vitest": "^2.1.8"
+    "vitest": "^3.2.3"
   },
   "overrides": {
     "glob": "^10.0.0",
