@@ -20,6 +20,7 @@ import verifyEmailRoute from './routes/auth/verifyEmail'
 import resendVerificationRoute from './routes/auth/resendVerification'
 import forgotPasswordRoute from './routes/auth/forgotPassword'
 import resetPasswordRoute from './routes/auth/resetPassword'
+import adminResetPasswordRoute from './routes/auth/adminResetPassword'
 import { 
   initializeDatabase, 
   registerPluginTables, 
@@ -328,6 +329,7 @@ export const createServer = async () => {
     authInstance.register(resendVerificationRoute, { prefix: '/email' }); // resendVerificationRoute handles /email/resend-verification
     authInstance.register(forgotPasswordRoute); // forgotPasswordRoute handles /email/forgot-password
     authInstance.register(resetPasswordRoute); // resetPasswordRoute handles /email/reset-password
+    authInstance.register(adminResetPasswordRoute); // adminResetPasswordRoute handles /admin/reset-password
     authInstance.register(updateProfileRoute); // updateProfileRoute handles /profile/update
     authInstance.register(githubAuthRoutes, { prefix: '/github' }); // githubAuthRoutes handles /login/github and /login/github/callback
     authInstance.register(logoutRoute); // logoutRoute handles /logout

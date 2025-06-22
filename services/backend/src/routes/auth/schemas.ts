@@ -74,3 +74,9 @@ export const ResetPasswordSchema = z.object({
 });
 
 export type ResetPasswordInput = z.infer<typeof ResetPasswordSchema>;
+
+export const AdminResetPasswordSchema = z.object({
+  email: z.string().email({ message: 'Valid email address is required' }),
+});
+
+export type AdminResetPasswordInput = z.infer<typeof AdminResetPasswordSchema>;
