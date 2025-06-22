@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, defineProps, computed } from 'vue' // Added defineProps
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 // import { cn } from '@/lib/utils' // cn might not be needed for root if $attrs.class is used directly

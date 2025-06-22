@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ArrowLeft, Mail, Github, Shield } from 'lucide-vue-next'
 import DashboardLayout from '@/components/DashboardLayout.vue'
+import UserActionsGroup from '@/components/admin/UserActionsGroup.vue'
 import { getEnv } from '@/utils/env'
 import type { User } from './users/types'
 
@@ -103,6 +104,9 @@ const goBack = () => {
 
       <!-- User Details -->
       <div v-else-if="user">
+        <!-- User Actions Group -->
+        <UserActionsGroup :user="user" />
+
         <div class="px-4 sm:px-0">
           <h3 class="text-base/7 font-semibold text-gray-900">{{ t('adminUsers.userDetail.userInformation') }}</h3>
           <p class="mt-1 max-w-2xl text-sm/6 text-gray-500">{{ t('adminUsers.userDetail.personalDetails') }}</p>

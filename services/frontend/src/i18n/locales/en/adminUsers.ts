@@ -57,6 +57,19 @@ export default {
         lastName: 'Last name:',
         userId: 'User ID:',
         active: 'Active'
+      },
+      actions: {
+        title: 'User Actions',
+        forceResetPassword: 'Force Reset Password',
+        resetPasswordConfirm: {
+          title: 'Force Reset Password',
+          description: 'Are you sure you want to force reset password for {username}? They will receive an email with reset instructions.',
+          cancel: 'Cancel',
+          confirm: 'Send Reset Email'
+        },
+        resetPasswordSuccess: 'Password reset email sent successfully to {email}',
+        resetPasswordError: 'Failed to send password reset email: {error}',
+        resetPasswordDisabled: 'Password reset is only available for users who registered with email'
       }
     }
   },
