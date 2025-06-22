@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import {
   FlexRender,
   getCoreRowModel,
@@ -24,10 +25,11 @@ import {
 import { Button } from '@/components/ui/button'
 import DashboardLayout from '@/components/DashboardLayout.vue'
 import { getEnv } from '@/utils/env'
-import { columns } from './users/columns'
+import { createColumns } from './users/columns'
 import type { User, UsersApiResponse } from './users/types'
 
 const { t } = useI18n()
+const router = useRouter()
 
 const users = ref<User[]>([])
 const isLoading = ref(true)
@@ -38,6 +40,14 @@ const columnVisibility = ref<VisibilityState>({})
 const rowSelection = ref({})
 
 const apiUrl = getEnv('VITE_DEPLOYSTACK_BACKEND_URL') || ''
+
+// Navigation function for viewing user details
+const handleViewUser = (userId: string) => {
+  router.push(`/admin/users/${userId}`)
+}
+
+// Create columns with navigation callback
+const columns = createColumns(handleViewUser)
 
 // Fetch users from API
 async function fetchUsers(): Promise<User[]> {
