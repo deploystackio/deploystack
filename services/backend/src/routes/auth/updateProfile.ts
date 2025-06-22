@@ -49,6 +49,10 @@ const updateProfileRouteSchema = {
       $refStrategy: 'none',
       target: 'openApi3'
     }),
+    403: zodToJsonSchema(updateProfileErrorResponseSchema.describe('Forbidden - Cannot change username for non-email users'), {
+      $refStrategy: 'none',
+      target: 'openApi3'
+    }),
     500: zodToJsonSchema(updateProfileErrorResponseSchema.describe('Internal Server Error - Profile update failed'), {
       $refStrategy: 'none',
       target: 'openApi3'
@@ -113,6 +117,14 @@ export default async function updateProfileRoute(fastify: FastifyInstance) {
         }
 
         const currentUser = users[0];
+
+        // Check if username change is allowed for this auth type
+        if (username && username !== currentUser.username && currentUser.auth_type !== 'email_signup') {
+          return reply.status(403).send({ 
+            success: false, 
+            error: 'Username change is only available for email-authenticated users.' 
+          });
+        }
 
         // If username is being updated, check if it's already taken by another user
         if (username && username !== currentUser.username) {

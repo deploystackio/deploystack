@@ -63,8 +63,12 @@ const routes = [
   },
   {
     path: '/user/account',
+    redirect: '/user/account/profile'
+  },
+  {
+    path: '/user/account/:section',
     name: 'UserAccount',
-    component: () => import('../views/UserAccount.vue'),
+    component: () => import('../views/user/Account.vue'),
     meta: { requiresSetup: true },
   },
   {

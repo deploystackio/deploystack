@@ -6,6 +6,8 @@ import { ChangePasswordSchema, type ChangePasswordInput } from './schemas';
 import { requireAuthHook } from '../../hooks/authHook';
 import { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
+import { EmailService } from '../../email';
+import { GlobalSettingsService } from '../../services/globalSettingsService';
 
 // Response schemas
 const changePasswordSuccessResponseSchema = z.object({
@@ -159,6 +161,56 @@ export default async function changePasswordRoute(fastify: FastifyInstance) {
           .where(eq(authUserTable.id, userId));
 
         fastify.log.info(`Password changed successfully for user: ${userId}`);
+
+        // Send password change notification email if email sending is enabled
+        try {
+          // Check if email sending is enabled in global settings
+          const emailSettings = await GlobalSettingsService.getByGroup('global');
+          const sendMailSetting = emailSettings?.find(s => s.key === 'global.send_mail');
+          const isEmailEnabled = sendMailSetting?.value === 'true';
+
+          if (isEmailEnabled) {
+            // Get user's IP address and user agent for security info
+            const ipAddress = request.ip || request.headers['x-forwarded-for'] as string || 'Unknown';
+            const userAgent = request.headers['user-agent'] || 'Unknown';
+            const changeTime = new Date().toLocaleString('en-US', {
+              timeZone: 'UTC',
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+              timeZoneName: 'short'
+            });
+
+            // Get frontend URL for login link
+            const frontendUrlSetting = emailSettings?.find(s => s.key === 'global.frontend_url');
+            const frontendUrl = frontendUrlSetting?.value || process.env.DEPLOYSTACK_FRONTEND_URL || 'https://app.deploystack.com';
+            const loginUrl = `${frontendUrl}/login`;
+
+            // Send password change notification email
+            const emailResult = await EmailService.sendPasswordChangedEmail({
+              to: user.email,
+              userName: user.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : user.username,
+              userEmail: user.email,
+              changeTime,
+              ipAddress,
+              userAgent,
+              loginUrl,
+            });
+
+            if (emailResult.success) {
+              fastify.log.info(`Password change notification email sent to: ${user.email}`);
+            } else {
+              fastify.log.warn(`Failed to send password change notification email: ${emailResult.error}`);
+            }
+          } else {
+            fastify.log.debug('Email sending is disabled, skipping password change notification');
+          }
+        } catch (emailError) {
+          // Don't fail the password change if email fails
+          fastify.log.warn('Failed to send password change notification email:', emailError);
+        }
 
         // Optional: Invalidate all other sessions for security
         // This would require additional implementation to track and invalidate sessions
