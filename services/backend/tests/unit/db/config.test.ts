@@ -134,25 +134,22 @@ describe('Database Configuration', () => {
   });
 
   describe('deleteDbConfig', () => {
-    const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-
-    beforeEach(() => {
-        consoleLogSpy.mockClear();
-        consoleErrorSpy.mockClear();
-    })
-
     it('should delete the configuration file successfully', async () => {
       process.env.NODE_ENV = 'development'; // Set to non-test mode to enable logging
+      const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
       mockUnlink.mockResolvedValue(undefined);
 
       await deleteDbConfig();
       expect(mockUnlink).toHaveBeenCalledWith(TEST_CONFIG_FILE_PATH);
       expect(consoleLogSpy).toHaveBeenCalledWith(`[INFO] Database configuration deleted from ${TEST_CONFIG_FILE_PATH}`);
+      
+      consoleLogSpy.mockRestore();
     });
 
     it('should log info and not throw if the file does not exist (ENOENT)', async () => {
       process.env.NODE_ENV = 'development'; // Set to non-test mode to enable logging
+      const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       const error = new Error('File not found') as NodeJS.ErrnoException;
       error.code = 'ENOENT';
       mockUnlink.mockRejectedValue(error);
@@ -161,9 +158,14 @@ describe('Database Configuration', () => {
       expect(mockUnlink).toHaveBeenCalledWith(TEST_CONFIG_FILE_PATH);
       expect(consoleLogSpy).toHaveBeenCalledWith('[INFO] Database configuration file not found, nothing to delete.');
       expect(consoleErrorSpy).not.toHaveBeenCalled(); // No error should be logged
+      
+      consoleLogSpy.mockRestore();
+      consoleErrorSpy.mockRestore();
     });
 
     it('should log an error and re-throw for other unlink errors', async () => {
+      const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       const error = new Error('Delete permission denied');
       mockUnlink.mockRejectedValue(error);
 
@@ -171,6 +173,9 @@ describe('Database Configuration', () => {
       expect(mockUnlink).toHaveBeenCalledWith(TEST_CONFIG_FILE_PATH);
       expect(consoleErrorSpy).toHaveBeenCalledWith('[ERROR] Failed to delete database configuration:', error);
       expect(consoleLogSpy).not.toHaveBeenCalledWith(expect.stringContaining('nothing to delete'));
+      
+      consoleLogSpy.mockRestore();
+      consoleErrorSpy.mockRestore();
     });
   });
 
