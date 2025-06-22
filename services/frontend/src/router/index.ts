@@ -108,7 +108,12 @@ const routes = [
       {
         path: 'users',
         name: 'AdminUsers',
-        component: () => import('../views/admin/Users.vue'), // Assuming the new component will be in views/admin/
+        component: () => import('../views/admin/Users.vue'),
+      },
+      {
+        path: 'users/:id',
+        name: 'AdminUserDetail',
+        component: () => import('../views/admin/UserDetail.vue'),
       },
     ],
   },

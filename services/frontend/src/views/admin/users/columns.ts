@@ -2,16 +2,11 @@ import { h } from 'vue'
 import type { ColumnDef } from '@tanstack/vue-table'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { MoreHorizontal, Mail, Github } from 'lucide-vue-next'
+import { Mail, Github, Eye } from 'lucide-vue-next'
 import type { User } from './types'
 
-export const columns: ColumnDef<User>[] = [
+export function createColumns(onViewUser: (userId: string) => void): ColumnDef<User>[] {
+  return [
   {
     accessorKey: 'auth_type',
     header: 'Registration',
@@ -73,28 +68,19 @@ export const columns: ColumnDef<User>[] = [
       const user = row.original
       
       return h('div', { class: 'flex justify-end' }, [
-        h(DropdownMenu, {}, {
-          default: () => [
-            h(DropdownMenuTrigger, { asChild: true }, () => [
-              h(Button, {
-                variant: 'ghost',
-                class: 'h-8 w-8 p-0'
-              }, () => [
-                h('span', { class: 'sr-only' }, 'Open menu'),
-                h(MoreHorizontal, { class: 'h-4 w-4' })
-              ])
-            ]),
-            h(DropdownMenuContent, { align: 'end' }, () => [
-              h(DropdownMenuItem, {
-                onClick: () => {
-                  // Placeholder for reset password functionality
-                  console.log('Reset password for user:', user.id)
-                }
-              }, () => 'Reset Password')
-            ])
-          ]
-        })
+        h(Button, {
+          variant: 'outline',
+          size: 'sm',
+          class: 'h-8 px-3',
+          onClick: () => {
+            onViewUser(user.id)
+          }
+        }, () => [
+          h(Eye, { class: 'h-4 w-4 mr-1' }),
+          'View User'
+        ])
       ])
     },
   },
-]
+  ]
+}
