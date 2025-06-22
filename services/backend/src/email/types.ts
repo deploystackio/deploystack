@@ -120,12 +120,23 @@ export interface EmailVerificationVariables {
   supportEmail?: string;
 }
 
+export interface PasswordChangedEmailVariables {
+  userName?: string;
+  userEmail: string;
+  changeTime: string;
+  ipAddress?: string;
+  userAgent?: string;
+  loginUrl?: string;
+  supportEmail?: string;
+}
+
 // Template registry for type safety
 export interface TemplateVariableMap {
   welcome: WelcomeEmailVariables;
   'password-reset': PasswordResetEmailVariables;
   notification: NotificationEmailVariables;
   'email-verification': EmailVerificationVariables;
+  'password-changed': PasswordChangedEmailVariables;
 }
 
 export type TemplateNames = keyof TemplateVariableMap;

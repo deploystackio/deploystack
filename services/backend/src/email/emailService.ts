@@ -300,4 +300,33 @@ export class EmailService {
       },
     });
   }
+
+  /**
+   * Send a password changed notification email (type-safe helper)
+   */
+  static async sendPasswordChangedEmail(options: {
+    to: string;
+    userName?: string;
+    userEmail: string;
+    changeTime: string;
+    ipAddress?: string;
+    userAgent?: string;
+    loginUrl?: string;
+    supportEmail?: string;
+  }): Promise<EmailSendResult> {
+    return this.sendEmail({
+      to: options.to,
+      subject: 'Password Changed - DeployStack Security Alert',
+      template: 'password-changed',
+      variables: {
+        userName: options.userName,
+        userEmail: options.userEmail,
+        changeTime: options.changeTime,
+        ipAddress: options.ipAddress,
+        userAgent: options.userAgent,
+        loginUrl: options.loginUrl || 'https://app.deploystack.com/login',
+        supportEmail: options.supportEmail || 'support@deploystack.com',
+      },
+    });
+  }
 }
