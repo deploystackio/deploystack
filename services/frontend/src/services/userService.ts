@@ -246,4 +246,46 @@ export class UserService {
       throw error;
     }
   }
+
+  /**
+   * Admin-initiated password reset for email users
+   */
+  static async adminResetPassword(email: string): Promise<{ success: boolean; message: string }> {
+    try {
+      const apiUrl = this.getApiUrl();
+      const response = await fetch(`${apiUrl}/api/auth/admin/reset-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        return data;
+      }
+
+      // Handle different error status codes
+      if (response.status === 400) {
+        throw new Error('INVALID_USER');
+      }
+      if (response.status === 401) {
+        throw new Error('UNAUTHORIZED');
+      }
+      if (response.status === 403) {
+        throw new Error('FORBIDDEN');
+      }
+      if (response.status === 503) {
+        throw new Error('SERVICE_UNAVAILABLE');
+      }
+
+      throw new Error(`Admin password reset failed with status: ${response.status}`);
+    } catch (error) {
+      console.error('Admin password reset error:', error);
+      throw error;
+    }
+  }
 }
