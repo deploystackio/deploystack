@@ -294,4 +294,79 @@ export class PasswordResetService {
   static async isPasswordResetAvailable(): Promise<boolean> {
     return await GlobalSettings.getBoolean('global.send_mail', false);
   }
+
+  /**
+   * Send admin-initiated password reset email to user
+   * Only for users with auth_type = 'email_signup'
+   * Admin cannot reset their own password
+   */
+  static async sendAdminResetEmail(email: string, adminUserId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      // Check if email sending is enabled
+      const isEmailEnabled = await GlobalSettings.getBoolean('global.send_mail', false);
+      if (!isEmailEnabled) {
+        return { success: false, error: 'Password reset is currently disabled. Email functionality is not enabled.' };
+      }
+
+      const db = getDb();
+      const schema = getSchema();
+      const authUserTable = schema.authUser;
+
+      if (!authUserTable) {
+        return { success: false, error: 'Database configuration error' };
+      }
+
+      // Find user with email auth type
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const users = await (db as any)
+        .select()
+        .from(authUserTable)
+        .where(and(
+          eq(authUserTable.email, email.toLowerCase()),
+          eq(authUserTable.auth_type, 'email_signup')
+        ))
+        .limit(1);
+
+      if (users.length === 0) {
+        return { success: false, error: 'User not found or not eligible for password reset (must have email authentication)' };
+      }
+
+      const user = users[0];
+
+      // Check if admin is trying to reset their own password
+      if (user.id === adminUserId) {
+        return { success: false, error: 'Administrators cannot reset their own password using this endpoint' };
+      }
+
+      // Generate reset token
+      const token = await this.createResetToken(user.id);
+
+      // Get frontend URL for reset link
+      const frontendUrl = await GlobalSettings.get('global.page_url', 'http://localhost:5173');
+      const resetUrl = `${frontendUrl}/reset-password?token=${token}`;
+
+      // Send admin-initiated reset email
+      const emailResult = await EmailService.sendEmail({
+        to: user.email,
+        subject: 'Password Reset Initiated by Administrator',
+        template: 'admin-password-reset',
+        variables: {
+          userName: user.username,
+          userEmail: user.email,
+          resetUrl,
+          expirationTime: '10 minutes',
+          supportEmail: await GlobalSettings.get('smtp.from_email') || undefined,
+        },
+      });
+
+      if (!emailResult.success) {
+        return { success: false, error: emailResult.error || 'Failed to send reset email' };
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error sending admin-initiated password reset email:', error);
+      return { success: false, error: 'An error occurred while sending reset email' };
+    }
+  }
 }
