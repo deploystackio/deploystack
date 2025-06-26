@@ -231,6 +231,7 @@ const filterValue = computed({
                 <TableHead
                   v-for="header in headerGroup.headers"
                   :key="header.id"
+                  :class="header.id === 'actions' ? 'text-right' : ''"
                 >
                   <FlexRender
                     v-if="!header.isPlaceholder"
