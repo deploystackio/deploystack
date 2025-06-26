@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 // import { cn } from '@/lib/utils' // cn might not be needed for root if $attrs.class is used directly
@@ -30,6 +30,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { TeamService, type Team } from '@/services/teamService'
 import { UserService, type User } from '@/services/userService'
+import { useEventBus } from '@/composables/useEventBus'
 import {
   Server,
   LayoutDashboard,
@@ -52,6 +53,7 @@ const props = defineProps<Props>()
 
 const router = useRouter()
 const { t } = useI18n()
+const eventBus = useEventBus()
 
 // User data
 const currentUser = ref<User | null>(null)
@@ -154,6 +156,17 @@ const getUserInitials = (name: string) => { return name.split(' ').map(word => w
 onMounted(() => {
   fetchUserData()
   fetchTeams()
+
+  // Listen for team updates from other components
+  eventBus.on('teams-updated', () => {
+    console.log('Teams updated event received, refreshing teams...')
+    fetchTeams(true) // Force refresh to get latest data
+  })
+})
+
+onUnmounted(() => {
+  // Clean up event listeners
+  eventBus.off('teams-updated')
 })
 </script>
 

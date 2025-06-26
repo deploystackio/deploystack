@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { TeamService, CreateTeamSchema, type CreateTeamInput } from '@/services/teamService'
+import { useEventBus } from '@/composables/useEventBus'
 
 interface Props {
   open: boolean
@@ -27,6 +28,7 @@ interface Emits {
 const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 const { t } = useI18n()
+const eventBus = useEventBus()
 
 // Form state
 const formData = ref<CreateTeamInput>({
@@ -76,6 +78,9 @@ const handleSubmit = async () => {
 
   try {
     await TeamService.createTeam(formData.value)
+
+    // Emit global event for immediate UI updates across components
+    eventBus.emit('teams-updated')
 
     // Reset form
     formData.value = { name: '', description: '' }

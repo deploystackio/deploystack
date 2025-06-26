@@ -27,6 +27,7 @@ import DashboardLayout from '@/components/DashboardLayout.vue'
 import AddTeamModal from '@/components/teams/AddTeamModal.vue'
 import { TeamService, type TeamWithRole } from '@/services/teamService'
 import { UserService } from '@/services/userService'
+import { useEventBus } from '@/composables/useEventBus'
 import { createColumns } from './teams/columns'
 import { useRouter, useRoute } from 'vue-router'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -35,6 +36,7 @@ import { CheckCircle } from 'lucide-vue-next'
 const { t } = useI18n()
 const router = useRouter()
 const route = useRoute()
+const eventBus = useEventBus()
 
 // State
 const teams = ref<TeamWithRole[]>([])
@@ -89,8 +91,8 @@ const fetchTeams = async (): Promise<void> => {
 // Handle team creation success
 const handleTeamCreated = async () => {
   await fetchTeams()
-  // Also refresh the sidebar teams
-  await TeamService.getUserTeams(true)
+  // Emit global event to update sidebar and other components
+  eventBus.emit('teams-updated')
 }
 
 // Check for delete success message from query params

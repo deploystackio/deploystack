@@ -8,7 +8,6 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
 import { ArrowLeft, Save, Trash2, AlertTriangle, Lock } from 'lucide-vue-next'
 import DashboardLayout from '@/components/DashboardLayout.vue'
 import { TeamService, type Team } from '@/services/teamService'
@@ -39,6 +38,7 @@ const saveError = ref<string | null>(null)
 const saveSuccess = ref(false)
 const showDeleteDialog = ref(false)
 const userPermissions = ref<string[]>([])
+/* eslint-disable-next-line @typescript-eslint/no-explicit-any */
 const currentUser = ref<any>(null)
 
 // Form data

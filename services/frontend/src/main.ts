@@ -2,6 +2,7 @@ import './assets/index.css'
 
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
+import mitt from 'mitt'
 
 import App from './App.vue'
 import router from './router'
@@ -10,9 +11,13 @@ import i18n from './i18n'
 import { PluginManager } from './plugin-system/plugin-manager'
 import { loadPlugins } from './plugins'
 import ExtensionPoint from './components/ExtensionPoint.vue'
+import type { EventBusEvents } from './composables/useEventBus'
 
 const app = createApp(App)
 const pinia = createPinia()
+
+// Create event bus
+const emitter = mitt<EventBusEvents>()
 
 // Register global components
 app.component('ExtensionPoint', ExtensionPoint)
@@ -30,8 +35,9 @@ app.use(pinia)
 app.use(router)
 app.use(i18n)
 
-// Make plugin manager available globally in the app
+// Provide global services
 app.provide('pluginManager', pluginManager)
+app.provide('emitter', emitter)
 
 // Initialize application with plugins
 async function initializeApplication() {
