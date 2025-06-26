@@ -7,7 +7,6 @@ import { drizzle as drizzleSqliteAdapter } from 'drizzle-orm/better-sqlite3';
 // Modules to mock
 import * as configModule from '../../../src/db/config';
 import * as staticSchemaModule from '../../../src/db/schema.sqlite';
-import * as schemaModule from '../../../src/db/schema'; // For inputPluginTableDefinitions
 
 // Functions from the module under test
 import {
@@ -100,10 +99,6 @@ vi.mock('../../../src/db/schema.sqlite', () => ({
   // e.g., authUser: {}, authSession: {}
   // For now, an empty object might suffice if generateSchema doesn't rely on specific props
   // from staticSchema for the core tests.
-}));
-
-// Mock './schema' for inputPluginTableDefinitions
-vi.mock('../../../src/db/schema', () => ({
   pluginTableDefinitions: {}, // Start with empty plugin definitions
 }));
 
@@ -207,10 +202,10 @@ describe('Database Service (db/index.ts)', () => {
     };
 
     beforeEach(() => {
-      // Reset pluginTableDefinitions from schemaModule for each test
-      // schemaModule.pluginTableDefinitions = {}; // This causes a read-only error
+      // Reset pluginTableDefinitions from staticSchemaModule for each test
+      // staticSchemaModule.pluginTableDefinitions = {}; // This causes a read-only error
       // Instead, clear the properties of the mocked object
-      const ptd = schemaModule.pluginTableDefinitions as Record<string, any>;
+      const ptd = staticSchemaModule.pluginTableDefinitions as Record<string, any>;
       for (const key in ptd) {
         delete ptd[key];
       }
@@ -218,9 +213,9 @@ describe('Database Service (db/index.ts)', () => {
 
     it('should register table definitions from plugins', () => {
       registerPluginTables([plugin1, plugin2]);
-      expect(schemaModule.pluginTableDefinitions).toHaveProperty('plugin1_myTable');
-      expect(schemaModule.pluginTableDefinitions['plugin1_myTable']).toEqual(plugin1.databaseExtension?.tableDefinitions?.myTable);
-      expect(Object.keys(schemaModule.pluginTableDefinitions).length).toBe(1);
+      expect(staticSchemaModule.pluginTableDefinitions).toHaveProperty('plugin1_myTable');
+      expect(staticSchemaModule.pluginTableDefinitions['plugin1_myTable']).toEqual(plugin1.databaseExtension?.tableDefinitions?.myTable);
+      expect(Object.keys(staticSchemaModule.pluginTableDefinitions).length).toBe(1);
     });
   });
 });
