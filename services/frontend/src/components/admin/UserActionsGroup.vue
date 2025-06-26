@@ -53,7 +53,7 @@ const handlePasswordReset = async () => {
       }, 5000)
     }
   } catch (error) {
-    let errorKey = 'adminUsers.userDetail.actions.resetPasswordError'
+    const errorKey = 'adminUsers.userDetail.actions.resetPasswordError'
     let errorText = error instanceof Error ? error.message : 'Unknown error'
     
     // Handle specific error types
