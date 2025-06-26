@@ -429,8 +429,19 @@ export default async function teamsRoute(fastify: FastifyInstance) {
         });
       }
 
-      // Check if it's a default team
-      const isDefaultTeam = await TeamService.isDefaultTeam(teamId, request.user.id);
+      // Check if it's a default team with better error handling
+      let isDefaultTeam = false;
+      try {
+        isDefaultTeam = await TeamService.isDefaultTeam(teamId, request.user.id);
+        fastify.log.info(`Default team check for team ${teamId}: ${isDefaultTeam}`);
+      } catch (defaultTeamError) {
+        fastify.log.error(defaultTeamError, 'Error checking if team is default team');
+        return reply.status(500).send({
+          success: false,
+          error: 'Failed to verify team deletion eligibility',
+        });
+      }
+
       if (isDefaultTeam) {
         return reply.status(400).send({
           success: false,
@@ -457,6 +468,7 @@ export default async function teamsRoute(fastify: FastifyInstance) {
       return reply.status(500).send({
         success: false,
         error: 'Failed to delete team',
+        details: error instanceof Error ? error.message : 'Unknown error'
       });
     }
   });

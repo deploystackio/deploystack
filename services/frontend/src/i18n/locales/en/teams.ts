@@ -11,6 +11,9 @@ export default {
         placeholder: 'Search teams...'
       }
     },
+    messages: {
+      deleteSuccess: 'Team "{teamName}" has been successfully deleted.'
+    },
     pagination: {
       rowsSelected: '{selected} of {total} row(s) selected.',
       previous: 'Previous',

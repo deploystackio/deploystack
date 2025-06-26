@@ -28,10 +28,13 @@ import AddTeamModal from '@/components/teams/AddTeamModal.vue'
 import { TeamService, type TeamWithRole } from '@/services/teamService'
 import { UserService } from '@/services/userService'
 import { createColumns } from './teams/columns'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { CheckCircle } from 'lucide-vue-next'
 
 const { t } = useI18n()
 const router = useRouter()
+const route = useRoute()
 
 // State
 const teams = ref<TeamWithRole[]>([])
@@ -44,6 +47,7 @@ const rowSelection = ref({})
 const showAddModal = ref(false)
 const canCreateTeams = ref(false)
 const userPermissions = ref<string[]>([])
+const deleteSuccessMessage = ref<string | null>(null)
 
 // Handle manage team navigation
 const handleManageTeam = (teamId: string) => {
@@ -89,8 +93,27 @@ const handleTeamCreated = async () => {
   await TeamService.getUserTeams(true)
 }
 
+// Check for delete success message from query params
+const checkDeleteSuccess = () => {
+  const deletedTeamName = route.query.deleted as string
+  if (deletedTeamName) {
+    deleteSuccessMessage.value = t('teams.messages.deleteSuccess', { teamName: deletedTeamName })
+
+    // Clear the query parameter from URL
+    router.replace({ path: '/teams' })
+
+    // Clear the message after 5 seconds
+    setTimeout(() => {
+      deleteSuccessMessage.value = null
+    }, 5000)
+  }
+}
+
 // Load data on component mount
 onMounted(async () => {
+  // Check for delete success message first
+  checkDeleteSuccess()
+
   await Promise.all([
     checkPermissions(),
     fetchTeams()
@@ -169,6 +192,12 @@ const filterValue = computed({
           {{ t('teams.addButton') }}
         </Button>
       </div>
+
+      <!-- Delete Success Message -->
+      <Alert v-if="deleteSuccessMessage" class="border-green-200 bg-green-50 text-green-800">
+        <CheckCircle class="h-4 w-4" />
+        <AlertDescription>{{ deleteSuccessMessage }}</AlertDescription>
+      </Alert>
 
       <!-- Loading State -->
       <div v-if="isLoading" class="text-muted-foreground">

@@ -275,9 +275,6 @@ export class TeamService {
 
       const response = await fetch(`${apiUrl}/api/teams/${teamId}`, {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         credentials: 'include',
       });
 

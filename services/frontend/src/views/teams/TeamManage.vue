@@ -170,10 +170,14 @@ const saveTeam = async () => {
 const deleteTeam = async () => {
   try {
     isDeleting.value = true
+    const teamName = team.value?.name || 'Unknown Team'
     await TeamService.deleteTeam(teamId.value)
 
-    // Redirect to teams list
-    router.push('/teams')
+    // Redirect to teams list with success message
+    router.push({
+      path: '/teams',
+      query: { deleted: teamName }
+    })
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'Failed to delete team'
     console.error('Error deleting team:', err)
