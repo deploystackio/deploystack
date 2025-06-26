@@ -1,5 +1,16 @@
-// This file is specifically for drizzle-kit when generating SQLite migrations.
-// It defines the actual SQLite tables with proper foreign key relationships.
+// SINGLE SOURCE OF TRUTH FOR DATABASE SCHEMA
+// This file is the definitive schema definition for the SQLite database.
+// It is used by:
+// - Drizzle Kit for generating migrations (npm run db:generate)
+// - The application runtime for table definitions and type safety
+// - All database operations and queries
+//
+// IMPORTANT: When making schema changes:
+// 1. Edit this file (schema.sqlite.ts) ONLY
+// 2. Run `npm run db:generate` to create migrations
+// 3. The changes will be automatically applied on next server start
+//
+// DO NOT create or edit schema.ts - this file has been removed to avoid confusion.
 
 import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
 
@@ -96,3 +107,9 @@ export const passwordResetTokens = sqliteTable('passwordResetTokens', {
   expires_at: integer('expires_at', { mode: 'timestamp' }).notNull(),
   created_at: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 });
+
+// Plugin table definitions - populated dynamically by the plugin system
+// This object will hold definitions for plugin tables, to be populated dynamically.
+// Key: Table name (e.g., 'myPlugin_myTable')
+// Value: Column definitions object (e.g., { id: (b:any)=>b('id'), name: (b:any)=>b('name') })
+export const pluginTableDefinitions: Record<string, Record<string, (columnBuilder: any) => any>> = {};

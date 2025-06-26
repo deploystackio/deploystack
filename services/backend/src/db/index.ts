@@ -6,7 +6,7 @@ import { type Plugin, type DatabaseExtension } from '../plugin-system/types'; //
 import { getDbConfig, saveDbConfig, type DbConfig, type SQLiteConfig } from './config';
 
 // Schema Definitions
-import { /* baseTableDefinitions, */ pluginTableDefinitions as inputPluginTableDefinitions } from './schema';
+import { pluginTableDefinitions as inputPluginTableDefinitions } from './schema.sqlite';
 
 // Drizzle SQLite
 import { drizzle as drizzleSqliteAdapter, type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
