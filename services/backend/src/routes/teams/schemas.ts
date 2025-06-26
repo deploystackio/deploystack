@@ -33,6 +33,7 @@ export const TeamSchema = z.object({
   slug: z.string().describe('Team slug'),
   description: z.string().nullable().describe('Team description'),
   owner_id: z.string().describe('Team owner ID'),
+  is_default: z.boolean().describe('Indicates if this is the user\'s default team'),
   created_at: z.date().describe('Team creation date'),
   updated_at: z.date().describe('Team last update date')
 });

@@ -14,6 +14,64 @@ import {
 } from './schemas';
 
 export default async function teamsRoute(fastify: FastifyInstance) {
+  // GET /api/teams/me/default - Get current user's default team (must come before /me route)
+  fastify.get('/api/teams/me/default', {
+    schema: {
+      tags: ['Teams'],
+      summary: 'Get current user default team',
+      description: 'Retrieves the default team for the currently authenticated user.',
+      security: [{ cookieAuth: [] }],
+      response: {
+        200: zodToJsonSchema(TeamResponseSchema.describe('Default team retrieved successfully'), {
+          $refStrategy: 'none',
+          target: 'openApi3'
+        }),
+        401: zodToJsonSchema(ErrorResponseSchema.describe('Unauthorized - Authentication required'), {
+          $refStrategy: 'none',
+          target: 'openApi3'
+        }),
+        404: zodToJsonSchema(ErrorResponseSchema.describe('Not Found - No default team found'), {
+          $refStrategy: 'none',
+          target: 'openApi3'
+        }),
+        500: zodToJsonSchema(ErrorResponseSchema.describe('Internal Server Error'), {
+          $refStrategy: 'none',
+          target: 'openApi3'
+        })
+      }
+    }
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      if (!request.user) {
+        return reply.status(401).send({
+          success: false,
+          error: 'Authentication required',
+        });
+      }
+
+      const defaultTeam = await TeamService.getUserDefaultTeam(request.user.id);
+      
+      if (!defaultTeam) {
+        return reply.status(404).send({
+          success: false,
+          error: 'No default team found',
+        });
+      }
+
+      return reply.status(200).send({
+        success: true,
+        data: defaultTeam,
+        message: 'Default team retrieved successfully',
+      });
+    } catch (error) {
+      fastify.log.error(error, 'Error fetching user default team');
+      return reply.status(500).send({
+        success: false,
+        error: 'Failed to fetch default team',
+      });
+    }
+  });
+
   // GET /api/teams/me - Get current user's teams (must come before /:id route)
   fastify.get('/api/teams/me', {
     schema: {
@@ -322,8 +380,7 @@ export default async function teamsRoute(fastify: FastifyInstance) {
       }
 
       // Check if trying to update default team name
-      const isDefaultTeam = await TeamService.isDefaultTeam(teamId, request.user.id);
-      if (isDefaultTeam && validatedData.name && validatedData.name !== existingTeam.name) {
+      if (existingTeam.is_default && validatedData.name && validatedData.name !== existingTeam.name) {
         return reply.status(400).send({
           success: false,
           error: 'Default team names cannot be changed',
@@ -429,20 +486,8 @@ export default async function teamsRoute(fastify: FastifyInstance) {
         });
       }
 
-      // Check if it's a default team with better error handling
-      let isDefaultTeam = false;
-      try {
-        isDefaultTeam = await TeamService.isDefaultTeam(teamId, request.user.id);
-        fastify.log.info(`Default team check for team ${teamId}: ${isDefaultTeam}`);
-      } catch (defaultTeamError) {
-        fastify.log.error(defaultTeamError, 'Error checking if team is default team');
-        return reply.status(500).send({
-          success: false,
-          error: 'Failed to verify team deletion eligibility',
-        });
-      }
-
-      if (isDefaultTeam) {
+      // Check if it's a default team
+      if (existingTeam.is_default) {
         return reply.status(400).send({
           success: false,
           error: 'Default teams cannot be deleted',

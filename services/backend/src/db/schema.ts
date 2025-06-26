@@ -56,6 +56,7 @@ export const teamsTableColumns = {
   slug: (columnBuilder: any) => columnBuilder('slug').notNull().unique(),
   description: (columnBuilder: any) => columnBuilder('description'),
   owner_id: (columnBuilder: any) => columnBuilder('owner_id').notNull(), // Foreign key to authUser.id
+  is_default: (columnBuilder: any) => columnBuilder('is_default').notNull().default(false), // Indicates if this is the user's default team
   created_at: (columnBuilder: any) => columnBuilder('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
   updated_at: (columnBuilder: any) => columnBuilder('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 };

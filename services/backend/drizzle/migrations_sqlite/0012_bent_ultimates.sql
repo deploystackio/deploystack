@@ -1,0 +1,1 @@
+ALTER TABLE `teams` ADD `is_default` integer DEFAULT false NOT NULL;

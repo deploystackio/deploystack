@@ -96,6 +96,12 @@ const routes = [
     meta: { requiresSetup: true },
   },
   {
+    path: '/teams/manage',
+    name: 'TeamsManageDefault',
+    component: () => import('../views/teams/TeamsManageRedirect.vue'),
+    meta: { requiresSetup: true },
+  },
+  {
     path: '/teams/manage/:id',
     name: 'TeamManage',
     component: () => import('../views/teams/TeamManage.vue'),
