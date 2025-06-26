@@ -90,6 +90,12 @@ const routes = [
     meta: { requiresSetup: true },
   },
   {
+    path: '/teams',
+    name: 'Teams',
+    component: () => import('../views/Teams.vue'),
+    meta: { requiresSetup: true },
+  },
+  {
     path: '/admin',
     meta: {
       requiresSetup: true,

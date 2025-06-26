@@ -1,18 +1,45 @@
 import { getEnv } from '@/utils/env'
+import { z } from 'zod'
 
-export interface Team {
-  id: string
-  name: string
-  slug: string
-  description?: string
-  owner_id: string
-  created_at: number
-  updated_at: number
-}
+// Zod schemas for validation
+export const TeamSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  slug: z.string(),
+  description: z.string().nullable(),
+  owner_id: z.string(),
+  created_at: z.date(),
+  updated_at: z.date()
+})
+
+export const TeamWithRoleSchema = TeamSchema.extend({
+  role: z.enum(['team_admin', 'team_user'])
+})
+
+export const CreateTeamSchema = z.object({
+  name: z.string().min(1, 'Team name is required').max(100, 'Team name must be 100 characters or less'),
+  description: z.string().max(500, 'Description must be 500 characters or less').optional()
+})
+
+// Type exports
+export type Team = z.infer<typeof TeamSchema>
+export type TeamWithRole = z.infer<typeof TeamWithRoleSchema>
+export type CreateTeamInput = z.infer<typeof CreateTeamSchema>
 
 export interface TeamResponse {
   success: boolean;
-  teams: Team[]; // Changed 'data' to 'teams'
+  teams: Team[]; // For /api/users/me/teams endpoint
+}
+
+export interface TeamsListResponse {
+  success: boolean;
+  data: TeamWithRole[]; // For /api/teams/me endpoint
+}
+
+export interface TeamCreateResponse {
+  success: boolean;
+  data: Team;
+  message?: string;
 }
 
 interface TeamCacheEntry {
@@ -124,10 +151,48 @@ export class TeamService {
   }
 
   /**
-   * Create a new team - clears cache to ensure fresh data
+   * Get user teams with role information for the Teams page
    */
-  static async createTeam(teamData: Partial<Team>): Promise<Team> {
+  static async getUserTeamsWithRoles(): Promise<TeamWithRole[]> {
     try {
+      const apiUrl = this.getApiUrl()
+
+      const response = await fetch(`${apiUrl}/api/teams/me`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+      })
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Unauthorized - please log in')
+        }
+        throw new Error(`Failed to fetch teams: ${response.status}`)
+      }
+
+      const data: TeamsListResponse = await response.json()
+
+      if (data.success && Array.isArray(data.data)) {
+        return data.data
+      } else {
+        throw new Error('Invalid response format')
+      }
+    } catch (error) {
+      console.error('Error fetching user teams with roles:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Create a new team with Zod validation - clears cache to ensure fresh data
+   */
+  static async createTeam(teamData: CreateTeamInput): Promise<Team> {
+    try {
+      // Validate input data with Zod
+      const validatedData = CreateTeamSchema.parse(teamData);
+
       const apiUrl = this.getApiUrl();
 
       const response = await fetch(`${apiUrl}/api/teams`, {
@@ -136,14 +201,28 @@ export class TeamService {
           'Content-Type': 'application/json',
         },
         credentials: 'include',
-        body: JSON.stringify(teamData),
+        body: JSON.stringify(validatedData),
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to create team: ${response.status}`);
+        const errorData = await response.json().catch(() => ({}));
+
+        if (response.status === 400 && errorData.error?.includes('limit')) {
+          throw new Error('You have reached the maximum limit of 3 teams');
+        }
+
+        if (response.status === 403) {
+          throw new Error('You do not have permission to create teams');
+        }
+
+        throw new Error(errorData.error || `Failed to create team: ${response.status}`);
       }
 
-      const data = await response.json();
+      const data: TeamCreateResponse = await response.json();
+
+      if (!data.success || !data.data) {
+        throw new Error('Invalid response format from server');
+      }
 
       // Clear cache on successful team creation
       this.clearUserTeamsCache();

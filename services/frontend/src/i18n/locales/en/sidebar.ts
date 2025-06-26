@@ -1,6 +1,7 @@
 export default {
   sidebar: {
     navigation: {
+      dashboard: 'Dashboard',
       title: 'Navigation',
       mcpServer: 'MCP Server',
       provider: 'Provider',
@@ -12,7 +13,10 @@ export default {
       users: 'Users',
     },
     teams: {
+      title: 'Teams',
       selectTeam: 'Select Team',
+      myTeams: 'My Teams',
+      manageTeam: 'Manage Team',
       loading: 'Loading teams...',
       noTeams: 'No teams found.',
     },
