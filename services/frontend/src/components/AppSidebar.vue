@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 // import { cn } from '@/lib/utils' // cn might not be needed for root if $attrs.class is used directly
@@ -30,14 +30,17 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { TeamService, type Team } from '@/services/teamService'
 import { UserService, type User } from '@/services/userService'
+import { useEventBus } from '@/composables/useEventBus'
 import {
   Server,
+  LayoutDashboard,
   Settings,
   Key,
   ChevronDown,
   User as UserIcon,
   LogOut,
   Users,
+  UserRoundPen,
   FileSliders
 } from 'lucide-vue-next'
 
@@ -50,6 +53,7 @@ const props = defineProps<Props>()
 
 const router = useRouter()
 const { t } = useI18n()
+const eventBus = useEventBus()
 
 // User data
 const currentUser = ref<User | null>(null)
@@ -68,8 +72,25 @@ const selectedTeam = ref<Team | null>(null)
 const teamsLoading = ref(true)
 const teamsError = ref('')
 
-// Navigation items
+const teamItems = [
+  {
+    title: t('sidebar.teams.myTeams'),
+    icon: Users,
+    url: '/teams',
+  },
+  {
+    title: t('sidebar.teams.manageTeam'),
+    icon: UserRoundPen,
+    url: '/teams/manage',
+  },
+]
+
 const navigationItems = [
+  {
+    title: t('sidebar.navigation.dashboard'),
+    icon: LayoutDashboard,
+    url: '/dashboard',
+  },
   {
     title: t('sidebar.navigation.mcpServer'),
     icon: Server,
@@ -135,6 +156,17 @@ const getUserInitials = (name: string) => { return name.split(' ').map(word => w
 onMounted(() => {
   fetchUserData()
   fetchTeams()
+
+  // Listen for team updates from other components
+  eventBus.on('teams-updated', () => {
+    console.log('Teams updated event received, refreshing teams...')
+    fetchTeams(true) // Force refresh to get latest data
+  })
+})
+
+onUnmounted(() => {
+  // Clean up event listeners
+  eventBus.off('teams-updated')
 })
 </script>
 
@@ -199,11 +231,31 @@ onMounted(() => {
     </SidebarHeader>
 
     <SidebarContent>
+
       <SidebarGroup>
-        <SidebarGroupLabel>{{ t('sidebar.navigation.title', 'Navigation') }}</SidebarGroupLabel>
+        <SidebarGroupLabel>{{ t('sidebar.navigation.title') }}</SidebarGroupLabel>
         <SidebarGroupContent>
           <SidebarMenu>
             <SidebarMenuItem v-for="item in navigationItems" :key="item.title">
+              <SidebarMenuButton
+                @click="navigateTo(item.url)"
+                :is-active="router.currentRoute.value.path === item.url"
+                class="w-full justify-start"
+                :aria-current="router.currentRoute.value.path === item.url ? 'page' : undefined"
+              >
+                <component :is="item.icon" class="mr-2 h-4 w-4 shrink-0" />
+                <span>{{ item.title }}</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroupContent>
+      </SidebarGroup>
+
+      <SidebarGroup>
+        <SidebarGroupLabel>{{ t('sidebar.teams.title') }}</SidebarGroupLabel>
+        <SidebarGroupContent>
+          <SidebarMenu>
+            <SidebarMenuItem v-for="item in teamItems" :key="item.title">
               <SidebarMenuButton
                 @click="navigateTo(item.url)"
                 :is-active="router.currentRoute.value.path === item.url"

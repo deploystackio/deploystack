@@ -9,9 +9,25 @@ export interface TestContext {
   firstUserCookie?: string;
   secondUserId?: string;
   secondUserCookie?: string;
+  thirdUserId?: string;
+  thirdUserCookie?: string;
   firstUserLoginCookie?: string;
   secondUserLoginCookie?: string;
   secondUserProfileCookie?: string;
+  secondUserTeamCookie?: string;
+  thirdUserTeamCookie?: string;
+  secondUserCrossPermissionCookie?: string;
+  thirdUserCrossPermissionCookie?: string;
+  secondUserEditingCookie?: string;
+  secondUserDefaultTeamId?: string;
+  secondUserDefaultTeamIdForEditing?: string;
+  secondUserTeam1Id?: string;
+  secondUserTeam2Id?: string;
+  firstUserVisibilityCookie?: string;
+  secondUserVisibilityCookie?: string;
+  firstUserDefaultTeamId?: string;
+  crossPermissionTestTeamId?: string;
+  editingTestTeamId?: string;
 }
 
 const CONTEXT_FILE = path.join(__dirname, '.test-context.json');
@@ -29,9 +45,25 @@ export function setTestContext(context: TestContext): void {
       firstUserCookie: context.firstUserCookie,
       secondUserId: context.secondUserId,
       secondUserCookie: context.secondUserCookie,
+      thirdUserId: context.thirdUserId,
+      thirdUserCookie: context.thirdUserCookie,
       firstUserLoginCookie: context.firstUserLoginCookie,
       secondUserLoginCookie: context.secondUserLoginCookie,
       secondUserProfileCookie: context.secondUserProfileCookie,
+      secondUserTeamCookie: context.secondUserTeamCookie,
+      thirdUserTeamCookie: context.thirdUserTeamCookie,
+      secondUserCrossPermissionCookie: context.secondUserCrossPermissionCookie,
+      thirdUserCrossPermissionCookie: context.thirdUserCrossPermissionCookie,
+      secondUserEditingCookie: context.secondUserEditingCookie,
+      secondUserDefaultTeamId: context.secondUserDefaultTeamId,
+      secondUserDefaultTeamIdForEditing: context.secondUserDefaultTeamIdForEditing,
+      secondUserTeam1Id: context.secondUserTeam1Id,
+      secondUserTeam2Id: context.secondUserTeam2Id,
+      firstUserVisibilityCookie: context.firstUserVisibilityCookie,
+      secondUserVisibilityCookie: context.secondUserVisibilityCookie,
+      firstUserDefaultTeamId: context.firstUserDefaultTeamId,
+      crossPermissionTestTeamId: context.crossPermissionTestTeamId,
+      editingTestTeamId: context.editingTestTeamId,
     }, null, 2));
   } catch (error) {
     console.warn('Failed to save test context to file:', error);

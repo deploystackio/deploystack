@@ -145,10 +145,6 @@ const allEnv = getAllEnv();
 const navigateToRegister = () => {
   router.push('/register')
 }
-
-const navigateToForgotPassword = () => {
-  router.push('/forgot-password')
-}
 </script>
 
 <template>
@@ -202,13 +198,12 @@ const navigateToForgotPassword = () => {
                 <div class="flex items-center justify-between">
                   <FormLabel>{{ $t('login.form.password.label') }}</FormLabel>
                   <div class="text-sm">
-                    <Button
-                      variant="link"
-                      class="font-medium text-indigo-600 hover:text-indigo-500 p-0 h-auto"
-                      @click="navigateToForgotPassword"
+                    <router-link
+                      to="/forgot-password"
+                      class="font-medium text-indigo-600 hover:text-indigo-500 text-sm"
                     >
                       {{ $t('login.form.forgotPassword') }}
-                    </Button>
+                    </router-link>
                   </div>
                 </div>
                 <FormControl>
