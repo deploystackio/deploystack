@@ -51,7 +51,7 @@
     "@typescript-eslint/eslint-plugin": "^8.33.0",
     "@typescript-eslint/parser": "^8.33.0",
     "@vitest/coverage-v8": "^3.2.3",
-    "drizzle-kit": "^0.31.1",
+    "drizzle-kit": "^0.31.3",
     "eslint": "^9.29.0",
     "fs-extra": "^11.3.0",
     "jest": "^30.0.2",
