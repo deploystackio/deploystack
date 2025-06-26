@@ -8,7 +8,13 @@ export interface User {
   role_id: string;
   first_name?: string;
   last_name?: string;
-  // Add other user properties as needed
+  auth_type: string;
+  github_id?: string;
+  role?: {
+    id: string;
+    name: string;
+    permissions: string[];
+  };
 }
 
 interface CacheEntry {
