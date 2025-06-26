@@ -40,6 +40,16 @@ describe('Teams Route', () => {
         preHandlers[`GET ${path}`] = options?.preHandler;
         return mockFastify as FastifyInstance;
       }),
+      put: vi.fn((path, options, handler) => {
+        routeHandlers[`PUT ${path}`] = handler;
+        preHandlers[`PUT ${path}`] = options?.preHandler;
+        return mockFastify as FastifyInstance;
+      }),
+      delete: vi.fn((path, options, handler) => {
+        routeHandlers[`DELETE ${path}`] = handler;
+        preHandlers[`DELETE ${path}`] = options?.preHandler;
+        return mockFastify as FastifyInstance;
+      }),
       log: {
         error: vi.fn(),
         info: vi.fn(),
