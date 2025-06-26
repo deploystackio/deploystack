@@ -9,6 +9,8 @@ import rolesRoute from './roles'
 import usersRoute from './users'
 // Import global settings routes
 import globalSettingsRoute from './globalSettings'
+// Import teams routes
+import teamsRoute from './teams'
 
 // Response schema for the root health check endpoint
 const healthCheckResponseSchema = z.object({
@@ -29,6 +31,9 @@ export const registerRoutes = (server: FastifyInstance): void => {
   
   // Register global settings routes
   server.register(globalSettingsRoute);
+  
+  // Register teams routes
+  server.register(teamsRoute);
 
   // Define a default route with comprehensive OpenAPI documentation
   server.get('/', {

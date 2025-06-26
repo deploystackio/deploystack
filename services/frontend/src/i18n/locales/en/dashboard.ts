@@ -3,6 +3,7 @@ export default {
   sidebar: {
     navigation: {
       title: 'Navigation',
+      dashboard: 'Dashboard',
       mcpServer: 'MCP Server',
       provider: 'Provider',
       credentials: 'Credentials',
@@ -22,6 +23,10 @@ export default {
     },
   },
   pages: {
+    dashboard: {
+      title: 'Dashboard',
+      description: 'View and control all your MCP servers from a single dashboard',
+    },
     mcpServer: {
       title: 'MCP Server Management',
       description: 'Manage your MCP servers and configurations',

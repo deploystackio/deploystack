@@ -98,7 +98,44 @@ describe('User Registration E2E Tests', () => {
     });
   });
 
-  it('should verify both users exist in database with correct roles', async () => {
+  it('should register third user and assign global_user role', async () => {
+    // Register the third user
+    const thirdUserData = {
+      username: 'regular_user_2',
+      email: 'user2@example.com',
+      password: 'SecurePassword789!',
+      first_name: 'Regular2',
+      last_name: 'User2'
+    };
+
+    const registerResponse = await request(server.server)
+      .post('/api/auth/email/register')
+      .send(thirdUserData);
+
+    expect(registerResponse.status).toBe(201);
+    expect(registerResponse.body).toHaveProperty('success', true);
+    expect(registerResponse.body).toHaveProperty('user');
+    
+    const user = registerResponse.body.user;
+    expect(user.username).toBe(thirdUserData.username);
+    expect(user.email).toBe(thirdUserData.email);
+    expect(user.first_name).toBe(thirdUserData.first_name);
+    expect(user.last_name).toBe(thirdUserData.last_name);
+    
+    // Verify the third user gets global_user role (not admin)
+    expect(user.role_id).toBe('global_user');
+    
+    // Verify user has a session cookie
+    expect(registerResponse.headers['set-cookie']).toBeDefined();
+    
+    // Store user ID for later tests
+    updateTestContext({
+      thirdUserId: user.id,
+      thirdUserCookie: registerResponse.headers['set-cookie'][0]
+    });
+  });
+
+  it('should verify all three users exist in database with correct roles', async () => {
     const context = getTestContext();
     
     // Get first user details
@@ -116,9 +153,17 @@ describe('User Registration E2E Tests', () => {
 
     expect(secondUserResponse.status).toBe(200);
     expect(secondUserResponse.body.role_id).toBe('global_user');
+
+    // Get third user details (using admin privileges)
+    const thirdUserResponse = await request(server.server)
+      .get(`/api/users/${context.thirdUserId}`)
+      .set('Cookie', context.firstUserCookie!); // Use admin cookie
+
+    expect(thirdUserResponse.status).toBe(200);
+    expect(thirdUserResponse.body.role_id).toBe('global_user');
   });
 
-  it('should create default teams for both users', async () => {
+  it('should create default teams for all three users', async () => {
     const context = getTestContext();
     
     // Check first user's teams
@@ -146,6 +191,19 @@ describe('User Registration E2E Tests', () => {
     const secondUserTeam = secondUserTeamsResponse.body.teams[0];
     expect(secondUserTeam.name).toBe('regular_user'); // Default team name is username
     expect(secondUserTeam.owner_id).toBe(context.secondUserId);
+
+    // Check third user's teams
+    const thirdUserTeamsResponse = await request(server.server)
+      .get('/api/users/me/teams')
+      .set('Cookie', context.thirdUserCookie!);
+
+    expect(thirdUserTeamsResponse.status).toBe(200);
+    expect(thirdUserTeamsResponse.body).toHaveProperty('teams');
+    expect(thirdUserTeamsResponse.body.teams).toHaveLength(1);
+    
+    const thirdUserTeam = thirdUserTeamsResponse.body.teams[0];
+    expect(thirdUserTeam.name).toBe('regular_user_2'); // Default team name is username
+    expect(thirdUserTeam.owner_id).toBe(context.thirdUserId);
   });
 
   it('should prevent duplicate email registration', async () => {
