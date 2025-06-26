@@ -9,6 +9,7 @@ export interface Team {
   slug: string;
   description?: string | null;
   owner_id: string;
+  is_default: boolean;
   created_at: Date;
   updated_at: Date;
 }
@@ -26,6 +27,7 @@ export interface CreateTeamData {
   slug?: string;
   description?: string;
   owner_id: string;
+  is_default?: boolean;
 }
 
 export interface UpdateTeamData {
@@ -92,6 +94,7 @@ export class TeamService {
       slug,
       description: data.description || null,
       owner_id: data.owner_id,
+      is_default: data.is_default || false,
       created_at: now,
       updated_at: now,
     };
@@ -151,6 +154,7 @@ export class TeamService {
         slug: schema.teams.slug,
         description: schema.teams.description,
         owner_id: schema.teams.owner_id,
+        is_default: schema.teams.is_default,
         created_at: schema.teams.created_at,
         updated_at: schema.teams.updated_at,
       })
@@ -307,6 +311,29 @@ export class TeamService {
   }
 
   /**
+   * Get user's default team
+   */
+  static async getUserDefaultTeam(userId: string): Promise<Team | null> {
+    const { db, schema } = this.getDbAndSchema();
+    const result = await (db as any)
+      .select()
+      .from(schema.teams)
+      .innerJoin(
+        schema.teamMemberships,
+        eq(schema.teams.id, schema.teamMemberships.team_id)
+      )
+      .where(
+        and(
+          eq(schema.teamMemberships.user_id, userId),
+          eq(schema.teams.is_default, true)
+        )
+      )
+      .limit(1);
+
+    return result[0]?.teams || null;
+  }
+
+  /**
    * Create a team automatically for a new user (called during registration)
    */
   static async createDefaultTeamForUser(userId: string, username: string): Promise<Team> {
@@ -314,6 +341,7 @@ export class TeamService {
       name: username,
       owner_id: userId,
       description: `${username}'s team`,
+      is_default: true,
     });
   }
 }

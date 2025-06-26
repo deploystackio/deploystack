@@ -47,6 +47,7 @@ export const teams = sqliteTable('teams', {
   slug: text('slug').notNull().unique(),
   description: text('description'),
   owner_id: text('owner_id').notNull().references(() => authUser.id, { onDelete: 'cascade' }),
+  is_default: integer('is_default', { mode: 'boolean' }).notNull().default(false),
   created_at: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
   updated_at: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 });

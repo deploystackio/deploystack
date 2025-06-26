@@ -8,6 +8,7 @@ export const TeamSchema = z.object({
   slug: z.string(),
   description: z.string().nullable(),
   owner_id: z.string(),
+  is_default: z.boolean(),
   created_at: z.date(),
   updated_at: z.date()
 })
@@ -321,6 +322,44 @@ export class TeamService {
       }
     } catch (error) {
       console.error('Error fetching team:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Get user's default team
+   */
+  static async getUserDefaultTeam(): Promise<Team> {
+    try {
+      const apiUrl = this.getApiUrl()
+
+      const response = await fetch(`${apiUrl}/api/teams/me/default`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+      })
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Unauthorized - please log in')
+        }
+        if (response.status === 404) {
+          throw new Error('No default team found')
+        }
+        throw new Error(`Failed to fetch default team: ${response.status}`)
+      }
+
+      const data = await response.json()
+
+      if (data.success && data.data) {
+        return data.data
+      } else {
+        throw new Error('Invalid response format')
+      }
+    } catch (error) {
+      console.error('Error fetching default team:', error)
       throw error
     }
   }

@@ -4086,6 +4086,137 @@ paths:
                   - error
                 additionalProperties: false
                 description: Internal Server Error
+  /api/teams/me/default:
+    get:
+      summary: Get current user default team
+      tags:
+        - Teams
+      description: Retrieves the default team for the currently authenticated user.
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Default team retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Indicates if the operation was successful
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        description: Team ID
+                      name:
+                        type: string
+                        description: Team name
+                      slug:
+                        type: string
+                        description: Team slug
+                      description:
+                        type: string
+                        nullable: true
+                        description: Team description
+                      owner_id:
+                        type: string
+                        description: Team owner ID
+                      is_default:
+                        type: boolean
+                        description: Indicates if this is the user's default team
+                      created_at:
+                        type: string
+                        format: date-time
+                        description: Team creation date
+                      updated_at:
+                        type: string
+                        format: date-time
+                        description: Team last update date
+                    required:
+                      - id
+                      - name
+                      - slug
+                      - description
+                      - owner_id
+                      - is_default
+                      - created_at
+                      - updated_at
+                    additionalProperties: false
+                    description: Team data
+                  message:
+                    type: string
+                    description: Success message
+                required:
+                  - success
+                  - data
+                additionalProperties: false
+                description: Default team retrieved successfully
+        "401":
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Indicates if the operation was successful (false for errors)
+                    default: false
+                  error:
+                    type: string
+                    description: Error message
+                  details:
+                    type: array
+                    description: Additional error details (validation errors)
+                required:
+                  - error
+                additionalProperties: false
+                description: Unauthorized - Authentication required
+        "404":
+          description: Not Found - No default team found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Indicates if the operation was successful (false for errors)
+                    default: false
+                  error:
+                    type: string
+                    description: Error message
+                  details:
+                    type: array
+                    description: Additional error details (validation errors)
+                required:
+                  - error
+                additionalProperties: false
+                description: Not Found - No default team found
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Indicates if the operation was successful (false for errors)
+                    default: false
+                  error:
+                    type: string
+                    description: Error message
+                  details:
+                    type: array
+                    description: Additional error details (validation errors)
+                required:
+                  - error
+                additionalProperties: false
+                description: Internal Server Error
   /api/teams/me:
     get:
       summary: Get current user teams
@@ -4127,6 +4258,9 @@ paths:
                         owner_id:
                           type: string
                           description: Team owner ID
+                        is_default:
+                          type: boolean
+                          description: Indicates if this is the user's default team
                         created_at:
                           type: string
                           format: date-time
@@ -4147,6 +4281,7 @@ paths:
                         - slug
                         - description
                         - owner_id
+                        - is_default
                         - created_at
                         - updated_at
                         - role
@@ -4243,6 +4378,9 @@ paths:
                       owner_id:
                         type: string
                         description: Team owner ID
+                      is_default:
+                        type: boolean
+                        description: Indicates if this is the user's default team
                       created_at:
                         type: string
                         format: date-time
@@ -4257,6 +4395,7 @@ paths:
                       - slug
                       - description
                       - owner_id
+                      - is_default
                       - created_at
                       - updated_at
                     additionalProperties: false
@@ -4414,6 +4553,9 @@ paths:
                       owner_id:
                         type: string
                         description: Team owner ID
+                      is_default:
+                        type: boolean
+                        description: Indicates if this is the user's default team
                       created_at:
                         type: string
                         format: date-time
@@ -4428,6 +4570,7 @@ paths:
                       - slug
                       - description
                       - owner_id
+                      - is_default
                       - created_at
                       - updated_at
                     additionalProperties: false
@@ -4739,6 +4882,9 @@ paths:
                       owner_id:
                         type: string
                         description: Team owner ID
+                      is_default:
+                        type: boolean
+                        description: Indicates if this is the user's default team
                       created_at:
                         type: string
                         format: date-time
@@ -4753,6 +4899,7 @@ paths:
                       - slug
                       - description
                       - owner_id
+                      - is_default
                       - created_at
                       - updated_at
                     additionalProperties: false
