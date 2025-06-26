@@ -118,6 +118,11 @@ export function resetLucia(): void {
   luciaInstance = null;
 }
 
+// Function to reset GitHub instance (useful for testing or config changes)
+export function resetGithubAuth(): void {
+  githubAuthInstance = null;
+}
+
 // Force reset on module reload in development
 if (process.env.NODE_ENV !== 'production') {
   resetLucia();

@@ -90,6 +90,18 @@ const routes = [
     meta: { requiresSetup: true },
   },
   {
+    path: '/teams',
+    name: 'Teams',
+    component: () => import('../views/Teams.vue'),
+    meta: { requiresSetup: true },
+  },
+  {
+    path: '/teams/manage/:id',
+    name: 'TeamManage',
+    component: () => import('../views/teams/TeamManage.vue'),
+    meta: { requiresSetup: true },
+  },
+  {
     path: '/admin',
     meta: {
       requiresSetup: true,

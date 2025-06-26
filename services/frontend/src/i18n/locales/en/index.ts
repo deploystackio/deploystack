@@ -10,6 +10,7 @@ import sidebarMessages from './sidebar'
 import verifyEmailMessages from './verifyEmail'
 import forgotPasswordMessages from './forgotPassword'
 import resetPasswordMessages from './resetPassword'
+import teamsMessages from './teams'
 
 export default {
   ...commonMessages,
@@ -23,6 +24,7 @@ export default {
   ...verifyEmailMessages,
   ...forgotPasswordMessages,
   ...resetPasswordMessages,
+  ...teamsMessages,
   // If there are any top-level keys directly under 'en', they can be added here.
   // For example, if you had a global 'appName': 'My Application'
   // appName: 'DeployStack Application',

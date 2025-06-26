@@ -9,25 +9,33 @@ import { RoleService } from '../services/roleService';
  */
 export function requirePermission(permission: string) {
   return async (request: FastifyRequest, reply: FastifyReply) => {
-    // Check if user is authenticated
-    if (!request.user) {
-      return reply.status(401).send({ error: 'Authentication required' });
-    }
-
-    const roleService = new RoleService();
-    
     try {
+      // Check if user is authenticated
+      if (!request.user) {
+        return reply.status(401).send({ 
+          success: false,
+          error: 'Authentication required' 
+        });
+      }
+
+      const roleService = new RoleService();
+      
       const hasPermission = await roleService.userHasPermission(request.user.id, permission);
       
       if (!hasPermission) {
         return reply.status(403).send({ 
+          success: false,
           error: 'Insufficient permissions',
           required_permission: permission 
         });
       }
     } catch (error) {
-      request.log.error(error, 'Error checking user permissions');
-      return reply.status(500).send({ error: 'Internal server error' });
+      request.log.error(error, `Error checking user permissions for permission: ${permission}`);
+      return reply.status(500).send({ 
+        success: false,
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   };
 }

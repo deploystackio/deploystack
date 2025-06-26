@@ -10,7 +10,11 @@ class CustomSequencer extends Sequencer {
       '4-global-settings-check.e2e.test.ts',
       '5-global-settings-api-access.e2e.test.ts',
       '6-global-settings-helpers.e2e.test.ts',
-      '7-global-enable-login.e2e.test.ts'
+      '7-global-enable-login.e2e.test.ts',
+      '8-password-change.e2e.test.ts',
+      '9-profile-update.e2e.test.ts',
+      '10-team-creation-limit.e2e.test.ts',
+      '11-team-visibility.e2e.test.ts'
     ];
 
     return tests.sort((testA, testB) => {

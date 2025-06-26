@@ -8,6 +8,7 @@ vi.mock('../../../src/routes/db/setup');
 vi.mock('../../../src/routes/roles');
 vi.mock('../../../src/routes/users');
 vi.mock('../../../src/routes/globalSettings');
+vi.mock('../../../src/routes/teams');
 
 // Import mocked modules
 import dbStatusRoute from '../../../src/routes/db/status';
@@ -15,6 +16,7 @@ import dbSetupRoute from '../../../src/routes/db/setup';
 import rolesRoute from '../../../src/routes/roles';
 import usersRoute from '../../../src/routes/users';
 import globalSettingsRoute from '../../../src/routes/globalSettings';
+import teamsRoute from '../../../src/routes/teams';
 
 // Type the mocked functions
 const mockDbStatusRoute = dbStatusRoute as MockedFunction<typeof dbStatusRoute>;
@@ -22,6 +24,7 @@ const mockDbSetupRoute = dbSetupRoute as MockedFunction<typeof dbSetupRoute>;
 const mockRolesRoute = rolesRoute as MockedFunction<typeof rolesRoute>;
 const mockUsersRoute = usersRoute as MockedFunction<typeof usersRoute>;
 const mockGlobalSettingsRoute = globalSettingsRoute as MockedFunction<typeof globalSettingsRoute>;
+const mockTeamsRoute = teamsRoute as MockedFunction<typeof teamsRoute>;
 
 describe('Main Routes Registration', () => {
   let mockFastify: Partial<FastifyInstance>;
@@ -56,18 +59,20 @@ describe('Main Routes Registration', () => {
     mockRolesRoute.mockResolvedValue(undefined);
     mockUsersRoute.mockResolvedValue(undefined);
     mockGlobalSettingsRoute.mockResolvedValue(undefined);
+    mockTeamsRoute.mockResolvedValue(undefined);
   });
 
   describe('Route Registration', () => {
     it('should register all route modules', async () => {
       await registerRoutes(mockFastify as FastifyInstance);
 
-      expect(mockFastify.register).toHaveBeenCalledTimes(5);
+      expect(mockFastify.register).toHaveBeenCalledTimes(6);
       expect(mockFastify.register).toHaveBeenCalledWith(dbStatusRoute);
       expect(mockFastify.register).toHaveBeenCalledWith(dbSetupRoute);
       expect(mockFastify.register).toHaveBeenCalledWith(rolesRoute);
       expect(mockFastify.register).toHaveBeenCalledWith(usersRoute);
       expect(mockFastify.register).toHaveBeenCalledWith(globalSettingsRoute);
+      expect(mockFastify.register).toHaveBeenCalledWith(teamsRoute);
     });
 
     it('should register health check route', async () => {
@@ -178,7 +183,7 @@ describe('Main Routes Registration', () => {
       expect(result).toBeUndefined();
       
       // Verify all routes were registered
-      expect(mockFastify.register).toHaveBeenCalledTimes(5);
+      expect(mockFastify.register).toHaveBeenCalledTimes(6);
     });
 
     it('should register health check route regardless of other routes', async () => {
@@ -199,6 +204,7 @@ describe('Main Routes Registration', () => {
       expect(registerCalls[2][0]).toBe(rolesRoute);
       expect(registerCalls[3][0]).toBe(usersRoute);
       expect(registerCalls[4][0]).toBe(globalSettingsRoute);
+      expect(registerCalls[5][0]).toBe(teamsRoute);
     });
   });
 });

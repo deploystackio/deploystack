@@ -31,7 +31,7 @@ export interface CreateTeamData {
 export interface UpdateTeamData {
   name?: string;
   slug?: string;
-  description?: string;
+  description?: string | null;
 }
 
 export class TeamService {
@@ -270,6 +270,40 @@ export class TeamService {
       .where(eq(schema.teamMemberships.team_id, teamId));
 
     return result;
+  }
+
+  /**
+   * Check if user is a member of a team
+   */
+  static async isTeamMember(teamId: string, userId: string): Promise<boolean> {
+    const membership = await this.getTeamMembership(teamId, userId);
+    return membership !== null;
+  }
+
+  /**
+   * Check if a team is a user's default team
+   */
+  static async isDefaultTeam(teamId: string, userId: string): Promise<boolean> {
+    const team = await this.getTeamById(teamId);
+    if (!team || team.owner_id !== userId) {
+      return false;
+    }
+
+    // Get user to check if team name matches username (indicating default team)
+    const { db, schema } = this.getDbAndSchema();
+    const userResult = await (db as any)
+      .select({ username: schema.authUser.username })
+      .from(schema.authUser)
+      .where(eq(schema.authUser.id, userId))
+      .limit(1);
+
+    if (!userResult[0]) {
+      return false;
+    }
+
+    // Check if team name or slug matches username
+    const username = userResult[0].username;
+    return team.name === username || team.slug === username;
   }
 
   /**
