@@ -28,8 +28,10 @@ import AddTeamModal from '@/components/teams/AddTeamModal.vue'
 import { TeamService, type TeamWithRole } from '@/services/teamService'
 import { UserService } from '@/services/userService'
 import { createColumns } from './teams/columns'
+import { useRouter } from 'vue-router'
 
 const { t } = useI18n()
+const router = useRouter()
 
 // State
 const teams = ref<TeamWithRole[]>([])
@@ -41,9 +43,12 @@ const columnVisibility = ref<VisibilityState>({})
 const rowSelection = ref({})
 const showAddModal = ref(false)
 const canCreateTeams = ref(false)
+const userPermissions = ref<string[]>([])
 
-// Create columns
-const columns = createColumns()
+// Handle manage team navigation
+const handleManageTeam = (teamId: string) => {
+  router.push(`/teams/manage/${teamId}`)
+}
 
 // Check user permissions
 const checkPermissions = async () => {
@@ -51,12 +56,17 @@ const checkPermissions = async () => {
     const user = await UserService.getCurrentUser()
     if (user?.role?.permissions) {
       canCreateTeams.value = user.role.permissions.includes('teams.create')
+      userPermissions.value = user.role.permissions
     }
   } catch (error) {
     console.error('Error checking permissions:', error)
     canCreateTeams.value = false
+    userPermissions.value = []
   }
 }
+
+// Create columns with permissions
+const columns = computed(() => createColumns(handleManageTeam, userPermissions.value))
 
 // Fetch teams from API
 const fetchTeams = async (): Promise<void> => {
@@ -93,7 +103,7 @@ const table = useVueTable({
     return teams.value
   },
   get columns() {
-    return columns
+    return columns.value
   },
   onSortingChange: (updaterOrValue) => {
     sorting.value = typeof updaterOrValue === 'function'
@@ -222,7 +232,7 @@ const filterValue = computed({
               <template v-else>
                 <TableRow>
                   <TableCell
-                    :colspan="columns.length"
+                    :colspan="table.getAllColumns().length"
                     class="h-24 text-center"
                   >
                     {{ t('teams.table.noResults') }}

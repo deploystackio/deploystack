@@ -5880,6 +5880,849 @@
         }
       }
     },
+    "/api/teams/me": {
+      "get": {
+        "summary": "Get current user teams",
+        "tags": [
+          "Teams"
+        ],
+        "description": "Retrieves all teams that the currently authenticated user belongs to, including their role in each team.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User teams retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "Team ID"
+                          },
+                          "name": {
+                            "type": "string",
+                            "description": "Team name"
+                          },
+                          "slug": {
+                            "type": "string",
+                            "description": "Team slug"
+                          },
+                          "description": {
+                            "type": "string",
+                            "nullable": true,
+                            "description": "Team description"
+                          },
+                          "owner_id": {
+                            "type": "string",
+                            "description": "Team owner ID"
+                          },
+                          "created_at": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Team creation date"
+                          },
+                          "updated_at": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Team last update date"
+                          },
+                          "role": {
+                            "type": "string",
+                            "enum": [
+                              "team_admin",
+                              "team_user"
+                            ],
+                            "description": "User role in the team"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "slug",
+                          "description",
+                          "owner_id",
+                          "created_at",
+                          "updated_at",
+                          "role"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "description": "Array of teams with user roles"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "additionalProperties": false,
+                  "description": "User teams retrieved successfully"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "details": {
+                      "type": "array",
+                      "description": "Additional error details (validation errors)"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Unauthorized - Authentication required"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "details": {
+                      "type": "array",
+                      "description": "Additional error details (validation errors)"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Internal Server Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teams/{id}": {
+      "get": {
+        "summary": "Get team by ID",
+        "tags": [
+          "Teams"
+        ],
+        "description": "Retrieves a specific team by its ID. User must be a member of the team.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Team retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "Team ID"
+                        },
+                        "name": {
+                          "type": "string",
+                          "description": "Team name"
+                        },
+                        "slug": {
+                          "type": "string",
+                          "description": "Team slug"
+                        },
+                        "description": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Team description"
+                        },
+                        "owner_id": {
+                          "type": "string",
+                          "description": "Team owner ID"
+                        },
+                        "created_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "description": "Team creation date"
+                        },
+                        "updated_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "description": "Team last update date"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name",
+                        "slug",
+                        "description",
+                        "owner_id",
+                        "created_at",
+                        "updated_at"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Team data"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Success message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Team retrieved successfully"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "details": {
+                      "type": "array",
+                      "description": "Additional error details (validation errors)"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Unauthorized - Authentication required"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Insufficient permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "details": {
+                      "type": "array",
+                      "description": "Additional error details (validation errors)"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Forbidden - Insufficient permissions"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found - Team not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "details": {
+                      "type": "array",
+                      "description": "Additional error details (validation errors)"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Not Found - Team not found"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "details": {
+                      "type": "array",
+                      "description": "Additional error details (validation errors)"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Internal Server Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update team",
+        "tags": [
+          "Teams"
+        ],
+        "description": "Updates an existing team. Only team admins can update teams. Default team names cannot be changed.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100,
+                    "description": "Team name"
+                  },
+                  "description": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "nullable": true,
+                    "description": "Team description"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Team updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "Team ID"
+                        },
+                        "name": {
+                          "type": "string",
+                          "description": "Team name"
+                        },
+                        "slug": {
+                          "type": "string",
+                          "description": "Team slug"
+                        },
+                        "description": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Team description"
+                        },
+                        "owner_id": {
+                          "type": "string",
+                          "description": "Team owner ID"
+                        },
+                        "created_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "description": "Team creation date"
+                        },
+                        "updated_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "description": "Team last update date"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name",
+                        "slug",
+                        "description",
+                        "owner_id",
+                        "created_at",
+                        "updated_at"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Team data"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Success message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Team updated successfully"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - Validation error or cannot update default team name",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "details": {
+                      "type": "array",
+                      "description": "Additional error details (validation errors)"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Bad Request - Validation error or cannot update default team name"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "details": {
+                      "type": "array",
+                      "description": "Additional error details (validation errors)"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Unauthorized - Authentication required"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Insufficient permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "details": {
+                      "type": "array",
+                      "description": "Additional error details (validation errors)"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Forbidden - Insufficient permissions"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found - Team not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "details": {
+                      "type": "array",
+                      "description": "Additional error details (validation errors)"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Not Found - Team not found"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "details": {
+                      "type": "array",
+                      "description": "Additional error details (validation errors)"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Internal Server Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete team",
+        "tags": [
+          "Teams"
+        ],
+        "description": "Deletes a team from the system. Only team owners can delete teams. Default teams cannot be deleted.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "message"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - Cannot delete default team or team has active resources",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "details": {
+                      "type": "array",
+                      "description": "Additional error details (validation errors)"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Bad Request - Cannot delete default team or team has active resources"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "details": {
+                      "type": "array",
+                      "description": "Additional error details (validation errors)"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Unauthorized - Authentication required"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Insufficient permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "details": {
+                      "type": "array",
+                      "description": "Additional error details (validation errors)"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Forbidden - Insufficient permissions"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found - Team not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "details": {
+                      "type": "array",
+                      "description": "Additional error details (validation errors)"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Not Found - Team not found"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "details": {
+                      "type": "array",
+                      "description": "Additional error details (validation errors)"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Internal Server Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/teams": {
       "post": {
         "summary": "Create new team",
@@ -6079,163 +6922,6 @@
                   ],
                   "additionalProperties": false,
                   "description": "Forbidden - Insufficient permissions"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "description": "Indicates if the operation was successful (false for errors)",
-                      "default": false
-                    },
-                    "error": {
-                      "type": "string",
-                      "description": "Error message"
-                    },
-                    "details": {
-                      "type": "array",
-                      "description": "Additional error details (validation errors)"
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ],
-                  "additionalProperties": false,
-                  "description": "Internal Server Error"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/teams/me": {
-      "get": {
-        "summary": "Get current user teams",
-        "tags": [
-          "Teams"
-        ],
-        "description": "Retrieves all teams that the currently authenticated user belongs to, including their role in each team.",
-        "security": [
-          {
-            "cookieAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "User teams retrieved successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "description": "Indicates if the operation was successful"
-                    },
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "id": {
-                            "type": "string",
-                            "description": "Team ID"
-                          },
-                          "name": {
-                            "type": "string",
-                            "description": "Team name"
-                          },
-                          "slug": {
-                            "type": "string",
-                            "description": "Team slug"
-                          },
-                          "description": {
-                            "type": "string",
-                            "nullable": true,
-                            "description": "Team description"
-                          },
-                          "owner_id": {
-                            "type": "string",
-                            "description": "Team owner ID"
-                          },
-                          "created_at": {
-                            "type": "string",
-                            "format": "date-time",
-                            "description": "Team creation date"
-                          },
-                          "updated_at": {
-                            "type": "string",
-                            "format": "date-time",
-                            "description": "Team last update date"
-                          },
-                          "role": {
-                            "type": "string",
-                            "enum": [
-                              "team_admin",
-                              "team_user"
-                            ],
-                            "description": "User role in the team"
-                          }
-                        },
-                        "required": [
-                          "id",
-                          "name",
-                          "slug",
-                          "description",
-                          "owner_id",
-                          "created_at",
-                          "updated_at",
-                          "role"
-                        ],
-                        "additionalProperties": false
-                      },
-                      "description": "Array of teams with user roles"
-                    }
-                  },
-                  "required": [
-                    "success",
-                    "data"
-                  ],
-                  "additionalProperties": false,
-                  "description": "User teams retrieved successfully"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized - Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "description": "Indicates if the operation was successful (false for errors)",
-                      "default": false
-                    },
-                    "error": {
-                      "type": "string",
-                      "description": "Error message"
-                    },
-                    "details": {
-                      "type": "array",
-                      "description": "Additional error details (validation errors)"
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ],
-                  "additionalProperties": false,
-                  "description": "Unauthorized - Authentication required"
                 }
               }
             }

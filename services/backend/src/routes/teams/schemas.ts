@@ -12,6 +12,20 @@ export const CreateTeamSchema = z.object({
     .describe('Team description')
 });
 
+// Team update schema
+export const UpdateTeamSchema = z.object({
+  name: z.string()
+    .min(1, 'Team name is required')
+    .max(100, 'Team name must be 100 characters or less')
+    .optional()
+    .describe('Team name'),
+  description: z.string()
+    .max(500, 'Description must be 500 characters or less')
+    .nullable()
+    .optional()
+    .describe('Team description')
+});
+
 // Team response schema
 export const TeamSchema = z.object({
   id: z.string().describe('Team ID'),
@@ -49,5 +63,6 @@ export const ErrorResponseSchema = z.object({
 
 // Type exports
 export type CreateTeamInput = z.infer<typeof CreateTeamSchema>;
+export type UpdateTeamInput = z.infer<typeof UpdateTeamSchema>;
 export type Team = z.infer<typeof TeamSchema>;
 export type TeamWithMembership = z.infer<typeof TeamWithMembershipSchema>;

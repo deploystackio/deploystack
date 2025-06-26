@@ -1,8 +1,13 @@
 import type { ColumnDef } from '@tanstack/vue-table'
 import { h } from 'vue'
+import { Button } from '@/components/ui/button'
+import { Settings } from 'lucide-vue-next'
 import type { TeamWithRole } from '@/services/teamService'
 
-export const createColumns = (): ColumnDef<TeamWithRole>[] => [
+export const createColumns = (
+  onManageTeam: (teamId: string) => void,
+  userPermissions: string[] = []
+): ColumnDef<TeamWithRole>[] => [
   {
     accessorKey: 'name',
     header: 'Team Name',
@@ -45,6 +50,36 @@ export const createColumns = (): ColumnDef<TeamWithRole>[] => [
       return h('div', { class: 'text-sm text-muted-foreground' },
         date.toLocaleDateString()
       )
+    },
+  },
+  {
+    id: 'actions',
+    header: 'Actions',
+    enableHiding: false,
+    cell: ({ row }) => {
+      const team = row.original
+
+      // Check if user can manage this team
+      const canManage = userPermissions.includes('teams.edit') &&
+                       team.role === 'team_admin'
+
+      if (!canManage) {
+        return h('div', { class: 'text-muted-foreground text-sm' }, 'No actions')
+      }
+
+      return h('div', { class: 'flex justify-end' }, [
+        h(Button, {
+          variant: 'outline',
+          size: 'sm',
+          class: 'h-8 px-3',
+          onClick: () => {
+            onManageTeam(team.id)
+          }
+        }, () => [
+          h(Settings, { class: 'h-4 w-4 mr-1' }),
+          'Manage'
+        ])
+      ])
     },
   },
 ]
