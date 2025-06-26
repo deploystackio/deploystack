@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // SINGLE SOURCE OF TRUTH FOR DATABASE SCHEMA
 // This file is the definitive schema definition for the SQLite database.
 // It is used by:
