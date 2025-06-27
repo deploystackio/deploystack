@@ -163,7 +163,6 @@ const handleTeamSelectedFromOtherComponents = (data: { teamId: string; teamName:
   const team = teams.value.find(t => t.id === data.teamId)
   if (team) {
     selectedTeam.value = team
-    console.log('Team selected from other component:', data.teamName)
   }
 }
 
@@ -173,7 +172,6 @@ onMounted(() => {
 
   // Listen for team updates from other components
   eventBus.on('teams-updated', () => {
-    console.log('Teams updated event received, refreshing teams...')
     fetchTeams(true) // Force refresh to get latest data
   })
 
