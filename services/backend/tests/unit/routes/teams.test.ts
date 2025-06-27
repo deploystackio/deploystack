@@ -97,6 +97,12 @@ describe('Teams Route', () => {
     mockTeamService.createTeam = vi.fn();
     mockTeamService.getUserTeams = vi.fn();
     mockTeamService.getTeamMembership = vi.fn();
+    mockTeamService.getUserDefaultTeam = vi.fn();
+    mockTeamService.getTeamById = vi.fn();
+    mockTeamService.isTeamMember = vi.fn();
+    mockTeamService.isTeamAdmin = vi.fn();
+    mockTeamService.updateTeam = vi.fn();
+    mockTeamService.deleteTeam = vi.fn();
   });
 
   afterEach(() => {
@@ -353,6 +359,79 @@ describe('Teams Route', () => {
     });
   });
 
+  describe('GET /api/teams/me/default - Get User Default Team', () => {
+    beforeEach(async () => {
+      await teamsRoute(mockFastify as FastifyInstance);
+    });
+
+    it('should return user default team successfully', async () => {
+      const defaultTeam = {
+        id: 'team-default',
+        name: 'Default Team',
+        slug: 'default-team',
+        description: 'User default team',
+        owner_id: 'user-123',
+        is_default: true,
+        created_at: new Date(),
+        updated_at: new Date(),
+      };
+
+      mockTeamService.getUserDefaultTeam.mockResolvedValue(defaultTeam);
+
+      const handler = routeHandlers['GET /api/teams/me/default'];
+      await handler(mockRequest, mockReply);
+
+      expect(mockTeamService.getUserDefaultTeam).toHaveBeenCalledWith('user-123');
+      expect(mockReply.status).toHaveBeenCalledWith(200);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        success: true,
+        data: defaultTeam,
+        message: 'Default team retrieved successfully',
+      });
+    });
+
+    it('should return 401 when user is not authenticated', async () => {
+      mockRequest.user = null;
+
+      const handler = routeHandlers['GET /api/teams/me/default'];
+      await handler(mockRequest, mockReply);
+
+      expect(mockReply.status).toHaveBeenCalledWith(401);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        success: false,
+        error: 'Authentication required',
+      });
+    });
+
+    it('should return 404 when no default team found', async () => {
+      mockTeamService.getUserDefaultTeam.mockResolvedValue(null);
+
+      const handler = routeHandlers['GET /api/teams/me/default'];
+      await handler(mockRequest, mockReply);
+
+      expect(mockTeamService.getUserDefaultTeam).toHaveBeenCalledWith('user-123');
+      expect(mockReply.status).toHaveBeenCalledWith(404);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        success: false,
+        error: 'No default team found',
+      });
+    });
+
+    it('should handle internal server errors', async () => {
+      mockTeamService.getUserDefaultTeam.mockRejectedValue(new Error('Database error'));
+
+      const handler = routeHandlers['GET /api/teams/me/default'];
+      await handler(mockRequest, mockReply);
+
+      expect(mockFastify.log?.error).toHaveBeenCalled();
+      expect(mockReply.status).toHaveBeenCalledWith(500);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        success: false,
+        error: 'Failed to fetch default team',
+      });
+    });
+  });
+
   describe('GET /api/teams/me - Get User Teams', () => {
     beforeEach(async () => {
       await teamsRoute(mockFastify as FastifyInstance);
@@ -501,6 +580,458 @@ describe('Teams Route', () => {
       expect(mockReply.send).toHaveBeenCalledWith({
         success: false,
         error: 'Failed to fetch user teams',
+      });
+    });
+  });
+
+  describe('GET /api/teams/:id - Get Team by ID', () => {
+    beforeEach(async () => {
+      await teamsRoute(mockFastify as FastifyInstance);
+      mockRequest.params = { id: 'team-123' };
+    });
+
+    it('should return team successfully for team member', async () => {
+      const team = {
+        id: 'team-123',
+        name: 'Test Team',
+        slug: 'test-team',
+        description: 'A test team',
+        owner_id: 'user-456',
+        is_default: false,
+        created_at: new Date(),
+        updated_at: new Date(),
+      };
+
+      mockTeamService.getTeamById.mockResolvedValue(team);
+      mockTeamService.isTeamMember.mockResolvedValue(true);
+
+      const handler = routeHandlers['GET /api/teams/:id'];
+      await handler(mockRequest, mockReply);
+
+      expect(mockTeamService.getTeamById).toHaveBeenCalledWith('team-123');
+      expect(mockTeamService.isTeamMember).toHaveBeenCalledWith('team-123', 'user-123');
+      expect(mockReply.status).toHaveBeenCalledWith(200);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        success: true,
+        data: team,
+      });
+    });
+
+    it('should return 401 when user is not authenticated', async () => {
+      mockRequest.user = null;
+
+      const handler = routeHandlers['GET /api/teams/:id'];
+      await handler(mockRequest, mockReply);
+
+      expect(mockReply.status).toHaveBeenCalledWith(401);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        success: false,
+        error: 'Authentication required',
+      });
+    });
+
+    it('should return 404 when team is not found', async () => {
+      mockTeamService.getTeamById.mockResolvedValue(null);
+
+      const handler = routeHandlers['GET /api/teams/:id'];
+      await handler(mockRequest, mockReply);
+
+      expect(mockTeamService.getTeamById).toHaveBeenCalledWith('team-123');
+      expect(mockReply.status).toHaveBeenCalledWith(404);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        success: false,
+        error: 'Team not found',
+      });
+    });
+
+    it('should return 403 when user is not a team member', async () => {
+      const team = {
+        id: 'team-123',
+        name: 'Test Team',
+        slug: 'test-team',
+        description: 'A test team',
+        owner_id: 'user-456',
+        is_default: false,
+        created_at: new Date(),
+        updated_at: new Date(),
+      };
+
+      mockTeamService.getTeamById.mockResolvedValue(team);
+      mockTeamService.isTeamMember.mockResolvedValue(false);
+
+      const handler = routeHandlers['GET /api/teams/:id'];
+      await handler(mockRequest, mockReply);
+
+      expect(mockTeamService.getTeamById).toHaveBeenCalledWith('team-123');
+      expect(mockTeamService.isTeamMember).toHaveBeenCalledWith('team-123', 'user-123');
+      expect(mockReply.status).toHaveBeenCalledWith(403);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        success: false,
+        error: 'You do not have access to this team',
+      });
+    });
+
+    it('should handle internal server errors', async () => {
+      mockTeamService.getTeamById.mockRejectedValue(new Error('Database error'));
+
+      const handler = routeHandlers['GET /api/teams/:id'];
+      await handler(mockRequest, mockReply);
+
+      expect(mockFastify.log?.error).toHaveBeenCalled();
+      expect(mockReply.status).toHaveBeenCalledWith(500);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        success: false,
+        error: 'Failed to fetch team',
+      });
+    });
+  });
+
+  describe('PUT /api/teams/:id - Update Team', () => {
+    beforeEach(async () => {
+      await teamsRoute(mockFastify as FastifyInstance);
+      mockRequest.params = { id: 'team-123' };
+    });
+
+    it('should update team successfully as admin', async () => {
+      const updateData = {
+        name: 'Updated Team',
+        description: 'Updated description',
+      };
+
+      const existingTeam = {
+        id: 'team-123',
+        name: 'Test Team',
+        slug: 'test-team',
+        description: 'A test team',
+        owner_id: 'user-456',
+        is_default: false,
+        created_at: new Date(),
+        updated_at: new Date(),
+      };
+
+      const updatedTeam = {
+        ...existingTeam,
+        name: 'Updated Team',
+        description: 'Updated description',
+        updated_at: new Date(),
+      };
+
+      mockRequest.body = updateData;
+      mockTeamService.getTeamById.mockResolvedValue(existingTeam);
+      mockTeamService.isTeamAdmin.mockResolvedValue(true);
+      mockTeamService.updateTeam.mockResolvedValue(updatedTeam);
+
+      const handler = routeHandlers['PUT /api/teams/:id'];
+      await handler(mockRequest, mockReply);
+
+      expect(mockTeamService.getTeamById).toHaveBeenCalledWith('team-123');
+      expect(mockTeamService.isTeamAdmin).toHaveBeenCalledWith('team-123', 'user-123');
+      expect(mockTeamService.updateTeam).toHaveBeenCalledWith('team-123', updateData);
+      expect(mockReply.status).toHaveBeenCalledWith(200);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        success: true,
+        data: updatedTeam,
+        message: 'Team updated successfully',
+      });
+    });
+
+    it('should return 401 when user is not authenticated', async () => {
+      mockRequest.user = null;
+
+      const handler = routeHandlers['PUT /api/teams/:id'];
+      await handler(mockRequest, mockReply);
+
+      expect(mockReply.status).toHaveBeenCalledWith(401);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        success: false,
+        error: 'Authentication required',
+      });
+    });
+
+    it('should return 404 when team is not found', async () => {
+      mockRequest.body = { name: 'Updated Team' };
+      mockTeamService.getTeamById.mockResolvedValue(null);
+
+      const handler = routeHandlers['PUT /api/teams/:id'];
+      await handler(mockRequest, mockReply);
+
+      expect(mockTeamService.getTeamById).toHaveBeenCalledWith('team-123');
+      expect(mockReply.status).toHaveBeenCalledWith(404);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        success: false,
+        error: 'Team not found',
+      });
+    });
+
+    it('should return 403 when user is not team admin', async () => {
+      const existingTeam = {
+        id: 'team-123',
+        name: 'Test Team',
+        slug: 'test-team',
+        description: 'A test team',
+        owner_id: 'user-456',
+        is_default: false,
+        created_at: new Date(),
+        updated_at: new Date(),
+      };
+
+      mockRequest.body = { name: 'Updated Team' };
+      mockTeamService.getTeamById.mockResolvedValue(existingTeam);
+      mockTeamService.isTeamAdmin.mockResolvedValue(false);
+
+      const handler = routeHandlers['PUT /api/teams/:id'];
+      await handler(mockRequest, mockReply);
+
+      expect(mockTeamService.getTeamById).toHaveBeenCalledWith('team-123');
+      expect(mockTeamService.isTeamAdmin).toHaveBeenCalledWith('team-123', 'user-123');
+      expect(mockReply.status).toHaveBeenCalledWith(403);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        success: false,
+        error: 'Only team administrators can update teams',
+      });
+    });
+
+    it('should return 400 when trying to update default team name', async () => {
+      const existingTeam = {
+        id: 'team-123',
+        name: 'Default Team',
+        slug: 'default-team',
+        description: 'Default team',
+        owner_id: 'user-123',
+        is_default: true,
+        created_at: new Date(),
+        updated_at: new Date(),
+      };
+
+      mockRequest.body = { name: 'New Name' };
+      mockTeamService.getTeamById.mockResolvedValue(existingTeam);
+      mockTeamService.isTeamAdmin.mockResolvedValue(true);
+
+      const handler = routeHandlers['PUT /api/teams/:id'];
+      await handler(mockRequest, mockReply);
+
+      expect(mockReply.status).toHaveBeenCalledWith(400);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        success: false,
+        error: 'Default team names cannot be changed',
+      });
+    });
+
+    it('should allow updating default team description', async () => {
+      const existingTeam = {
+        id: 'team-123',
+        name: 'Default Team',
+        slug: 'default-team',
+        description: 'Default team',
+        owner_id: 'user-123',
+        is_default: true,
+        created_at: new Date(),
+        updated_at: new Date(),
+      };
+
+      const updatedTeam = {
+        ...existingTeam,
+        description: 'Updated description',
+        updated_at: new Date(),
+      };
+
+      mockRequest.body = { description: 'Updated description' };
+      mockTeamService.getTeamById.mockResolvedValue(existingTeam);
+      mockTeamService.isTeamAdmin.mockResolvedValue(true);
+      mockTeamService.updateTeam.mockResolvedValue(updatedTeam);
+
+      const handler = routeHandlers['PUT /api/teams/:id'];
+      await handler(mockRequest, mockReply);
+
+      expect(mockTeamService.updateTeam).toHaveBeenCalledWith('team-123', { description: 'Updated description' });
+      expect(mockReply.status).toHaveBeenCalledWith(200);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        success: true,
+        data: updatedTeam,
+        message: 'Team updated successfully',
+      });
+    });
+
+    it('should return 400 for validation errors', async () => {
+      const invalidData = {
+        name: '', // Invalid: empty name
+      };
+
+      mockRequest.body = invalidData;
+
+      const handler = routeHandlers['PUT /api/teams/:id'];
+      await handler(mockRequest, mockReply);
+
+      expect(mockReply.status).toHaveBeenCalledWith(400);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        success: false,
+        error: 'Validation error',
+        details: expect.any(Array),
+      });
+    });
+
+    it('should handle internal server errors', async () => {
+      mockRequest.body = { name: 'Updated Team' };
+      mockTeamService.getTeamById.mockRejectedValue(new Error('Database error'));
+
+      const handler = routeHandlers['PUT /api/teams/:id'];
+      await handler(mockRequest, mockReply);
+
+      expect(mockFastify.log?.error).toHaveBeenCalled();
+      expect(mockReply.status).toHaveBeenCalledWith(500);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        success: false,
+        error: 'Failed to update team',
+      });
+    });
+  });
+
+  describe('DELETE /api/teams/:id - Delete Team', () => {
+    beforeEach(async () => {
+      await teamsRoute(mockFastify as FastifyInstance);
+      mockRequest.params = { id: 'team-123' };
+    });
+
+    it('should delete team successfully as owner', async () => {
+      const existingTeam = {
+        id: 'team-123',
+        name: 'Test Team',
+        slug: 'test-team',
+        description: 'A test team',
+        owner_id: 'user-123', // Same as request user
+        is_default: false,
+        created_at: new Date(),
+        updated_at: new Date(),
+      };
+
+      mockTeamService.getTeamById.mockResolvedValue(existingTeam);
+      mockTeamService.deleteTeam.mockResolvedValue(undefined);
+
+      const handler = routeHandlers['DELETE /api/teams/:id'];
+      await handler(mockRequest, mockReply);
+
+      expect(mockTeamService.getTeamById).toHaveBeenCalledWith('team-123');
+      expect(mockTeamService.deleteTeam).toHaveBeenCalledWith('team-123');
+      expect(mockReply.status).toHaveBeenCalledWith(200);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        success: true,
+        message: 'Team deleted successfully',
+      });
+    });
+
+    it('should return 401 when user is not authenticated', async () => {
+      mockRequest.user = null;
+
+      const handler = routeHandlers['DELETE /api/teams/:id'];
+      await handler(mockRequest, mockReply);
+
+      expect(mockReply.status).toHaveBeenCalledWith(401);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        success: false,
+        error: 'Authentication required',
+      });
+    });
+
+    it('should return 404 when team is not found', async () => {
+      mockTeamService.getTeamById.mockResolvedValue(null);
+
+      const handler = routeHandlers['DELETE /api/teams/:id'];
+      await handler(mockRequest, mockReply);
+
+      expect(mockTeamService.getTeamById).toHaveBeenCalledWith('team-123');
+      expect(mockReply.status).toHaveBeenCalledWith(404);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        success: false,
+        error: 'Team not found',
+      });
+    });
+
+    it('should return 403 when user is not team owner', async () => {
+      const existingTeam = {
+        id: 'team-123',
+        name: 'Test Team',
+        slug: 'test-team',
+        description: 'A test team',
+        owner_id: 'user-456', // Different from request user
+        is_default: false,
+        created_at: new Date(),
+        updated_at: new Date(),
+      };
+
+      mockTeamService.getTeamById.mockResolvedValue(existingTeam);
+
+      const handler = routeHandlers['DELETE /api/teams/:id'];
+      await handler(mockRequest, mockReply);
+
+      expect(mockTeamService.getTeamById).toHaveBeenCalledWith('team-123');
+      expect(mockReply.status).toHaveBeenCalledWith(403);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        success: false,
+        error: 'Only team owners can delete teams',
+      });
+    });
+
+    it('should return 400 when trying to delete default team', async () => {
+      const existingTeam = {
+        id: 'team-123',
+        name: 'Default Team',
+        slug: 'default-team',
+        description: 'Default team',
+        owner_id: 'user-123',
+        is_default: true,
+        created_at: new Date(),
+        updated_at: new Date(),
+      };
+
+      mockTeamService.getTeamById.mockResolvedValue(existingTeam);
+
+      const handler = routeHandlers['DELETE /api/teams/:id'];
+      await handler(mockRequest, mockReply);
+
+      expect(mockReply.status).toHaveBeenCalledWith(400);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        success: false,
+        error: 'Default teams cannot be deleted',
+      });
+    });
+
+    it('should return 400 when team has active resources', async () => {
+      const existingTeam = {
+        id: 'team-123',
+        name: 'Test Team',
+        slug: 'test-team',
+        description: 'A test team',
+        owner_id: 'user-123',
+        is_default: false,
+        created_at: new Date(),
+        updated_at: new Date(),
+      };
+
+      mockTeamService.getTeamById.mockResolvedValue(existingTeam);
+      mockTeamService.deleteTeam.mockRejectedValue(new Error('Cannot delete team with active resources'));
+
+      const handler = routeHandlers['DELETE /api/teams/:id'];
+      await handler(mockRequest, mockReply);
+
+      expect(mockReply.status).toHaveBeenCalledWith(400);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        success: false,
+        error: 'Cannot delete team with active resources',
+      });
+    });
+
+    it('should handle internal server errors', async () => {
+      mockTeamService.getTeamById.mockRejectedValue(new Error('Database error'));
+
+      const handler = routeHandlers['DELETE /api/teams/:id'];
+      await handler(mockRequest, mockReply);
+
+      expect(mockFastify.log?.error).toHaveBeenCalled();
+      expect(mockReply.status).toHaveBeenCalledWith(500);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        success: false,
+        error: 'Failed to delete team',
+        details: 'Database error',
       });
     });
   });

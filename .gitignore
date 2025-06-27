@@ -57,7 +57,7 @@ deploystack.db
 services/backend/persistent_data/*
 
 # Test files
-services/backend/tests/.test-context.json
+.test-context.json
 services/backend/tests/e2e/test-data/*.db
 
 ._*.ts
@@ -65,7 +65,10 @@ services/backend/tests/e2e/test-data/*.db
 ._*.md
 ._*.js
 ._*.json
+._*.js
+._*.png
+._*.webp
+._*.jpg
 cookies.txt
 cookiejar.txt
-services/backend/tests/e2e/.test-context.json
 cookie.txt

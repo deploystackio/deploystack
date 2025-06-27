@@ -138,25 +138,22 @@ const onSubmit = form.handleSubmit(async (values) => {
   }
 })
 
-import { getAllEnv } from '@/utils/env';
-
-const allEnv = getAllEnv();
-
 const navigateToRegister = () => {
   router.push('/register')
 }
+
 </script>
 
 <template>
   <div class="flex min-h-full flex-1 flex-col justify-center px-6 py-12 lg:px-8">
     <div class="sm:mx-auto sm:w-full sm:max-w-sm">
       <img
-        class="mx-auto h-10 w-auto"
-        src="https://tailwindcss.com/plus-assets/img/logos/mark.svg?color=indigo&shade=600"
-        alt="Your Company"
+        class="mx-auto h-20 w-auto"
+        src="/deploystack-logo-74x80.webp"
+        alt="DeployStack Logo"
       />
       <h2 class="mt-10 text-center text-2xl font-bold tracking-tight text-gray-900">
-        {{ $t('login.title') }}
+        DeployStack {{ $t('login.title') }}
       </h2>
     </div>
 
@@ -243,12 +240,6 @@ const navigateToRegister = () => {
         </CardFooter>
       </Card>
     </div>
-
-<div>
-  <pre>
-    {{ allEnv }}
-  </pre>
-</div>
 
   </div>
 </template>

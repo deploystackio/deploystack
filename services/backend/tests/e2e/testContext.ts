@@ -28,6 +28,8 @@ export interface TestContext {
   firstUserDefaultTeamId?: string;
   crossPermissionTestTeamId?: string;
   editingTestTeamId?: string;
+  adminUserTeamsAccessCookie?: string;
+  regularUserTeamsAccessCookie?: string;
 }
 
 const CONTEXT_FILE = path.join(__dirname, '.test-context.json');
@@ -64,6 +66,8 @@ export function setTestContext(context: TestContext): void {
       firstUserDefaultTeamId: context.firstUserDefaultTeamId,
       crossPermissionTestTeamId: context.crossPermissionTestTeamId,
       editingTestTeamId: context.editingTestTeamId,
+      adminUserTeamsAccessCookie: context.adminUserTeamsAccessCookie,
+      regularUserTeamsAccessCookie: context.regularUserTeamsAccessCookie,
     }, null, 2));
   } catch (error) {
     console.warn('Failed to save test context to file:', error);

@@ -144,8 +144,8 @@ export function requireOwnershipOrAdmin(getUserIdFromRequest: (request: FastifyR
  * Helper function to get user ID from route params
  */
 export function getUserIdFromParams(request: FastifyRequest): string {
-  const params = request.params as { id?: string; userId?: string };
-  return params.id || params.userId || '';
+  const params = request.params as { id?: string; userId?: string } | undefined;
+  return params?.id || params?.userId || '';
 }
 
 /**

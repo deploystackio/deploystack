@@ -14,7 +14,10 @@ class CustomSequencer extends Sequencer {
       '8-password-change.e2e.test.ts',
       '9-profile-update.e2e.test.ts',
       '10-team-creation-limit.e2e.test.ts',
-      '11-team-visibility.e2e.test.ts'
+      '11-team-visibility.e2e.test.ts',
+      '12-team-cross-user-permissions.e2e.test.ts',
+      '13-team-editing-permissions.e2e.test.ts',
+      '14-admin-user-teams-access.e2e.test.ts'
     ];
 
     return tests.sort((testA, testB) => {
