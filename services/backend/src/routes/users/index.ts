@@ -40,7 +40,9 @@ const userTeamsResponseSchema = z.object({
     description: z.string().nullable().describe('Team description'),
     owner_id: z.string().describe('Team owner ID'),
     created_at: z.date().describe('Team creation date'),
-    updated_at: z.date().describe('Team last update date')
+    updated_at: z.date().describe('Team last update date'),
+    role: z.enum(['team_admin', 'team_user']).optional().describe('User role in the team'),
+    is_owner: z.boolean().optional().describe('Whether the user is the owner of this team')
   })).describe('Array of user teams')
 });
 
@@ -627,6 +629,81 @@ export default async function usersRoute(fastify: FastifyInstance) {
       return reply.status(200).send({
         success: true,
         teams: teams,
+      });
+    } catch (error) {
+      fastify.log.error(error, 'Error fetching user teams');
+      return reply.status(500).send({
+        success: false,
+        error: 'Failed to fetch user teams',
+      });
+    }
+  });
+
+  // GET /api/users/:id/teams - Get teams for specific user (admin only)
+  fastify.get<{ Params: { id: string } }>('/api/users/:id/teams', {
+    schema: {
+      tags: ['Users'],
+      summary: 'Get user teams by ID',
+      description: 'Retrieves all teams for a specific user. Requires admin permissions to view other users\' teams.',
+      security: [{ cookieAuth: [] }],
+      params: zodToJsonSchema(paramsWithIdSchema, {
+        $refStrategy: 'none',
+        target: 'openApi3'
+      }),
+      response: {
+        200: zodToJsonSchema(userTeamsResponseSchema.describe('User teams retrieved successfully'), {
+          $refStrategy: 'none',
+          target: 'openApi3'
+        }),
+        401: zodToJsonSchema(errorResponseSchema.describe('Unauthorized - Authentication required'), {
+          $refStrategy: 'none',
+          target: 'openApi3'
+        }),
+        403: zodToJsonSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions'), {
+          $refStrategy: 'none',
+          target: 'openApi3'
+        }),
+        404: zodToJsonSchema(errorResponseSchema.describe('Not Found - User not found'), {
+          $refStrategy: 'none',
+          target: 'openApi3'
+        }),
+        500: zodToJsonSchema(errorResponseSchema.describe('Internal Server Error'), {
+          $refStrategy: 'none',
+          target: 'openApi3'
+        })
+      }
+    },
+    preHandler: requireOwnershipOrAdmin(getUserIdFromParams),
+  }, async (request, reply) => {
+    try {
+      const { id } = request.params;
+      
+      // Check if user exists
+      const targetUser = await userService.getUserById(id);
+      if (!targetUser) {
+        return reply.status(404).send({
+          success: false,
+          error: 'User not found',
+        });
+      }
+
+      const teams = await TeamService.getUserTeams(id);
+      
+      // Add role information to each team
+      const teamsWithRoles = await Promise.all(
+        teams.map(async (team) => {
+          const membership = await TeamService.getTeamMembership(team.id, id);
+          return {
+            ...team,
+            role: membership?.role || 'team_user',
+            is_owner: team.owner_id === id
+          };
+        })
+      );
+      
+      return reply.status(200).send({
+        success: true,
+        teams: teamsWithRoles,
       });
     } catch (error) {
       fastify.log.error(error, 'Error fetching user teams');

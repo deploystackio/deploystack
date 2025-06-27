@@ -4,19 +4,39 @@ import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, Mail, Github, Shield } from 'lucide-vue-next'
+import { ArrowLeft, Mail, Github, Shield, Users, Crown, UserCheck } from 'lucide-vue-next'
 import DashboardLayout from '@/components/DashboardLayout.vue'
 import UserActionsGroup from '@/components/admin/UserActionsGroup.vue'
 import { getEnv } from '@/utils/env'
 import type { User } from './users/types'
+
+interface Team {
+  id: string
+  name: string
+  slug: string
+  description: string | null
+  owner_id: string
+  created_at: string
+  updated_at: string
+  role?: 'team_admin' | 'team_user'
+  is_owner?: boolean
+}
+
+interface TeamsResponse {
+  success: boolean
+  teams: Team[]
+}
 
 const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 
 const user = ref<User | null>(null)
+const teams = ref<Team[]>([])
 const isLoading = ref(true)
+const isLoadingTeams = ref(false)
 const error = ref<string | null>(null)
+const teamsError = ref<string | null>(null)
 
 const apiUrl = getEnv('VITE_DEPLOYSTACK_BACKEND_URL') || ''
 const userId = route.params.id as string
@@ -26,9 +46,9 @@ async function fetchUser(id: string): Promise<User> {
   if (!apiUrl) {
     throw new Error('VITE_DEPLOYSTACK_BACKEND_URL is not configured.')
   }
-  
-  const response = await fetch(`${apiUrl}/api/users/${id}`, { 
-    credentials: 'include' 
+
+  const response = await fetch(`${apiUrl}/api/users/${id}`, {
+    credentials: 'include'
   })
 
   if (!response.ok) {
@@ -39,12 +59,43 @@ async function fetchUser(id: string): Promise<User> {
   return await response.json()
 }
 
-// Load user on component mount
+// Fetch user teams from API
+async function fetchUserTeams(id: string): Promise<TeamsResponse> {
+  if (!apiUrl) {
+    throw new Error('VITE_DEPLOYSTACK_BACKEND_URL is not configured.')
+  }
+
+  const response = await fetch(`${apiUrl}/api/users/${id}/teams`, {
+    credentials: 'include'
+  })
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}))
+    throw new Error(errorData.error || `Failed to fetch user teams: ${response.statusText} (status: ${response.status})`)
+  }
+
+  return await response.json()
+}
+
+// Load user and teams on component mount
 onMounted(async () => {
   try {
     isLoading.value = true
     user.value = await fetchUser(userId)
     error.value = null
+
+    // Fetch teams after user is loaded
+    try {
+      isLoadingTeams.value = true
+      const teamsResponse = await fetchUserTeams(userId)
+      teams.value = teamsResponse.teams
+      teamsError.value = null
+    } catch (err) {
+      teamsError.value = err instanceof Error ? err.message : 'Failed to load teams'
+      teams.value = []
+    } finally {
+      isLoadingTeams.value = false
+    }
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'An unknown error occurred'
     user.value = null
@@ -82,8 +133,8 @@ const goBack = () => {
     <div class="space-y-6">
       <!-- Back Button -->
       <div>
-        <Button 
-          variant="outline" 
+        <Button
+          variant="outline"
           @click="goBack"
           class="mb-4"
         >
@@ -145,7 +196,7 @@ const goBack = () => {
             <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
               <dt class="text-sm/6 font-medium text-gray-900">{{ t('adminUsers.userDetail.fields.registrationMethod') }}</dt>
               <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
-                <Badge 
+                <Badge
                   v-if="authTypeBadge"
                   :variant="authTypeBadge.variant"
                   class="flex items-center gap-1 w-fit"
@@ -181,8 +232,8 @@ const goBack = () => {
               <dt class="text-sm/6 font-medium text-gray-900">{{ t('adminUsers.userDetail.fields.permissions') }}</dt>
               <dd class="mt-2 text-sm text-gray-900 sm:col-span-2 sm:mt-0">
                 <ul role="list" class="divide-y divide-gray-100 rounded-md border border-gray-200">
-                  <li 
-                    v-for="permission in user.role.permissions" 
+                  <li
+                    v-for="permission in user.role.permissions"
                     :key="permission"
                     class="flex items-center justify-between py-4 pr-5 pl-4 text-sm/6"
                   >
@@ -194,6 +245,59 @@ const goBack = () => {
                     </div>
                     <div class="ml-4 shrink-0">
                       <Badge variant="outline" class="text-xs">{{ t('adminUsers.userDetail.values.active') }}</Badge>
+                    </div>
+                  </li>
+                </ul>
+              </dd>
+            </div>
+
+            <!-- Teams -->
+            <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+              <dt class="text-sm/6 font-medium text-gray-900">Teams</dt>
+              <dd class="mt-2 text-sm text-gray-900 sm:col-span-2 sm:mt-0">
+                <!-- Teams Loading State -->
+                <div v-if="isLoadingTeams" class="text-muted-foreground text-sm">
+                  Loading teams...
+                </div>
+
+                <!-- Teams Error State -->
+                <div v-else-if="teamsError" class="text-red-500 text-sm">
+                  Error loading teams: {{ teamsError }}
+                </div>
+
+                <!-- No Teams -->
+                <div v-else-if="teams.length === 0" class="text-gray-500 text-sm">
+                  No teams found for this user.
+                </div>
+
+                <!-- Teams List -->
+                <ul v-else role="list" class="divide-y divide-gray-100 rounded-md border border-gray-200">
+                  <li
+                    v-for="team in teams"
+                    :key="team.id"
+                    class="flex items-center justify-between py-4 pr-5 pl-4 text-sm/6"
+                  >
+                    <div class="flex w-0 flex-1 items-center">
+                      <Users class="size-5 shrink-0 text-gray-400" aria-hidden="true" />
+                      <div class="ml-4 flex min-w-0 flex-1 gap-2">
+                        <div class="flex flex-col">
+                          <span class="truncate font-medium">{{ team.name }}</span>
+                          <span v-if="team.description" class="truncate text-xs text-gray-500">{{ team.description }}</span>
+                          <span class="truncate text-xs text-gray-400">Created: {{ new Date(team.created_at).toLocaleDateString() }}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="ml-4 shrink-0 flex gap-2">
+                      <!-- Owner Badge -->
+                      <Badge v-if="team.is_owner" variant="default" class="text-xs flex items-center gap-1">
+                        <Crown class="h-3 w-3" />
+                        Owner
+                      </Badge>
+                      <!-- Role Badge -->
+                      <Badge v-else-if="team.role" variant="outline" class="text-xs flex items-center gap-1">
+                        <UserCheck class="h-3 w-3" />
+                        {{ team.role === 'team_admin' ? 'Admin' : 'Member' }}
+                      </Badge>
                     </div>
                   </li>
                 </ul>
