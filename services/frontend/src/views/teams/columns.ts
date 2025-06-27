@@ -1,11 +1,13 @@
 import type { ColumnDef } from '@tanstack/vue-table'
 import { h } from 'vue'
 import { Button } from '@/components/ui/button'
-import { Settings } from 'lucide-vue-next'
+import { Settings, ArrowRightLeft } from 'lucide-vue-next'
 import type { TeamWithRole } from '@/services/teamService'
 
 export const createColumns = (
   onManageTeam: (teamId: string) => void,
+  onSwitchTeam: (teamId: string) => void,
+  selectedTeamId: string | null,
   userPermissions: string[] = []
 ): ColumnDef<TeamWithRole>[] => [
   {
@@ -50,6 +52,32 @@ export const createColumns = (
       return h('div', { class: 'text-sm text-muted-foreground' },
         date.toLocaleDateString()
       )
+    },
+  },
+  {
+    id: 'switch',
+    header: 'Switch Team',
+    enableHiding: false,
+    cell: ({ row }) => {
+      const team = row.original
+      const isSelected = selectedTeamId === team.id
+
+      return h('div', { class: 'flex justify-start' }, [
+        h(Button, {
+          variant: isSelected ? 'default' : 'outline',
+          size: 'sm',
+          class: 'h-8 px-3',
+          disabled: isSelected,
+          onClick: () => {
+            if (!isSelected) {
+              onSwitchTeam(team.id)
+            }
+          }
+        }, () => [
+          h(ArrowRightLeft, { class: 'h-4 w-4 mr-1' }),
+          isSelected ? 'Selected' : 'Switch'
+        ])
+      ])
     },
   },
   {

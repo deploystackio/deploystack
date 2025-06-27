@@ -5,6 +5,7 @@ export type EventBusEvents = {
   'teams-updated': void
   'team-created': void
   'team-deleted': void
+  'team-selected': { teamId: string; teamName: string }
 }
 
 export function useEventBus() {
