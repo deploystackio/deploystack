@@ -92,19 +92,19 @@ const routes = [
   {
     path: '/teams',
     name: 'Teams',
-    component: () => import('../views/Teams.vue'),
+    component: () => import('../views/teams/index.vue'),
     meta: { requiresSetup: true },
   },
   {
     path: '/teams/manage',
     name: 'TeamsManageDefault',
-    component: () => import('../views/teams/TeamsManageRedirect.vue'),
+    component: () => import('../views/teams/manage/index.vue'),
     meta: { requiresSetup: true },
   },
   {
     path: '/teams/manage/:id',
     name: 'TeamManage',
-    component: () => import('../views/teams/TeamManage.vue'),
+    component: () => import('../views/teams/manage/[id].vue'),
     meta: { requiresSetup: true },
   },
   {

@@ -28,7 +28,7 @@ import AddTeamModal from '@/components/teams/AddTeamModal.vue'
 import { TeamService, type TeamWithRole, type Team } from '@/services/teamService'
 import { UserService } from '@/services/userService'
 import { useEventBus } from '@/composables/useEventBus'
-import { createColumns } from './teams/columns'
+import { createColumns } from './columns'
 import { useRouter, useRoute } from 'vue-router'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { CheckCircle } from 'lucide-vue-next'
@@ -66,7 +66,6 @@ const handleSwitchTeam = (teamId: string) => {
     selectedTeam.value = team
     // Emit global event for team selection to update sidebar
     eventBus.emit('team-selected', { teamId: team.id, teamName: team.name })
-    console.log('Switched to team:', team.name)
   }
 }
 
@@ -76,11 +75,9 @@ const handleTeamSelectedFromSidebar = (data: { teamId: string; teamName: string 
   const team = teams.value.find(t => t.id === data.teamId)
   if (team) {
     selectedTeam.value = team
-    console.log('Team selected from sidebar:', data.teamName)
   } else {
     // If team not found in current list, create a basic team object
     selectedTeam.value = { id: data.teamId, name: data.teamName } as Team
-    console.log('Team selected from sidebar (not in current list):', data.teamName)
   }
 }
 
@@ -172,7 +169,6 @@ onMounted(async () => {
 
   // Listen for team updates from other components
   eventBus.on('teams-updated', () => {
-    console.log('Teams updated event received, refreshing teams...')
     fetchTeams(true) // Force refresh to get latest data
   })
 })
