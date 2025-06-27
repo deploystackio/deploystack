@@ -6,6 +6,19 @@
 
 DeployStack is an open-source CI/CD platform specifically built for MCP (Model Context Protocol) servers. Think of us as the infrastructure layer that makes MCP server deployment as simple as using n8n for automations - you select your MCP server, configure credentials, choose your target platform, and we handle all the complex deployment work behind the scenes.
 
+## 🚀 Quick Start
+
+Get DeployStack running locally in 2 commands:
+
+```bash
+curl -o docker-compose.yml https://raw.githubusercontent.com/deploystackio/deploystack/main/docker-compose.yml
+DEPLOYSTACK_ENCRYPTION_SECRET=$(openssl rand -hex 16) docker-compose up -d
+```
+
+Access DeployStack at [http://localhost:8080](http://localhost:8080)
+
+> **Note**: You'll need Docker and Docker Compose installed. For detailed setup instructions, see our [Self-Hosted Documentation](https://deploystack.io/docs/deploystack/self-hosted).
+
 ## What Makes DeployStack Different
 
 - **MCP-Native CI/CD**: Purpose-built for MCP server lifecycle management, not adapted from general deployment tools
