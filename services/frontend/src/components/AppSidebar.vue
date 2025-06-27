@@ -137,7 +137,11 @@ const fetchTeams = async (forceRefresh = false) => {
   } catch (error) { console.error('Error fetching teams:', error); teamsError.value = error instanceof Error ? error.message : 'Failed to load teams'; } finally { teamsLoading.value = false; }
 }
 
-const selectTeam = (team: Team) => { selectedTeam.value = team }
+const selectTeam = (team: Team) => {
+  selectedTeam.value = team
+  // Emit global event for team selection
+  eventBus.emit('team-selected', { teamId: team.id, teamName: team.name })
+}
 const navigateTo = (url: string) => { router.push(url) }
 const goToAccount = () => { router.push('/user/account') }
 const logout = async () => {
@@ -153,6 +157,16 @@ const logout = async () => {
 }
 const getUserInitials = (name: string) => { return name.split(' ').map(word => word.charAt(0)).join('').toUpperCase().slice(0, 2) }
 
+// Handle team selection from other components (like Teams page)
+const handleTeamSelectedFromOtherComponents = (data: { teamId: string; teamName: string }) => {
+  // Find the team in our teams list and update selectedTeam
+  const team = teams.value.find(t => t.id === data.teamId)
+  if (team) {
+    selectedTeam.value = team
+    console.log('Team selected from other component:', data.teamName)
+  }
+}
+
 onMounted(() => {
   fetchUserData()
   fetchTeams()
@@ -162,11 +176,15 @@ onMounted(() => {
     console.log('Teams updated event received, refreshing teams...')
     fetchTeams(true) // Force refresh to get latest data
   })
+
+  // Listen for team selection from other components
+  eventBus.on('team-selected', handleTeamSelectedFromOtherComponents)
 })
 
 onUnmounted(() => {
   // Clean up event listeners
   eventBus.off('teams-updated')
+  eventBus.off('team-selected', handleTeamSelectedFromOtherComponents)
 })
 </script>
 
