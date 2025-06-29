@@ -7,6 +7,9 @@ export default defineConfig({
     exclude: ['tests/e2e/**/*'],
     watch: false, // Disable watch mode by default
     testTimeout: 10000, // 10 seconds timeout for unit tests
+    typecheck: {
+      tsconfig: 'tsconfig.test.json',
+    },
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],

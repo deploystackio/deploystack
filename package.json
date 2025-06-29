@@ -8,7 +8,7 @@
     "dev:frontend": "cd services/frontend && npm run dev",
     "dev:backend": "cd services/backend && npm run dev",
     "build:frontend": "cd services/frontend && npm run build",
-    "build:backend": "cd services/backend && npm run lint",
+    "build:backend": "cd services/backend && npm run build",
     "lint:md": "npx markdownlint-cli2 '**/*.md' '#node_modules' '#**/node_modules/**' '#.github' '#**/CHANGELOG.md' '#**/._*'",
     "lint:frontend": "cd services/frontend && npm run lint",
     "lint:backend": "cd services/backend && npm run lint",
