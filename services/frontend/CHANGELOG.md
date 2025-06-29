@@ -1,5 +1,9 @@
 # Changelog
 
+## <small>0.13.3 (2025-06-29)</small>
+
+* release v0.13.2 ([abc1edf](https://github.com/deploystackio/deploystack/commit/abc1edf5a194862de1adb4ae5bffea3dfbf668d8))* update release workflow and version to v0.13.1 ([3544b47](https://github.com/deploystackio/deploystack/commit/3544b47bc3136ec3a59ce4b98d578a09df408e57))
+
 ## <small>0.13.2 (2025-06-29)</small>
 
 * update release workflow and version to v0.13.1 ([3544b47](https://github.com/deploystackio/deploystack/commit/3544b47bc3136ec3a59ce4b98d578a09df408e57))
