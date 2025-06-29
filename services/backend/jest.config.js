@@ -10,6 +10,7 @@ module.exports = {
   transform: {
     '^.+\\.ts$': ['ts-jest', {
       useESM: false,
+      tsconfig: 'tsconfig.test.json',
     }],
   },
   // Run tests sequentially to ensure proper order
