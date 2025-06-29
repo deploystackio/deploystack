@@ -23,9 +23,6 @@ permissions:
 jobs:
   releaseIt:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: services/backend
     steps:
       - uses: actions/checkout@v4
         with:
@@ -41,8 +38,16 @@ jobs:
         with:
           node-version: 20
           cache: npm
-      - run: npm ci
+      
+      # Install dependencies from root (same as frontend pipeline)
+      - name: Install dependencies
+        run: |
+          npm ci || {
+            echo "npm ci failed, trying clean install..."
+            npm install --no-optional
+          }
       - name: Prepare release
+        working-directory: services/backend
         env:
           GITHUB_TOKEN: ${{ secrets.APP_INSTALLATION_TOKEN }}
           TYPE_ARG: ${{ fromJSON('{"patch":"patch", "minor":"minor", "major":"major"}')[github.event.inputs.type] }}
