@@ -117,10 +117,16 @@ const initializeSelectedTeam = async () => {
 }
 
 // Fetch teams from API
-const fetchTeams = async (): Promise<void> => {
+const fetchTeams = async (forceRefresh = false): Promise<void> => {
   try {
     isLoading.value = true
     error.value = null
+    
+    // Clear cache if force refresh is requested
+    if (forceRefresh) {
+      TeamService.clearUserTeamsCache()
+    }
+    
     teams.value = await TeamService.getUserTeamsWithRoles()
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'An unknown error occurred'
