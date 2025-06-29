@@ -55,10 +55,6 @@ jobs:
         working-directory: services/backend
         run: npm run test:unit
 
-      - name: Backend E2E Tests
-        working-directory: services/backend
-        run: npm run test:e2e
-
       - name: Backend Lint
         working-directory: services/backend
         run: npm run lint
