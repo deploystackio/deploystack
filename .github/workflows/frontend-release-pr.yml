@@ -49,6 +49,18 @@ jobs:
             npm install --no-optional
           }
           
+      - name: Frontend Type Check
+        working-directory: services/frontend
+        run: npm run type-check
+
+      - name: Frontend Build Test
+        working-directory: services/frontend
+        run: npm run build
+
+      - name: Frontend Lint
+        working-directory: services/frontend
+        run: npm run lint
+          
       - name: Prepare release
         working-directory: services/frontend
         env:
