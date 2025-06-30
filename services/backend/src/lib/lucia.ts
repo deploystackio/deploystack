@@ -54,6 +54,7 @@ function initializeLucia(): Lucia {
   }
 
   // Create Lucia adapter with existing database instance
+  // Note: DrizzleSQLiteAdapter expects (db, sessionTable, userTable)
   const adapter = new DrizzleSQLiteAdapter(
     db,
     authSessionTable,
@@ -97,11 +98,25 @@ function initializeLucia(): Lucia {
 }
 
 // Lazy initialization function for GitHub OAuth
-function initializeGithubAuth(): GitHub {
+async function initializeGithubAuth(): Promise<GitHub> {
+  // Import GlobalSettingsInitService to get GitHub OAuth configuration
+  const { GlobalSettingsInitService } = await import('../global-settings');
+  const githubConfig = await GlobalSettingsInitService.getGitHubOAuthConfiguration();
+  
+  if (!githubConfig) {
+    // Return a dummy GitHub instance if not configured
+    // This prevents errors but the actual OAuth routes will handle the validation
+    return new GitHub(
+      'not_configured',
+      'not_configured',
+      'http://localhost:3000/api/auth/github/callback'
+    );
+  }
+  
   return new GitHub(
-    process.env.GITHUB_CLIENT_ID || 'YOUR_GITHUB_CLIENT_ID_HERE', // Replace with your actual Client ID or load from env
-    process.env.GITHUB_CLIENT_SECRET || 'YOUR_GITHUB_CLIENT_SECRET_HERE', // Replace with your actual Client Secret or load from env
-    process.env.GITHUB_REDIRECT_URI || 'http://localhost:3000/api/auth/github/callback'
+    githubConfig.clientId,
+    githubConfig.clientSecret,
+    githubConfig.callbackUrl
   );
 }
 
@@ -132,15 +147,16 @@ if (process.env.NODE_ENV !== 'production') {
 resetLucia();
 
 // Getter function for GitHub OAuth instance
-export function getGithubAuth(): GitHub {
+export async function getGithubAuth(): Promise<GitHub> {
   if (!githubAuthInstance) {
-    githubAuthInstance = initializeGithubAuth();
+    githubAuthInstance = await initializeGithubAuth();
   }
   return githubAuthInstance;
 }
 
 // Legacy exports for backward compatibility (deprecated)
 export const lucia = getLucia;
+// Note: githubAuth is now async, so legacy usage may need updating
 export const githubAuth = getGithubAuth;
 
 // IMPORTANT: Define DatabaseUserAttributes and DatabaseSessionAttributes

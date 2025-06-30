@@ -8963,7 +8963,7 @@
             }
           },
           "403": {
-            "description": "Forbidden - Login is disabled by administrator",
+            "description": "Forbidden - Login is disabled by administrator or GitHub OAuth is disabled",
             "content": {
               "application/json": {
                 "schema": {
@@ -8978,7 +8978,7 @@
                     "error"
                   ],
                   "additionalProperties": false,
-                  "description": "Forbidden - Login is disabled by administrator"
+                  "description": "Forbidden - Login is disabled by administrator or GitHub OAuth is disabled"
                 }
               }
             }
@@ -9128,6 +9128,64 @@
                   ],
                   "additionalProperties": false,
                   "description": "Conflict - User account conflict"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Internal Server Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/github/status": {
+      "get": {
+        "summary": "Check GitHub OAuth status",
+        "tags": [
+          "Authentication"
+        ],
+        "description": "Returns whether GitHub OAuth is enabled and configured. This endpoint can be used by the frontend to determine whether to show the \"Login with GitHub\" button.",
+        "responses": {
+          "200": {
+            "description": "GitHub OAuth status information",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean",
+                      "description": "Whether GitHub OAuth is enabled and properly configured"
+                    },
+                    "configured": {
+                      "type": "boolean",
+                      "description": "Whether GitHub OAuth settings are present (regardless of enabled status)"
+                    }
+                  },
+                  "required": [
+                    "enabled",
+                    "configured"
+                  ],
+                  "additionalProperties": false,
+                  "description": "GitHub OAuth status information"
                 }
               }
             }

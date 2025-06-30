@@ -21,6 +21,7 @@ import resendVerificationRoute from './routes/auth/resendVerification'
 import forgotPasswordRoute from './routes/auth/forgotPassword'
 import resetPasswordRoute from './routes/auth/resetPassword'
 import adminResetPasswordRoute from './routes/auth/adminResetPassword'
+import githubStatusRoute from './routes/auth/githubStatus'
 import { 
   initializeDatabase, 
   registerPluginTables, 
@@ -332,6 +333,7 @@ export const createServer = async () => {
     authInstance.register(adminResetPasswordRoute); // adminResetPasswordRoute handles /admin/reset-password
     authInstance.register(updateProfileRoute); // updateProfileRoute handles /profile/update
     authInstance.register(githubAuthRoutes, { prefix: '/github' }); // githubAuthRoutes handles /login/github and /login/github/callback
+    authInstance.register(githubStatusRoute); // githubStatusRoute handles /github/status
     authInstance.register(logoutRoute); // logoutRoute handles /logout
   }, { prefix: '/api/auth' });
   server.log.info('Authentication routes registered under /api/auth.');

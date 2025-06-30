@@ -302,12 +302,21 @@ describe('Lucia Authentication Library', () => {
   });
 
   describe('getGithubAuth', () => {
-    it('should create and return GitHub instance with environment variables', () => {
-      process.env.GITHUB_CLIENT_ID = 'test_client_id';
-      process.env.GITHUB_CLIENT_SECRET = 'test_client_secret';
-      process.env.GITHUB_REDIRECT_URI = 'http://localhost:3000/callback';
+    it('should create and return GitHub instance with environment variables', async () => {
+      // Mock GlobalSettingsInitService
+      const mockGlobalSettingsInitService = {
+        getGitHubOAuthConfiguration: vi.fn().mockResolvedValue({
+          clientId: 'test_client_id',
+          clientSecret: 'test_client_secret',
+          callbackUrl: 'http://localhost:3000/callback'
+        })
+      };
+      
+      vi.doMock('../../../src/global-settings', () => ({
+        GlobalSettingsInitService: mockGlobalSettingsInitService
+      }));
 
-      const github = getGithubAuth();
+      const github = await getGithubAuth();
 
       expect(mockGitHub).toHaveBeenCalledWith(
         'test_client_id',
@@ -317,24 +326,42 @@ describe('Lucia Authentication Library', () => {
       expect(github).toBe(mockGithubInstance);
     });
 
-    it('should create GitHub instance with default values when env vars are missing', () => {
-      delete process.env.GITHUB_CLIENT_ID;
-      delete process.env.GITHUB_CLIENT_SECRET;
-      delete process.env.GITHUB_REDIRECT_URI;
+    it('should create GitHub instance with default values when env vars are missing', async () => {
+      // Mock GlobalSettingsInitService returning null (not configured)
+      const mockGlobalSettingsInitService = {
+        getGitHubOAuthConfiguration: vi.fn().mockResolvedValue(null)
+      };
+      
+      vi.doMock('../../../src/global-settings', () => ({
+        GlobalSettingsInitService: mockGlobalSettingsInitService
+      }));
 
-      const github = getGithubAuth();
+      const github = await getGithubAuth();
 
       expect(mockGitHub).toHaveBeenCalledWith(
-        'YOUR_GITHUB_CLIENT_ID_HERE',
-        'YOUR_GITHUB_CLIENT_SECRET_HERE',
+        'not_configured',
+        'not_configured',
         'http://localhost:3000/api/auth/github/callback'
       );
       expect(github).toBe(mockGithubInstance);
     });
 
-    it('should return cached instance on subsequent calls', () => {
-      const github1 = getGithubAuth();
-      const github2 = getGithubAuth();
+    it('should return cached instance on subsequent calls', async () => {
+      // Mock GlobalSettingsInitService
+      const mockGlobalSettingsInitService = {
+        getGitHubOAuthConfiguration: vi.fn().mockResolvedValue({
+          clientId: 'test_client_id',
+          clientSecret: 'test_client_secret',
+          callbackUrl: 'http://localhost:3000/callback'
+        })
+      };
+      
+      vi.doMock('../../../src/global-settings', () => ({
+        GlobalSettingsInitService: mockGlobalSettingsInitService
+      }));
+
+      const github1 = await getGithubAuth();
+      const github2 = await getGithubAuth();
 
       expect(github1).toBe(github2);
       expect(mockGitHub).toHaveBeenCalledTimes(1);
