@@ -5,8 +5,7 @@ import * as path from 'path';
 import { getTestContext, updateTestContext } from './testContext';
 
 // __dirname is services/backend/tests/e2e
-const TEST_DATA_DIR = path.join(__dirname, 'test-data'); // Resolves to services/backend/tests/e2e/test-data
-const DB_FILE_PATH = path.join(TEST_DATA_DIR, 'deploystack.test.db'); // Path where the app creates the test db
+const TEST_DB_DIR = path.join(__dirname, '..', '..', 'persistent_data', 'database-test'); // Resolves to services/backend/persistent_data/database-test
 
 describe('Email Login and Logout E2E Tests', () => {
   let server: FastifyInstance;
@@ -20,8 +19,14 @@ describe('Email Login and Logout E2E Tests', () => {
   });
 
   it('should login first user (admin) with email and password', async () => {
-    // Ensure database and users exist (should be done by previous tests)
-    expect(await fs.pathExists(DB_FILE_PATH)).toBe(true);
+    // Ensure database directory and users exist (should be done by previous tests)
+    expect(await fs.pathExists(TEST_DB_DIR)).toBe(true);
+    
+    // Verify there's a database file in the test directory
+    const files = await fs.readdir(TEST_DB_DIR);
+    const dbFile = files.find(file => file.startsWith('deploystack-') && file.endsWith('.db'));
+    expect(dbFile).toBeDefined();
+    
     const context = getTestContext();
     expect(context.firstUserId).toBeDefined();
 

@@ -2,6 +2,7 @@ import { getDb, getSchema } from '../db';
 import { eq, lt, gt, and } from 'drizzle-orm';
 import { generateId } from 'lucia';
 import { hash, verify } from '@node-rs/argon2';
+import type { FastifyBaseLogger } from 'fastify';
 import { EmailService } from '../email';
 import { GlobalSettings } from '../global-settings/helpers';
 
@@ -74,7 +75,7 @@ export class PasswordResetService {
   /**
    * Validate reset token and reset password
    */
-  static async validateAndResetPassword(token: string, newPassword: string): Promise<{ success: boolean; error?: string; userId?: string }> {
+  static async validateAndResetPassword(token: string, newPassword: string, logger?: FastifyBaseLogger): Promise<{ success: boolean; error?: string; userId?: string }> {
     const db = getDb();
     const schema = getSchema();
     const passwordResetTokensTable = schema.passwordResetTokens;
@@ -148,11 +149,16 @@ export class PasswordResetService {
         .where(eq(passwordResetTokensTable.id, matchingToken.id));
 
       // Invalidate all user sessions for security
-      await this.invalidateAllUserSessions(matchingToken.user_id);
+      await this.invalidateAllUserSessions(matchingToken.user_id, logger);
 
       return { success: true, userId: matchingToken.user_id };
     } catch (error) {
-      console.error('Error validating reset token and resetting password:', error);
+      if (logger) {
+        logger.error({
+          error,
+          operation: 'validate_reset_password'
+        }, 'Error validating reset token and resetting password');
+      }
       return { success: false, error: 'An error occurred during password reset' };
     }
   }
@@ -160,7 +166,7 @@ export class PasswordResetService {
   /**
    * Invalidate all sessions for a user (security measure after password reset)
    */
-  static async invalidateAllUserSessions(userId: string): Promise<void> {
+  static async invalidateAllUserSessions(userId: string, logger?: FastifyBaseLogger): Promise<void> {
     const db = getDb();
     const schema = getSchema();
     const authSessionTable = schema.authSession;
@@ -176,7 +182,13 @@ export class PasswordResetService {
         .delete(authSessionTable)
         .where(eq(authSessionTable.user_id, userId));
     } catch (error) {
-      console.error('Error invalidating user sessions:', error);
+      if (logger) {
+        logger.error({
+          error,
+          userId,
+          operation: 'invalidate_user_sessions'
+        }, 'Error invalidating user sessions');
+      }
       // Don't throw error here as password reset was successful
     }
   }
@@ -222,7 +234,7 @@ export class PasswordResetService {
   /**
    * Send password reset email to user
    */
-  static async sendResetEmail(email: string): Promise<{ success: boolean; error?: string }> {
+  static async sendResetEmail(email: string, logger?: FastifyBaseLogger): Promise<{ success: boolean; error?: string }> {
     try {
       // Check if email sending is enabled
       const isEmailEnabled = await GlobalSettings.getBoolean('global.send_mail', false);
@@ -263,7 +275,11 @@ export class PasswordResetService {
       const frontendUrl = await GlobalSettings.get('global.page_url', 'http://localhost:5173');
       const resetUrl = `${frontendUrl}/reset-password?token=${token}`;
 
-      // Send reset email
+      // Send reset email (only if logger is available)
+      if (!logger) {
+        return { success: false, error: 'Logger is required for email sending' };
+      }
+
       const emailResult = await EmailService.sendEmail({
         to: user.email,
         subject: 'Reset Your Password',
@@ -275,7 +291,7 @@ export class PasswordResetService {
           expirationTime: '10 minutes',
           supportEmail: await GlobalSettings.get('smtp.from_email') || undefined,
         },
-      });
+      }, logger);
 
       if (!emailResult.success) {
         return { success: false, error: emailResult.error || 'Failed to send reset email' };
@@ -283,7 +299,13 @@ export class PasswordResetService {
 
       return { success: true };
     } catch (error) {
-      console.error('Error sending password reset email:', error);
+      if (logger) {
+        logger.error({
+          error,
+          email,
+          operation: 'send_reset_email'
+        }, 'Error sending password reset email');
+      }
       return { success: false, error: 'An error occurred while sending reset email' };
     }
   }
@@ -300,7 +322,7 @@ export class PasswordResetService {
    * Only for users with auth_type = 'email_signup'
    * Admin cannot reset their own password
    */
-  static async sendAdminResetEmail(email: string, adminUserId: string): Promise<{ success: boolean; error?: string }> {
+  static async sendAdminResetEmail(email: string, adminUserId: string, logger?: FastifyBaseLogger): Promise<{ success: boolean; error?: string }> {
     try {
       // Check if email sending is enabled
       const isEmailEnabled = await GlobalSettings.getBoolean('global.send_mail', false);
@@ -345,7 +367,11 @@ export class PasswordResetService {
       const frontendUrl = await GlobalSettings.get('global.page_url', 'http://localhost:5173');
       const resetUrl = `${frontendUrl}/reset-password?token=${token}`;
 
-      // Send admin-initiated reset email
+      // Send admin-initiated reset email (only if logger is available)
+      if (!logger) {
+        return { success: false, error: 'Logger is required for email sending' };
+      }
+
       const emailResult = await EmailService.sendEmail({
         to: user.email,
         subject: 'Password Reset Initiated by Administrator',
@@ -357,7 +383,7 @@ export class PasswordResetService {
           expirationTime: '10 minutes',
           supportEmail: await GlobalSettings.get('smtp.from_email') || undefined,
         },
-      });
+      }, logger);
 
       if (!emailResult.success) {
         return { success: false, error: emailResult.error || 'Failed to send reset email' };
@@ -365,7 +391,14 @@ export class PasswordResetService {
 
       return { success: true };
     } catch (error) {
-      console.error('Error sending admin-initiated password reset email:', error);
+      if (logger) {
+        logger.error({
+          error,
+          email,
+          adminUserId,
+          operation: 'send_admin_reset_email'
+        }, 'Error sending admin-initiated password reset email');
+      }
       return { success: false, error: 'An error occurred while sending reset email' };
     }
   }

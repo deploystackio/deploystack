@@ -1,4 +1,4 @@
-import { type FastifyInstance } from 'fastify';
+import { type FastifyInstance, type FastifyBaseLogger } from 'fastify';
 // import { type SQLiteTable } from 'drizzle-orm/sqlite-core'; // Replaced by tableDefinitions
 // import { type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3'; // Replaced by AnyDatabase
 import { type AnyDatabase } from '../db'; // Import AnyDatabase
@@ -77,7 +77,7 @@ export interface DatabaseExtension {
    * Can be used for seeding or additional setup.
    * This is called only if the main database initializes successfully.
    */
-  onDatabaseInit?: (db: AnyDatabase) => Promise<void>; // db here will be non-null
+  onDatabaseInit?: (db: AnyDatabase, logger: FastifyBaseLogger) => Promise<void>; // db here will be non-null
 }
 
 /**
@@ -110,8 +110,9 @@ export interface Plugin {
    * Use this method for database setup, configuration, and other non-route initialization.
    * 
    * @param db The database instance (can be null if not configured/initialized)
+   * @param logger The logger instance for structured logging
    */
-  initialize: (db: AnyDatabase | null) => Promise<void>;
+  initialize: (db: AnyDatabase | null, logger: FastifyBaseLogger) => Promise<void>;
   
   /**
    * Register plugin routes using the isolated route manager
@@ -121,8 +122,9 @@ export interface Plugin {
    * 
    * @param routeManager The isolated route manager for this plugin
    * @param db The database instance (can be null if not configured/initialized)
+   * @param logger The logger instance for structured logging
    */
-  registerRoutes?: (routeManager: PluginRouteManager, db: AnyDatabase | null) => Promise<void>;
+  registerRoutes?: (routeManager: PluginRouteManager, db: AnyDatabase | null, logger: FastifyBaseLogger) => Promise<void>;
   
   /**
    * Re-initialize the plugin with database access
@@ -134,8 +136,9 @@ export interface Plugin {
   
   /**
    * Shutdown the plugin gracefully
+   * @param logger The logger instance for structured logging
    */
-  shutdown?: () => Promise<void>;
+  shutdown?: (logger: FastifyBaseLogger) => Promise<void>;
 }
 
 /**

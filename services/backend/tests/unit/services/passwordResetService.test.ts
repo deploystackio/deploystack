@@ -28,10 +28,22 @@ describe('PasswordResetService - Admin Reset Email', () => {
   let mockSchema: any;
   let mockAuthUserTable: any;
   let mockPasswordResetTokensTable: any;
+  let mockLogger: any;
 
   beforeEach(() => {
     // Reset all mocks
     vi.clearAllMocks();
+
+    // Setup mock logger
+    mockLogger = {
+      info: vi.fn(),
+      error: vi.fn(),
+      warn: vi.fn(),
+      debug: vi.fn(),
+      trace: vi.fn(),
+      fatal: vi.fn(),
+      child: vi.fn(() => mockLogger),
+    };
 
     // Setup mock database tables
     mockAuthUserTable = {
@@ -102,7 +114,7 @@ describe('PasswordResetService - Admin Reset Email', () => {
       const createResetTokenSpy = vi.spyOn(PasswordResetService, 'createResetToken')
         .mockResolvedValue('mock-reset-token');
 
-      const result = await PasswordResetService.sendAdminResetEmail('user@example.com', 'admin-123');
+      const result = await PasswordResetService.sendAdminResetEmail('user@example.com', 'admin-123', mockLogger);
 
       expect(mockGlobalSettings.getBoolean).toHaveBeenCalledWith('global.send_mail', false);
       expect(mockDb.select).toHaveBeenCalled();
@@ -124,7 +136,7 @@ describe('PasswordResetService - Admin Reset Email', () => {
           expirationTime: '10 minutes',
           supportEmail: undefined,
         },
-      });
+      }, mockLogger);
       expect(result).toEqual({ success: true });
 
       createResetTokenSpy.mockRestore();
@@ -133,7 +145,7 @@ describe('PasswordResetService - Admin Reset Email', () => {
     it('should fail when email sending is disabled', async () => {
       mockGlobalSettings.getBoolean.mockResolvedValue(false);
 
-      const result = await PasswordResetService.sendAdminResetEmail('user@example.com', 'admin-123');
+      const result = await PasswordResetService.sendAdminResetEmail('user@example.com', 'admin-123', mockLogger);
 
       expect(mockGlobalSettings.getBoolean).toHaveBeenCalledWith('global.send_mail', false);
       expect(mockDb.select).not.toHaveBeenCalled();
@@ -146,7 +158,7 @@ describe('PasswordResetService - Admin Reset Email', () => {
     it('should fail when database tables are not available', async () => {
       mockSchema.authUser = null;
 
-      const result = await PasswordResetService.sendAdminResetEmail('user@example.com', 'admin-123');
+      const result = await PasswordResetService.sendAdminResetEmail('user@example.com', 'admin-123', mockLogger);
 
       expect(result).toEqual({
         success: false,
@@ -157,7 +169,7 @@ describe('PasswordResetService - Admin Reset Email', () => {
     it('should fail when user is not found', async () => {
       mockDb.limit.mockResolvedValue([]);
 
-      const result = await PasswordResetService.sendAdminResetEmail('user@example.com', 'admin-123');
+      const result = await PasswordResetService.sendAdminResetEmail('user@example.com', 'admin-123', mockLogger);
 
       expect(mockDb.where).toHaveBeenCalledWith(
         and(
@@ -174,7 +186,7 @@ describe('PasswordResetService - Admin Reset Email', () => {
     it('should fail when user does not have email auth type', async () => {
       mockDb.limit.mockResolvedValue([]);
 
-      const result = await PasswordResetService.sendAdminResetEmail('github-user@example.com', 'admin-123');
+      const result = await PasswordResetService.sendAdminResetEmail('github-user@example.com', 'admin-123', mockLogger);
 
       expect(mockDb.where).toHaveBeenCalledWith(
         and(
@@ -198,7 +210,7 @@ describe('PasswordResetService - Admin Reset Email', () => {
         },
       ]);
 
-      const result = await PasswordResetService.sendAdminResetEmail('admin@example.com', 'admin-123');
+      const result = await PasswordResetService.sendAdminResetEmail('admin@example.com', 'admin-123', mockLogger);
 
       expect(result).toEqual({
         success: false,
@@ -224,7 +236,7 @@ describe('PasswordResetService - Admin Reset Email', () => {
         error: 'SMTP configuration error',
       });
 
-      const result = await PasswordResetService.sendAdminResetEmail('user@example.com', 'admin-123');
+      const result = await PasswordResetService.sendAdminResetEmail('user@example.com', 'admin-123', mockLogger);
 
       expect(result).toEqual({
         success: false,
@@ -249,7 +261,7 @@ describe('PasswordResetService - Admin Reset Email', () => {
 
       mockEmailService.sendEmail.mockResolvedValue({ success: false });
 
-      const result = await PasswordResetService.sendAdminResetEmail('user@example.com', 'admin-123');
+      const result = await PasswordResetService.sendAdminResetEmail('user@example.com', 'admin-123', mockLogger);
 
       expect(result).toEqual({
         success: false,
@@ -262,20 +274,21 @@ describe('PasswordResetService - Admin Reset Email', () => {
     it('should handle unexpected errors', async () => {
       mockGlobalSettings.getBoolean.mockRejectedValue(new Error('Database connection failed'));
 
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const result = await PasswordResetService.sendAdminResetEmail('user@example.com', 'admin-123', mockLogger);
 
-      const result = await PasswordResetService.sendAdminResetEmail('user@example.com', 'admin-123');
-
-      expect(consoleSpy).toHaveBeenCalledWith(
-        'Error sending admin-initiated password reset email:',
-        expect.any(Error)
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: expect.any(Error),
+          email: 'user@example.com',
+          adminUserId: 'admin-123',
+          operation: 'send_admin_reset_email'
+        }),
+        'Error sending admin-initiated password reset email'
       );
       expect(result).toEqual({
         success: false,
         error: 'An error occurred while sending reset email',
       });
-
-      consoleSpy.mockRestore();
     });
 
     it('should use custom frontend URL from settings', async () => {
@@ -298,14 +311,15 @@ describe('PasswordResetService - Admin Reset Email', () => {
       const createResetTokenSpy = vi.spyOn(PasswordResetService, 'createResetToken')
         .mockResolvedValue('mock-reset-token');
 
-      await PasswordResetService.sendAdminResetEmail('user@example.com', 'admin-123');
+      await PasswordResetService.sendAdminResetEmail('user@example.com', 'admin-123', mockLogger);
 
       expect(mockEmailService.sendEmail).toHaveBeenCalledWith(
         expect.objectContaining({
           variables: expect.objectContaining({
             resetUrl: 'https://custom-domain.com/reset-password?token=mock-reset-token',
           }),
-        })
+        }),
+        mockLogger
       );
 
       createResetTokenSpy.mockRestore();
@@ -334,14 +348,15 @@ describe('PasswordResetService - Admin Reset Email', () => {
       const createResetTokenSpy = vi.spyOn(PasswordResetService, 'createResetToken')
         .mockResolvedValue('mock-reset-token');
 
-      await PasswordResetService.sendAdminResetEmail('user@example.com', 'admin-123');
+      await PasswordResetService.sendAdminResetEmail('user@example.com', 'admin-123', mockLogger);
 
       expect(mockEmailService.sendEmail).toHaveBeenCalledWith(
         expect.objectContaining({
           variables: expect.objectContaining({
             supportEmail: 'support@example.com',
           }),
-        })
+        }),
+        mockLogger
       );
 
       createResetTokenSpy.mockRestore();

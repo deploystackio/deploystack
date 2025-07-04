@@ -80,6 +80,10 @@ export const AVAILABLE_PERMISSIONS = [
   'teams.manage',
   'team.members.view',
   'team.members.manage',
+  'cloud_credentials.view',
+  'cloud_credentials.create',
+  'cloud_credentials.edit',
+  'cloud_credentials.delete',
 ] as const;
 
 export type Permission = typeof AVAILABLE_PERMISSIONS[number];

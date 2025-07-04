@@ -128,9 +128,9 @@ input {
   background-color: hsl(0 0% 100%); /* Corresponds to bg-white */
 }
 
-.bg-card {
+/* .bg-card {
   background-color: oklch(96.8% 0.007 247.896)
-}
+} */
 
 /* Global cursor pointer for buttons and interactive elements */
 button,
