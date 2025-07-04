@@ -4,19 +4,19 @@ import { ZodError } from 'zod';
 import cloudCredentialsRoute from '../../../src/routes/cloud-credentials/index';
 import { CloudCredentialsService } from '../../../src/services/cloudCredentialsService';
 import { RoleService } from '../../../src/services/roleService';
-import { requirePermission } from '../../../src/middleware/roleMiddleware';
+import { TeamService } from '../../../src/services/teamService';
 import { getEnabledCloudProviders } from '../../../src/config/cloud-providers';
 
 // Mock dependencies
 vi.mock('../../../src/services/cloudCredentialsService');
 vi.mock('../../../src/services/roleService');
-vi.mock('../../../src/middleware/roleMiddleware');
+vi.mock('../../../src/services/teamService');
 vi.mock('../../../src/config/cloud-providers');
 
 // Type the mocked modules
 const mockCloudCredentialsService = CloudCredentialsService as any;
 const mockRoleService = RoleService as any;
-const mockRequirePermission = requirePermission as MockedFunction<typeof requirePermission>;
+const mockTeamService = TeamService as any;
 const mockGetEnabledCloudProviders = getEnabledCloudProviders as MockedFunction<typeof getEnabledCloudProviders>;
 
 describe('Cloud Credentials Route', () => {
@@ -40,22 +40,18 @@ describe('Cloud Credentials Route', () => {
     mockFastify = {
       post: vi.fn((path, options, handler) => {
         routeHandlers[`POST ${path}`] = handler;
-        preHandlers[`POST ${path}`] = options.preHandler;
         return mockFastify as FastifyInstance;
       }),
       get: vi.fn((path, options, handler) => {
         routeHandlers[`GET ${path}`] = handler;
-        preHandlers[`GET ${path}`] = options?.preHandler;
         return mockFastify as FastifyInstance;
       }),
       put: vi.fn((path, options, handler) => {
         routeHandlers[`PUT ${path}`] = handler;
-        preHandlers[`PUT ${path}`] = options?.preHandler;
         return mockFastify as FastifyInstance;
       }),
       delete: vi.fn((path, options, handler) => {
         routeHandlers[`DELETE ${path}`] = handler;
-        preHandlers[`DELETE ${path}`] = options?.preHandler;
         return mockFastify as FastifyInstance;
       }),
       log: {
@@ -98,9 +94,6 @@ describe('Cloud Credentials Route', () => {
       send: vi.fn().mockReturnThis(),
     };
 
-    // Mock requirePermission middleware
-    mockRequirePermission.mockReturnValue(vi.fn());
-
     // Setup mock service instances
     mockCloudCredentialsServiceInstance = {
       getTeamCredentials: vi.fn(),
@@ -122,6 +115,10 @@ describe('Cloud Credentials Route', () => {
     // Mock service constructors
     mockCloudCredentialsService.mockImplementation(() => mockCloudCredentialsServiceInstance);
     mockRoleService.mockImplementation(() => mockRoleServiceInstance);
+
+    // Mock TeamService static methods
+    mockTeamService.getTeamMembership = vi.fn();
+    mockTeamService.getTeamById = vi.fn();
 
     // Mock getEnabledCloudProviders
     mockGetEnabledCloudProviders.mockReturnValue([
@@ -165,7 +162,6 @@ describe('Cloud Credentials Route', () => {
             tags: ['Cloud Credentials'],
             summary: 'List available cloud providers',
           }),
-          preHandler: expect.any(Function),
         }),
         expect.any(Function)
       );
@@ -177,7 +173,6 @@ describe('Cloud Credentials Route', () => {
             tags: ['Cloud Credentials'],
             summary: 'List team cloud credentials',
           }),
-          preHandler: expect.any(Function),
         }),
         expect.any(Function)
       );
@@ -189,7 +184,6 @@ describe('Cloud Credentials Route', () => {
             tags: ['Cloud Credentials'],
             summary: 'Create cloud credentials',
           }),
-          preHandler: expect.any(Function),
         }),
         expect.any(Function)
       );
@@ -201,7 +195,6 @@ describe('Cloud Credentials Route', () => {
             tags: ['Cloud Credentials'],
             summary: 'Get cloud credential by ID',
           }),
-          preHandler: expect.any(Function),
         }),
         expect.any(Function)
       );
@@ -213,7 +206,6 @@ describe('Cloud Credentials Route', () => {
             tags: ['Cloud Credentials'],
             summary: 'Update cloud credentials',
           }),
-          preHandler: expect.any(Function),
         }),
         expect.any(Function)
       );
@@ -225,19 +217,9 @@ describe('Cloud Credentials Route', () => {
             tags: ['Cloud Credentials'],
             summary: 'Delete cloud credentials',
           }),
-          preHandler: expect.any(Function),
         }),
         expect.any(Function)
       );
-    });
-
-    it('should use correct permission middleware for each route', async () => {
-      await cloudCredentialsRoute(mockFastify as FastifyInstance);
-
-      expect(mockRequirePermission).toHaveBeenCalledWith('cloud_credentials.view');
-      expect(mockRequirePermission).toHaveBeenCalledWith('cloud_credentials.create');
-      expect(mockRequirePermission).toHaveBeenCalledWith('cloud_credentials.edit');
-      expect(mockRequirePermission).toHaveBeenCalledWith('cloud_credentials.delete');
     });
   });
 
@@ -248,9 +230,19 @@ describe('Cloud Credentials Route', () => {
     });
 
     it('should return enabled cloud providers successfully', async () => {
+      // Mock team membership for team admin
+      mockTeamService.getTeamMembership.mockResolvedValue({
+        id: 'membership-1',
+        team_id: 'team-123',
+        user_id: 'user-123',
+        role: 'team_admin',
+        joined_at: new Date(),
+      });
+
       const handler = routeHandlers['GET /teams/:teamId/cloud-providers'];
       await handler(mockRequest, mockReply);
 
+      expect(mockTeamService.getTeamMembership).toHaveBeenCalledWith('team-123', 'user-123');
       expect(mockGetEnabledCloudProviders).toHaveBeenCalled();
       expect(mockReply.status).toHaveBeenCalledWith(200);
       expect(mockReply.send).toHaveBeenCalledWith({
@@ -265,7 +257,30 @@ describe('Cloud Credentials Route', () => {
       });
     });
 
+    it('should return 403 for insufficient permissions', async () => {
+      // Mock no team membership
+      mockTeamService.getTeamMembership.mockResolvedValue(null);
+      mockRoleServiceInstance.getUserRole.mockResolvedValue({ id: 'team_user' });
+
+      const handler = routeHandlers['GET /teams/:teamId/cloud-providers'];
+      await handler(mockRequest, mockReply);
+
+      expect(mockReply.status).toHaveBeenCalledWith(403);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        success: false,
+        error: 'Insufficient permissions',
+      });
+    });
+
     it('should handle errors when retrieving cloud providers', async () => {
+      mockTeamService.getTeamMembership.mockResolvedValue({
+        id: 'membership-1',
+        team_id: 'team-123',
+        user_id: 'user-123',
+        role: 'team_admin',
+        joined_at: new Date(),
+      });
+
       mockGetEnabledCloudProviders.mockImplementation(() => {
         throw new Error('Configuration error');
       });
@@ -311,15 +326,19 @@ describe('Cloud Credentials Route', () => {
         },
       ];
 
-      mockRoleServiceInstance.userHasPermission.mockResolvedValue(true);
-      mockRoleServiceInstance.getUserRole.mockResolvedValue({ id: 'team_admin' });
+      mockTeamService.getTeamMembership.mockResolvedValue({
+        id: 'membership-1',
+        team_id: 'team-123',
+        user_id: 'user-123',
+        role: 'team_admin',
+        joined_at: new Date(),
+      });
       mockCloudCredentialsServiceInstance.getTeamCredentials.mockResolvedValue(mockCredentials);
 
       const handler = routeHandlers['GET /teams/:teamId/cloud-credentials'];
       await handler(mockRequest, mockReply);
 
-      expect(mockRoleServiceInstance.userHasPermission).toHaveBeenCalledWith('user-123', 'cloud_credentials.edit');
-      expect(mockRoleServiceInstance.getUserRole).toHaveBeenCalledWith('user-123');
+      expect(mockTeamService.getTeamMembership).toHaveBeenCalledWith('team-123', 'user-123');
       expect(mockCloudCredentialsServiceInstance.getTeamCredentials).toHaveBeenCalledWith('team-123');
       expect(mockReply.status).toHaveBeenCalledWith(200);
       expect(mockReply.send).toHaveBeenCalledWith({
@@ -347,13 +366,19 @@ describe('Cloud Credentials Route', () => {
         },
       ];
 
-      mockRoleServiceInstance.userHasPermission.mockResolvedValue(false);
-      mockRoleServiceInstance.getUserRole.mockResolvedValue({ id: 'team_user' });
+      mockTeamService.getTeamMembership.mockResolvedValue({
+        id: 'membership-1',
+        team_id: 'team-123',
+        user_id: 'user-123',
+        role: 'team_user',
+        joined_at: new Date(),
+      });
       mockCloudCredentialsServiceInstance.getTeamCredentialsBasic.mockResolvedValue(mockCredentials);
 
       const handler = routeHandlers['GET /teams/:teamId/cloud-credentials'];
       await handler(mockRequest, mockReply);
 
+      expect(mockTeamService.getTeamMembership).toHaveBeenCalledWith('team-123', 'user-123');
       expect(mockCloudCredentialsServiceInstance.getTeamCredentialsBasic).toHaveBeenCalledWith('team-123');
       expect(mockReply.status).toHaveBeenCalledWith(200);
       expect(mockReply.send).toHaveBeenCalledWith({
@@ -385,13 +410,27 @@ describe('Cloud Credentials Route', () => {
         },
       ];
 
-      mockRoleServiceInstance.userHasPermission.mockResolvedValue(true);
+      // Mock no team membership but global admin role
+      mockTeamService.getTeamMembership.mockResolvedValue(null);
       mockRoleServiceInstance.getUserRole.mockResolvedValue({ id: 'global_admin' });
+      mockTeamService.getTeamById.mockResolvedValue({
+        id: 'team-123',
+        name: 'Test Team',
+        slug: 'test-team',
+        description: 'Test team',
+        owner_id: 'other-user',
+        is_default: false,
+        created_at: new Date(),
+        updated_at: new Date(),
+      });
       mockCloudCredentialsServiceInstance.getTeamCredentialsGlobalAdmin.mockResolvedValue(mockCredentials);
 
       const handler = routeHandlers['GET /teams/:teamId/cloud-credentials'];
       await handler(mockRequest, mockReply);
 
+      expect(mockTeamService.getTeamMembership).toHaveBeenCalledWith('team-123', 'user-123');
+      expect(mockRoleServiceInstance.getUserRole).toHaveBeenCalledWith('user-123');
+      expect(mockTeamService.getTeamById).toHaveBeenCalledWith('team-123');
       expect(mockCloudCredentialsServiceInstance.getTeamCredentialsGlobalAdmin).toHaveBeenCalledWith('team-123');
       expect(mockReply.status).toHaveBeenCalledWith(200);
       expect(mockReply.send).toHaveBeenCalledWith({
@@ -414,7 +453,7 @@ describe('Cloud Credentials Route', () => {
     });
 
     it('should handle service errors', async () => {
-      mockRoleServiceInstance.userHasPermission.mockRejectedValue(new Error('Database error'));
+      mockTeamService.getTeamMembership.mockRejectedValue(new Error('Database error'));
 
       const handler = routeHandlers['GET /teams/:teamId/cloud-credentials'];
       await handler(mockRequest, mockReply);
@@ -432,6 +471,15 @@ describe('Cloud Credentials Route', () => {
     beforeEach(async () => {
       await cloudCredentialsRoute(mockFastify as FastifyInstance);
       mockRequest.params = { teamId: 'team-123' };
+      
+      // Mock team admin membership for create operations
+      mockTeamService.getTeamMembership.mockResolvedValue({
+        id: 'membership-1',
+        team_id: 'team-123',
+        user_id: 'user-123',
+        role: 'team_admin',
+        joined_at: new Date(),
+      });
     });
 
     it('should create credentials successfully', async () => {
@@ -621,13 +669,19 @@ describe('Cloud Credentials Route', () => {
         updatedAt: '2024-01-01T00:00:00Z',
       };
 
-      mockRoleServiceInstance.userHasPermission.mockResolvedValue(true);
-      mockRoleServiceInstance.getUserRole.mockResolvedValue({ id: 'team_admin' });
+      mockTeamService.getTeamMembership.mockResolvedValue({
+        id: 'membership-1',
+        team_id: 'team-123',
+        user_id: 'user-123',
+        role: 'team_admin',
+        joined_at: new Date(),
+      });
       mockCloudCredentialsServiceInstance.getCredentialById.mockResolvedValue(mockCredential);
 
       const handler = routeHandlers['GET /teams/:teamId/cloud-credentials/:credentialId'];
       await handler(mockRequest, mockReply);
 
+      expect(mockTeamService.getTeamMembership).toHaveBeenCalledWith('team-123', 'user-123');
       expect(mockCloudCredentialsServiceInstance.getCredentialById).toHaveBeenCalledWith('cred-1', 'team-123');
       expect(mockReply.status).toHaveBeenCalledWith(200);
       expect(mockReply.send).toHaveBeenCalledWith({
@@ -636,9 +690,101 @@ describe('Cloud Credentials Route', () => {
       });
     });
 
+    it('should return credential for team user (basic view)', async () => {
+      const mockCredential = {
+        id: 'cred-1',
+        teamId: 'team-123',
+        providerId: 'aws',
+        name: 'AWS Production',
+        comment: 'Production AWS credentials',
+        provider: {
+          id: 'aws',
+          name: 'Amazon Web Services',
+          description: 'AWS cloud provider',
+        },
+        createdBy: 'user-123',
+        createdAt: '2024-01-01T00:00:00Z',
+        updatedAt: '2024-01-01T00:00:00Z',
+      };
+
+      mockTeamService.getTeamMembership.mockResolvedValue({
+        id: 'membership-1',
+        team_id: 'team-123',
+        user_id: 'user-123',
+        role: 'team_user',
+        joined_at: new Date(),
+      });
+      mockCloudCredentialsServiceInstance.getCredentialByIdBasic.mockResolvedValue(mockCredential);
+
+      const handler = routeHandlers['GET /teams/:teamId/cloud-credentials/:credentialId'];
+      await handler(mockRequest, mockReply);
+
+      expect(mockTeamService.getTeamMembership).toHaveBeenCalledWith('team-123', 'user-123');
+      expect(mockCloudCredentialsServiceInstance.getCredentialByIdBasic).toHaveBeenCalledWith('cred-1', 'team-123');
+      expect(mockReply.status).toHaveBeenCalledWith(200);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        success: true,
+        data: mockCredential,
+      });
+    });
+
+    it('should return credential for global admin', async () => {
+      const mockCredential = {
+        id: 'cred-1',
+        teamId: 'team-123',
+        providerId: 'aws',
+        name: 'AWS Production',
+        comment: 'Production AWS credentials',
+        provider: {
+          id: 'aws',
+          name: 'Amazon Web Services',
+          description: 'AWS cloud provider',
+        },
+        fields: {
+          accessKeyId: { hasValue: true, secret: false },
+          secretAccessKey: { hasValue: true, secret: true },
+        },
+        createdBy: 'user-123',
+        createdAt: '2024-01-01T00:00:00Z',
+        updatedAt: '2024-01-01T00:00:00Z',
+      };
+
+      mockTeamService.getTeamMembership.mockResolvedValue(null);
+      mockRoleServiceInstance.getUserRole.mockResolvedValue({ id: 'global_admin' });
+      mockTeamService.getTeamById.mockResolvedValue({
+        id: 'team-123',
+        name: 'Test Team',
+        slug: 'test-team',
+        description: 'Test team',
+        owner_id: 'other-user',
+        is_default: false,
+        created_at: new Date(),
+        updated_at: new Date(),
+      });
+      mockCloudCredentialsServiceInstance.getCredentialByIdGlobalAdmin.mockResolvedValue(mockCredential);
+
+      const handler = routeHandlers['GET /teams/:teamId/cloud-credentials/:credentialId'];
+      await handler(mockRequest, mockReply);
+
+      expect(mockTeamService.getTeamMembership).toHaveBeenCalledWith('team-123', 'user-123');
+      expect(mockRoleServiceInstance.getUserRole).toHaveBeenCalledWith('user-123');
+      expect(mockTeamService.getTeamById).toHaveBeenCalledWith('team-123');
+      expect(mockCloudCredentialsServiceInstance.getCredentialByIdGlobalAdmin).toHaveBeenCalledWith('cred-1', 'team-123');
+      expect(mockReply.status).toHaveBeenCalledWith(200);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        success: true,
+        data: mockCredential,
+      });
+    });
+
     it('should return 404 when credential is not found', async () => {
-      mockRoleServiceInstance.userHasPermission.mockResolvedValue(true);
-      mockRoleServiceInstance.getUserRole.mockResolvedValue({ id: 'team_admin' });
+      mockTeamService.getTeamMembership.mockResolvedValue({
+        id: 'membership-1',
+        team_id: 'team-123',
+        user_id: 'user-123',
+        role: 'team_admin',
+        joined_at: new Date(),
+      });
       mockCloudCredentialsServiceInstance.getCredentialById.mockResolvedValue(null);
 
       const handler = routeHandlers['GET /teams/:teamId/cloud-credentials/:credentialId'];
@@ -648,6 +794,20 @@ describe('Cloud Credentials Route', () => {
       expect(mockReply.send).toHaveBeenCalledWith({
         success: false,
         error: 'Cloud credential not found',
+      });
+    });
+
+    it('should return 403 for insufficient permissions', async () => {
+      mockTeamService.getTeamMembership.mockResolvedValue(null);
+      mockRoleServiceInstance.getUserRole.mockResolvedValue({ id: 'team_user' });
+
+      const handler = routeHandlers['GET /teams/:teamId/cloud-credentials/:credentialId'];
+      await handler(mockRequest, mockReply);
+
+      expect(mockReply.status).toHaveBeenCalledWith(403);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        success: false,
+        error: 'Insufficient permissions',
       });
     });
 
@@ -669,6 +829,15 @@ describe('Cloud Credentials Route', () => {
     beforeEach(async () => {
       await cloudCredentialsRoute(mockFastify as FastifyInstance);
       mockRequest.params = { teamId: 'team-123', credentialId: 'cred-1' };
+      
+      // Mock team admin membership for update operations
+      mockTeamService.getTeamMembership.mockResolvedValue({
+        id: 'membership-1',
+        team_id: 'team-123',
+        user_id: 'user-123',
+        role: 'team_admin',
+        joined_at: new Date(),
+      });
     });
 
     it('should update credentials successfully', async () => {
@@ -761,6 +930,15 @@ describe('Cloud Credentials Route', () => {
     beforeEach(async () => {
       await cloudCredentialsRoute(mockFastify as FastifyInstance);
       mockRequest.params = { teamId: 'team-123', credentialId: 'cred-1' };
+      
+      // Mock team admin membership for delete operations
+      mockTeamService.getTeamMembership.mockResolvedValue({
+        id: 'membership-1',
+        team_id: 'team-123',
+        user_id: 'user-123',
+        role: 'team_admin',
+        joined_at: new Date(),
+      });
     });
 
     it('should delete credentials successfully', async () => {
@@ -875,6 +1053,16 @@ describe('Cloud Credentials Route', () => {
 
       mockRequest.body = credentialData;
       mockRequest.params = { teamId: 'team-123' };
+      
+      // Mock team admin membership for create operations
+      mockTeamService.getTeamMembership.mockResolvedValue({
+        id: 'membership-1',
+        team_id: 'team-123',
+        user_id: 'user-123',
+        role: 'team_admin',
+        joined_at: new Date(),
+      });
+      
       mockCloudCredentialsServiceInstance.createCredentials.mockRejectedValue('String error');
 
       const handler = routeHandlers['POST /teams/:teamId/cloud-credentials'];
@@ -895,6 +1083,15 @@ describe('Cloud Credentials Route', () => {
 
       mockRequest.body = updateData;
       mockRequest.params = { teamId: 'team-123', credentialId: 'cred-1' };
+      
+      // Mock team admin membership for update operations
+      mockTeamService.getTeamMembership.mockResolvedValue({
+        id: 'membership-1',
+        team_id: 'team-123',
+        user_id: 'user-123',
+        role: 'team_admin',
+        joined_at: new Date(),
+      });
 
       const handler = routeHandlers['PUT /teams/:teamId/cloud-credentials/:credentialId'];
       await handler(mockRequest, mockReply);
@@ -914,6 +1111,16 @@ describe('Cloud Credentials Route', () => {
 
       mockRequest.body = updateData;
       mockRequest.params = { teamId: 'team-123', credentialId: 'cred-1' };
+      
+      // Mock team admin membership for update operations
+      mockTeamService.getTeamMembership.mockResolvedValue({
+        id: 'membership-1',
+        team_id: 'team-123',
+        user_id: 'user-123',
+        role: 'team_admin',
+        joined_at: new Date(),
+      });
+      
       mockCloudCredentialsServiceInstance.updateCredentials.mockRejectedValue(
         new Error('Credential with this name already exists')
       );
@@ -932,6 +1139,15 @@ describe('Cloud Credentials Route', () => {
     it('should handle service instance creation', async () => {
       // Test that service instances are created properly
       await cloudCredentialsRoute(mockFastify as FastifyInstance);
+      
+      // Mock team membership for the test
+      mockTeamService.getTeamMembership.mockResolvedValue({
+        id: 'membership-1',
+        team_id: 'team-123',
+        user_id: 'user-123',
+        role: 'team_admin',
+        joined_at: new Date(),
+      });
       
       // The services are instantiated when the route handlers are called, not during route registration
       // So we need to call a handler to trigger service instantiation

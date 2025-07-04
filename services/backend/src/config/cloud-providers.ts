@@ -88,6 +88,7 @@ export const getEnabledCloudProviders = (): CloudProvider[] => {
   return Object.values(CLOUD_PROVIDERS).filter(provider => provider.enabled);
 };
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 export const validateCredentialData = (providerId: string, data: Record<string, any>): { valid: boolean; errors: string[] } => {
   const provider = getCloudProvider(providerId);
   if (!provider) {
@@ -138,6 +139,7 @@ export const validateCredentialData = (providerId: string, data: Record<string, 
   return { valid: errors.length === 0, errors };
 };
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 export const validateCredentialDataForUpdate = (providerId: string, data: Record<string, any>): { valid: boolean; errors: string[] } => {
   const provider = getCloudProvider(providerId);
   if (!provider) {

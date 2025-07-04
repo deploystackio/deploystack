@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { FastifyInstance } from 'fastify';
 import { getEnabledCloudProviders } from '../../config/cloud-providers';
 import { CloudCredentialsService } from '../../services/cloudCredentialsService';
