@@ -26,44 +26,49 @@ export class GlobalSettingsInitService {
       return;
     }
 
-    const settingsDir = __dirname;
-    const files = fs.readdirSync(settingsDir);
-    
-    // Filter for .ts/.js files, exclude index and types files
-    const settingFiles = files.filter(file => 
-      (file.endsWith('.ts') || file.endsWith('.js')) && 
-      file !== 'index.ts' && 
-      file !== 'index.js' && 
-      file !== 'types.ts' && 
-      file !== 'types.js'
-    );
+    try {
+      const settingsDir = __dirname;
+      
+      const files = fs.readdirSync(settingsDir);
+      
+      // Filter for .ts/.js files, exclude index, types, and helpers files
+      const settingFiles = files.filter(file => 
+        (file.endsWith('.ts') || file.endsWith('.js')) && 
+        file !== 'index.ts' && 
+        file !== 'index.js' && 
+        file !== 'types.ts' && 
+        file !== 'types.js' &&
+        file !== 'helpers.ts' &&
+        file !== 'helpers.js'
+      );
 
-    console.log(`🔄 Loading global settings definitions...`);
-    console.log(`📁 Found ${settingFiles.length} setting files: ${settingFiles.map(f => f.replace(/\.(ts|js)$/, '')).join(', ')}`);
-
-    for (const file of settingFiles) {
-      try {
-        const filePath = path.join(settingsDir, file);
-        const module = await import(filePath);
-        
-        // Look for exported settings modules
-        for (const exportName of Object.keys(module)) {
-          const exportedValue = module[exportName];
-          if (exportedValue && 
-              typeof exportedValue === 'object' && 
-              exportedValue.group && 
-              Array.isArray(exportedValue.settings)) {
-            this.settingsModules.push(exportedValue as GlobalSettingsModule);
-            console.log(`✅ Loaded settings module: ${exportedValue.group.id} (${exportedValue.settings.length} settings)`);
+      for (const file of settingFiles) {
+        try {
+          const filePath = path.join(settingsDir, file);
+          
+          const module = await import(filePath);
+          
+          // Look for exported settings modules
+          for (const exportName of Object.keys(module)) {
+            const exportedValue = module[exportName];
+            
+            if (exportedValue && 
+                typeof exportedValue === 'object' && 
+                exportedValue.group && 
+                Array.isArray(exportedValue.settings)) {
+              this.settingsModules.push(exportedValue as GlobalSettingsModule);
+            }
           }
+        } catch {
+          // Silently continue on error
         }
-      } catch (error) {
-        console.error(`❌ Failed to load settings file ${file}:`, error);
       }
-    }
 
-    this.isLoaded = true;
-    console.log(`🎉 Loaded ${this.settingsModules.length} settings modules with ${this.getAllSettings().length} total settings`);
+      this.isLoaded = true;
+      
+    } catch (error) {
+      throw error;
+    }
   }
 
   /**
@@ -91,87 +96,100 @@ export class GlobalSettingsInitService {
   /**
    * Initialize groups and settings in the database (non-destructive)
    */
-  static async initializeSettings(): Promise<InitializationResult> {
-    if (!this.isLoaded) {
-      await this.loadSettingsDefinitions();
-    }
-
-    // First, create groups
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  static async initializeSettings(logger?: any): Promise<InitializationResult> {
     try {
-      await this.createGroups();
-    } catch (error) {
-      console.error('❌ Failed to create groups, continuing with settings creation:', error);
-    }
-
-    const allSettings = this.getAllSettings();
-    const result: InitializationResult = {
-      totalModules: this.settingsModules.length,
-      totalSettings: allSettings.length,
-      created: 0,
-      skipped: 0,
-      createdSettings: [],
-      skippedSettings: []
-    };
-
-    console.log(`🔄 Initializing ${allSettings.length} global settings...`);
-
-    for (const setting of allSettings) {
-      try {
-        const exists = await GlobalSettingsService.exists(setting.key);
-        
-        if (!exists) {
-          const groupIdForThisSetting = this.getGroupIdForSetting(setting.key);
-          await GlobalSettingsService.setTyped(setting.key, setting.defaultValue, setting.type, {
-            description: setting.description,
-            encrypted: setting.encrypted,
-            group_id: groupIdForThisSetting === 'unknown' ? undefined : groupIdForThisSetting // Pass correct group_id
-          });
-          
-          result.created++;
-          result.createdSettings.push(setting.key);
-          console.log(`✅ Created setting: ${setting.key}`);
-        } else {
-          result.skipped++;
-          result.skippedSettings.push(setting.key);
-          console.log(`⏭️  Skipped existing setting: ${setting.key}`);
-        }
-      } catch (error) {
-        console.error(`❌ Failed to initialize setting ${setting.key}:`, error);
+      if (!this.isLoaded) {
+        await this.loadSettingsDefinitions();
       }
-    }
 
-    console.log(`🎉 Global settings initialization complete: ${result.created} created, ${result.skipped} skipped`);
-    
-    // Check for missing required settings
-    const validation = await this.validateRequiredSettings();
-    if (!validation.valid) {
-      console.warn(`⚠️  Missing required settings: ${validation.missing.join(', ')}`);
-    }
+      // First, create groups using batch operations
+      try {
+        await this.createGroupsBatch();
+      } catch {
+        // Continue with settings creation even if group creation fails
+      }
 
-    return result;
+      // Then, create settings using batch operations
+      const allSettings = this.getAllSettings();
+      
+      const result: InitializationResult = {
+        totalModules: this.settingsModules.length,
+        totalSettings: allSettings.length,
+        created: 0,
+        skipped: 0,
+        createdSettings: [],
+        skippedSettings: []
+      };
+
+      try {
+        await this.createSettingsBatch(allSettings, result);
+      } catch {
+        // Fallback to individual creation if batch fails
+        await this.createSettingsIndividually(allSettings, result);
+      }
+
+      // Check for missing required settings
+      try {
+        await this.validateRequiredSettings();
+      } catch (error) {
+        if (logger) {
+          logger.debug({
+            operation: 'validate_required_settings',
+            error: error instanceof Error ? error.message : String(error)
+          }, 'Validation of required settings failed during initialization');
+        }
+      }
+
+      return result;
+      
+    } catch (error) {
+      throw error;
+    }
   }
 
   /**
-   * Create groups in the database (non-destructive)
+   * Create groups in the database using batch operations (non-destructive)
    */
-  private static async createGroups(): Promise<void> {
+  private static async createGroupsBatch(): Promise<void> {
     const groups = this.getGroups();
     
-    console.log(`🔄 Creating ${groups.length} setting groups...`);
+    // Check which groups need to be created
+    const groupsToCreate: GlobalSettingGroup[] = [];
     
     for (const group of groups) {
       try {
-        // Check if group already exists (we'll need to add this method to GlobalSettingsService)
         const exists = await this.groupExists(group.id);
-        
         if (!exists) {
-          await this.createGroup(group);
-          console.log(`✅ Created group: ${group.id} (${group.name})`);
-        } else {
-          console.log(`⏭️  Skipped existing group: ${group.id}`);
+          groupsToCreate.push(group);
         }
-      } catch (error) {
-        console.error(`❌ Failed to create group ${group.id}:`, error);
+      } catch {
+        // Silently continue on error
+      }
+    }
+
+    if (groupsToCreate.length === 0) {
+      return;
+    }
+
+    // Create groups using database-specific batch operations
+    try {
+      await this.executeBatchGroupCreation(groupsToCreate);
+    } catch {
+      // Fallback to individual creation
+      await this.createGroupsIndividually(groupsToCreate);
+    }
+  }
+
+  /**
+   * Fallback method to create groups individually
+   */
+  private static async createGroupsIndividually(groups: GlobalSettingGroup[]): Promise<void> {
+    for (const group of groups) {
+      try {
+        await this.createGroup(group);
+      } catch {
+        // Silently continue on error
       }
     }
   }
@@ -186,13 +204,11 @@ export class GlobalSettingsInitService {
       
       // Check if database is available
       if (!db) {
-        console.warn(`Database not available during group existence check for: ${groupId}`);
         return false;
       }
       
       const globalSettingGroupsTable = schema.globalSettingGroups;
       if (!globalSettingGroupsTable) {
-        console.warn(`GlobalSettingGroups table not found in schema for group: ${groupId}`);
         return false;
       }
 
@@ -204,8 +220,7 @@ export class GlobalSettingsInitService {
         .limit(1);
 
       return results.length > 0;
-    } catch (error) {
-      console.warn(`Error checking if group exists: ${groupId}`, error instanceof Error ? error.message : 'Unknown error');
+    } catch {
       return false;
     }
   }
@@ -246,6 +261,210 @@ export class GlobalSettingsInitService {
 
     } catch (error) {
       throw new Error(`Failed to create group '${group.id}': ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Create settings using batch operations (non-destructive)
+   */
+  private static async createSettingsBatch(allSettings: GlobalSettingDefinition[], result: InitializationResult): Promise<void> {
+    // Check which settings need to be created
+    const settingsToCreate: Array<{
+      setting: GlobalSettingDefinition;
+      groupId: string | null;
+    }> = [];
+
+    for (const setting of allSettings) {
+      try {
+        const exists = await GlobalSettingsService.exists(setting.key);
+        if (!exists) {
+          const groupIdForThisSetting = this.getGroupIdForSetting(setting.key);
+          settingsToCreate.push({
+            setting,
+            groupId: groupIdForThisSetting === 'unknown' ? null : groupIdForThisSetting
+          });
+          result.createdSettings.push(setting.key);
+        } else {
+          result.skippedSettings.push(setting.key);
+        }
+      } catch {
+        // Silently continue on error
+      }
+    }
+
+    if (settingsToCreate.length === 0) {
+      result.skipped = allSettings.length;
+      return;
+    }
+
+    // Create settings using database-specific batch operations
+    try {
+      await this.executeBatchSettingsCreation(settingsToCreate);
+
+      result.created = settingsToCreate.length;
+      result.skipped = allSettings.length - settingsToCreate.length;
+      
+      } catch (error) {
+        throw error; // Re-throw to trigger fallback
+      }
+  }
+
+  /**
+   * Fallback method to create settings individually
+   */
+  private static async createSettingsIndividually(allSettings: GlobalSettingDefinition[], result: InitializationResult): Promise<void> {
+    for (const setting of allSettings) {
+      try {
+        const exists = await GlobalSettingsService.exists(setting.key);
+        
+        if (!exists) {
+          const groupIdForThisSetting = this.getGroupIdForSetting(setting.key);
+          await GlobalSettingsService.setTyped(setting.key, setting.defaultValue, setting.type, {
+            description: setting.description,
+            encrypted: setting.encrypted,
+            group_id: groupIdForThisSetting === 'unknown' ? undefined : groupIdForThisSetting
+          });
+          
+          result.created++;
+          result.createdSettings.push(setting.key);
+        } else {
+          result.skipped++;
+          result.skippedSettings.push(setting.key);
+        }
+      } catch {
+        // Silently continue on error
+      }
+    }
+  }
+
+  /**
+   * Universal batch wrapper that works across all database types
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private static async universalBatch(operations: any[]): Promise<any[]> {
+    try {
+      const db = getDb();
+      
+      if (!db) {
+        throw new Error('Database not available during batch operation');
+      }
+
+      // For D1, we need to execute operations sequentially due to our HTTP client implementation
+      // The D1 HTTP client doesn't support true batch operations
+      const results = [];
+      for (let i = 0; i < operations.length; i++) {
+        const operation = operations[i];
+        
+        try {
+          const result = await operation;
+          results.push(result);
+        } catch (error) {
+          throw error;
+        }
+      }
+      
+      return results;
+      
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Execute batch group creation using universal batch wrapper
+   */
+  private static async executeBatchGroupCreation(groupsToCreate: GlobalSettingGroup[]): Promise<void> {
+    try {
+      const db = getDb();
+      const schema = getSchema();
+      
+      if (!db) {
+        throw new Error('Database not available during group creation');
+      }
+      
+      const globalSettingGroupsTable = schema.globalSettingGroups;
+      
+      if (!globalSettingGroupsTable) {
+        throw new Error('GlobalSettingGroups table not found in schema');
+      }
+
+      const now = new Date();
+      const groupsData = groupsToCreate.map(group => ({
+        id: group.id,
+        name: group.name,
+        description: group.description || null,
+        icon: group.icon || null,
+        sort_order: group.sort_order || 0,
+        created_at: now,
+        updated_at: now,
+      }));
+
+      // Use universal batch wrapper
+      await this.universalBatch([
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (db as any).insert(globalSettingGroupsTable).values(groupsData)
+      ]);
+      
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Execute batch settings creation using universal batch wrapper with D1 parameter limits
+   */
+  private static async executeBatchSettingsCreation(settingsToCreate: Array<{
+    setting: GlobalSettingDefinition;
+    groupId: string | null;
+  }>): Promise<void> {
+    const db = getDb();
+    const schema = getSchema();
+    
+    if (!db) {
+      throw new Error('Database not available during settings creation');
+    }
+
+    const { encrypt } = await import('../utils/encryption');
+    const now = new Date();
+    
+    const settingsData = settingsToCreate.map(({ setting, groupId }) => {
+      const stringValue = String(setting.defaultValue);
+      const finalValue = setting.encrypted ? encrypt(stringValue) : stringValue;
+      
+      return {
+        key: setting.key,
+        value: finalValue,
+        type: setting.type,
+        description: setting.description || null,
+        is_encrypted: setting.encrypted || false,
+        group_id: groupId,
+        created_at: now,
+        updated_at: now,
+      };
+    });
+
+    // D1 has a parameter limit of around 100-120 parameters per query
+    // Each setting has 8 columns, so we can safely batch ~12 settings at a time (96 parameters)
+    const BATCH_SIZE = 10; // Conservative batch size to stay well under D1's limits
+    
+    // Split settings into smaller batches
+    const batches = [];
+    for (let i = 0; i < settingsData.length; i += BATCH_SIZE) {
+      batches.push(settingsData.slice(i, i + BATCH_SIZE));
+    }
+    
+    // Process each batch
+    for (let i = 0; i < batches.length; i++) {
+      const batch = batches[i];
+      
+      try {
+        await this.universalBatch([
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (db as any).insert(schema.globalSettings).values(batch)
+        ]);
+      } catch (error) {
+        throw error;
+      }
     }
   }
 
@@ -295,8 +514,7 @@ export class GlobalSettingsInitService {
             groups[groupId].missingKeys.push(setting.key);
           }
         }
-      } catch (error) {
-        console.error(`Error validating setting ${setting.key}:`, error);
+      } catch {
         missing.push(setting.key);
         const groupId = this.getGroupIdForSetting(setting.key);
         if (groups[groupId]) {
@@ -344,8 +562,7 @@ export class GlobalSettingsInitService {
         fromName: fromName?.value || 'DeployStack',
         fromEmail: fromEmail?.value || ''
       };
-    } catch (error) {
-      console.error('Failed to get SMTP configuration:', error);
+    } catch {
       return null;
     }
   }
@@ -377,8 +594,7 @@ export class GlobalSettingsInitService {
         callbackUrl: callbackUrl?.value || 'http://localhost:3000/api/auth/github/callback',
         scope: scope?.value || 'user:email'
       };
-    } catch (error) {
-      console.error('Failed to get GitHub OAuth configuration:', error);
+    } catch {
       return null;
     }
   }
@@ -419,8 +635,7 @@ export class GlobalSettingsInitService {
         enableLogin: enableLogin?.value === 'true',
         enableEmailRegistration: enableEmailRegistration?.value === 'true'
       };
-    } catch (error) {
-      console.error('Failed to get Global configuration:', error);
+    } catch {
       return null;
     }
   }
@@ -432,8 +647,7 @@ export class GlobalSettingsInitService {
     try {
       const setting = await GlobalSettingsService.get('global.send_mail');
       return setting?.value === 'true';
-    } catch (error) {
-      console.error('Failed to check if email sending is enabled:', error);
+    } catch {
       return false; // Default to disabled if there's an error
     }
   }
@@ -445,8 +659,7 @@ export class GlobalSettingsInitService {
     try {
       const setting = await GlobalSettingsService.get('global.page_url');
       return setting?.value || 'http://localhost:5173';
-    } catch (error) {
-      console.error('Failed to get page URL:', error);
+    } catch {
       return 'http://localhost:5173'; // Default fallback
     }
   }
@@ -458,8 +671,7 @@ export class GlobalSettingsInitService {
     try {
       const setting = await GlobalSettingsService.get('global.enable_login');
       return setting?.value === 'true';
-    } catch (error) {
-      console.error('Failed to check if login is enabled:', error);
+    } catch {
       return true; // Default to enabled if there's an error
     }
   }
@@ -471,8 +683,7 @@ export class GlobalSettingsInitService {
     try {
       const setting = await GlobalSettingsService.get('global.enable_email_registration');
       return setting?.value === 'true';
-    } catch (error) {
-      console.error('Failed to check if email registration is enabled:', error);
+    } catch {
       return true; // Default to enabled if there's an error
     }
   }

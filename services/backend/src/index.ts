@@ -10,12 +10,17 @@ const start = async () => {
     await server.listen({ port, host: '0.0.0.0' })
     
     // Display the fancy startup banner
-    displayStartupBanner(port)
+    displayStartupBanner(port, server.log)
     
     // Also log using the standard logger (useful for log files)
     server.log.info(`DeployStack server started on port ${port}`)
   } catch (err) {
-    console.error('Error starting server:', err)
+    // Server creation failed, so we can't use server.log
+    // Use process.stderr for critical startup errors
+    process.stderr.write(`Error starting server: ${err instanceof Error ? err.message : String(err)}\n`);
+    if (err instanceof Error && err.stack) {
+      process.stderr.write(`Stack trace: ${err.stack}\n`);
+    }
     process.exit(1)
   }
 }

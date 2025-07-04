@@ -1,29 +1,27 @@
 import { type FastifyInstance, type FastifyRequest, type FastifyReply } from 'fastify';
-import { setupNewDatabase } from '../../db';
-import { getDbConfig } from '../../db/config';
-import { 
-  InternalDbConfigSchema,
-  DbSetupRequestBodySchema, 
-  DatabaseType,
-  type InternalDbConfig,
-  type DbSetupRequestBody
-} from './schemas';
-import { ZodError, z } from 'zod';
+import { initializeDatabase } from '../../db';
+import { getDatabaseConfig, validateDatabaseConfig } from '../../db/config';
+import { DbSetupRequestBodySchema, DatabaseType } from './schemas';
+import { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
+import fs from 'node:fs/promises';
+import path from 'node:path';
 
 // Response schemas for different scenarios
 const setupSuccessResponseSchema = z.object({
   message: z.string().describe('Success message indicating the database setup status.'),
-  restart_required: z.boolean().describe('Indicates whether a server restart is required to complete the setup.')
+  restart_required: z.boolean().describe('Indicates whether a server restart is required to complete the setup.'),
+  database_type: z.string().describe('The type of database that was configured.')
 });
 
 const setupErrorResponseSchema = z.object({
   error: z.string().describe('Error message describing what went wrong.'),
-  details: z.array(z.any()).optional().describe('Additional error details (validation errors).')
+  details: z.any().optional().describe('Additional error details.')
 });
 
 const setupConflictResponseSchema = z.object({
-  message: z.string().describe('Message indicating that database setup has already been performed.')
+  message: z.string().describe('Message indicating that database setup has already been performed.'),
+  database_type: z.string().describe('The type of database that is currently configured.')
 });
 
 // Route schema for OpenAPI documentation
@@ -31,10 +29,17 @@ const dbSetupRouteSchema = {
   tags: ['Database'],
   summary: 'Setup database',
   description: 'Initializes and configures the database for the DeployStack application. This endpoint sets up the database schema, creates necessary tables, and initializes database-dependent services. Can only be called once - subsequent calls will return a conflict error.',
-  body: zodToJsonSchema(DbSetupRequestBodySchema, { 
-    $refStrategy: 'none', 
-    target: 'openApi3' 
-  }),
+  requestBody: {
+    content: {
+      'application/json': {
+        schema: zodToJsonSchema(DbSetupRequestBodySchema, {
+          $refStrategy: 'none',
+          target: 'openApi3'
+        })
+      }
+    },
+    required: true
+  },
   response: {
     200: zodToJsonSchema(setupSuccessResponseSchema.describe('Database setup completed successfully'), {
       $refStrategy: 'none',
@@ -55,42 +60,128 @@ const dbSetupRouteSchema = {
   }
 };
 
+/**
+ * Save database selection to persistent_data/db.selection.json
+ */
+async function saveDatabaseSelection(dbType: DatabaseType): Promise<void> {
+  const persistentDataDir = path.join(process.cwd(), 'persistent_data');
+  const selectionFile = path.join(persistentDataDir, 'db.selection.json');
+  
+  // Ensure persistent_data directory exists
+  await fs.mkdir(persistentDataDir, { recursive: true });
+  
+  const selection = {
+    type: dbType,
+    selectedAt: new Date().toISOString(),
+    version: '1.0'
+  };
+  
+  await fs.writeFile(selectionFile, JSON.stringify(selection, null, 2), 'utf8');
+}
+
+/**
+ * Check if database selection already exists
+ */
+async function getDatabaseSelection(): Promise<{ type: DatabaseType; selectedAt: string } | null> {
+  try {
+    const persistentDataDir = path.join(process.cwd(), 'persistent_data');
+    const selectionFile = path.join(persistentDataDir, 'db.selection.json');
+    
+    const content = await fs.readFile(selectionFile, 'utf8');
+    const selection = JSON.parse(content);
+    
+    return {
+      type: selection.type as DatabaseType,
+      selectedAt: selection.selectedAt
+    };
+  } catch {
+    // File doesn't exist or is invalid
+    return null;
+  }
+}
+
+/**
+ * Set environment variables for the selected database type
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function setDatabaseEnvironment(dbType: DatabaseType, logger?: any): void {
+  // Clear any existing DB_TYPE
+  delete process.env.DB_TYPE;
+  
+  // Set the selected database type
+  process.env.DB_TYPE = dbType;
+  
+  if (logger) {
+    logger.info({
+      operation: 'set_database_environment',
+      databaseType: dbType
+    }, `Database type set to: ${dbType}`);
+  }
+}
+
 // Handler for POST /api/db/setup
 async function setupDbHandler(
-  request: FastifyRequest<{ Body: DbSetupRequestBody }>,
+  request: FastifyRequest,
   reply: FastifyReply,
   server: FastifyInstance
 ) {
   try {
-    // Check if DB is already configured
-    const existingConfig = await getDbConfig();
-    if (existingConfig) {
-      server.log.warn('Attempt to set up an already configured database.');
-      return reply.status(409).send({ message: 'Database setup has already been performed.' });
+    // Validate request body
+    const parseResult = DbSetupRequestBodySchema.safeParse(request.body);
+    if (!parseResult.success) {
+      return reply.status(400).send({ 
+        error: 'Invalid request body',
+        details: parseResult.error.errors
+      });
     }
 
-    // Fastify has already validated the request body using our Zod schema
-    // If we reach here, request.body is guaranteed to be valid
+    const { type: dbType } = parseResult.data;
+
+    // Check if database is already configured
+    const existingSelection = await getDatabaseSelection();
+    if (existingSelection) {
+      server.log.warn('Attempt to setup database when already configured.');
+      return reply.status(409).send({ 
+        message: 'Database setup has already been performed.',
+        database_type: existingSelection.type
+      });
+    }
+
+    // Validate that the selected database type has proper environment configuration
+    setDatabaseEnvironment(dbType, server.log);
     
-    // Determine DB path based on environment
-    const isTestEnv = process.env.NODE_ENV === 'test';
-    const sqliteDbFileName = isTestEnv ? 'deploystack.test.db' : 'deploystack.db';
-    // dbPath should be relative to services/backend
-    // For tests, use the test-data directory; for production, use the persistent_data directory
-    const sqliteDbPath = isTestEnv ? `tests/e2e/test-data/${sqliteDbFileName}` : `persistent_data/database/${sqliteDbFileName}`;
+    let dbConfig;
+    try {
+      dbConfig = getDatabaseConfig(server.log);
+    } catch (error) {
+      const typedError = error as Error;
+      server.log.error('Database configuration error:', typedError.message);
+      return reply.status(400).send({ 
+        error: 'Database configuration incomplete. Please check environment variables.',
+        details: typedError.message
+      });
+    }
 
-    // Since Zod validation ensures type is valid DatabaseType.SQLite, we can trust it
-    const internalConfigObject: InternalDbConfig = { 
-      type: DatabaseType.SQLite, 
-      dbPath: sqliteDbPath 
-    };
+    // Validate configuration
+    if (!validateDatabaseConfig(dbConfig)) {
+      server.log.error('Invalid database configuration for selected type');
+      return reply.status(400).send({ 
+        error: `Invalid ${dbType} database configuration. Please check environment variables.`,
+        details: `Database type: ${dbType}`
+      });
+    }
 
-    const validatedInternalConfig = InternalDbConfigSchema.parse(internalConfigObject);
-
-    server.log.info(`Attempting to set up database with type: ${validatedInternalConfig.type}`);
-    const success = await setupNewDatabase(validatedInternalConfig);
+    server.log.info(`Setting up ${dbType} database...`);
+    
+    // Save the database selection
+    await saveDatabaseSelection(dbType);
+    server.log.info(`Database selection saved: ${dbType}`);
+    
+    // Initialize database
+    const success = await initializeDatabase(request.log);
+    
     if (success) {
-      server.log.info('Database setup/initialization successful.');
+      server.log.info('Database initialization successful.');
       
       try {
         // Re-initialize database-dependent services
@@ -105,40 +196,43 @@ async function setupDbHandler(
           server.log.info('Database setup and re-initialization completed successfully.');
           return reply.status(200).send({ 
             message: 'Database setup successful. All services have been initialized and are ready to use.',
-            restart_required: false
+            restart_required: false,
+            database_type: dbType
           });
         } else {
-          server.log.warn('Database setup succeeded but re-initialization failed. Manual restart may be required.');
+          server.log.warn('Database initialization succeeded but re-initialization failed. Manual restart may be required.');
           return reply.status(200).send({ 
             message: 'Database setup successful, but some services may require a server restart to function properly.',
-            restart_required: true
+            restart_required: true,
+            database_type: dbType
           });
         }
       } catch (reinitError) {
         server.log.error('Error during re-initialization after database setup:', reinitError);
         return reply.status(200).send({ 
           message: 'Database setup successful, but re-initialization failed. Please restart the server to complete setup.',
-          restart_required: true
+          restart_required: true,
+          database_type: dbType
         });
       }
     } else {
-      server.log.error('Database setup/initialization failed.');
-      return reply.status(500).send({ message: 'Database setup failed. Check server logs.' });
+      server.log.error('Database initialization failed.');
+      return reply.status(500).send({ 
+        error: 'Database initialization failed. Check server logs and configuration.'
+      });
     }
   } catch (error) {
-    if (error instanceof ZodError) {
-      server.log.warn(error, 'Validation error during database setup');
-      return reply.status(400).send({ error: 'Invalid request body', details: error.errors });
-    }
     const typedError = error as Error;
     server.log.error(typedError, `Error during database setup: ${typedError.message}`);
-    return reply.status(500).send({ error: `Database setup failed: ${typedError.message}` });
+    return reply.status(500).send({ 
+      error: `Database setup failed: ${typedError.message}`
+    });
   }
 }
 
-// Fastify plugin to register the /api/db/setup route
+// Fastify plugin to register the database setup route
 export default async function dbSetupRoute(server: FastifyInstance) {
-  server.post<{ Body: DbSetupRequestBody }>(
+  server.post(
     '/api/db/setup',
     { schema: dbSetupRouteSchema },
     async (request, reply) => setupDbHandler(request, reply, server)

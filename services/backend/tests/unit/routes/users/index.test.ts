@@ -20,7 +20,7 @@ const mockGetUserIdFromParams = getUserIdFromParams as MockedFunction<typeof get
 
 describe('Users Route', () => {
   let mockFastify: Partial<FastifyInstance>;
-  let mockRequest: Partial<FastifyRequest>;
+  let mockRequest: any;
   let mockReply: Partial<FastifyReply>;
   let mockUserService: any;
   let mockTeamService: any;
@@ -44,10 +44,12 @@ describe('Users Route', () => {
 
     mockTeamService = {
       getUserTeams: vi.fn(),
+      getTeamMembership: vi.fn(),
     };
 
     MockedUserService.mockImplementation(() => mockUserService);
     MockedTeamService.getUserTeams = mockTeamService.getUserTeams;
+    MockedTeamService.getTeamMembership = mockTeamService.getTeamMembership;
 
     // Setup mock middleware
     mockRequirePermission.mockReturnValue(vi.fn());
@@ -59,16 +61,28 @@ describe('Users Route', () => {
 
     // Setup mock Fastify instance
     mockFastify = {
-      get: vi.fn((path, options, handler) => {
-        routeHandlers[`GET ${path}`] = handler;
+      get: vi.fn((path: string, options: any, handler?: any) => {
+        if (handler) {
+          routeHandlers[`GET ${path}`] = handler;
+        } else {
+          routeHandlers[`GET ${path}`] = options;
+        }
         return mockFastify as FastifyInstance;
       }),
-      put: vi.fn((path, options, handler) => {
-        routeHandlers[`PUT ${path}`] = handler;
+      put: vi.fn((path: string, options: any, handler?: any) => {
+        if (handler) {
+          routeHandlers[`PUT ${path}`] = handler;
+        } else {
+          routeHandlers[`PUT ${path}`] = options;
+        }
         return mockFastify as FastifyInstance;
       }),
-      delete: vi.fn((path, options, handler) => {
-        routeHandlers[`DELETE ${path}`] = handler;
+      delete: vi.fn((path: string, options: any, handler?: any) => {
+        if (handler) {
+          routeHandlers[`DELETE ${path}`] = handler;
+        } else {
+          routeHandlers[`DELETE ${path}`] = options;
+        }
         return mockFastify as FastifyInstance;
       }),
       log: {
@@ -87,10 +101,10 @@ describe('Users Route', () => {
         id: 'current-user-123',
         username: 'testuser',
         email: 'test@example.com',
-      } as any,
+      },
       session: {
         id: 'session-123',
-      } as any,
+      },
     };
 
     // Setup mock reply
@@ -514,6 +528,332 @@ describe('Users Route', () => {
       expect(mockReply.send).toHaveBeenCalledWith({
         success: false,
         error: 'Failed to fetch user teams',
+      });
+    });
+  });
+
+  describe('PUT /api/users/:id/role', () => {
+    beforeEach(async () => {
+      await usersRoute(mockFastify as FastifyInstance);
+    });
+
+    it('should assign role to user successfully', async () => {
+      const roleData = { role_id: 'new-role-123' };
+      const updatedUser = { id: 'user-123', role_id: 'new-role-123' };
+      
+      mockRequest.params = { id: 'user-123' };
+      mockRequest.body = roleData;
+      mockRequest.user = { id: 'current-user-456' };
+      mockUserService.assignRole.mockResolvedValue(true);
+      mockUserService.getUserById.mockResolvedValue(updatedUser);
+
+      const handler = routeHandlers['PUT /api/users/:id/role'];
+      await handler(mockRequest, mockReply);
+
+      expect(mockUserService.assignRole).toHaveBeenCalledWith('user-123', 'new-role-123');
+      expect(mockUserService.getUserById).toHaveBeenCalledWith('user-123');
+      expect(mockReply.status).toHaveBeenCalledWith(200);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        success: true,
+        data: updatedUser,
+        message: 'Role assigned successfully',
+      });
+    });
+
+    it('should prevent users from changing their own role', async () => {
+      const roleData = { role_id: 'new-role-123' };
+      
+      mockRequest.params = { id: 'current-user-123' };
+      mockRequest.body = roleData;
+      mockRequest.user = { id: 'current-user-123' };
+
+      const handler = routeHandlers['PUT /api/users/:id/role'];
+      await handler(mockRequest, mockReply);
+
+      expect(mockUserService.assignRole).not.toHaveBeenCalled();
+      expect(mockReply.status).toHaveBeenCalledWith(403);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        success: false,
+        error: 'Cannot change your own role',
+      });
+    });
+
+    it('should return 404 when user or role not found', async () => {
+      const roleData = { role_id: 'nonexistent-role' };
+      
+      mockRequest.params = { id: 'user-123' };
+      mockRequest.body = roleData;
+      mockRequest.user = { id: 'current-user-456' };
+      mockUserService.assignRole.mockResolvedValue(false);
+
+      const handler = routeHandlers['PUT /api/users/:id/role'];
+      await handler(mockRequest, mockReply);
+
+      expect(mockReply.status).toHaveBeenCalledWith(404);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        success: false,
+        error: 'User or role not found',
+      });
+    });
+
+    it('should handle validation errors', async () => {
+      const zodError = new ZodError([
+        {
+          code: 'invalid_type',
+          expected: 'string',
+          received: 'number',
+          path: ['role_id'],
+          message: 'Expected string, received number',
+        },
+      ]);
+      
+      mockRequest.params = { id: 'user-123' };
+      mockRequest.body = { role_id: 123 };
+      mockRequest.user = { id: 'current-user-456' };
+      mockUserService.assignRole.mockRejectedValue(zodError);
+
+      const handler = routeHandlers['PUT /api/users/:id/role'];
+      await handler(mockRequest, mockReply);
+
+      expect(mockReply.status).toHaveBeenCalledWith(400);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        success: false,
+        error: 'Validation error',
+        details: zodError.errors,
+      });
+    });
+
+    it('should handle service errors', async () => {
+      const error = new Error('Database error');
+      mockRequest.params = { id: 'user-123' };
+      mockRequest.body = { role_id: 'role-123' };
+      mockRequest.user = { id: 'current-user-456' };
+      mockUserService.assignRole.mockRejectedValue(error);
+
+      const handler = routeHandlers['PUT /api/users/:id/role'];
+      await handler(mockRequest, mockReply);
+
+      expect(mockFastify.log!.error).toHaveBeenCalledWith(error, 'Error assigning role');
+      expect(mockReply.status).toHaveBeenCalledWith(500);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        success: false,
+        error: 'Failed to assign role',
+      });
+    });
+  });
+
+  describe('GET /api/users/stats', () => {
+    beforeEach(async () => {
+      await usersRoute(mockFastify as FastifyInstance);
+    });
+
+    it('should return user statistics successfully', async () => {
+      const mockStats = {
+        'admin': 2,
+        'user': 10,
+        'moderator': 3,
+      };
+      mockUserService.getUserCountByRole.mockResolvedValue(mockStats);
+
+      const handler = routeHandlers['GET /api/users/stats'];
+      await handler(mockRequest, mockReply);
+
+      expect(mockUserService.getUserCountByRole).toHaveBeenCalled();
+      expect(mockReply.status).toHaveBeenCalledWith(200);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        success: true,
+        data: {
+          user_count_by_role: mockStats,
+        },
+      });
+    });
+
+    it('should handle service errors', async () => {
+      const error = new Error('Database error');
+      mockUserService.getUserCountByRole.mockRejectedValue(error);
+
+      const handler = routeHandlers['GET /api/users/stats'];
+      await handler(mockRequest, mockReply);
+
+      expect(mockFastify.log!.error).toHaveBeenCalledWith(error, 'Error fetching user statistics');
+      expect(mockReply.status).toHaveBeenCalledWith(500);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        success: false,
+        error: 'Failed to fetch user statistics',
+      });
+    });
+  });
+
+  describe('GET /api/users/role/:roleId', () => {
+    beforeEach(async () => {
+      await usersRoute(mockFastify as FastifyInstance);
+    });
+
+    it('should return users by role successfully', async () => {
+      const mockUsers = [
+        { id: '1', username: 'admin1', email: 'admin1@example.com', role_id: 'admin-role' },
+        { id: '2', username: 'admin2', email: 'admin2@example.com', role_id: 'admin-role' },
+      ];
+      mockRequest.params = { roleId: 'admin-role' };
+      mockUserService.getUsersByRole.mockResolvedValue(mockUsers);
+
+      const handler = routeHandlers['GET /api/users/role/:roleId'];
+      await handler(mockRequest, mockReply);
+
+      expect(mockUserService.getUsersByRole).toHaveBeenCalledWith('admin-role');
+      expect(mockReply.status).toHaveBeenCalledWith(200);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        success: true,
+        data: mockUsers,
+      });
+    });
+
+    it('should handle service errors', async () => {
+      const error = new Error('Database error');
+      mockRequest.params = { roleId: 'admin-role' };
+      mockUserService.getUsersByRole.mockRejectedValue(error);
+
+      const handler = routeHandlers['GET /api/users/role/:roleId'];
+      await handler(mockRequest, mockReply);
+
+      expect(mockFastify.log!.error).toHaveBeenCalledWith(error, 'Error fetching users by role');
+      expect(mockReply.status).toHaveBeenCalledWith(500);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        success: false,
+        error: 'Failed to fetch users by role',
+      });
+    });
+  });
+
+  describe('GET /api/users/:id/teams', () => {
+    beforeEach(async () => {
+      await usersRoute(mockFastify as FastifyInstance);
+    });
+
+    it('should return user teams by ID successfully', async () => {
+      const mockTeams = [
+        { id: 'team-1', name: 'Team 1', slug: 'team-1', owner_id: 'user-123' },
+        { id: 'team-2', name: 'Team 2', slug: 'team-2', owner_id: 'other-user' },
+      ];
+      const mockUser = { id: 'user-123', username: 'testuser' };
+      
+      mockRequest.params = { id: 'user-123' };
+      mockUserService.getUserById.mockResolvedValue(mockUser);
+      mockTeamService.getUserTeams.mockResolvedValue(mockTeams);
+      mockTeamService.getTeamMembership
+        .mockResolvedValueOnce({ role: 'team_admin' })
+        .mockResolvedValueOnce({ role: 'team_user' });
+
+      const handler = routeHandlers['GET /api/users/:id/teams'];
+      await handler(mockRequest, mockReply);
+
+      expect(mockUserService.getUserById).toHaveBeenCalledWith('user-123');
+      expect(mockTeamService.getUserTeams).toHaveBeenCalledWith('user-123');
+      expect(mockReply.status).toHaveBeenCalledWith(200);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        success: true,
+        teams: [
+          { ...mockTeams[0], role: 'team_admin', is_owner: true },
+          { ...mockTeams[1], role: 'team_user', is_owner: false },
+        ],
+      });
+    });
+
+    it('should return 404 when user not found', async () => {
+      mockRequest.params = { id: 'nonexistent' };
+      mockUserService.getUserById.mockResolvedValue(null);
+
+      const handler = routeHandlers['GET /api/users/:id/teams'];
+      await handler(mockRequest, mockReply);
+
+      expect(mockReply.status).toHaveBeenCalledWith(404);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        success: false,
+        error: 'User not found',
+      });
+    });
+
+    it('should handle service errors', async () => {
+      const error = new Error('Database error');
+      mockRequest.params = { id: 'user-123' };
+      mockUserService.getUserById.mockRejectedValue(error);
+
+      const handler = routeHandlers['GET /api/users/:id/teams'];
+      await handler(mockRequest, mockReply);
+
+      expect(mockFastify.log!.error).toHaveBeenCalledWith(error, 'Error fetching user teams');
+      expect(mockReply.status).toHaveBeenCalledWith(500);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        success: false,
+        error: 'Failed to fetch user teams',
+      });
+    });
+  });
+
+  describe('Error handling for GET /api/users/me', () => {
+    beforeEach(async () => {
+      await usersRoute(mockFastify as FastifyInstance);
+    });
+
+    it('should handle service errors', async () => {
+      const error = new Error('Database error');
+      mockRequest.user = { id: 'current-user-123' };
+      mockUserService.getUserById.mockRejectedValue(error);
+
+      const handler = routeHandlers['GET /api/users/me'];
+      await handler(mockRequest, mockReply);
+
+      expect(mockFastify.log!.error).toHaveBeenCalledWith(error, 'Error fetching current user');
+      expect(mockReply.status).toHaveBeenCalledWith(500);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        success: false,
+        error: 'Failed to fetch user profile',
+      });
+    });
+  });
+
+  describe('Additional error handling for PUT /api/users/:id', () => {
+    beforeEach(async () => {
+      await usersRoute(mockFastify as FastifyInstance);
+    });
+
+    it('should handle generic service errors', async () => {
+      const error = new Error('Generic database error');
+      mockRequest.params = { id: 'user-123' };
+      mockRequest.body = { username: 'newname' };
+      mockUserService.updateUser.mockRejectedValue(error);
+
+      const handler = routeHandlers['PUT /api/users/:id'];
+      await handler(mockRequest, mockReply);
+
+      expect(mockFastify.log!.error).toHaveBeenCalledWith(error, 'Error updating user');
+      expect(mockReply.status).toHaveBeenCalledWith(500);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        success: false,
+        error: 'Failed to update user',
+      });
+    });
+  });
+
+  describe('Additional error handling for DELETE /api/users/:id', () => {
+    beforeEach(async () => {
+      await usersRoute(mockFastify as FastifyInstance);
+    });
+
+    it('should handle generic service errors', async () => {
+      const error = new Error('Generic database error');
+      mockRequest.params = { id: 'user-123' };
+      mockRequest.user = { id: 'current-user-456' };
+      mockUserService.deleteUser.mockRejectedValue(error);
+
+      const handler = routeHandlers['DELETE /api/users/:id'];
+      await handler(mockRequest, mockReply);
+
+      expect(mockFastify.log!.error).toHaveBeenCalledWith(error, 'Error deleting user');
+      expect(mockReply.status).toHaveBeenCalledWith(500);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        success: false,
+        error: 'Failed to delete user',
       });
     });
   });

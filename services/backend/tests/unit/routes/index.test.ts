@@ -9,6 +9,7 @@ vi.mock('../../../src/routes/roles');
 vi.mock('../../../src/routes/users');
 vi.mock('../../../src/routes/globalSettings');
 vi.mock('../../../src/routes/teams');
+vi.mock('../../../src/routes/cloud-credentials');
 
 // Import mocked modules
 import dbStatusRoute from '../../../src/routes/db/status';
@@ -17,6 +18,7 @@ import rolesRoute from '../../../src/routes/roles';
 import usersRoute from '../../../src/routes/users';
 import globalSettingsRoute from '../../../src/routes/globalSettings';
 import teamsRoute from '../../../src/routes/teams';
+import cloudCredentialsRoute from '../../../src/routes/cloud-credentials';
 
 // Type the mocked functions
 const mockDbStatusRoute = dbStatusRoute as MockedFunction<typeof dbStatusRoute>;
@@ -25,9 +27,10 @@ const mockRolesRoute = rolesRoute as MockedFunction<typeof rolesRoute>;
 const mockUsersRoute = usersRoute as MockedFunction<typeof usersRoute>;
 const mockGlobalSettingsRoute = globalSettingsRoute as MockedFunction<typeof globalSettingsRoute>;
 const mockTeamsRoute = teamsRoute as MockedFunction<typeof teamsRoute>;
+const mockCloudCredentialsRoute = cloudCredentialsRoute as MockedFunction<typeof cloudCredentialsRoute>;
 
 describe('Main Routes Registration', () => {
-  let mockFastify: Partial<FastifyInstance>;
+  let mockFastify: Partial<FastifyInstance> & { db?: any };
   let routeHandlers: Record<string, any>;
 
   beforeEach(() => {
@@ -60,19 +63,21 @@ describe('Main Routes Registration', () => {
     mockUsersRoute.mockResolvedValue(undefined);
     mockGlobalSettingsRoute.mockResolvedValue(undefined);
     mockTeamsRoute.mockResolvedValue(undefined);
+    mockCloudCredentialsRoute.mockResolvedValue(undefined);
   });
 
   describe('Route Registration', () => {
     it('should register all route modules', async () => {
       await registerRoutes(mockFastify as FastifyInstance);
 
-      expect(mockFastify.register).toHaveBeenCalledTimes(6);
+      expect(mockFastify.register).toHaveBeenCalledTimes(7);
       expect(mockFastify.register).toHaveBeenCalledWith(dbStatusRoute);
       expect(mockFastify.register).toHaveBeenCalledWith(dbSetupRoute);
       expect(mockFastify.register).toHaveBeenCalledWith(rolesRoute);
       expect(mockFastify.register).toHaveBeenCalledWith(usersRoute);
       expect(mockFastify.register).toHaveBeenCalledWith(globalSettingsRoute);
       expect(mockFastify.register).toHaveBeenCalledWith(teamsRoute);
+      expect(mockFastify.register).toHaveBeenCalledWith(cloudCredentialsRoute);
     });
 
     it('should register health check route', async () => {
@@ -183,7 +188,7 @@ describe('Main Routes Registration', () => {
       expect(result).toBeUndefined();
       
       // Verify all routes were registered
-      expect(mockFastify.register).toHaveBeenCalledTimes(6);
+      expect(mockFastify.register).toHaveBeenCalledTimes(7);
     });
 
     it('should register health check route regardless of other routes', async () => {
@@ -205,6 +210,7 @@ describe('Main Routes Registration', () => {
       expect(registerCalls[3][0]).toBe(usersRoute);
       expect(registerCalls[4][0]).toBe(globalSettingsRoute);
       expect(registerCalls[5][0]).toBe(teamsRoute);
+      expect(registerCalls[6][0]).toBe(cloudCredentialsRoute);
     });
   });
 });

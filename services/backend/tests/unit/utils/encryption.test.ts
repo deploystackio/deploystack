@@ -366,14 +366,32 @@ describe('encryption.ts', () => {
   });
 
   describe('environment variable handling', () => {
-    it('should log debug information in test environment', () => {
+    it('should log debug information in test environment when logger is provided', () => {
       process.env.NODE_ENV = 'test';
       process.env.DEPLOYSTACK_ENCRYPTION_SECRET = 'debug-test-secret';
       
-      encrypt('test message');
+      // Create a mock logger that matches FastifyBaseLogger interface
+      const mockLogger = {
+        debug: vi.fn(),
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        fatal: vi.fn(),
+        trace: vi.fn(),
+        silent: vi.fn(),
+        child: vi.fn(() => mockLogger),
+        level: 'debug'
+      } as any;
       
-      expect(consoleLogSpy).toHaveBeenCalledWith(
-        '[TEST_ENV_ENCRYPTION_DEBUG] getEncryptionKey() using DEPLOYSTACK_ENCRYPTION_SECRET: "debug-test-secret"'
+      encrypt('test message', mockLogger);
+      
+      expect(mockLogger.debug).toHaveBeenCalledWith(
+        {
+          secretFromEnv: 'debug-test-secret',
+          operation: 'get_encryption_key',
+          environment: 'test'
+        },
+        '[TEST_ENV_ENCRYPTION_DEBUG] getEncryptionKey() using DEPLOYSTACK_ENCRYPTION_SECRET'
       );
     });
 
@@ -381,20 +399,60 @@ describe('encryption.ts', () => {
       process.env.NODE_ENV = 'production';
       process.env.DEPLOYSTACK_ENCRYPTION_SECRET = 'production-secret';
       
-      encrypt('test message');
+      // Create a mock logger that matches FastifyBaseLogger interface
+      const mockLogger = {
+        debug: vi.fn(),
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        fatal: vi.fn(),
+        trace: vi.fn(),
+        silent: vi.fn(),
+        child: vi.fn(() => mockLogger),
+        level: 'debug'
+      } as any;
       
-      expect(consoleLogSpy).not.toHaveBeenCalled();
+      encrypt('test message', mockLogger);
+      
+      expect(mockLogger.debug).not.toHaveBeenCalled();
     });
 
-    it('should handle undefined environment variable', () => {
+    it('should handle undefined environment variable when logger is provided', () => {
       delete process.env.DEPLOYSTACK_ENCRYPTION_SECRET;
       process.env.NODE_ENV = 'test';
       
-      encrypt('test message');
+      // Create a mock logger that matches FastifyBaseLogger interface
+      const mockLogger = {
+        debug: vi.fn(),
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        fatal: vi.fn(),
+        trace: vi.fn(),
+        silent: vi.fn(),
+        child: vi.fn(() => mockLogger),
+        level: 'debug'
+      } as any;
       
-      expect(consoleLogSpy).toHaveBeenCalledWith(
-        '[TEST_ENV_ENCRYPTION_DEBUG] getEncryptionKey() using DEPLOYSTACK_ENCRYPTION_SECRET: "undefined"'
+      encrypt('test message', mockLogger);
+      
+      expect(mockLogger.debug).toHaveBeenCalledWith(
+        {
+          secretFromEnv: undefined,
+          operation: 'get_encryption_key',
+          environment: 'test'
+        },
+        '[TEST_ENV_ENCRYPTION_DEBUG] getEncryptionKey() using DEPLOYSTACK_ENCRYPTION_SECRET'
       );
+    });
+
+    it('should not log when no logger is provided', () => {
+      process.env.NODE_ENV = 'test';
+      process.env.DEPLOYSTACK_ENCRYPTION_SECRET = 'debug-test-secret';
+      
+      // This should not throw an error and should not log anything
+      expect(() => encrypt('test message')).not.toThrow();
+      expect(consoleLogSpy).not.toHaveBeenCalled();
     });
   });
 

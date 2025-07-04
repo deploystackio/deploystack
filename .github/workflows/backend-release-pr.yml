@@ -59,6 +59,10 @@ jobs:
         working-directory: services/backend
         run: npm run lint
         
+      - name: Check for console.log in backend
+        working-directory: services/backend
+        run: npm run check:no-console
+        
       - name: Prepare release
         working-directory: services/backend
         env:

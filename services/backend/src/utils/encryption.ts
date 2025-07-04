@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import type { FastifyBaseLogger } from 'fastify';
 
 const ALGORITHM = 'aes-256-gcm';
 const KEY_LENGTH = 32; // 256 bits
@@ -9,29 +10,39 @@ const TAG_LENGTH = 16; // 128 bits
  * Derive encryption key from environment variable
  * Uses scrypt for key derivation with a fixed salt
  */
-function getEncryptionKey(): Buffer {
+function getEncryptionKey(logger?: FastifyBaseLogger): Buffer {
   const secretFromEnv = process.env.DEPLOYSTACK_ENCRYPTION_SECRET;
-  if (process.env.NODE_ENV === 'test') {
-    console.log(`[TEST_ENV_ENCRYPTION_DEBUG] getEncryptionKey() using DEPLOYSTACK_ENCRYPTION_SECRET: "${secretFromEnv}"`);
+  if (process.env.NODE_ENV === 'test' && logger) {
+    logger.debug({
+      secretFromEnv,
+      operation: 'get_encryption_key',
+      environment: 'test'
+    }, '[TEST_ENV_ENCRYPTION_DEBUG] getEncryptionKey() using DEPLOYSTACK_ENCRYPTION_SECRET');
   }
   const secret = secretFromEnv || 'fallback-secret-key-change-in-production-immediately';
   // Use a fixed salt for consistent key derivation
   const salt = 'deploystack-global-settings-salt';
   const derivedKey = crypto.scryptSync(secret, salt, KEY_LENGTH);
-  // if (process.env.NODE_ENV === 'test') {
-  //   console.log(`[TEST_ENV_ENCRYPTION_DEBUG] Derived key (first 4 bytes hex): ${derivedKey.subarray(0,4).toString('hex')}`);
-  // }
+  // Debug logging for derived key can be added here if needed for testing
+  if (process.env.NODE_ENV === 'test' && logger) {
+    logger.debug({
+      derivedKeyPreview: derivedKey.subarray(0, 4).toString('hex'),
+      operation: 'get_encryption_key',
+      environment: 'test'
+    }, '[TEST_ENV_ENCRYPTION_DEBUG] Derived key (first 4 bytes hex)');
+  }
   return derivedKey;
 }
 
 /**
  * Encrypt a plaintext string
  * @param text - The plaintext to encrypt
+ * @param logger - Optional logger for debug output
  * @returns Encrypted string in format: iv:authTag:encryptedData (all hex encoded)
  */
-export function encrypt(text: string): string {
+export function encrypt(text: string, logger?: FastifyBaseLogger): string {
   try {
-    const key = getEncryptionKey();
+    const key = getEncryptionKey(logger);
     const iv = crypto.randomBytes(IV_LENGTH);
     const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
     
@@ -54,9 +65,10 @@ export function encrypt(text: string): string {
 /**
  * Decrypt an encrypted string
  * @param encryptedData - The encrypted string in format: iv:authTag:encryptedData
+ * @param logger - Optional logger for debug output
  * @returns Decrypted plaintext string
  */
-export function decrypt(encryptedData: string): string {
+export function decrypt(encryptedData: string, logger?: FastifyBaseLogger): string {
   try {
     const parts = encryptedData.split(':');
     if (parts.length !== 3) {
@@ -65,7 +77,7 @@ export function decrypt(encryptedData: string): string {
     
     const [ivHex, authTagHex, encrypted] = parts;
     
-    const key = getEncryptionKey();
+    const key = getEncryptionKey(logger);
     const iv = Buffer.from(ivHex, 'hex');
     const authTag = Buffer.from(authTagHex, 'hex');
     
@@ -101,11 +113,11 @@ export function isEncrypted(value: string): boolean {
  * Validate that encryption/decryption is working correctly
  * Used for testing and health checks
  */
-export function validateEncryption(): boolean {
+export function validateEncryption(logger?: FastifyBaseLogger): boolean {
   try {
     const testData = 'test-encryption-validation';
-    const encrypted = encrypt(testData);
-    const decrypted = decrypt(encrypted);
+    const encrypted = encrypt(testData, logger);
+    const decrypted = decrypt(encrypted, logger);
     return decrypted === testData;
   } catch {
     return false;

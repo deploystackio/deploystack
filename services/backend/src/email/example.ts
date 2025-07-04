@@ -5,12 +5,13 @@
  * These examples can be integrated into your existing services.
  */
 
+import type { FastifyBaseLogger } from 'fastify';
 import { EmailService } from './emailService';
 
 /**
  * Example: Send a welcome email to a new user
  */
-export async function sendWelcomeEmailExample() {
+export async function sendWelcomeEmailExample(logger: FastifyBaseLogger) {
   try {
     const result = await EmailService.sendWelcomeEmail({
       to: 'newuser@example.com',
@@ -18,19 +19,28 @@ export async function sendWelcomeEmailExample() {
       userEmail: 'newuser@example.com',
       loginUrl: 'https://app.deploystack.com/login',
       supportEmail: 'support@deploystack.com'
-    });
+    }, logger);
 
     if (result.success) {
-      console.log('✅ Welcome email sent successfully!');
-      console.log('Message ID:', result.messageId);
-      console.log('Recipients:', result.recipients);
+      logger.info({
+        messageId: result.messageId,
+        recipients: result.recipients,
+        operation: 'welcome_email_example'
+      }, '✅ Welcome email sent successfully!');
     } else {
-      console.error('❌ Failed to send welcome email:', result.error);
+      logger.error({
+        error: result.error,
+        recipients: result.recipients,
+        operation: 'welcome_email_example'
+      }, '❌ Failed to send welcome email');
     }
 
     return result;
   } catch (error) {
-    console.error('❌ Error sending welcome email:', error);
+    logger.error({
+      error,
+      operation: 'welcome_email_example'
+    }, '❌ Error sending welcome email');
     throw error;
   }
 }
@@ -38,7 +48,7 @@ export async function sendWelcomeEmailExample() {
 /**
  * Example: Send a password reset email
  */
-export async function sendPasswordResetExample() {
+export async function sendPasswordResetExample(logger: FastifyBaseLogger) {
   try {
     const result = await EmailService.sendPasswordResetEmail({
       to: 'user@example.com',
@@ -46,17 +56,28 @@ export async function sendPasswordResetExample() {
       resetUrl: 'https://app.deploystack.com/reset-password?token=abc123xyz',
       expirationTime: '24 hours',
       supportEmail: 'support@deploystack.com'
-    });
+    }, logger);
 
     if (result.success) {
-      console.log('✅ Password reset email sent successfully!');
+      logger.info({
+        messageId: result.messageId,
+        recipients: result.recipients,
+        operation: 'password_reset_example'
+      }, '✅ Password reset email sent successfully!');
     } else {
-      console.error('❌ Failed to send password reset email:', result.error);
+      logger.error({
+        error: result.error,
+        recipients: result.recipients,
+        operation: 'password_reset_example'
+      }, '❌ Failed to send password reset email');
     }
 
     return result;
   } catch (error) {
-    console.error('❌ Error sending password reset email:', error);
+    logger.error({
+      error,
+      operation: 'password_reset_example'
+    }, '❌ Error sending password reset email');
     throw error;
   }
 }
@@ -64,7 +85,7 @@ export async function sendPasswordResetExample() {
 /**
  * Example: Send a notification email
  */
-export async function sendNotificationExample() {
+export async function sendNotificationExample(logger: FastifyBaseLogger) {
   try {
     const result = await EmailService.sendNotificationEmail({
       to: 'user@example.com',
@@ -73,17 +94,28 @@ export async function sendNotificationExample() {
       actionUrl: 'https://app.deploystack.com/deployments/123',
       actionText: 'View Deployment Details',
       userName: 'Developer'
-    });
+    }, logger);
 
     if (result.success) {
-      console.log('✅ Notification email sent successfully!');
+      logger.info({
+        messageId: result.messageId,
+        recipients: result.recipients,
+        operation: 'notification_email_example'
+      }, '✅ Notification email sent successfully!');
     } else {
-      console.error('❌ Failed to send notification email:', result.error);
+      logger.error({
+        error: result.error,
+        recipients: result.recipients,
+        operation: 'notification_email_example'
+      }, '❌ Failed to send notification email');
     }
 
     return result;
   } catch (error) {
-    console.error('❌ Error sending notification email:', error);
+    logger.error({
+      error,
+      operation: 'notification_email_example'
+    }, '❌ Error sending notification email');
     throw error;
   }
 }
@@ -91,7 +123,7 @@ export async function sendNotificationExample() {
 /**
  * Example: Send a custom email with attachments
  */
-export async function sendCustomEmailExample() {
+export async function sendCustomEmailExample(logger: FastifyBaseLogger) {
   try {
     const result = await EmailService.sendEmail({
       to: ['user1@example.com', 'user2@example.com'],
@@ -111,17 +143,29 @@ export async function sendCustomEmailExample() {
           contentType: 'text/plain'
         }
       ]
-    });
+    }, logger);
 
     if (result.success) {
-      console.log('✅ Custom email with attachments sent successfully!');
+      logger.info({
+        messageId: result.messageId,
+        recipients: result.recipients,
+        attachmentCount: 1,
+        operation: 'custom_email_example'
+      }, '✅ Custom email with attachments sent successfully!');
     } else {
-      console.error('❌ Failed to send custom email:', result.error);
+      logger.error({
+        error: result.error,
+        recipients: result.recipients,
+        operation: 'custom_email_example'
+      }, '❌ Failed to send custom email');
     }
 
     return result;
   } catch (error) {
-    console.error('❌ Error sending custom email:', error);
+    logger.error({
+      error,
+      operation: 'custom_email_example'
+    }, '❌ Error sending custom email');
     throw error;
   }
 }
@@ -129,30 +173,45 @@ export async function sendCustomEmailExample() {
 /**
  * Example: Test SMTP configuration
  */
-export async function testSmtpConfigurationExample() {
+export async function testSmtpConfigurationExample(logger: FastifyBaseLogger) {
   try {
-    console.log('🔍 Testing SMTP configuration...');
+    logger.info({
+      operation: 'test_smtp_config_example'
+    }, '🔍 Testing SMTP configuration...');
     
     // Check if SMTP is configured
-    const status = await EmailService.getSmtpStatus();
+    const status = await EmailService.getSmtpStatus(logger);
     if (!status.configured) {
-      console.error('❌ SMTP is not configured:', status.error);
+      logger.error({
+        error: status.error,
+        operation: 'test_smtp_config_example'
+      }, '❌ SMTP is not configured');
       return false;
     }
     
-    console.log('✅ SMTP configuration found');
+    logger.info({
+      operation: 'test_smtp_config_example'
+    }, '✅ SMTP configuration found');
     
     // Test the connection
-    const connectionTest = await EmailService.testConnection();
+    const connectionTest = await EmailService.testConnection(logger);
     if (connectionTest.success) {
-      console.log('✅ SMTP connection test successful!');
+      logger.info({
+        operation: 'test_smtp_config_example'
+      }, '✅ SMTP connection test successful!');
       return true;
     } else {
-      console.error('❌ SMTP connection test failed:', connectionTest.error);
+      logger.error({
+        error: connectionTest.error,
+        operation: 'test_smtp_config_example'
+      }, '❌ SMTP connection test failed');
       return false;
     }
   } catch (error) {
-    console.error('❌ Error testing SMTP configuration:', error);
+    logger.error({
+      error,
+      operation: 'test_smtp_config_example'
+    }, '❌ Error testing SMTP configuration');
     return false;
   }
 }
@@ -160,16 +219,25 @@ export async function testSmtpConfigurationExample() {
 /**
  * Example: Get available templates and validate them
  */
-export async function listAndValidateTemplatesExample() {
+export async function listAndValidateTemplatesExample(logger: FastifyBaseLogger) {
   try {
-    console.log('📋 Available email templates:');
+    logger.info({
+      operation: 'list_validate_templates_example'
+    }, '📋 Available email templates:');
     
-    const templates = EmailService.getAvailableTemplates();
-    console.log('Templates:', templates);
+    const templates = EmailService.getAvailableTemplates(logger);
+    logger.info({
+      templates,
+      templateCount: templates.length,
+      operation: 'list_validate_templates_example'
+    }, 'Templates found');
     
     // Validate each template with sample data
     for (const template of templates) {
-      console.log(`\n🔍 Validating template: ${template}`);
+      logger.debug({
+        template,
+        operation: 'validate_template_example'
+      }, `🔍 Validating template: ${template}`);
       
       let sampleVariables = {};
       
@@ -202,15 +270,24 @@ export async function listAndValidateTemplatesExample() {
       const validation = await EmailService.validateTemplate(template, sampleVariables);
       
       if (validation.valid) {
-        console.log(`✅ Template ${template} is valid`);
+        logger.info({
+          template,
+          operation: 'validate_template_example'
+        }, `✅ Template ${template} is valid`);
       } else {
-        console.log(`❌ Template ${template} validation failed:`);
-        console.log('Errors:', validation.errors);
-        console.log('Missing variables:', validation.missingVariables);
+        logger.warn({
+          template,
+          errors: validation.errors,
+          missingVariables: validation.missingVariables,
+          operation: 'validate_template_example'
+        }, `❌ Template ${template} validation failed`);
       }
     }
   } catch (error) {
-    console.error('❌ Error listing/validating templates:', error);
+    logger.error({
+      error,
+      operation: 'list_validate_templates_example'
+    }, '❌ Error listing/validating templates');
   }
 }
 
@@ -221,12 +298,20 @@ export async function userRegistrationIntegrationExample(userData: {
   email: string;
   name: string;
   id: string;
-}) {
+}, logger: FastifyBaseLogger) {
   try {
-    console.log(`👤 Processing registration for user: ${userData.name}`);
+    logger.info({
+      userId: userData.id,
+      userName: userData.name,
+      userEmail: userData.email,
+      operation: 'user_registration_example'
+    }, `👤 Processing registration for user: ${userData.name}`);
     
     // Simulate user creation
-    console.log('✅ User account created successfully');
+    logger.info({
+      userId: userData.id,
+      operation: 'user_registration_example'
+    }, '✅ User account created successfully');
     
     // Send welcome email
     const emailResult = await EmailService.sendWelcomeEmail({
@@ -235,12 +320,20 @@ export async function userRegistrationIntegrationExample(userData: {
       userEmail: userData.email,
       loginUrl: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/login`,
       supportEmail: 'support@deploystack.com'
-    });
+    }, logger);
     
     if (emailResult.success) {
-      console.log('✅ Welcome email sent to new user');
+      logger.info({
+        userId: userData.id,
+        messageId: emailResult.messageId,
+        operation: 'user_registration_example'
+      }, '✅ Welcome email sent to new user');
     } else {
-      console.warn('⚠️ User created but welcome email failed:', emailResult.error);
+      logger.warn({
+        userId: userData.id,
+        error: emailResult.error,
+        operation: 'user_registration_example'
+      }, '⚠️ User created but welcome email failed');
       // Don't fail the registration process if email fails
     }
     
@@ -249,7 +342,11 @@ export async function userRegistrationIntegrationExample(userData: {
       emailSent: emailResult.success
     };
   } catch (error) {
-    console.error('❌ Error in user registration integration:', error);
+    logger.error({
+      error,
+      userId: userData.id,
+      operation: 'user_registration_example'
+    }, '❌ Error in user registration integration');
     throw error;
   }
 }
@@ -257,46 +354,59 @@ export async function userRegistrationIntegrationExample(userData: {
 /**
  * Run all examples (for testing purposes)
  */
-export async function runAllExamples() {
-  console.log('🚀 Running Email Service Examples...\n');
+export async function runAllExamples(logger: FastifyBaseLogger) {
+  logger.info({
+    operation: 'run_all_examples'
+  }, '🚀 Running Email Service Examples...');
   
   try {
     // Test SMTP configuration first
-    const smtpWorking = await testSmtpConfigurationExample();
+    const smtpWorking = await testSmtpConfigurationExample(logger);
     
     if (!smtpWorking) {
-      console.log('\n⚠️ SMTP is not configured. Please configure SMTP settings in global settings to test email sending.');
-      console.log('You can still run template validation...\n');
+      logger.warn({
+        operation: 'run_all_examples'
+      }, '⚠️ SMTP is not configured. Please configure SMTP settings in global settings to test email sending.');
+      logger.info({
+        operation: 'run_all_examples'
+      }, 'You can still run template validation...');
       
       // Only run template validation if SMTP is not configured
-      await listAndValidateTemplatesExample();
+      await listAndValidateTemplatesExample(logger);
       return;
     }
     
-    console.log('\n📧 Testing email sending...');
+    logger.info({
+      operation: 'run_all_examples'
+    }, '📧 Testing email sending...');
     
     // Test template validation
-    await listAndValidateTemplatesExample();
+    await listAndValidateTemplatesExample(logger);
     
     // Test different email types (uncomment to actually send emails)
     /*
-    await sendWelcomeEmailExample();
-    await sendPasswordResetExample();
-    await sendNotificationExample();
-    await sendCustomEmailExample();
+    await sendWelcomeEmailExample(logger);
+    await sendPasswordResetExample(logger);
+    await sendNotificationExample(logger);
+    await sendCustomEmailExample(logger);
     
     // Test integration example
     await userRegistrationIntegrationExample({
       email: 'testuser@example.com',
       name: 'Test User',
       id: 'test-123'
-    });
+    }, logger);
     */
     
-    console.log('\n✅ All examples completed successfully!');
+    logger.info({
+      operation: 'run_all_examples'
+    }, '✅ All examples completed successfully!');
     
   } catch (error) {
-    console.error('\n❌ Error running examples:', error);
+    logger.error({
+      error,
+      operation: 'run_all_examples'
+    }, '❌ Error running examples');
   }
 }
 

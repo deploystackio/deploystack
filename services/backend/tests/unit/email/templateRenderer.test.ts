@@ -44,12 +44,26 @@ vi.mock('path', () => ({
 describe('TemplateRenderer', () => {
   let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
   let mockCompiledTemplate: ReturnType<typeof vi.fn>;
+  let mockLogger: any;
 
   beforeEach(() => {
     vi.resetAllMocks();
     
     // Setup console spy
     consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    
+    // Setup mock logger
+    mockLogger = {
+      debug: vi.fn(),
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      fatal: vi.fn(),
+      trace: vi.fn(),
+      silent: vi.fn(),
+      child: vi.fn(() => mockLogger),
+      level: 'debug'
+    } as any;
     
     // Setup mock compiled template function
     mockCompiledTemplate = vi.fn().mockReturnValue('<html><body>Rendered content</body></html>');
@@ -76,7 +90,7 @@ describe('TemplateRenderer', () => {
     };
 
     it('should render template successfully with variables', async () => {
-      const result = await TemplateRenderer.render(validRenderOptions);
+      const result = await TemplateRenderer.render(validRenderOptions, mockLogger);
 
       expect(result).toBe('<html><body>Rendered content</body></html>');
       expect(mockExistsSync).toHaveBeenCalledWith(expect.stringContaining('welcome.pug'));
@@ -103,7 +117,7 @@ describe('TemplateRenderer', () => {
         layout: 'minimal',
       };
 
-      await TemplateRenderer.render(options);
+      await TemplateRenderer.render(options, mockLogger);
 
       expect(mockCompiledTemplate).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -114,11 +128,11 @@ describe('TemplateRenderer', () => {
 
     it('should cache compiled templates', async () => {
       // First render
-      await TemplateRenderer.render(validRenderOptions);
+      await TemplateRenderer.render(validRenderOptions, mockLogger);
       expect(mockCompileFile).toHaveBeenCalledTimes(1);
 
       // Second render should use cache
-      await TemplateRenderer.render(validRenderOptions);
+      await TemplateRenderer.render(validRenderOptions, mockLogger);
       expect(mockCompileFile).toHaveBeenCalledTimes(1); // Still only called once
       expect(mockCompiledTemplate).toHaveBeenCalledTimes(2); // But template executed twice
     });
@@ -126,7 +140,7 @@ describe('TemplateRenderer', () => {
     it('should throw error when template does not exist', async () => {
       mockExistsSync.mockReturnValue(false);
 
-      await expect(TemplateRenderer.render(validRenderOptions))
+      await expect(TemplateRenderer.render(validRenderOptions, mockLogger))
         .rejects
         .toThrow("Template 'welcome' not found");
     });
@@ -137,7 +151,7 @@ describe('TemplateRenderer', () => {
         throw compilationError;
       });
 
-      await expect(TemplateRenderer.render(validRenderOptions))
+      await expect(TemplateRenderer.render(validRenderOptions, mockLogger))
         .rejects
         .toThrow("Failed to render template 'welcome': Invalid pug syntax");
     });
@@ -148,13 +162,13 @@ describe('TemplateRenderer', () => {
         throw executionError;
       });
 
-      await expect(TemplateRenderer.render(validRenderOptions))
+      await expect(TemplateRenderer.render(validRenderOptions, mockLogger))
         .rejects
         .toThrow("Failed to render template 'welcome': Variable not defined");
     });
 
     it('should include helper variables in template context', async () => {
-      await TemplateRenderer.render(validRenderOptions);
+      await TemplateRenderer.render(validRenderOptions, mockLogger);
 
       expect(mockCompiledTemplate).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -173,7 +187,7 @@ describe('TemplateRenderer', () => {
       const result = await TemplateRenderer.validateTemplate('welcome', {
         userName: 'John',
         appName: 'TestApp',
-      });
+      }, mockLogger);
 
       expect(result.valid).toBe(true);
       expect(result.errors).toEqual([]);
@@ -183,7 +197,7 @@ describe('TemplateRenderer', () => {
     it('should return invalid result for non-existent template', async () => {
       mockExistsSync.mockReturnValue(false);
 
-      const result = await TemplateRenderer.validateTemplate('nonexistent', {});
+      const result = await TemplateRenderer.validateTemplate('nonexistent', {}, mockLogger);
 
       expect(result.valid).toBe(false);
       expect(result.errors).toContain("Template 'nonexistent' not found");
@@ -195,7 +209,7 @@ describe('TemplateRenderer', () => {
       const result = await TemplateRenderer.validateTemplate('welcome', {
         userName: 'John',
         // Missing userEmail
-      });
+      }, mockLogger);
 
       expect(result.valid).toBe(false);
       expect(result.missingVariables).toContain('userEmail');
@@ -208,7 +222,7 @@ describe('TemplateRenderer', () => {
         throw compilationError;
       });
 
-      const result = await TemplateRenderer.validateTemplate('welcome', {});
+      const result = await TemplateRenderer.validateTemplate('welcome', {}, mockLogger);
 
       expect(result.valid).toBe(false);
       expect(result.errors).toContain('Template compilation failed: Syntax error in template');
@@ -220,7 +234,7 @@ describe('TemplateRenderer', () => {
         throw validationError;
       });
 
-      const result = await TemplateRenderer.validateTemplate('welcome', {});
+      const result = await TemplateRenderer.validateTemplate('welcome', {}, mockLogger);
 
       expect(result.valid).toBe(false);
       expect(result.errors).toContain('Validation failed: File read error');
@@ -238,7 +252,7 @@ describe('TemplateRenderer', () => {
         userName: 'John',
         actionUrl: 'https://example.com',
         // Missing actionText and resetCode
-      });
+      }, mockLogger);
 
       expect(result.valid).toBe(false);
       expect(result.missingVariables).toContain('actionText');
@@ -247,10 +261,26 @@ describe('TemplateRenderer', () => {
   });
 
   describe('getAvailableTemplates', () => {
+    let mockLogger: any;
+
+    beforeEach(() => {
+      mockLogger = {
+        debug: vi.fn(),
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        fatal: vi.fn(),
+        trace: vi.fn(),
+        silent: vi.fn(),
+        child: vi.fn(() => mockLogger),
+        level: 'debug'
+      } as any;
+    });
+
     it('should return list of available templates', () => {
       mockReaddirSync.mockReturnValue(['welcome.pug', 'password-reset.pug', 'notification.pug', '_layout.pug', 'README.md']);
 
-      const result = TemplateRenderer.getAvailableTemplates();
+      const result = TemplateRenderer.getAvailableTemplates(mockLogger);
 
       expect(result).toEqual(['welcome', 'password-reset', 'notification']);
       expect(result).not.toContain('_layout'); // Should exclude files starting with _
@@ -260,7 +290,7 @@ describe('TemplateRenderer', () => {
     it('should return empty array when templates directory does not exist', () => {
       mockExistsSync.mockReturnValue(false);
 
-      const result = TemplateRenderer.getAvailableTemplates();
+      const result = TemplateRenderer.getAvailableTemplates(mockLogger);
 
       expect(result).toEqual([]);
     });
@@ -270,10 +300,16 @@ describe('TemplateRenderer', () => {
         throw new Error('Permission denied');
       });
 
-      const result = TemplateRenderer.getAvailableTemplates();
+      const result = TemplateRenderer.getAvailableTemplates(mockLogger);
 
       expect(result).toEqual([]);
-      expect(consoleErrorSpy).toHaveBeenCalledWith('Failed to get available templates:', expect.any(Error));
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        {
+          error: expect.any(Error),
+          operation: 'get_available_templates'
+        },
+        'Failed to get available templates'
+      );
     });
   });
 
@@ -283,7 +319,7 @@ describe('TemplateRenderer', () => {
       await TemplateRenderer.render({
         template: 'welcome',
         variables: { userName: 'John' },
-      });
+      }, mockLogger);
       expect(mockCompileFile).toHaveBeenCalledTimes(1);
 
       // Clear cache
@@ -293,7 +329,7 @@ describe('TemplateRenderer', () => {
       await TemplateRenderer.render({
         template: 'welcome',
         variables: { userName: 'Jane' },
-      });
+      }, mockLogger);
       expect(mockCompileFile).toHaveBeenCalledTimes(2);
     });
   });
@@ -302,7 +338,7 @@ describe('TemplateRenderer', () => {
     it('should create templates directory if it does not exist', () => {
       mockExistsSync.mockReturnValueOnce(false).mockReturnValueOnce(true); // templates dir doesn't exist, layouts dir exists
 
-      TemplateRenderer.ensureTemplatesDirectory();
+      TemplateRenderer.ensureTemplatesDirectory(mockLogger);
 
       expect(mockMkdirSync).toHaveBeenCalledWith(
         expect.stringContaining('templates'),
@@ -313,7 +349,7 @@ describe('TemplateRenderer', () => {
     it('should create layouts directory if it does not exist', () => {
       mockExistsSync.mockReturnValueOnce(true).mockReturnValueOnce(false); // templates dir exists, layouts dir doesn't exist
 
-      TemplateRenderer.ensureTemplatesDirectory();
+      TemplateRenderer.ensureTemplatesDirectory(mockLogger);
 
       expect(mockMkdirSync).toHaveBeenCalledWith(
         expect.stringContaining('layouts'),
@@ -324,7 +360,7 @@ describe('TemplateRenderer', () => {
     it('should create both directories if neither exist', () => {
       mockExistsSync.mockReturnValue(false);
 
-      TemplateRenderer.ensureTemplatesDirectory();
+      TemplateRenderer.ensureTemplatesDirectory(mockLogger);
 
       expect(mockMkdirSync).toHaveBeenCalledTimes(2);
       expect(mockMkdirSync).toHaveBeenCalledWith(
@@ -340,7 +376,7 @@ describe('TemplateRenderer', () => {
     it('should not create directories if they already exist', () => {
       mockExistsSync.mockReturnValue(true);
 
-      TemplateRenderer.ensureTemplatesDirectory();
+      TemplateRenderer.ensureTemplatesDirectory(mockLogger);
 
       expect(mockMkdirSync).not.toHaveBeenCalled();
     });
@@ -406,7 +442,7 @@ describe('TemplateRenderer', () => {
         variables: {}, // No variables provided
       };
 
-      const result = await TemplateRenderer.render(options);
+      const result = await TemplateRenderer.render(options, mockLogger);
 
       expect(result).toBe('<html><body>Rendered content</body></html>');
       expect(mockCompiledTemplate).toHaveBeenCalledWith(
@@ -426,7 +462,7 @@ describe('TemplateRenderer', () => {
         },
       };
 
-      await TemplateRenderer.render(options);
+      await TemplateRenderer.render(options, mockLogger);
 
       expect(mockCompiledTemplate).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -451,7 +487,7 @@ describe('TemplateRenderer', () => {
         },
       };
 
-      await TemplateRenderer.render(options);
+      await TemplateRenderer.render(options, mockLogger);
 
       expect(mockCompiledTemplate).toHaveBeenCalledWith(
         expect.objectContaining({
