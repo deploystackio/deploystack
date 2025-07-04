@@ -1,84 +1,140 @@
-import fs from 'node:fs/promises';
-import path from 'node:path';
-
-// Define the path to the configuration file
-// Storing it in the 'persistent_data' directory within services/backend
-// __dirname is services/backend/src/db, so ../../persistent_data points to services/backend/persistent_data
-const CONFIG_DIR = path.join(__dirname, '..', '..', 'persistent_data');
-const DB_SELECTION_FILE_NAME = process.env.NODE_ENV === 'test' ? 'db.selection.test.json' : 'db.selection.json';
-const CONFIG_FILE_PATH = path.join(CONFIG_DIR, DB_SELECTION_FILE_NAME);
+/**
+ * Database Configuration
+ * Environment-based database selection for SQLite and Turso
+ */
+import type { FastifyBaseLogger } from 'fastify';
+import fs from 'fs';
+import path from 'path';
 
 // Helper function to check if we're in test mode
 function isTestMode(): boolean {
   return process.env.NODE_ENV === 'test';
 }
 
-// Helper function for conditional logging
-function logInfo(message: string): void {
-  if (!isTestMode()) {
-    console.log(message);
-  }
-}
+export type DatabaseType = 'sqlite' | 'turso';
 
-export interface SQLiteConfig {
-  type: 'sqlite';
-  dbPath: string; // Relative to services/backend directory
+export interface DatabaseConfig {
+  type: DatabaseType;
+  // SQLite specific
+  dbPath?: string;
+  // Turso specific
+  url?: string;
+  authToken?: string;
 }
-
-export type DbConfig = SQLiteConfig;
 
 /**
- * Reads the database configuration.
- * @returns The database configuration object, or null if not found or error.
+ * Get database selection from persistent_data/db.selection.json
  */
-export async function getDbConfig(): Promise<DbConfig | null> {
+function getDatabaseSelection(): { type: DatabaseType } | null {
   try {
-    await fs.mkdir(CONFIG_DIR, { recursive: true }); // Ensure directory exists
-    const data = await fs.readFile(CONFIG_FILE_PATH, 'utf-8');
-    return JSON.parse(data) as DbConfig;
-  } catch (error) {
-    // If file not found, it's a valid state (not configured yet)
-    // @ts-expect-error - error.code may not be standard on all Node versions but commonly used
-    if (error.code === 'ENOENT') {
+    const persistentDataDir = path.join(process.cwd(), 'persistent_data');
+    const selectionFile = path.join(persistentDataDir, 'db.selection.json');
+    
+    if (!fs.existsSync(selectionFile)) {
       return null;
     }
-    // For other errors, log and return null
-    console.error('[ERROR] Failed to read database configuration:', error);
+    
+    const content = fs.readFileSync(selectionFile, 'utf8');
+    const selection = JSON.parse(content);
+    
+    return {
+      type: selection.type as DatabaseType
+    };
+  } catch {
     return null;
   }
 }
 
 /**
- * Saves the database configuration.
- * @param config The database configuration to save.
+ * Get database configuration from selection file or environment variables
  */
-export async function saveDbConfig(config: DbConfig): Promise<void> {
-  try {
-    await fs.mkdir(CONFIG_DIR, { recursive: true }); // Ensure directory exists
-    const data = JSON.stringify(config, null, 2);
-    await fs.writeFile(CONFIG_FILE_PATH, data, 'utf-8');
-    logInfo(`[INFO] Database configuration saved to ${CONFIG_FILE_PATH}`);
-  } catch (error) {
-    console.error('[ERROR] Failed to save database configuration:', error);
-    throw error; // Re-throw to indicate failure
+export function getDatabaseConfig(logger?: FastifyBaseLogger): DatabaseConfig {
+  // First check if there's a database selection file
+  const selection = getDatabaseSelection();
+  
+  let dbType: DatabaseType;
+  if (selection) {
+    dbType = selection.type;
+    if (!isTestMode() && logger) {
+      logger.info({
+        operation: 'get_database_config',
+        source: 'selection_file',
+        databaseType: dbType
+      }, 'Database type from selection file');
+    }
+  } else {
+    // Fall back to environment variable, but don't default to sqlite
+    const envDbType = process.env.DB_TYPE;
+    if (!envDbType) {
+      throw new Error('No database selection found. Please use the setup endpoint to configure a database.');
+    }
+    dbType = envDbType as DatabaseType;
+    if (!isTestMode() && logger) {
+      logger.info({
+        operation: 'get_database_config',
+        source: 'environment',
+        databaseType: dbType
+      }, 'Database type from environment');
+    }
+  }
+  
+  const config: DatabaseConfig = { type: dbType };
+  
+  switch (dbType) {
+    case 'sqlite':
+      if (isTestMode()) {
+        const timestamp = Date.now();
+        config.dbPath = `persistent_data/database-test/deploystack-${timestamp}.db`;
+      } else {
+        config.dbPath = process.env.SQLITE_DB_PATH || 'persistent_data/database/deploystack.db';
+      }
+      break;
+      
+    case 'turso':
+      config.url = process.env.TURSO_DATABASE_URL;
+      config.authToken = process.env.TURSO_AUTH_TOKEN;
+      
+      if (!config.url || !config.authToken) {
+        throw new Error('Turso configuration incomplete. Required: TURSO_DATABASE_URL, TURSO_AUTH_TOKEN');
+      }
+      break;
+      
+    default:
+      throw new Error(`Unsupported database type: ${dbType}`);
+  }
+  
+  if (!isTestMode() && logger) {
+    logger.info({
+      operation: 'get_database_config',
+      databaseType: dbType
+    }, 'Database configuration loaded');
+  }
+  return config;
+}
+
+/**
+ * Validate database configuration
+ */
+export function validateDatabaseConfig(config: DatabaseConfig): boolean {
+  switch (config.type) {
+    case 'sqlite':
+      return !!config.dbPath;
+      
+    case 'turso':
+      return !!(config.url && config.authToken);
+      
+    default:
+      return false;
   }
 }
 
 /**
- * Deletes the database configuration.
- * Useful for resetting the setup.
+ * Get database status for API responses
  */
-export async function deleteDbConfig(): Promise<void> {
-  try {
-    await fs.unlink(CONFIG_FILE_PATH);
-    logInfo(`[INFO] Database configuration deleted from ${CONFIG_FILE_PATH}`);
-  } catch (error) {
-    // @ts-expect-error - error.code
-    if (error.code === 'ENOENT') {
-      logInfo('[INFO] Database configuration file not found, nothing to delete.');
-      return;
-    }
-    console.error('[ERROR] Failed to delete database configuration:', error);
-    throw error;
-  }
+export function getDatabaseStatus(config: DatabaseConfig) {
+  return {
+    configured: validateDatabaseConfig(config),
+    dialect: config.type,
+    type: config.type
+  };
 }

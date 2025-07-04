@@ -45,7 +45,7 @@ export const githubOAuthSettings: GlobalSettingsModule = {
       key: 'github.oauth.scope',
       defaultValue: 'user:email',
       type: 'string',
-      description: 'GitHub OAuth requested scopes',
+      description: 'GitHub OAuth requested scopes (user:email is required for email access)',
       encrypted: false,
       required: false
     }

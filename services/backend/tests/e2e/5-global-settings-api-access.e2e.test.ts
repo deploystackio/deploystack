@@ -5,8 +5,7 @@ import * as path from 'path';
 import { getTestContext } from './testContext';
 
 // __dirname is services/backend/tests/e2e
-const APP_BACKEND_ROOT = path.join(__dirname, '..', '..'); // Resolves to services/backend/
-const DB_FILE_PATH = path.join(__dirname, 'test-data', 'deploystack.test.db'); // Path where the app creates the test db
+const TEST_DB_DIR = path.join(__dirname, '..', '..', 'persistent_data', 'database-test'); // Resolves to services/backend/persistent_data/database-test
 
 describe('Global Settings Access Control E2E Tests', () => {
   let server: FastifyInstance;
@@ -84,8 +83,13 @@ describe('Global Settings Access Control E2E Tests', () => {
     });
 
     it('should allow global_admin to list all settings', async () => {
-      // Ensure database and users exist (should be done by previous tests)
-      expect(await fs.pathExists(DB_FILE_PATH)).toBe(true);
+      // Ensure database directory and users exist (should be done by previous tests)
+      expect(await fs.pathExists(TEST_DB_DIR)).toBe(true);
+      
+      // Verify there's a database file in the test directory
+      const files = await fs.readdir(TEST_DB_DIR);
+      const dbFile = files.find(file => file.startsWith('deploystack-') && file.endsWith('.db'));
+      expect(dbFile).toBeDefined();
 
       const response = await request(server.server)
         .get('/api/settings')

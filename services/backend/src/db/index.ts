@@ -1,44 +1,39 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { type Plugin, type DatabaseExtension } from '../plugin-system/types'; // Added DatabaseExtension
+import type { FastifyBaseLogger } from 'fastify';
+import { type Plugin, type DatabaseExtension } from '../plugin-system/types';
 
 // Config
-import { getDbConfig, saveDbConfig, type DbConfig, type SQLiteConfig } from './config';
+import { getDatabaseConfig, validateDatabaseConfig, type DatabaseConfig } from './config';
 
 // Schema Definitions
 import { pluginTableDefinitions as inputPluginTableDefinitions } from './schema.sqlite';
 
-// Drizzle SQLite
-import { drizzle as drizzleSqliteAdapter, type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
-import SqliteDriver from 'better-sqlite3'; // Default import is the constructor
+// Drizzle imports for different database types
+import { drizzle as drizzleSqlite, type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
+import { drizzle as drizzleLibSQL } from 'drizzle-orm/libsql';
+import SqliteDriver from 'better-sqlite3';
+import { createClient } from '@libsql/client';
 import { sqliteTable, text as sqliteText, integer as sqliteInteger } from 'drizzle-orm/sqlite-core';
 
-// Types for Drizzle instance and schema
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type AnyDatabase = BetterSQLite3Database<any>;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type AnySchema = Record<string, any>; // Represents the schema object Drizzle uses
+// Types for database instances
+ 
+export type AnyDatabase = BetterSQLite3Database<any> | any; // LibSQL instances
+ 
+export type AnySchema = Record<string, any>;
 
-// Global state for database instance and schema
+// Global state
 let dbInstance: AnyDatabase | null = null;
 let dbSchema: AnySchema | null = null;
-let dbConnection: SqliteDriver.Database | null = null; // SQLite connection only
-let currentDbConfig: DbConfig | null = null;
+let dbConfig: DatabaseConfig | null = null;
 let isDbInitialized = false;
-let isDbConfigured = false;
 
 const MIGRATIONS_TABLE_NAME = '__drizzle_migrations';
 
 // Helper function to check if we're in test mode
 function isTestMode(): boolean {
   return process.env.NODE_ENV === 'test';
-}
-
-// Helper function for conditional logging
-function logInfo(message: string): void {
-  if (!isTestMode()) {
-    console.log(message);
-  }
 }
 
 function getColumnBuilder(type: 'text' | 'integer' | 'timestamp') {
@@ -51,8 +46,6 @@ function getColumnBuilder(type: 'text' | 'integer' | 'timestamp') {
 import * as staticSchema from './schema.sqlite';
 
 function generateSchema(): AnySchema {
-  // Import the static schema instead of generating it dynamically
-  // This avoids SQL syntax errors caused by dynamic schema generation
   const generatedSchema: AnySchema = { ...staticSchema };
 
   // Add plugin tables to the static schema
@@ -73,7 +66,127 @@ function generateSchema(): AnySchema {
   return generatedSchema;
 }
 
-async function ensureMigrationsTable() { // db param not used due to raw exec
+
+/**
+ * Create database instance based on configuration
+ */
+async function createDatabaseInstance(config: DatabaseConfig, schema: AnySchema, logger?: FastifyBaseLogger): Promise<AnyDatabase> {
+  if (!isTestMode() && logger) {
+    logger.info({
+      operation: 'create_database_instance',
+      databaseType: config.type
+    }, `Creating database instance for ${config.type}`);
+  }
+
+  switch (config.type) {
+    case 'sqlite': {
+      const dbPath = path.resolve(process.cwd(), config.dbPath!);
+      if (!isTestMode() && logger) {
+        logger.info({
+          operation: 'create_database_instance',
+          databaseType: 'sqlite',
+          dbPath
+        }, `Creating SQLite connection to: ${dbPath}`);
+      }
+      const sqliteConn = new SqliteDriver(dbPath);
+      const db = drizzleSqlite(sqliteConn, { schema });
+      if (!isTestMode() && logger) {
+        logger.info({
+          operation: 'create_database_instance',
+          databaseType: 'sqlite',
+          clientType: typeof (db as any).$client
+        }, `SQLite database instance created successfully`);
+      }
+      return db;
+    }
+    
+    case 'turso': {
+      if (!isTestMode() && logger) {
+        logger.info({
+          operation: 'create_database_instance',
+          databaseType: 'turso',
+          url: config.url,
+          hasAuthToken: !!config.authToken
+        }, `Creating Turso connection`);
+      }
+      
+      // Create the libSQL client first
+      const libsqlClient = createClient({
+        url: config.url!,
+        authToken: config.authToken!
+      });
+      
+      if (!isTestMode() && logger) {
+        logger.info({
+          operation: 'create_database_instance',
+          databaseType: 'turso',
+          clientType: typeof libsqlClient,
+          clientMethods: Object.getOwnPropertyNames(libsqlClient)
+        }, `LibSQL client created`);
+      }
+      
+      // Create the Drizzle instance with the libSQL client
+      const db = drizzleLibSQL(libsqlClient, { schema });
+      
+      if (!isTestMode() && logger) {
+        logger.info({
+          operation: 'create_database_instance',
+          databaseType: 'turso',
+          drizzleType: typeof db,
+          drizzleMethods: Object.getOwnPropertyNames(db),
+          hasClient: '$client' in db,
+          clientType: '$client' in db ? typeof (db as any).$client : 'undefined'
+        }, `Turso database instance created successfully`);
+      }
+      
+      return db;
+    }
+    
+    default:
+      throw new Error(`Unsupported database type: ${config.type}`);
+  }
+}
+
+/**
+ * Apply migrations for any database type
+ */
+async function applyMigrations(db: AnyDatabase, config: DatabaseConfig, logger: FastifyBaseLogger) {
+  const projectRootMigrationsDir = path.join(process.cwd(), 'drizzle');
+  const migrationsPath = path.join(projectRootMigrationsDir, 'migrations_sqlite');
+
+  try {
+    await fs.access(migrationsPath);
+  } catch {
+    if (!isTestMode()) {
+      logger.info({
+        operation: 'apply_migrations',
+        migrationsPath
+      }, `Migrations directory not found at: ${migrationsPath}, skipping migrations.`);
+    }
+    return;
+  }
+
+  if (!isTestMode()) {
+    logger.info({
+      operation: 'apply_migrations',
+      migrationsPath,
+      databaseType: config.type
+    }, `Checking for new migrations in ${migrationsPath}...`);
+  }
+
+  // Debug the database instance structure
+  if (!isTestMode()) {
+    logger.info({
+      operation: 'apply_migrations',
+      databaseType: config.type,
+      dbType: typeof db,
+      hasClient: '$client' in db,
+      clientType: '$client' in db ? typeof (db as any).$client : 'undefined',
+      dbMethods: Object.getOwnPropertyNames(db)
+    }, `Database instance structure for migrations`);
+  }
+
+  // Ensure migrations table exists
   const createTableQuery = `
     CREATE TABLE IF NOT EXISTS ${MIGRATIONS_TABLE_NAME} (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -81,38 +194,90 @@ async function ensureMigrationsTable() { // db param not used due to raw exec
       applied_at INTEGER DEFAULT (strftime('%s', 'now')) NOT NULL
     )
   `;
-  
-  (dbConnection as SqliteDriver.Database).exec(createTableQuery);
-}
-
-async function applyMigrations() {
-  const projectRootMigrationsDir = path.join(process.cwd(), 'drizzle');
-
-  // fs.stat is async with fs/promises, so await it or use fs.existsSync
-  try {
-    await fs.stat(projectRootMigrationsDir); // Check if 'services/backend/drizzle' exists
-  } catch {
-     // This might be too noisy if the directory simply doesn't exist yet.
-     // console.warn(`[WARN] Base Drizzle directory not found at: ${projectRootMigrationsDir}.`);
-  }
-  
-  const migrationsPath = path.join(projectRootMigrationsDir, 'migrations_sqlite');
 
   try {
-    await fs.access(migrationsPath);
-  } catch {
-    logInfo(`[INFO] Migrations directory not found at: ${migrationsPath}, skipping migrations.`);
-    return;
+    if (config.type === 'sqlite') {
+      // SQLite uses the better-sqlite3 client
+      (db as any).$client.exec(createTableQuery);
+    } else if (config.type === 'turso') {
+      // Turso uses libSQL client - try different approaches
+      if ((db as any).$client && typeof (db as any).$client.execute === 'function') {
+        // Use execute method for libSQL
+        await (db as any).$client.execute(createTableQuery);
+      } else if ((db as any).$client && typeof (db as any).$client.prepare === 'function') {
+        // Use prepare/run for libSQL
+        const prepared = (db as any).$client.prepare(createTableQuery);
+        await prepared.run();
+      } else {
+        // Fallback: use Drizzle's run method
+        await db.run(createTableQuery);
+      }
+    }
+    
+    if (!isTestMode()) {
+      logger.info({
+        operation: 'apply_migrations',
+        databaseType: config.type
+      }, `Migrations table created/verified`);
+    }
+  } catch (error) {
+    const typedError = error as Error;
+    logger.error({
+      operation: 'apply_migrations',
+      databaseType: config.type,
+      error: typedError,
+      errorMessage: typedError.message
+    }, `Failed to create migrations table`);
+    throw error;
   }
 
-  logInfo(`[INFO] Checking for new migrations in ${migrationsPath}...`);
-  await ensureMigrationsTable();
-
-  let appliedMigrations: { name: string }[] = [];
+  // Get applied migrations
   const selectAppliedQuery = `SELECT migration_name as name FROM ${MIGRATIONS_TABLE_NAME}`;
+  let appliedMigrations: { name: string }[] = [];
 
-  appliedMigrations = (dbConnection as SqliteDriver.Database).prepare(selectAppliedQuery).all() as {name: string}[];
-  const appliedMigrationNames = appliedMigrations.map(row => row.name);
+  try {
+    if (config.type === 'sqlite') {
+      appliedMigrations = (db as any).$client.prepare(selectAppliedQuery).all();
+    } else if (config.type === 'turso') {
+      // Turso uses libSQL client
+      if ((db as any).$client && typeof (db as any).$client.execute === 'function') {
+        const result = await (db as any).$client.execute(selectAppliedQuery);
+        appliedMigrations = result.rows || [];
+      } else if ((db as any).$client && typeof (db as any).$client.prepare === 'function') {
+        const prepared = (db as any).$client.prepare(selectAppliedQuery);
+        const result = await prepared.all();
+        appliedMigrations = result || [];
+      } else {
+        // Fallback: use Drizzle's all method
+        const result = await db.all(selectAppliedQuery);
+        appliedMigrations = result || [];
+      }
+    }
+    
+    if (!isTestMode()) {
+      logger.info({
+        operation: 'apply_migrations',
+        databaseType: config.type,
+        appliedCount: appliedMigrations.length
+      }, `Found ${appliedMigrations.length} applied migrations`);
+    }
+  } catch (error) {
+    const typedError = error as Error;
+    logger.error({
+      operation: 'apply_migrations',
+      databaseType: config.type,
+      error: typedError,
+      errorMessage: typedError.message
+    }, `Failed to query applied migrations`);
+    throw error;
+  }
+
+  const appliedMigrationNames = appliedMigrations.map(row => {
+    if (typeof row === 'object' && row !== null) {
+      return (row as any).name || (row as any).migration_name;
+    }
+    return row;
+  });
 
   const migrationFiles = (await fs.readdir(migrationsPath))
     .filter(file => file.endsWith('.sql'))
@@ -120,114 +285,169 @@ async function applyMigrations() {
 
   for (const file of migrationFiles) {
     if (!appliedMigrationNames.includes(file)) {
-      logInfo(`[INFO] Applying migration: ${file}`);
+      if (!isTestMode()) {
+        logger.info({
+          operation: 'apply_migrations',
+          migrationFile: file,
+          databaseType: config.type
+        }, `Applying migration: ${file}`);
+      }
       const migrationFilePath = path.join(migrationsPath, file);
       const sqlContent = await fs.readFile(migrationFilePath, 'utf8');
       const statements = sqlContent.split('--> statement-breakpoint');
 
       try {
-        const sqliteConn = dbConnection as SqliteDriver.Database;
-        sqliteConn.exec('BEGIN');
         for (const statement of statements) {
           const trimmedStatement = statement.trim();
-          if (trimmedStatement) sqliteConn.exec(trimmedStatement);
+          if (trimmedStatement) {
+            if (config.type === 'sqlite') {
+              (db as any).$client.exec(trimmedStatement);
+            } else if (config.type === 'turso') {
+              // Turso uses libSQL client
+              if ((db as any).$client && typeof (db as any).$client.execute === 'function') {
+                await (db as any).$client.execute(trimmedStatement);
+              } else if ((db as any).$client && typeof (db as any).$client.prepare === 'function') {
+                const prepared = (db as any).$client.prepare(trimmedStatement);
+                await prepared.run();
+              } else {
+                // Fallback: use Drizzle's run method
+                await db.run(trimmedStatement);
+              }
+            }
+          }
         }
-        sqliteConn.prepare(`INSERT INTO ${MIGRATIONS_TABLE_NAME} (migration_name) VALUES (?)`).run(file);
-        sqliteConn.exec('COMMIT');
-        logInfo(`[INFO] Applied migration: ${file}`);
+        
+        // Record the migration as applied
+        const insertMigrationQuery = `INSERT INTO ${MIGRATIONS_TABLE_NAME} (migration_name) VALUES (?)`;
+        if (config.type === 'sqlite') {
+          (db as any).$client.prepare(insertMigrationQuery).run(file);
+        } else if (config.type === 'turso') {
+          // Turso uses libSQL client
+          if ((db as any).$client && typeof (db as any).$client.execute === 'function') {
+            await (db as any).$client.execute(insertMigrationQuery, [file]);
+          } else if ((db as any).$client && typeof (db as any).$client.prepare === 'function') {
+            const prepared = (db as any).$client.prepare(insertMigrationQuery);
+            await prepared.run([file]);
+          } else {
+            // Fallback: use Drizzle's run method
+            await db.run(insertMigrationQuery, [file]);
+          }
+        }
+        
+        if (!isTestMode()) {
+          logger.info({
+            operation: 'apply_migrations',
+            migrationFile: file,
+            databaseType: config.type
+          }, `Applied migration: ${file}`);
+        }
       } catch (error) {
         const typedError = error as Error;
-        console.error(`[ERROR] Failed to apply migration ${file}:`, typedError.message, typedError.stack);
+        logger.error({
+          operation: 'apply_migrations',
+          migrationFile: file,
+          databaseType: config.type,
+          error: typedError,
+          errorMessage: typedError.message
+        }, `Failed to apply migration ${file}`);
         throw error;
       }
     } else {
-      logInfo(`[INFO] Migration already applied: ${file}`);
+      if (!isTestMode()) {
+        logger.debug({
+          operation: 'apply_migrations',
+          migrationFile: file,
+          databaseType: config.type
+        }, `Migration already applied: ${file}`);
+      }
     }
   }
 }
 
-export async function initializeDatabase(): Promise<boolean> {
+/**
+ * Initialize database
+ */
+export async function initializeDatabase(logger: FastifyBaseLogger): Promise<boolean> {
   if (isDbInitialized) {
-    logInfo('[INFO] Database already initialized.');
+    if (!isTestMode()) {
+      logger.info({
+        operation: 'initialize_database'
+      }, 'Database already initialized.');
+    }
     return true;
   }
 
-  currentDbConfig = await getDbConfig();
-  if (!currentDbConfig) {
-    console.warn('[WARN] Database not configured. API setup required.');
-    isDbConfigured = false;
+  try {
+    dbConfig = getDatabaseConfig(logger);
+    
+    if (!validateDatabaseConfig(dbConfig)) {
+      logger.error({
+        operation: 'initialize_database',
+        error: 'Invalid database configuration'
+      }, 'Invalid database configuration');
+      return false;
+    }
+
+    dbSchema = generateSchema();
+    
+    // Ensure directory exists for SQLite
+    if (dbConfig.type === 'sqlite') {
+      const dbDir = path.dirname(path.resolve(process.cwd(), dbConfig.dbPath!));
+      await fs.mkdir(dbDir, { recursive: true });
+    }
+
+    dbInstance = await createDatabaseInstance(dbConfig, dbSchema, logger);
+    
+    if (!isTestMode()) {
+      logger.info({
+        operation: 'initialize_database',
+        databaseType: dbConfig.type
+      }, `Connected to ${dbConfig.type} database`);
+    }
+
+    // Apply migrations
+    await applyMigrations(dbInstance, dbConfig, logger);
+    
+    isDbInitialized = true;
+    if (!isTestMode()) {
+      logger.info({
+        operation: 'initialize_database'
+      }, 'Database initialized successfully.');
+    }
+    return true;
+    
+  } catch (error) {
+    const typedError = error as Error;
+    if (typedError.message.includes('No database selection found')) {
+      if (!isTestMode()) {
+        logger.info({
+          operation: 'initialize_database'
+        }, 'No database configured yet. Please use the /api/db/setup endpoint to configure your database.');
+      }
+    } else {
+      logger.error({
+        operation: 'initialize_database',
+        error: typedError,
+        errorMessage: typedError.message
+      }, 'Failed to initialize database');
+    }
     return false;
   }
-  isDbConfigured = true;
-
-  dbSchema = generateSchema();
-
-  let dbExists = false;
-
-  const sqliteConfig = currentDbConfig as SQLiteConfig;
-  // process.cwd() is .../services/backend due to the npm script `cd services/backend && ...`
-  // sqliteConfig.dbPath is 'persistent_data/database/deploystack.db'
-  // So, this correctly resolves to .../services/backend/persistent_data/database/deploystack.db
-  const absoluteDbPath = path.join(process.cwd(), sqliteConfig.dbPath);
-  const dbDir = path.dirname(absoluteDbPath);
-  await fs.mkdir(dbDir, { recursive: true });
-  
-  try {
-      await fs.access(absoluteDbPath);
-      dbExists = true;
-  } catch {
-      dbExists = false;
-  }
-
-  const sqliteConn = new SqliteDriver(absoluteDbPath); // Use constructor
-  dbConnection = sqliteConn;
-  dbInstance = drizzleSqliteAdapter(sqliteConn, { schema: dbSchema, logger: false });
-  logInfo(`[INFO] Connected to SQLite database at: ${absoluteDbPath}`);
-  if (!dbExists) logInfo(`[INFO] SQLite database created at: ${absoluteDbPath}`);
-
-  if (dbInstance) { // Ensure dbInstance is not null
-    await applyMigrations();
-  } else {
-    throw new Error("Database instance could not be created.");
-  }
-  
-  isDbInitialized = true;
-  logInfo('[INFO] Database initialized successfully.');
-  return true;
 }
 
-export async function setupNewDatabase(config: DbConfig): Promise<boolean> {
-  if (isDbConfigured && isDbInitialized) {
-    console.warn('[WARN] Database is already configured and initialized.');
-    return true;
-  }
-  if (isDbConfigured && !isDbInitialized) {
-     console.warn('[WARN] Database is configured but not initialized. Attempting initialization.');
-  } else {
-    await saveDbConfig(config);
-    currentDbConfig = config; 
-    isDbConfigured = true;
-    logInfo(`[INFO] Database configuration saved: ${config.type}`);
-  }
-  
-  isDbInitialized = false; 
-  dbInstance = null;
-  dbSchema = null;
-  if (dbConnection) {
-    (dbConnection as SqliteDriver.Database).close();
-    dbConnection = null;
-  }
-
-  return initializeDatabase();
-}
-
+/**
+ * Get database instance
+ */
 export function getDb(): AnyDatabase {
   if (!dbInstance || !isDbInitialized) {
-    throw new Error('Database not initialized. Call initializeDatabase() first or ensure setup is complete.');
+    throw new Error('Database not initialized. Call initializeDatabase() first.');
   }
   return dbInstance;
 }
 
+/**
+ * Get database schema
+ */
 export function getSchema(): AnySchema {
   if (!dbSchema || !isDbInitialized) {
     throw new Error('Database schema not generated. Call initializeDatabase() first.');
@@ -235,9 +455,32 @@ export function getSchema(): AnySchema {
   return dbSchema;
 }
 
-// Helper function to safely execute database operations with proper typing
+/**
+ * Get database status
+ */
+export function getDbStatus() {
+  if (!dbConfig) {
+    return {
+      configured: false,
+      initialized: false,
+      dialect: null,
+      type: null
+    };
+  }
+  
+  return {
+    configured: validateDatabaseConfig(dbConfig),
+    initialized: isDbInitialized,
+    dialect: dbConfig.type,
+    type: dbConfig.type
+  };
+}
+
+/**
+ * Helper function to safely execute database operations
+ */
 export function executeDbOperation<T>(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   operation: (db: any, schema: any) => Promise<T> | T
 ): Promise<T> | T {
   const db = getDb();
@@ -245,87 +488,70 @@ export function executeDbOperation<T>(
   return operation(db, schema);
 }
 
-export function getDbConnection(): SqliteDriver.Database {
-   if (!dbConnection || !isDbInitialized) {
-    throw new Error('Database connection not established. Call initializeDatabase() first.');
-  }
-  return dbConnection;
-}
-
-export function getDbStatus() {
-    return {
-        configured: isDbConfigured,
-        initialized: isDbInitialized,
-        dialect: currentDbConfig?.type || null,
-    };
-}
-
-// Function to force schema regeneration (useful for development)
-export function regenerateSchema(): void {
-  if (currentDbConfig) {
-    logInfo('[INFO] Forcing schema regeneration...');
-    dbSchema = generateSchema();
-    
-    // Recreate the database instance with new schema
-    if (dbConnection) {
-      dbInstance = drizzleSqliteAdapter(dbConnection as SqliteDriver.Database, { schema: dbSchema, logger: false });
-    }
-    
-    logInfo('[INFO] Schema regenerated successfully.');
-  }
-}
-
-// Define a more specific type for DatabaseExtension if possible, or use 'any' for now.
+// Plugin system functions
 interface DatabaseExtensionWithTables extends DatabaseExtension {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    tableDefinitions?: Record<string, Record<string, (columnBuilder: any) => any>>;
-    onDatabaseInit?: (db: AnyDatabase) => Promise<void>; // Ensure onDatabaseInit accepts AnyDatabase
+   
+  tableDefinitions?: Record<string, Record<string, (columnBuilder: any) => any>>;
+  onDatabaseInit?: (db: AnyDatabase, logger: FastifyBaseLogger) => Promise<void>;
 }
 
-export function registerPluginTables(plugins: Plugin[]) {
+export function registerPluginTables(plugins: Plugin[], logger?: FastifyBaseLogger) {
   const dbPlugins = plugins.filter(plugin => plugin.databaseExtension);
   for (const plugin of dbPlugins) {
-    const ext = plugin.databaseExtension as DatabaseExtensionWithTables | undefined; // Cast here
+    const ext = plugin.databaseExtension as DatabaseExtensionWithTables | undefined;
     if (!ext || !ext.tableDefinitions) continue;
     
     for (const [defName, definition] of Object.entries(ext.tableDefinitions)) {
-        inputPluginTableDefinitions[`${plugin.meta.id}_${defName}`] = definition;
+      inputPluginTableDefinitions[`${plugin.meta.id}_${defName}`] = definition;
     }
   }
   if (isDbInitialized) {
-      console.warn("[WARN] Plugins registered after DB initialization. Schema may be stale. Consider restarting.")
-  }
-}
-
-export async function createPluginTables(plugins: Plugin[]) { // db param not used
-  logInfo('[INFO] Attempting to create plugin tables (Note: Better handled by migrations)...');
-  if (!currentDbConfig) {
-      console.error("[ERROR] Cannot create plugin tables: DB config unknown.");
-      return;
-  }
-
-  const dbPlugins = plugins.filter(plugin => plugin.databaseExtension);
-  for (const plugin of dbPlugins) {
-    const ext = plugin.databaseExtension as DatabaseExtensionWithTables | undefined; // Cast here
-    if (!ext || !ext.tableDefinitions) continue;
-
-    for (const [defName] of Object.entries(ext.tableDefinitions)) {
-      const fullTableName = `${plugin.meta.id}_${defName}`;
-      if (dbSchema && dbSchema[fullTableName]) {
-        logInfo(`[INFO] Table ${fullTableName} already defined in schema. Creation should be handled by migrations.`);
-      } else {
-          console.warn(`[WARN] Table definition for ${fullTableName} not found in generated schema. Skipping creation.`);
-      }
+    if (logger && !isTestMode()) {
+      logger.warn({
+        operation: 'register_plugin_tables'
+      }, "Plugins registered after DB initialization. Schema may be stale. Consider restarting.");
     }
   }
 }
 
-export async function initializePluginDatabases(db: AnyDatabase, plugins: Plugin[]) {
+export async function createPluginTables(plugins: Plugin[], logger: FastifyBaseLogger) {
+  if (!isTestMode()) {
+    logger.info({
+      operation: 'create_plugin_tables'
+    }, 'Plugin tables are handled by migrations.');
+  }
+}
+
+export async function initializePluginDatabases(db: AnyDatabase, plugins: Plugin[], logger: FastifyBaseLogger) {
   for (const plugin of plugins) {
-    const ext = plugin.databaseExtension as DatabaseExtensionWithTables | undefined; // Cast here
+    const ext = plugin.databaseExtension as DatabaseExtensionWithTables | undefined;
     if (ext?.onDatabaseInit) {
-      logInfo(`[INFO] Initializing database for plugin: ${plugin.meta.id}`);
-      await ext.onDatabaseInit(db); // db is AnyDatabase, should be compatible
+      if (!isTestMode()) {
+        logger.info({
+          operation: 'initialize_plugin_databases',
+          pluginId: plugin.meta.id
+        }, `Initializing database for plugin: ${plugin.meta.id}`);
+      }
+      try {
+        // Create a child logger for this plugin
+        const pluginLogger = logger.child({ pluginId: plugin.meta.id });
+        await ext.onDatabaseInit(db, pluginLogger);
+        if (!isTestMode()) {
+          logger.info({
+            operation: 'initialize_plugin_databases',
+            pluginId: plugin.meta.id
+          }, `✅ Plugin ${plugin.meta.id} database initialization completed successfully`);
+        }
+      } catch (error) {
+        logger.error({
+          operation: 'initialize_plugin_databases',
+          pluginId: plugin.meta.id,
+          error: error,
+          message: error instanceof Error ? error.message : 'Unknown error',
+          stack: error instanceof Error ? error.stack : 'No stack trace'
+        }, `❌ Plugin ${plugin.meta.id} database initialization failed`);
+        throw error; // Re-throw to propagate the error
+      }
     }
   }
 }

@@ -2,6 +2,7 @@ import { getDb, getSchema } from '../db';
 import { eq, lt, gt } from 'drizzle-orm';
 import { generateId } from 'lucia';
 import { hash, verify } from '@node-rs/argon2';
+import type { FastifyBaseLogger } from 'fastify';
 import { EmailService } from '../email';
 import { GlobalSettings } from '../global-settings/helpers';
 
@@ -74,7 +75,7 @@ export class EmailVerificationService {
   /**
    * Verify a token and mark user as verified
    */
-  static async verifyEmailToken(token: string): Promise<{ success: boolean; error?: string; userId?: string }> {
+  static async verifyEmailToken(token: string, logger?: FastifyBaseLogger): Promise<{ success: boolean; error?: string; userId?: string }> {
     const db = getDb();
     const schema = getSchema();
     const emailVerificationTokensTable = schema.emailVerificationTokens;
@@ -121,7 +122,12 @@ export class EmailVerificationService {
 
       return { success: true, userId: matchingToken.user_id };
     } catch (error) {
-      console.error('Error verifying email token:', error);
+      if (logger) {
+        logger.error({
+          error,
+          operation: 'verify_email_token'
+        }, 'Error verifying email token');
+      }
       return { success: false, error: 'An error occurred during verification' };
     }
   }
@@ -167,7 +173,7 @@ export class EmailVerificationService {
   /**
    * Send verification email to user
    */
-  static async sendVerificationEmail(userId: string, userEmail: string, userName: string): Promise<{ success: boolean; error?: string }> {
+  static async sendVerificationEmail(userId: string, userEmail: string, userName: string, logger?: FastifyBaseLogger): Promise<{ success: boolean; error?: string }> {
     try {
       // Check if email sending is enabled
       const isEmailEnabled = await GlobalSettings.getBoolean('global.send_mail', false);
@@ -182,7 +188,11 @@ export class EmailVerificationService {
       const frontendUrl = await GlobalSettings.get('global.page_url', 'http://localhost:5173');
       const verificationUrl = `${frontendUrl}/verify-email?token=${token}`;
 
-      // Send verification email
+      // Send verification email (only if logger is available)
+      if (!logger) {
+        return { success: false, error: 'Logger is required for email sending' };
+      }
+
       const emailResult = await EmailService.sendEmail({
         to: userEmail,
         subject: 'Verify Your Email Address',
@@ -194,7 +204,7 @@ export class EmailVerificationService {
           expirationTime: '24 hours',
           supportEmail: await GlobalSettings.get('smtp.from_email') || undefined,
         },
-      });
+      }, logger);
 
       if (!emailResult.success) {
         return { success: false, error: emailResult.error || 'Failed to send verification email' };
@@ -202,7 +212,14 @@ export class EmailVerificationService {
 
       return { success: true };
     } catch (error) {
-      console.error('Error sending verification email:', error);
+      if (logger) {
+        logger.error({
+          error,
+          userId,
+          userEmail,
+          operation: 'send_verification_email'
+        }, 'Error sending verification email');
+      }
       return { success: false, error: 'An error occurred while sending verification email' };
     }
   }
@@ -210,7 +227,7 @@ export class EmailVerificationService {
   /**
    * Check if user's email is verified
    */
-  static async isEmailVerified(userId: string): Promise<boolean> {
+  static async isEmailVerified(userId: string, logger?: FastifyBaseLogger): Promise<boolean> {
     const db = getDb();
     const schema = getSchema();
     const authUserTable = schema.authUser;
@@ -229,7 +246,13 @@ export class EmailVerificationService {
 
       return users.length > 0 && users[0].email_verified === true;
     } catch (error) {
-      console.error('Error checking email verification status:', error);
+      if (logger) {
+        logger.error({
+          error,
+          userId,
+          operation: 'check_email_verified'
+        }, 'Error checking email verification status');
+      }
       return false;
     }
   }

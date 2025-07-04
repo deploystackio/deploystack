@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach, type MockedFunction } from 'vitest';
 import { generateMigrations, applyMigrations } from '../../../src/db/migrations';
+import type { FastifyBaseLogger } from 'fastify';
 
 // Create mock functions using vi.hoisted
 const { mockExec, mockDatabase, mockDrizzle, mockMigrate, mockAccess, mockClose } = vi.hoisted(() => ({
@@ -44,8 +45,23 @@ vi.mock('node:fs/promises', () => ({
 }));
 
 describe('Database Migrations', () => {
+  let mockLogger: FastifyBaseLogger;
+
   beforeEach(() => {
     vi.resetAllMocks();
+    
+    // Setup mock logger
+    mockLogger = {
+      info: vi.fn(),
+      error: vi.fn(),
+      warn: vi.fn(),
+      debug: vi.fn(),
+      trace: vi.fn(),
+      fatal: vi.fn(),
+      child: vi.fn(() => mockLogger),
+      level: 'info',
+      silent: false,
+    } as any;
     
     // Setup default mock implementations
     mockDatabase.mockReturnValue({
@@ -75,16 +91,13 @@ describe('Database Migrations', () => {
         stderr: mockStderr,
       });
 
-      const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-
-      await generateMigrations(testSchemaPath, testOutDir);
+      await generateMigrations(testSchemaPath, testOutDir, mockLogger);
 
       expect(mockExec).toHaveBeenCalledWith(
         `npx drizzle-kit generate:sqlite --schema=${testSchemaPath} --out=${testOutDir}`
       );
-      expect(consoleLogSpy).toHaveBeenCalledWith(`Migration stdout: ${mockStdout}`);
-      
-      consoleLogSpy.mockRestore();
+      // In test mode, info logs are not called due to isTestMode() check
+      expect(mockLogger.info).not.toHaveBeenCalled();
     });
 
     it('should log stderr output when present', async () => {
@@ -96,45 +109,47 @@ describe('Database Migrations', () => {
         stderr: mockStderr,
       });
 
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      await generateMigrations(testSchemaPath, testOutDir, mockLogger);
 
-      await generateMigrations(testSchemaPath, testOutDir);
-
-      expect(consoleErrorSpy).toHaveBeenCalledWith(`Migration stderr: ${mockStderr}`);
-      expect(consoleLogSpy).toHaveBeenCalledWith(`Migration stdout: ${mockStdout}`);
-      
-      consoleErrorSpy.mockRestore();
-      consoleLogSpy.mockRestore();
+      expect(mockLogger.error).toHaveBeenCalledWith({
+        operation: 'generate_migrations',
+        schemaPath: testSchemaPath,
+        outDir: testOutDir,
+        stderr: mockStderr
+      }, 'Migration stderr output');
+      // In test mode, info logs are not called due to isTestMode() check
+      expect(mockLogger.info).not.toHaveBeenCalled();
     });
 
     it('should handle and re-throw exec errors', async () => {
       const mockError = new Error('Command failed');
       mockExec.mockRejectedValue(mockError);
 
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-
-      await expect(generateMigrations(testSchemaPath, testOutDir)).rejects.toThrow(mockError);
+      await expect(generateMigrations(testSchemaPath, testOutDir, mockLogger)).rejects.toThrow(mockError);
       
-      expect(consoleErrorSpy).toHaveBeenCalledWith('Migration generation error:', mockError);
-      
-      consoleErrorSpy.mockRestore();
+      expect(mockLogger.error).toHaveBeenCalledWith({
+        operation: 'generate_migrations',
+        schemaPath: testSchemaPath,
+        outDir: testOutDir,
+        error: mockError
+      }, 'Migration generation error');
     });
 
     it('should handle exec errors with stderr', async () => {
       const mockError = new Error('drizzle-kit not found');
       mockExec.mockRejectedValue(mockError);
 
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-
-      await expect(generateMigrations(testSchemaPath, testOutDir)).rejects.toThrow(mockError);
+      await expect(generateMigrations(testSchemaPath, testOutDir, mockLogger)).rejects.toThrow(mockError);
       
       expect(mockExec).toHaveBeenCalledWith(
         `npx drizzle-kit generate:sqlite --schema=${testSchemaPath} --out=${testOutDir}`
       );
-      expect(consoleErrorSpy).toHaveBeenCalledWith('Migration generation error:', mockError);
-      
-      consoleErrorSpy.mockRestore();
+      expect(mockLogger.error).toHaveBeenCalledWith({
+        operation: 'generate_migrations',
+        schemaPath: testSchemaPath,
+        outDir: testOutDir,
+        error: mockError
+      }, 'Migration generation error');
     });
   });
 
@@ -156,18 +171,15 @@ describe('Database Migrations', () => {
       mockAccess.mockResolvedValue(undefined);
       mockMigrate.mockResolvedValue(undefined);
 
-      const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-
-      await applyMigrations(testDbPath, testMigrationsDir);
+      await applyMigrations(testDbPath, testMigrationsDir, mockLogger);
 
       expect(mockDatabase).toHaveBeenCalledWith(testDbPath);
       expect(mockDrizzle).toHaveBeenCalledWith(mockDbInstance);
       expect(mockAccess).toHaveBeenCalledWith(testMigrationsDir);
       expect(mockMigrate).toHaveBeenCalledWith(mockDrizzleInstance, { migrationsFolder: testMigrationsDir });
       expect(mockClose).toHaveBeenCalled();
-      expect(consoleLogSpy).toHaveBeenCalledWith('Migrations applied successfully');
-      
-      consoleLogSpy.mockRestore();
+      // In test mode, info logs are not called due to isTestMode() check
+      expect(mockLogger.info).not.toHaveBeenCalled();
     });
 
     it('should handle missing migrations directory', async () => {
@@ -175,17 +187,18 @@ describe('Database Migrations', () => {
       accessError.code = 'ENOENT';
       mockAccess.mockRejectedValue(accessError);
 
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-
-      await expect(applyMigrations(testDbPath, testMigrationsDir)).rejects.toThrow(accessError);
+      await expect(applyMigrations(testDbPath, testMigrationsDir, mockLogger)).rejects.toThrow(accessError);
 
       expect(mockDatabase).toHaveBeenCalledWith(testDbPath);
       expect(mockAccess).toHaveBeenCalledWith(testMigrationsDir);
       expect(mockMigrate).not.toHaveBeenCalled();
       expect(mockClose).toHaveBeenCalled(); // Should still close the database
-      expect(consoleErrorSpy).toHaveBeenCalledWith('Failed to apply migrations:', accessError);
-      
-      consoleErrorSpy.mockRestore();
+      expect(mockLogger.error).toHaveBeenCalledWith({
+        operation: 'apply_migrations',
+        dbPath: testDbPath,
+        migrationsDir: testMigrationsDir,
+        error: accessError
+      }, 'Failed to apply migrations');
     });
 
     it('should handle migration application errors', async () => {
@@ -196,18 +209,19 @@ describe('Database Migrations', () => {
       mockAccess.mockResolvedValue(undefined);
       mockMigrate.mockRejectedValue(migrationError);
 
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-
-      await expect(applyMigrations(testDbPath, testMigrationsDir)).rejects.toThrow(migrationError);
+      await expect(applyMigrations(testDbPath, testMigrationsDir, mockLogger)).rejects.toThrow(migrationError);
 
       expect(mockDatabase).toHaveBeenCalledWith(testDbPath);
       expect(mockDrizzle).toHaveBeenCalledWith(mockDbInstance);
       expect(mockAccess).toHaveBeenCalledWith(testMigrationsDir);
       expect(mockMigrate).toHaveBeenCalledWith(mockDrizzleInstance, { migrationsFolder: testMigrationsDir });
       expect(mockClose).toHaveBeenCalled(); // Should still close the database
-      expect(consoleErrorSpy).toHaveBeenCalledWith('Failed to apply migrations:', migrationError);
-      
-      consoleErrorSpy.mockRestore();
+      expect(mockLogger.error).toHaveBeenCalledWith({
+        operation: 'apply_migrations',
+        dbPath: testDbPath,
+        migrationsDir: testMigrationsDir,
+        error: migrationError
+      }, 'Failed to apply migrations');
     });
 
     it('should handle database connection errors', async () => {
@@ -216,17 +230,13 @@ describe('Database Migrations', () => {
         throw dbError;
       });
 
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-
-      await expect(applyMigrations(testDbPath, testMigrationsDir)).rejects.toThrow(dbError);
+      await expect(applyMigrations(testDbPath, testMigrationsDir, mockLogger)).rejects.toThrow(dbError);
 
       expect(mockDatabase).toHaveBeenCalledWith(testDbPath);
       expect(mockDrizzle).not.toHaveBeenCalled();
       expect(mockAccess).not.toHaveBeenCalled();
       expect(mockMigrate).not.toHaveBeenCalled();
       // mockClose should not be called since database creation failed
-      
-      consoleErrorSpy.mockRestore();
     });
 
     it('should ensure database is closed even if migration fails', async () => {
@@ -237,28 +247,20 @@ describe('Database Migrations', () => {
       mockAccess.mockResolvedValue(undefined);
       mockMigrate.mockRejectedValue(migrationError);
 
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-
-      await expect(applyMigrations(testDbPath, testMigrationsDir)).rejects.toThrow(migrationError);
+      await expect(applyMigrations(testDbPath, testMigrationsDir, mockLogger)).rejects.toThrow(migrationError);
 
       // Verify database is closed in finally block
       expect(mockClose).toHaveBeenCalled();
-      
-      consoleErrorSpy.mockRestore();
     });
 
     it('should ensure database is closed even if access check fails', async () => {
       const accessError = new Error('Permission denied');
       mockAccess.mockRejectedValue(accessError);
 
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-
-      await expect(applyMigrations(testDbPath, testMigrationsDir)).rejects.toThrow(accessError);
+      await expect(applyMigrations(testDbPath, testMigrationsDir, mockLogger)).rejects.toThrow(accessError);
 
       // Verify database is closed in finally block
       expect(mockClose).toHaveBeenCalled();
-      
-      consoleErrorSpy.mockRestore();
     });
   });
 
@@ -281,22 +283,18 @@ describe('Database Migrations', () => {
       mockAccess.mockResolvedValue(undefined);
       mockMigrate.mockResolvedValue(undefined);
 
-      const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-
       // Generate migrations
-      await generateMigrations(schemaPath, outDir);
+      await generateMigrations(schemaPath, outDir, mockLogger);
       
       // Apply migrations
-      await applyMigrations(dbPath, outDir);
+      await applyMigrations(dbPath, outDir, mockLogger);
 
       expect(mockExec).toHaveBeenCalledWith(
         `npx drizzle-kit generate:sqlite --schema=${schemaPath} --out=${outDir}`
       );
       expect(mockMigrate).toHaveBeenCalledWith(mockDrizzleInstance, { migrationsFolder: outDir });
-      expect(consoleLogSpy).toHaveBeenCalledWith('Migration stdout: Migration files generated');
-      expect(consoleLogSpy).toHaveBeenCalledWith('Migrations applied successfully');
-      
-      consoleLogSpy.mockRestore();
+      // In test mode, info logs are not called due to isTestMode() check
+      expect(mockLogger.info).not.toHaveBeenCalled();
     });
   });
 });

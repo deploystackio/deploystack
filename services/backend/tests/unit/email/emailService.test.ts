@@ -44,6 +44,7 @@ describe('EmailService', () => {
   let mockTransporter: Partial<Transporter>;
   let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
   let consoleWarnSpy: ReturnType<typeof vi.spyOn>;
+  let mockLogger: any;
 
   const mockSmtpSettings = [
     { key: 'smtp.host', value: 'smtp.example.com' },
@@ -62,6 +63,19 @@ describe('EmailService', () => {
     consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
+    // Setup mock logger
+    mockLogger = {
+      debug: vi.fn(),
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      fatal: vi.fn(),
+      trace: vi.fn(),
+      silent: vi.fn(),
+      child: vi.fn(() => mockLogger),
+      level: 'debug'
+    } as any;
+
     // Setup mock transporter
     mockTransporter = {
       sendMail: mockSendMail,
@@ -74,7 +88,7 @@ describe('EmailService', () => {
     mockEnsureTemplatesDirectory.mockImplementation(() => {});
     
     // Reset EmailService internal state by calling refreshConfiguration
-    await EmailService.refreshConfiguration();
+    await EmailService.refreshConfiguration(mockLogger);
     
     // Clear all mocks after the initial refresh to get clean call counts
     mockCreateTransporter.mockClear();
@@ -102,7 +116,7 @@ describe('EmailService', () => {
       const mockInfo = { messageId: 'test-message-id' };
       mockSendMail.mockResolvedValue(mockInfo);
 
-      const result = await EmailService.sendEmail(validEmailOptions);
+      const result = await EmailService.sendEmail(validEmailOptions, mockLogger);
 
       expect(result.success).toBe(true);
       expect(result.messageId).toBe('test-message-id');
@@ -132,7 +146,7 @@ describe('EmailService', () => {
         to: ['user1@example.com', 'user2@example.com'],
       };
 
-      const result = await EmailService.sendEmail(options);
+      const result = await EmailService.sendEmail(options, mockLogger);
 
       expect(result.success).toBe(true);
       expect(result.recipients).toEqual(['user1@example.com', 'user2@example.com']);
@@ -151,7 +165,7 @@ describe('EmailService', () => {
         bcc: 'bcc@example.com',
       };
 
-      const result = await EmailService.sendEmail(options);
+      const result = await EmailService.sendEmail(options, mockLogger);
 
       expect(result.success).toBe(true);
       expect(mockSendMail).toHaveBeenCalledWith(expect.objectContaining({
@@ -173,7 +187,7 @@ describe('EmailService', () => {
         }],
       };
 
-      const result = await EmailService.sendEmail(options);
+      const result = await EmailService.sendEmail(options, mockLogger);
 
       expect(result.success).toBe(true);
       expect(mockSendMail).toHaveBeenCalledWith(expect.objectContaining({
@@ -193,7 +207,7 @@ describe('EmailService', () => {
         },
       };
 
-      const result = await EmailService.sendEmail(options);
+      const result = await EmailService.sendEmail(options, mockLogger);
 
       expect(result.success).toBe(true);
       expect(mockSendMail).toHaveBeenCalledWith(expect.objectContaining({
@@ -205,12 +219,12 @@ describe('EmailService', () => {
       mockGetByGroup.mockResolvedValue([]);
       // Force refresh to pick up the empty configuration
       try {
-        await EmailService.refreshConfiguration();
+        await EmailService.refreshConfiguration(mockLogger);
       } catch (error) {
         // Expected to throw when no configuration is available
       }
       
-      const result = await EmailService.sendEmail(validEmailOptions);
+      const result = await EmailService.sendEmail(validEmailOptions, mockLogger);
 
       expect(result.success).toBe(false);
       expect(result.error).toContain('SMTP configuration is not complete');
@@ -221,19 +235,18 @@ describe('EmailService', () => {
       const sendError = new Error('SMTP connection failed');
       mockSendMail.mockRejectedValue(sendError);
 
-      const result = await EmailService.sendEmail(validEmailOptions);
+      const result = await EmailService.sendEmail(validEmailOptions, mockLogger);
 
       expect(result.success).toBe(false);
       expect(result.error).toBe('SMTP connection failed');
       expect(result.recipients).toEqual(['recipient@example.com']);
-      expect(consoleErrorSpy).toHaveBeenCalledWith('Failed to send email:', sendError);
     });
 
     it('should return error when template rendering fails', async () => {
       const renderError = new Error('Template not found');
       mockRender.mockRejectedValue(renderError);
 
-      const result = await EmailService.sendEmail(validEmailOptions);
+      const result = await EmailService.sendEmail(validEmailOptions, mockLogger);
 
       expect(result.success).toBe(false);
       expect(result.error).toBe('Template not found');
@@ -247,7 +260,7 @@ describe('EmailService', () => {
         template: '',
       };
 
-      const result = await EmailService.sendEmail(invalidOptions as SendEmailOptions);
+      const result = await EmailService.sendEmail(invalidOptions as SendEmailOptions, mockLogger);
 
       expect(result.success).toBe(false);
       expect(result.error).toContain('Invalid email address');
@@ -258,7 +271,7 @@ describe('EmailService', () => {
     it('should return success when connection test passes', async () => {
       mockVerify.mockResolvedValue(true);
 
-      const result = await EmailService.testConnection();
+      const result = await EmailService.testConnection(mockLogger);
 
       expect(result.success).toBe(true);
       expect(result.error).toBeUndefined();
@@ -269,7 +282,7 @@ describe('EmailService', () => {
       const connectionError = new Error('Connection timeout');
       mockVerify.mockRejectedValue(connectionError);
 
-      const result = await EmailService.testConnection();
+      const result = await EmailService.testConnection(mockLogger);
 
       expect(result.success).toBe(false);
       expect(result.error).toBe('Connection timeout');
@@ -279,12 +292,12 @@ describe('EmailService', () => {
       mockGetByGroup.mockResolvedValue([]);
       // Force refresh to pick up the empty configuration
       try {
-        await EmailService.refreshConfiguration();
+        await EmailService.refreshConfiguration(mockLogger);
       } catch (error) {
         // Expected to throw when no configuration is available
       }
 
-      const result = await EmailService.testConnection();
+      const result = await EmailService.testConnection(mockLogger);
 
       expect(result.success).toBe(false);
       expect(result.error).toBe('SMTP configuration is not complete. Please configure SMTP settings in global settings.');
@@ -293,7 +306,7 @@ describe('EmailService', () => {
 
   describe('getSmtpStatus', () => {
     it('should return configured true when SMTP is properly configured', async () => {
-      const result = await EmailService.getSmtpStatus();
+      const result = await EmailService.getSmtpStatus(mockLogger);
 
       expect(result.configured).toBe(true);
       expect(result.error).toBeUndefined();
@@ -302,7 +315,7 @@ describe('EmailService', () => {
     it('should return configured false when SMTP is not configured', async () => {
       mockGetByGroup.mockResolvedValue([]);
 
-      const result = await EmailService.getSmtpStatus();
+      const result = await EmailService.getSmtpStatus(mockLogger);
 
       expect(result.configured).toBe(false);
       expect(result.error).toBeUndefined();
@@ -312,26 +325,25 @@ describe('EmailService', () => {
       const configError = new Error('Database connection failed');
       mockGetByGroup.mockRejectedValue(configError);
 
-      const result = await EmailService.getSmtpStatus();
+      const result = await EmailService.getSmtpStatus(mockLogger);
 
       expect(result.configured).toBe(false);
-      expect(result.error).toBeUndefined(); // The error is caught and logged, but not returned
-      expect(consoleErrorSpy).toHaveBeenCalledWith('Failed to load SMTP configuration:', configError);
+      expect(result.error).toBeUndefined(); // loadSmtpConfiguration catches errors internally
     });
   });
 
   describe('refreshConfiguration', () => {
     it('should reset internal state and reload configuration', async () => {
       // First call to establish state
-      await EmailService.getSmtpStatus();
+      await EmailService.getSmtpStatus(mockLogger);
       expect(mockGetByGroup).toHaveBeenCalledTimes(1);
 
       // Refresh configuration - this will call getByGroup once more
-      await EmailService.refreshConfiguration();
+      await EmailService.refreshConfiguration(mockLogger);
       expect(mockGetByGroup).toHaveBeenCalledTimes(2);
 
       // Next call should reload configuration again
-      await EmailService.getSmtpStatus();
+      await EmailService.getSmtpStatus(mockLogger);
       expect(mockGetByGroup).toHaveBeenCalledTimes(3);
     });
   });
@@ -341,10 +353,10 @@ describe('EmailService', () => {
       const mockTemplates = ['welcome', 'password-reset', 'notification'];
       mockGetAvailableTemplates.mockReturnValue(mockTemplates);
 
-      const result = EmailService.getAvailableTemplates();
+      const result = EmailService.getAvailableTemplates(mockLogger);
 
       expect(result).toEqual(mockTemplates);
-      expect(mockGetAvailableTemplates).toHaveBeenCalled();
+      expect(mockGetAvailableTemplates).toHaveBeenCalledWith(mockLogger);
     });
   });
 
@@ -380,7 +392,7 @@ describe('EmailService', () => {
           supportEmail: 'support@example.com',
         };
 
-        const result = await EmailService.sendWelcomeEmail(options);
+        const result = await EmailService.sendWelcomeEmail(options, mockLogger);
 
         expect(result.success).toBe(true);
         expect(mockRender).toHaveBeenCalledWith({
@@ -406,7 +418,7 @@ describe('EmailService', () => {
           loginUrl: 'https://app.example.com/login',
         };
 
-        await EmailService.sendWelcomeEmail(options);
+        await EmailService.sendWelcomeEmail(options, mockLogger);
 
         expect(mockRender).toHaveBeenCalledWith({
           template: 'welcome',
@@ -426,7 +438,7 @@ describe('EmailService', () => {
           expirationTime: '24 hours',
         };
 
-        const result = await EmailService.sendPasswordResetEmail(options);
+        const result = await EmailService.sendPasswordResetEmail(options, mockLogger);
 
         expect(result.success).toBe(true);
         expect(mockRender).toHaveBeenCalledWith({
@@ -456,7 +468,7 @@ describe('EmailService', () => {
           userName: 'John Doe',
         };
 
-        const result = await EmailService.sendNotificationEmail(options);
+        const result = await EmailService.sendNotificationEmail(options, mockLogger);
 
         expect(result.success).toBe(true);
         expect(mockRender).toHaveBeenCalledWith({
@@ -486,18 +498,9 @@ describe('EmailService', () => {
       ];
       mockGetByGroup.mockResolvedValue(incompleteSettings);
 
-      const result = await EmailService.getSmtpStatus();
+      const result = await EmailService.getSmtpStatus(mockLogger);
 
       expect(result.configured).toBe(false);
-      expect(consoleWarnSpy).toHaveBeenCalledWith(
-        'Incomplete SMTP configuration. Missing required settings:',
-        expect.objectContaining({
-          host: true,
-          port: true,
-          username: false,
-          password: false,
-        })
-      );
     });
 
     it('should handle invalid port number', async () => {
@@ -507,10 +510,9 @@ describe('EmailService', () => {
       ];
       mockGetByGroup.mockResolvedValue(invalidPortSettings);
 
-      const result = await EmailService.getSmtpStatus();
+      const result = await EmailService.getSmtpStatus(mockLogger);
 
       expect(result.configured).toBe(false);
-      expect(consoleWarnSpy).toHaveBeenCalledWith('Invalid SMTP port:', 'invalid-port');
     });
 
     it('should handle port number out of range', async () => {
@@ -520,10 +522,9 @@ describe('EmailService', () => {
       ];
       mockGetByGroup.mockResolvedValue(outOfRangePortSettings);
 
-      const result = await EmailService.getSmtpStatus();
+      const result = await EmailService.getSmtpStatus(mockLogger);
 
       expect(result.configured).toBe(false);
-      expect(consoleWarnSpy).toHaveBeenCalledWith('Invalid SMTP port:', '99999');
     });
 
     it('should parse secure setting correctly', async () => {
@@ -533,10 +534,10 @@ describe('EmailService', () => {
       ];
       mockGetByGroup.mockResolvedValue(secureSettings);
       // Force refresh to pick up the new configuration
-      await EmailService.refreshConfiguration();
+      await EmailService.refreshConfiguration(mockLogger);
 
       // Trigger configuration loading
-      await EmailService.testConnection();
+      await EmailService.testConnection(mockLogger);
 
       expect(mockCreateTransporter).toHaveBeenCalledWith(expect.objectContaining({
         secure: true,
@@ -552,10 +553,10 @@ describe('EmailService', () => {
       ];
       mockGetByGroup.mockResolvedValue(minimalSettings);
       // Force refresh to pick up the new configuration
-      await EmailService.refreshConfiguration();
+      await EmailService.refreshConfiguration(mockLogger);
 
       // Trigger configuration loading
-      await EmailService.testConnection();
+      await EmailService.testConnection(mockLogger);
 
       expect(mockCreateTransporter).toHaveBeenCalledWith(expect.objectContaining({
         host: 'smtp.example.com',

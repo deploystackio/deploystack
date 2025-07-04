@@ -26,8 +26,7 @@ export class GlobalSettings {
       }
       
       return setting.value;
-    } catch (error) {
-      console.error(`Failed to get setting '${key}':`, error);
+    } catch {
       return defaultValue ?? null;
     }
   }
@@ -70,10 +69,8 @@ export class GlobalSettings {
       }
       
       // If we can't parse it, return default
-      console.warn(`Setting '${key}' has value '${value}' which cannot be parsed as boolean`);
       return defaultValue ?? null;
-    } catch (error) {
-      console.error(`Failed to get boolean setting '${key}':`, error);
+    } catch {
       return defaultValue ?? null;
     }
   }
@@ -95,13 +92,11 @@ export class GlobalSettings {
       const numValue = Number(value);
       
       if (isNaN(numValue)) {
-        console.warn(`Setting '${key}' has value '${value}' which cannot be parsed as number`);
         return defaultValue ?? null;
       }
       
       return numValue;
-    } catch (error) {
-      console.error(`Failed to get number setting '${key}':`, error);
+    } catch {
       return defaultValue ?? null;
     }
   }
@@ -121,8 +116,7 @@ export class GlobalSettings {
       }
       
       return Math.floor(numValue);
-    } catch (error) {
-      console.error(`Failed to get integer setting '${key}':`, error);
+    } catch {
       return defaultValue ?? null;
     }
   }
@@ -170,8 +164,7 @@ export class GlobalSettings {
       }
       
       return result;
-    } catch (error) {
-      console.error(`Failed to get group values for '${groupId}':`, error);
+    } catch {
       return {};
     }
   }
@@ -191,8 +184,7 @@ export class GlobalSettings {
       }
       
       return result;
-    } catch (error) {
-      console.error(`Failed to get group values with full keys for '${groupId}':`, error);
+    } catch {
       return {};
     }
   }
@@ -204,8 +196,7 @@ export class GlobalSettings {
     try {
       const value = await this.get(key);
       return value !== null && value.trim() !== '';
-    } catch (error) {
-      console.error(`Failed to check if setting is set '${key}':`, error);
+    } catch {
       return false;
     }
   }
@@ -250,11 +241,9 @@ export class GlobalSettings {
         new URL(value);
         return value;
       } catch {
-        console.warn(`Setting '${key}' has value '${value}' which is not a valid URL`);
         return defaultValue ?? null;
       }
-    } catch (error) {
-      console.error(`Failed to get URL setting '${key}':`, error);
+    } catch {
       return defaultValue ?? null;
     }
   }
@@ -279,11 +268,9 @@ export class GlobalSettings {
       if (emailRegex.test(value)) {
         return value;
       } else {
-        console.warn(`Setting '${key}' has value '${value}' which is not a valid email address`);
         return defaultValue ?? null;
       }
-    } catch (error) {
-      console.error(`Failed to get email setting '${key}':`, error);
+    } catch {
       return defaultValue ?? null;
     }
   }
@@ -308,11 +295,9 @@ export class GlobalSettings {
       try {
         return JSON.parse(value) as T;
       } catch {
-        console.warn(`Setting '${key}' has value '${value}' which cannot be parsed as JSON`);
         return defaultValue ?? null;
       }
-    } catch (error) {
-      console.error(`Failed to get JSON setting '${key}':`, error);
+    } catch {
       return defaultValue ?? null;
     }
   }
@@ -333,8 +318,7 @@ export class GlobalSettings {
       
       // Split by comma and trim whitespace
       return value.split(',').map(item => item.trim()).filter(item => item !== '');
-    } catch (error) {
-      console.error(`Failed to get array setting '${key}':`, error);
+    } catch {
       return defaultValue ?? [];
     }
   }
@@ -345,8 +329,7 @@ export class GlobalSettings {
   static async exists(key: string): Promise<boolean> {
     try {
       return await GlobalSettingsService.exists(key);
-    } catch (error) {
-      console.error(`Failed to check if setting exists '${key}':`, error);
+    } catch {
       return false;
     }
   }
@@ -366,6 +349,5 @@ export class GlobalSettings {
   static async refreshCaches(): Promise<void> {
     // This could be extended to notify other services to refresh their caches
     // For now, we don't have any caching in the GlobalSettings helpers themselves
-    console.log('GlobalSettings cache refresh requested (no caches to clear)');
   }
 }

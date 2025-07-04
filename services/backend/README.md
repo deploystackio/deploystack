@@ -9,7 +9,7 @@ A modular and extensible backend API for the DeployStack CI/CD platform, built w
 - **Modular**: Well-organized code structure for maintainability
 - **Email System**: Integrated email service with Pug templates and SMTP support
 - **Global Settings**: Centralized configuration management with encryption
-- **Database Integration**: SQLite/PostgreSQL support with Drizzle ORM
+- **Database Integration**: SQLite/Turso support with Drizzle ORM
 - **Plugin System**: Extensible architecture for custom functionality
 - **Authentication**: Lucia-based authentication with role management
 - **Logging**: Comprehensive request logging with request IDs and timing
@@ -190,9 +190,43 @@ Create a `.env` file in the `services/backend` directory with the following vari
 ```bash
 NODE_ENV=development
 PORT=3000
-LOG_LEVEL=debug
+HOST=localhost
+LOG_LEVEL=info
 DEPLOYSTACK_ENCRYPTION_SECRET=your-32-character-secret-key-here  # Required for global settings encryption
 ```
+
+### Logging Configuration
+
+DeployStack uses **Pino** logger with **Fastify** for high-performance, structured logging:
+
+**Available Log Levels** (in order of severity):
+- `trace` (10) - Very detailed debugging information
+- `debug` (20) - Debugging information for development
+- `info` (30) - General information (default for production)
+- `warn` (40) - Warning messages
+- `error` (50) - Error conditions
+- `fatal` (60) - Fatal errors that cause application termination
+
+**Environment-based Defaults:**
+- **Development**: `debug` level with pretty-printed, colorized output
+- **Production**: `info` level with structured JSON output
+- **Override**: Set `LOG_LEVEL` environment variable to any level
+
+**Examples:**
+```bash
+# Show all logs including debug info
+LOG_LEVEL=debug npm run dev
+
+# Production-like logging in development
+LOG_LEVEL=info npm run dev
+
+# Only show errors and fatal messages
+LOG_LEVEL=error npm run start
+```
+
+**Log Output Formats:**
+- **Development**: `[2025-07-03 10:48:06.636 +0200] INFO: ✅ Database initialization completed`
+- **Production**: `{"level":30,"time":"2025-07-03T08:48:06.636Z","msg":"Database initialization completed"}`
 
 ## 🤝 Contributing
 

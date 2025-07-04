@@ -269,6 +269,23 @@ export class RoleService {
         'teams.delete',
         'team.members.view',
       ],
+      team_admin: [
+        'teams.view',
+        'teams.edit',
+        'teams.delete',
+        'teams.manage',
+        'team.members.view',
+        'team.members.manage',
+        'cloud_credentials.view',
+        'cloud_credentials.create',
+        'cloud_credentials.edit',
+        'cloud_credentials.delete',
+      ],
+      team_user: [
+        'teams.view',
+        'team.members.view',
+        'cloud_credentials.view',
+      ],
     };
   }
 }

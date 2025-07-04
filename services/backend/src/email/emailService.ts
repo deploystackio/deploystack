@@ -1,5 +1,6 @@
 import * as nodemailer from 'nodemailer';
 import type { Transporter } from 'nodemailer';
+import type { FastifyBaseLogger } from 'fastify';
 import { GlobalSettingsService } from '../services/globalSettingsService';
 import { TemplateRenderer } from './templateRenderer';
 import { 
@@ -16,13 +17,13 @@ export class EmailService {
   /**
    * Send an email using a template
    */
-  static async sendEmail(options: SendEmailOptions): Promise<EmailSendResult> {
+  static async sendEmail(options: SendEmailOptions, logger: FastifyBaseLogger): Promise<EmailSendResult> {
     try {
       // Validate input using Zod
       const validatedOptions = SendEmailOptionsSchema.parse(options);
 
       // Ensure SMTP is configured and transporter is ready
-      await this.ensureTransporter();
+      await this.ensureTransporter(logger);
 
       if (!this.transporter || !this.smtpConfig) {
         throw new Error('SMTP configuration is not available or invalid');
@@ -50,10 +51,24 @@ export class EmailService {
       };
 
       // Send the email
+      logger.debug({
+        recipient: validatedOptions.to,
+        template: validatedOptions.template,
+        subject: validatedOptions.subject,
+        operation: 'send_email'
+      }, 'Sending email');
+
       const info = await this.transporter.sendMail(mailOptions);
 
       // Prepare recipients list
       const recipients = Array.isArray(validatedOptions.to) ? validatedOptions.to : [validatedOptions.to];
+
+      logger.debug({
+        messageId: info.messageId,
+        recipients,
+        template: validatedOptions.template,
+        operation: 'send_email'
+      }, 'Email sent successfully');
 
       return {
         success: true,
@@ -62,9 +77,16 @@ export class EmailService {
       };
 
     } catch (error) {
-      console.error('Failed to send email:', error);
-      
       const recipients = Array.isArray(options.to) ? options.to : [options.to];
+      
+      logger.error({
+        error,
+        recipient: options.to,
+        template: options.template,
+        subject: options.subject,
+        operation: 'send_email'
+      }, 'Failed to send email');
+      
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error occurred',
@@ -76,19 +98,33 @@ export class EmailService {
   /**
    * Test SMTP connection
    */
-  static async testConnection(): Promise<{ success: boolean; error?: string }> {
+  static async testConnection(logger: FastifyBaseLogger): Promise<{ success: boolean; error?: string }> {
     try {
-      await this.ensureTransporter();
+      await this.ensureTransporter(logger);
 
       if (!this.transporter) {
+        logger.warn({
+          operation: 'test_smtp_connection'
+        }, 'SMTP configuration is not available');
         return { success: false, error: 'SMTP configuration is not available' };
       }
 
       // Verify the connection
       await this.transporter.verify();
 
+      logger.debug({
+        operation: 'test_smtp_connection',
+        smtpHost: this.smtpConfig?.host
+      }, 'SMTP connection test successful');
+
       return { success: true };
     } catch (error) {
+      logger.error({
+        error,
+        operation: 'test_smtp_connection',
+        smtpHost: this.smtpConfig?.host
+      }, 'SMTP connection test failed');
+      
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error occurred',
@@ -99,11 +135,23 @@ export class EmailService {
   /**
    * Get current SMTP configuration status
    */
-  static async getSmtpStatus(): Promise<{ configured: boolean; error?: string }> {
+  static async getSmtpStatus(logger: FastifyBaseLogger): Promise<{ configured: boolean; error?: string }> {
     try {
-      const config = await this.loadSmtpConfiguration();
-      return { configured: config !== null };
+      const config = await this.loadSmtpConfiguration(logger);
+      const isConfigured = config !== null;
+      
+      logger.debug({
+        configured: isConfigured,
+        operation: 'get_smtp_status'
+      }, 'SMTP configuration status checked');
+      
+      return { configured: isConfigured };
     } catch (error) {
+      logger.error({
+        error,
+        operation: 'get_smtp_status'
+      }, 'Failed to get SMTP status');
+      
       return {
         configured: false,
         error: error instanceof Error ? error.message : 'Unknown error occurred',
@@ -114,17 +162,21 @@ export class EmailService {
   /**
    * Refresh SMTP configuration (useful when settings are updated)
    */
-  static async refreshConfiguration(): Promise<void> {
+  static async refreshConfiguration(logger: FastifyBaseLogger): Promise<void> {
+    logger.debug({
+      operation: 'refresh_smtp_config'
+    }, 'Refreshing SMTP configuration');
+    
     this.transporter = null;
     this.smtpConfig = null;
-    await this.ensureTransporter();
+    await this.ensureTransporter(logger);
   }
 
   /**
    * Get list of available email templates
    */
-  static getAvailableTemplates(): string[] {
-    return TemplateRenderer.getAvailableTemplates();
+  static getAvailableTemplates(logger: FastifyBaseLogger): string[] {
+    return TemplateRenderer.getAvailableTemplates(logger);
   }
 
   /**
@@ -137,13 +189,13 @@ export class EmailService {
   /**
    * Ensure transporter is configured and ready
    */
-  private static async ensureTransporter(): Promise<void> {
+  private static async ensureTransporter(logger: FastifyBaseLogger): Promise<void> {
     if (this.transporter && this.smtpConfig) {
       return;
     }
 
     // Load SMTP configuration from global settings
-    this.smtpConfig = await this.loadSmtpConfiguration();
+    this.smtpConfig = await this.loadSmtpConfiguration(logger);
 
     if (!this.smtpConfig) {
       throw new Error('SMTP configuration is not complete. Please configure SMTP settings in global settings.');
@@ -170,13 +222,15 @@ export class EmailService {
   /**
    * Load SMTP configuration from global settings
    */
-  private static async loadSmtpConfiguration(): Promise<SmtpConfiguration | null> {
+  private static async loadSmtpConfiguration(logger: FastifyBaseLogger): Promise<SmtpConfiguration | null> {
     try {
       // Get SMTP settings from global settings
       const smtpSettings = await GlobalSettingsService.getByGroup('smtp');
 
       if (!smtpSettings || smtpSettings.length === 0) {
-        console.warn('No SMTP settings found in global settings');
+        logger.warn({
+          operation: 'load_smtp_config'
+        }, 'No SMTP settings found in global settings');
         return null;
       }
 
@@ -191,19 +245,25 @@ export class EmailService {
 
       // Validate required settings
       if (!host || !port || !username || !password) {
-        console.warn('Incomplete SMTP configuration. Missing required settings:', {
-          host: !!host,
-          port: !!port,
-          username: !!username,
-          password: !!password,
-        });
+        logger.warn({
+          missingSettings: {
+            host: !host,
+            port: !port,
+            username: !username,
+            password: !password,
+          },
+          operation: 'load_smtp_config'
+        }, 'Incomplete SMTP configuration. Missing required settings');
         return null;
       }
 
       // Parse and validate port
       const portNumber = parseInt(port, 10);
       if (isNaN(portNumber) || portNumber <= 0 || portNumber > 65535) {
-        console.warn('Invalid SMTP port:', port);
+        logger.warn({
+          port,
+          operation: 'load_smtp_config'
+        }, 'Invalid SMTP port');
         return null;
       }
 
@@ -225,7 +285,10 @@ export class EmailService {
       };
 
     } catch (error) {
-      console.error('Failed to load SMTP configuration:', error);
+      logger.error({
+        error,
+        operation: 'load_smtp_config'
+      }, 'Failed to load SMTP configuration');
       return null;
     }
   }
@@ -239,7 +302,7 @@ export class EmailService {
     userEmail: string;
     loginUrl: string;
     supportEmail?: string;
-  }): Promise<EmailSendResult> {
+  }, logger: FastifyBaseLogger): Promise<EmailSendResult> {
     return this.sendEmail({
       to: options.to,
       subject: `Welcome to DeployStack, ${options.userName}!`,
@@ -250,7 +313,7 @@ export class EmailService {
         loginUrl: options.loginUrl,
         supportEmail: options.supportEmail || 'support@deploystack.com',
       },
-    });
+    }, logger);
   }
 
   /**
@@ -262,7 +325,7 @@ export class EmailService {
     resetUrl: string;
     expirationTime: string;
     supportEmail?: string;
-  }): Promise<EmailSendResult> {
+  }, logger: FastifyBaseLogger): Promise<EmailSendResult> {
     return this.sendEmail({
       to: options.to,
       subject: 'Reset Your DeployStack Password',
@@ -273,7 +336,7 @@ export class EmailService {
         expirationTime: options.expirationTime,
         supportEmail: options.supportEmail || 'support@deploystack.com',
       },
-    });
+    }, logger);
   }
 
   /**
@@ -286,7 +349,7 @@ export class EmailService {
     actionUrl?: string;
     actionText?: string;
     userName?: string;
-  }): Promise<EmailSendResult> {
+  }, logger: FastifyBaseLogger): Promise<EmailSendResult> {
     return this.sendEmail({
       to: options.to,
       subject: options.title,
@@ -298,7 +361,7 @@ export class EmailService {
         actionText: options.actionText,
         userName: options.userName,
       },
-    });
+    }, logger);
   }
 
   /**
@@ -313,7 +376,7 @@ export class EmailService {
     userAgent?: string;
     loginUrl?: string;
     supportEmail?: string;
-  }): Promise<EmailSendResult> {
+  }, logger: FastifyBaseLogger): Promise<EmailSendResult> {
     return this.sendEmail({
       to: options.to,
       subject: 'Password Changed - DeployStack Security Alert',
@@ -327,6 +390,6 @@ export class EmailService {
         loginUrl: options.loginUrl || 'https://app.deploystack.com/login',
         supportEmail: options.supportEmail || 'support@deploystack.com',
       },
-    });
+    }, logger);
   }
 }

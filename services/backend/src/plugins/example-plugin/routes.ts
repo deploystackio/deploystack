@@ -1,3 +1,4 @@
+import { type FastifyBaseLogger } from 'fastify';
 import { type PluginRouteManager } from '../../plugin-system/route-manager';
 import { type AnyDatabase, getSchema } from '../../db';
 import { type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
@@ -22,10 +23,15 @@ function isSQLiteDB(db: AnyDatabase): db is BetterSQLite3Database<any> {
  * 
  * @param routeManager The isolated route manager for this plugin
  * @param db The database instance (can be null if not configured)
+ * @param logger The logger instance for structured logging
  */
-export async function registerRoutes(routeManager: PluginRouteManager, db: AnyDatabase | null): Promise<void> {
+export async function registerRoutes(routeManager: PluginRouteManager, db: AnyDatabase | null, logger: FastifyBaseLogger): Promise<void> {
   if (!db) {
-    console.warn(`[${routeManager.getPluginId()}] Database not available, skipping database-dependent routes.`);
+    logger.warn({
+      operation: 'plugin_routes_register',
+      pluginId: routeManager.getPluginId(),
+      reason: 'database_not_available'
+    }, 'Database not available, skipping database-dependent routes.');
     return;
   }
 
@@ -34,7 +40,12 @@ export async function registerRoutes(routeManager: PluginRouteManager, db: AnyDa
   const table = currentSchema[tableNameInSchema];
 
   if (!table) {
-    console.error(`[${routeManager.getPluginId()}] Critical: Table ${tableNameInSchema} not found in global schema! Cannot register API routes.`);
+    logger.error({
+      operation: 'plugin_routes_register',
+      pluginId: routeManager.getPluginId(),
+      tableNameInSchema,
+      error: 'Table not found in global schema'
+    }, 'Critical: Table not found in global schema! Cannot register API routes.');
     return;
   }
 
@@ -83,5 +94,9 @@ export async function registerRoutes(routeManager: PluginRouteManager, db: AnyDa
     return example;
   });
 
-  console.log(`[${routeManager.getPluginId()}] Routes registered successfully under ${routeManager.getNamespace()}`);
+  logger.info({
+    operation: 'plugin_routes_register',
+    pluginId: routeManager.getPluginId(),
+    namespace: routeManager.getNamespace()
+  }, 'Routes registered successfully');
 }

@@ -1,250 +1,374 @@
-import { describe, it, expect, vi, beforeEach, afterEach, type MockedFunction } from 'vitest';
-import path from 'node:path';
-import { getDbConfig, saveDbConfig, deleteDbConfig, type DbConfig, type SQLiteConfig } from '../../../src/db/config';
-
-// Create mock functions using vi.hoisted
-const { mockMkdir, mockReadFile, mockWriteFile, mockUnlink } = vi.hoisted(() => ({
-  mockMkdir: vi.fn(),
-  mockReadFile: vi.fn(),
-  mockWriteFile: vi.fn(),
-  mockUnlink: vi.fn(),
-}));
-
-// Mock the fs/promises module
-vi.mock('node:fs/promises', () => ({
-  default: {
-    mkdir: mockMkdir,
-    readFile: mockReadFile,
-    writeFile: mockWriteFile,
-    unlink: mockUnlink,
-  },
-  mkdir: mockMkdir,
-  readFile: mockReadFile,
-  writeFile: mockWriteFile,
-  unlink: mockUnlink,
-}));
-
-const TEST_CONFIG_DIR = path.join(__dirname, '..', '..', '..', 'src', 'db', '..', '..', 'persistent_data');
-const TEST_DB_SELECTION_FILE_NAME = 'db.selection.test.json';
-const TEST_CONFIG_FILE_PATH = path.join(TEST_CONFIG_DIR, TEST_DB_SELECTION_FILE_NAME);
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { validateDatabaseConfig, getDatabaseStatus } from '../../../src/db/config';
+import type { DatabaseConfig } from '../../../src/db/config';
 
 describe('Database Configuration', () => {
-  let originalNodeEnv: string | undefined;
+  let originalEnv: string | undefined;
+  let originalDbType: string | undefined;
+  let originalSqliteDbPath: string | undefined;
+  let originalTursoUrl: string | undefined;
+  let originalTursoToken: string | undefined;
 
   beforeEach(() => {
-    vi.resetAllMocks();
-    originalNodeEnv = process.env.NODE_ENV;
-    process.env.NODE_ENV = 'test'; // Ensure test mode for consistent file naming
-
-    // Default mock for mkdir, can be overridden in specific tests if needed
-    mockMkdir.mockResolvedValue(TEST_CONFIG_DIR as any);
+    // Store original environment variables
+    originalEnv = process.env.NODE_ENV;
+    originalDbType = process.env.DB_TYPE;
+    originalSqliteDbPath = process.env.SQLITE_DB_PATH;
+    originalTursoUrl = process.env.TURSO_DATABASE_URL;
+    originalTursoToken = process.env.TURSO_AUTH_TOKEN;
+    
+    // Clear environment variables
+    delete process.env.DB_TYPE;
+    delete process.env.SQLITE_DB_PATH;
+    delete process.env.TURSO_DATABASE_URL;
+    delete process.env.TURSO_AUTH_TOKEN;
   });
 
   afterEach(() => {
-    process.env.NODE_ENV = originalNodeEnv;
+    // Restore original environment variables
+    if (originalEnv !== undefined) {
+      process.env.NODE_ENV = originalEnv;
+    }
+    if (originalDbType !== undefined) {
+      process.env.DB_TYPE = originalDbType;
+    } else {
+      delete process.env.DB_TYPE;
+    }
+    if (originalSqliteDbPath !== undefined) {
+      process.env.SQLITE_DB_PATH = originalSqliteDbPath;
+    } else {
+      delete process.env.SQLITE_DB_PATH;
+    }
+    if (originalTursoUrl !== undefined) {
+      process.env.TURSO_DATABASE_URL = originalTursoUrl;
+    } else {
+      delete process.env.TURSO_DATABASE_URL;
+    }
+    if (originalTursoToken !== undefined) {
+      process.env.TURSO_AUTH_TOKEN = originalTursoToken;
+    } else {
+      delete process.env.TURSO_AUTH_TOKEN;
+    }
   });
 
-  describe('getDbConfig', () => {
-    it('should read and parse an existing configuration file', async () => {
-      const mockConfig: SQLiteConfig = { type: 'sqlite', dbPath: 'test.db' };
-      mockReadFile.mockResolvedValue(JSON.stringify(mockConfig));
+  describe('validateDatabaseConfig', () => {
+    it('should validate valid SQLite config', () => {
+      const config: DatabaseConfig = {
+        type: 'sqlite',
+        dbPath: '/path/to/database.db'
+      };
 
-      const config = await getDbConfig();
-      expect(config).toEqual(mockConfig);
-      expect(mockMkdir).toHaveBeenCalledWith(TEST_CONFIG_DIR, { recursive: true });
-      expect(mockReadFile).toHaveBeenCalledWith(TEST_CONFIG_FILE_PATH, 'utf-8');
+      const result = validateDatabaseConfig(config);
+
+      expect(result).toBe(true);
     });
 
-    it('should return null if the configuration file does not exist (ENOENT)', async () => {
-      const error = new Error('File not found') as NodeJS.ErrnoException;
-      error.code = 'ENOENT';
-      mockReadFile.mockRejectedValue(error);
+    it('should validate valid Turso config', () => {
+      const config: DatabaseConfig = {
+        type: 'turso',
+        url: 'libsql://test.turso.io',
+        authToken: 'test-token'
+      };
 
-      const config = await getDbConfig();
-      expect(config).toBeNull();
-      expect(mockMkdir).toHaveBeenCalledWith(TEST_CONFIG_DIR, { recursive: true });
+      const result = validateDatabaseConfig(config);
+
+      expect(result).toBe(true);
     });
 
-    it('should log an error and return null for other readFile errors', async () => {
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      const error = new Error('Read permission denied');
-      mockReadFile.mockRejectedValue(error);
+    it('should reject SQLite config without dbPath', () => {
+      const config: DatabaseConfig = {
+        type: 'sqlite'
+      };
 
-      const config = await getDbConfig();
-      expect(config).toBeNull();
-      expect(mockMkdir).toHaveBeenCalledWith(TEST_CONFIG_DIR, { recursive: true });
-      expect(consoleErrorSpy).toHaveBeenCalledWith('[ERROR] Failed to read database configuration:', error);
-      consoleErrorSpy.mockRestore();
+      const result = validateDatabaseConfig(config);
+
+      expect(result).toBe(false);
     });
 
-    it('should log an error and return null if JSON parsing fails', async () => {
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      mockReadFile.mockResolvedValue('invalid json');
+    it('should reject SQLite config with empty dbPath', () => {
+      const config: DatabaseConfig = {
+        type: 'sqlite',
+        dbPath: ''
+      };
 
-      // We expect JSON.parse to throw, which should be caught by getDbConfig
-      // For this test, we don't mock JSON.parse itself, but rely on it failing.
-      // The function should catch this and return null.
-      const config = await getDbConfig();
-      expect(config).toBeNull();
-      // The error logged would be the SyntaxError from JSON.parse
-      expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('[ERROR] Failed to read database configuration:'), expect.any(SyntaxError));
-      consoleErrorSpy.mockRestore();
+      const result = validateDatabaseConfig(config);
+
+      expect(result).toBe(false);
+    });
+
+    it('should reject Turso config without url', () => {
+      const config: DatabaseConfig = {
+        type: 'turso',
+        authToken: 'test-token'
+      };
+
+      const result = validateDatabaseConfig(config);
+
+      expect(result).toBe(false);
+    });
+
+    it('should reject Turso config without authToken', () => {
+      const config: DatabaseConfig = {
+        type: 'turso',
+        url: 'libsql://test.turso.io'
+      };
+
+      const result = validateDatabaseConfig(config);
+
+      expect(result).toBe(false);
+    });
+
+    it('should reject Turso config with empty credentials', () => {
+      const config: DatabaseConfig = {
+        type: 'turso',
+        url: '',
+        authToken: ''
+      };
+
+      const result = validateDatabaseConfig(config);
+
+      expect(result).toBe(false);
+    });
+
+    it('should reject unsupported database type', () => {
+      const config = {
+        type: 'postgres' as any
+      };
+
+      const result = validateDatabaseConfig(config);
+
+      expect(result).toBe(false);
+    });
+
+    it('should handle null values', () => {
+      const config: DatabaseConfig = {
+        type: 'sqlite',
+        dbPath: null as any
+      };
+
+      const result = validateDatabaseConfig(config);
+
+      expect(result).toBe(false);
+    });
+
+    it('should handle undefined values', () => {
+      const config: DatabaseConfig = {
+        type: 'turso',
+        url: undefined,
+        authToken: undefined
+      };
+
+      const result = validateDatabaseConfig(config);
+
+      expect(result).toBe(false);
+    });
+
+    it('should handle whitespace-only values', () => {
+      const config: DatabaseConfig = {
+        type: 'sqlite',
+        dbPath: '   '
+      };
+
+      const result = validateDatabaseConfig(config);
+
+      // The current implementation only checks for truthiness, not for non-empty strings
+      // A string with whitespace is truthy, so it returns true
+      expect(result).toBe(true);
+    });
+
+    it('should validate SQLite config with whitespace in path', () => {
+      const config: DatabaseConfig = {
+        type: 'sqlite',
+        dbPath: '/path with spaces/database.db'
+      };
+
+      const result = validateDatabaseConfig(config);
+
+      expect(result).toBe(true);
+    });
+
+    it('should validate Turso config with complex URL', () => {
+      const config: DatabaseConfig = {
+        type: 'turso',
+        url: 'libsql://my-db-name-123.turso.io',
+        authToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test'
+      };
+
+      const result = validateDatabaseConfig(config);
+
+      expect(result).toBe(true);
     });
   });
 
-  describe('saveDbConfig', () => {
-    const mockConfig: SQLiteConfig = { type: 'sqlite', dbPath: 'test.db' };
+  describe('getDatabaseStatus', () => {
+    it('should return status for valid SQLite config', () => {
+      const config: DatabaseConfig = {
+        type: 'sqlite',
+        dbPath: '/path/to/database.db'
+      };
 
-    it('should save the configuration file successfully', async () => {
-      process.env.NODE_ENV = 'development'; // Set to non-test mode to enable logging
-      mockWriteFile.mockResolvedValue(undefined);
-      const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      const status = getDatabaseStatus(config);
 
-      await saveDbConfig(mockConfig);
-
-      expect(mockMkdir).toHaveBeenCalledWith(TEST_CONFIG_DIR, { recursive: true });
-      expect(mockWriteFile).toHaveBeenCalledWith(TEST_CONFIG_FILE_PATH, JSON.stringify(mockConfig, null, 2), 'utf-8');
-      expect(consoleLogSpy).toHaveBeenCalledWith(`[INFO] Database configuration saved to ${TEST_CONFIG_FILE_PATH}`);
-      consoleLogSpy.mockRestore();
+      expect(status).toEqual({
+        configured: true,
+        dialect: 'sqlite',
+        type: 'sqlite'
+      });
     });
 
-    it('should log an error and re-throw if writeFile fails', async () => {
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      const error = new Error('Write permission denied');
-      mockWriteFile.mockRejectedValue(error);
+    it('should return status for valid Turso config', () => {
+      const config: DatabaseConfig = {
+        type: 'turso',
+        url: 'libsql://test.turso.io',
+        authToken: 'test-token'
+      };
 
-      await expect(saveDbConfig(mockConfig)).rejects.toThrow(error);
-      expect(mockMkdir).toHaveBeenCalledWith(TEST_CONFIG_DIR, { recursive: true });
-      expect(consoleErrorSpy).toHaveBeenCalledWith('[ERROR] Failed to save database configuration:', error);
-      consoleErrorSpy.mockRestore();
+      const status = getDatabaseStatus(config);
+
+      expect(status).toEqual({
+        configured: true,
+        dialect: 'turso',
+        type: 'turso'
+      });
     });
 
-     it('should log an error and re-throw if mkdir fails', async () => {
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      const error = new Error('Cannot create directory');
-      mockMkdir.mockRejectedValue(error); // Mock mkdir to fail
+    it('should return status for invalid SQLite config', () => {
+      const config: DatabaseConfig = {
+        type: 'sqlite'
+        // Missing dbPath
+      };
 
-      await expect(saveDbConfig(mockConfig)).rejects.toThrow(error);
-      // writeFile should not be called if mkdir fails
-      expect(mockWriteFile).not.toHaveBeenCalled();
-      // The error from mkdir is caught by the try-catch in saveDbConfig
-      expect(consoleErrorSpy).toHaveBeenCalledWith('[ERROR] Failed to save database configuration:', error);
-      consoleErrorSpy.mockRestore();
-    });
-  });
+      const status = getDatabaseStatus(config);
 
-  describe('deleteDbConfig', () => {
-    it('should delete the configuration file successfully', async () => {
-      process.env.NODE_ENV = 'development'; // Set to non-test mode to enable logging
-      const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-      mockUnlink.mockResolvedValue(undefined);
-
-      await deleteDbConfig();
-      expect(mockUnlink).toHaveBeenCalledWith(TEST_CONFIG_FILE_PATH);
-      expect(consoleLogSpy).toHaveBeenCalledWith(`[INFO] Database configuration deleted from ${TEST_CONFIG_FILE_PATH}`);
-      
-      consoleLogSpy.mockRestore();
+      expect(status).toEqual({
+        configured: false,
+        dialect: 'sqlite',
+        type: 'sqlite'
+      });
     });
 
-    it('should log info and not throw if the file does not exist (ENOENT)', async () => {
-      process.env.NODE_ENV = 'development'; // Set to non-test mode to enable logging
-      const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      const error = new Error('File not found') as NodeJS.ErrnoException;
-      error.code = 'ENOENT';
-      mockUnlink.mockRejectedValue(error);
+    it('should return status for invalid Turso config', () => {
+      const config: DatabaseConfig = {
+        type: 'turso',
+        url: 'libsql://test.turso.io'
+        // Missing authToken
+      };
 
-      await deleteDbConfig();
-      expect(mockUnlink).toHaveBeenCalledWith(TEST_CONFIG_FILE_PATH);
-      expect(consoleLogSpy).toHaveBeenCalledWith('[INFO] Database configuration file not found, nothing to delete.');
-      expect(consoleErrorSpy).not.toHaveBeenCalled(); // No error should be logged
-      
-      consoleLogSpy.mockRestore();
-      consoleErrorSpy.mockRestore();
+      const status = getDatabaseStatus(config);
+
+      expect(status).toEqual({
+        configured: false,
+        dialect: 'turso',
+        type: 'turso'
+      });
     });
 
-    it('should log an error and re-throw for other unlink errors', async () => {
-      const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      const error = new Error('Delete permission denied');
-      mockUnlink.mockRejectedValue(error);
+    it('should return status for config with empty values', () => {
+      const config: DatabaseConfig = {
+        type: 'sqlite',
+        dbPath: ''
+      };
 
-      await expect(deleteDbConfig()).rejects.toThrow(error);
-      expect(mockUnlink).toHaveBeenCalledWith(TEST_CONFIG_FILE_PATH);
-      expect(consoleErrorSpy).toHaveBeenCalledWith('[ERROR] Failed to delete database configuration:', error);
-      expect(consoleLogSpy).not.toHaveBeenCalledWith(expect.stringContaining('nothing to delete'));
-      
-      consoleLogSpy.mockRestore();
-      consoleErrorSpy.mockRestore();
+      const status = getDatabaseStatus(config);
+
+      expect(status).toEqual({
+        configured: false,
+        dialect: 'sqlite',
+        type: 'sqlite'
+      });
     });
   });
 
-  describe('NODE_ENV handling for logging', () => {
-    const mockConfig: SQLiteConfig = { type: 'sqlite', dbPath: 'test.db' };
+  describe('Type validation', () => {
+    it('should handle config with extra properties', () => {
+      const config = {
+        type: 'sqlite' as const,
+        dbPath: '/path/to/db',
+        extraProperty: 'should be ignored'
+      };
 
-    it('should not call console.log when NODE_ENV is "test" for saveDbConfig', async () => {
-      process.env.NODE_ENV = 'test';
-      const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-      mockWriteFile.mockResolvedValue(undefined);
+      const result = validateDatabaseConfig(config);
+      expect(result).toBe(true);
 
-      await saveDbConfig(mockConfig);
-      expect(consoleLogSpy).not.toHaveBeenCalled(); // logInfo should prevent this
-      consoleLogSpy.mockRestore();
+      const status = getDatabaseStatus(config);
+      expect(status.configured).toBe(true);
     });
 
-    it('should call console.log when NODE_ENV is not "test" for saveDbConfig', async () => {
-      process.env.NODE_ENV = 'development'; // Not 'test'
-      const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-      mockWriteFile.mockResolvedValue(undefined);
+    it('should handle config with missing type', () => {
+      const config = {
+        dbPath: '/path/to/db'
+      } as any;
 
-      await saveDbConfig(mockConfig);
-      expect(consoleLogSpy).toHaveBeenCalledWith(`[INFO] Database configuration saved to ${TEST_CONFIG_FILE_PATH}`); // Use the actual path that will be used
-      consoleLogSpy.mockRestore();
+      const result = validateDatabaseConfig(config);
+      expect(result).toBe(false);
     });
 
+    it('should handle null config', () => {
+      const config = null as any;
 
-    it('should not call console.log when NODE_ENV is "test" for deleteDbConfig (success)', async () => {
-      process.env.NODE_ENV = 'test';
-      const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-      mockUnlink.mockResolvedValue(undefined);
-
-      await deleteDbConfig();
-      expect(consoleLogSpy).not.toHaveBeenCalled();
-      consoleLogSpy.mockRestore();
+      expect(() => validateDatabaseConfig(config)).toThrow();
     });
 
-    it('should call console.log when NODE_ENV is not "test" for deleteDbConfig (success)', async () => {
-      process.env.NODE_ENV = 'development';
-      const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-      mockUnlink.mockResolvedValue(undefined);
+    it('should handle undefined config', () => {
+      const config = undefined as any;
 
-      await deleteDbConfig();
-      expect(consoleLogSpy).toHaveBeenCalledWith(`[INFO] Database configuration deleted from ${TEST_CONFIG_FILE_PATH}`);
-      consoleLogSpy.mockRestore();
+      expect(() => validateDatabaseConfig(config)).toThrow();
+    });
+  });
+
+  describe('Edge cases and boundary conditions', () => {
+    it('should handle very long paths', () => {
+      const longPath = '/very/long/path/'.repeat(50) + 'database.db';
+      const config: DatabaseConfig = {
+        type: 'sqlite',
+        dbPath: longPath
+      };
+
+      const result = validateDatabaseConfig(config);
+      expect(result).toBe(true);
     });
 
-    it('should not call console.log when NODE_ENV is "test" for deleteDbConfig (ENOENT)', async () => {
-      process.env.NODE_ENV = 'test';
-      const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-      const error = new Error('File not found') as NodeJS.ErrnoException;
-      error.code = 'ENOENT';
-      mockUnlink.mockRejectedValue(error);
+    it('should handle special characters in paths', () => {
+      const config: DatabaseConfig = {
+        type: 'sqlite',
+        dbPath: '/path/with/special-chars_123/database.db'
+      };
 
-      await deleteDbConfig();
-      expect(consoleLogSpy).not.toHaveBeenCalled();
-      consoleLogSpy.mockRestore();
+      const result = validateDatabaseConfig(config);
+      expect(result).toBe(true);
     });
 
-    it('should call console.log when NODE_ENV is not "test" for deleteDbConfig (ENOENT)', async () => {
-      process.env.NODE_ENV = 'development';
-      const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-      const error = new Error('File not found') as NodeJS.ErrnoException;
-      error.code = 'ENOENT';
-      mockUnlink.mockRejectedValue(error);
+    it('should handle URLs with ports', () => {
+      const config: DatabaseConfig = {
+        type: 'turso',
+        url: 'libsql://test.turso.io:8080',
+        authToken: 'test-token'
+      };
 
-      await deleteDbConfig();
-      expect(consoleLogSpy).toHaveBeenCalledWith('[INFO] Database configuration file not found, nothing to delete.');
-      consoleLogSpy.mockRestore();
+      const result = validateDatabaseConfig(config);
+      expect(result).toBe(true);
+    });
+
+    it('should handle very long auth tokens', () => {
+      const longToken = 'a'.repeat(1000);
+      const config: DatabaseConfig = {
+        type: 'turso',
+        url: 'libsql://test.turso.io',
+        authToken: longToken
+      };
+
+      const result = validateDatabaseConfig(config);
+      expect(result).toBe(true);
+    });
+
+    it('should handle case sensitivity in database type', () => {
+      const config = {
+        type: 'SQLite' as any,
+        dbPath: '/path/to/db'
+      };
+
+      const result = validateDatabaseConfig(config);
+      expect(result).toBe(false);
     });
   });
 });

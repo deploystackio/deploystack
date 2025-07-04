@@ -11,6 +11,8 @@ import usersRoute from './users'
 import globalSettingsRoute from './globalSettings'
 // Import teams routes
 import teamsRoute from './teams'
+// Import cloud credentials routes
+import cloudCredentialsRoute from './cloud-credentials'
 
 // Response schema for the root health check endpoint
 const healthCheckResponseSchema = z.object({
@@ -34,6 +36,9 @@ export const registerRoutes = (server: FastifyInstance): void => {
   
   // Register teams routes
   server.register(teamsRoute);
+  
+  // Register cloud credentials routes
+  server.register(cloudCredentialsRoute);
 
   // Define a default route with comprehensive OpenAPI documentation
   server.get('/', {

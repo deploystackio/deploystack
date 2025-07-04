@@ -110,6 +110,7 @@ You can also run DeployStack on your own infrastructure for maximum control:
    ```env
    DEPLOYSTACK_FRONTEND_URL=http://localhost:5173
    DEPLOYSTACK_ENCRYPTION_SECRET=your-very-secure-32-character-secret-key-here
+   LOG_LEVEL=debug
    ```
 
    ```bash

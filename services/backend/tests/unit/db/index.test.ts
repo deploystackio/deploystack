@@ -11,15 +11,13 @@ import * as staticSchemaModule from '../../../src/db/schema.sqlite';
 // Functions from the module under test
 import {
   initializeDatabase,
-  setupNewDatabase,
   getDb,
   getSchema,
-  getDbConnection,
   getDbStatus,
-  regenerateSchema,
   registerPluginTables,
-  // createPluginTables, // Not testing directly as it's complex and migration-focused
-  // initializePluginDatabases, // Similar to createPluginTables
+  executeDbOperation,
+  createPluginTables,
+  initializePluginDatabases,
   type AnyDatabase,
   type AnySchema,
 } from '../../../src/db/index';
@@ -89,8 +87,9 @@ vi.mock('drizzle-orm/better-sqlite3', () => ({
 
 // Mock './config'
 vi.mock('../../../src/db/config', () => ({
-  getDbConfig: vi.fn(),
-  saveDbConfig: vi.fn(),
+  getDatabaseConfig: vi.fn(),
+  validateDatabaseConfig: vi.fn(),
+  getDatabaseStatus: vi.fn(),
 }));
 
 // Mock './schema.sqlite' (static schema)
@@ -102,8 +101,8 @@ vi.mock('../../../src/db/schema.sqlite', () => ({
   pluginTableDefinitions: {}, // Start with empty plugin definitions
 }));
 
-const mockedGetDbConfig = configModule.getDbConfig as MockedFunction<typeof configModule.getDbConfig>;
-const mockedSaveDbConfig = configModule.saveDbConfig as MockedFunction<typeof configModule.saveDbConfig>;
+const mockedGetDatabaseConfig = configModule.getDatabaseConfig as MockedFunction<typeof configModule.getDatabaseConfig>;
+const mockedValidateDatabaseConfig = configModule.validateDatabaseConfig as MockedFunction<typeof configModule.validateDatabaseConfig>;
 const mockedDrizzleSqliteAdapter = drizzleSqliteAdapter as Mocked<typeof drizzleSqliteAdapter>;
 const MockedSqliteDriver = SqliteDriver as Mocked<typeof SqliteDriver>;
 
@@ -124,7 +123,10 @@ describe('Database Service (db/index.ts)', () => {
     // This is tricky because db/index.ts has module-level state.
     // For robust tests, the module might need a reset function, or tests need to be carefully ordered/isolated.
     // For now, we rely on mocks to control behavior.
-    mockedGetDbConfig.mockResolvedValue(null); // Default to not configured
+    mockedGetDatabaseConfig.mockImplementation(() => {
+      throw new Error('No database selection found. Please use the setup endpoint to configure a database.');
+    });
+    mockedValidateDatabaseConfig.mockReturnValue(false);
     
     // Default mocks for fs that might be called during init
     mockMkdir.mockResolvedValue(undefined);
@@ -147,40 +149,35 @@ describe('Database Service (db/index.ts)', () => {
                        // We'll rely on controlling mocks for state.
   });
 
-  const sqliteConfig: configModule.SQLiteConfig = {
+  const sqliteConfig: configModule.DatabaseConfig = {
     type: 'sqlite',
     dbPath: 'persistent_data/database/deploystack.test.db',
   };
 
+  // Create a mock logger for tests that need it
+  const mockLogger = {
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+    child: vi.fn(() => mockLogger),
+  } as any;
+
   describe('initializeDatabase', () => {
     it('should return false if database is not configured', async () => {
-      mockedGetDbConfig.mockResolvedValue(null);
-      const result = await initializeDatabase();
+      // The mock is already set up to throw an error for no database config
+      const result = await initializeDatabase(mockLogger);
       expect(result).toBe(false);
       expect(getDbStatus().configured).toBe(false);
       expect(getDbStatus().initialized).toBe(false);
     });
   });
 
-  describe('getDb, getSchema, getDbConnection', () => {
+  describe('getDb and getSchema', () => {
     it('should throw if not initialized', async () => {
       // Ensure not initialized (default state of mocks)
       expect(() => getDb()).toThrow('Database not initialized');
       expect(() => getSchema()).toThrow('Database schema not generated');
-      expect(() => getDbConnection()).toThrow('Database connection not established');
-    });
-  });
-
-  describe('regenerateSchema', () => {
-    it('should not regenerate if not configured', async () => {
-       mockedGetDbConfig.mockResolvedValue(null); // Not configured
-       // Ensure it's not initialized either
-       // (This state is hard to enforce perfectly without module reset)
-
-       const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-       regenerateSchema();
-       expect(consoleLogSpy).not.toHaveBeenCalledWith(expect.stringContaining('regenerating'));
-       consoleLogSpy.mockRestore();
     });
   });
 
@@ -216,6 +213,52 @@ describe('Database Service (db/index.ts)', () => {
       expect(staticSchemaModule.pluginTableDefinitions).toHaveProperty('plugin1_myTable');
       expect(staticSchemaModule.pluginTableDefinitions['plugin1_myTable']).toEqual(plugin1.databaseExtension?.tableDefinitions?.myTable);
       expect(Object.keys(staticSchemaModule.pluginTableDefinitions).length).toBe(1);
+    });
+
+    it('should handle plugins without database extensions', () => {
+      registerPluginTables([plugin2]);
+      expect(Object.keys(staticSchemaModule.pluginTableDefinitions).length).toBe(0);
+    });
+
+    it('should handle empty plugin array', () => {
+      registerPluginTables([]);
+      expect(Object.keys(staticSchemaModule.pluginTableDefinitions).length).toBe(0);
+    });
+  });
+
+  describe('getDbStatus', () => {
+    it('should return correct status when not configured', () => {
+      const status = getDbStatus();
+      expect(status.configured).toBe(false);
+      expect(status.initialized).toBe(false);
+      expect(status.dialect).toBe(null);
+      expect(status.type).toBe(null);
+    });
+  });
+
+  describe('executeDbOperation', () => {
+    it('should throw when database is not initialized', () => {
+      const operation = vi.fn();
+      expect(() => executeDbOperation(operation)).toThrow('Database not initialized');
+      expect(operation).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('initializeDatabase with valid config', () => {
+    it('should successfully initialize with valid SQLite config', async () => {
+      // Mock a successful configuration
+      mockedGetDatabaseConfig.mockReturnValue(sqliteConfig);
+      mockedValidateDatabaseConfig.mockReturnValue(true);
+      
+      // Mock successful file operations
+      mockMkdir.mockResolvedValue(undefined);
+      mockAccess.mockResolvedValue(undefined); // Directory exists
+      mockReaddir.mockResolvedValue([]); // No migrations
+      
+      const result = await initializeDatabase(mockLogger);
+      expect(result).toBe(true);
+      expect(mockedGetDatabaseConfig).toHaveBeenCalledWith(mockLogger);
+      expect(mockedValidateDatabaseConfig).toHaveBeenCalledWith(sqliteConfig);
     });
   });
 });
