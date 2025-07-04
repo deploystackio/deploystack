@@ -182,9 +182,8 @@ export class GlobalSettingsService {
         if (setting.is_encrypted && setting.value) {
           try {
             setting.value = decrypt(setting.value);
-          } catch (error) {
-            // Log error but don't fail the entire operation
-            console.error(`Failed to decrypt setting '${setting.key}':`, error);
+          } catch {
+            // Silently handle decryption failure
             setting.value = '[DECRYPTION_FAILED]';
           }
         }
@@ -219,8 +218,7 @@ export class GlobalSettingsService {
         if (setting.is_encrypted && setting.value) {
           try {
             setting.value = decrypt(setting.value);
-          } catch (error) {
-            console.error(`Failed to decrypt setting '${setting.key}':`, error);
+          } catch {
             setting.value = '[DECRYPTION_FAILED]';
           }
         }
@@ -411,8 +409,7 @@ export class GlobalSettingsService {
         if (setting.is_encrypted && setting.value) {
           try {
             setting.value = decrypt(setting.value);
-          } catch (error) {
-            console.error(`Failed to decrypt setting '${setting.key}':`, error);
+          } catch {
             setting.value = '[DECRYPTION_FAILED]';
           }
         }

@@ -24,13 +24,22 @@ export default {
     },
     noAccount: "Don't have an account?",
     createAccount: 'Create account',
+    oauth: {
+      divider: 'or',
+      github: {
+        button: 'Login with GitHub',
+        signup: 'Sign up with GitHub',
+        unavailable: 'GitHub login is currently unavailable'
+      }
+    },
     errors: { // Added based on Login.vue structure, using placeholders
       title: 'Login Error',
       networkError: 'Network error. Please check your connection or try again later.',
       invalidCredentials: 'Invalid email or password.',
       serverError: 'Server error. Please try again later.',
       timeout: 'The request timed out. Please try again.',
-      unknownError: 'An unknown error occurred during login.'
+      unknownError: 'An unknown error occurred during login.',
+      githubOAuthError: 'GitHub login failed. Please try again.'
     }
   },
   register: {

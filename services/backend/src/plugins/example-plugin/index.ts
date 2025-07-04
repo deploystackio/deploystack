@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { type FastifyBaseLogger } from 'fastify';
 import { 
   type Plugin, 
   type DatabaseExtension,
@@ -96,70 +97,93 @@ class ExamplePlugin implements Plugin {
     tableDefinitions: examplePluginTableDefinitions, // Use tableDefinitions
     
     // Optional initialization function
-    // Use arrow function to correctly capture 'this' for access to this.meta.id
-    onDatabaseInit: async (db: AnyDatabase) => {
-      console.log(`[${this.meta.id}] Initializing example plugin database...`);
+  // Use arrow function to correctly capture 'this' for access to this.meta.id
+  onDatabaseInit: async (db: AnyDatabase, logger: FastifyBaseLogger) => {
+    logger.info({
+      operation: 'plugin_database_init',
+      pluginId: this.meta.id
+    }, 'Initializing example plugin database...');
 
-      const currentSchema = getSchema();
-      // 'this' here refers to the ExamplePlugin instance because of the arrow function
-      const tableNameInSchema = `${this.meta.id}_example_entities`; 
-      const table = currentSchema[tableNameInSchema];
+    const currentSchema = getSchema();
+    // 'this' here refers to the ExamplePlugin instance because of the arrow function
+    const tableNameInSchema = `${this.meta.id}_example_entities`; 
+    const table = currentSchema[tableNameInSchema];
 
-      if (!table) {
-        console.error(`[${this.meta.id}] Critical: Table ${tableNameInSchema} not found in global schema! Cannot initialize database for plugin.`);
-        return;
-      }
-      
-      let currentCount = 0;
+    if (!table) {
+      logger.error({
+        operation: 'plugin_database_init',
+        pluginId: this.meta.id,
+        tableNameInSchema,
+        error: 'Table not found in global schema'
+      }, 'Critical: Table not found in global schema! Cannot initialize database for plugin.');
+      return;
+    }
+    
+    let currentCount = 0;
+    if (isSQLiteDB(db)) {
+      const result = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(table as SQLiteTable)
+        .get();
+      currentCount = result?.count ?? 0;
+    } else {
+      // Assume NodePgDatabase-like behavior
+      const rows = await (db as NodePgDatabase)
+        .select({ count: sql<number>`count(*)` })
+        .from(table as PgTable);
+      currentCount = rows[0]?.count ?? 0;
+    }
+    
+    if (currentCount === 0) {
+      logger.info({
+        operation: 'plugin_database_seed',
+        pluginId: this.meta.id
+      }, 'Seeding initial data...');
+      const dataToSeed = {
+        id: 'example1',
+        name: 'Example Entity',
+        description: 'This is an example entity created by the plugin',
+      };
       if (isSQLiteDB(db)) {
-        const result = await db
-          .select({ count: sql<number>`count(*)` })
-          .from(table as SQLiteTable)
-          .get();
-        currentCount = result?.count ?? 0;
+        await db.insert(table as SQLiteTable).values(dataToSeed).run();
       } else {
         // Assume NodePgDatabase-like behavior
-        const rows = await (db as NodePgDatabase)
-          .select({ count: sql<number>`count(*)` })
-          .from(table as PgTable);
-        currentCount = rows[0]?.count ?? 0;
+        await (db as NodePgDatabase).insert(table as PgTable).values(dataToSeed);
       }
-      
-      if (currentCount === 0) {
-        console.log(`[${this.meta.id}] Seeding initial data...`);
-        const dataToSeed = {
-          id: 'example1',
-          name: 'Example Entity',
-          description: 'This is an example entity created by the plugin',
-        };
-        if (isSQLiteDB(db)) {
-          await db.insert(table as SQLiteTable).values(dataToSeed).run();
-        } else {
-          // Assume NodePgDatabase-like behavior
-          await (db as NodePgDatabase).insert(table as PgTable).values(dataToSeed);
-        }
-        console.log(`[${this.meta.id}] Seeded initial data`);
-      }
-    },
+      logger.info({
+        operation: 'plugin_database_seed',
+        pluginId: this.meta.id
+      }, 'Seeded initial data');
+    }
+  },
   };
   
   // Initialize the plugin (non-route initialization only)
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async initialize(db: AnyDatabase | null) {
-    console.log(`[${this.meta.id}] Initializing...`);
+   
+  async initialize(db: AnyDatabase | null, logger: FastifyBaseLogger) {
+    logger.info({
+      operation: 'plugin_init',
+      pluginId: this.meta.id
+    }, 'Initializing...');
     // Non-route initialization only - routes are now registered via registerRoutes method
-    console.log(`[${this.meta.id}] Initialized successfully`);
+    logger.info({
+      operation: 'plugin_init',
+      pluginId: this.meta.id
+    }, 'Initialized successfully');
   }
   
   // Register plugin routes using the isolated route manager
-  async registerRoutes(routeManager: PluginRouteManager, db: AnyDatabase | null) {
+  async registerRoutes(routeManager: PluginRouteManager, db: AnyDatabase | null, logger: FastifyBaseLogger) {
     const { registerRoutes } = await import('./routes');
-    await registerRoutes(routeManager, db);
+    await registerRoutes(routeManager, db, logger);
   }
   
   // Optional cleanup
-  async shutdown() {
-    console.log('Shutting down example plugin...');
+  async shutdown(logger: FastifyBaseLogger) {
+    logger.info({
+      operation: 'plugin_shutdown',
+      pluginId: this.meta.id
+    }, 'Shutting down example plugin...');
   }
 }
 

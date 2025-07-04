@@ -58,18 +58,32 @@ async function getDefinedCoreSettingKeys(): Promise<string[]> {
 
 describe('Global Settings Initialization Check', () => {
   // __dirname is services/backend/tests/e2e
-  const APP_BACKEND_ROOT = path.join(__dirname, '..', '..'); // Resolves to services/backend/
-  const dbPath = path.join(__dirname, 'test-data', 'deploystack.test.db'); // Correct path for test data
+  const TEST_DB_DIR = path.join(__dirname, '..', '..', 'persistent_data', 'database-test'); // Resolves to services/backend/persistent_data/database-test
   let db: Database.Database;
+  let dbPath: string;
 
   beforeAll(() => {
     try {
+      // Find the timestamp-based database file created by previous tests
+      if (!fs.existsSync(TEST_DB_DIR)) {
+        throw new Error(`Test database directory does not exist: ${TEST_DB_DIR}. Ensure '1-setup.e2e.test.ts' ran successfully.`);
+      }
+
+      const files = fs.readdirSync(TEST_DB_DIR);
+      const dbFile = files.find(file => file.startsWith('deploystack-') && file.endsWith('.db'));
+      
+      if (!dbFile) {
+        throw new Error(`No timestamp-based database file found in ${TEST_DB_DIR}. Ensure '1-setup.e2e.test.ts' ran successfully.`);
+      }
+
+      dbPath = path.join(TEST_DB_DIR, dbFile);
+      
       // The database file should exist as '1-setup.e2e.test.ts' must have run and created it.
       // Open in read-only mode as this test only verifies existence.
       db = new Database(dbPath, { readonly: true, fileMustExist: true });
     } catch (error) {
       console.error(
-        `Failed to open database at ${dbPath}. Ensure '1-setup.e2e.test.ts' ran successfully and created the database.`,
+        `Failed to open database at ${dbPath || 'unknown path'}. Ensure '1-setup.e2e.test.ts' ran successfully and created the database.`,
         error
       );
       // Re-throw to fail the test suite early if DB connection fails

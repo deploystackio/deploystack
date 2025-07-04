@@ -1,6 +1,7 @@
 import * as pug from 'pug';
 import * as path from 'path';
 import * as fs from 'fs';
+import type { FastifyBaseLogger } from 'fastify';
 import type { TemplateRenderOptions, TemplateValidationResult } from './types';
 
 export class TemplateRenderer {
@@ -99,7 +100,7 @@ export class TemplateRenderer {
   /**
    * Get list of available templates
    */
-  static getAvailableTemplates(): string[] {
+  static getAvailableTemplates(logger: FastifyBaseLogger): string[] {
     try {
       if (!fs.existsSync(this.templatesDir)) {
         return [];
@@ -109,7 +110,10 @@ export class TemplateRenderer {
         .filter(file => file.endsWith('.pug') && !file.startsWith('_'))
         .map(file => file.replace('.pug', ''));
     } catch (error) {
-      console.error('Failed to get available templates:', error);
+      logger.error({
+        error,
+        operation: 'get_available_templates'
+      }, 'Failed to get available templates');
       return [];
     }
   }

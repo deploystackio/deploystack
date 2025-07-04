@@ -2,11 +2,13 @@
 import { useForm } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
 import * as z from 'zod'
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Mail, Lock, AlertTriangle } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 import { UserService } from '@/services/userService'
+import GitHubIcon from '@/components/icons/GitHubIcon.vue'
+import { getEnv } from '@/utils/env'
 
 import {
   Card,
@@ -33,6 +35,7 @@ import { Input } from '@/components/ui/input'
 const router = useRouter()
 const isLoading = ref(false)
 const errorMessage = ref('')
+const githubOAuthEnabled = ref(false)
 const { t } = useI18n() // Initialize i18n composable
 
 // Define validation schema using Zod
@@ -142,6 +145,54 @@ const navigateToRegister = () => {
   router.push('/register')
 }
 
+// Check GitHub OAuth status
+const checkGitHubOAuthStatus = async () => {
+  try {
+    const apiUrl = getEnv('VITE_DEPLOYSTACK_BACKEND_URL')
+    if (!apiUrl) {
+      console.error('API URL not configured')
+      return false
+    }
+
+    const response = await fetch(`${apiUrl}/api/auth/github/status`)
+    if (response.ok) {
+      const status = await response.json()
+      return status.enabled
+    }
+  } catch (error) {
+    console.error('Failed to check GitHub OAuth status:', error)
+  }
+  return false
+}
+
+// Handle GitHub OAuth login
+const handleGitHubLogin = async () => {
+  try {
+    const isEnabled = await checkGitHubOAuthStatus()
+    if (!isEnabled) {
+      errorMessage.value = t('login.oauth.github.unavailable')
+      return
+    }
+
+    const apiUrl = getEnv('VITE_DEPLOYSTACK_BACKEND_URL')
+    if (!apiUrl) {
+      errorMessage.value = t('login.errors.networkError')
+      return
+    }
+
+    // Redirect to GitHub OAuth endpoint
+    window.location.href = `${apiUrl}/api/auth/github/login`
+  } catch (error) {
+    console.error('GitHub OAuth error:', error)
+    errorMessage.value = t('login.errors.githubOAuthError')
+  }
+}
+
+// Initialize GitHub OAuth status on component mount
+onMounted(async () => {
+  githubOAuthEnabled.value = await checkGitHubOAuthStatus()
+})
+
 </script>
 
 <template>
@@ -224,6 +275,30 @@ const navigateToRegister = () => {
               {{ isLoading ? $t('login.buttons.loading') : $t('login.buttons.submit') }}
             </Button>
           </form>
+
+          <!-- GitHub OAuth Section -->
+          <div v-if="githubOAuthEnabled" class="mt-6">
+            <div class="relative">
+              <div class="absolute inset-0 flex items-center">
+                <span class="w-full border-t" />
+              </div>
+              <div class="relative flex justify-center text-xs uppercase">
+                <span class="bg-background px-2 text-muted-foreground">
+                  {{ $t('login.oauth.divider') }}
+                </span>
+              </div>
+            </div>
+
+            <Button
+              type="button"
+              variant="outline"
+              class="w-full mt-4"
+              @click="handleGitHubLogin"
+            >
+              <GitHubIcon class="mr-2" />
+              {{ $t('login.oauth.github.button') }}
+            </Button>
+          </div>
         </CardContent>
         <CardFooter class="flex justify-center border-t p-6">
           <p class="text-center text-sm text-gray-500">

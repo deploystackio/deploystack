@@ -37,3 +37,6 @@ jobs:
         
       - name: Backend Lint
         run: npm run lint:backend
+        
+      - name: Check for console.log in backend
+        run: npm run check:no-console:backend
