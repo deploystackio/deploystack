@@ -1,48 +1,65 @@
 import { defineConfig, type Config } from "drizzle-kit";
-import fs from 'fs';
-import path from 'path';
+import { getDatabaseConfig } from './src/db/config';
 
-interface DbSelection {
-  type: 'sqlite';
-  dbPath: string;
+// Get database configuration from environment
+let dbConfig;
+try {
+  dbConfig = getDatabaseConfig();
+} catch (error) {
+  // If no database is configured yet, default to SQLite for drizzle-kit
+  console.log('[INFO] No database configured yet, defaulting to SQLite for drizzle-kit');
+  dbConfig = {
+    type: 'sqlite' as const,
+    dbPath: 'persistent_data/database/deploystack.db'
+  };
 }
 
-// Function to read config (simplified, synchronous for CLI tool)
-function getDbSelectionConfig(): DbSelection | null {
-  // Updated path to match the actual location used by the application
-  const configPath = path.resolve(__dirname, './persistent_data/db.selection.json'); 
-  try {
-    if (fs.existsSync(configPath)) {
-      const raw = fs.readFileSync(configPath, 'utf-8');
-      return JSON.parse(raw) as DbSelection;
-    }
-    console.log("db.selection.json not found, using default SQLite configuration for drizzle-kit.");
-  } catch (e) { 
-    console.error("Error reading db.selection.json for drizzle-kit, using default SQLite configuration:", e); 
-  }
-  return null; // Default to SQLite if no config or error
+let drizzleKitConfig: Config;
+
+switch (dbConfig.type) {
+  case 'sqlite':
+    drizzleKitConfig = {
+      dialect: "sqlite",
+      schema: "./src/db/schema.sqlite.ts",
+      out: "./drizzle/migrations_sqlite",
+      dbCredentials: {
+        url: dbConfig.dbPath!
+      }
+    };
+    break;
+    
+  case 'd1':
+    // For D1, we'll handle migrations via our HTTP API implementation
+    // Drizzle Kit doesn't directly support D1 HTTP API in this version
+    drizzleKitConfig = {
+      dialect: "sqlite",
+      schema: "./src/db/schema.sqlite.ts", 
+      out: "./drizzle/migrations_sqlite"
+      // Note: D1 migrations are applied via our custom HTTP client
+    };
+    break;
+    
+  case 'turso':
+    drizzleKitConfig = {
+      dialect: "sqlite", // Turso uses SQLite syntax
+      schema: "./src/db/schema.sqlite.ts",
+      out: "./drizzle/migrations_sqlite",
+      driver: "turso",
+      dbCredentials: {
+        url: dbConfig.url!,
+        authToken: dbConfig.authToken!
+      }
+    } as Config;
+    break;
+    
+  default:
+    throw new Error(`Unsupported database type: ${dbConfig.type}`);
 }
 
-const dbSelection = getDbSelectionConfig();
-
-// Default SQLite configuration
-const sqliteDbPath = (dbSelection?.dbPath) 
-  ? dbSelection.dbPath 
-  : 'persistent_data/database/deploystack.db'; // Default SQLite path
-
-console.log(`[INFO] drizzle.config.ts: Using SQLite dialect for drizzle-kit. DB path: ${sqliteDbPath}`);
-
-const drizzleKitConfig: Config = {
-  dialect: "sqlite",
-  schema: "./src/db/schema.sqlite.ts", // Point to SQLite-specific schema for drizzle-kit
-  out: "./drizzle/migrations_sqlite", // SQLite specific migrations
-  dbCredentials: {
-    url: path.isAbsolute(sqliteDbPath) ? sqliteDbPath : path.resolve(__dirname, sqliteDbPath),
-  },
-};
+console.log(`[INFO] drizzle.config.ts: Using ${dbConfig.type} configuration for drizzle-kit`);
 
 export default defineConfig({
   ...drizzleKitConfig,
   strict: true,
-  verbose: true, // Good for debugging drizzle-kit issues
+  verbose: true
 });

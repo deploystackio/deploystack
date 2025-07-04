@@ -93,6 +93,7 @@ describe('Lucia Authentication Library', () => {
     // Setup default mocks
     mockGetDbStatus.mockReturnValue({
       dialect: 'sqlite',
+      type: 'sqlite',
       configured: true,
       initialized: true,
     });
@@ -155,6 +156,7 @@ describe('Lucia Authentication Library', () => {
     it('should throw error when database is not configured', () => {
       mockGetDbStatus.mockReturnValue({
         dialect: 'sqlite',
+        type: 'sqlite',
         configured: false,
         initialized: true,
       });
@@ -167,6 +169,7 @@ describe('Lucia Authentication Library', () => {
     it('should throw error when database is not initialized', () => {
       mockGetDbStatus.mockReturnValue({
         dialect: 'sqlite',
+        type: 'sqlite',
         configured: true,
         initialized: false,
       });
@@ -179,11 +182,12 @@ describe('Lucia Authentication Library', () => {
     it('should throw error for unsupported database dialect', () => {
       mockGetDbStatus.mockReturnValue({
         dialect: 'postgresql' as any,
+        type: 'postgresql' as any,
         configured: true,
         initialized: true,
       });
 
-      expect(() => getLucia()).toThrow('Only SQLite is supported for authentication.');
+      expect(() => getLucia()).toThrow('Unsupported database type for authentication: postgresql');
     });
 
     it('should throw error when authUser table is missing', () => {
@@ -250,12 +254,18 @@ describe('Lucia Authentication Library', () => {
 
     it('should log in non-test mode', () => {
       process.env.NODE_ENV = 'development';
+      
+      // Mock process.stdout.write to capture structured logging
+      const stdoutSpy = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
 
       getLucia();
 
-      expect(consoleLogSpy).toHaveBeenCalledWith(
-        '[INFO] Lucia SQLite adapter created with existing database instance'
+      // Check that structured logging was called
+      expect(stdoutSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Lucia adapter created for sqlite database with existing database instance')
       );
+      
+      stdoutSpy.mockRestore();
     });
 
     it('should configure getUserAttributes correctly', () => {

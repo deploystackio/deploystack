@@ -1,5 +1,7 @@
+import type { FastifyBaseLogger } from 'fastify';
+
 // Function to display fancy startup banner
-export const displayStartupBanner = (port: number): void => {
+export const displayStartupBanner = (port: number, logger: FastifyBaseLogger): void => {
   const version = process.env.DEPLOYSTACK_BACKEND_VERSION || process.env.npm_package_version || '0.1.0';
 
   const message = `
@@ -18,5 +20,10 @@ export const displayStartupBanner = (port: number): void => {
   ║                                                                                               
   ╚═══════════════════════════════════════════════════════════════════════════════════════════════\x1b[0m
   `
-  console.log(message)
+  logger.info({
+    port,
+    version,
+    environment: process.env.NODE_ENV || 'development',
+    operation: 'startup_banner'
+  }, message);
 }

@@ -11,22 +11,6 @@ components:
       name: auth_session
   schemas: {}
 paths:
-  /api/plugin/example-plugin/examples:
-    get:
-      responses:
-        "200":
-          description: Default Response
-  /api/plugin/example-plugin/examples/{id}:
-    get:
-      parameters:
-        - schema:
-            type: string
-          in: path
-          name: id
-          required: true
-      responses:
-        "200":
-          description: Default Response
   /:
     get:
       summary: API health check
@@ -86,6 +70,7 @@ paths:
                     type: string
                     enum:
                       - sqlite
+                      - turso
                     nullable: true
                 required:
                   - configured
@@ -116,20 +101,6 @@ paths:
         application. This endpoint sets up the database schema, creates
         necessary tables, and initializes database-dependent services. Can only
         be called once - subsequent calls will return a conflict error.
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                type:
-                  type: string
-                  enum:
-                    - sqlite
-              required:
-                - type
-              additionalProperties: false
-        required: true
       responses:
         "200":
           description: Database setup completed successfully
@@ -145,9 +116,13 @@ paths:
                     type: boolean
                     description: Indicates whether a server restart is required to complete the
                       setup.
+                  database_type:
+                    type: string
+                    description: The type of database that was configured.
                 required:
                   - message
                   - restart_required
+                  - database_type
                 additionalProperties: false
                 description: Database setup completed successfully
         "400":
@@ -161,8 +136,7 @@ paths:
                     type: string
                     description: Error message describing what went wrong.
                   details:
-                    type: array
-                    description: Additional error details (validation errors).
+                    description: Additional error details.
                 required:
                   - error
                 additionalProperties: false
@@ -177,8 +151,12 @@ paths:
                   message:
                     type: string
                     description: Message indicating that database setup has already been performed.
+                  database_type:
+                    type: string
+                    description: The type of database that is currently configured.
                 required:
                   - message
+                  - database_type
                 additionalProperties: false
                 description: Conflict - Database setup has already been performed
         "500":
@@ -192,8 +170,7 @@ paths:
                     type: string
                     description: Error message describing what went wrong.
                   details:
-                    type: array
-                    description: Additional error details (validation errors).
+                    description: Additional error details.
                 required:
                   - error
                 additionalProperties: false
@@ -5165,6 +5142,1031 @@ paths:
                   details:
                     type: array
                     description: Additional error details (validation errors)
+                required:
+                  - error
+                additionalProperties: false
+                description: Internal Server Error
+  /teams/{teamId}/cloud-providers:
+    get:
+      summary: List available cloud providers
+      tags:
+        - Cloud Credentials
+      description: Retrieves all available cloud providers with their configuration schemas.
+      security:
+        - cookieAuth: []
+      parameters:
+        - schema:
+            type: string
+          in: path
+          name: teamId
+          required: true
+      responses:
+        "200":
+          description: Successfully retrieved cloud providers
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Indicates if the operation was successful
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        name:
+                          type: string
+                        description:
+                          type: string
+                        fields:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              key:
+                                type: string
+                              label:
+                                type: string
+                              type:
+                                type: string
+                                enum:
+                                  - text
+                                  - password
+                                  - textarea
+                              required:
+                                type: boolean
+                              secret:
+                                type: boolean
+                              placeholder:
+                                type: string
+                              description:
+                                type: string
+                              validation:
+                                type: object
+                                properties:
+                                  pattern:
+                                    type: string
+                                  minLength:
+                                    type: number
+                                  maxLength:
+                                    type: number
+                                additionalProperties: false
+                            required:
+                              - key
+                              - label
+                              - type
+                              - required
+                              - secret
+                            additionalProperties: false
+                        enabled:
+                          type: boolean
+                      required:
+                        - id
+                        - name
+                        - description
+                        - fields
+                        - enabled
+                      additionalProperties: false
+                    description: Array of available cloud providers
+                required:
+                  - success
+                  - data
+                additionalProperties: false
+                description: Successfully retrieved cloud providers
+        "401":
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates if the operation was successful (false for errors)
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - error
+                additionalProperties: false
+                description: Unauthorized - Authentication required
+        "403":
+          description: Forbidden - Insufficient permissions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates if the operation was successful (false for errors)
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - error
+                additionalProperties: false
+                description: Forbidden - Insufficient permissions
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates if the operation was successful (false for errors)
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - error
+                additionalProperties: false
+                description: Internal Server Error
+  /teams/{teamId}/cloud-credentials:
+    get:
+      summary: List team cloud credentials
+      tags:
+        - Cloud Credentials
+      description: Retrieves all cloud credentials for the specified team. Team admins
+        see full details including field metadata, while team members see basic
+        information only (name, provider, metadata).
+      security:
+        - cookieAuth: []
+      parameters:
+        - schema:
+            type: string
+          in: path
+          name: teamId
+          required: true
+      responses:
+        "200":
+          description: Successfully retrieved team credentials
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Indicates if the operation was successful
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        teamId:
+                          type: string
+                        providerId:
+                          type: string
+                        name:
+                          type: string
+                        comment:
+                          type: string
+                          nullable: true
+                        provider:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            name:
+                              type: string
+                            description:
+                              type: string
+                          required:
+                            - id
+                            - name
+                            - description
+                          additionalProperties: false
+                        fields:
+                          type: object
+                          additionalProperties:
+                            type: object
+                            properties:
+                              value:
+                                type: string
+                              hasValue:
+                                type: boolean
+                              secret:
+                                type: boolean
+                            required:
+                              - hasValue
+                              - secret
+                            additionalProperties: false
+                        createdBy:
+                          type: string
+                        createdAt:
+                          type: string
+                        updatedAt:
+                          type: string
+                      required:
+                        - id
+                        - teamId
+                        - providerId
+                        - name
+                        - comment
+                        - provider
+                        - fields
+                        - createdBy
+                        - createdAt
+                        - updatedAt
+                      additionalProperties: false
+                    description: Array of team cloud credentials
+                required:
+                  - success
+                  - data
+                additionalProperties: false
+                description: Successfully retrieved team credentials
+        "401":
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates if the operation was successful (false for errors)
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - error
+                additionalProperties: false
+                description: Unauthorized - Authentication required
+        "403":
+          description: Forbidden - Insufficient permissions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates if the operation was successful (false for errors)
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - error
+                additionalProperties: false
+                description: Forbidden - Insufficient permissions
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates if the operation was successful (false for errors)
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - error
+                additionalProperties: false
+                description: Internal Server Error
+    post:
+      summary: Create cloud credentials
+      tags:
+        - Cloud Credentials
+      description: Creates new cloud provider credentials for the team. Credentials
+        are encrypted before storage.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                providerId:
+                  type: string
+                  minLength: 1
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 100
+                comment:
+                  type: string
+                  maxLength: 500
+                credentials:
+                  type: object
+                  additionalProperties:
+                    type: string
+              required:
+                - providerId
+                - name
+                - credentials
+              additionalProperties: false
+        required: true
+      security:
+        - cookieAuth: []
+      parameters:
+        - schema:
+            type: string
+          in: path
+          name: teamId
+          required: true
+      responses:
+        "201":
+          description: Credential created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Indicates if the operation was successful
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      teamId:
+                        type: string
+                      providerId:
+                        type: string
+                      name:
+                        type: string
+                      comment:
+                        type: string
+                        nullable: true
+                      provider:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                          name:
+                            type: string
+                          description:
+                            type: string
+                        required:
+                          - id
+                          - name
+                          - description
+                        additionalProperties: false
+                      fields:
+                        type: object
+                        additionalProperties:
+                          type: object
+                          properties:
+                            value:
+                              type: string
+                            hasValue:
+                              type: boolean
+                            secret:
+                              type: boolean
+                          required:
+                            - hasValue
+                            - secret
+                          additionalProperties: false
+                      createdBy:
+                        type: string
+                      createdAt:
+                        type: string
+                      updatedAt:
+                        type: string
+                    required:
+                      - id
+                      - teamId
+                      - providerId
+                      - name
+                      - comment
+                      - provider
+                      - fields
+                      - createdBy
+                      - createdAt
+                      - updatedAt
+                    additionalProperties: false
+                    description: Created credential data
+                  message:
+                    type: string
+                    description: Success message
+                required:
+                  - success
+                  - data
+                  - message
+                additionalProperties: false
+                description: Credential created successfully
+        "400":
+          description: Bad Request - Validation error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates if the operation was successful (false for errors)
+                  error:
+                    type: string
+                    description: Error message
+                  details:
+                    type: array
+                    items:
+                      type: string
+                    description: Validation error details
+                required:
+                  - error
+                additionalProperties: false
+                description: Bad Request - Validation error
+        "401":
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates if the operation was successful (false for errors)
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - error
+                additionalProperties: false
+                description: Unauthorized - Authentication required
+        "403":
+          description: Forbidden - Insufficient permissions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates if the operation was successful (false for errors)
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - error
+                additionalProperties: false
+                description: Forbidden - Insufficient permissions
+        "409":
+          description: Conflict - Credential name already exists
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates if the operation was successful (false for errors)
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - error
+                additionalProperties: false
+                description: Conflict - Credential name already exists
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates if the operation was successful (false for errors)
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - error
+                additionalProperties: false
+                description: Internal Server Error
+  /teams/{teamId}/cloud-credentials/{credentialId}:
+    get:
+      summary: Get cloud credential by ID
+      tags:
+        - Cloud Credentials
+      description: Retrieves a specific cloud credential by ID. Team admins see full
+        details including field metadata, while team members see basic
+        information only (name, provider, metadata). Secret field values are
+        never returned.
+      security:
+        - cookieAuth: []
+      parameters:
+        - schema:
+            type: string
+          in: path
+          name: teamId
+          required: true
+        - schema:
+            type: string
+          in: path
+          name: credentialId
+          required: true
+      responses:
+        "200":
+          description: Credential retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Indicates if the operation was successful
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      teamId:
+                        type: string
+                      providerId:
+                        type: string
+                      name:
+                        type: string
+                      comment:
+                        type: string
+                        nullable: true
+                      provider:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                          name:
+                            type: string
+                          description:
+                            type: string
+                        required:
+                          - id
+                          - name
+                          - description
+                        additionalProperties: false
+                      fields:
+                        type: object
+                        additionalProperties:
+                          type: object
+                          properties:
+                            value:
+                              type: string
+                            hasValue:
+                              type: boolean
+                            secret:
+                              type: boolean
+                          required:
+                            - hasValue
+                            - secret
+                          additionalProperties: false
+                      createdBy:
+                        type: string
+                      createdAt:
+                        type: string
+                      updatedAt:
+                        type: string
+                    required:
+                      - id
+                      - teamId
+                      - providerId
+                      - name
+                      - comment
+                      - provider
+                      - fields
+                      - createdBy
+                      - createdAt
+                      - updatedAt
+                    additionalProperties: false
+                    description: Credential data
+                required:
+                  - success
+                  - data
+                additionalProperties: false
+                description: Credential retrieved successfully
+        "401":
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates if the operation was successful (false for errors)
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - error
+                additionalProperties: false
+                description: Unauthorized - Authentication required
+        "403":
+          description: Forbidden - Insufficient permissions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates if the operation was successful (false for errors)
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - error
+                additionalProperties: false
+                description: Forbidden - Insufficient permissions
+        "404":
+          description: Not Found - Credential not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates if the operation was successful (false for errors)
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - error
+                additionalProperties: false
+                description: Not Found - Credential not found
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates if the operation was successful (false for errors)
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - error
+                additionalProperties: false
+                description: Internal Server Error
+    put:
+      summary: Update cloud credentials
+      tags:
+        - Cloud Credentials
+      description: Updates existing cloud credentials. Secret fields can only be
+        replaced, not retrieved.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 100
+                comment:
+                  type: string
+                  maxLength: 500
+                credentials:
+                  type: object
+                  additionalProperties:
+                    type: string
+              additionalProperties: false
+      security:
+        - cookieAuth: []
+      parameters:
+        - schema:
+            type: string
+          in: path
+          name: teamId
+          required: true
+        - schema:
+            type: string
+          in: path
+          name: credentialId
+          required: true
+      responses:
+        "200":
+          description: Credential updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Indicates if the operation was successful
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      teamId:
+                        type: string
+                      providerId:
+                        type: string
+                      name:
+                        type: string
+                      comment:
+                        type: string
+                        nullable: true
+                      provider:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                          name:
+                            type: string
+                          description:
+                            type: string
+                        required:
+                          - id
+                          - name
+                          - description
+                        additionalProperties: false
+                      fields:
+                        type: object
+                        additionalProperties:
+                          type: object
+                          properties:
+                            value:
+                              type: string
+                            hasValue:
+                              type: boolean
+                            secret:
+                              type: boolean
+                          required:
+                            - hasValue
+                            - secret
+                          additionalProperties: false
+                      createdBy:
+                        type: string
+                      createdAt:
+                        type: string
+                      updatedAt:
+                        type: string
+                    required:
+                      - id
+                      - teamId
+                      - providerId
+                      - name
+                      - comment
+                      - provider
+                      - fields
+                      - createdBy
+                      - createdAt
+                      - updatedAt
+                    additionalProperties: false
+                    description: Updated credential data
+                  message:
+                    type: string
+                    description: Success message
+                required:
+                  - success
+                  - data
+                  - message
+                additionalProperties: false
+                description: Credential updated successfully
+        "400":
+          description: Bad Request - Validation error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates if the operation was successful (false for errors)
+                  error:
+                    type: string
+                    description: Error message
+                  details:
+                    type: array
+                    items:
+                      type: string
+                    description: Validation error details
+                required:
+                  - error
+                additionalProperties: false
+                description: Bad Request - Validation error
+        "401":
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates if the operation was successful (false for errors)
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - error
+                additionalProperties: false
+                description: Unauthorized - Authentication required
+        "403":
+          description: Forbidden - Insufficient permissions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates if the operation was successful (false for errors)
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - error
+                additionalProperties: false
+                description: Forbidden - Insufficient permissions
+        "404":
+          description: Not Found - Credential not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates if the operation was successful (false for errors)
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - error
+                additionalProperties: false
+                description: Not Found - Credential not found
+        "409":
+          description: Conflict - Credential name already exists
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates if the operation was successful (false for errors)
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - error
+                additionalProperties: false
+                description: Conflict - Credential name already exists
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates if the operation was successful (false for errors)
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - error
+                additionalProperties: false
+                description: Internal Server Error
+    delete:
+      summary: Delete cloud credentials
+      tags:
+        - Cloud Credentials
+      description: Deletes cloud credentials from the team. This action cannot be undone.
+      security:
+        - cookieAuth: []
+      parameters:
+        - schema:
+            type: string
+          in: path
+          name: teamId
+          required: true
+        - schema:
+            type: string
+          in: path
+          name: credentialId
+          required: true
+      responses:
+        "200":
+          description: Credential deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Indicates if the operation was successful
+                  message:
+                    type: string
+                    description: Success message
+                required:
+                  - success
+                  - message
+                additionalProperties: false
+                description: Credential deleted successfully
+        "401":
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates if the operation was successful (false for errors)
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - error
+                additionalProperties: false
+                description: Unauthorized - Authentication required
+        "403":
+          description: Forbidden - Insufficient permissions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates if the operation was successful (false for errors)
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - error
+                additionalProperties: false
+                description: Forbidden - Insufficient permissions
+        "404":
+          description: Not Found - Credential not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates if the operation was successful (false for errors)
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - error
+                additionalProperties: false
+                description: Not Found - Credential not found
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates if the operation was successful (false for errors)
+                  error:
+                    type: string
+                    description: Error message
                 required:
                   - error
                 additionalProperties: false

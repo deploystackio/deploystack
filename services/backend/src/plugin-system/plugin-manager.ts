@@ -1,7 +1,7 @@
 import path from 'node:path';
 import fs from 'node:fs';
 import fsPromises from 'node:fs/promises';
-import { type FastifyInstance } from 'fastify';
+import { type FastifyInstance, type FastifyBaseLogger } from 'fastify';
 // import { type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3'; // Replaced by AnyDatabase
 import { type AnyDatabase } from '../db'; // Import the AnyDatabase union type
 
@@ -33,6 +33,7 @@ export class PluginManager {
   private db: AnyDatabase | null = null; // Updated type
   private pluginPaths: string[] = [];
   private initialized = false;
+  private logger: FastifyBaseLogger | null = null;
 
   /**
    * Create a new plugin manager
@@ -55,6 +56,7 @@ export class PluginManager {
    */
   setApp(app: FastifyInstance): void {
     this.app = app;
+    this.logger = app.log.child({ component: 'PluginManager' });
   }
 
   /**
@@ -107,32 +109,32 @@ export class PluginManager {
    */
   async loadPlugin(pluginPath: string): Promise<Plugin> {
     try {
-      console.log(`[DEBUG] Attempting to load plugin from: ${pluginPath}`);
+      this.logger?.debug(`Attempting to load plugin from: ${pluginPath}`);
       
       // Try to load as an ES module or CommonJS module
       let pluginPackage: PluginPackage;
       
       try {
-        console.log(`[DEBUG] Trying to import as module: ${pluginPath}`);
+        this.logger?.debug(`Trying to import as module: ${pluginPath}`);
         pluginPackage = await import(pluginPath);
       } catch (err) {
-        console.log(`[DEBUG] Module import failed, trying require: ${pluginPath}`, err);
+        this.logger?.debug(`Module import failed, trying require: ${pluginPath}`, err);
         // Using dynamic import with a constructed path to avoid require()
         // This is a workaround for the ESLint rule @typescript-eslint/no-require-imports
         pluginPackage = await import(`${pluginPath}`);
       }
       
       if (!pluginPackage.default) {
-        console.log(`[DEBUG] No default export found in: ${pluginPath}`);
+        this.logger?.debug(`No default export found in: ${pluginPath}`);
         throw new Error(`Plugin at ${pluginPath} does not export a default export`);
       }
       
-      console.log(`[DEBUG] Found plugin class in: ${pluginPath}`);
+      this.logger?.debug(`Found plugin class in: ${pluginPath}`);
       const PluginClass = pluginPackage.default;
       const plugin = new PluginClass();
       
       const { id } = plugin.meta;
-      console.log(`[DEBUG] Instantiated plugin with ID: ${id}`);
+      this.logger?.debug(`Instantiated plugin with ID: ${id}`);
       
       if (this.plugins.has(id)) {
         throw new PluginDuplicateError(id);
@@ -140,18 +142,18 @@ export class PluginManager {
       
       if (!this.isPluginEnabled(id)) {
         // Plugin is disabled, skip it
-        console.log(`[DEBUG] Plugin ${id} is disabled, skipping`);
+        this.logger?.debug(`Plugin ${id} is disabled, skipping`);
         return plugin;
       }
       
       this.plugins.set(id, plugin);
-      console.log(`[DEBUG] Successfully loaded plugin: ${id}`);
+      this.logger?.debug(`Successfully loaded plugin: ${id}`);
       return plugin;
     } catch (error) {
       if (error instanceof PluginDuplicateError) {
         throw error;
       }
-      console.error(`[DEBUG] Error loading plugin from ${pluginPath}:`, error);
+      this.logger?.error(`Error loading plugin from ${pluginPath}:`, error);
       throw new PluginLoadError(path.basename(pluginPath), error);
     }
   }
@@ -164,7 +166,7 @@ export class PluginManager {
       try {
         // Check if the plugin path exists
         if (!fs.existsSync(pluginPath)) {
-          console.log(`[INFO] Plugin directory not found: ${pluginPath} - creating directory`);
+          this.logger?.info(`Plugin directory not found: ${pluginPath} - creating directory`);
           fs.mkdirSync(pluginPath, { recursive: true });
           continue; // Skip processing this directory as it's empty
         }
@@ -184,7 +186,7 @@ export class PluginManager {
               const packageJsonPath = path.join(entryPath, 'package.json');
               try {
                 await fsPromises.access(packageJsonPath);
-                console.log(`[DEBUG] Found package.json in: ${entryPath}`);
+                this.logger?.debug(`Found package.json in: ${entryPath}`);
                 
                 // Check if we're running from dist directory
                 const isRunningFromDist = __dirname.includes('/dist/');
@@ -200,15 +202,15 @@ export class PluginManager {
                 
                 const mainPath = path.join(pluginBasePath, `index.${pluginExtension}`);
                 
-                console.log(`[DEBUG] Attempting to load plugin main from: ${mainPath}`);
+                this.logger?.debug(`Attempting to load plugin main from: ${mainPath}`);
                 
                 // Check if the file exists
                 try {
                   await fsPromises.access(mainPath);
-                  console.log(`[DEBUG] Found main file: ${mainPath}`);
+                  this.logger?.debug(`Found main file: ${mainPath}`);
                   await this.loadPlugin(mainPath);
                 } catch (accessErr) {
-                  console.log(`[DEBUG] Main file not found: ${mainPath}, error:`, accessErr);
+                  this.logger?.debug(`Main file not found: ${mainPath}, error:`, accessErr);
                   
                   // If preferred file not found, try alternative
                   const altExtension = pluginExtension === 'ts' ? 'js' : 'ts';
@@ -216,15 +218,15 @@ export class PluginManager {
                   
                   try {
                     await fsPromises.access(altPath);
-                    console.log(`[DEBUG] Found alternative file: ${altPath}`);
+                    this.logger?.debug(`Found alternative file: ${altPath}`);
                     await this.loadPlugin(altPath);
                   } catch {
-                    console.log(`[DEBUG] Alternative file not found either`);
+                    this.logger?.debug(`Alternative file not found either`);
                   }
                 }
               } catch {
                 // No package.json, skip
-                console.log(`[DEBUG] No package.json found in: ${entryPath}`);
+                this.logger?.debug(`No package.json found in: ${entryPath}`);
                 continue;
               }
             }
@@ -234,11 +236,11 @@ export class PluginManager {
           await this.loadPlugin(pluginPath);
         }
       } catch (error) {
-        console.error(`[ERROR] Error discovering plugins at ${pluginPath}:`, error);
+        this.logger?.error(`Error discovering plugins at ${pluginPath}:`, error);
       }
     }
     
-    console.log(`[INFO] Plugin discovery complete. ${this.plugins.size} plugins loaded.`);
+    this.logger?.info(`Plugin discovery complete. ${this.plugins.size} plugins loaded.`);
   }
 
   /**
@@ -280,7 +282,7 @@ export class PluginManager {
             allGroups.push(group);
             groupIds.add(group.id);
           } else {
-            console.warn(`[PluginManager] Duplicate group ID '${group.id}' defined by plugin '${plugin.meta.id}'. Ignoring subsequent definition.`);
+            this.logger?.warn(`Duplicate group ID '${group.id}' defined by plugin '${plugin.meta.id}'. Ignoring subsequent definition.`);
           }
         }
       }
@@ -308,7 +310,7 @@ export class PluginManager {
    * This should be called after core settings are initialized.
    */
   async initializePluginGlobalSettings(): Promise<void> {
-    console.log('[PluginManager] Initializing global settings from plugins...');
+    this.logger?.info('Initializing global settings from plugins...');
     const pluginGroups = this.getPluginGlobalSettingGroups();
     const pluginSettings = this.getPluginGlobalSettingDefinitions();
 
@@ -323,13 +325,13 @@ export class PluginManager {
         if (!existingGroup) {
           // Attempt to create the group if it doesn't exist.
           await GlobalSettingsService.createGroup(group); 
-          console.log(`[PluginManager] Created global setting group ID '${group.id}' (Name: "${group.name}") as defined by a plugin.`);
+          this.logger?.info(`Created global setting group ID '${group.id}' (Name: "${group.name}") as defined by a plugin.`);
         } else {
           // Group ID already exists. Log that the plugin's definition for this group ID (name, description, etc.) is ignored.
-          console.warn(`[PluginManager] Global setting group ID '${group.id}' already exists (Existing Name: "${existingGroup.name}"). Plugin's attempt to define a group with this ID (Plugin's proposed Name: "${group.name}") will use the existing group. Plugin-specific metadata for this group ID (name, description, icon, sort_order) is ignored.`);
+          this.logger?.warn(`Global setting group ID '${group.id}' already exists (Existing Name: "${existingGroup.name}"). Plugin's attempt to define a group with this ID (Plugin's proposed Name: "${group.name}") will use the existing group. Plugin-specific metadata for this group ID (name, description, icon, sort_order) is ignored.`);
         }
       } catch (error) {
-        console.error(`[PluginManager] Error processing plugin-defined group '${group.id}' (Plugin's proposed Name: "${group.name}"):`, error);
+        this.logger?.error(`Error processing plugin-defined group '${group.id}' (Plugin's proposed Name: "${group.name}"):`, error);
       }
     }
 
@@ -340,14 +342,14 @@ export class PluginManager {
       const coreSettings = await GlobalSettingsService.getAll();
       coreSettings.forEach(cs => initializedKeys.add(cs.key));
     } catch (error) {
-      console.error('[PluginManager] Failed to get all core settings for precedence check:', error);
+      this.logger?.error('Failed to get all core settings for precedence check:', error);
       // If this fails, we might risk overwriting, but proceed with caution.
     }
 
 
     for (const { pluginId, definition } of pluginSettings) {
       if (initializedKeys.has(definition.key)) {
-        console.warn(`[PluginManager] Global setting key '${definition.key}' from plugin '${pluginId}' already exists (core or another plugin). Skipping.`);
+        this.logger?.warn(`Global setting key '${definition.key}' from plugin '${pluginId}' already exists (core or another plugin). Skipping.`);
         continue;
       }
 
@@ -358,12 +360,12 @@ export class PluginManager {
           group_id: definition.groupId,
         });
         initializedKeys.add(definition.key); // Add to set after successful initialization
-        console.log(`[PluginManager] Initialized global setting '${definition.key}' from plugin '${pluginId}'.`);
+        this.logger?.info(`Initialized global setting '${definition.key}' from plugin '${pluginId}'.`);
       } catch (error) {
-        console.error(`[PluginManager] Failed to initialize global setting '${definition.key}' from plugin '${pluginId}':`, error);
+        this.logger?.error(`Failed to initialize global setting '${definition.key}' from plugin '${pluginId}':`, error);
       }
     }
-    console.log('[PluginManager] Plugin global settings initialization complete.');
+    this.logger?.info('Plugin global settings initialization complete.');
   }
 
   /**
@@ -385,19 +387,22 @@ export class PluginManager {
     
     for (const plugin of this.plugins.values()) {
       try {
+        // Create a child logger for this plugin
+        const pluginLogger = this.logger?.child({ pluginId: plugin.meta.id }) || this.app!.log.child({ pluginId: plugin.meta.id });
+        
         // Initialize plugin (non-route initialization only)
-        await plugin.initialize(this.db);
+        await plugin.initialize(this.db, pluginLogger);
         
         // Register plugin routes using the isolated route manager
         if (plugin.registerRoutes) {
           const routeManager = new PluginRouteManager(this.app, plugin.meta.id);
-          await plugin.registerRoutes(routeManager, this.db);
-          console.log(`[PluginManager] Registered routes for plugin: ${plugin.meta.id}`);
+          await plugin.registerRoutes(routeManager, this.db, pluginLogger);
+          this.logger?.info(`Registered routes for plugin: ${plugin.meta.id}`);
         }
       } catch (error) {
         // Log individual plugin initialization errors but continue with others.
         const typedError = error as Error;
-        console.error(`[ERROR] Failed to initialize plugin ${plugin.meta.id}: ${typedError.message}`, typedError.stack);
+        this.logger?.error(`Failed to initialize plugin ${plugin.meta.id}: ${typedError.message}`, typedError.stack);
         // Optionally, re-throw: throw new PluginInitializeError(plugin.meta.id, error);
       }
     }
@@ -418,7 +423,7 @@ export class PluginManager {
       throw new Error('Cannot re-initialize plugins: Database not set');
     }
     
-    console.log('[PluginManager] Re-initializing plugins with database access...');
+    this.logger?.info('Re-initializing plugins with database access...');
     
     for (const plugin of this.plugins.values()) {
       try {
@@ -426,21 +431,21 @@ export class PluginManager {
         if (plugin.databaseExtension || plugin.reinitialize) {
           if (plugin.reinitialize) {
             await plugin.reinitialize(this.app, this.db);
-            console.log(`[PluginManager] Re-initialized plugin: ${plugin.meta.id}`);
+            this.logger?.info(`Re-initialized plugin: ${plugin.meta.id}`);
           } else {
             // For plugins with database extension but no reinitialize method,
             // we assume they can handle the database being available now
-            console.log(`[PluginManager] Plugin ${plugin.meta.id} has database extension but no reinitialize method - database is now available`);
+            this.logger?.info(`Plugin ${plugin.meta.id} has database extension but no reinitialize method - database is now available`);
           }
         }
       } catch (error) {
         const typedError = error as Error;
-        console.error(`[PluginManager] Failed to re-initialize plugin ${plugin.meta.id}: ${typedError.message}`, typedError.stack);
+        this.logger?.error(`Failed to re-initialize plugin ${plugin.meta.id}: ${typedError.message}`, typedError.stack);
         // Continue with other plugins even if one fails
       }
     }
     
-    console.log('[PluginManager] Plugin re-initialization completed.');
+    this.logger?.info('Plugin re-initialization completed.');
   }
 
   /**
@@ -450,9 +455,11 @@ export class PluginManager {
     for (const plugin of this.plugins.values()) {
       if (plugin.shutdown) {
         try {
-          await plugin.shutdown();
+          // Create a child logger for this plugin
+          const pluginLogger = this.logger?.child({ pluginId: plugin.meta.id }) || this.app!.log.child({ pluginId: plugin.meta.id });
+          await plugin.shutdown(pluginLogger);
         } catch (error) {
-          console.error(`Error shutting down plugin ${plugin.meta.id}:`, error);
+          this.logger?.error(`Error shutting down plugin ${plugin.meta.id}:`, error);
         }
       }
     }

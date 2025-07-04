@@ -1,5 +1,6 @@
 export enum DatabaseType {
   SQLite = 'sqlite',
+  Turso = 'turso',
 }
 
 export interface DbStatusResponse {
@@ -14,6 +15,18 @@ export interface DbSetupRequest {
 
 export interface DbSetupResponse {
   message: string;
+  database_type?: string;
+}
+
+export interface DatabaseOption {
+  type: DatabaseType;
+  name: string;
+  subtitle: string;
+  description: string;
+  features: string[];
+  recommended: 'development' | 'production' | 'advanced';
+  requiresEnvVars: boolean;
+  envVars?: string[];
 }
 
 export interface DatabaseState {

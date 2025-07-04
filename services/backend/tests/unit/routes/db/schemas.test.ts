@@ -18,10 +18,10 @@ describe('Database Schemas', () => {
       expect(DatabaseType.SQLite).toBe('sqlite');
     });
 
-    it('should only contain SQLite type', () => {
+    it('should contain both SQLite and Turso types', () => {
       const values = Object.values(DatabaseType);
-      expect(values).toEqual(['sqlite']);
-      expect(values).toHaveLength(1);
+      expect(values).toEqual(['sqlite', 'turso']);
+      expect(values).toHaveLength(2);
     });
   });
 

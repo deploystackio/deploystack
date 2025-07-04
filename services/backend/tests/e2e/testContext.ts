@@ -30,6 +30,18 @@ export interface TestContext {
   editingTestTeamId?: string;
   adminUserTeamsAccessCookie?: string;
   regularUserTeamsAccessCookie?: string;
+  // Cloud credentials test properties
+  regularUserCredentialsCookie?: string;
+  adminUserCredentialsCookie?: string;
+  teamAdminCredentialsCookie?: string;
+  teamAdminTeamId?: string;
+  globalAdminCredentialsCookie?: string;
+  regularUserTeamId?: string;
+  adminUserTeamId?: string;
+  firstCredentialId?: string;
+  editTestCredentialId?: string;
+  prodCredentialId?: string;
+  stagingCredentialId?: string;
 }
 
 const CONTEXT_FILE = path.join(__dirname, '.test-context.json');
@@ -68,6 +80,18 @@ export function setTestContext(context: TestContext): void {
       editingTestTeamId: context.editingTestTeamId,
       adminUserTeamsAccessCookie: context.adminUserTeamsAccessCookie,
       regularUserTeamsAccessCookie: context.regularUserTeamsAccessCookie,
+      // Cloud credentials test properties
+      regularUserCredentialsCookie: context.regularUserCredentialsCookie,
+      adminUserCredentialsCookie: context.adminUserCredentialsCookie,
+      teamAdminCredentialsCookie: context.teamAdminCredentialsCookie,
+      teamAdminTeamId: context.teamAdminTeamId,
+      globalAdminCredentialsCookie: context.globalAdminCredentialsCookie,
+      regularUserTeamId: context.regularUserTeamId,
+      adminUserTeamId: context.adminUserTeamId,
+      firstCredentialId: context.firstCredentialId,
+      editTestCredentialId: context.editTestCredentialId,
+      prodCredentialId: context.prodCredentialId,
+      stagingCredentialId: context.stagingCredentialId,
     }, null, 2));
   } catch (error) {
     console.warn('Failed to save test context to file:', error);

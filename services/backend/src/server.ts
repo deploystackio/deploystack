@@ -28,7 +28,6 @@ import {
   initializePluginDatabases, 
   createPluginTables,
   getDb,
-  getDbConnection,
   getDbStatus
 } from './db'
 import { GlobalSettingsInitService } from './global-settings'
@@ -49,15 +48,27 @@ export async function initializeDatabaseDependentServices(
   pluginManager: PluginManager
 ): Promise<boolean> {
   try {
+    server.log.debug('🔄 Starting initializeDatabaseDependentServices...');
+    
+    // Reset Lucia instance to pick up new database configuration
+    server.log.debug('🔄 Resetting Lucia instance...');
+    const { resetLucia } = await import('./lib/lucia');
+    resetLucia();
+    server.log.debug('✅ Lucia instance reset for database reinitialization.');
+
     // Initialize the database using the new mechanism
-    const dbSuccessfullyInitialized = await initializeDatabase();
+    server.log.debug('🔄 Initializing database...');
+    const dbSuccessfullyInitialized = await initializeDatabase(server.log);
+    server.log.debug(`✅ Database initialization result: ${dbSuccessfullyInitialized}`);
 
     if (dbSuccessfullyInitialized) {
+      server.log.debug('🔄 Getting database instance...');
       const dbInstance = getDb();
-      const rawConnection = getDbConnection();
+      server.log.debug('✅ Database instance obtained');
 
       // Update Fastify decorations with real database instances
       // Check if decorations already exist to avoid redecoration errors
+      server.log.debug('🔄 Setting up Fastify decorations...');
       if (!server.hasDecorator('db')) {
         server.decorate('db', dbInstance as any);
       } else {
@@ -65,33 +76,105 @@ export async function initializeDatabaseDependentServices(
       }
       
       if (!server.hasDecorator('rawDbConnection')) {
-        server.decorate('rawDbConnection', rawConnection as any);
+        server.decorate('rawDbConnection', null as any);
       } else {
-        (server as any).rawDbConnection = rawConnection;
+        (server as any).rawDbConnection = null;
       }
-      server.log.info('Database connection established and decorated.');
+      server.log.debug('✅ Database connection established and decorated.');
 
+      server.log.debug('🔄 Setting database for plugin manager...');
       pluginManager.setDatabase(dbInstance as any); // Set Drizzle instance for plugins
+      server.log.debug('✅ Plugin manager database set');
 
       // Create plugin tables in the database (Note: better handled by migrations)
-      await createPluginTables(pluginManager.getAllPlugins());
+      server.log.debug('🔄 Creating plugin tables...');
+      await createPluginTables(pluginManager.getAllPlugins(), server.log);
+      server.log.debug('✅ Plugin tables created');
     
       // Initialize plugin database extensions (e.g., run plugin-specific setup)
+      server.log.debug('🔄 Initializing plugin database extensions...');
       const dbExtensions = pluginManager.getAllPlugins().filter(p => p.databaseExtension);
-      await initializePluginDatabases(dbInstance, dbExtensions);
+      server.log.debug(`🔍 Found ${dbExtensions.length} plugins with database extensions`);
+      await initializePluginDatabases(dbInstance, dbExtensions, server.log);
+      server.log.debug('✅ Plugin database extensions initialized');
       
-      // Initialize global settings
+      // Initialize global settings with comprehensive debugging
       try {
-        await GlobalSettingsInitService.loadSettingsDefinitions();
-        await GlobalSettingsInitService.initializeSettings();
-        server.log.info('Core global settings initialization completed.');
+        server.log.debug('🔄 Starting global settings initialization...');
+        
+        // Check database status before proceeding
+        const dbStatus = getDbStatus();
+        server.log.debug('🔍 Database status before global settings init:', {
+          configured: dbStatus.configured,
+          initialized: dbStatus.initialized,
+          dialect: dbStatus.dialect,
+          type: dbStatus.type
+        });
 
-        // Initialize global settings defined by plugins
-        await pluginManager.initializePluginGlobalSettings();
-        server.log.info('Plugin global settings initialization completed.');
+        // Step 1: Load settings definitions
+        server.log.debug('📥 Step 1: Loading global settings definitions...');
+        const startLoadTime = Date.now();
+        
+        try {
+          await GlobalSettingsInitService.loadSettingsDefinitions();
+          const loadTime = Date.now() - startLoadTime;
+          server.log.debug(`✅ Step 1 completed successfully in ${loadTime}ms`);
+        } catch (loadError) {
+          server.log.error('❌ Step 1 FAILED - Error loading settings definitions:', {
+            error: loadError,
+            message: loadError instanceof Error ? loadError.message : 'Unknown error',
+            stack: loadError instanceof Error ? loadError.stack : 'No stack trace'
+          });
+          throw loadError;
+        }
+        
+        // Step 2: Initialize settings in database
+        server.log.debug('🚀 Step 2: Initializing global settings in database...');
+        const startInitTime = Date.now();
+        
+        try {
+          const result = await GlobalSettingsInitService.initializeSettings();
+          const initTime = Date.now() - startInitTime;
+        server.log.debug(`✅ Step 2 completed successfully in ${initTime}ms - ${result.created} created, ${result.skipped} skipped`);
+        } catch (initError) {
+          server.log.error('❌ Step 2 FAILED - Error initializing settings:', {
+            error: initError,
+            message: initError instanceof Error ? initError.message : 'Unknown error',
+            stack: initError instanceof Error ? initError.stack : 'No stack trace'
+          });
+          throw initError;
+        }
+
+        // Step 3: Initialize plugin global settings
+        server.log.debug('🔌 Step 3: Initializing plugin global settings...');
+        const startPluginTime = Date.now();
+        
+        try {
+          await pluginManager.initializePluginGlobalSettings();
+          const pluginTime = Date.now() - startPluginTime;
+          server.log.debug(`✅ Step 3 completed successfully in ${pluginTime}ms`);
+        } catch (pluginError) {
+          server.log.error('❌ Step 3 FAILED - Error initializing plugin settings:', {
+            error: pluginError,
+            message: pluginError instanceof Error ? pluginError.message : 'Unknown error',
+            stack: pluginError instanceof Error ? pluginError.stack : 'No stack trace'
+          });
+          throw pluginError;
+        }
+
+        server.log.info('🎉 All global settings initialization steps completed successfully!');
 
       } catch (error) {
-        server.log.error('Failed to initialize global settings (core or plugin):', error);
+        server.log.error('❌ CRITICAL FAILURE in global settings initialization:', {
+          errorType: error instanceof Error ? error.constructor.name : typeof error,
+          message: error instanceof Error ? error.message : 'Unknown error',
+          stack: error instanceof Error ? error.stack : 'No stack trace',
+          name: error instanceof Error ? error.name : 'Unknown error type'
+        });
+        
+        // Don't re-throw - let the service continue but mark as failed
+        server.log.warn('⚠️ Continuing without global settings initialization due to error');
+        return false; // Return false to indicate partial failure
       }
 
       return true;
@@ -113,7 +196,14 @@ export async function initializeDatabaseDependentServices(
       return false;
     }
   } catch (error) {
-    server.log.error('Error during database-dependent services initialization:', error);
+    server.log.error('❌ CRITICAL ERROR in initializeDatabaseDependentServices:', {
+      errorType: error instanceof Error ? error.constructor.name : typeof error,
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : 'No stack trace',
+      name: error instanceof Error ? error.name : 'Unknown error type'
+    });
+    server.log.error('❌ Full error object:', error);
+    server.log.error('❌ Error stringified:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
     return false;
   }
 }
@@ -188,10 +278,19 @@ export const createServer = async () => {
   
   // Register plugin table definitions (populates inputPluginTableDefinitions in db/index.ts)
   // This must happen before initializeDatabase, which generates the actual schema
-  registerPluginTables(pluginManager.getAllPlugins());
+  registerPluginTables(pluginManager.getAllPlugins(), server.log);
 
-  // Initialize database-dependent services
-  await initializeDatabaseDependentServices(server, pluginManager);
+  // Try to initialize database-dependent services (will fail gracefully if no DB configured)
+  try {
+    await initializeDatabaseDependentServices(server, pluginManager);
+  } catch (error) {
+    const typedError = error as Error;
+    if (typedError.message.includes('No database selection found')) {
+      server.log.info('No database configured yet. Please use the /api/db/setup endpoint to configure your database.');
+    } else {
+      server.log.warn('Database not configured yet. Some features will be unavailable until database setup is completed.');
+    }
+  }
 
   // Conditionally register Swagger for API documentation
   // This is placed after DB & global settings initialization to ensure settings are available
@@ -202,8 +301,14 @@ export const createServer = async () => {
   } else {
     try {
       server.log.info('Database is available. Checking "global.enable_swagger_docs" setting.');
-      swaggerEnabled = await GlobalSettings.getBoolean('global.enable_swagger_docs', true);
-      // The log message below was removed as it's covered by more specific logs later.
+      // Use a safer approach that doesn't throw if the database isn't fully ready
+      const dbStatus = getDbStatus();
+      if (dbStatus.initialized) {
+        swaggerEnabled = await GlobalSettings.getBoolean('global.enable_swagger_docs', true);
+      } else {
+        server.log.warn('Database not fully initialized yet. Defaulting Swagger to enabled.');
+        swaggerEnabled = true;
+      }
     } catch (error) {
       server.log.error('Error fetching "global.enable_swagger_docs" setting. Defaulting to true.', error);
       swaggerEnabled = true;
@@ -340,13 +445,14 @@ export const createServer = async () => {
   
   server.addHook('onClose', async () => {
     await pluginManager.shutdownPlugins();
-    const rawConn = server.rawDbConnection as SqliteDriver.Database | null; // Get from decoration
+    const rawConn = server.rawDbConnection; // Get from decoration
     if (rawConn) {
       const status = getDbStatus();
       if (status.dialect === 'sqlite' && 'close' in rawConn) {
         (rawConn as SqliteDriver.Database).close();
         server.log.info('SQLite connection closed.');
       }
+      // Note: Turso/LibSQL connections are automatically managed by the client
     }
   });
   

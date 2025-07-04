@@ -197,7 +197,7 @@ export default async function changePasswordRoute(fastify: FastifyInstance) {
               ipAddress,
               userAgent,
               loginUrl,
-            });
+            }, request.log);
 
             if (emailResult.success) {
               fastify.log.info(`Password change notification email sent to: ${user.email}`);

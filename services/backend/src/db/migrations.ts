@@ -4,14 +4,21 @@ import Database from 'better-sqlite3';
 import fs from 'node:fs/promises';
 import { exec as execCallback } from 'node:child_process';
 import { promisify } from 'node:util';
+import type { FastifyBaseLogger } from 'fastify';
 
 // Convert callback-based exec to Promise-based
 const exec = promisify(execCallback);
+
+// Helper function to check if we're in test mode
+function isTestMode(): boolean {
+  return process.env.NODE_ENV === 'test';
+}
 
 // Generate migrations from the schema
 export async function generateMigrations(
   schemaPath: string,
   outDir: string,
+  logger: FastifyBaseLogger
 ) {
   try {
     // This is typically run as a separate command, not at runtime
@@ -20,18 +27,35 @@ export async function generateMigrations(
     );
     
     if (stderr) {
-      console.error(`Migration stderr: ${stderr}`);
+      logger.error({
+        operation: 'generate_migrations',
+        schemaPath,
+        outDir,
+        stderr
+      }, 'Migration stderr output');
     }
     
-    console.log(`Migration stdout: ${stdout}`);
+    if (!isTestMode()) {
+      logger.info({
+        operation: 'generate_migrations',
+        schemaPath,
+        outDir,
+        stdout
+      }, 'Migration stdout output');
+    }
   } catch (error) {
-    console.error(`Migration generation error:`, error);
+    logger.error({
+      operation: 'generate_migrations',
+      schemaPath,
+      outDir,
+      error
+    }, 'Migration generation error');
     throw error;
   }
 }
 
 // Apply migrations to the database
-export async function applyMigrations(dbPath: string, migrationsDir: string) {
+export async function applyMigrations(dbPath: string, migrationsDir: string, logger: FastifyBaseLogger) {
   const sqlite = new Database(dbPath);
   const db = drizzle(sqlite);
   
@@ -41,9 +65,20 @@ export async function applyMigrations(dbPath: string, migrationsDir: string) {
     
     // Apply migrations
     await migrate(db, { migrationsFolder: migrationsDir });
-    console.log('Migrations applied successfully');
+    if (!isTestMode()) {
+      logger.info({
+        operation: 'apply_migrations',
+        dbPath,
+        migrationsDir
+      }, 'Migrations applied successfully');
+    }
   } catch (error) {
-    console.error('Failed to apply migrations:', error);
+    logger.error({
+      operation: 'apply_migrations',
+      dbPath,
+      migrationsDir,
+      error
+    }, 'Failed to apply migrations');
     throw error;
   } finally {
     sqlite.close();

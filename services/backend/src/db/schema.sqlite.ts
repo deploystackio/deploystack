@@ -109,6 +109,18 @@ export const passwordResetTokens = sqliteTable('passwordResetTokens', {
   created_at: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 });
 
+export const teamCloudCredentials = sqliteTable('teamCloudCredentials', {
+  id: text('id').primaryKey(),
+  team_id: text('team_id').notNull().references(() => teams.id, { onDelete: 'cascade' }),
+  provider_id: text('provider_id').notNull(), // 'render', 'aws', etc.
+  name: text('name').notNull(), // User-friendly name like "Production Render"
+  comment: text('comment'), // Optional comment/description
+  credentials: text('credentials').notNull(), // Encrypted JSON of credential fields
+  created_by: text('created_by').notNull().references(() => authUser.id),
+  created_at: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  updated_at: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+});
+
 // Plugin table definitions - populated dynamically by the plugin system
 // This object will hold definitions for plugin tables, to be populated dynamically.
 // Key: Table name (e.g., 'myPlugin_myTable')

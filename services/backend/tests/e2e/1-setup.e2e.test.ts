@@ -5,12 +5,12 @@ import * as path from 'path';
 import { getTestContext } from './testContext';
 
 // __dirname is services/backend/tests/e2e
-const TEST_DATA_DIR = path.join(__dirname, 'test-data'); // Resolves to services/backend/tests/e2e/test-data
-const DB_FILE_PATH = path.join(TEST_DATA_DIR, 'deploystack.test.db'); // Path where the app creates the test db
+const TEST_DB_DIR = path.join(__dirname, '..', '..', 'persistent_data', 'database-test'); // Resolves to services/backend/persistent_data/database-test
 
 describe('POST /api/db/setup and GET /api/db/status (E2E)', () => {
   let server: FastifyInstance;
   let port: number;
+  let dbFilePath: string;
 
   beforeAll(() => {
     // Access the server instance and port from test context
@@ -20,8 +20,8 @@ describe('POST /api/db/setup and GET /api/db/status (E2E)', () => {
   });
 
   it('Case 1: should setup SQLite database and return correct status', async () => {
-    // 1. Ensure db file does not exist initially (globalSetup should handle this, but double check for this specific test logic)
-    expect(await fs.pathExists(DB_FILE_PATH)).toBe(false);
+    // 1. Ensure test db directory is clean initially (globalSetup should handle this)
+    expect(await fs.pathExists(TEST_DB_DIR)).toBe(false);
     
     // 2. Call /api/db/setup to initialize SQLite
     const setupResponse = await request(server.server || `http://localhost:${port}`)
@@ -31,11 +31,20 @@ describe('POST /api/db/setup and GET /api/db/status (E2E)', () => {
     expect(setupResponse.status).toBe(200);
     expect(setupResponse.body).toEqual({
       message: "Database setup successful. All services have been initialized and are ready to use.",
-      restart_required: false
+      restart_required: false,
+      database_type: "sqlite"
     });
 
-    // 3. Check if the database file was created
-    expect(await fs.pathExists(DB_FILE_PATH)).toBe(true);
+    // 3. Check if the database directory was created and find the database file
+    expect(await fs.pathExists(TEST_DB_DIR)).toBe(true);
+    
+    // Find the database file with timestamp pattern
+    const files = await fs.readdir(TEST_DB_DIR);
+    const dbFile = files.find(file => file.startsWith('deploystack-') && file.endsWith('.db'));
+    expect(dbFile).toBeDefined();
+    
+    dbFilePath = path.join(TEST_DB_DIR, dbFile!);
+    expect(await fs.pathExists(dbFilePath)).toBe(true);
 
     // 4. Call /api/db/status to verify
     const statusResponse = await request(server.server || `http://localhost:${port}`)
@@ -62,7 +71,7 @@ describe('POST /api/db/setup and GET /api/db/status (E2E)', () => {
     expect(statusResponse.body.dialect).toBe('sqlite');
     
     // Verify database file exists (global settings were created successfully)
-    expect(await fs.pathExists(DB_FILE_PATH)).toBe(true);
+    expect(await fs.pathExists(dbFilePath)).toBe(true);
   });
 
   it('Case 3: should apply all migrations successfully', async () => {
@@ -70,10 +79,10 @@ describe('POST /api/db/setup and GET /api/db/status (E2E)', () => {
     // Database is already set up from the first test
     
     // Verify database file exists and is accessible
-    expect(await fs.pathExists(DB_FILE_PATH)).toBe(true);
+    expect(await fs.pathExists(dbFilePath)).toBe(true);
     
     // Check that the database file is not empty (migrations were applied)
-    const stats = await fs.stat(DB_FILE_PATH);
+    const stats = await fs.stat(dbFilePath);
     expect(stats.size).toBeGreaterThan(0);
     
     // Verify status shows properly initialized state
