@@ -105,7 +105,6 @@
 <script setup lang="ts">
 import { onMounted, ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
-import { useI18n } from 'vue-i18n';
 import { CheckCircle, AlertCircle, AlertTriangle, Loader2 } from 'lucide-vue-next';
 
 import { useDatabaseStore } from '@/stores/database';
@@ -118,7 +117,6 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const router = useRouter();
 const databaseStore = useDatabaseStore();
-const { t } = useI18n();
 
 const setupSuccessMessageVisible = ref(false);
 const selectedType = ref<DatabaseType>(DatabaseType.SQLite);
