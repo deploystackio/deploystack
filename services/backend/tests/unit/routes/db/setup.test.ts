@@ -82,14 +82,14 @@ describe('Database Setup Route', () => {
     it('should register database setup route', async () => {
       await dbSetupRoute(mockFastify);
 
-      expect(mockFastify.post).toHaveBeenCalledWith('/api/db/setup', expect.any(Object), expect.any(Function));
+      expect(mockFastify.post).toHaveBeenCalledWith('/db/setup', expect.any(Object), expect.any(Function));
     });
 
     it('should register route with proper schema', async () => {
       await dbSetupRoute(mockFastify);
 
       const [path, options] = mockFastify.post.mock.calls[0];
-      expect(path).toBe('/api/db/setup');
+      expect(path).toBe('/db/setup');
       expect(options.schema).toBeDefined();
       expect(options.schema.tags).toEqual(['Database']);
       expect(options.schema.summary).toBe('Setup database');
@@ -97,7 +97,7 @@ describe('Database Setup Route', () => {
     });
   });
 
-  describe('POST /api/db/setup', () => {
+  describe('POST /db/setup', () => {
     beforeEach(async () => {
       await dbSetupRoute(mockFastify);
     });
@@ -106,7 +106,7 @@ describe('Database Setup Route', () => {
       it('should handle valid SQLite request', async () => {
         mockRequest.body = { type: DatabaseType.SQLite };
 
-        const handler = routeHandlers['POST /api/db/setup'];
+        const handler = routeHandlers['POST /db/setup'];
         await handler(mockRequest, mockReply);
 
         // The handler should attempt to process the request
@@ -117,7 +117,7 @@ describe('Database Setup Route', () => {
       it('should handle Turso request', async () => {
         mockRequest.body = { type: DatabaseType.Turso };
 
-        const handler = routeHandlers['POST /api/db/setup'];
+        const handler = routeHandlers['POST /db/setup'];
         await handler(mockRequest, mockReply);
 
         // The handler should attempt to process the request
@@ -128,7 +128,7 @@ describe('Database Setup Route', () => {
       it('should handle invalid request body', async () => {
         mockRequest.body = { type: 'invalid' as any };
 
-        const handler = routeHandlers['POST /api/db/setup'];
+        const handler = routeHandlers['POST /db/setup'];
         await handler(mockRequest, mockReply);
 
         // Should return an error response
@@ -143,7 +143,7 @@ describe('Database Setup Route', () => {
       it('should handle missing request body', async () => {
         mockRequest.body = undefined as any;
 
-        const handler = routeHandlers['POST /api/db/setup'];
+        const handler = routeHandlers['POST /db/setup'];
         await handler(mockRequest, mockReply);
 
         // Should return an error response
@@ -163,7 +163,7 @@ describe('Database Setup Route', () => {
 
         mockRequest.body = { type: DatabaseType.SQLite };
 
-        const handler = routeHandlers['POST /api/db/setup'];
+        const handler = routeHandlers['POST /db/setup'];
         await handler(mockRequest, mockReply);
 
         expect(mockReply.status).toHaveBeenCalled();
@@ -178,7 +178,7 @@ describe('Database Setup Route', () => {
 
         mockRequest.body = { type: DatabaseType.SQLite };
 
-        const handler = routeHandlers['POST /api/db/setup'];
+        const handler = routeHandlers['POST /db/setup'];
         await handler(mockRequest, mockReply);
 
         expect(mockReply.status).toHaveBeenCalled();
@@ -191,15 +191,15 @@ describe('Database Setup Route', () => {
     describe('Error handling', () => {
       it('should handle exceptions gracefully', async () => {
         // Mock an error in the handler
-        const handler = routeHandlers['POST /api/db/setup'];
+        const handler = routeHandlers['POST /db/setup'];
         
         // Override the handler to throw an error
-        routeHandlers['POST /api/db/setup'] = async () => {
+        routeHandlers['POST /db/setup'] = async () => {
           throw new Error('Test error');
         };
 
         try {
-          await routeHandlers['POST /api/db/setup'](mockRequest, mockReply);
+          await routeHandlers['POST /db/setup'](mockRequest, mockReply);
         } catch (error) {
           expect(error).toBeInstanceOf(Error);
         }
@@ -208,7 +208,7 @@ describe('Database Setup Route', () => {
       it('should validate request body structure', async () => {
         mockRequest.body = { invalidField: 'test' } as any;
 
-        const handler = routeHandlers['POST /api/db/setup'];
+        const handler = routeHandlers['POST /db/setup'];
         await handler(mockRequest, mockReply);
 
         expect(mockReply.status).toHaveBeenCalledWith(400);
@@ -219,7 +219,7 @@ describe('Database Setup Route', () => {
       it('should log setup attempts', async () => {
         mockRequest.body = { type: DatabaseType.SQLite };
 
-        const handler = routeHandlers['POST /api/db/setup'];
+        const handler = routeHandlers['POST /db/setup'];
         await handler(mockRequest, mockReply);
 
         // The handler should log something
@@ -231,7 +231,7 @@ describe('Database Setup Route', () => {
       it('should return proper response structure on success', async () => {
         mockRequest.body = { type: DatabaseType.SQLite };
 
-        const handler = routeHandlers['POST /api/db/setup'];
+        const handler = routeHandlers['POST /db/setup'];
         await handler(mockRequest, mockReply);
 
         // Check that a response was sent
@@ -248,7 +248,7 @@ describe('Database Setup Route', () => {
       it('should return proper error response structure on failure', async () => {
         mockRequest.body = { type: 'invalid' as any };
 
-        const handler = routeHandlers['POST /api/db/setup'];
+        const handler = routeHandlers['POST /db/setup'];
         await handler(mockRequest, mockReply);
 
         expect(mockReply.status).toHaveBeenCalledWith(400);

@@ -95,32 +95,32 @@ describe('Roles Route', () => {
     it('should register all role routes with correct permissions', async () => {
       await rolesRoute(mockFastify as FastifyInstance);
 
-      expect(mockFastify.get).toHaveBeenCalledWith('/api/roles', expect.objectContaining({
+      expect(mockFastify.get).toHaveBeenCalledWith('/roles', expect.objectContaining({
         schema: expect.any(Object),
         preHandler: expect.any(Function),
       }), expect.any(Function));
 
-      expect(mockFastify.get).toHaveBeenCalledWith('/api/roles/:id', expect.objectContaining({
+      expect(mockFastify.get).toHaveBeenCalledWith('/roles/:id', expect.objectContaining({
         schema: expect.any(Object),
         preHandler: expect.any(Function),
       }), expect.any(Function));
 
-      expect(mockFastify.post).toHaveBeenCalledWith('/api/roles', expect.objectContaining({
+      expect(mockFastify.post).toHaveBeenCalledWith('/roles', expect.objectContaining({
         schema: expect.any(Object),
         preHandler: expect.any(Function),
       }), expect.any(Function));
 
-      expect(mockFastify.put).toHaveBeenCalledWith('/api/roles/:id', expect.objectContaining({
+      expect(mockFastify.put).toHaveBeenCalledWith('/roles/:id', expect.objectContaining({
         schema: expect.any(Object),
         preHandler: expect.any(Function),
       }), expect.any(Function));
 
-      expect(mockFastify.delete).toHaveBeenCalledWith('/api/roles/:id', expect.objectContaining({
+      expect(mockFastify.delete).toHaveBeenCalledWith('/roles/:id', expect.objectContaining({
         schema: expect.any(Object),
         preHandler: expect.any(Function),
       }), expect.any(Function));
 
-      expect(mockFastify.get).toHaveBeenCalledWith('/api/roles/permissions', expect.objectContaining({
+      expect(mockFastify.get).toHaveBeenCalledWith('/roles/permissions', expect.objectContaining({
         schema: expect.any(Object),
         preHandler: expect.any(Function),
       }), expect.any(Function));
@@ -130,7 +130,7 @@ describe('Roles Route', () => {
     });
   });
 
-  describe('GET /api/roles', () => {
+  describe('GET /roles', () => {
     beforeEach(async () => {
       await rolesRoute(mockFastify as FastifyInstance);
     });
@@ -159,7 +159,7 @@ describe('Roles Route', () => {
 
       mockRoleServiceInstance.getAllRoles.mockResolvedValue(mockRoles);
 
-      const handler = routeHandlers['GET /api/roles'];
+      const handler = routeHandlers['GET /roles'];
       await handler(mockRequest, mockReply);
 
       expect(mockRoleServiceInstance.getAllRoles).toHaveBeenCalled();
@@ -174,7 +174,7 @@ describe('Roles Route', () => {
       const error = new Error('Database connection failed');
       mockRoleServiceInstance.getAllRoles.mockRejectedValue(error);
 
-      const handler = routeHandlers['GET /api/roles'];
+      const handler = routeHandlers['GET /roles'];
       await handler(mockRequest, mockReply);
 
       expect(mockFastify.log!.error).toHaveBeenCalledWith(error, 'Error fetching roles');
@@ -186,7 +186,7 @@ describe('Roles Route', () => {
     });
   });
 
-  describe('GET /api/roles/:id', () => {
+  describe('GET /roles/:id', () => {
     beforeEach(async () => {
       await rolesRoute(mockFastify as FastifyInstance);
     });
@@ -205,7 +205,7 @@ describe('Roles Route', () => {
       mockRequest.params = { id: 'admin' };
       mockRoleServiceInstance.getRoleById.mockResolvedValue(mockRole);
 
-      const handler = routeHandlers['GET /api/roles/:id'];
+      const handler = routeHandlers['GET /roles/:id'];
       await handler(mockRequest, mockReply);
 
       expect(mockRoleServiceInstance.getRoleById).toHaveBeenCalledWith('admin');
@@ -220,7 +220,7 @@ describe('Roles Route', () => {
       mockRequest.params = { id: 'nonexistent' };
       mockRoleServiceInstance.getRoleById.mockResolvedValue(null);
 
-      const handler = routeHandlers['GET /api/roles/:id'];
+      const handler = routeHandlers['GET /roles/:id'];
       await handler(mockRequest, mockReply);
 
       expect(mockRoleServiceInstance.getRoleById).toHaveBeenCalledWith('nonexistent');
@@ -236,7 +236,7 @@ describe('Roles Route', () => {
       mockRequest.params = { id: 'admin' };
       mockRoleServiceInstance.getRoleById.mockRejectedValue(error);
 
-      const handler = routeHandlers['GET /api/roles/:id'];
+      const handler = routeHandlers['GET /roles/:id'];
       await handler(mockRequest, mockReply);
 
       expect(mockFastify.log!.error).toHaveBeenCalledWith(error, 'Error fetching role');
@@ -248,7 +248,7 @@ describe('Roles Route', () => {
     });
   });
 
-  describe('POST /api/roles', () => {
+  describe('POST /roles', () => {
     beforeEach(async () => {
       await rolesRoute(mockFastify as FastifyInstance);
     });
@@ -271,7 +271,7 @@ describe('Roles Route', () => {
       mockRequest.body = createRoleInput;
       mockRoleServiceInstance.createRole.mockResolvedValue(createdRole);
 
-      const handler = routeHandlers['POST /api/roles'];
+      const handler = routeHandlers['POST /roles'];
       await handler(mockRequest, mockReply);
 
       expect(mockRoleServiceInstance.createRole).toHaveBeenCalledWith(createRoleInput);
@@ -293,7 +293,7 @@ describe('Roles Route', () => {
 
       mockRequest.body = createRoleInput;
 
-      const handler = routeHandlers['POST /api/roles'];
+      const handler = routeHandlers['POST /roles'];
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(400);
@@ -320,7 +320,7 @@ describe('Roles Route', () => {
       mockRequest.body = { id: 'test', permissions: ['profile.view'] };
       mockRoleServiceInstance.createRole.mockRejectedValue(zodError);
 
-      const handler = routeHandlers['POST /api/roles'];
+      const handler = routeHandlers['POST /roles'];
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(400);
@@ -342,7 +342,7 @@ describe('Roles Route', () => {
       mockRequest.body = createRoleInput;
       mockRoleServiceInstance.createRole.mockRejectedValue(uniqueError);
 
-      const handler = routeHandlers['POST /api/roles'];
+      const handler = routeHandlers['POST /roles'];
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(409);
@@ -363,7 +363,7 @@ describe('Roles Route', () => {
       mockRequest.body = createRoleInput;
       mockRoleServiceInstance.createRole.mockRejectedValue(error);
 
-      const handler = routeHandlers['POST /api/roles'];
+      const handler = routeHandlers['POST /roles'];
       await handler(mockRequest, mockReply);
 
       expect(mockFastify.log!.error).toHaveBeenCalledWith(error, 'Error creating role');
@@ -375,7 +375,7 @@ describe('Roles Route', () => {
     });
   });
 
-  describe('PUT /api/roles/:id', () => {
+  describe('PUT /roles/:id', () => {
     beforeEach(async () => {
       await rolesRoute(mockFastify as FastifyInstance);
     });
@@ -399,7 +399,7 @@ describe('Roles Route', () => {
       mockRequest.body = updateRoleInput;
       mockRoleServiceInstance.updateRole.mockResolvedValue(updatedRole);
 
-      const handler = routeHandlers['PUT /api/roles/:id'];
+      const handler = routeHandlers['PUT /roles/:id'];
       await handler(mockRequest, mockReply);
 
       expect(mockRoleServiceInstance.updateRole).toHaveBeenCalledWith('custom-role', updateRoleInput);
@@ -420,7 +420,7 @@ describe('Roles Route', () => {
       mockRequest.body = updateRoleInput;
       mockRoleServiceInstance.updateRole.mockResolvedValue(null);
 
-      const handler = routeHandlers['PUT /api/roles/:id'];
+      const handler = routeHandlers['PUT /roles/:id'];
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(404);
@@ -438,7 +438,7 @@ describe('Roles Route', () => {
       mockRequest.params = { id: 'custom-role' };
       mockRequest.body = updateRoleInput;
 
-      const handler = routeHandlers['PUT /api/roles/:id'];
+      const handler = routeHandlers['PUT /roles/:id'];
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(400);
@@ -459,7 +459,7 @@ describe('Roles Route', () => {
       mockRequest.body = updateRoleInput;
       mockRoleServiceInstance.updateRole.mockRejectedValue(systemRoleError);
 
-      const handler = routeHandlers['PUT /api/roles/:id'];
+      const handler = routeHandlers['PUT /roles/:id'];
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(403);
@@ -486,7 +486,7 @@ describe('Roles Route', () => {
       mockRequest.body = { name: '' };
       mockRoleServiceInstance.updateRole.mockRejectedValue(zodError);
 
-      const handler = routeHandlers['PUT /api/roles/:id'];
+      const handler = routeHandlers['PUT /roles/:id'];
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(400);
@@ -507,7 +507,7 @@ describe('Roles Route', () => {
       mockRequest.body = updateRoleInput;
       mockRoleServiceInstance.updateRole.mockRejectedValue(error);
 
-      const handler = routeHandlers['PUT /api/roles/:id'];
+      const handler = routeHandlers['PUT /roles/:id'];
       await handler(mockRequest, mockReply);
 
       expect(mockFastify.log!.error).toHaveBeenCalledWith(error, 'Error updating role');
@@ -519,7 +519,7 @@ describe('Roles Route', () => {
     });
   });
 
-  describe('DELETE /api/roles/:id', () => {
+  describe('DELETE /roles/:id', () => {
     beforeEach(async () => {
       await rolesRoute(mockFastify as FastifyInstance);
     });
@@ -528,7 +528,7 @@ describe('Roles Route', () => {
       mockRequest.params = { id: 'custom-role' };
       mockRoleServiceInstance.deleteRole.mockResolvedValue(true);
 
-      const handler = routeHandlers['DELETE /api/roles/:id'];
+      const handler = routeHandlers['DELETE /roles/:id'];
       await handler(mockRequest, mockReply);
 
       expect(mockRoleServiceInstance.deleteRole).toHaveBeenCalledWith('custom-role');
@@ -543,7 +543,7 @@ describe('Roles Route', () => {
       mockRequest.params = { id: 'nonexistent' };
       mockRoleServiceInstance.deleteRole.mockResolvedValue(false);
 
-      const handler = routeHandlers['DELETE /api/roles/:id'];
+      const handler = routeHandlers['DELETE /roles/:id'];
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(404);
@@ -558,7 +558,7 @@ describe('Roles Route', () => {
       mockRequest.params = { id: 'admin' };
       mockRoleServiceInstance.deleteRole.mockRejectedValue(systemRoleError);
 
-      const handler = routeHandlers['DELETE /api/roles/:id'];
+      const handler = routeHandlers['DELETE /roles/:id'];
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(403);
@@ -573,7 +573,7 @@ describe('Roles Route', () => {
       mockRequest.params = { id: 'user-role' };
       mockRoleServiceInstance.deleteRole.mockRejectedValue(assignedRoleError);
 
-      const handler = routeHandlers['DELETE /api/roles/:id'];
+      const handler = routeHandlers['DELETE /roles/:id'];
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(409);
@@ -588,7 +588,7 @@ describe('Roles Route', () => {
       mockRequest.params = { id: 'custom-role' };
       mockRoleServiceInstance.deleteRole.mockRejectedValue(error);
 
-      const handler = routeHandlers['DELETE /api/roles/:id'];
+      const handler = routeHandlers['DELETE /roles/:id'];
       await handler(mockRequest, mockReply);
 
       expect(mockFastify.log!.error).toHaveBeenCalledWith(error, 'Error deleting role');
@@ -600,13 +600,13 @@ describe('Roles Route', () => {
     });
   });
 
-  describe('GET /api/roles/permissions', () => {
+  describe('GET /roles/permissions', () => {
     beforeEach(async () => {
       await rolesRoute(mockFastify as FastifyInstance);
     });
 
     it('should return available permissions and default roles', async () => {
-      const handler = routeHandlers['GET /api/roles/permissions'];
+      const handler = routeHandlers['GET /roles/permissions'];
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(200);
@@ -637,7 +637,7 @@ describe('Roles Route', () => {
 
       mockRequest.body = createRoleInput;
 
-      const handler = routeHandlers['POST /api/roles'];
+      const handler = routeHandlers['POST /roles'];
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(400);
@@ -656,7 +656,7 @@ describe('Roles Route', () => {
       mockRequest.params = { id: 'test-role' };
       mockRequest.body = updateRoleInput;
 
-      const handler = routeHandlers['PUT /api/roles/:id'];
+      const handler = routeHandlers['PUT /roles/:id'];
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(400);
@@ -684,7 +684,7 @@ describe('Roles Route', () => {
       mockRequest.body = createRoleInput;
       mockRoleServiceInstance.createRole.mockResolvedValue(createdRole);
 
-      const handler = routeHandlers['POST /api/roles'];
+      const handler = routeHandlers['POST /roles'];
       await handler(mockRequest, mockReply);
 
       expect(mockRoleServiceInstance.createRole).toHaveBeenCalledWith(createRoleInput);
@@ -710,7 +710,7 @@ describe('Roles Route', () => {
       mockRequest.body = updateRoleInput;
       mockRoleServiceInstance.updateRole.mockResolvedValue(updatedRole);
 
-      const handler = routeHandlers['PUT /api/roles/:id'];
+      const handler = routeHandlers['PUT /roles/:id'];
       await handler(mockRequest, mockReply);
 
       expect(mockRoleServiceInstance.updateRole).toHaveBeenCalledWith('test-role', updateRoleInput);
