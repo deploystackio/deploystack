@@ -5166,7 +5166,7 @@ paths:
                   - error
                 additionalProperties: false
                 description: Internal Server Error
-  /teams/{teamId}/cloud-providers:
+  /api/teams/{teamId}/cloud-providers:
     get:
       summary: List available cloud providers
       tags:
@@ -5311,7 +5311,7 @@ paths:
                   - error
                 additionalProperties: false
                 description: Internal Server Error
-  /teams/{teamId}/cloud-credentials:
+  /api/teams/{teamId}/cloud-credentials:
     get:
       summary: List team cloud credentials
       tags:
@@ -5384,7 +5384,22 @@ paths:
                               - secret
                             additionalProperties: false
                         createdBy:
-                          type: string
+                          anyOf:
+                            - type: object
+                              properties:
+                                id:
+                                  type: string
+                                username:
+                                  type: string
+                                email:
+                                  type: string
+                              required:
+                                - id
+                                - username
+                                - email
+                              additionalProperties: false
+                            - type: string
+                          description: User object when available, fallback to user ID
                         createdAt:
                           type: string
                         updatedAt:
@@ -5556,7 +5571,22 @@ paths:
                             - secret
                           additionalProperties: false
                       createdBy:
-                        type: string
+                        anyOf:
+                          - type: object
+                            properties:
+                              id:
+                                type: string
+                              username:
+                                type: string
+                              email:
+                                type: string
+                            required:
+                              - id
+                              - username
+                              - email
+                            additionalProperties: false
+                          - type: string
+                        description: User object when available, fallback to user ID
                       createdAt:
                         type: string
                       updatedAt:
@@ -5678,7 +5708,7 @@ paths:
                   - error
                 additionalProperties: false
                 description: Internal Server Error
-  /teams/{teamId}/cloud-credentials/{credentialId}:
+  /api/teams/{teamId}/cloud-credentials/{credentialId}:
     get:
       summary: Get cloud credential by ID
       tags:
@@ -5755,7 +5785,22 @@ paths:
                             - secret
                           additionalProperties: false
                       createdBy:
-                        type: string
+                        anyOf:
+                          - type: object
+                            properties:
+                              id:
+                                type: string
+                              username:
+                                type: string
+                              email:
+                                type: string
+                            required:
+                              - id
+                              - username
+                              - email
+                            additionalProperties: false
+                          - type: string
+                        description: User object when available, fallback to user ID
                       createdAt:
                         type: string
                       updatedAt:
@@ -5942,7 +5987,22 @@ paths:
                             - secret
                           additionalProperties: false
                       createdBy:
-                        type: string
+                        anyOf:
+                          - type: object
+                            properties:
+                              id:
+                                type: string
+                              username:
+                                type: string
+                              email:
+                                type: string
+                            required:
+                              - id
+                              - username
+                              - email
+                            additionalProperties: false
+                          - type: string
+                        description: User object when available, fallback to user ID
                       createdAt:
                         type: string
                       updatedAt:
@@ -6191,7 +6251,7 @@ paths:
                   - error
                 additionalProperties: false
                 description: Internal Server Error
-  /teams/{teamId}/cloud-credentials/search:
+  /api/teams/{teamId}/cloud-credentials/search:
     get:
       summary: Search team cloud credentials
       tags:

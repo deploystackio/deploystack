@@ -29,6 +29,13 @@ export const CredentialFieldResponseSchema = z.object({
   secret: z.boolean(),
 });
 
+// User info schema for createdBy field
+export const UserInfoSchema = z.object({
+  id: z.string(),
+  username: z.string(),
+  email: z.string(),
+});
+
 export const CloudCredentialResponseSchema = z.object({
   id: z.string(),
   teamId: z.string(),
@@ -41,7 +48,7 @@ export const CloudCredentialResponseSchema = z.object({
     description: z.string(),
   }),
   fields: z.record(CredentialFieldResponseSchema),
-  createdBy: z.string(),
+  createdBy: z.union([UserInfoSchema, z.string()]).describe('User object when available, fallback to user ID'),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
@@ -57,7 +64,7 @@ export const CloudCredentialBasicResponseSchema = z.object({
     name: z.string(),
     description: z.string(),
   }),
-  createdBy: z.string(),
+  createdBy: z.union([UserInfoSchema, z.string()]).describe('User object when available, fallback to user ID'),
   createdAt: z.string(),
   updatedAt: z.string(),
 });

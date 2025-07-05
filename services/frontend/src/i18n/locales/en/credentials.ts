@@ -102,6 +102,46 @@ export default {
       title: 'No credentials yet',
       description: 'Get started by adding your first cloud provider credential',
       action: 'Add First Credential'
+    },
+    detail: {
+      title: 'Credential Details',
+      backToCredentials: 'Back to Credentials',
+      loading: 'Loading credential...',
+      error: 'Failed to load credential: {error}',
+      notFound: 'Credential not found',
+      credentialInformation: 'Credential Information',
+      providerInformation: 'Provider Information',
+      fieldInformation: 'Field Information',
+      auditInformation: 'Audit Information',
+      fields: {
+        name: 'Name',
+        provider: 'Provider',
+        comment: 'Comment',
+        createdAt: 'Created',
+        updatedAt: 'Last Updated',
+        createdBy: 'Created By',
+        credentialId: 'Credential ID',
+        providerDescription: 'Provider Description',
+        fieldType: 'Field Type',
+        fieldRequired: 'Required',
+        fieldSecret: 'Secret',
+        hasValue: 'Has Value'
+      },
+      values: {
+        noComment: 'No comment provided',
+        notProvided: 'Not provided',
+        yes: 'Yes',
+        no: 'No',
+        text: 'Text',
+        password: 'Password',
+        textarea: 'Text Area',
+        configured: 'Configured',
+        notConfigured: 'Not configured'
+      },
+      permissions: {
+        teamUserNote: 'As a team user, you can view basic credential information but cannot see field details.',
+        teamAdminNote: 'As a team admin, you can view all credential details including field information.'
+      }
     }
   }
 }

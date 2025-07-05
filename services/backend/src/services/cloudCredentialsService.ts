@@ -26,10 +26,25 @@ export class CloudCredentialsService {
   async getTeamCredentials(teamId: string): Promise<CloudCredentialResponse[]> {
     const { db, schema } = this.getDbAndSchema();
     const credentialsTable = schema.teamCloudCredentials;
+    const authUserTable = schema.authUser;
     
     const credentials = await (db as any)
-      .select()
+      .select({
+        id: credentialsTable.id,
+        team_id: credentialsTable.team_id,
+        provider_id: credentialsTable.provider_id,
+        name: credentialsTable.name,
+        comment: credentialsTable.comment,
+        credentials: credentialsTable.credentials,
+        created_by: credentialsTable.created_by,
+        created_at: credentialsTable.created_at,
+        updated_at: credentialsTable.updated_at,
+        // User information
+        user_username: authUserTable.username,
+        user_email: authUserTable.email,
+      })
       .from(credentialsTable)
+      .leftJoin(authUserTable, eq(credentialsTable.created_by, authUserTable.id))
       .where(eq(credentialsTable.team_id, teamId));
 
     return credentials.map((cred: any) => this.formatCredentialResponse(cred));
@@ -41,10 +56,25 @@ export class CloudCredentialsService {
   async getTeamCredentialsBasic(teamId: string): Promise<CloudCredentialBasicResponse[]> {
     const { db, schema } = this.getDbAndSchema();
     const credentialsTable = schema.teamCloudCredentials;
+    const authUserTable = schema.authUser;
     
     const credentials = await (db as any)
-      .select()
+      .select({
+        id: credentialsTable.id,
+        team_id: credentialsTable.team_id,
+        provider_id: credentialsTable.provider_id,
+        name: credentialsTable.name,
+        comment: credentialsTable.comment,
+        credentials: credentialsTable.credentials,
+        created_by: credentialsTable.created_by,
+        created_at: credentialsTable.created_at,
+        updated_at: credentialsTable.updated_at,
+        // User information
+        user_username: authUserTable.username,
+        user_email: authUserTable.email,
+      })
       .from(credentialsTable)
+      .leftJoin(authUserTable, eq(credentialsTable.created_by, authUserTable.id))
       .where(eq(credentialsTable.team_id, teamId));
 
     return credentials.map((cred: any) => this.formatCredentialBasicResponse(cred));
@@ -71,10 +101,25 @@ export class CloudCredentialsService {
   async getCredentialById(credentialId: string, teamId: string): Promise<CloudCredentialResponse | null> {
     const { db, schema } = this.getDbAndSchema();
     const credentialsTable = schema.teamCloudCredentials;
+    const authUserTable = schema.authUser;
     
     const credentials = await (db as any)
-      .select()
+      .select({
+        id: credentialsTable.id,
+        team_id: credentialsTable.team_id,
+        provider_id: credentialsTable.provider_id,
+        name: credentialsTable.name,
+        comment: credentialsTable.comment,
+        credentials: credentialsTable.credentials,
+        created_by: credentialsTable.created_by,
+        created_at: credentialsTable.created_at,
+        updated_at: credentialsTable.updated_at,
+        // User information
+        user_username: authUserTable.username,
+        user_email: authUserTable.email,
+      })
       .from(credentialsTable)
+      .leftJoin(authUserTable, eq(credentialsTable.created_by, authUserTable.id))
       .where(and(
         eq(credentialsTable.id, credentialId),
         eq(credentialsTable.team_id, teamId)
@@ -272,14 +317,29 @@ export class CloudCredentialsService {
     const { db, schema } = this.getDbAndSchema();
     const credentialsTable = schema.teamCloudCredentials;
 
-    const result = await (db as any)
+    // First check if the credential exists
+    const existing = await (db as any)
+      .select({ id: credentialsTable.id })
+      .from(credentialsTable)
+      .where(and(
+        eq(credentialsTable.id, credentialId),
+        eq(credentialsTable.team_id, teamId)
+      ))
+      .limit(1);
+
+    if (existing.length === 0) {
+      return false;
+    }
+
+    // Delete the credential
+    await (db as any)
       .delete(credentialsTable)
       .where(and(
         eq(credentialsTable.id, credentialId),
         eq(credentialsTable.team_id, teamId)
       ));
 
-    return result.changes > 0;
+    return true;
   }
 
   /**
@@ -390,6 +450,15 @@ export class CloudCredentialsService {
       }
     }
 
+    // Format createdBy as user object if user info is available
+    const createdBy = credentialData.user_username && credentialData.user_email 
+      ? {
+          id: credentialData.created_by,
+          username: credentialData.user_username,
+          email: credentialData.user_email,
+        }
+      : credentialData.created_by; // Fallback to ID if user info not available
+
     return {
       id: credentialData.id,
       teamId: credentialData.team_id,
@@ -402,7 +471,7 @@ export class CloudCredentialsService {
         description: provider.description,
       },
       fields,
-      createdBy: credentialData.created_by,
+      createdBy,
       createdAt: credentialData.created_at.toISOString(),
       updatedAt: credentialData.updated_at.toISOString(),
     };
@@ -417,6 +486,15 @@ export class CloudCredentialsService {
       throw new Error('Invalid provider ID in stored credential');
     }
 
+    // Format createdBy as user object if user info is available
+    const createdBy = credentialData.user_username && credentialData.user_email 
+      ? {
+          id: credentialData.created_by,
+          username: credentialData.user_username,
+          email: credentialData.user_email,
+        }
+      : credentialData.created_by; // Fallback to ID if user info not available
+
     return {
       id: credentialData.id,
       teamId: credentialData.team_id,
@@ -428,7 +506,7 @@ export class CloudCredentialsService {
         name: provider.name,
         description: provider.description,
       },
-      createdBy: credentialData.created_by,
+      createdBy,
       createdAt: credentialData.created_at.toISOString(),
       updatedAt: credentialData.updated_at.toISOString(),
     };

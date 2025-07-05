@@ -14,8 +14,8 @@ import {
 } from './schemas';
 
 export default async function teamsRoute(fastify: FastifyInstance) {
-  // GET /api/teams/me/default - Get current user's default team (must come before /me route)
-  fastify.get('/api/teams/me/default', {
+  // GET /teams/me/default - Get current user's default team (must come before /me route)
+  fastify.get('/teams/me/default', {
     schema: {
       tags: ['Teams'],
       summary: 'Get current user default team',
@@ -72,8 +72,8 @@ export default async function teamsRoute(fastify: FastifyInstance) {
     }
   });
 
-  // GET /api/teams/me - Get current user's teams (must come before /:id route)
-  fastify.get('/api/teams/me', {
+  // GET /teams/me - Get current user's teams (must come before /:id route)
+  fastify.get('/teams/me', {
     schema: {
       tags: ['Teams'],
       summary: 'Get current user teams',
@@ -129,8 +129,8 @@ export default async function teamsRoute(fastify: FastifyInstance) {
     }
   });
 
-  // GET /api/teams/:id - Get team by ID
-  fastify.get<{ Params: { id: string } }>('/api/teams/:id', {
+  // GET /teams/:id - Get team by ID
+  fastify.get<{ Params: { id: string } }>('/teams/:id', {
     schema: {
       tags: ['Teams'],
       summary: 'Get team by ID',
@@ -208,8 +208,8 @@ export default async function teamsRoute(fastify: FastifyInstance) {
     }
   });
 
-  // POST /api/teams - Create a new team
-  fastify.post<{ Body: CreateTeamInput }>('/api/teams', {
+  // POST /teams - Create a new team
+  fastify.post<{ Body: CreateTeamInput }>('/teams', {
     schema: {
       tags: ['Teams'],
       summary: 'Create new team',
@@ -303,8 +303,8 @@ export default async function teamsRoute(fastify: FastifyInstance) {
     }
   });
 
-  // PUT /api/teams/:id - Update team
-  fastify.put<{ Params: { id: string }; Body: UpdateTeamInput }>('/api/teams/:id', {
+  // PUT /teams/:id - Update team
+  fastify.put<{ Params: { id: string }; Body: UpdateTeamInput }>('/teams/:id', {
     schema: {
       tags: ['Teams'],
       summary: 'Update team',
@@ -412,8 +412,8 @@ export default async function teamsRoute(fastify: FastifyInstance) {
     }
   });
 
-  // DELETE /api/teams/:id - Delete team
-  fastify.delete<{ Params: { id: string } }>('/api/teams/:id', {
+  // DELETE /teams/:id - Delete team
+  fastify.delete<{ Params: { id: string } }>('/teams/:id', {
     schema: {
       tags: ['Teams'],
       summary: 'Delete team',

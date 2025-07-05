@@ -12,6 +12,12 @@ export interface CredentialFieldResponse {
   secret: boolean;    // From provider config
 }
 
+export interface UserInfo {
+  id: string;
+  username: string;
+  email: string;
+}
+
 export interface CloudCredentialResponse {
   id: string;
   teamId: string;
@@ -24,7 +30,7 @@ export interface CloudCredentialResponse {
     description: string;
   };
   fields: Record<string, CredentialFieldResponse>;
-  createdBy: string;
+  createdBy: UserInfo | string; // User object when available, fallback to ID
   createdAt: string;
   updatedAt: string;
 }
@@ -40,7 +46,7 @@ export interface CloudCredentialBasicResponse {
     name: string;
     description: string;
   };
-  createdBy: string;
+  createdBy: UserInfo | string; // User object when available, fallback to ID
   createdAt: string;
   updatedAt: string;
 }

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import {
   FlexRender,
   getCoreRowModel,
@@ -43,6 +44,7 @@ function debounce<T extends (...args: any[]) => any>(func: T, wait: number): T {
 }
 
 const { t } = useI18n()
+const router = useRouter()
 const eventBus = useEventBus()
 
 // State
@@ -220,12 +222,22 @@ const handleDeleteCredential = async (credentialId: string) => {
   }
 }
 
+const handleManageCredential = (credentialId: string) => {
+  // Navigate to credential detail page
+  router.push(`/credentials/${credentialId}`)
+}
+
 // Create columns with permissions
-const columns = computed(() => createColumns(
-  handleEditCredential,
-  handleDeleteCredential,
-  userPermissions.value
-))
+const columns = computed(() => {
+  const isTeamAdmin = selectedTeam.value?.is_admin || selectedTeam.value?.role === 'team_admin'
+  return createColumns(
+    handleEditCredential,
+    handleDeleteCredential,
+    handleManageCredential,
+    userPermissions.value,
+    isTeamAdmin
+  )
+})
 
 // Handle credential creation success
 const handleCredentialCreated = async () => {

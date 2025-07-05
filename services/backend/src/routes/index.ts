@@ -23,22 +23,25 @@ const healthCheckResponseSchema = z.object({
 });
 
 export const registerRoutes = (server: FastifyInstance): void => {
-  // Register the individual database setup routes
-  server.register(dbStatusRoute);
-  server.register(dbSetupRoute);
+  // Register all API routes with centralized /api prefix
+  server.register(async (apiInstance) => {
+    // Register the individual database setup routes
+    await apiInstance.register(dbStatusRoute);
+    await apiInstance.register(dbSetupRoute);
+      
+    // Register role and user management routes
+    await apiInstance.register(rolesRoute);
+    await apiInstance.register(usersRoute);
     
-  // Register role and user management routes
-  server.register(rolesRoute);
-  server.register(usersRoute);
-  
-  // Register global settings routes
-  server.register(globalSettingsRoute);
-  
-  // Register teams routes
-  server.register(teamsRoute);
-  
-  // Register cloud credentials routes
-  server.register(cloudCredentialsRoute);
+    // Register global settings routes
+    await apiInstance.register(globalSettingsRoute);
+    
+    // Register teams routes
+    await apiInstance.register(teamsRoute);
+    
+    // Register cloud credentials routes
+    await apiInstance.register(cloudCredentialsRoute);
+  }, { prefix: '/api' });
 
   // Define a default route with comprehensive OpenAPI documentation
   server.get('/', {
