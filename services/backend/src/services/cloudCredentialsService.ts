@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { getDb, getSchema } from '../db';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, or, like } from 'drizzle-orm';
 import { generateId } from 'lucia';
 import { encrypt, decrypt } from '../utils/encryption';
 import { getCloudProvider, validateCredentialData, validateCredentialDataForUpdate } from '../config/cloud-providers';
@@ -280,6 +280,30 @@ export class CloudCredentialsService {
       ));
 
     return result.changes > 0;
+  }
+
+  /**
+   * Search team credentials by name or comment
+   */
+  async searchTeamCredentials(teamId: string, query: string, limit: number = 50): Promise<CloudCredentialBasicResponse[]> {
+    const { db, schema } = this.getDbAndSchema();
+    const credentialsTable = schema.teamCloudCredentials;
+    
+    const searchPattern = `%${query}%`;
+    
+    const credentials = await (db as any)
+      .select()
+      .from(credentialsTable)
+      .where(and(
+        eq(credentialsTable.team_id, teamId),
+        or(
+          like(credentialsTable.name, searchPattern),
+          like(credentialsTable.comment, searchPattern)
+        )
+      ))
+      .limit(limit);
+
+    return credentials.map((cred: any) => this.formatCredentialBasicResponse(cred));
   }
 
   /**

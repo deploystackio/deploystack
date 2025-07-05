@@ -6,6 +6,9 @@ export type EventBusEvents = {
   'team-created': void
   'team-deleted': void
   'team-selected': { teamId: string; teamName: string }
+  'credentials-updated': void
+  'credential-created': { credentialId: string; credentialName: string }
+  'credential-deleted': { credentialId: string; credentialName: string }
 }
 
 export function useEventBus() {
