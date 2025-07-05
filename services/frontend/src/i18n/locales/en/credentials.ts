@@ -4,7 +4,8 @@ export default {
     description: 'Manage your team\'s cloud provider credentials securely',
     addButton: 'Add Credential',
     search: {
-      placeholder: 'Search credentials by name or comment...',
+      placeholder: 'Search credentials',
+      button: 'Search',
       noResults: 'No credentials found',
       results: 'Found {count} credential{count, plural, one {} other {s}} for "{query}"'
     },

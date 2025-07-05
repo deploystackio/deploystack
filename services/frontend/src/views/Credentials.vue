@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Loader2 } from 'lucide-vue-next'
+import { Plus, Loader2, Search } from 'lucide-vue-next'
 import DashboardLayout from '@/components/DashboardLayout.vue'
 import { CredentialsService } from '@/services/credentialsService'
 import { UserService } from '@/services/userService'
@@ -161,6 +161,27 @@ const debouncedSearch = debounce(async (query: string) => {
     isSearching.value = false
   }
 }, 300)
+
+// Manual search function for button click
+const handleManualSearch = async () => {
+  if (!selectedTeam.value || !searchQuery.value.trim()) {
+    searchResults.value = []
+    return
+  }
+
+  try {
+    isSearching.value = true
+    searchResults.value = await CredentialsService.searchCredentials(
+      selectedTeam.value.id,
+      searchQuery.value.trim()
+    )
+  } catch (error) {
+    console.error('Search error:', error)
+    searchResults.value = []
+  } finally {
+    isSearching.value = false
+  }
+}
 
 // Watch search query
 watch(searchQuery, (newQuery) => {
@@ -325,18 +346,25 @@ const table = useVueTable({
 
       <!-- Data Table -->
       <div v-else class="space-y-4">
-        <!-- Search Input -->
+        <!-- Search Input with Button -->
         <div class="flex items-center py-4">
-          <div class="relative max-w-sm">
+          <div class="flex max-w-sm">
             <Input
               :placeholder="t('credentials.search.placeholder')"
               v-model="searchQuery"
-              class="pr-8"
+              class="rounded-r-none border-r-0 focus:z-10"
+              @keyup.enter="handleManualSearch"
             />
-            <Loader2
-              v-if="isSearching"
-              class="absolute right-2 top-1/2 transform -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground"
-            />
+            <Button
+              variant="outline"
+              class="rounded-l-none border-l-0 px-3"
+              @click="handleManualSearch"
+              :disabled="isSearching"
+            >
+              <Loader2 v-if="isSearching" class="h-4 w-4 animate-spin" />
+              <Search v-else class="h-4 w-4" />
+              <span class="sr-only">{{ t('credentials.search.button') }}</span>
+            </Button>
           </div>
         </div>
 
