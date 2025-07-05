@@ -18,7 +18,9 @@ class CustomSequencer extends Sequencer {
       '12-team-cross-user-permissions.e2e.test.ts',
       '13-team-editing-permissions.e2e.test.ts',
       '14-admin-user-teams-access.e2e.test.ts',
-      '15-cloud-credentials.e2e.test.ts'
+      '15-cloud-credentials.e2e.test.ts',
+      '16-cloud-credentials-cross-user-permissions.e2e.test.ts',
+      '17-cloud-credentials-team-member-permissions.e2e.test.ts'
     ];
 
     return tests.sort((testA, testB) => {
