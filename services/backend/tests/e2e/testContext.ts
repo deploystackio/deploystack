@@ -42,6 +42,14 @@ export interface TestContext {
   editTestCredentialId?: string;
   prodCredentialId?: string;
   stagingCredentialId?: string;
+  // Test 16: Cross-user permissions test properties
+  testCredentialsUser1Id?: string;
+  testCredentialsUser1Cookie?: string;
+  testCredentialsUser2Id?: string;
+  testCredentialsUser2Cookie?: string;
+  testCredentialsUser1TeamId?: string;
+  testCredentialsUser2TeamId?: string;
+  testCredentialsUser1CredentialId?: string;
 }
 
 const CONTEXT_FILE = path.join(__dirname, '.test-context.json');
@@ -92,6 +100,14 @@ export function setTestContext(context: TestContext): void {
       editTestCredentialId: context.editTestCredentialId,
       prodCredentialId: context.prodCredentialId,
       stagingCredentialId: context.stagingCredentialId,
+      // Test 16: Cross-user permissions test properties
+      testCredentialsUser1Id: context.testCredentialsUser1Id,
+      testCredentialsUser1Cookie: context.testCredentialsUser1Cookie,
+      testCredentialsUser2Id: context.testCredentialsUser2Id,
+      testCredentialsUser2Cookie: context.testCredentialsUser2Cookie,
+      testCredentialsUser1TeamId: context.testCredentialsUser1TeamId,
+      testCredentialsUser2TeamId: context.testCredentialsUser2TeamId,
+      testCredentialsUser1CredentialId: context.testCredentialsUser1CredentialId,
     }, null, 2));
   } catch (error) {
     console.warn('Failed to save test context to file:', error);
