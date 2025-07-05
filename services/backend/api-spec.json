@@ -91,6 +91,41 @@
         }
       }
     },
+    "/api/health": {
+      "get": {
+        "summary": "Simple API health check",
+        "tags": [
+          "Health Check"
+        ],
+        "description": "Returns basic API health status for monitoring, load balancers, and uptime checks",
+        "responses": {
+          "200": {
+            "description": "Simple health check response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "ok"
+                      ],
+                      "description": "Health status indicator"
+                    }
+                  },
+                  "required": [
+                    "status"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Simple health check response"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/db/status": {
       "get": {
         "summary": "Get database status",

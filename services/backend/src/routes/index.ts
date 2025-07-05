@@ -13,6 +13,8 @@ import globalSettingsRoute from './globalSettings'
 import teamsRoute from './teams'
 // Import cloud credentials routes
 import cloudCredentialsRoute from './cloud-credentials'
+// Import health check route
+import healthRoute from './health'
 
 // Response schema for the root health check endpoint
 const healthCheckResponseSchema = z.object({
@@ -25,6 +27,9 @@ const healthCheckResponseSchema = z.object({
 export const registerRoutes = (server: FastifyInstance): void => {
   // Register all API routes with centralized /api prefix
   server.register(async (apiInstance) => {
+    // Register health check route
+    await apiInstance.register(healthRoute);
+
     // Register the individual database setup routes
     await apiInstance.register(dbStatusRoute);
     await apiInstance.register(dbSetupRoute);
