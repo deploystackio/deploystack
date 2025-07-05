@@ -11,10 +11,13 @@ import {
   getCredentialSchema,
   updateCredentialSchema,
   deleteCredentialSchema,
+  searchCredentialsSchema,
   CreateCloudCredentialSchema,
   UpdateCloudCredentialSchema,
+  SearchCredentialsQuerySchema,
   type CreateCloudCredentialInput,
-  type UpdateCloudCredentialInput
+  type UpdateCloudCredentialInput,
+  type SearchCredentialsQuery
 } from './schemas';
 
 /**
@@ -443,6 +446,72 @@ export default async function cloudCredentialsRoutes(fastify: FastifyInstance) {
       return reply.status(500).send({
         success: false,
         error: 'Failed to delete cloud credentials'
+      });
+    }
+  });
+
+  // Search team's cloud credentials
+  fastify.get('/teams/:teamId/cloud-credentials/search', {
+    schema: searchCredentialsSchema
+  }, async (request, reply) => {
+    try {
+      const { teamId } = request.params as { teamId: string };
+      const userId = request.user?.id;
+      
+      if (!userId) {
+        return reply.status(401).send({
+          success: false,
+          error: 'User not authenticated'
+        });
+      }
+
+      // Check permissions
+      const { allowed } = await checkCloudCredentialsPermission(teamId, userId, 'view');
+      if (!allowed) {
+        return reply.status(403).send({
+          success: false,
+          error: 'Insufficient permissions'
+        });
+      }
+
+      // Validate query parameters
+      const validationResult = SearchCredentialsQuerySchema.safeParse(request.query);
+      if (!validationResult.success) {
+        return reply.status(400).send({
+          success: false,
+          error: 'Validation failed',
+          details: validationResult.error.errors.map(err => err.message)
+        });
+      }
+
+      const { q, limit = 50 }: SearchCredentialsQuery = validationResult.data;
+      
+      // Search credentials within the team
+      const results = await cloudCredentialsService.searchTeamCredentials(teamId, q, limit);
+      
+      request.log.info({
+        operation: 'search_team_credentials',
+        teamId,
+        query: q,
+        resultsCount: results.length,
+        userId
+      }, 'Cloud credentials search completed');
+      
+      return reply.status(200).send({
+        success: true,
+        data: results
+      });
+    } catch (error) {
+      request.log.error({
+        error,
+        operation: 'search_team_credentials',
+        teamId: (request.params as any).teamId,
+        query: (request.query as any)?.q
+      }, 'Failed to search team credentials');
+      
+      return reply.status(500).send({
+        success: false,
+        error: 'Failed to search team credentials'
       });
     }
   });

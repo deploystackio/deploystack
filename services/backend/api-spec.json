@@ -16,6 +16,34 @@
     "schemas": {}
   },
   "paths": {
+    "/api/plugin/example-plugin/examples": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/plugin/example-plugin/examples/{id}": {
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
     "/": {
       "get": {
         "summary": "API health check",
@@ -3315,9 +3343,9 @@
                             ],
                             "description": "User role in the team"
                           },
-                          "is_owner": {
+                          "is_admin": {
                             "type": "boolean",
-                            "description": "Whether the user is the owner of this team"
+                            "description": "Whether the user is an admin of this team"
                           }
                         },
                         "required": [
@@ -3327,7 +3355,9 @@
                           "description",
                           "owner_id",
                           "created_at",
-                          "updated_at"
+                          "updated_at",
+                          "role",
+                          "is_admin"
                         ],
                         "additionalProperties": false
                       },
@@ -3486,9 +3516,9 @@
                             ],
                             "description": "User role in the team"
                           },
-                          "is_owner": {
+                          "is_admin": {
                             "type": "boolean",
-                            "description": "Whether the user is the owner of this team"
+                            "description": "Whether the user is an admin of this team"
                           }
                         },
                         "required": [
@@ -3498,7 +3528,9 @@
                           "description",
                           "owner_id",
                           "created_at",
-                          "updated_at"
+                          "updated_at",
+                          "role",
+                          "is_admin"
                         ],
                         "additionalProperties": false
                       },
@@ -8813,6 +8845,212 @@
                   ],
                   "additionalProperties": false,
                   "description": "Not Found - Credential not found"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates if the operation was successful (false for errors)"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Internal Server Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/teams/{teamId}/cloud-credentials/search": {
+      "get": {
+        "summary": "Search team cloud credentials",
+        "tags": [
+          "Cloud Credentials"
+        ],
+        "description": "Search for cloud credentials within a team by name or comment. Returns only metadata, no secret values. Team membership is required.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "query",
+            "name": "q",
+            "required": true,
+            "description": "Search query for credential name or comment"
+          },
+          {
+            "schema": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "description": "Maximum number of results to return"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "teamId",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Search completed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "comment": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "providerId": {
+                            "type": "string"
+                          },
+                          "provider": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "description": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name",
+                              "description"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "createdAt": {
+                            "type": "string"
+                          },
+                          "updatedAt": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "comment",
+                          "providerId",
+                          "provider",
+                          "createdAt",
+                          "updatedAt"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "description": "Array of matching credentials (metadata only, no secret values)"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Search completed successfully"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates if the operation was successful (false for errors)"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Unauthorized - Authentication required"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Insufficient permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates if the operation was successful (false for errors)"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Forbidden - Insufficient permissions"
                 }
               }
             }

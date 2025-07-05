@@ -41,8 +41,8 @@ const userTeamsResponseSchema = z.object({
     owner_id: z.string().describe('Team owner ID'),
     created_at: z.date().describe('Team creation date'),
     updated_at: z.date().describe('Team last update date'),
-    role: z.enum(['team_admin', 'team_user']).optional().describe('User role in the team'),
-    is_owner: z.boolean().optional().describe('Whether the user is the owner of this team')
+    role: z.enum(['team_admin', 'team_user']).describe('User role in the team'),
+    is_admin: z.boolean().describe('Whether the user is an admin of this team')
   })).describe('Array of user teams')
 });
 
@@ -626,9 +626,21 @@ export default async function usersRoute(fastify: FastifyInstance) {
 
       const teams = await TeamService.getUserTeams(request.user.id);
       
+      // Add role information to each team
+      const teamsWithRoles = await Promise.all(
+        teams.map(async (team) => {
+          const membership = await TeamService.getTeamMembership(team.id, request.user!.id);
+          return {
+            ...team,
+            role: membership?.role || 'team_user',
+            is_admin: membership?.role === 'team_admin'
+          };
+        })
+      );
+      
       return reply.status(200).send({
         success: true,
-        teams: teams,
+        teams: teamsWithRoles,
       });
     } catch (error) {
       fastify.log.error(error, 'Error fetching user teams');
