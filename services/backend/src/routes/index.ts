@@ -67,7 +67,7 @@ export const registerRoutes = (server: FastifyInstance): void => {
       message: 'DeployStack Backend is running.',
       status: server.db ? 'Database Connected' : 'Database Not Configured/Connected - Use /api/db/status and /api/db/setup',
       timestamp: new Date().toISOString(),
-      version: '0.20.5'
+      version: '0.20.9'
     }
   })
 }

@@ -44,7 +44,7 @@ describe('banner.ts', () => {
       const logCall = (mockLogger.info as any).mock.calls[0];
       expect(logCall[0]).toEqual({
         port: testPort,
-        version: '0.20.7',
+        version: '0.20.9',
         environment: 'test',
         operation: 'startup_banner'
       });
