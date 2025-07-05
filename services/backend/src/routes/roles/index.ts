@@ -50,8 +50,8 @@ const paramsWithIdSchema = z.object({
 export default async function rolesRoute(fastify: FastifyInstance) {
   const roleService = new RoleService();
 
-  // GET /api/roles - List all roles
-  fastify.get('/api/roles', {
+  // GET /roles - List all roles
+  fastify.get('/roles', {
     schema: {
       tags: ['Roles'],
       summary: 'List all roles',
@@ -93,8 +93,8 @@ export default async function rolesRoute(fastify: FastifyInstance) {
     }
   });
 
-  // GET /api/roles/:id - Get role by ID
-  fastify.get<{ Params: { id: string } }>('/api/roles/:id', {
+  // GET /roles/:id - Get role by ID
+  fastify.get<{ Params: { id: string } }>('/roles/:id', {
     schema: {
       tags: ['Roles'],
       summary: 'Get role by ID',
@@ -153,8 +153,8 @@ export default async function rolesRoute(fastify: FastifyInstance) {
     }
   });
 
-  // POST /api/roles - Create new role
-  fastify.post<{ Body: CreateRoleInput }>('/api/roles', {
+  // POST /roles - Create new role
+  fastify.post<{ Body: CreateRoleInput }>('/roles', {
     schema: {
       tags: ['Roles'],
       summary: 'Create new role',
@@ -243,8 +243,8 @@ export default async function rolesRoute(fastify: FastifyInstance) {
     }
   });
 
-  // PUT /api/roles/:id - Update role
-  fastify.put<{ Params: { id: string }; Body: UpdateRoleInput }>('/api/roles/:id', {
+  // PUT /roles/:id - Update role
+  fastify.put<{ Params: { id: string }; Body: UpdateRoleInput }>('/roles/:id', {
     schema: {
       tags: ['Roles'],
       summary: 'Update role',
@@ -346,8 +346,8 @@ export default async function rolesRoute(fastify: FastifyInstance) {
     }
   });
 
-  // DELETE /api/roles/:id - Delete role
-  fastify.delete<{ Params: { id: string } }>('/api/roles/:id', {
+  // DELETE /roles/:id - Delete role
+  fastify.delete<{ Params: { id: string } }>('/roles/:id', {
     schema: {
       tags: ['Roles'],
       summary: 'Delete role',
@@ -426,8 +426,8 @@ export default async function rolesRoute(fastify: FastifyInstance) {
     }
   });
 
-  // GET /api/roles/permissions - Get available permissions
-  fastify.get('/api/roles/permissions', {
+  // GET /roles/permissions - Get available permissions
+  fastify.get('/roles/permissions', {
     schema: {
       tags: ['Roles'],
       summary: 'Get available permissions',

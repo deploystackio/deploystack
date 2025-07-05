@@ -21,6 +21,12 @@ export interface CredentialField {
   }
 }
 
+export interface UserInfo {
+  id: string
+  username: string
+  email: string
+}
+
 export interface CloudCredential {
   id: string
   teamId: string
@@ -37,7 +43,7 @@ export interface CloudCredential {
     secret: boolean
     value?: string // Only for non-secret fields for team_admin
   }>
-  createdBy: string
+  createdBy: UserInfo | string // User object when available, fallback to user ID
   createdAt: string
   updatedAt: string
 }
@@ -53,7 +59,7 @@ export interface CloudCredentialBasic {
     name: string
     description: string
   }
-  createdBy: string
+  createdBy: UserInfo | string // User object when available, fallback to user ID
   createdAt: string
   updatedAt: string
 }

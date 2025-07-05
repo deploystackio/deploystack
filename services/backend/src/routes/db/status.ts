@@ -50,10 +50,10 @@ async function getDbStatusHandler(
   }
 }
 
-// Fastify plugin to register the /api/db/status route
+// Fastify plugin to register the /db/status route
 export default async function dbStatusRoute(server: FastifyInstance) {
   server.get(
-    '/api/db/status',
+    '/db/status',
     { schema: dbStatusRouteSchema },
     async (request, reply) => getDbStatusHandler(request, reply, server)
   );

@@ -424,7 +424,7 @@ export const createServer = async () => {
   });
   
   // Register core routes and API for DB setup
-  registerRoutes(server); 
+  registerRoutes(server);
   
   // Register Authentication Routes
   server.register(async (authInstance) => {

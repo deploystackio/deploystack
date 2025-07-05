@@ -7397,7 +7397,7 @@
         }
       }
     },
-    "/teams/{teamId}/cloud-providers": {
+    "/api/teams/{teamId}/cloud-providers": {
       "get": {
         "summary": "List available cloud providers",
         "tags": [
@@ -7609,7 +7609,7 @@
         }
       }
     },
-    "/teams/{teamId}/cloud-credentials": {
+    "/api/teams/{teamId}/cloud-credentials": {
       "get": {
         "summary": "List team cloud credentials",
         "tags": [
@@ -7707,7 +7707,32 @@
                             }
                           },
                           "createdBy": {
-                            "type": "string"
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string"
+                                  },
+                                  "username": {
+                                    "type": "string"
+                                  },
+                                  "email": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "username",
+                                  "email"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "string"
+                              }
+                            ],
+                            "description": "User object when available, fallback to user ID"
                           },
                           "createdAt": {
                             "type": "string"
@@ -7955,7 +7980,32 @@
                           }
                         },
                         "createdBy": {
-                          "type": "string"
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string"
+                                },
+                                "username": {
+                                  "type": "string"
+                                },
+                                "email": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "username",
+                                "email"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ],
+                          "description": "User object when available, fallback to user ID"
                         },
                         "createdAt": {
                           "type": "string"
@@ -8135,7 +8185,7 @@
         }
       }
     },
-    "/teams/{teamId}/cloud-credentials/{credentialId}": {
+    "/api/teams/{teamId}/cloud-credentials/{credentialId}": {
       "get": {
         "summary": "Get cloud credential by ID",
         "tags": [
@@ -8239,7 +8289,32 @@
                           }
                         },
                         "createdBy": {
-                          "type": "string"
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string"
+                                },
+                                "username": {
+                                  "type": "string"
+                                },
+                                "email": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "username",
+                                "email"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ],
+                          "description": "User object when available, fallback to user ID"
                         },
                         "createdAt": {
                           "type": "string"
@@ -8510,7 +8585,32 @@
                           }
                         },
                         "createdBy": {
-                          "type": "string"
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string"
+                                },
+                                "username": {
+                                  "type": "string"
+                                },
+                                "email": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "username",
+                                "email"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ],
+                          "description": "User object when available, fallback to user ID"
                         },
                         "createdAt": {
                           "type": "string"
@@ -8878,7 +8978,7 @@
         }
       }
     },
-    "/teams/{teamId}/cloud-credentials/search": {
+    "/api/teams/{teamId}/cloud-credentials/search": {
       "get": {
         "summary": "Search team cloud credentials",
         "tags": [

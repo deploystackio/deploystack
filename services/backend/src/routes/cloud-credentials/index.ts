@@ -398,7 +398,22 @@ export default async function cloudCredentialsRoutes(fastify: FastifyInstance) {
       const { teamId, credentialId } = request.params as { teamId: string; credentialId: string };
       const userId = request.user?.id;
       
+      request.log.debug({
+        operation: 'delete_cloud_credential_start',
+        teamId,
+        credentialId,
+        userId,
+        headers: request.headers,
+        method: request.method,
+        url: request.url
+      }, 'Starting cloud credential deletion');
+      
       if (!userId) {
+        request.log.debug({
+          operation: 'delete_cloud_credential_auth_fail',
+          teamId,
+          credentialId
+        }, 'User not authenticated');
         return reply.status(401).send({
           success: false,
           error: 'User not authenticated'
@@ -406,17 +421,84 @@ export default async function cloudCredentialsRoutes(fastify: FastifyInstance) {
       }
 
       // Check permissions
-      const { allowed } = await checkCloudCredentialsPermission(teamId, userId, 'delete');
+      request.log.debug({
+        operation: 'delete_cloud_credential_permission_check',
+        teamId,
+        credentialId,
+        userId
+      }, 'Checking delete permissions');
+      
+      const { allowed, userType } = await checkCloudCredentialsPermission(teamId, userId, 'delete');
+      
+      request.log.debug({
+        operation: 'delete_cloud_credential_permission_result',
+        teamId,
+        credentialId,
+        userId,
+        allowed,
+        userType
+      }, 'Permission check result');
+      
       if (!allowed) {
+        request.log.debug({
+          operation: 'delete_cloud_credential_permission_denied',
+          teamId,
+          credentialId,
+          userId,
+          userType
+        }, 'Insufficient permissions for deletion');
         return reply.status(403).send({
           success: false,
           error: 'Insufficient permissions'
         });
       }
       
+      // Get credential info before deletion for logging
+      let credentialInfo = null;
+      try {
+        credentialInfo = await cloudCredentialsService.getCredentialById(credentialId, teamId);
+        request.log.debug({
+          operation: 'delete_cloud_credential_info',
+          teamId,
+          credentialId,
+          userId,
+          credentialName: credentialInfo?.name,
+          credentialProvider: credentialInfo?.providerId
+        }, 'Retrieved credential info before deletion');
+      } catch (infoError) {
+        request.log.debug({
+          operation: 'delete_cloud_credential_info_error',
+          teamId,
+          credentialId,
+          userId,
+          error: infoError
+        }, 'Could not retrieve credential info before deletion');
+      }
+      
+      request.log.debug({
+        operation: 'delete_cloud_credential_execute',
+        teamId,
+        credentialId,
+        userId
+      }, 'Executing credential deletion');
+      
       const deleted = await cloudCredentialsService.deleteCredentials(credentialId, teamId);
       
+      request.log.debug({
+        operation: 'delete_cloud_credential_result',
+        teamId,
+        credentialId,
+        userId,
+        deleted
+      }, 'Credential deletion result');
+      
       if (!deleted) {
+        request.log.debug({
+          operation: 'delete_cloud_credential_not_found',
+          teamId,
+          credentialId,
+          userId
+        }, 'Cloud credential not found for deletion');
         return reply.status(404).send({
           success: false,
           error: 'Cloud credential not found'
@@ -424,11 +506,14 @@ export default async function cloudCredentialsRoutes(fastify: FastifyInstance) {
       }
       
       request.log.info({
-        operation: 'delete_cloud_credential',
+        operation: 'delete_cloud_credential_success',
         teamId,
         credentialId,
-        userId: request.user?.id
-      }, 'Cloud credential deleted successfully');
+        userId,
+        credentialName: credentialInfo?.name,
+        credentialProvider: credentialInfo?.providerId,
+        deletedBy: userId
+      }, `Cloud credential '${credentialInfo?.name || credentialId}' (${credentialInfo?.providerId || 'unknown provider'}) deleted successfully by user ${userId} from team ${teamId}`);
       
       return reply.status(200).send({
         success: true,
@@ -437,10 +522,12 @@ export default async function cloudCredentialsRoutes(fastify: FastifyInstance) {
     } catch (error) {
       request.log.error({
         error,
-        operation: 'delete_cloud_credential',
+        operation: 'delete_cloud_credential_error',
         teamId: (request.params as any).teamId,
         credentialId: (request.params as any).credentialId,
-        userId: request.user?.id
+        userId: request.user?.id,
+        errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        errorStack: error instanceof Error ? error.stack : undefined
       }, 'Failed to delete cloud credential');
       
       return reply.status(500).send({

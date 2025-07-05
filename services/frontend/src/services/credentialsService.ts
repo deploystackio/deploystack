@@ -28,7 +28,7 @@ export class CredentialsService {
     try {
       const apiUrl = this.getApiUrl()
 
-      const response = await fetch(`${apiUrl}/teams/${teamId}/cloud-providers`, {
+      const response = await fetch(`${apiUrl}/api/teams/${teamId}/cloud-providers`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -66,7 +66,7 @@ export class CredentialsService {
     try {
       const apiUrl = this.getApiUrl()
 
-      const response = await fetch(`${apiUrl}/teams/${teamId}/cloud-credentials`, {
+      const response = await fetch(`${apiUrl}/api/teams/${teamId}/cloud-credentials`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -109,7 +109,7 @@ export class CredentialsService {
       const apiUrl = this.getApiUrl()
       const searchParams = new URLSearchParams({ q: query, limit: limit.toString() })
 
-      const response = await fetch(`${apiUrl}/teams/${teamId}/cloud-credentials/search?${searchParams}`, {
+      const response = await fetch(`${apiUrl}/api/teams/${teamId}/cloud-credentials/search?${searchParams}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -147,7 +147,7 @@ export class CredentialsService {
     try {
       const apiUrl = this.getApiUrl()
 
-      const response = await fetch(`${apiUrl}/teams/${teamId}/cloud-credentials/${credentialId}`, {
+      const response = await fetch(`${apiUrl}/api/teams/${teamId}/cloud-credentials/${credentialId}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -191,7 +191,7 @@ export class CredentialsService {
     try {
       const apiUrl = this.getApiUrl()
 
-      const response = await fetch(`${apiUrl}/teams/${teamId}/cloud-credentials`, {
+      const response = await fetch(`${apiUrl}/api/teams/${teamId}/cloud-credentials`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -239,7 +239,7 @@ export class CredentialsService {
     try {
       const apiUrl = this.getApiUrl()
 
-      const response = await fetch(`${apiUrl}/teams/${teamId}/cloud-credentials/${credentialId}`, {
+      const response = await fetch(`${apiUrl}/api/teams/${teamId}/cloud-credentials/${credentialId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -286,7 +286,7 @@ export class CredentialsService {
     try {
       const apiUrl = this.getApiUrl()
 
-      const response = await fetch(`${apiUrl}/teams/${teamId}/cloud-credentials/${credentialId}`, {
+      const response = await fetch(`${apiUrl}/api/teams/${teamId}/cloud-credentials/${credentialId}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
