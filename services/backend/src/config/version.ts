@@ -25,7 +25,7 @@ try {
       source: 'package.json'
     };
   }
-} catch (error) {
+} catch {
   // Use static fallback if package.json can't be read
 }
 

@@ -7,7 +7,6 @@ import {
   CreateTeamSchema,
   UpdateTeamSchema,
   TeamResponseSchema,
-  TeamsListResponseSchema,
   TeamsListWithRoleInfoResponseSchema,
   TeamMembersListResponseSchema,
   TeamMemberResponseSchema,
@@ -689,7 +688,7 @@ export default async function teamsRoute(fastify: FastifyInstance) {
       }
 
       // Add the member
-      const membership = await TeamService.addTeamMember(teamId, validatedData.userId, validatedData.role);
+      await TeamService.addTeamMember(teamId, validatedData.userId, validatedData.role);
 
       // Get the full member info to return
       const members = await TeamService.getTeamMembersWithUserInfo(teamId);
