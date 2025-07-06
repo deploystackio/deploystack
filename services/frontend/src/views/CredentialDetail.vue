@@ -42,19 +42,47 @@ const error = ref<string | null>(null)
 const showDeleteModal = ref(false)
 const isDeleting = ref(false)
 const deleteError = ref<string | null>(null)
-const successMessage = ref<string | null>(null)
 
 const credentialId = route.params.id as string
 
-// Fetch credential details from API
-async function fetchCredential(): Promise<void> {
-  if (!selectedTeam.value) return
-
+// Find which team owns the credential by trying each team
+async function findCredentialTeam(): Promise<void> {
   try {
     isLoading.value = true
     error.value = null
 
-    credential.value = await CredentialsService.getCredential(selectedTeam.value.id, credentialId)
+    const userTeams = await TeamService.getUserTeams()
+
+    if (userTeams.length === 0) {
+      error.value = 'No teams found for user'
+      return
+    }
+
+    // Try each team to find the one that owns this credential
+    for (const team of userTeams) {
+      try {
+        const foundCredential = await CredentialsService.getCredential(team.id, credentialId)
+
+        // If we successfully found the credential, this is the correct team
+        credential.value = foundCredential
+        selectedTeam.value = team
+        userRole.value = team.role || 'team_user'
+        return
+
+      } catch (err) {
+        // If credential not found in this team, continue to next team
+        if (err instanceof Error && err.message.includes('not found')) {
+          continue
+        }
+        // If it's a different error (auth, permissions, etc.), re-throw
+        throw err
+      }
+    }
+
+    // If we get here, credential wasn't found in any team
+    error.value = 'Credential not found in any of your teams'
+    credential.value = null
+
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'An unknown error occurred'
     credential.value = null
@@ -63,25 +91,9 @@ async function fetchCredential(): Promise<void> {
   }
 }
 
-// Initialize team context
-async function initializeTeamContext(): Promise<void> {
-  try {
-    const userTeams = await TeamService.getUserTeams()
-    if (userTeams.length > 0) {
-      selectedTeam.value = userTeams[0] // Default to first team
-      userRole.value = selectedTeam.value.role || 'team_user'
-    }
-  } catch (error) {
-    console.error('Error initializing team context:', error)
-  }
-}
-
 // Load data on component mount
 onMounted(async () => {
-  await initializeTeamContext()
-  if (selectedTeam.value) {
-    await fetchCredential()
-  }
+  await findCredentialTeam()
 })
 
 // Computed properties for display
@@ -148,16 +160,14 @@ const confirmDelete = async () => {
     // Emit general credentials updated event
     eventBus.emit('credentials-updated')
 
-    // Set success message
-    successMessage.value = `Credential "${credential.value.name}" has been successfully deleted.`
-
-    // Close modal and navigate back to credentials list
+    // Close modal and navigate back to credentials list with success message
     showDeleteModal.value = false
 
-    // Navigate back with a slight delay to show success message
-    setTimeout(() => {
-      router.push('/credentials')
-    }, 1500)
+    // Navigate back with success message in query params
+    router.push({
+      path: '/credentials',
+      query: { deleted: credential.value.name }
+    })
 
   } catch (err) {
     console.error('Error deleting credential:', err)
@@ -222,14 +232,6 @@ const handleUpdateSecrets = () => {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-
-      <!-- Success Message -->
-      <Alert v-if="successMessage" class="mb-4">
-        <CheckCircle class="h-4 w-4" />
-        <AlertDescription>
-          {{ successMessage }}
-        </AlertDescription>
-      </Alert>
 
       <!-- Loading State -->
       <div v-if="isLoading" class="text-muted-foreground">
