@@ -22,7 +22,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { ArrowLeft, Key, Shield, Calendar, User, AlertTriangle, Trash2, CheckCircle, Settings, Edit } from 'lucide-vue-next'
+import { ArrowLeft, Key, Shield, Calendar, User, AlertTriangle, Trash2, Settings, Edit } from 'lucide-vue-next'
 import DashboardLayout from '@/components/DashboardLayout.vue'
 import { CredentialsService } from '@/services/credentialsService'
 import { TeamService, type Team } from '@/services/teamService'
