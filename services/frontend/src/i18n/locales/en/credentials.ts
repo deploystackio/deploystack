@@ -71,7 +71,10 @@ export default {
     actions: {
       edit: 'Edit',
       delete: 'Delete',
-      view: 'View Details'
+      view: 'View Details',
+      editCredential: 'Edit Credential',
+      editName: 'Edit Name',
+      updateSecrets: 'Update Secrets'
     },
     delete: {
       title: 'Delete Credential',

@@ -7,7 +7,7 @@ import { useRouter } from 'vue-router'
 import { Mail, Lock, AlertTriangle } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 import { UserService } from '@/services/userService'
-import GitHubIcon from '@/components/icons/GitHubIcon.vue'
+import { Github } from 'lucide-vue-next'
 import { getEnv } from '@/utils/env'
 
 import {
@@ -295,7 +295,7 @@ onMounted(async () => {
               class="w-full mt-4"
               @click="handleGitHubLogin"
             >
-              <GitHubIcon class="mr-2" />
+              <Github class="mr-2 h-4 w-4" />
               {{ $t('login.oauth.github.button') }}
             </Button>
           </div>

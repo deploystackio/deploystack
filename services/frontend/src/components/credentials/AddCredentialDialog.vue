@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { z } from 'zod'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -138,7 +137,7 @@ const validateField = (fieldKey: string, value: string) => {
       if (!regex.test(value)) {
         errors.push(t('credentials.form.validation.pattern', { field: field.label }))
       }
-    } catch (e) {
+    } catch {
       console.warn('Invalid regex pattern for field:', fieldKey, field.validation.pattern)
     }
   }
