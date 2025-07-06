@@ -45,22 +45,22 @@ const getRoleDisplay = (role: string) => {
     <table class="w-full">
       <thead>
         <tr class="border-b bg-muted/50">
-          <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+          <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground text-sm">
             {{ t('teams.table.columns.name') }}
           </th>
-          <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+          <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground text-sm">
             {{ t('teams.table.columns.description') }}
           </th>
-          <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+          <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground text-sm">
             {{ t('teams.table.columns.role') }}
           </th>
-          <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+          <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground text-sm">
             {{ t('teams.table.columns.created') }}
           </th>
-          <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+          <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground text-sm">
             {{ t('teams.table.columns.switch') }}
           </th>
-          <th class="h-12 px-4 text-right align-middle font-medium text-muted-foreground">
+          <th class="h-12 px-4 text-right align-middle font-medium text-muted-foreground text-sm">
             {{ t('teams.table.columns.actions') }}
           </th>
         </tr>

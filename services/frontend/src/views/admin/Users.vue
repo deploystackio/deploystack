@@ -54,9 +54,9 @@ async function fetchUsers(): Promise<User[]> {
   if (!apiUrl) {
     throw new Error('VITE_DEPLOYSTACK_BACKEND_URL is not configured.')
   }
-  
-  const response = await fetch(`${apiUrl}/api/users`, { 
-    credentials: 'include' 
+
+  const response = await fetch(`${apiUrl}/api/users`, {
+    credentials: 'include'
   })
 
   if (!response.ok) {
@@ -95,23 +95,23 @@ const table = useVueTable({
     return columns
   },
   onSortingChange: (updaterOrValue) => {
-    sorting.value = typeof updaterOrValue === 'function' 
-      ? updaterOrValue(sorting.value) 
+    sorting.value = typeof updaterOrValue === 'function'
+      ? updaterOrValue(sorting.value)
       : updaterOrValue
   },
   onColumnFiltersChange: (updaterOrValue) => {
-    columnFilters.value = typeof updaterOrValue === 'function' 
-      ? updaterOrValue(columnFilters.value) 
+    columnFilters.value = typeof updaterOrValue === 'function'
+      ? updaterOrValue(columnFilters.value)
       : updaterOrValue
   },
   onColumnVisibilityChange: (updaterOrValue) => {
-    columnVisibility.value = typeof updaterOrValue === 'function' 
-      ? updaterOrValue(columnVisibility.value) 
+    columnVisibility.value = typeof updaterOrValue === 'function'
+      ? updaterOrValue(columnVisibility.value)
       : updaterOrValue
   },
   onRowSelectionChange: (updaterOrValue) => {
-    rowSelection.value = typeof updaterOrValue === 'function' 
-      ? updaterOrValue(rowSelection.value) 
+    rowSelection.value = typeof updaterOrValue === 'function'
+      ? updaterOrValue(rowSelection.value)
       : updaterOrValue
   },
   getCoreRowModel: getCoreRowModel(),
@@ -177,6 +177,7 @@ const filterValue = computed({
               <TableRow
                 v-for="headerGroup in table.getHeaderGroups()"
                 :key="headerGroup.id"
+                class="bg-muted/50"
               >
                 <TableHead
                   v-for="header in headerGroup.headers"

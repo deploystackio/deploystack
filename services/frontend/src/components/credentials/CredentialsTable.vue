@@ -39,23 +39,23 @@ const getCreatedByDisplay = (createdBy: any) => {
   <div class="rounded-md border">
     <table class="w-full">
       <thead>
-        <tr class="border-b">
-          <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+        <tr class="border-b bg-muted/50">
+          <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground text-sm">
             Name
           </th>
-          <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+          <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground text-sm">
             Provider
           </th>
-          <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+          <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground text-sm">
             Comment
           </th>
-          <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+          <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground text-sm">
             Created By
           </th>
-          <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+          <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground text-sm">
             Created
           </th>
-          <th class="h-12 px-4 text-right align-middle font-medium text-muted-foreground">
+          <th class="h-12 px-4 text-right align-middle font-medium text-muted-foreground text-sm">
             Manage
           </th>
         </tr>
