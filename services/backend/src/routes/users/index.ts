@@ -41,8 +41,8 @@ const userTeamsResponseSchema = z.object({
     owner_id: z.string().describe('Team owner ID'),
     created_at: z.date().describe('Team creation date'),
     updated_at: z.date().describe('Team last update date'),
-    role: z.enum(['team_admin', 'team_user']).optional().describe('User role in the team'),
-    is_owner: z.boolean().optional().describe('Whether the user is the owner of this team')
+    role: z.enum(['team_admin', 'team_user']).describe('User role in the team'),
+    is_owner: z.boolean().describe('Whether the user is the owner of this team')
   })).describe('Array of user teams')
 });
 
@@ -68,8 +68,8 @@ const roleParamsSchema = z.object({
 export default async function usersRoute(fastify: FastifyInstance) {
   const userService = new UserService();
 
-  // GET /api/users - List all users (admin only)
-  fastify.get('/api/users', {
+  // GET /users - List all users (admin only)
+  fastify.get('/users', {
     schema: {
       tags: ['Users'],
       summary: 'List all users',
@@ -111,8 +111,8 @@ export default async function usersRoute(fastify: FastifyInstance) {
     }
   });
 
-  // GET /api/users/:id - Get user by ID (own profile or admin)
-  fastify.get<{ Params: { id: string } }>('/api/users/:id', {
+  // GET /users/:id - Get user by ID (own profile or admin)
+  fastify.get<{ Params: { id: string } }>('/users/:id', {
     schema: {
       tags: ['Users'],
       summary: 'Get user by ID',
@@ -168,8 +168,8 @@ export default async function usersRoute(fastify: FastifyInstance) {
     }
   });
 
-  // PUT /api/users/:id - Update user (own profile or admin)
-  fastify.put<{ Params: { id: string }; Body: UpdateUserInput }>('/api/users/:id', {
+  // PUT /users/:id - Update user (own profile or admin)
+  fastify.put<{ Params: { id: string }; Body: UpdateUserInput }>('/users/:id', {
     schema: {
       tags: ['Users'],
       summary: 'Update user',
@@ -278,8 +278,8 @@ export default async function usersRoute(fastify: FastifyInstance) {
     }
   });
 
-  // DELETE /api/users/:id - Delete user (admin only)
-  fastify.delete<{ Params: { id: string } }>('/api/users/:id', {
+  // DELETE /users/:id - Delete user (admin only)
+  fastify.delete<{ Params: { id: string } }>('/users/:id', {
     schema: {
       tags: ['Users'],
       summary: 'Delete user',
@@ -354,8 +354,8 @@ export default async function usersRoute(fastify: FastifyInstance) {
     }
   });
 
-  // PUT /api/users/:id/role - Assign role to user (admin only)
-  fastify.put<{ Params: { id: string }; Body: AssignRoleInput }>('/api/users/:id/role', {
+  // PUT /users/:id/role - Assign role to user (admin only)
+  fastify.put<{ Params: { id: string }; Body: AssignRoleInput }>('/users/:id/role', {
     schema: {
       tags: ['Users'],
       summary: 'Assign role to user',
@@ -444,8 +444,8 @@ export default async function usersRoute(fastify: FastifyInstance) {
     }
   });
 
-  // GET /api/users/stats - Get user statistics (admin only)
-  fastify.get('/api/users/stats', {
+  // GET /users/stats - Get user statistics (admin only)
+  fastify.get('/users/stats', {
     schema: {
       tags: ['Users'],
       summary: 'Get user statistics',
@@ -490,8 +490,8 @@ export default async function usersRoute(fastify: FastifyInstance) {
     }
   });
 
-  // GET /api/users/role/:roleId - Get users by role (admin only)
-  fastify.get<{ Params: { roleId: string } }>('/api/users/role/:roleId', {
+  // GET /users/role/:roleId - Get users by role (admin only)
+  fastify.get<{ Params: { roleId: string } }>('/users/role/:roleId', {
     schema: {
       tags: ['Users'],
       summary: 'Get users by role',
@@ -539,8 +539,8 @@ export default async function usersRoute(fastify: FastifyInstance) {
     }
   });
 
-  // GET /api/users/me - Get current user profile
-  fastify.get('/api/users/me', {
+  // GET /users/me - Get current user profile
+  fastify.get('/users/me', {
     schema: {
       tags: ['Users'],
       summary: 'Get current user profile',
@@ -593,8 +593,8 @@ export default async function usersRoute(fastify: FastifyInstance) {
     }
   });
 
-  // GET /api/users/me/teams - Get current user's teams
-  fastify.get('/api/users/me/teams', {
+  // GET /users/me/teams - Get current user's teams
+  fastify.get('/users/me/teams', {
     schema: {
       tags: ['Users'],
       summary: 'Get current user teams',
@@ -626,9 +626,21 @@ export default async function usersRoute(fastify: FastifyInstance) {
 
       const teams = await TeamService.getUserTeams(request.user.id);
       
+      // Add role information to each team
+      const teamsWithRoles = await Promise.all(
+        teams.map(async (team) => {
+          const membership = await TeamService.getTeamMembership(team.id, request.user!.id);
+          return {
+            ...team,
+            role: membership?.role || 'team_user',
+            is_owner: team.owner_id === request.user!.id
+          };
+        })
+      );
+      
       return reply.status(200).send({
         success: true,
-        teams: teams,
+        teams: teamsWithRoles,
       });
     } catch (error) {
       fastify.log.error(error, 'Error fetching user teams');
@@ -639,8 +651,8 @@ export default async function usersRoute(fastify: FastifyInstance) {
     }
   });
 
-  // GET /api/users/:id/teams - Get teams for specific user (admin only)
-  fastify.get<{ Params: { id: string } }>('/api/users/:id/teams', {
+  // GET /users/:id/teams - Get teams for specific user (admin only)
+  fastify.get<{ Params: { id: string } }>('/users/:id/teams', {
     schema: {
       tags: ['Users'],
       summary: 'Get user teams by ID',

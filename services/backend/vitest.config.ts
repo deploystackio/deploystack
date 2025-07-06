@@ -23,6 +23,7 @@ export default defineConfig({
         'src/email/example.ts', // Exclude email examples
         'src/index.ts', // Entry point
         'src/server.ts', // Server setup
+        'src/plugin-system/index.ts', // Simple barrel export file
       ],
       thresholds: {
         global: {

@@ -233,7 +233,7 @@ async function setupDbHandler(
 // Fastify plugin to register the database setup route
 export default async function dbSetupRoute(server: FastifyInstance) {
   server.post(
-    '/api/db/setup',
+    '/db/setup',
     { schema: dbSetupRouteSchema },
     async (request, reply) => setupDbHandler(request, reply, server)
   );

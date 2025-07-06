@@ -26,7 +26,9 @@ describe('Database Status Route', () => {
     // Setup mock Fastify instance
     mockFastify = {
       get: vi.fn((path, options, handler) => {
-        routeHandlers[`GET ${path}`] = handler;
+        // Extract the actual handler function from the arguments
+        const actualHandler = typeof options === 'function' ? options : handler;
+        routeHandlers[`GET ${path}`] = actualHandler;
         return mockFastify as FastifyInstance;
       }),
       log: {
@@ -51,14 +53,14 @@ describe('Database Status Route', () => {
     it('should register database status route', async () => {
       await dbStatusRoute(mockFastify as FastifyInstance);
 
-      expect(mockFastify.get).toHaveBeenCalledWith('/api/db/status', expect.any(Object), expect.any(Function));
+      expect(mockFastify.get).toHaveBeenCalledWith('/db/status', expect.any(Object), expect.any(Function));
     });
 
     it('should register route with proper schema', async () => {
       await dbStatusRoute(mockFastify as FastifyInstance);
 
       const [path, options] = (mockFastify.get as any).mock.calls[0];
-      expect(path).toBe('/api/db/status');
+      expect(path).toBe('/db/status');
       expect(options.schema).toBeDefined();
       expect(options.schema.tags).toEqual(['Database']);
       expect(options.schema.summary).toBe('Get database status');
@@ -69,7 +71,7 @@ describe('Database Status Route', () => {
     });
   });
 
-  describe('GET /api/db/status', () => {
+  describe('GET /db/status', () => {
     beforeEach(async () => {
       await dbStatusRoute(mockFastify as FastifyInstance);
     });
@@ -79,10 +81,11 @@ describe('Database Status Route', () => {
         configured: true,
         initialized: true,
         dialect: DatabaseType.SQLite,
+        type: DatabaseType.SQLite,
       };
       mockGetDbStatus.mockReturnValue(mockStatus);
 
-      const handler = routeHandlers['GET /api/db/status'];
+      const handler = routeHandlers['GET /db/status'];
       await handler(mockRequest, mockReply);
 
       expect(mockGetDbStatus).toHaveBeenCalledTimes(1);
@@ -99,10 +102,11 @@ describe('Database Status Route', () => {
         configured: false,
         initialized: false,
         dialect: null,
+        type: null,
       };
       mockGetDbStatus.mockReturnValue(mockStatus);
 
-      const handler = routeHandlers['GET /api/db/status'];
+      const handler = routeHandlers['GET /db/status'];
       await handler(mockRequest, mockReply);
 
       expect(mockGetDbStatus).toHaveBeenCalledTimes(1);
@@ -118,10 +122,11 @@ describe('Database Status Route', () => {
         configured: true,
         initialized: false,
         dialect: DatabaseType.SQLite,
+        type: DatabaseType.SQLite,
       };
       mockGetDbStatus.mockReturnValue(mockStatus);
 
-      const handler = routeHandlers['GET /api/db/status'];
+      const handler = routeHandlers['GET /db/status'];
       await handler(mockRequest, mockReply);
 
       expect(mockGetDbStatus).toHaveBeenCalledTimes(1);
@@ -137,10 +142,11 @@ describe('Database Status Route', () => {
         configured: false,
         initialized: false,
         dialect: null,
+        type: null,
       };
       mockGetDbStatus.mockReturnValue(mockStatus);
 
-      const handler = routeHandlers['GET /api/db/status'];
+      const handler = routeHandlers['GET /db/status'];
       await handler(mockRequest, mockReply);
 
       expect(mockReply.send).toHaveBeenCalledWith({
@@ -155,10 +161,11 @@ describe('Database Status Route', () => {
         configured: false,
         initialized: false,
         dialect: undefined,
+        type: undefined,
       };
       mockGetDbStatus.mockReturnValue(mockStatus as any);
 
-      const handler = routeHandlers['GET /api/db/status'];
+      const handler = routeHandlers['GET /db/status'];
       await handler(mockRequest, mockReply);
 
       expect(mockReply.send).toHaveBeenCalledWith({
@@ -174,7 +181,7 @@ describe('Database Status Route', () => {
         throw error;
       });
 
-      const handler = routeHandlers['GET /api/db/status'];
+      const handler = routeHandlers['GET /db/status'];
       await handler(mockRequest, mockReply);
 
       expect(mockFastify.log!.error).toHaveBeenCalledWith(error, 'Error fetching database status');
@@ -189,10 +196,11 @@ describe('Database Status Route', () => {
         configured: 'true', // Should be boolean
         initialized: 1, // Should be boolean
         dialect: 'postgres', // Should be sqlite or null
+        type: 'postgres',
       };
       mockGetDbStatus.mockReturnValue(invalidStatus as any);
 
-      const handler = routeHandlers['GET /api/db/status'];
+      const handler = routeHandlers['GET /db/status'];
       await handler(mockRequest, mockReply);
 
       // Should still process the data as received from getDbStatus
@@ -210,7 +218,7 @@ describe('Database Status Route', () => {
       };
       mockGetDbStatus.mockReturnValue(partialStatus as any);
 
-      const handler = routeHandlers['GET /api/db/status'];
+      const handler = routeHandlers['GET /db/status'];
       await handler(mockRequest, mockReply);
 
       expect(mockReply.send).toHaveBeenCalledWith({
@@ -223,7 +231,7 @@ describe('Database Status Route', () => {
     it('should handle getDbStatus returning empty object', async () => {
       mockGetDbStatus.mockReturnValue({} as any);
 
-      const handler = routeHandlers['GET /api/db/status'];
+      const handler = routeHandlers['GET /db/status'];
       await handler(mockRequest, mockReply);
 
       expect(mockReply.send).toHaveBeenCalledWith({
@@ -239,7 +247,7 @@ describe('Database Status Route', () => {
         throw stringError;
       });
 
-      const handler = routeHandlers['GET /api/db/status'];
+      const handler = routeHandlers['GET /db/status'];
       await handler(mockRequest, mockReply);
 
       expect(mockFastify.log!.error).toHaveBeenCalledWith(stringError, 'Error fetching database status');
@@ -255,10 +263,11 @@ describe('Database Status Route', () => {
         configured: true,
         initialized: true,
         dialect: DatabaseType.SQLite,
+        type: DatabaseType.SQLite,
       };
       mockGetDbStatus.mockReturnValue(originalStatus);
 
-      const handler = routeHandlers['GET /api/db/status'];
+      const handler = routeHandlers['GET /db/status'];
       await handler(mockRequest, mockReply);
 
       // Verify original object is unchanged
@@ -266,6 +275,7 @@ describe('Database Status Route', () => {
         configured: true,
         initialized: true,
         dialect: 'sqlite',
+        type: 'sqlite',
       });
 
       // Verify the response was sent with correct typing
@@ -281,16 +291,18 @@ describe('Database Status Route', () => {
         configured: false,
         initialized: false,
         dialect: null,
+        type: null,
       };
       const mockStatus2 = {
         configured: true,
         initialized: true,
         dialect: DatabaseType.SQLite,
+        type: DatabaseType.SQLite,
       };
 
       mockGetDbStatus.mockReturnValueOnce(mockStatus1).mockReturnValueOnce(mockStatus2);
 
-      const handler = routeHandlers['GET /api/db/status'];
+      const handler = routeHandlers['GET /db/status'];
       
       // First call
       await handler(mockRequest, mockReply);
@@ -325,7 +337,7 @@ describe('Database Status Route', () => {
         throw error;
       });
 
-      const handler = routeHandlers['GET /api/db/status'];
+      const handler = routeHandlers['GET /db/status'];
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(500);
@@ -340,7 +352,7 @@ describe('Database Status Route', () => {
         throw error;
       });
 
-      const handler = routeHandlers['GET /api/db/status'];
+      const handler = routeHandlers['GET /db/status'];
       await handler(mockRequest, mockReply);
 
       // Error message should be consistent regardless of the actual error

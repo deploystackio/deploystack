@@ -29,6 +29,13 @@ export const CredentialFieldResponseSchema = z.object({
   secret: z.boolean(),
 });
 
+// User info schema for createdBy field
+export const UserInfoSchema = z.object({
+  id: z.string(),
+  username: z.string(),
+  email: z.string(),
+});
+
 export const CloudCredentialResponseSchema = z.object({
   id: z.string(),
   teamId: z.string(),
@@ -41,7 +48,7 @@ export const CloudCredentialResponseSchema = z.object({
     description: z.string(),
   }),
   fields: z.record(CredentialFieldResponseSchema),
-  createdBy: z.string(),
+  createdBy: z.union([UserInfoSchema, z.string()]).describe('User object when available, fallback to user ID'),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
@@ -57,7 +64,7 @@ export const CloudCredentialBasicResponseSchema = z.object({
     name: z.string(),
     description: z.string(),
   }),
-  createdBy: z.string(),
+  createdBy: z.union([UserInfoSchema, z.string()]).describe('User object when available, fallback to user ID'),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
@@ -78,9 +85,29 @@ export const UpdateCloudCredentialSchema = z.object({
   credentials: z.record(z.string()).optional(),
 });
 
+export const SearchCredentialsQuerySchema = z.object({
+  q: z.string().min(1, 'Search query is required').describe('Search query for credential name or comment'),
+  limit: z.number().min(1).max(100).default(50).optional().describe('Maximum number of results to return'),
+});
+
+export const SearchCredentialsResponseSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  comment: z.string().nullable(),
+  providerId: z.string(),
+  provider: z.object({
+    id: z.string(),
+    name: z.string(),
+    description: z.string(),
+  }),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
 // Request/Response types
 export type CreateCloudCredentialInput = z.infer<typeof CreateCloudCredentialSchema>;
 export type UpdateCloudCredentialInput = z.infer<typeof UpdateCloudCredentialSchema>;
+export type SearchCredentialsQuery = z.infer<typeof SearchCredentialsQuerySchema>;
 
 // Route schemas for OpenAPI documentation
 export const listProvidersSchema = {
@@ -353,6 +380,47 @@ export const deleteCredentialSchema = {
       success: z.boolean().default(false).describe('Indicates if the operation was successful (false for errors)'),
       error: z.string().describe('Error message'),
     }).describe('Not Found - Credential not found'), { 
+      $refStrategy: 'none', 
+      target: 'openApi3' 
+    }),
+    500: zodToJsonSchema(z.object({
+      success: z.boolean().default(false).describe('Indicates if the operation was successful (false for errors)'),
+      error: z.string().describe('Error message'),
+    }).describe('Internal Server Error'), { 
+      $refStrategy: 'none', 
+      target: 'openApi3' 
+    }),
+  }
+};
+
+export const searchCredentialsSchema = {
+  tags: ['Cloud Credentials'],
+  summary: 'Search team cloud credentials',
+  description: 'Search for cloud credentials within a team by name or comment. Returns only metadata, no secret values. Team membership is required.',
+  security: [{ cookieAuth: [] }],
+  querystring: zodToJsonSchema(SearchCredentialsQuerySchema, { 
+    $refStrategy: 'none', 
+    target: 'openApi3' 
+  }),
+  response: {
+    200: zodToJsonSchema(z.object({
+      success: z.boolean().describe('Indicates if the operation was successful'),
+      data: z.array(SearchCredentialsResponseSchema).describe('Array of matching credentials (metadata only, no secret values)'),
+    }).describe('Search completed successfully'), { 
+      $refStrategy: 'none', 
+      target: 'openApi3' 
+    }),
+    401: zodToJsonSchema(z.object({
+      success: z.boolean().default(false).describe('Indicates if the operation was successful (false for errors)'),
+      error: z.string().describe('Error message'),
+    }).describe('Unauthorized - Authentication required'), { 
+      $refStrategy: 'none', 
+      target: 'openApi3' 
+    }),
+    403: zodToJsonSchema(z.object({
+      success: z.boolean().default(false).describe('Indicates if the operation was successful (false for errors)'),
+      error: z.string().describe('Error message'),
+    }).describe('Forbidden - Insufficient permissions'), { 
       $refStrategy: 'none', 
       target: 'openApi3' 
     }),

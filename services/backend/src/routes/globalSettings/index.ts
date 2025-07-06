@@ -88,8 +88,8 @@ const paramsWithGroupIdSchema = z.object({
 });
 
 export default async function globalSettingsRoute(fastify: FastifyInstance) {
-  // GET /api/settings/groups - List all groups with their settings (admin only)
-  fastify.get('/api/settings/groups', {
+  // GET /settings/groups - List all groups with their settings (admin only)
+  fastify.get('/settings/groups', {
     schema: {
       tags: ['Global Settings'],
       summary: 'List all setting groups',
@@ -131,8 +131,8 @@ export default async function globalSettingsRoute(fastify: FastifyInstance) {
     }
   });
 
-  // GET /api/settings - List all global settings (admin only)
-  fastify.get('/api/settings', {
+  // GET /settings - List all global settings (admin only)
+  fastify.get('/settings', {
     schema: {
       tags: ['Global Settings'],
       summary: 'List all global settings',
@@ -174,8 +174,8 @@ export default async function globalSettingsRoute(fastify: FastifyInstance) {
     }
   });
 
-  // GET /api/settings/:key - Get specific global setting (admin only)
-  fastify.get<{ Params: { key: string } }>('/api/settings/:key', {
+  // GET /settings/:key - Get specific global setting (admin only)
+  fastify.get<{ Params: { key: string } }>('/settings/:key', {
     schema: {
       tags: ['Global Settings'],
       summary: 'Get global setting by key',
@@ -234,8 +234,8 @@ export default async function globalSettingsRoute(fastify: FastifyInstance) {
     }
   });
 
-  // POST /api/settings - Create new global setting (admin only)
-  fastify.post<{ Body: CreateGlobalSettingInput }>('/api/settings', {
+  // POST /settings - Create new global setting (admin only)
+  fastify.post<{ Body: CreateGlobalSettingInput }>('/settings', {
     schema: {
       tags: ['Global Settings'],
       summary: 'Create new global setting',
@@ -320,8 +320,8 @@ export default async function globalSettingsRoute(fastify: FastifyInstance) {
     }
   });
 
-  // PUT /api/settings/:key - Update existing global setting (admin only)
-  fastify.put<{ Params: { key: string }; Body: UpdateGlobalSettingInput }>('/api/settings/:key', {
+  // PUT /settings/:key - Update existing global setting (admin only)
+  fastify.put<{ Params: { key: string }; Body: UpdateGlobalSettingInput }>('/settings/:key', {
     schema: {
       tags: ['Global Settings'],
       summary: 'Update global setting',
@@ -400,8 +400,8 @@ export default async function globalSettingsRoute(fastify: FastifyInstance) {
     }
   });
 
-  // DELETE /api/settings/:key - Delete global setting (admin only)
-  fastify.delete<{ Params: { key: string } }>('/api/settings/:key', {
+  // DELETE /settings/:key - Delete global setting (admin only)
+  fastify.delete<{ Params: { key: string } }>('/settings/:key', {
     schema: {
       tags: ['Global Settings'],
       summary: 'Delete global setting',
@@ -461,8 +461,8 @@ export default async function globalSettingsRoute(fastify: FastifyInstance) {
     }
   });
 
-  // GET /api/settings/group/:groupId - Get settings by group (admin only)
-  fastify.get<{ Params: { groupId: string } }>('/api/settings/group/:groupId', {
+  // GET /settings/group/:groupId - Get settings by group (admin only)
+  fastify.get<{ Params: { groupId: string } }>('/settings/group/:groupId', {
     schema: {
       tags: ['Global Settings'],
       summary: 'Get settings by group',
@@ -510,8 +510,8 @@ export default async function globalSettingsRoute(fastify: FastifyInstance) {
     }
   });
 
-  // GET /api/settings/categories - Get all categories (admin only)
-  fastify.get('/api/settings/categories', {
+  // GET /settings/categories - Get all categories (admin only)
+  fastify.get('/settings/categories', {
     schema: {
       tags: ['Global Settings'],
       summary: 'Get all categories',
@@ -554,8 +554,8 @@ export default async function globalSettingsRoute(fastify: FastifyInstance) {
     }
   });
 
-  // POST /api/settings/search - Search settings by key pattern (admin only)
-  fastify.post<{ Body: SearchGlobalSettingsInput }>('/api/settings/search', {
+  // POST /settings/search - Search settings by key pattern (admin only)
+  fastify.post<{ Body: SearchGlobalSettingsInput }>('/settings/search', {
     schema: {
       tags: ['Global Settings'],
       summary: 'Search settings',
@@ -616,8 +616,8 @@ export default async function globalSettingsRoute(fastify: FastifyInstance) {
     }
   });
 
-  // POST /api/settings/bulk - Bulk create/update settings (admin only)
-  fastify.post<{ Body: BulkGlobalSettingsInput }>('/api/settings/bulk', {
+  // POST /settings/bulk - Bulk create/update settings (admin only)
+  fastify.post<{ Body: BulkGlobalSettingsInput }>('/settings/bulk', {
     schema: {
       tags: ['Global Settings'],
       summary: 'Bulk create/update settings',
@@ -721,8 +721,8 @@ export default async function globalSettingsRoute(fastify: FastifyInstance) {
     }
   });
 
-  // GET /api/settings/health - Health check for encryption system (admin only)
-  fastify.get('/api/settings/health', {
+  // GET /settings/health - Health check for encryption system (admin only)
+  fastify.get('/settings/health', {
     schema: {
       tags: ['Global Settings'],
       summary: 'Health check',

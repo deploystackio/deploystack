@@ -50,19 +50,27 @@ describe('Global Settings Route', () => {
     // Setup mock Fastify instance
     mockFastify = {
       get: vi.fn((path, options, handler) => {
-        routeHandlers[`GET ${path}`] = handler;
+        // Extract the actual handler function from the arguments
+        const actualHandler = typeof options === 'function' ? options : handler;
+        routeHandlers[`GET ${path}`] = actualHandler;
         return mockFastify as FastifyInstance;
       }),
       post: vi.fn((path, options, handler) => {
-        routeHandlers[`POST ${path}`] = handler;
+        // Extract the actual handler function from the arguments
+        const actualHandler = typeof options === 'function' ? options : handler;
+        routeHandlers[`POST ${path}`] = actualHandler;
         return mockFastify as FastifyInstance;
       }),
       put: vi.fn((path, options, handler) => {
-        routeHandlers[`PUT ${path}`] = handler;
+        // Extract the actual handler function from the arguments
+        const actualHandler = typeof options === 'function' ? options : handler;
+        routeHandlers[`PUT ${path}`] = actualHandler;
         return mockFastify as FastifyInstance;
       }),
       delete: vi.fn((path, options, handler) => {
-        routeHandlers[`DELETE ${path}`] = handler;
+        // Extract the actual handler function from the arguments
+        const actualHandler = typeof options === 'function' ? options : handler;
+        routeHandlers[`DELETE ${path}`] = actualHandler;
         return mockFastify as FastifyInstance;
       }),
       log: {
@@ -77,15 +85,7 @@ describe('Global Settings Route', () => {
     mockRequest = {
       params: {},
       body: {},
-      user: {
-        id: 'admin-user-123',
-        username: 'admin',
-        email: 'admin@example.com',
-      } as any,
-      session: {
-        id: 'session-123',
-      } as any,
-    };
+    } as any;
 
     // Setup mock reply
     mockReply = {
@@ -98,17 +98,17 @@ describe('Global Settings Route', () => {
     it('should register all global settings routes', async () => {
       await globalSettingsRoute(mockFastify as FastifyInstance);
 
-      expect(mockFastify.get).toHaveBeenCalledWith('/api/settings/groups', expect.any(Object), expect.any(Function));
-      expect(mockFastify.get).toHaveBeenCalledWith('/api/settings', expect.any(Object), expect.any(Function));
-      expect(mockFastify.get).toHaveBeenCalledWith('/api/settings/:key', expect.any(Object), expect.any(Function));
-      expect(mockFastify.post).toHaveBeenCalledWith('/api/settings', expect.any(Object), expect.any(Function));
-      expect(mockFastify.put).toHaveBeenCalledWith('/api/settings/:key', expect.any(Object), expect.any(Function));
-      expect(mockFastify.delete).toHaveBeenCalledWith('/api/settings/:key', expect.any(Object), expect.any(Function));
-      expect(mockFastify.get).toHaveBeenCalledWith('/api/settings/group/:groupId', expect.any(Object), expect.any(Function));
-      expect(mockFastify.get).toHaveBeenCalledWith('/api/settings/categories', expect.any(Object), expect.any(Function));
-      expect(mockFastify.post).toHaveBeenCalledWith('/api/settings/search', expect.any(Object), expect.any(Function));
-      expect(mockFastify.post).toHaveBeenCalledWith('/api/settings/bulk', expect.any(Object), expect.any(Function));
-      expect(mockFastify.get).toHaveBeenCalledWith('/api/settings/health', expect.any(Object), expect.any(Function));
+      expect(mockFastify.get).toHaveBeenCalledWith('/settings/groups', expect.any(Object), expect.any(Function));
+      expect(mockFastify.get).toHaveBeenCalledWith('/settings', expect.any(Object), expect.any(Function));
+      expect(mockFastify.get).toHaveBeenCalledWith('/settings/:key', expect.any(Object), expect.any(Function));
+      expect(mockFastify.post).toHaveBeenCalledWith('/settings', expect.any(Object), expect.any(Function));
+      expect(mockFastify.put).toHaveBeenCalledWith('/settings/:key', expect.any(Object), expect.any(Function));
+      expect(mockFastify.delete).toHaveBeenCalledWith('/settings/:key', expect.any(Object), expect.any(Function));
+      expect(mockFastify.get).toHaveBeenCalledWith('/settings/group/:groupId', expect.any(Object), expect.any(Function));
+      expect(mockFastify.get).toHaveBeenCalledWith('/settings/categories', expect.any(Object), expect.any(Function));
+      expect(mockFastify.post).toHaveBeenCalledWith('/settings/search', expect.any(Object), expect.any(Function));
+      expect(mockFastify.post).toHaveBeenCalledWith('/settings/bulk', expect.any(Object), expect.any(Function));
+      expect(mockFastify.get).toHaveBeenCalledWith('/settings/health', expect.any(Object), expect.any(Function));
     });
 
     it('should configure middleware correctly', async () => {
@@ -118,7 +118,7 @@ describe('Global Settings Route', () => {
     });
   });
 
-  describe('GET /api/settings/groups', () => {
+  describe('GET /settings/groups', () => {
     beforeEach(async () => {
       await globalSettingsRoute(mockFastify as FastifyInstance);
     });
@@ -136,7 +136,7 @@ describe('Global Settings Route', () => {
       ];
       MockedGlobalSettingsService.getAllGroupsWithSettings.mockResolvedValue(mockGroups);
 
-      const handler = routeHandlers['GET /api/settings/groups'];
+      const handler = routeHandlers['GET /settings/groups'];
       await handler(mockRequest, mockReply);
 
       expect(MockedGlobalSettingsService.getAllGroupsWithSettings).toHaveBeenCalled();
@@ -151,7 +151,7 @@ describe('Global Settings Route', () => {
       const error = new Error('Database error');
       MockedGlobalSettingsService.getAllGroupsWithSettings.mockRejectedValue(error);
 
-      const handler = routeHandlers['GET /api/settings/groups'];
+      const handler = routeHandlers['GET /settings/groups'];
       await handler(mockRequest, mockReply);
 
       expect(mockFastify.log!.error).toHaveBeenCalledWith(error, 'Error fetching all global setting groups with settings');
@@ -163,7 +163,7 @@ describe('Global Settings Route', () => {
     });
   });
 
-  describe('GET /api/settings', () => {
+  describe('GET /settings', () => {
     beforeEach(async () => {
       await globalSettingsRoute(mockFastify as FastifyInstance);
     });
@@ -175,7 +175,7 @@ describe('Global Settings Route', () => {
       ];
       MockedGlobalSettingsService.getAll.mockResolvedValue(mockSettings);
 
-      const handler = routeHandlers['GET /api/settings'];
+      const handler = routeHandlers['GET /settings'];
       await handler(mockRequest, mockReply);
 
       expect(MockedGlobalSettingsService.getAll).toHaveBeenCalled();
@@ -190,7 +190,7 @@ describe('Global Settings Route', () => {
       const error = new Error('Database error');
       MockedGlobalSettingsService.getAll.mockRejectedValue(error);
 
-      const handler = routeHandlers['GET /api/settings'];
+      const handler = routeHandlers['GET /settings'];
       await handler(mockRequest, mockReply);
 
       expect(mockFastify.log!.error).toHaveBeenCalledWith(error, 'Error fetching global settings');
@@ -202,7 +202,7 @@ describe('Global Settings Route', () => {
     });
   });
 
-  describe('GET /api/settings/:key', () => {
+  describe('GET /settings/:key', () => {
     beforeEach(async () => {
       await globalSettingsRoute(mockFastify as FastifyInstance);
     });
@@ -212,7 +212,7 @@ describe('Global Settings Route', () => {
       mockRequest.params = { key: 'app.name' };
       MockedGlobalSettingsService.get.mockResolvedValue(mockSetting);
 
-      const handler = routeHandlers['GET /api/settings/:key'];
+      const handler = routeHandlers['GET /settings/:key'];
       await handler(mockRequest, mockReply);
 
       expect(MockedGlobalSettingsService.get).toHaveBeenCalledWith('app.name');
@@ -227,7 +227,7 @@ describe('Global Settings Route', () => {
       mockRequest.params = { key: 'nonexistent' };
       MockedGlobalSettingsService.get.mockResolvedValue(null);
 
-      const handler = routeHandlers['GET /api/settings/:key'];
+      const handler = routeHandlers['GET /settings/:key'];
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(404);
@@ -242,7 +242,7 @@ describe('Global Settings Route', () => {
       mockRequest.params = { key: 'app.name' };
       MockedGlobalSettingsService.get.mockRejectedValue(error);
 
-      const handler = routeHandlers['GET /api/settings/:key'];
+      const handler = routeHandlers['GET /settings/:key'];
       await handler(mockRequest, mockReply);
 
       expect(mockFastify.log!.error).toHaveBeenCalledWith(error, 'Error fetching global setting');
@@ -254,7 +254,7 @@ describe('Global Settings Route', () => {
     });
   });
 
-  describe('POST /api/settings', () => {
+  describe('POST /settings', () => {
     beforeEach(async () => {
       await globalSettingsRoute(mockFastify as FastifyInstance);
     });
@@ -273,7 +273,7 @@ describe('Global Settings Route', () => {
       MockedGlobalSettingsService.exists.mockResolvedValue(false);
       MockedGlobalSettingsService.setTyped.mockResolvedValue(createdSetting);
 
-      const handler = routeHandlers['POST /api/settings'];
+      const handler = routeHandlers['POST /settings'];
       await handler(mockRequest, mockReply);
 
       expect(MockedGlobalSettingsService.exists).toHaveBeenCalledWith('new.setting');
@@ -305,7 +305,7 @@ describe('Global Settings Route', () => {
       mockRequest.body = settingData;
       MockedGlobalSettingsService.exists.mockResolvedValue(true);
 
-      const handler = routeHandlers['POST /api/settings'];
+      const handler = routeHandlers['POST /settings'];
       await handler(mockRequest, mockReply);
 
       expect(MockedGlobalSettingsService.setTyped).not.toHaveBeenCalled();
@@ -330,7 +330,7 @@ describe('Global Settings Route', () => {
       mockRequest.body = { key: 123 };
       MockedGlobalSettingsService.setTyped.mockRejectedValue(zodError);
 
-      const handler = routeHandlers['POST /api/settings'];
+      const handler = routeHandlers['POST /settings'];
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(400);
@@ -342,7 +342,7 @@ describe('Global Settings Route', () => {
     });
   });
 
-  describe('PUT /api/settings/:key', () => {
+  describe('PUT /settings/:key', () => {
     beforeEach(async () => {
       await globalSettingsRoute(mockFastify as FastifyInstance);
     });
@@ -355,7 +355,7 @@ describe('Global Settings Route', () => {
       mockRequest.body = updateData;
       MockedGlobalSettingsService.update.mockResolvedValue(updatedSetting);
 
-      const handler = routeHandlers['PUT /api/settings/:key'];
+      const handler = routeHandlers['PUT /settings/:key'];
       await handler(mockRequest, mockReply);
 
       expect(MockedGlobalSettingsService.update).toHaveBeenCalledWith('app.name', updateData);
@@ -372,7 +372,7 @@ describe('Global Settings Route', () => {
       mockRequest.body = { value: 'new value' };
       MockedGlobalSettingsService.update.mockResolvedValue(null);
 
-      const handler = routeHandlers['PUT /api/settings/:key'];
+      const handler = routeHandlers['PUT /settings/:key'];
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(404);
@@ -383,7 +383,7 @@ describe('Global Settings Route', () => {
     });
   });
 
-  describe('DELETE /api/settings/:key', () => {
+  describe('DELETE /settings/:key', () => {
     beforeEach(async () => {
       await globalSettingsRoute(mockFastify as FastifyInstance);
     });
@@ -392,7 +392,7 @@ describe('Global Settings Route', () => {
       mockRequest.params = { key: 'app.name' };
       MockedGlobalSettingsService.delete.mockResolvedValue(true);
 
-      const handler = routeHandlers['DELETE /api/settings/:key'];
+      const handler = routeHandlers['DELETE /settings/:key'];
       await handler(mockRequest, mockReply);
 
       expect(MockedGlobalSettingsService.delete).toHaveBeenCalledWith('app.name');
@@ -407,7 +407,7 @@ describe('Global Settings Route', () => {
       mockRequest.params = { key: 'nonexistent' };
       MockedGlobalSettingsService.delete.mockResolvedValue(false);
 
-      const handler = routeHandlers['DELETE /api/settings/:key'];
+      const handler = routeHandlers['DELETE /settings/:key'];
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(404);
@@ -418,7 +418,7 @@ describe('Global Settings Route', () => {
     });
   });
 
-  describe('GET /api/settings/group/:groupId', () => {
+  describe('GET /settings/group/:groupId', () => {
     beforeEach(async () => {
       await globalSettingsRoute(mockFastify as FastifyInstance);
     });
@@ -431,7 +431,7 @@ describe('Global Settings Route', () => {
       mockRequest.params = { groupId: 'test-group' };
       MockedGlobalSettingsService.getByGroup.mockResolvedValue(mockSettings);
 
-      const handler = routeHandlers['GET /api/settings/group/:groupId'];
+      const handler = routeHandlers['GET /settings/group/:groupId'];
       await handler(mockRequest, mockReply);
 
       expect(MockedGlobalSettingsService.getByGroup).toHaveBeenCalledWith('test-group');
@@ -443,7 +443,7 @@ describe('Global Settings Route', () => {
     });
   });
 
-  describe('GET /api/settings/categories', () => {
+  describe('GET /settings/categories', () => {
     beforeEach(async () => {
       await globalSettingsRoute(mockFastify as FastifyInstance);
     });
@@ -452,7 +452,7 @@ describe('Global Settings Route', () => {
       const mockCategories = ['general', 'security', 'email'];
       MockedGlobalSettingsService.getCategories.mockResolvedValue(mockCategories);
 
-      const handler = routeHandlers['GET /api/settings/categories'];
+      const handler = routeHandlers['GET /settings/categories'];
       await handler(mockRequest, mockReply);
 
       expect(MockedGlobalSettingsService.getCategories).toHaveBeenCalled();
@@ -464,7 +464,7 @@ describe('Global Settings Route', () => {
     });
   });
 
-  describe('POST /api/settings/search', () => {
+  describe('POST /settings/search', () => {
     beforeEach(async () => {
       await globalSettingsRoute(mockFastify as FastifyInstance);
     });
@@ -477,7 +477,7 @@ describe('Global Settings Route', () => {
       mockRequest.body = { pattern: 'app.*' };
       MockedGlobalSettingsService.search.mockResolvedValue(mockResults);
 
-      const handler = routeHandlers['POST /api/settings/search'];
+      const handler = routeHandlers['POST /settings/search'];
       await handler(mockRequest, mockReply);
 
       expect(MockedGlobalSettingsService.search).toHaveBeenCalledWith('app.*');
@@ -489,7 +489,7 @@ describe('Global Settings Route', () => {
     });
   });
 
-  describe('POST /api/settings/bulk', () => {
+  describe('POST /settings/bulk', () => {
     beforeEach(async () => {
       await globalSettingsRoute(mockFastify as FastifyInstance);
     });
@@ -506,7 +506,7 @@ describe('Global Settings Route', () => {
         .mockResolvedValueOnce(createdSettings[0])
         .mockResolvedValueOnce(createdSettings[1]);
 
-      const handler = routeHandlers['POST /api/settings/bulk'];
+      const handler = routeHandlers['POST /settings/bulk'];
       await handler(mockRequest, mockReply);
 
       expect(MockedGlobalSettingsService.setTyped).toHaveBeenCalledTimes(2);
@@ -531,7 +531,7 @@ describe('Global Settings Route', () => {
         .mockResolvedValueOnce(createdSetting)
         .mockRejectedValueOnce(new Error('Validation failed'));
 
-      const handler = routeHandlers['POST /api/settings/bulk'];
+      const handler = routeHandlers['POST /settings/bulk'];
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(207); // Multi-Status
@@ -544,7 +544,7 @@ describe('Global Settings Route', () => {
     });
   });
 
-  describe('GET /api/settings/health', () => {
+  describe('GET /settings/health', () => {
     beforeEach(async () => {
       await globalSettingsRoute(mockFastify as FastifyInstance);
     });
@@ -552,7 +552,7 @@ describe('Global Settings Route', () => {
     it('should return healthy status when encryption works', async () => {
       mockValidateEncryption.mockReturnValue(true);
 
-      const handler = routeHandlers['GET /api/settings/health'];
+      const handler = routeHandlers['GET /settings/health'];
       await handler(mockRequest, mockReply);
 
       expect(mockValidateEncryption).toHaveBeenCalled();
@@ -570,7 +570,7 @@ describe('Global Settings Route', () => {
     it('should return warning when encryption fails', async () => {
       mockValidateEncryption.mockReturnValue(false);
 
-      const handler = routeHandlers['GET /api/settings/health'];
+      const handler = routeHandlers['GET /settings/health'];
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(200);
@@ -590,7 +590,7 @@ describe('Global Settings Route', () => {
         throw error;
       });
 
-      const handler = routeHandlers['GET /api/settings/health'];
+      const handler = routeHandlers['GET /settings/health'];
       await handler(mockRequest, mockReply);
 
       expect(mockFastify.log!.error).toHaveBeenCalledWith(error, 'Error checking settings health');
