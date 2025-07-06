@@ -73,14 +73,13 @@
                     },
                     "version": {
                       "type": "string",
-                      "description": "API version"
+                      "description": "API version (configurable via global.show_version setting)"
                     }
                   },
                   "required": [
                     "message",
                     "status",
-                    "timestamp",
-                    "version"
+                    "timestamp"
                   ],
                   "additionalProperties": false,
                   "description": "API health check information"

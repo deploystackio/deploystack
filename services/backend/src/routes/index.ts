@@ -2,6 +2,7 @@ import { type FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
 import { getVersionString } from '../config/version'
+import { GlobalSettings } from '../global-settings/helpers'
 // Import the individual database setup routes
 import dbStatusRoute from './db/status'
 import dbSetupRoute from './db/setup'
@@ -22,7 +23,7 @@ const healthCheckResponseSchema = z.object({
   message: z.string().describe('Service status message'),
   status: z.string().describe('Database connection status'),
   timestamp: z.string().describe('Current server timestamp'),
-  version: z.string().describe('API version')
+  version: z.string().optional().describe('API version (configurable via global.show_version setting)')
 });
 
 export const registerRoutes = (server: FastifyInstance): void => {
@@ -62,13 +63,38 @@ export const registerRoutes = (server: FastifyInstance): void => {
         })
       }
     }
-  }, async () => {
-    // Ensure message points to the correct non-versioned API paths
-    return { 
+  }, async (request) => {
+    // Check if version should be shown based on global setting
+    const showVersion = await GlobalSettings.getBoolean('global.show_version', true);
+    
+    request.log.debug({
+      operation: 'root_endpoint_version_check',
+      showVersion,
+      setting: 'global.show_version'
+    }, 'Checking version display setting');
+
+    // Build base response
+    const response: Record<string, any> = {
       message: 'DeployStack Backend is running.',
       status: server.db ? 'Database Connected' : 'Database Not Configured/Connected - Use /api/db/status and /api/db/setup',
-      timestamp: new Date().toISOString(),
-      version: getVersionString()
+      timestamp: new Date().toISOString()
+    };
+
+    // Conditionally include version based on global setting
+    if (showVersion) {
+      response.version = getVersionString();
+      request.log.debug({
+        operation: 'root_endpoint_response',
+        includeVersion: true,
+        version: response.version
+      }, 'Including version in root endpoint response');
+    } else {
+      request.log.debug({
+        operation: 'root_endpoint_response',
+        includeVersion: false
+      }, 'Version hidden from root endpoint response per global setting');
     }
+
+    return response;
   })
 }
