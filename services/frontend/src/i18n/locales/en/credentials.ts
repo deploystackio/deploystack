@@ -103,8 +103,7 @@ export default {
     },
     empty: {
       title: 'No credentials yet',
-      description: 'Get started by adding your first cloud provider credential',
-      action: 'Add First Credential'
+      description: 'Get started by adding your first cloud provider credential'
     },
     detail: {
       title: 'Credential Details',
