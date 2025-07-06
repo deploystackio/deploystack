@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Plus, Loader2, Search } from 'lucide-vue-next'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Plus, Loader2, Search, CheckCircle } from 'lucide-vue-next'
 import DashboardLayout from '@/components/DashboardLayout.vue'
 import { CredentialsService } from '@/services/credentialsService'
 import { UserService } from '@/services/userService'
@@ -27,6 +28,7 @@ function debounce<T extends (...args: any[]) => any>(func: T, wait: number): T {
 
 const { t } = useI18n()
 const router = useRouter()
+const route = useRoute()
 const eventBus = useEventBus()
 
 // State
@@ -39,6 +41,7 @@ const showAddModal = ref(false)
 const canCreateCredentials = ref(false)
 const userPermissions = ref<string[]>([])
 const searchQuery = ref('')
+const deleteSuccessMessage = ref<string | null>(null)
 
 // Team context (same pattern as teams page)
 const selectedTeam = ref<Team | null>(null)
@@ -190,8 +193,27 @@ const handleCredentialCreated = async () => {
   eventBus.emit('credentials-updated')
 }
 
+// Check for delete success message from query params
+const checkDeleteSuccess = () => {
+  const deletedCredentialName = route.query.deleted as string
+  if (deletedCredentialName) {
+    deleteSuccessMessage.value = `Credential "${deletedCredentialName}" has been successfully deleted.`
+
+    // Clear the query parameter from URL
+    router.replace({ path: '/credentials' })
+
+    // Clear the message after 5 seconds
+    setTimeout(() => {
+      deleteSuccessMessage.value = null
+    }, 5000)
+  }
+}
+
 // Load data on component mount
 onMounted(async () => {
+  // Check for delete success message first
+  checkDeleteSuccess()
+
   await Promise.all([
     checkPermissions(),
     initializeSelectedTeam()
@@ -237,6 +259,12 @@ onUnmounted(() => {
           {{ t('credentials.addButton') }}
         </Button>
       </div>
+
+      <!-- Delete Success Message -->
+      <Alert v-if="deleteSuccessMessage" class="border-green-200 bg-green-50 text-green-800">
+        <CheckCircle class="h-4 w-4" />
+        <AlertDescription>{{ deleteSuccessMessage }}</AlertDescription>
+      </Alert>
 
       <!-- No team selected state -->
       <div v-if="!selectedTeam" class="text-center py-12">

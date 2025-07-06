@@ -288,9 +288,6 @@ export class CredentialsService {
 
       const response = await fetch(`${apiUrl}/api/teams/${teamId}/cloud-credentials/${credentialId}`, {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         credentials: 'include',
       })
 
