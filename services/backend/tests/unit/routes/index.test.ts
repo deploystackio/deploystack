@@ -12,6 +12,13 @@ vi.mock('../../../src/routes/teams');
 vi.mock('../../../src/routes/cloud-credentials');
 vi.mock('../../../src/routes/health');
 
+// Mock the GlobalSettings helper
+vi.mock('../../../src/global-settings/helpers', () => ({
+  GlobalSettings: {
+    getBoolean: vi.fn()
+  }
+}));
+
 // Import mocked modules
 import dbStatusRoute from '../../../src/routes/db/status';
 import dbSetupRoute from '../../../src/routes/db/setup';
@@ -21,6 +28,7 @@ import globalSettingsRoute from '../../../src/routes/globalSettings';
 import teamsRoute from '../../../src/routes/teams';
 import cloudCredentialsRoute from '../../../src/routes/cloud-credentials';
 import healthRoute from '../../../src/routes/health';
+import { GlobalSettings } from '../../../src/global-settings/helpers';
 
 // Type the mocked functions
 const mockDbStatusRoute = dbStatusRoute as MockedFunction<typeof dbStatusRoute>;
@@ -125,11 +133,26 @@ describe('Main Routes Registration', () => {
     let mockReply: Partial<FastifyReply>;
 
     beforeEach(async () => {
-      mockRequest = {};
+      mockRequest = {
+        log: {
+          debug: vi.fn(),
+          info: vi.fn(),
+          warn: vi.fn(),
+          error: vi.fn(),
+          fatal: vi.fn(),
+          trace: vi.fn(),
+          silent: vi.fn(),
+          child: vi.fn(),
+          level: 'info'
+        }
+      } as any;
       mockReply = {
         status: vi.fn().mockReturnThis(),
         send: vi.fn().mockReturnThis(),
       };
+
+      // Reset GlobalSettings mock
+      vi.mocked(GlobalSettings.getBoolean).mockResolvedValue(true);
 
       await registerRoutes(mockFastify as FastifyInstance);
     });
@@ -149,6 +172,9 @@ describe('Main Routes Registration', () => {
 
       // Verify timestamp is a valid ISO string
       expect(new Date(result.timestamp).toISOString()).toBe(result.timestamp);
+      
+      // Verify GlobalSettings was called
+      expect(GlobalSettings.getBoolean).toHaveBeenCalledWith('global.show_version', true);
     });
 
     it('should return health check with database connected', async () => {
@@ -166,6 +192,9 @@ describe('Main Routes Registration', () => {
 
       // Verify timestamp is a valid ISO string
       expect(new Date(result.timestamp).toISOString()).toBe(result.timestamp);
+      
+      // Verify GlobalSettings was called
+      expect(GlobalSettings.getBoolean).toHaveBeenCalledWith('global.show_version', true);
     });
 
     it('should return consistent timestamp format', async () => {
@@ -176,11 +205,25 @@ describe('Main Routes Registration', () => {
       expect(result.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
     });
 
-    it('should return correct version', async () => {
+    it('should return correct version when show_version is true', async () => {
+      vi.mocked(GlobalSettings.getBoolean).mockResolvedValue(true);
+
       const handler = routeHandlers['GET /'];
       const result = await handler(mockRequest, mockReply);
 
       expect(result.version).toBe('0.20.9');
+      expect(GlobalSettings.getBoolean).toHaveBeenCalledWith('global.show_version', true);
+    });
+
+    it('should not return version when show_version is false', async () => {
+      vi.mocked(GlobalSettings.getBoolean).mockResolvedValue(false);
+
+      const handler = routeHandlers['GET /'];
+      const result = await handler(mockRequest, mockReply);
+
+      expect(result.version).toBeUndefined();
+      expect(result).not.toHaveProperty('version');
+      expect(GlobalSettings.getBoolean).toHaveBeenCalledWith('global.show_version', true);
     });
 
     it('should handle undefined database gracefully', async () => {
@@ -190,6 +233,7 @@ describe('Main Routes Registration', () => {
       const result = await handler(mockRequest, mockReply);
 
       expect(result.status).toBe('Database Not Configured/Connected - Use /api/db/status and /api/db/setup');
+      expect(GlobalSettings.getBoolean).toHaveBeenCalledWith('global.show_version', true);
     });
 
     it('should handle falsy database values', async () => {
@@ -199,6 +243,44 @@ describe('Main Routes Registration', () => {
       const result = await handler(mockRequest, mockReply);
 
       expect(result.status).toBe('Database Not Configured/Connected - Use /api/db/status and /api/db/setup');
+      expect(GlobalSettings.getBoolean).toHaveBeenCalledWith('global.show_version', true);
+    });
+
+    it('should log debug information about version display', async () => {
+      vi.mocked(GlobalSettings.getBoolean).mockResolvedValue(false);
+
+      const handler = routeHandlers['GET /'];
+      await handler(mockRequest, mockReply);
+
+      expect(mockRequest.log?.debug).toHaveBeenCalledWith({
+        operation: 'root_endpoint_version_check',
+        showVersion: false,
+        setting: 'global.show_version'
+      }, 'Checking version display setting');
+
+      expect(mockRequest.log?.debug).toHaveBeenCalledWith({
+        operation: 'root_endpoint_response',
+        includeVersion: false
+      }, 'Version hidden from root endpoint response per global setting');
+    });
+
+    it('should log when version is included', async () => {
+      vi.mocked(GlobalSettings.getBoolean).mockResolvedValue(true);
+
+      const handler = routeHandlers['GET /'];
+      const result = await handler(mockRequest, mockReply);
+
+      expect(mockRequest.log?.debug).toHaveBeenCalledWith({
+        operation: 'root_endpoint_version_check',
+        showVersion: true,
+        setting: 'global.show_version'
+      }, 'Checking version display setting');
+
+      expect(mockRequest.log?.debug).toHaveBeenCalledWith({
+        operation: 'root_endpoint_response',
+        includeVersion: true,
+        version: result.version
+      }, 'Including version in root endpoint response');
     });
   });
 

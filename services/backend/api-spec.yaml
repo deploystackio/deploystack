@@ -54,12 +54,11 @@ paths:
                     description: Current server timestamp
                   version:
                     type: string
-                    description: API version
+                    description: API version (configurable via global.show_version setting)
                 required:
                   - message
                   - status
                   - timestamp
-                  - version
                 additionalProperties: false
                 description: API health check information
   /api/health:

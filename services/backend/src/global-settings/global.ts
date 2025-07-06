@@ -48,6 +48,14 @@ export const globalSettings: GlobalSettingsModule = {
       description: 'Enable or disable Swagger API documentation endpoint (/documentation)',
       encrypted: false,
       required: false
+    },
+    {
+      key: 'global.show_version',
+      defaultValue: true,
+      type: 'boolean',
+      description: 'Show backend version in the root API response. When disabled, version information is hidden from visitors.',
+      encrypted: false,
+      required: false
     }
   ]
 };
