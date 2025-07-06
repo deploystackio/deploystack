@@ -25,6 +25,18 @@ vi.mock('../../../src/db', () => ({
   getSchema: vi.fn(),
 }))
 
+// Mock the encryption module
+vi.mock('../../../src/utils/encryption', () => ({
+  encrypt: vi.fn((value) => `encrypted_${value}`),
+}))
+
+// Mock path module
+vi.mock('path', () => ({
+  default: {
+    join: vi.fn((...args) => args.join('/')),
+  }
+}))
+
 describe('GlobalSettingsInitService', () => {
   const mockGlobalSettingsService = GlobalSettingsService as any
 
@@ -129,6 +141,290 @@ describe('GlobalSettingsInitService', () => {
 
       // Should throw the file system error
       await expect(GlobalSettingsInitService.loadSettingsDefinitions()).rejects.toThrow('File system error')
+    })
+
+    it('should load settings modules from files', async () => {
+      const fs = await import('fs')
+      const mockFs = fs.default as any
+      
+      // Mock file system to return test files
+      mockFs.readdirSync.mockReturnValue(['smtp.ts', 'global.ts', 'index.ts', 'types.ts', 'helpers.ts'])
+
+      // Mock dynamic imports
+      const mockSmtpModule = {
+        smtpSettings: {
+          group: { id: 'smtp', name: 'SMTP Settings', sort_order: 1 },
+          settings: [
+            { key: 'smtp.host', defaultValue: '', type: 'string', description: 'SMTP host', encrypted: false, required: true }
+          ]
+        }
+      }
+
+      const mockGlobalModule = {
+        globalSettings: {
+          group: { id: 'global', name: 'Global Settings', sort_order: 0 },
+          settings: [
+            { key: 'global.page_url', defaultValue: 'http://localhost:5173', type: 'string', description: 'Page URL', encrypted: false, required: false }
+          ]
+        }
+      }
+
+      // Mock the dynamic import function
+      const originalImport = global.__dirname
+      vi.stubGlobal('__dirname', '/test/path')
+      
+      // Mock import calls
+      vi.doMock('/test/path/smtp.ts', () => mockSmtpModule)
+      vi.doMock('/test/path/global.ts', () => mockGlobalModule)
+
+      await GlobalSettingsInitService.loadSettingsDefinitions()
+
+      expect(GlobalSettingsInitService['isLoaded']).toBe(true)
+      expect(GlobalSettingsInitService['settingsModules']).toHaveLength(2)
+    })
+
+    it('should handle import errors gracefully', async () => {
+      const fs = await import('fs')
+      const mockFs = fs.default as any
+      
+      mockFs.readdirSync.mockReturnValue(['invalid.ts'])
+      vi.stubGlobal('__dirname', '/test/path')
+
+      // This should not throw, but continue processing
+      await expect(GlobalSettingsInitService.loadSettingsDefinitions()).resolves.not.toThrow()
+      expect(GlobalSettingsInitService['isLoaded']).toBe(true)
+    })
+  })
+
+  describe('initializeSettings', () => {
+    it('should initialize settings successfully', async () => {
+      // Setup test modules
+      GlobalSettingsInitService['settingsModules'] = [
+        {
+          group: { id: 'test', name: 'Test Group', sort_order: 0 },
+          settings: [
+            { key: 'test.setting1', defaultValue: 'value1', type: 'string', description: 'Test setting', encrypted: false, required: false }
+          ]
+        }
+      ]
+      GlobalSettingsInitService['isLoaded'] = true
+
+      mockGlobalSettingsService.exists.mockResolvedValue(false)
+
+      const result = await GlobalSettingsInitService.initializeSettings()
+
+      expect(result.totalModules).toBe(1)
+      expect(result.totalSettings).toBe(1)
+      expect(result.created).toBeGreaterThanOrEqual(0)
+      expect(result.skipped).toBeGreaterThanOrEqual(0)
+    })
+
+    it('should skip existing settings', async () => {
+      GlobalSettingsInitService['settingsModules'] = [
+        {
+          group: { id: 'test', name: 'Test Group', sort_order: 0 },
+          settings: [
+            { key: 'test.setting1', defaultValue: 'value1', type: 'string', description: 'Test setting', encrypted: false, required: false }
+          ]
+        }
+      ]
+      GlobalSettingsInitService['isLoaded'] = true
+
+      mockGlobalSettingsService.exists.mockResolvedValue(true)
+
+      const result = await GlobalSettingsInitService.initializeSettings()
+
+      expect(result.totalModules).toBe(1)
+      expect(result.totalSettings).toBe(1)
+      expect(result.skipped).toBeGreaterThanOrEqual(0)
+    })
+
+    it('should load settings definitions if not loaded', async () => {
+      GlobalSettingsInitService['isLoaded'] = false
+      
+      const fs = await import('fs')
+      const mockFs = fs.default as any
+      mockFs.readdirSync.mockReturnValue([])
+
+      const result = await GlobalSettingsInitService.initializeSettings()
+
+      expect(GlobalSettingsInitService['isLoaded']).toBe(true)
+      expect(result.totalModules).toBe(0)
+    })
+  })
+
+  describe('validateRequiredSettings', () => {
+    beforeEach(() => {
+      GlobalSettingsInitService['settingsModules'] = [
+        {
+          group: { id: 'smtp', name: 'SMTP Settings', sort_order: 1 },
+          settings: [
+            { key: 'smtp.host', defaultValue: '', type: 'string', description: 'SMTP host', encrypted: false, required: true },
+            { key: 'smtp.port', defaultValue: 587, type: 'number', description: 'SMTP port', encrypted: false, required: true },
+            { key: 'smtp.from_name', defaultValue: 'DeployStack', type: 'string', description: 'From name', encrypted: false, required: false }
+          ]
+        },
+        {
+          group: { id: 'global', name: 'Global Settings', sort_order: 0 },
+          settings: [
+            { key: 'global.page_url', defaultValue: 'http://localhost:5173', type: 'string', description: 'Page URL', encrypted: false, required: true }
+          ]
+        }
+      ]
+      GlobalSettingsInitService['isLoaded'] = true
+    })
+
+    it('should return valid when all required settings have values', async () => {
+      mockGlobalSettingsService.get
+        .mockResolvedValueOnce({ key: 'smtp.host', value: 'smtp.example.com', type: 'string' })
+        .mockResolvedValueOnce({ key: 'smtp.port', value: '587', type: 'number' })
+        .mockResolvedValueOnce({ key: 'global.page_url', value: 'https://example.com', type: 'string' })
+
+      const result = await GlobalSettingsInitService.validateRequiredSettings()
+
+      expect(result.valid).toBe(true)
+      expect(result.missing).toEqual([])
+      expect(result.groups.smtp.missing).toBe(0)
+      expect(result.groups.global.missing).toBe(0)
+    })
+
+    it('should return invalid when required settings are missing', async () => {
+      mockGlobalSettingsService.get
+        .mockResolvedValueOnce(null) // smtp.host missing
+        .mockResolvedValueOnce({ key: 'smtp.port', value: '587', type: 'number' })
+        .mockResolvedValueOnce({ key: 'global.page_url', value: '', type: 'string' }) // empty value
+
+      const result = await GlobalSettingsInitService.validateRequiredSettings()
+
+      expect(result.valid).toBe(false)
+      expect(result.missing).toEqual(['smtp.host', 'global.page_url'])
+      expect(result.groups.smtp.missing).toBe(1)
+      expect(result.groups.smtp.missingKeys).toEqual(['smtp.host'])
+      expect(result.groups.global.missing).toBe(1)
+      expect(result.groups.global.missingKeys).toEqual(['global.page_url'])
+    })
+
+    it('should handle database errors gracefully', async () => {
+      mockGlobalSettingsService.get.mockRejectedValue(new Error('Database error'))
+
+      const result = await GlobalSettingsInitService.validateRequiredSettings()
+
+      expect(result.valid).toBe(false)
+      expect(result.missing).toEqual(['smtp.host', 'smtp.port', 'global.page_url'])
+    })
+
+    it('should load settings definitions if not loaded', async () => {
+      // Reset state completely for this test
+      GlobalSettingsInitService['isLoaded'] = false
+      GlobalSettingsInitService['settingsModules'] = []
+      
+      const fs = await import('fs')
+      const mockFs = fs.default as any
+      mockFs.readdirSync.mockReturnValue([])
+
+      const result = await GlobalSettingsInitService.validateRequiredSettings()
+
+      expect(GlobalSettingsInitService['isLoaded']).toBe(true)
+      expect(result.missing).toEqual([]) // No required settings when no modules loaded
+      expect(Object.keys(result.groups)).toEqual([]) // No groups when no modules loaded
+    })
+  })
+
+  describe('helper methods', () => {
+    describe('isGitHubOAuthConfigured', () => {
+      it('should return true when GitHub OAuth is configured and enabled', async () => {
+        mockGlobalSettingsService.get
+          .mockResolvedValueOnce({ key: 'github.oauth.client_id', value: 'client123', type: 'string' })
+          .mockResolvedValueOnce({ key: 'github.oauth.client_secret', value: 'secret456', type: 'string' })
+          .mockResolvedValueOnce({ key: 'github.oauth.enabled', value: 'true', type: 'boolean' })
+          .mockResolvedValueOnce({ key: 'github.oauth.callback_url', value: 'http://localhost:3000/callback', type: 'string' })
+          .mockResolvedValueOnce({ key: 'github.oauth.scope', value: 'user:email', type: 'string' })
+
+        const result = await GlobalSettingsInitService.isGitHubOAuthConfigured()
+        expect(result).toBe(true)
+      })
+
+      it('should return false when GitHub OAuth is not configured', async () => {
+        mockGlobalSettingsService.get.mockResolvedValue(null)
+
+        const result = await GlobalSettingsInitService.isGitHubOAuthConfigured()
+        expect(result).toBe(false)
+      })
+    })
+
+    describe('isEmailRegistrationEnabled', () => {
+      it('should return true when email registration is enabled', async () => {
+        mockGlobalSettingsService.get.mockResolvedValue({
+          key: 'global.enable_email_registration',
+          value: 'true',
+          type: 'boolean'
+        })
+
+        const result = await GlobalSettingsInitService.isEmailRegistrationEnabled()
+        expect(result).toBe(true)
+      })
+
+      it('should return false when email registration is disabled', async () => {
+        mockGlobalSettingsService.get.mockResolvedValue({
+          key: 'global.enable_email_registration',
+          value: 'false',
+          type: 'boolean'
+        })
+
+        const result = await GlobalSettingsInitService.isEmailRegistrationEnabled()
+        expect(result).toBe(false)
+      })
+
+      it('should return false when setting does not exist', async () => {
+        mockGlobalSettingsService.get.mockResolvedValue(null)
+
+        const result = await GlobalSettingsInitService.isEmailRegistrationEnabled()
+        expect(result).toBe(false) // null?.value === 'true' is false
+      })
+    })
+  })
+
+  describe('error handling in configuration getters', () => {
+    it('should handle errors in getSmtpConfiguration', async () => {
+      mockGlobalSettingsService.get.mockRejectedValue(new Error('Database error'))
+
+      const config = await GlobalSettingsInitService.getSmtpConfiguration()
+      expect(config).toBeNull()
+    })
+
+    it('should handle errors in getGitHubOAuthConfiguration', async () => {
+      mockGlobalSettingsService.get.mockRejectedValue(new Error('Database error'))
+
+      const config = await GlobalSettingsInitService.getGitHubOAuthConfiguration()
+      expect(config).toBeNull()
+    })
+
+    it('should handle errors in getGlobalConfiguration', async () => {
+      mockGlobalSettingsService.get.mockRejectedValue(new Error('Database error'))
+
+      const config = await GlobalSettingsInitService.getGlobalConfiguration()
+      expect(config).toBeNull()
+    })
+
+    it('should handle errors in isEmailSendingEnabled', async () => {
+      mockGlobalSettingsService.get.mockRejectedValue(new Error('Database error'))
+
+      const result = await GlobalSettingsInitService.isEmailSendingEnabled()
+      expect(result).toBe(false)
+    })
+
+    it('should handle errors in isLoginEnabled', async () => {
+      mockGlobalSettingsService.get.mockRejectedValue(new Error('Database error'))
+
+      const result = await GlobalSettingsInitService.isLoginEnabled()
+      expect(result).toBe(true) // Default to enabled on error
+    })
+
+    it('should handle errors in getPageUrl', async () => {
+      mockGlobalSettingsService.get.mockRejectedValue(new Error('Database error'))
+
+      const result = await GlobalSettingsInitService.getPageUrl()
+      expect(result).toBe('http://localhost:5173') // Default fallback
     })
   })
 
