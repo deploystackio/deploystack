@@ -1,26 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import {
-  FlexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useVueTable,
-  type ColumnFiltersState,
-  type SortingState,
-  type VisibilityState,
-} from '@tanstack/vue-table'
 import { Input } from '@/components/ui/input'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-vue-next'
 import DashboardLayout from '@/components/DashboardLayout.vue'
@@ -28,7 +9,7 @@ import AddTeamModal from '@/components/teams/AddTeamModal.vue'
 import { TeamService, type TeamWithRole, type Team } from '@/services/teamService'
 import { UserService } from '@/services/userService'
 import { useEventBus } from '@/composables/useEventBus'
-import { createColumns } from './columns'
+import TeamTableColumns from './TeamTableColumns.vue'
 import { useRouter, useRoute } from 'vue-router'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { CheckCircle } from 'lucide-vue-next'
@@ -42,14 +23,11 @@ const eventBus = useEventBus()
 const teams = ref<TeamWithRole[]>([])
 const isLoading = ref(true)
 const error = ref<string | null>(null)
-const sorting = ref<SortingState>([])
-const columnFilters = ref<ColumnFiltersState>([])
-const columnVisibility = ref<VisibilityState>({})
-const rowSelection = ref({})
 const showAddModal = ref(false)
 const canCreateTeams = ref(false)
 const userPermissions = ref<string[]>([])
 const deleteSuccessMessage = ref<string | null>(null)
+const searchQuery = ref('')
 
 // Team switching state
 const selectedTeam = ref<Team | null>(null)
@@ -96,13 +74,17 @@ const checkPermissions = async () => {
   }
 }
 
-// Create columns with permissions
-const columns = computed(() => createColumns(
-  handleManageTeam,
-  handleSwitchTeam,
-  selectedTeam.value?.id || null,
-  userPermissions.value
-))
+// Filter teams based on search query
+const filteredTeams = computed(() => {
+  if (!searchQuery.value) {
+    return teams.value
+  }
+  const query = searchQuery.value.toLowerCase()
+  return teams.value.filter(team =>
+    team.name.toLowerCase().includes(query) ||
+    (team.description && team.description.toLowerCase().includes(query))
+  )
+})
 
 // Initialize selected team from sidebar teams
 const initializeSelectedTeam = async () => {
@@ -121,12 +103,12 @@ const fetchTeams = async (forceRefresh = false): Promise<void> => {
   try {
     isLoading.value = true
     error.value = null
-    
+
     // Clear cache if force refresh is requested
     if (forceRefresh) {
       TeamService.clearUserTeamsCache()
     }
-    
+
     teams.value = await TeamService.getUserTeamsWithRoles()
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'An unknown error occurred'
@@ -185,59 +167,6 @@ onUnmounted(() => {
   eventBus.off('teams-updated')
 })
 
-// Create table instance
-const table = useVueTable({
-  get data() {
-    return teams.value
-  },
-  get columns() {
-    return columns.value
-  },
-  onSortingChange: (updaterOrValue) => {
-    sorting.value = typeof updaterOrValue === 'function'
-      ? updaterOrValue(sorting.value)
-      : updaterOrValue
-  },
-  onColumnFiltersChange: (updaterOrValue) => {
-    columnFilters.value = typeof updaterOrValue === 'function'
-      ? updaterOrValue(columnFilters.value)
-      : updaterOrValue
-  },
-  onColumnVisibilityChange: (updaterOrValue) => {
-    columnVisibility.value = typeof updaterOrValue === 'function'
-      ? updaterOrValue(columnVisibility.value)
-      : updaterOrValue
-  },
-  onRowSelectionChange: (updaterOrValue) => {
-    rowSelection.value = typeof updaterOrValue === 'function'
-      ? updaterOrValue(rowSelection.value)
-      : updaterOrValue
-  },
-  getCoreRowModel: getCoreRowModel(),
-  getPaginationRowModel: getPaginationRowModel(),
-  getSortedRowModel: getSortedRowModel(),
-  getFilteredRowModel: getFilteredRowModel(),
-  state: {
-    get sorting() {
-      return sorting.value
-    },
-    get columnFilters() {
-      return columnFilters.value
-    },
-    get columnVisibility() {
-      return columnVisibility.value
-    },
-    get rowSelection() {
-      return rowSelection.value
-    },
-  },
-})
-
-// Filter value for search
-const filterValue = computed({
-  get: () => (table.getColumn('name')?.getFilterValue() as string) ?? '',
-  set: (value) => table.getColumn('name')?.setFilterValue(value),
-})
 </script>
 
 <template>
@@ -280,90 +209,23 @@ const filterValue = computed({
         <div class="flex items-center py-4">
           <Input
             :placeholder="t('teams.table.search.placeholder')"
-            v-model="filterValue"
+            v-model="searchQuery"
             class="max-w-sm"
           />
         </div>
 
-        <!-- Table -->
-        <div class="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow
-                v-for="headerGroup in table.getHeaderGroups()"
-                :key="headerGroup.id"
-              >
-                <TableHead
-                  v-for="header in headerGroup.headers"
-                  :key="header.id"
-                  :class="header.id === 'actions' ? 'text-right' : ''"
-                >
-                  <FlexRender
-                    v-if="!header.isPlaceholder"
-                    :render="header.column.columnDef.header"
-                    :props="header.getContext()"
-                  />
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              <template v-if="table.getRowModel().rows?.length">
-                <TableRow
-                  v-for="row in table.getRowModel().rows"
-                  :key="row.id"
-                  :data-state="row.getIsSelected() && 'selected'"
-                >
-                  <TableCell
-                    v-for="cell in row.getVisibleCells()"
-                    :key="cell.id"
-                  >
-                    <FlexRender
-                      :render="cell.column.columnDef.cell"
-                      :props="cell.getContext()"
-                    />
-                  </TableCell>
-                </TableRow>
-              </template>
-              <template v-else>
-                <TableRow>
-                  <TableCell
-                    :colspan="table.getAllColumns().length"
-                    class="h-24 text-center"
-                  >
-                    {{ t('teams.table.noResults') }}
-                  </TableCell>
-                </TableRow>
-              </template>
-            </TableBody>
-          </Table>
-        </div>
+        <!-- Teams Table Component -->
+        <TeamTableColumns
+          :teams="filteredTeams"
+          :selected-team-id="selectedTeam?.id || null"
+          :user-permissions="userPermissions"
+          :on-manage-team="handleManageTeam"
+          :on-switch-team="handleSwitchTeam"
+        />
 
-        <!-- Pagination -->
-        <div class="flex items-center justify-end space-x-2 py-4">
-          <div class="flex-1 text-sm text-muted-foreground">
-            {{ t('teams.pagination.rowsSelected', {
-              selected: table.getFilteredSelectedRowModel().rows.length,
-              total: table.getFilteredRowModel().rows.length
-            }) }}
-          </div>
-          <div class="space-x-2">
-            <Button
-              variant="outline"
-              size="sm"
-              :disabled="!table.getCanPreviousPage()"
-              @click="table.previousPage()"
-            >
-              {{ t('teams.pagination.previous') }}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              :disabled="!table.getCanNextPage()"
-              @click="table.nextPage()"
-            >
-              {{ t('teams.pagination.next') }}
-            </Button>
-          </div>
+        <!-- No Results Message -->
+        <div v-if="filteredTeams.length === 0" class="text-center py-8">
+          <p class="text-muted-foreground">{{ t('teams.table.noResults') }}</p>
         </div>
       </div>
 
