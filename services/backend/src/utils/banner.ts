@@ -1,8 +1,9 @@
 import type { FastifyBaseLogger } from 'fastify';
+import { getVersionString } from '../config/version';
 
 // Function to display fancy startup banner
 export const displayStartupBanner = (port: number, logger: FastifyBaseLogger): void => {
-  const version = process.env.DEPLOYSTACK_BACKEND_VERSION || process.env.npm_package_version || '0.1.0';
+  const version = getVersionString();
 
   const message = `
   \x1b[38;5;51m╔═══════════════════════════════════════════════════════════════════════════════════════════════

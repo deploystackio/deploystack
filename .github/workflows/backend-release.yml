@@ -86,7 +86,5 @@ jobs:
           tags: |
             deploystack/backend:latest
             deploystack/backend:v${{ steps.package-version.outputs.current-version }}
-          build-args: |
-            DEPLOYSTACK_BACKEND_VERSION=${{ steps.package-version.outputs.current-version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

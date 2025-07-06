@@ -1,6 +1,7 @@
 import { type FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
+import { getVersionString } from '../config/version'
 // Import the individual database setup routes
 import dbStatusRoute from './db/status'
 import dbSetupRoute from './db/setup'
@@ -67,7 +68,7 @@ export const registerRoutes = (server: FastifyInstance): void => {
       message: 'DeployStack Backend is running.',
       status: server.db ? 'Database Connected' : 'Database Not Configured/Connected - Use /api/db/status and /api/db/setup',
       timestamp: new Date().toISOString(),
-      version: '0.20.9'
+      version: getVersionString()
     }
   })
 }
