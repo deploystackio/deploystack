@@ -15,11 +15,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { ArrowLeft, Key, Shield, Calendar, User, AlertTriangle, Trash2, CheckCircle } from 'lucide-vue-next'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { ArrowLeft, Key, Shield, Calendar, User, AlertTriangle, Trash2, CheckCircle, Settings, Edit } from 'lucide-vue-next'
 import DashboardLayout from '@/components/DashboardLayout.vue'
 import { CredentialsService } from '@/services/credentialsService'
 import { TeamService, type Team } from '@/services/teamService'
-import { UserService } from '@/services/userService'
 import { useEventBus } from '@/composables/useEventBus'
 import type { CloudCredential } from '@/types/credentials'
 
@@ -165,12 +171,23 @@ const cancelDelete = () => {
   deleteError.value = null
   showDeleteModal.value = false
 }
+
+// Placeholder functions for new dropdown actions
+const handleEditName = () => {
+  console.log('Edit Name clicked - functionality to be implemented')
+  // TODO: Implement edit name functionality
+}
+
+const handleUpdateSecrets = () => {
+  console.log('Update Secrets clicked - functionality to be implemented')
+  // TODO: Implement update secrets functionality
+}
 </script>
 
 <template>
   <DashboardLayout :title="credential ? t('credentials.detail.title') : t('credentials.detail.loading')">
     <div class="space-y-6">
-      <!-- Back Button and Delete Button -->
+      <!-- Back Button and Edit Credential Dropdown -->
       <div class="flex items-center justify-between mb-4">
         <Button
           variant="outline"
@@ -180,16 +197,30 @@ const cancelDelete = () => {
           {{ t('credentials.detail.backToCredentials') }}
         </Button>
 
-        <!-- Delete Button (Team Admin Only) -->
-        <Button
-          v-if="credential && isTeamAdmin"
-          variant="destructive"
-          @click="handleDeleteClick"
-          :disabled="isDeleting"
-        >
-          <Trash2 class="h-4 w-4 mr-2" />
-          Delete Credential
-        </Button>
+        <!-- Edit Credential Dropdown (Team Admin Only) -->
+        <DropdownMenu v-if="credential && isTeamAdmin">
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" :disabled="isDeleting">
+              <Settings class="h-4 w-4 mr-2" />
+              {{ t('credentials.actions.editCredential') }}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem @click="handleEditName">
+              <Edit class="h-4 w-4 mr-2" />
+              {{ t('credentials.actions.editName') }}
+            </DropdownMenuItem>
+            <DropdownMenuItem @click="handleUpdateSecrets">
+              <Key class="h-4 w-4 mr-2" />
+              {{ t('credentials.actions.updateSecrets') }}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem @click="handleDeleteClick" class="text-red-600 focus:text-red-600">
+              <Trash2 class="h-4 w-4 mr-2" />
+              {{ t('credentials.actions.delete') }}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       <!-- Success Message -->

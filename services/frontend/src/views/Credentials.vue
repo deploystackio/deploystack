@@ -2,28 +2,8 @@
 import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import {
-  FlexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useVueTable,
-  type ColumnFiltersState,
-  type SortingState,
-  type VisibilityState,
-} from '@tanstack/vue-table'
 import { Input } from '@/components/ui/input'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Plus, Loader2, Search } from 'lucide-vue-next'
 import DashboardLayout from '@/components/DashboardLayout.vue'
 import { CredentialsService } from '@/services/credentialsService'
@@ -31,12 +11,14 @@ import { UserService } from '@/services/userService'
 import { TeamService, type Team } from '@/services/teamService'
 import { useEventBus } from '@/composables/useEventBus'
 import type { CloudCredential, CloudCredentialBasic } from '@/types/credentials'
-import { createColumns } from '@/components/credentials/columns'
+import CredentialsTable from '@/components/credentials/CredentialsTable.vue'
 import AddCredentialDialog from '@/components/credentials/AddCredentialDialog.vue'
 
 // Simple debounce function
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function debounce<T extends (...args: any[]) => any>(func: T, wait: number): T {
   let timeout: ReturnType<typeof setTimeout>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return ((...args: any[]) => {
     clearTimeout(timeout)
     timeout = setTimeout(() => func(...args), wait)
@@ -53,10 +35,6 @@ const searchResults = ref<CloudCredentialBasic[]>([])
 const isLoading = ref(true)
 const isSearching = ref(false)
 const error = ref<string | null>(null)
-const sorting = ref<SortingState>([])
-const columnFilters = ref<ColumnFiltersState>([])
-const columnVisibility = ref<VisibilityState>({})
-const rowSelection = ref({})
 const showAddModal = ref(false)
 const canCreateCredentials = ref(false)
 const userPermissions = ref<string[]>([])
@@ -127,7 +105,7 @@ const checkTeamPermissions = () => {
 }
 
 // Fetch credentials from API
-const fetchCredentials = async (forceRefresh = false): Promise<void> => {
+const fetchCredentials = async (): Promise<void> => {
   if (!selectedTeam.value) return
 
   try {
@@ -200,44 +178,10 @@ const displayCredentials = computed(() => {
 })
 
 // Handle credential actions
-const handleEditCredential = (credentialId: string) => {
-  // TODO: Implement edit functionality
-  console.log('Edit credential:', credentialId)
-}
-
-const handleDeleteCredential = async (credentialId: string) => {
-  if (!selectedTeam.value) return
-
-  try {
-    await CredentialsService.deleteCredential(selectedTeam.value.id, credentialId)
-
-    // Emit events
-    eventBus.emit('credentials-updated')
-
-    // Refresh credentials list
-    await fetchCredentials()
-  } catch (error) {
-    console.error('Error deleting credential:', error)
-    // TODO: Show error notification
-  }
-}
-
 const handleManageCredential = (credentialId: string) => {
   // Navigate to credential detail page
   router.push(`/credentials/${credentialId}`)
 }
-
-// Create columns with permissions
-const columns = computed(() => {
-  const isTeamAdmin = selectedTeam.value?.is_admin || selectedTeam.value?.role === 'team_admin'
-  return createColumns(
-    handleEditCredential,
-    handleDeleteCredential,
-    handleManageCredential,
-    userPermissions.value,
-    isTeamAdmin
-  )
-})
 
 // Handle credential creation success
 const handleCredentialCreated = async () => {
@@ -264,7 +208,7 @@ onMounted(async () => {
 
   // Listen for credential updates from other components
   eventBus.on('credentials-updated', () => {
-    fetchCredentials(true) // Force refresh to get latest data
+    fetchCredentials() // Force refresh to get latest data
   })
 })
 
@@ -274,53 +218,6 @@ onUnmounted(() => {
   eventBus.off('credentials-updated')
 })
 
-// Create table instance
-const table = useVueTable({
-  get data() {
-    return displayCredentials.value
-  },
-  get columns() {
-    return columns.value
-  },
-  onSortingChange: (updaterOrValue) => {
-    sorting.value = typeof updaterOrValue === 'function'
-      ? updaterOrValue(sorting.value)
-      : updaterOrValue
-  },
-  onColumnFiltersChange: (updaterOrValue) => {
-    columnFilters.value = typeof updaterOrValue === 'function'
-      ? updaterOrValue(columnFilters.value)
-      : updaterOrValue
-  },
-  onColumnVisibilityChange: (updaterOrValue) => {
-    columnVisibility.value = typeof updaterOrValue === 'function'
-      ? updaterOrValue(columnVisibility.value)
-      : updaterOrValue
-  },
-  onRowSelectionChange: (updaterOrValue) => {
-    rowSelection.value = typeof updaterOrValue === 'function'
-      ? updaterOrValue(rowSelection.value)
-      : updaterOrValue
-  },
-  getCoreRowModel: getCoreRowModel(),
-  getPaginationRowModel: getPaginationRowModel(),
-  getSortedRowModel: getSortedRowModel(),
-  getFilteredRowModel: getFilteredRowModel(),
-  state: {
-    get sorting() {
-      return sorting.value
-    },
-    get columnFilters() {
-      return columnFilters.value
-    },
-    get columnVisibility() {
-      return columnVisibility.value
-    },
-    get rowSelection() {
-      return rowSelection.value
-    },
-  },
-})
 </script>
 
 <template>
@@ -405,84 +302,15 @@ const table = useVueTable({
         </div>
 
         <!-- Table -->
-        <div v-else class="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow
-                v-for="headerGroup in table.getHeaderGroups()"
-                :key="headerGroup.id"
-              >
-                <TableHead
-                  v-for="header in headerGroup.headers"
-                  :key="header.id"
-                  :class="header.id === 'actions' ? 'text-right' : ''"
-                >
-                  <FlexRender
-                    v-if="!header.isPlaceholder"
-                    :render="header.column.columnDef.header"
-                    :props="header.getContext()"
-                  />
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              <template v-if="table.getRowModel().rows?.length">
-                <TableRow
-                  v-for="row in table.getRowModel().rows"
-                  :key="row.id"
-                  :data-state="row.getIsSelected() && 'selected'"
-                >
-                  <TableCell
-                    v-for="cell in row.getVisibleCells()"
-                    :key="cell.id"
-                  >
-                    <FlexRender
-                      :render="cell.column.columnDef.cell"
-                      :props="cell.getContext()"
-                    />
-                  </TableCell>
-                </TableRow>
-              </template>
-              <template v-else>
-                <TableRow>
-                  <TableCell
-                    :colspan="table.getAllColumns().length"
-                    class="h-24 text-center"
-                  >
-                    {{ searchQuery.trim() ? t('credentials.search.noResults') : t('credentials.table.noResults') }}
-                  </TableCell>
-                </TableRow>
-              </template>
-            </TableBody>
-          </Table>
-        </div>
+        <CredentialsTable
+          v-if="displayCredentials.length > 0"
+          :credentials="displayCredentials"
+          :on-manage="handleManageCredential"
+        />
 
-        <!-- Pagination -->
-        <div class="flex items-center justify-end space-x-2 py-4">
-          <div class="flex-1 text-sm text-muted-foreground">
-            {{ t('teams.pagination.rowsSelected', {
-              selected: table.getFilteredSelectedRowModel().rows.length,
-              total: table.getFilteredRowModel().rows.length
-            }) }}
-          </div>
-          <div class="space-x-2">
-            <Button
-              variant="outline"
-              size="sm"
-              :disabled="!table.getCanPreviousPage()"
-              @click="table.previousPage()"
-            >
-              {{ t('teams.pagination.previous') }}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              :disabled="!table.getCanNextPage()"
-              @click="table.nextPage()"
-            >
-              {{ t('teams.pagination.next') }}
-            </Button>
-          </div>
+        <!-- No results state -->
+        <div v-else-if="searchQuery.trim()" class="text-center py-12">
+          <p class="text-muted-foreground">{{ t('credentials.search.noResults') }}</p>
         </div>
       </div>
 
