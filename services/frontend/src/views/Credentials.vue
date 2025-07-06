@@ -318,14 +318,6 @@ onUnmounted(() => {
           <div class="space-y-4">
             <h3 class="text-lg font-medium">{{ t('credentials.empty.title') }}</h3>
             <p class="text-muted-foreground">{{ t('credentials.empty.description') }}</p>
-            <Button
-              v-if="canCreateCredentials"
-              @click="showAddModal = true"
-              class="flex items-center gap-2"
-            >
-              <Plus class="h-4 w-4" />
-              {{ t('credentials.empty.action') }}
-            </Button>
           </div>
         </div>
 
