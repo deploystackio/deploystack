@@ -74,6 +74,7 @@ export const registerRoutes = (server: FastifyInstance): void => {
     }, 'Checking version display setting');
 
     // Build base response
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const response: Record<string, any> = {
       message: 'DeployStack Backend is running.',
       status: server.db ? 'Database Connected' : 'Database Not Configured/Connected - Use /api/db/status and /api/db/setup',
