@@ -70,6 +70,11 @@ jobs:
           TYPE_ARG: ${{ fromJSON('{"patch":"patch", "minor":"minor", "major":"major"}')[github.event.inputs.type] }}
           BETA_ARG: ${{ github.event.inputs.beta == 'true' && '--preRelease=beta' || '' }}
         run: npm run release -- $TYPE_ARG --ci --verbose --no-git.push --no-git.commit --no-git.tag --no-github $BETA_ARG
+      - name: Update version.ts file
+        working-directory: services/backend
+        run: |
+          node scripts/update-version.js
+          git add src/config/version.ts
       - name: get-npm-version
         id: package-version
         uses: martinbeentjes/npm-get-version-action@main
@@ -138,8 +143,6 @@ jobs:
             - `linux/amd64` (Intel/AMD)
             - `linux/arm64` (Apple Silicon, AWS Graviton)
             
-            ### Environment Variables
-            The Docker image will include `DEPLOYSTACK_BACKEND_VERSION` environment variable set to the current version.
             
             ## Release notes:
             ${{ steps.extract-release-notes.outputs.release_notes }}
