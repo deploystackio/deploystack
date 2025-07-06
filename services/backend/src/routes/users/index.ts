@@ -42,7 +42,7 @@ const userTeamsResponseSchema = z.object({
     created_at: z.date().describe('Team creation date'),
     updated_at: z.date().describe('Team last update date'),
     role: z.enum(['team_admin', 'team_user']).describe('User role in the team'),
-    is_admin: z.boolean().describe('Whether the user is an admin of this team')
+    is_owner: z.boolean().describe('Whether the user is the owner of this team')
   })).describe('Array of user teams')
 });
 
@@ -633,7 +633,7 @@ export default async function usersRoute(fastify: FastifyInstance) {
           return {
             ...team,
             role: membership?.role || 'team_user',
-            is_admin: membership?.role === 'team_admin'
+            is_owner: team.owner_id === request.user!.id
           };
         })
       );
