@@ -87,6 +87,7 @@ describe('Teams Route', () => {
     mockTeamService.createTeam = vi.fn();
     mockTeamService.getUserTeams = vi.fn();
     mockTeamService.getTeamMembership = vi.fn();
+    mockTeamService.getUserTeamsWithRoles = vi.fn();
     mockTeamService.getUserDefaultTeam = vi.fn();
     mockTeamService.getTeamById = vi.fn();
     mockTeamService.isTeamMember = vi.fn();
@@ -428,15 +429,20 @@ describe('Teams Route', () => {
     });
 
     it('should return user teams successfully', async () => {
-      const userTeams = [
+      const userTeamsWithRoles = [
         {
           id: 'team-1',
           name: 'Team 1',
           slug: 'team-1',
           description: 'First team',
           owner_id: 'user-123',
+          is_default: false,
           created_at: new Date(),
           updated_at: new Date(),
+          role: 'team_admin',
+          is_admin: true,
+          is_owner: true,
+          member_count: 2,
         },
         {
           id: 'team-2',
@@ -444,36 +450,27 @@ describe('Teams Route', () => {
           slug: 'team-2',
           description: 'Second team',
           owner_id: 'user-456',
+          is_default: false,
           created_at: new Date(),
           updated_at: new Date(),
+          role: 'team_user',
+          is_admin: false,
+          is_owner: false,
+          member_count: 3,
         },
       ];
 
-      const memberships = [
-        { role: 'team_admin' },
-        { role: 'team_user' },
-      ];
-
-      mockTeamService.getUserTeams.mockResolvedValue(userTeams);
-      mockTeamService.getTeamMembership
-        .mockResolvedValueOnce(memberships[0])
-        .mockResolvedValueOnce(memberships[1]);
+      mockTeamService.getUserTeamsWithRoles.mockResolvedValue(userTeamsWithRoles);
 
       const handler = routeHandlers['GET /teams/me'];
       await handler(mockRequest, mockReply);
 
-      expect(mockTeamService.getUserTeams).toHaveBeenCalledWith('user-123');
-      expect(mockTeamService.getTeamMembership).toHaveBeenCalledTimes(2);
-      expect(mockTeamService.getTeamMembership).toHaveBeenCalledWith('team-1', 'user-123');
-      expect(mockTeamService.getTeamMembership).toHaveBeenCalledWith('team-2', 'user-123');
+      expect(mockTeamService.getUserTeamsWithRoles).toHaveBeenCalledWith('user-123');
 
       expect(mockReply.status).toHaveBeenCalledWith(200);
       expect(mockReply.send).toHaveBeenCalledWith({
         success: true,
-        data: [
-          { ...userTeams[0], role: 'team_admin' },
-          { ...userTeams[1], role: 'team_user' },
-        ],
+        data: userTeamsWithRoles,
       });
     });
 
@@ -491,12 +488,12 @@ describe('Teams Route', () => {
     });
 
     it('should return empty array when user has no teams', async () => {
-      mockTeamService.getUserTeams.mockResolvedValue([]);
+      mockTeamService.getUserTeamsWithRoles.mockResolvedValue([]);
 
       const handler = routeHandlers['GET /teams/me'];
       await handler(mockRequest, mockReply);
 
-      expect(mockTeamService.getUserTeams).toHaveBeenCalledWith('user-123');
+      expect(mockTeamService.getUserTeamsWithRoles).toHaveBeenCalledWith('user-123');
       expect(mockReply.status).toHaveBeenCalledWith(200);
       expect(mockReply.send).toHaveBeenCalledWith({
         success: true,
@@ -505,20 +502,24 @@ describe('Teams Route', () => {
     });
 
     it('should handle teams with no membership (default to team_user)', async () => {
-      const userTeams = [
+      const userTeamsWithRoles = [
         {
           id: 'team-1',
           name: 'Team 1',
           slug: 'team-1',
           description: 'First team',
           owner_id: 'user-123',
+          is_default: false,
           created_at: new Date(),
           updated_at: new Date(),
+          role: 'team_user',
+          is_admin: false,
+          is_owner: true,
+          member_count: 1,
         },
       ];
 
-      mockTeamService.getUserTeams.mockResolvedValue(userTeams);
-      mockTeamService.getTeamMembership.mockResolvedValue(null);
+      mockTeamService.getUserTeamsWithRoles.mockResolvedValue(userTeamsWithRoles);
 
       const handler = routeHandlers['GET /teams/me'];
       await handler(mockRequest, mockReply);
@@ -526,14 +527,12 @@ describe('Teams Route', () => {
       expect(mockReply.status).toHaveBeenCalledWith(200);
       expect(mockReply.send).toHaveBeenCalledWith({
         success: true,
-        data: [
-          { ...userTeams[0], role: 'team_user' },
-        ],
+        data: userTeamsWithRoles,
       });
     });
 
     it('should handle internal server errors', async () => {
-      mockTeamService.getUserTeams.mockRejectedValue(new Error('Database error'));
+      mockTeamService.getUserTeamsWithRoles.mockRejectedValue(new Error('Database error'));
 
       const handler = routeHandlers['GET /teams/me'];
       await handler(mockRequest, mockReply);
@@ -547,20 +546,7 @@ describe('Teams Route', () => {
     });
 
     it('should handle membership lookup errors gracefully', async () => {
-      const userTeams = [
-        {
-          id: 'team-1',
-          name: 'Team 1',
-          slug: 'team-1',
-          description: 'First team',
-          owner_id: 'user-123',
-          created_at: new Date(),
-          updated_at: new Date(),
-        },
-      ];
-
-      mockTeamService.getUserTeams.mockResolvedValue(userTeams);
-      mockTeamService.getTeamMembership.mockRejectedValue(new Error('Membership lookup failed'));
+      mockTeamService.getUserTeamsWithRoles.mockRejectedValue(new Error('Membership lookup failed'));
 
       const handler = routeHandlers['GET /teams/me'];
       await handler(mockRequest, mockReply);
