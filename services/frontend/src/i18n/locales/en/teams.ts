@@ -7,8 +7,21 @@ export default {
       loading: 'Loading teams...',
       error: 'Error loading teams: {error}',
       noResults: 'No teams found.',
+      noDescription: 'No description',
+      selected: 'Selected',
+      switch: 'Switch',
+      manage: 'Manage',
+      noActions: 'No actions',
       search: {
         placeholder: 'Search teams...'
+      },
+      columns: {
+        name: 'Team Name',
+        description: 'Description',
+        role: 'Your Role',
+        created: 'Created',
+        switch: 'Switch Team',
+        actions: 'Actions'
       }
     },
     messages: {

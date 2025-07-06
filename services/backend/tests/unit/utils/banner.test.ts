@@ -44,7 +44,7 @@ describe('banner.ts', () => {
       const logCall = (mockLogger.info as any).mock.calls[0];
       expect(logCall[0]).toEqual({
         port: testPort,
-        version: '0.20.7',
+        version: '0.20.9',
         environment: 'test',
         operation: 'startup_banner'
       });
@@ -90,43 +90,16 @@ describe('banner.ts', () => {
       expect(bannerOutput).toContain('\x1b[0m'); // Reset color
     });
 
-    it('should use DEPLOYSTACK_BACKEND_VERSION when available', () => {
-      process.env.DEPLOYSTACK_BACKEND_VERSION = '1.2.3';
+    it('should use version from config', () => {
       const testPort = 3000;
       
       displayStartupBanner(testPort, mockLogger);
       
       const logCall = (mockLogger.info as any).mock.calls[0];
       const bannerOutput = logCall[1] as string;
-      expect(bannerOutput).toContain('v1.2.3');
-      expect(bannerOutput).toContain('DeployStack CI/CD Backend');
-      expect(logCall[0].version).toBe('1.2.3');
-    });
-
-    it('should fallback to npm_package_version when DEPLOYSTACK_BACKEND_VERSION is not set', () => {
-      delete process.env.DEPLOYSTACK_BACKEND_VERSION;
-      process.env.npm_package_version = '2.1.0';
-      const testPort = 3000;
-      
-      displayStartupBanner(testPort, mockLogger);
-      
-      const logCall = (mockLogger.info as any).mock.calls[0];
-      const bannerOutput = logCall[1] as string;
-      expect(bannerOutput).toContain('v2.1.0');
-      expect(logCall[0].version).toBe('2.1.0');
-    });
-
-    it('should use default version when no version environment variables are set', () => {
-      delete process.env.DEPLOYSTACK_BACKEND_VERSION;
-      delete process.env.npm_package_version;
-      const testPort = 3000;
-      
-      displayStartupBanner(testPort, mockLogger);
-      
-      const logCall = (mockLogger.info as any).mock.calls[0];
-      const bannerOutput = logCall[1] as string;
-      expect(bannerOutput).toContain('v0.1.0');
-      expect(logCall[0].version).toBe('0.1.0');
+      // Should use the version from version.ts (which reads from package.json in development)
+      expect(bannerOutput).toContain('v0.20.9');
+      expect(logCall[0].version).toBe('0.20.9');
     });
 
     it('should display current NODE_ENV', () => {
@@ -249,11 +222,7 @@ describe('banner.ts', () => {
 
     it('should handle empty string environment variables gracefully', () => {
       const originalNodeEnv = process.env.NODE_ENV;
-      const originalBackendVersion = process.env.DEPLOYSTACK_BACKEND_VERSION;
-      const originalNpmVersion = process.env.npm_package_version;
       
-      process.env.DEPLOYSTACK_BACKEND_VERSION = '';
-      process.env.npm_package_version = '';
       process.env.NODE_ENV = '';
       const testPort = 3000;
       
@@ -262,35 +231,15 @@ describe('banner.ts', () => {
       const logCall = (mockLogger.info as any).mock.calls[0];
       const bannerOutput = logCall[1] as string;
       const cleanOutput = stripAnsiCodes(bannerOutput);
-      expect(cleanOutput).toContain('v0.1.0'); // Should fallback to default
+      expect(cleanOutput).toContain('v0.20.9'); // Should use version.ts data
       expect(cleanOutput).toContain('Environment: development'); // Should fallback to default
-      expect(logCall[0].version).toBe('0.1.0');
+      expect(logCall[0].version).toBe('0.20.9');
       expect(logCall[0].environment).toBe('development');
       
       // Restore original environment variables
       if (originalNodeEnv !== undefined) {
         process.env.NODE_ENV = originalNodeEnv;
       }
-      if (originalBackendVersion !== undefined) {
-        process.env.DEPLOYSTACK_BACKEND_VERSION = originalBackendVersion;
-      }
-      if (originalNpmVersion !== undefined) {
-        process.env.npm_package_version = originalNpmVersion;
-      }
-    });
-
-    it('should prioritize DEPLOYSTACK_BACKEND_VERSION over npm_package_version', () => {
-      process.env.DEPLOYSTACK_BACKEND_VERSION = '5.0.0';
-      process.env.npm_package_version = '4.0.0';
-      const testPort = 3000;
-      
-      displayStartupBanner(testPort, mockLogger);
-      
-      const logCall = (mockLogger.info as any).mock.calls[0];
-      const bannerOutput = logCall[1] as string;
-      expect(bannerOutput).toContain('v5.0.0');
-      expect(bannerOutput).not.toContain('v4.0.0');
-      expect(logCall[0].version).toBe('5.0.0');
     });
   });
 });

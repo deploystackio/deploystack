@@ -31,22 +31,30 @@ describe('Teams Route', () => {
     // Setup mock Fastify instance
     mockFastify = {
       post: vi.fn((path, options, handler) => {
-        routeHandlers[`POST ${path}`] = handler;
-        preHandlers[`POST ${path}`] = options.preHandler;
+        // Extract the actual handler function from the arguments
+        const actualHandler = typeof options === 'function' ? options : handler;
+        routeHandlers[`POST ${path}`] = actualHandler;
+        preHandlers[`POST ${path}`] = options?.preHandler;
         return mockFastify as FastifyInstance;
       }),
       get: vi.fn((path, options, handler) => {
-        routeHandlers[`GET ${path}`] = handler;
+        // Extract the actual handler function from the arguments
+        const actualHandler = typeof options === 'function' ? options : handler;
+        routeHandlers[`GET ${path}`] = actualHandler;
         preHandlers[`GET ${path}`] = options?.preHandler;
         return mockFastify as FastifyInstance;
       }),
       put: vi.fn((path, options, handler) => {
-        routeHandlers[`PUT ${path}`] = handler;
+        // Extract the actual handler function from the arguments
+        const actualHandler = typeof options === 'function' ? options : handler;
+        routeHandlers[`PUT ${path}`] = actualHandler;
         preHandlers[`PUT ${path}`] = options?.preHandler;
         return mockFastify as FastifyInstance;
       }),
       delete: vi.fn((path, options, handler) => {
-        routeHandlers[`DELETE ${path}`] = handler;
+        // Extract the actual handler function from the arguments
+        const actualHandler = typeof options === 'function' ? options : handler;
+        routeHandlers[`DELETE ${path}`] = actualHandler;
         preHandlers[`DELETE ${path}`] = options?.preHandler;
         return mockFastify as FastifyInstance;
       }),
@@ -64,25 +72,7 @@ describe('Teams Route', () => {
       user: {
         id: 'user-123',
       } as any, // Use any to avoid complex Lucia User type issues in tests
-      log: {
-        error: vi.fn(),
-        info: vi.fn(),
-        debug: vi.fn(),
-        warn: vi.fn(),
-        fatal: vi.fn(),
-        trace: vi.fn(),
-        child: vi.fn().mockReturnValue({
-          error: vi.fn(),
-          info: vi.fn(),
-          debug: vi.fn(),
-          warn: vi.fn(),
-          fatal: vi.fn(),
-          trace: vi.fn(),
-        }),
-        level: 'info',
-        silent: vi.fn(),
-      } as any, // Use any to avoid complex FastifyBaseLogger type issues in tests
-    };
+    } as any;
 
     mockReply = {
       status: vi.fn().mockReturnThis(),
@@ -97,6 +87,7 @@ describe('Teams Route', () => {
     mockTeamService.createTeam = vi.fn();
     mockTeamService.getUserTeams = vi.fn();
     mockTeamService.getTeamMembership = vi.fn();
+    mockTeamService.getUserTeamsWithRoles = vi.fn();
     mockTeamService.getUserDefaultTeam = vi.fn();
     mockTeamService.getTeamById = vi.fn();
     mockTeamService.isTeamMember = vi.fn();
@@ -110,11 +101,11 @@ describe('Teams Route', () => {
   });
 
   describe('Route Registration', () => {
-    it('should register POST /api/teams route', async () => {
+    it('should register POST /teams route', async () => {
       await teamsRoute(mockFastify as FastifyInstance);
 
       expect(mockFastify.post).toHaveBeenCalledWith(
-        '/api/teams',
+        '/teams',
         expect.objectContaining({
           schema: expect.objectContaining({
             tags: ['Teams'],
@@ -127,11 +118,11 @@ describe('Teams Route', () => {
       );
     });
 
-    it('should register GET /api/teams/me route', async () => {
+    it('should register GET /teams/me route', async () => {
       await teamsRoute(mockFastify as FastifyInstance);
 
       expect(mockFastify.get).toHaveBeenCalledWith(
-        '/api/teams/me',
+        '/teams/me',
         expect.objectContaining({
           schema: expect.objectContaining({
             tags: ['Teams'],
@@ -150,7 +141,7 @@ describe('Teams Route', () => {
     });
   });
 
-  describe('POST /api/teams - Create Team', () => {
+  describe('POST /teams - Create Team', () => {
     beforeEach(async () => {
       await teamsRoute(mockFastify as FastifyInstance);
     });
@@ -175,7 +166,7 @@ describe('Teams Route', () => {
       mockTeamService.canUserCreateTeam.mockResolvedValue(true);
       mockTeamService.createTeam.mockResolvedValue(createdTeam);
 
-      const handler = routeHandlers['POST /api/teams'];
+      const handler = routeHandlers['POST /teams'];
       await handler(mockRequest, mockReply);
 
       expect(mockTeamService.canUserCreateTeam).toHaveBeenCalledWith('user-123');
@@ -194,9 +185,9 @@ describe('Teams Route', () => {
     });
 
     it('should return 401 when user is not authenticated', async () => {
-      mockRequest.user = null;
+      (mockRequest as any).user = null;
 
-      const handler = routeHandlers['POST /api/teams'];
+      const handler = routeHandlers['POST /teams'];
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(401);
@@ -215,7 +206,7 @@ describe('Teams Route', () => {
       mockRequest.body = teamData;
       mockTeamService.canUserCreateTeam.mockResolvedValue(false);
 
-      const handler = routeHandlers['POST /api/teams'];
+      const handler = routeHandlers['POST /teams'];
       await handler(mockRequest, mockReply);
 
       expect(mockTeamService.canUserCreateTeam).toHaveBeenCalledWith('user-123');
@@ -233,7 +224,7 @@ describe('Teams Route', () => {
 
       mockRequest.body = invalidTeamData;
 
-      const handler = routeHandlers['POST /api/teams'];
+      const handler = routeHandlers['POST /teams'];
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(400);
@@ -254,7 +245,7 @@ describe('Teams Route', () => {
       mockTeamService.canUserCreateTeam.mockResolvedValue(true);
       mockTeamService.createTeam.mockRejectedValue(new Error('slug already exists'));
 
-      const handler = routeHandlers['POST /api/teams'];
+      const handler = routeHandlers['POST /teams'];
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(400);
@@ -274,7 +265,7 @@ describe('Teams Route', () => {
       mockTeamService.canUserCreateTeam.mockResolvedValue(true);
       mockTeamService.createTeam.mockRejectedValue(new Error('Database error'));
 
-      const handler = routeHandlers['POST /api/teams'];
+      const handler = routeHandlers['POST /teams'];
       await handler(mockRequest, mockReply);
 
       expect(mockFastify.log?.error).toHaveBeenCalled();
@@ -304,7 +295,7 @@ describe('Teams Route', () => {
       mockTeamService.canUserCreateTeam.mockResolvedValue(true);
       mockTeamService.createTeam.mockResolvedValue(createdTeam);
 
-      const handler = routeHandlers['POST /api/teams'];
+      const handler = routeHandlers['POST /teams'];
       await handler(mockRequest, mockReply);
 
       expect(mockTeamService.createTeam).toHaveBeenCalledWith({
@@ -328,7 +319,7 @@ describe('Teams Route', () => {
 
       mockRequest.body = teamData;
 
-      const handler = routeHandlers['POST /api/teams'];
+      const handler = routeHandlers['POST /teams'];
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(400);
@@ -347,7 +338,7 @@ describe('Teams Route', () => {
 
       mockRequest.body = teamData;
 
-      const handler = routeHandlers['POST /api/teams'];
+      const handler = routeHandlers['POST /teams'];
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(400);
@@ -359,7 +350,7 @@ describe('Teams Route', () => {
     });
   });
 
-  describe('GET /api/teams/me/default - Get User Default Team', () => {
+  describe('GET /teams/me/default - Get User Default Team', () => {
     beforeEach(async () => {
       await teamsRoute(mockFastify as FastifyInstance);
     });
@@ -378,7 +369,7 @@ describe('Teams Route', () => {
 
       mockTeamService.getUserDefaultTeam.mockResolvedValue(defaultTeam);
 
-      const handler = routeHandlers['GET /api/teams/me/default'];
+      const handler = routeHandlers['GET /teams/me/default'];
       await handler(mockRequest, mockReply);
 
       expect(mockTeamService.getUserDefaultTeam).toHaveBeenCalledWith('user-123');
@@ -391,9 +382,9 @@ describe('Teams Route', () => {
     });
 
     it('should return 401 when user is not authenticated', async () => {
-      mockRequest.user = null;
+      (mockRequest as any).user = null;
 
-      const handler = routeHandlers['GET /api/teams/me/default'];
+      const handler = routeHandlers['GET /teams/me/default'];
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(401);
@@ -406,7 +397,7 @@ describe('Teams Route', () => {
     it('should return 404 when no default team found', async () => {
       mockTeamService.getUserDefaultTeam.mockResolvedValue(null);
 
-      const handler = routeHandlers['GET /api/teams/me/default'];
+      const handler = routeHandlers['GET /teams/me/default'];
       await handler(mockRequest, mockReply);
 
       expect(mockTeamService.getUserDefaultTeam).toHaveBeenCalledWith('user-123');
@@ -420,7 +411,7 @@ describe('Teams Route', () => {
     it('should handle internal server errors', async () => {
       mockTeamService.getUserDefaultTeam.mockRejectedValue(new Error('Database error'));
 
-      const handler = routeHandlers['GET /api/teams/me/default'];
+      const handler = routeHandlers['GET /teams/me/default'];
       await handler(mockRequest, mockReply);
 
       expect(mockFastify.log?.error).toHaveBeenCalled();
@@ -432,21 +423,26 @@ describe('Teams Route', () => {
     });
   });
 
-  describe('GET /api/teams/me - Get User Teams', () => {
+  describe('GET /teams/me - Get User Teams', () => {
     beforeEach(async () => {
       await teamsRoute(mockFastify as FastifyInstance);
     });
 
     it('should return user teams successfully', async () => {
-      const userTeams = [
+      const userTeamsWithRoles = [
         {
           id: 'team-1',
           name: 'Team 1',
           slug: 'team-1',
           description: 'First team',
           owner_id: 'user-123',
+          is_default: false,
           created_at: new Date(),
           updated_at: new Date(),
+          role: 'team_admin',
+          is_admin: true,
+          is_owner: true,
+          member_count: 2,
         },
         {
           id: 'team-2',
@@ -454,43 +450,34 @@ describe('Teams Route', () => {
           slug: 'team-2',
           description: 'Second team',
           owner_id: 'user-456',
+          is_default: false,
           created_at: new Date(),
           updated_at: new Date(),
+          role: 'team_user',
+          is_admin: false,
+          is_owner: false,
+          member_count: 3,
         },
       ];
 
-      const memberships = [
-        { role: 'team_admin' },
-        { role: 'team_user' },
-      ];
+      mockTeamService.getUserTeamsWithRoles.mockResolvedValue(userTeamsWithRoles);
 
-      mockTeamService.getUserTeams.mockResolvedValue(userTeams);
-      mockTeamService.getTeamMembership
-        .mockResolvedValueOnce(memberships[0])
-        .mockResolvedValueOnce(memberships[1]);
-
-      const handler = routeHandlers['GET /api/teams/me'];
+      const handler = routeHandlers['GET /teams/me'];
       await handler(mockRequest, mockReply);
 
-      expect(mockTeamService.getUserTeams).toHaveBeenCalledWith('user-123');
-      expect(mockTeamService.getTeamMembership).toHaveBeenCalledTimes(2);
-      expect(mockTeamService.getTeamMembership).toHaveBeenCalledWith('team-1', 'user-123');
-      expect(mockTeamService.getTeamMembership).toHaveBeenCalledWith('team-2', 'user-123');
+      expect(mockTeamService.getUserTeamsWithRoles).toHaveBeenCalledWith('user-123');
 
       expect(mockReply.status).toHaveBeenCalledWith(200);
       expect(mockReply.send).toHaveBeenCalledWith({
         success: true,
-        data: [
-          { ...userTeams[0], role: 'team_admin' },
-          { ...userTeams[1], role: 'team_user' },
-        ],
+        data: userTeamsWithRoles,
       });
     });
 
     it('should return 401 when user is not authenticated', async () => {
-      mockRequest.user = null;
+      (mockRequest as any).user = null;
 
-      const handler = routeHandlers['GET /api/teams/me'];
+      const handler = routeHandlers['GET /teams/me'];
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(401);
@@ -501,12 +488,12 @@ describe('Teams Route', () => {
     });
 
     it('should return empty array when user has no teams', async () => {
-      mockTeamService.getUserTeams.mockResolvedValue([]);
+      mockTeamService.getUserTeamsWithRoles.mockResolvedValue([]);
 
-      const handler = routeHandlers['GET /api/teams/me'];
+      const handler = routeHandlers['GET /teams/me'];
       await handler(mockRequest, mockReply);
 
-      expect(mockTeamService.getUserTeams).toHaveBeenCalledWith('user-123');
+      expect(mockTeamService.getUserTeamsWithRoles).toHaveBeenCalledWith('user-123');
       expect(mockReply.status).toHaveBeenCalledWith(200);
       expect(mockReply.send).toHaveBeenCalledWith({
         success: true,
@@ -515,37 +502,39 @@ describe('Teams Route', () => {
     });
 
     it('should handle teams with no membership (default to team_user)', async () => {
-      const userTeams = [
+      const userTeamsWithRoles = [
         {
           id: 'team-1',
           name: 'Team 1',
           slug: 'team-1',
           description: 'First team',
           owner_id: 'user-123',
+          is_default: false,
           created_at: new Date(),
           updated_at: new Date(),
+          role: 'team_user',
+          is_admin: false,
+          is_owner: true,
+          member_count: 1,
         },
       ];
 
-      mockTeamService.getUserTeams.mockResolvedValue(userTeams);
-      mockTeamService.getTeamMembership.mockResolvedValue(null);
+      mockTeamService.getUserTeamsWithRoles.mockResolvedValue(userTeamsWithRoles);
 
-      const handler = routeHandlers['GET /api/teams/me'];
+      const handler = routeHandlers['GET /teams/me'];
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(200);
       expect(mockReply.send).toHaveBeenCalledWith({
         success: true,
-        data: [
-          { ...userTeams[0], role: 'team_user' },
-        ],
+        data: userTeamsWithRoles,
       });
     });
 
     it('should handle internal server errors', async () => {
-      mockTeamService.getUserTeams.mockRejectedValue(new Error('Database error'));
+      mockTeamService.getUserTeamsWithRoles.mockRejectedValue(new Error('Database error'));
 
-      const handler = routeHandlers['GET /api/teams/me'];
+      const handler = routeHandlers['GET /teams/me'];
       await handler(mockRequest, mockReply);
 
       expect(mockFastify.log?.error).toHaveBeenCalled();
@@ -557,22 +546,9 @@ describe('Teams Route', () => {
     });
 
     it('should handle membership lookup errors gracefully', async () => {
-      const userTeams = [
-        {
-          id: 'team-1',
-          name: 'Team 1',
-          slug: 'team-1',
-          description: 'First team',
-          owner_id: 'user-123',
-          created_at: new Date(),
-          updated_at: new Date(),
-        },
-      ];
+      mockTeamService.getUserTeamsWithRoles.mockRejectedValue(new Error('Membership lookup failed'));
 
-      mockTeamService.getUserTeams.mockResolvedValue(userTeams);
-      mockTeamService.getTeamMembership.mockRejectedValue(new Error('Membership lookup failed'));
-
-      const handler = routeHandlers['GET /api/teams/me'];
+      const handler = routeHandlers['GET /teams/me'];
       await handler(mockRequest, mockReply);
 
       expect(mockFastify.log?.error).toHaveBeenCalled();
@@ -584,7 +560,7 @@ describe('Teams Route', () => {
     });
   });
 
-  describe('GET /api/teams/:id - Get Team by ID', () => {
+  describe('GET /teams/:id - Get Team by ID', () => {
     beforeEach(async () => {
       await teamsRoute(mockFastify as FastifyInstance);
       mockRequest.params = { id: 'team-123' };
@@ -605,7 +581,7 @@ describe('Teams Route', () => {
       mockTeamService.getTeamById.mockResolvedValue(team);
       mockTeamService.isTeamMember.mockResolvedValue(true);
 
-      const handler = routeHandlers['GET /api/teams/:id'];
+      const handler = routeHandlers['GET /teams/:id'];
       await handler(mockRequest, mockReply);
 
       expect(mockTeamService.getTeamById).toHaveBeenCalledWith('team-123');
@@ -618,9 +594,9 @@ describe('Teams Route', () => {
     });
 
     it('should return 401 when user is not authenticated', async () => {
-      mockRequest.user = null;
+      (mockRequest as any).user = null;
 
-      const handler = routeHandlers['GET /api/teams/:id'];
+      const handler = routeHandlers['GET /teams/:id'];
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(401);
@@ -633,7 +609,7 @@ describe('Teams Route', () => {
     it('should return 404 when team is not found', async () => {
       mockTeamService.getTeamById.mockResolvedValue(null);
 
-      const handler = routeHandlers['GET /api/teams/:id'];
+      const handler = routeHandlers['GET /teams/:id'];
       await handler(mockRequest, mockReply);
 
       expect(mockTeamService.getTeamById).toHaveBeenCalledWith('team-123');
@@ -659,7 +635,7 @@ describe('Teams Route', () => {
       mockTeamService.getTeamById.mockResolvedValue(team);
       mockTeamService.isTeamMember.mockResolvedValue(false);
 
-      const handler = routeHandlers['GET /api/teams/:id'];
+      const handler = routeHandlers['GET /teams/:id'];
       await handler(mockRequest, mockReply);
 
       expect(mockTeamService.getTeamById).toHaveBeenCalledWith('team-123');
@@ -674,7 +650,7 @@ describe('Teams Route', () => {
     it('should handle internal server errors', async () => {
       mockTeamService.getTeamById.mockRejectedValue(new Error('Database error'));
 
-      const handler = routeHandlers['GET /api/teams/:id'];
+      const handler = routeHandlers['GET /teams/:id'];
       await handler(mockRequest, mockReply);
 
       expect(mockFastify.log?.error).toHaveBeenCalled();
@@ -686,7 +662,7 @@ describe('Teams Route', () => {
     });
   });
 
-  describe('PUT /api/teams/:id - Update Team', () => {
+  describe('PUT /teams/:id - Update Team', () => {
     beforeEach(async () => {
       await teamsRoute(mockFastify as FastifyInstance);
       mockRequest.params = { id: 'team-123' };
@@ -721,7 +697,7 @@ describe('Teams Route', () => {
       mockTeamService.isTeamAdmin.mockResolvedValue(true);
       mockTeamService.updateTeam.mockResolvedValue(updatedTeam);
 
-      const handler = routeHandlers['PUT /api/teams/:id'];
+      const handler = routeHandlers['PUT /teams/:id'];
       await handler(mockRequest, mockReply);
 
       expect(mockTeamService.getTeamById).toHaveBeenCalledWith('team-123');
@@ -736,9 +712,9 @@ describe('Teams Route', () => {
     });
 
     it('should return 401 when user is not authenticated', async () => {
-      mockRequest.user = null;
+      (mockRequest as any).user = null;
 
-      const handler = routeHandlers['PUT /api/teams/:id'];
+      const handler = routeHandlers['PUT /teams/:id'];
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(401);
@@ -752,7 +728,7 @@ describe('Teams Route', () => {
       mockRequest.body = { name: 'Updated Team' };
       mockTeamService.getTeamById.mockResolvedValue(null);
 
-      const handler = routeHandlers['PUT /api/teams/:id'];
+      const handler = routeHandlers['PUT /teams/:id'];
       await handler(mockRequest, mockReply);
 
       expect(mockTeamService.getTeamById).toHaveBeenCalledWith('team-123');
@@ -779,7 +755,7 @@ describe('Teams Route', () => {
       mockTeamService.getTeamById.mockResolvedValue(existingTeam);
       mockTeamService.isTeamAdmin.mockResolvedValue(false);
 
-      const handler = routeHandlers['PUT /api/teams/:id'];
+      const handler = routeHandlers['PUT /teams/:id'];
       await handler(mockRequest, mockReply);
 
       expect(mockTeamService.getTeamById).toHaveBeenCalledWith('team-123');
@@ -807,7 +783,7 @@ describe('Teams Route', () => {
       mockTeamService.getTeamById.mockResolvedValue(existingTeam);
       mockTeamService.isTeamAdmin.mockResolvedValue(true);
 
-      const handler = routeHandlers['PUT /api/teams/:id'];
+      const handler = routeHandlers['PUT /teams/:id'];
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(400);
@@ -840,7 +816,7 @@ describe('Teams Route', () => {
       mockTeamService.isTeamAdmin.mockResolvedValue(true);
       mockTeamService.updateTeam.mockResolvedValue(updatedTeam);
 
-      const handler = routeHandlers['PUT /api/teams/:id'];
+      const handler = routeHandlers['PUT /teams/:id'];
       await handler(mockRequest, mockReply);
 
       expect(mockTeamService.updateTeam).toHaveBeenCalledWith('team-123', { description: 'Updated description' });
@@ -859,7 +835,7 @@ describe('Teams Route', () => {
 
       mockRequest.body = invalidData;
 
-      const handler = routeHandlers['PUT /api/teams/:id'];
+      const handler = routeHandlers['PUT /teams/:id'];
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(400);
@@ -874,7 +850,7 @@ describe('Teams Route', () => {
       mockRequest.body = { name: 'Updated Team' };
       mockTeamService.getTeamById.mockRejectedValue(new Error('Database error'));
 
-      const handler = routeHandlers['PUT /api/teams/:id'];
+      const handler = routeHandlers['PUT /teams/:id'];
       await handler(mockRequest, mockReply);
 
       expect(mockFastify.log?.error).toHaveBeenCalled();
@@ -886,7 +862,7 @@ describe('Teams Route', () => {
     });
   });
 
-  describe('DELETE /api/teams/:id - Delete Team', () => {
+  describe('DELETE /teams/:id - Delete Team', () => {
     beforeEach(async () => {
       await teamsRoute(mockFastify as FastifyInstance);
       mockRequest.params = { id: 'team-123' };
@@ -907,7 +883,7 @@ describe('Teams Route', () => {
       mockTeamService.getTeamById.mockResolvedValue(existingTeam);
       mockTeamService.deleteTeam.mockResolvedValue(undefined);
 
-      const handler = routeHandlers['DELETE /api/teams/:id'];
+      const handler = routeHandlers['DELETE /teams/:id'];
       await handler(mockRequest, mockReply);
 
       expect(mockTeamService.getTeamById).toHaveBeenCalledWith('team-123');
@@ -920,9 +896,9 @@ describe('Teams Route', () => {
     });
 
     it('should return 401 when user is not authenticated', async () => {
-      mockRequest.user = null;
+      (mockRequest as any).user = null;
 
-      const handler = routeHandlers['DELETE /api/teams/:id'];
+      const handler = routeHandlers['DELETE /teams/:id'];
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(401);
@@ -935,7 +911,7 @@ describe('Teams Route', () => {
     it('should return 404 when team is not found', async () => {
       mockTeamService.getTeamById.mockResolvedValue(null);
 
-      const handler = routeHandlers['DELETE /api/teams/:id'];
+      const handler = routeHandlers['DELETE /teams/:id'];
       await handler(mockRequest, mockReply);
 
       expect(mockTeamService.getTeamById).toHaveBeenCalledWith('team-123');
@@ -960,7 +936,7 @@ describe('Teams Route', () => {
 
       mockTeamService.getTeamById.mockResolvedValue(existingTeam);
 
-      const handler = routeHandlers['DELETE /api/teams/:id'];
+      const handler = routeHandlers['DELETE /teams/:id'];
       await handler(mockRequest, mockReply);
 
       expect(mockTeamService.getTeamById).toHaveBeenCalledWith('team-123');
@@ -985,7 +961,7 @@ describe('Teams Route', () => {
 
       mockTeamService.getTeamById.mockResolvedValue(existingTeam);
 
-      const handler = routeHandlers['DELETE /api/teams/:id'];
+      const handler = routeHandlers['DELETE /teams/:id'];
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(400);
@@ -1010,7 +986,7 @@ describe('Teams Route', () => {
       mockTeamService.getTeamById.mockResolvedValue(existingTeam);
       mockTeamService.deleteTeam.mockRejectedValue(new Error('Cannot delete team with active resources'));
 
-      const handler = routeHandlers['DELETE /api/teams/:id'];
+      const handler = routeHandlers['DELETE /teams/:id'];
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(400);
@@ -1023,7 +999,7 @@ describe('Teams Route', () => {
     it('should handle internal server errors', async () => {
       mockTeamService.getTeamById.mockRejectedValue(new Error('Database error'));
 
-      const handler = routeHandlers['DELETE /api/teams/:id'];
+      const handler = routeHandlers['DELETE /teams/:id'];
       await handler(mockRequest, mockReply);
 
       expect(mockFastify.log?.error).toHaveBeenCalled();
@@ -1043,7 +1019,7 @@ describe('Teams Route', () => {
 
     it('should have proper OpenAPI schema for POST route', async () => {
       const postCall = (mockFastify.post as any).mock.calls.find(
-        (call: any) => call[0] === '/api/teams'
+        (call: any) => call[0] === '/teams'
       );
       
       expect(postCall).toBeDefined();
@@ -1064,7 +1040,7 @@ describe('Teams Route', () => {
 
     it('should have proper OpenAPI schema for GET route', async () => {
       const getCall = (mockFastify.get as any).mock.calls.find(
-        (call: any) => call[0] === '/api/teams/me'
+        (call: any) => call[0] === '/teams/me'
       );
       
       expect(getCall).toBeDefined();
@@ -1093,7 +1069,7 @@ describe('Teams Route', () => {
 
       mockRequest.body = teamData;
 
-      const handler = routeHandlers['POST /api/teams'];
+      const handler = routeHandlers['POST /teams'];
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(400);
@@ -1113,7 +1089,7 @@ describe('Teams Route', () => {
       mockTeamService.canUserCreateTeam.mockResolvedValue(true);
       mockTeamService.createTeam.mockRejectedValue('String error');
 
-      const handler = routeHandlers['POST /api/teams'];
+      const handler = routeHandlers['POST /teams'];
       await handler(mockRequest, mockReply);
 
       expect(mockFastify.log?.error).toHaveBeenCalled();
