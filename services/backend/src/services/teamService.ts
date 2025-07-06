@@ -36,6 +36,34 @@ export interface UpdateTeamData {
   description?: string | null;
 }
 
+export interface TeamMemberWithUser {
+  id: string;
+  user_id: string;
+  username: string;
+  email: string;
+  first_name?: string | null;
+  last_name?: string | null;
+  role: 'team_admin' | 'team_user';
+  is_admin: boolean;
+  is_owner: boolean;
+  joined_at: Date;
+}
+
+export interface UserTeamWithRole {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string | null;
+  owner_id: string;
+  is_default: boolean;
+  created_at: Date;
+  updated_at: Date;
+  role: 'team_admin' | 'team_user';
+  is_admin: boolean;
+  is_owner: boolean;
+  member_count: number;
+}
+
 export class TeamService {
   private static getDbAndSchema() {
     return {
@@ -343,5 +371,363 @@ export class TeamService {
       description: `${username}'s team`,
       is_default: true,
     });
+  }
+
+  // ===== NEW TEAM MEMBER MANAGEMENT METHODS =====
+
+  /**
+   * Get team member count
+   */
+  static async getTeamMemberCount(teamId: string): Promise<number> {
+    const { db, schema } = this.getDbAndSchema();
+    const result = await (db as any)
+      .select({ count: count() })
+      .from(schema.teamMemberships)
+      .where(eq(schema.teamMemberships.team_id, teamId));
+
+    return result[0].count;
+  }
+
+  /**
+   * Get team admin count
+   */
+  static async getTeamAdminCount(teamId: string): Promise<number> {
+    const { db, schema } = this.getDbAndSchema();
+    const result = await (db as any)
+      .select({ count: count() })
+      .from(schema.teamMemberships)
+      .where(
+        and(
+          eq(schema.teamMemberships.team_id, teamId),
+          eq(schema.teamMemberships.role, 'team_admin')
+        )
+      );
+
+    return result[0].count;
+  }
+
+  /**
+   * Check if team is a default team (using is_default flag)
+   */
+  static async isTeamDefault(teamId: string): Promise<boolean> {
+    const team = await this.getTeamById(teamId);
+    return team?.is_default || false;
+  }
+
+  /**
+   * Check if user can add member to team
+   */
+  static async canAddMemberToTeam(teamId: string): Promise<boolean> {
+    // Check if team is default (cannot add members to default teams)
+    if (await this.isTeamDefault(teamId)) {
+      return false;
+    }
+
+    // Check if team has less than 3 members
+    const memberCount = await this.getTeamMemberCount(teamId);
+    return memberCount < 3;
+  }
+
+  /**
+   * Check if user can be removed from team
+   */
+  static async canRemoveMemberFromTeam(teamId: string, userId: string): Promise<boolean> {
+    // Cannot remove from default teams
+    if (await this.isTeamDefault(teamId)) {
+      return false;
+    }
+
+    // Cannot remove if it would leave team with 0 members
+    const memberCount = await this.getTeamMemberCount(teamId);
+    if (memberCount <= 1) {
+      return false;
+    }
+
+    // Cannot remove team owner
+    if (await this.isTeamOwner(teamId, userId)) {
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
+   * Check if user can manage another team member
+   */
+  static async canUserManageTeamMember(
+    teamId: string, 
+    managerId: string, 
+    targetUserId: string, 
+    action: 'add' | 'remove' | 'change_role'
+  ): Promise<boolean> {
+    // Global admin can do anything (this will be checked in the route handler)
+    
+    // Default teams are protected
+    if (await this.isTeamDefault(teamId)) {
+      return false;
+    }
+
+    // Team owner can manage anyone (except remove themselves)
+    if (await this.isTeamOwner(teamId, managerId)) {
+      if (action === 'remove' && managerId === targetUserId) {
+        return false; // Owner cannot remove themselves
+      }
+      return true;
+    }
+
+    // Team admin can only manage team_users
+    if (await this.isTeamAdmin(teamId, managerId)) {
+      const targetMembership = await this.getTeamMembership(teamId, targetUserId);
+      if (!targetMembership) {
+        return action === 'add'; // Can add new members
+      }
+      
+      // Cannot manage other team_admins or the owner
+      if (targetMembership.role === 'team_admin' || await this.isTeamOwner(teamId, targetUserId)) {
+        return false;
+      }
+      
+      return true; // Can manage team_users
+    }
+
+    return false;
+  }
+
+  /**
+   * Add member to team
+   */
+  static async addTeamMember(teamId: string, userId: string, role: 'team_admin' | 'team_user'): Promise<TeamMembership> {
+    const { db, schema } = this.getDbAndSchema();
+
+    // Validate team exists
+    const team = await this.getTeamById(teamId);
+    if (!team) {
+      throw new Error('Team not found');
+    }
+
+    // Validate user exists
+    const userResult = await (db as any)
+      .select({ id: schema.authUser.id })
+      .from(schema.authUser)
+      .where(eq(schema.authUser.id, userId))
+      .limit(1);
+
+    if (!userResult[0]) {
+      throw new Error('User not found');
+    }
+
+    // Check if user is already a member
+    const existingMembership = await this.getTeamMembership(teamId, userId);
+    if (existingMembership) {
+      throw new Error('User is already a member of this team');
+    }
+
+    // Check if team can accept new members
+    if (!(await this.canAddMemberToTeam(teamId))) {
+      if (await this.isTeamDefault(teamId)) {
+        throw new Error('Cannot add members to default teams');
+      } else {
+        throw new Error('Team has reached maximum capacity (3 members)');
+      }
+    }
+
+    // Add the member
+    const membershipId = generateId(15);
+    const membershipData = {
+      id: membershipId,
+      team_id: teamId,
+      user_id: userId,
+      role,
+      joined_at: new Date(),
+    };
+
+    await (db as any).insert(schema.teamMemberships).values(membershipData);
+
+    return membershipData;
+  }
+
+  /**
+   * Remove member from team
+   */
+  static async removeTeamMember(teamId: string, userId: string): Promise<boolean> {
+    const { db, schema } = this.getDbAndSchema();
+
+    // Validate member exists
+    const membership = await this.getTeamMembership(teamId, userId);
+    if (!membership) {
+      throw new Error('User is not a member of this team');
+    }
+
+    // Check if member can be removed
+    if (!(await this.canRemoveMemberFromTeam(teamId, userId))) {
+      if (await this.isTeamDefault(teamId)) {
+        throw new Error('Cannot remove members from default teams');
+      } else if (await this.isTeamOwner(teamId, userId)) {
+        throw new Error('Cannot remove team owner. Transfer ownership first.');
+      } else {
+        throw new Error('Cannot remove last member from team');
+      }
+    }
+
+    // Remove the member
+    const result = await (db as any)
+      .delete(schema.teamMemberships)
+      .where(
+        and(
+          eq(schema.teamMemberships.team_id, teamId),
+          eq(schema.teamMemberships.user_id, userId)
+        )
+      );
+
+    return result.changes > 0;
+  }
+
+  /**
+   * Update member role
+   */
+  static async updateMemberRole(teamId: string, userId: string, newRole: 'team_admin' | 'team_user'): Promise<TeamMembership | null> {
+    const { db, schema } = this.getDbAndSchema();
+
+    // Validate member exists
+    const membership = await this.getTeamMembership(teamId, userId);
+    if (!membership) {
+      throw new Error('User is not a member of this team');
+    }
+
+    // Cannot change roles in default teams
+    if (await this.isTeamDefault(teamId)) {
+      throw new Error('Cannot change member roles in default teams');
+    }
+
+    // If demoting from team_admin, ensure at least one admin remains
+    if (membership.role === 'team_admin' && newRole === 'team_user') {
+      const adminCount = await this.getTeamAdminCount(teamId);
+      if (adminCount <= 1) {
+        throw new Error('Cannot demote last team admin. Promote another member first.');
+      }
+    }
+
+    // Update the role
+    await (db as any)
+      .update(schema.teamMemberships)
+      .set({ role: newRole })
+      .where(
+        and(
+          eq(schema.teamMemberships.team_id, teamId),
+          eq(schema.teamMemberships.user_id, userId)
+        )
+      );
+
+    return this.getTeamMembership(teamId, userId);
+  }
+
+  /**
+   * Transfer team ownership
+   */
+  static async transferOwnership(teamId: string, newOwnerId: string): Promise<boolean> {
+    const { db, schema } = this.getDbAndSchema();
+
+    // Validate team exists
+    const team = await this.getTeamById(teamId);
+    if (!team) {
+      throw new Error('Team not found');
+    }
+
+    // Cannot transfer ownership of default teams
+    if (team.is_default) {
+      throw new Error('Cannot transfer ownership of default teams');
+    }
+
+    // Validate new owner is a team member
+    const newOwnerMembership = await this.getTeamMembership(teamId, newOwnerId);
+    if (!newOwnerMembership) {
+      throw new Error('New owner must be a team member');
+    }
+
+    // Update team ownership
+    await (db as any)
+      .update(schema.teams)
+      .set({ 
+        owner_id: newOwnerId,
+        updated_at: new Date()
+      })
+      .where(eq(schema.teams.id, teamId));
+
+    // Ensure new owner has team_admin role
+    if (newOwnerMembership.role !== 'team_admin') {
+      await this.updateMemberRole(teamId, newOwnerId, 'team_admin');
+    }
+
+    return true;
+  }
+
+  /**
+   * Get user teams with role information
+   */
+  static async getUserTeamsWithRoles(userId: string): Promise<UserTeamWithRole[]> {
+    const { db, schema } = this.getDbAndSchema();
+    
+    const result = await (db as any)
+      .select({
+        // Team fields
+        id: schema.teams.id,
+        name: schema.teams.name,
+        slug: schema.teams.slug,
+        description: schema.teams.description,
+        owner_id: schema.teams.owner_id,
+        is_default: schema.teams.is_default,
+        created_at: schema.teams.created_at,
+        updated_at: schema.teams.updated_at,
+        // User's role in team
+        role: schema.teamMemberships.role,
+      })
+      .from(schema.teams)
+      .innerJoin(schema.teamMemberships, eq(schema.teams.id, schema.teamMemberships.team_id))
+      .where(eq(schema.teamMemberships.user_id, userId));
+
+    // Add computed fields
+    const teamsWithRoles = await Promise.all(
+      result.map(async (team: any) => ({
+        ...team,
+        is_admin: team.role === 'team_admin',
+        is_owner: team.owner_id === userId,
+        member_count: await this.getTeamMemberCount(team.id)
+      }))
+    );
+
+    return teamsWithRoles;
+  }
+
+  /**
+   * Get team members with user information
+   */
+  static async getTeamMembersWithUserInfo(teamId: string): Promise<TeamMemberWithUser[]> {
+    const { db, schema } = this.getDbAndSchema();
+    
+    const result = await (db as any)
+      .select({
+        id: schema.teamMemberships.id,
+        user_id: schema.teamMemberships.user_id,
+        role: schema.teamMemberships.role,
+        joined_at: schema.teamMemberships.joined_at,
+        username: schema.authUser.username,
+        email: schema.authUser.email,
+        first_name: schema.authUser.first_name,
+        last_name: schema.authUser.last_name,
+      })
+      .from(schema.teamMemberships)
+      .innerJoin(schema.authUser, eq(schema.teamMemberships.user_id, schema.authUser.id))
+      .where(eq(schema.teamMemberships.team_id, teamId));
+
+    // Get team owner_id
+    const team = await this.getTeamById(teamId);
+    const ownerId = team?.owner_id;
+
+    // Add computed fields
+    return result.map((member: any) => ({
+      ...member,
+      is_admin: member.role === 'team_admin',
+      is_owner: member.user_id === ownerId
+    }));
   }
 }
