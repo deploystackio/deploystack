@@ -141,7 +141,7 @@ describe('Cloud Credentials Cross-User Permissions E2E Tests', () => {
     };
 
     const response = await request(server.server)
-      .post(`/teams/${context.testCredentialsUser1TeamId}/cloud-credentials`)
+      .post(`/api/teams/${context.testCredentialsUser1TeamId}/cloud-credentials`)
       .set('Cookie', context.testCredentialsUser1Cookie!)
       .send(credentialData);
 
@@ -156,7 +156,9 @@ describe('Cloud Credentials Cross-User Permissions E2E Tests', () => {
     expect(credential.providerId).toBe('aws');
     expect(credential.name).toBe(credentialData.name);
     expect(credential.comment).toBe(credentialData.comment);
-    expect(credential.createdBy).toBe(context.testCredentialsUser1Id);
+    // Handle both possible response formats for createdBy
+    const createdById = typeof credential.createdBy === 'object' ? credential.createdBy.id : credential.createdBy;
+    expect(createdById).toBe(context.testCredentialsUser1Id);
     
     // Verify provider information
     expect(credential.provider.id).toBe('aws');
@@ -185,7 +187,7 @@ describe('Cloud Credentials Cross-User Permissions E2E Tests', () => {
     
     // User 2 attempts to list User 1's team credentials
     const response = await request(server.server)
-      .get(`/teams/${context.testCredentialsUser1TeamId}/cloud-credentials`)
+      .get(`/api/teams/${context.testCredentialsUser1TeamId}/cloud-credentials`)
       .set('Cookie', context.testCredentialsUser2Cookie!);
 
     // Should be forbidden - User 2 is not a member of User 1's team
@@ -199,7 +201,7 @@ describe('Cloud Credentials Cross-User Permissions E2E Tests', () => {
     
     // User 2 attempts to view User 1's specific credential
     const response = await request(server.server)
-      .get(`/teams/${context.testCredentialsUser1TeamId}/cloud-credentials/${context.testCredentialsUser1CredentialId}`)
+      .get(`/api/teams/${context.testCredentialsUser1TeamId}/cloud-credentials/${context.testCredentialsUser1CredentialId}`)
       .set('Cookie', context.testCredentialsUser2Cookie!);
 
     // Should be forbidden - User 2 is not a member of User 1's team
@@ -221,7 +223,7 @@ describe('Cloud Credentials Cross-User Permissions E2E Tests', () => {
 
     // User 2 attempts to update User 1's credential
     const response = await request(server.server)
-      .put(`/teams/${context.testCredentialsUser1TeamId}/cloud-credentials/${context.testCredentialsUser1CredentialId}`)
+      .put(`/api/teams/${context.testCredentialsUser1TeamId}/cloud-credentials/${context.testCredentialsUser1CredentialId}`)
       .set('Cookie', context.testCredentialsUser2Cookie!)
       .send(updateData);
 
@@ -236,7 +238,7 @@ describe('Cloud Credentials Cross-User Permissions E2E Tests', () => {
     
     // User 2 attempts to delete User 1's credential
     const response = await request(server.server)
-      .delete(`/teams/${context.testCredentialsUser1TeamId}/cloud-credentials/${context.testCredentialsUser1CredentialId}`)
+      .delete(`/api/teams/${context.testCredentialsUser1TeamId}/cloud-credentials/${context.testCredentialsUser1CredentialId}`)
       .set('Cookie', context.testCredentialsUser2Cookie!);
 
     // Should be forbidden - User 2 is not a member of User 1's team
@@ -250,7 +252,7 @@ describe('Cloud Credentials Cross-User Permissions E2E Tests', () => {
     
     // User 1 verifies their credential still exists and is unchanged
     const response = await request(server.server)
-      .get(`/teams/${context.testCredentialsUser1TeamId}/cloud-credentials/${context.testCredentialsUser1CredentialId}`)
+      .get(`/api/teams/${context.testCredentialsUser1TeamId}/cloud-credentials/${context.testCredentialsUser1CredentialId}`)
       .set('Cookie', context.testCredentialsUser1Cookie!);
 
     expect(response.status).toBe(200);
@@ -260,7 +262,7 @@ describe('Cloud Credentials Cross-User Permissions E2E Tests', () => {
     const credential = response.body.data;
     expect(credential.name).toBe('User1 Test Credentials'); // Original name unchanged
     expect(credential.comment).toBe('Test credentials for cross-user permission testing'); // Original comment unchanged
-    expect(credential.createdBy).toBe(context.testCredentialsUser1Id);
+    expect(credential.createdBy.id).toBe(context.testCredentialsUser1Id);
     expect(credential.teamId).toBe(context.testCredentialsUser1TeamId);
     
     // Verify fields are still intact
@@ -283,7 +285,7 @@ describe('Cloud Credentials Cross-User Permissions E2E Tests', () => {
     };
 
     const createResponse = await request(server.server)
-      .post(`/teams/${context.testCredentialsUser2TeamId}/cloud-credentials`)
+      .post(`/api/teams/${context.testCredentialsUser2TeamId}/cloud-credentials`)
       .set('Cookie', context.testCredentialsUser2Cookie!)
       .send(credentialData);
 
@@ -293,14 +295,16 @@ describe('Cloud Credentials Cross-User Permissions E2E Tests', () => {
     
     const credential = createResponse.body.data;
     expect(credential.teamId).toBe(context.testCredentialsUser2TeamId);
-    expect(credential.createdBy).toBe(context.testCredentialsUser2Id);
+    // Handle both possible response formats for createdBy
+    const createdById = typeof credential.createdBy === 'object' ? credential.createdBy.id : credential.createdBy;
+    expect(createdById).toBe(context.testCredentialsUser2Id);
     expect(credential.name).toBe(credentialData.name);
     
     const user2CredentialId = credential.id;
     
     // User 2 can list their own team's credentials
     const listResponse = await request(server.server)
-      .get(`/teams/${context.testCredentialsUser2TeamId}/cloud-credentials`)
+      .get(`/api/teams/${context.testCredentialsUser2TeamId}/cloud-credentials`)
       .set('Cookie', context.testCredentialsUser2Cookie!);
 
     expect(listResponse.status).toBe(200);
@@ -310,7 +314,7 @@ describe('Cloud Credentials Cross-User Permissions E2E Tests', () => {
     
     // User 2 can view their own credential
     const viewResponse = await request(server.server)
-      .get(`/teams/${context.testCredentialsUser2TeamId}/cloud-credentials/${user2CredentialId}`)
+      .get(`/api/teams/${context.testCredentialsUser2TeamId}/cloud-credentials/${user2CredentialId}`)
       .set('Cookie', context.testCredentialsUser2Cookie!);
 
     expect(viewResponse.status).toBe(200);
@@ -324,7 +328,7 @@ describe('Cloud Credentials Cross-User Permissions E2E Tests', () => {
     };
 
     const updateResponse = await request(server.server)
-      .put(`/teams/${context.testCredentialsUser2TeamId}/cloud-credentials/${user2CredentialId}`)
+      .put(`/api/teams/${context.testCredentialsUser2TeamId}/cloud-credentials/${user2CredentialId}`)
       .set('Cookie', context.testCredentialsUser2Cookie!)
       .send(updateData);
 
@@ -335,7 +339,7 @@ describe('Cloud Credentials Cross-User Permissions E2E Tests', () => {
     
     // User 2 can delete their own credential
     const deleteResponse = await request(server.server)
-      .delete(`/teams/${context.testCredentialsUser2TeamId}/cloud-credentials/${user2CredentialId}`)
+      .delete(`/api/teams/${context.testCredentialsUser2TeamId}/cloud-credentials/${user2CredentialId}`)
       .set('Cookie', context.testCredentialsUser2Cookie!);
 
     expect(deleteResponse.status).toBe(200);
@@ -348,7 +352,7 @@ describe('Cloud Credentials Cross-User Permissions E2E Tests', () => {
     
     // User 1 should not be able to access User 2's team
     const user1AccessUser2TeamResponse = await request(server.server)
-      .get(`/teams/${context.testCredentialsUser2TeamId}/cloud-credentials`)
+      .get(`/api/teams/${context.testCredentialsUser2TeamId}/cloud-credentials`)
       .set('Cookie', context.testCredentialsUser1Cookie!);
 
     expect(user1AccessUser2TeamResponse.status).toBe(403);
@@ -356,7 +360,7 @@ describe('Cloud Credentials Cross-User Permissions E2E Tests', () => {
     
     // User 2 should not be able to access User 1's team
     const user2AccessUser1TeamResponse = await request(server.server)
-      .get(`/teams/${context.testCredentialsUser1TeamId}/cloud-credentials`)
+      .get(`/api/teams/${context.testCredentialsUser1TeamId}/cloud-credentials`)
       .set('Cookie', context.testCredentialsUser2Cookie!);
 
     expect(user2AccessUser1TeamResponse.status).toBe(403);
@@ -364,7 +368,7 @@ describe('Cloud Credentials Cross-User Permissions E2E Tests', () => {
     
     // Verify User 1's credential still exists and is accessible only to User 1
     const user1CredentialResponse = await request(server.server)
-      .get(`/teams/${context.testCredentialsUser1TeamId}/cloud-credentials`)
+      .get(`/api/teams/${context.testCredentialsUser1TeamId}/cloud-credentials`)
       .set('Cookie', context.testCredentialsUser1Cookie!);
 
     expect(user1CredentialResponse.status).toBe(200);
@@ -374,7 +378,7 @@ describe('Cloud Credentials Cross-User Permissions E2E Tests', () => {
     
     // Verify User 2's team is empty (they deleted their credential)
     const user2CredentialResponse = await request(server.server)
-      .get(`/teams/${context.testCredentialsUser2TeamId}/cloud-credentials`)
+      .get(`/api/teams/${context.testCredentialsUser2TeamId}/cloud-credentials`)
       .set('Cookie', context.testCredentialsUser2Cookie!);
 
     expect(user2CredentialResponse.status).toBe(200);

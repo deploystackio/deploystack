@@ -126,7 +126,7 @@ describe('Cloud Credentials E2E Tests', () => {
     const context = getTestContext();
     
     const response = await request(server.server)
-      .get(`/teams/${context.teamAdminTeamId}/cloud-providers`)
+      .get(`/api/teams/${context.teamAdminTeamId}/cloud-providers`)
       .set('Cookie', context.teamAdminCredentialsCookie!);
 
     expect(response.status).toBe(200);
@@ -168,7 +168,7 @@ describe('Cloud Credentials E2E Tests', () => {
     };
 
     const response = await request(server.server)
-      .post(`/teams/${context.teamAdminTeamId}/cloud-credentials`)
+      .post(`/api/teams/${context.teamAdminTeamId}/cloud-credentials`)
       .set('Cookie', context.teamAdminCredentialsCookie!)
       .send(credentialData);
 
@@ -221,7 +221,7 @@ describe('Cloud Credentials E2E Tests', () => {
     };
 
     const response = await request(server.server)
-      .post(`/teams/${context.teamAdminTeamId}/cloud-credentials`)
+      .post(`/api/teams/${context.teamAdminTeamId}/cloud-credentials`)
       .set('Cookie', context.teamAdminCredentialsCookie!)
       .send(credentialData);
 
@@ -251,7 +251,7 @@ describe('Cloud Credentials E2E Tests', () => {
     };
 
     const response = await request(server.server)
-      .put(`/teams/${context.teamAdminTeamId}/cloud-credentials/${context.editTestCredentialId}`)
+      .put(`/api/teams/${context.teamAdminTeamId}/cloud-credentials/${context.editTestCredentialId}`)
       .set('Cookie', context.teamAdminCredentialsCookie!)
       .send(updateData);
 
@@ -277,7 +277,7 @@ describe('Cloud Credentials E2E Tests', () => {
     const context = getTestContext();
     
     const response = await request(server.server)
-      .delete(`/teams/${context.teamAdminTeamId}/cloud-credentials/${context.editTestCredentialId}`)
+      .delete(`/api/teams/${context.teamAdminTeamId}/cloud-credentials/${context.editTestCredentialId}`)
       .set('Cookie', context.teamAdminCredentialsCookie!);
 
     expect(response.status).toBe(200);
@@ -286,7 +286,7 @@ describe('Cloud Credentials E2E Tests', () => {
     
     // Verify credential is deleted by trying to get it
     const getResponse = await request(server.server)
-      .get(`/teams/${context.teamAdminTeamId}/cloud-credentials/${context.editTestCredentialId}`)
+      .get(`/api/teams/${context.teamAdminTeamId}/cloud-credentials/${context.editTestCredentialId}`)
       .set('Cookie', context.teamAdminCredentialsCookie!);
 
     expect(getResponse.status).toBe(404);
@@ -307,7 +307,7 @@ describe('Cloud Credentials E2E Tests', () => {
     };
 
     const response1 = await request(server.server)
-      .post(`/teams/${context.teamAdminTeamId}/cloud-credentials`)
+      .post(`/api/teams/${context.teamAdminTeamId}/cloud-credentials`)
       .set('Cookie', context.teamAdminCredentialsCookie!)
       .send(credential1Data);
 
@@ -326,7 +326,7 @@ describe('Cloud Credentials E2E Tests', () => {
     };
 
     const response2 = await request(server.server)
-      .post(`/teams/${context.teamAdminTeamId}/cloud-credentials`)
+      .post(`/api/teams/${context.teamAdminTeamId}/cloud-credentials`)
       .set('Cookie', context.teamAdminCredentialsCookie!)
       .send(credential2Data);
 
@@ -344,7 +344,7 @@ describe('Cloud Credentials E2E Tests', () => {
     const context = getTestContext();
     
     const response = await request(server.server)
-      .get(`/teams/${context.teamAdminTeamId}/cloud-credentials`)
+      .get(`/api/teams/${context.teamAdminTeamId}/cloud-credentials`)
       .set('Cookie', context.globalAdminCredentialsCookie!);
 
     expect(response.status).toBe(200);
@@ -387,7 +387,7 @@ describe('Cloud Credentials E2E Tests', () => {
     const context = getTestContext();
     
     const response = await request(server.server)
-      .get('/teams/non-existent-team-id/cloud-credentials')
+      .get('/api/teams/non-existent-team-id/cloud-credentials')
       .set('Cookie', context.globalAdminCredentialsCookie!);
 
     // Global admin should not be able to access non-existent team
@@ -400,7 +400,7 @@ describe('Cloud Credentials E2E Tests', () => {
     const context = getTestContext();
     
     const response = await request(server.server)
-      .get(`/teams/${context.teamAdminTeamId}/cloud-credentials/${context.prodCredentialId}`)
+      .get(`/api/teams/${context.teamAdminTeamId}/cloud-credentials/${context.prodCredentialId}`)
       .set('Cookie', context.globalAdminCredentialsCookie!);
 
     expect(response.status).toBe(200);
@@ -426,7 +426,7 @@ describe('Cloud Credentials E2E Tests', () => {
     
     // Test as global admin viewing other team's credentials
     const globalAdminResponse = await request(server.server)
-      .get(`/teams/${context.teamAdminTeamId}/cloud-credentials/${context.prodCredentialId}`)
+      .get(`/api/teams/${context.teamAdminTeamId}/cloud-credentials/${context.prodCredentialId}`)
       .set('Cookie', context.globalAdminCredentialsCookie!);
 
     expect(globalAdminResponse.status).toBe(200);
@@ -444,7 +444,7 @@ describe('Cloud Credentials E2E Tests', () => {
     
     // Test as team admin viewing own team's credentials
     const teamAdminResponse = await request(server.server)
-      .get(`/teams/${context.teamAdminTeamId}/cloud-credentials/${context.prodCredentialId}`)
+      .get(`/api/teams/${context.teamAdminTeamId}/cloud-credentials/${context.prodCredentialId}`)
       .set('Cookie', context.teamAdminCredentialsCookie!);
 
     expect(teamAdminResponse.status).toBe(200);
@@ -462,7 +462,7 @@ describe('Cloud Credentials E2E Tests', () => {
     
     // Test invalid provider ID
     const invalidProviderResponse = await request(server.server)
-      .post(`/teams/${context.teamAdminTeamId}/cloud-credentials`)
+      .post(`/api/teams/${context.teamAdminTeamId}/cloud-credentials`)
       .set('Cookie', context.teamAdminCredentialsCookie!)
       .send({
         providerId: 'invalid-provider',
@@ -476,7 +476,7 @@ describe('Cloud Credentials E2E Tests', () => {
     
     // Test missing required fields
     const missingFieldsResponse = await request(server.server)
-      .post(`/teams/${context.teamAdminTeamId}/cloud-credentials`)
+      .post(`/api/teams/${context.teamAdminTeamId}/cloud-credentials`)
       .set('Cookie', context.teamAdminCredentialsCookie!)
       .send({
         providerId: 'aws',
@@ -493,7 +493,7 @@ describe('Cloud Credentials E2E Tests', () => {
     
     // Test duplicate credential name
     const duplicateNameResponse = await request(server.server)
-      .post(`/teams/${context.teamAdminTeamId}/cloud-credentials`)
+      .post(`/api/teams/${context.teamAdminTeamId}/cloud-credentials`)
       .set('Cookie', context.teamAdminCredentialsCookie!)
       .send({
         providerId: 'aws',
@@ -514,7 +514,7 @@ describe('Cloud Credentials E2E Tests', () => {
     
     // Test without authentication
     const noAuthResponse = await request(server.server)
-      .get(`/teams/${context.regularUserTeamId}/cloud-credentials`);
+      .get(`/api/teams/${context.regularUserTeamId}/cloud-credentials`);
 
     expect(noAuthResponse.status).toBe(401);
     expect(noAuthResponse.body.success).toBe(false);
@@ -522,7 +522,7 @@ describe('Cloud Credentials E2E Tests', () => {
     
     // Test accessing non-existent team
     const invalidTeamResponse = await request(server.server)
-      .get('/teams/non-existent-team-id/cloud-credentials')
+      .get('/api/teams/non-existent-team-id/cloud-credentials')
       .set('Cookie', context.regularUserCredentialsCookie!);
 
     expect(invalidTeamResponse.status).toBe(403);
@@ -531,7 +531,7 @@ describe('Cloud Credentials E2E Tests', () => {
     
     // Test accessing non-existent credential
     const invalidCredentialResponse = await request(server.server)
-      .get(`/teams/${context.regularUserTeamId}/cloud-credentials/non-existent-credential-id`)
+      .get(`/api/teams/${context.regularUserTeamId}/cloud-credentials/non-existent-credential-id`)
       .set('Cookie', context.regularUserCredentialsCookie!);
 
     expect(invalidCredentialResponse.status).toBe(404);
