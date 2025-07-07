@@ -13,7 +13,7 @@
 //
 // DO NOT create or edit schema.ts - this file has been removed to avoid confusion.
 
-import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
 
 // Define tables with proper foreign key relationships
 export const roles = sqliteTable('roles', {
@@ -120,6 +120,92 @@ export const teamCloudCredentials = sqliteTable('teamCloudCredentials', {
   created_at: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
   updated_at: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 });
+
+// MCP Server Categories for better organization
+export const mcpCategories = sqliteTable('mcpCategories', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  description: text('description'),
+  icon: text('icon'), // Icon name/class for UI
+  sort_order: integer('sort_order').notNull().default(0),
+  created_at: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+});
+
+// Main MCP Server catalog table
+export const mcpServers = sqliteTable('mcpServers', {
+  id: text('id').primaryKey(),
+  
+  // Basic Information
+  name: text('name').notNull(), // Display name like "Playwright MCP"
+  slug: text('slug').notNull().unique(), // Globally unique with team prefix for team servers
+  description: text('description').notNull(), // Short description
+  long_description: text('long_description'), // Full README content
+  
+  // Repository & Package Info
+  github_url: text('github_url'), // https://github.com/microsoft/playwright-mcp
+  git_branch: text('git_branch').default('main'), // main, master, develop
+  homepage_url: text('homepage_url'), // https://playwright.dev
+  
+  // Technical Details
+  language: text('language').notNull(), // 'typescript', 'javascript', 'python', 'go'
+  runtime: text('runtime').notNull(), // 'node', 'python', 'docker'
+  runtime_min_version: text('runtime_min_version'), // e.g., "Node.js 18+", "Python 3.11+"
+  
+  // Installation Methods (JSON array of objects)
+  installation_methods: text('installation_methods').notNull(), // [{"type": "npm", "command": "npx @playwright/mcp"}, {"type": "docker", "image": "..."}]
+  
+  // MCP Capabilities (JSON array)
+  tools: text('tools').notNull(), // JSON array of tool definitions with descriptions
+  resources: text('resources'), // JSON array of resource types
+  prompts: text('prompts'), // JSON array of available prompts
+  
+  // Access Control & Visibility
+  visibility: text('visibility').notNull().default('team'), // 'global', 'team'
+  owner_team_id: text('owner_team_id').references(() => teams.id, { onDelete: 'cascade' }), // NULL for global servers
+  created_by: text('created_by').notNull().references(() => authUser.id),
+  
+  // Organization/Author Info
+  author_name: text('author_name'), // Microsoft Corporation, Fábio Ferreira
+  author_contact: text('author_contact'), // @fabiomlferreira, email
+  organization: text('organization'), // Microsoft, NoopStudios
+  license: text('license'), // Apache-2.0, MIT
+  
+  // Deployment & Configuration
+  default_config: text('default_config'), // JSON of default configuration
+  environment_variables: text('environment_variables'), // JSON array of required env vars
+  dependencies: text('dependencies'), // JSON of dependencies
+  
+  // Metadata & Status
+  category_id: text('category_id').references(() => mcpCategories.id),
+  tags: text('tags'), // JSON array: ["browser", "automation", "testing"]
+  status: text('status').notNull().default('active'), // 'active', 'deprecated', 'maintenance'
+  featured: integer('featured', { mode: 'boolean' }).notNull().default(false),
+  
+  // Timestamps
+  created_at: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  updated_at: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  last_sync_at: integer('last_sync_at', { mode: 'timestamp' }), // Last GitHub sync
+}, (table) => ({
+  visibilityIdx: index('mcp_servers_visibility_idx').on(table.visibility),
+  categoryIdx: index('mcp_servers_category_idx').on(table.category_id),
+  statusIdx: index('mcp_servers_status_idx').on(table.status),
+  ownerTeamIdx: index('mcp_servers_owner_team_idx').on(table.owner_team_id),
+}));
+
+// MCP Server Versions/Releases tracking
+export const mcpServerVersions = sqliteTable('mcpServerVersions', {
+  id: text('id').primaryKey(),
+  server_id: text('server_id').notNull().references(() => mcpServers.id, { onDelete: 'cascade' }),
+  version: text('version').notNull(), // 0.0.29, 1.2.3
+  git_commit: text('git_commit'), // GitHub commit hash
+  changelog: text('changelog'), // Release notes
+  is_latest: integer('is_latest', { mode: 'boolean' }).notNull().default(false),
+  is_stable: integer('is_stable', { mode: 'boolean' }).notNull().default(true),
+  created_at: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+}, (table) => ({
+  serverVersionIdx: index('mcp_server_versions_server_idx').on(table.server_id),
+  latestIdx: index('mcp_server_versions_latest_idx').on(table.is_latest),
+}));
 
 // Plugin table definitions - populated dynamically by the plugin system
 // This object will hold definitions for plugin tables, to be populated dynamically.
