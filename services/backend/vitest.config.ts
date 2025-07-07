@@ -4,7 +4,11 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['tests/unit/**/*.test.ts'],
-    exclude: ['tests/e2e/**/*'],
+    exclude: [
+      'tests/e2e/**/*',
+      'tests/unit/**/._*.test.ts', // Exclude macOS resource fork files
+      '**/._*' // Exclude all macOS resource fork files
+    ],
     watch: false, // Disable watch mode by default
     testTimeout: 10000, // 10 seconds timeout for unit tests
     typecheck: {

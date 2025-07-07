@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, beforeEach, type MockedFunction } from 'vitest';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { registerRoutes } from '../../../src/routes/index';
+import { getVersionString } from '../../../src/config/version';
+
+// Get version dynamically from version config
+const CURRENT_VERSION = getVersionString();
 
 // Mock the route modules
 vi.mock('../../../src/routes/db/status');
@@ -90,6 +94,14 @@ describe('Main Routes Registration', () => {
     mockHealthRoute.mockResolvedValue(undefined);
   });
 
+  describe('Version Management', () => {
+    it('should read version from version config', () => {
+      expect(CURRENT_VERSION).toBeDefined();
+      expect(typeof CURRENT_VERSION).toBe('string');
+      expect(CURRENT_VERSION).toMatch(/^\d+\.\d+\.\d+/);
+    });
+  });
+
   describe('Route Registration', () => {
     it('should register all route modules', async () => {
       await registerRoutes(mockFastify as FastifyInstance);
@@ -167,7 +179,7 @@ describe('Main Routes Registration', () => {
         message: 'DeployStack Backend is running.',
         status: 'Database Not Configured/Connected - Use /api/db/status and /api/db/setup',
         timestamp: expect.any(String),
-        version: '0.20.9'
+        version: CURRENT_VERSION
       });
 
       // Verify timestamp is a valid ISO string
@@ -187,7 +199,7 @@ describe('Main Routes Registration', () => {
         message: 'DeployStack Backend is running.',
         status: 'Database Connected',
         timestamp: expect.any(String),
-        version: '0.20.9'
+        version: CURRENT_VERSION
       });
 
       // Verify timestamp is a valid ISO string
@@ -211,7 +223,7 @@ describe('Main Routes Registration', () => {
       const handler = routeHandlers['GET /'];
       const result = await handler(mockRequest, mockReply);
 
-      expect(result.version).toBe('0.20.9');
+      expect(result.version).toBe(CURRENT_VERSION);
       expect(GlobalSettings.getBoolean).toHaveBeenCalledWith('global.show_version', true);
     });
 
