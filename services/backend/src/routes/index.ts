@@ -17,6 +17,8 @@ import teamsRoute from './teams'
 import cloudCredentialsRoute from './cloud-credentials'
 // Import health check route
 import healthRoute from './health'
+// Import MCP routes
+import mcpRoutes from './mcp'
 
 // Response schema for the root health check endpoint
 const healthCheckResponseSchema = z.object({
@@ -48,6 +50,9 @@ export const registerRoutes = (server: FastifyInstance): void => {
     
     // Register cloud credentials routes
     await apiInstance.register(cloudCredentialsRoute);
+    
+    // Register MCP routes
+    await apiInstance.register(mcpRoutes);
   }, { prefix: '/api' });
 
   // Define a default route with comprehensive OpenAPI documentation

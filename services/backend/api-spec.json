@@ -16,6 +16,34 @@
     "schemas": {}
   },
   "paths": {
+    "/api/plugin/example-plugin/examples": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/plugin/example-plugin/examples/{id}": {
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
     "/": {
       "get": {
         "summary": "API health check",
@@ -10467,6 +10495,728 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/api/mcp/categories": {
+      "get": {
+        "summary": "List all MCP server categories",
+        "tags": [
+          "MCP Categories"
+        ],
+        "description": "Retrieve all available MCP server categories for organization",
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "icon": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "sort_order": {
+                            "type": "number"
+                          },
+                          "created_at": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "description",
+                          "icon",
+                          "sort_order",
+                          "created_at"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create MCP category (Admin only)",
+        "tags": [
+          "MCP Categories"
+        ],
+        "description": "Create a new MCP server category - requires global admin permissions",
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/mcp/categories/{id}": {
+      "put": {
+        "summary": "Update MCP category (Admin only)",
+        "tags": [
+          "MCP Categories"
+        ],
+        "description": "Update an existing MCP server category - requires global admin permissions",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete MCP category (Admin only)",
+        "tags": [
+          "MCP Categories"
+        ],
+        "description": "Delete an MCP server category - requires global admin permissions",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/mcp/servers": {
+      "get": {
+        "summary": "List MCP servers",
+        "tags": [
+          "MCP Servers"
+        ],
+        "description": "Retrieve MCP servers visible to the current user based on their permissions",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "category_id",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "language",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "runtime",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "active",
+                "deprecated",
+                "maintenance"
+              ]
+            },
+            "in": "query",
+            "name": "status",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "boolean"
+            },
+            "in": "query",
+            "name": "featured",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "search",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "slug": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "type": "string"
+                          },
+                          "long_description": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "github_url": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "homepage_url": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "language": {
+                            "type": "string"
+                          },
+                          "runtime": {
+                            "type": "string"
+                          },
+                          "runtime_min_version": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "installation_methods": {
+                            "type": "string"
+                          },
+                          "tools": {
+                            "type": "string"
+                          },
+                          "resources": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "prompts": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "visibility": {
+                            "type": "string",
+                            "enum": [
+                              "global",
+                              "team"
+                            ]
+                          },
+                          "owner_team_id": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "author_name": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "author_contact": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "organization": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "license": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "category_id": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "tags": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "active",
+                              "deprecated",
+                              "maintenance"
+                            ]
+                          },
+                          "featured": {
+                            "type": "boolean"
+                          },
+                          "created_at": {
+                            "type": "string"
+                          },
+                          "updated_at": {
+                            "type": "string"
+                          },
+                          "last_sync_at": {
+                            "type": "string",
+                            "nullable": true
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "slug",
+                          "description",
+                          "long_description",
+                          "github_url",
+                          "homepage_url",
+                          "language",
+                          "runtime",
+                          "runtime_min_version",
+                          "installation_methods",
+                          "tools",
+                          "resources",
+                          "prompts",
+                          "visibility",
+                          "owner_team_id",
+                          "author_name",
+                          "author_contact",
+                          "organization",
+                          "license",
+                          "category_id",
+                          "tags",
+                          "status",
+                          "featured",
+                          "created_at",
+                          "updated_at",
+                          "last_sync_at"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/mcp/servers/{id}": {
+      "get": {
+        "summary": "Get MCP server by ID",
+        "tags": [
+          "MCP Servers"
+        ],
+        "description": "Retrieve a specific MCP server by its ID",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/mcp/servers/search": {
+      "get": {
+        "summary": "Search MCP servers",
+        "tags": [
+          "MCP Servers"
+        ],
+        "description": "Search MCP servers by query string",
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/mcp/servers/global": {
+      "post": {
+        "summary": "Create global MCP server (Admin only)",
+        "tags": [
+          "MCP Servers"
+        ],
+        "description": "Create a new global MCP server - requires global admin permissions",
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/mcp/servers/global/{id}": {
+      "put": {
+        "summary": "Update global MCP server (Admin only)",
+        "tags": [
+          "MCP Servers"
+        ],
+        "description": "Update a global MCP server - requires global admin permissions",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete global MCP server (Admin only)",
+        "tags": [
+          "MCP Servers"
+        ],
+        "description": "Delete a global MCP server - requires global admin permissions",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/mcp/teams/{teamId}/servers": {
+      "get": {
+        "summary": "List team MCP servers",
+        "tags": [
+          "MCP Team Servers"
+        ],
+        "description": "List MCP servers for a specific team",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "teamId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create team MCP server",
+        "tags": [
+          "MCP Team Servers"
+        ],
+        "description": "Create a new MCP server for a team",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "teamId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/mcp/teams/{teamId}/servers/{serverId}": {
+      "put": {
+        "summary": "Update team MCP server",
+        "tags": [
+          "MCP Team Servers"
+        ],
+        "description": "Update a team MCP server",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "teamId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "serverId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete team MCP server",
+        "tags": [
+          "MCP Team Servers"
+        ],
+        "description": "Delete a team MCP server",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "teamId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "serverId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/mcp/servers/{serverId}/versions": {
+      "get": {
+        "summary": "List MCP server versions",
+        "tags": [
+          "MCP Versions"
+        ],
+        "description": "List all versions/releases for a specific MCP server",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "serverId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create MCP server version",
+        "tags": [
+          "MCP Versions"
+        ],
+        "description": "Create a new version/release for an MCP server",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "serverId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/mcp/servers/{serverId}/versions/{versionId}": {
+      "put": {
+        "summary": "Update MCP server version",
+        "tags": [
+          "MCP Versions"
+        ],
+        "description": "Update an existing version/release for an MCP server",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "serverId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "versionId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/mcp/github/sync/{serverId}": {
+      "post": {
+        "summary": "Sync MCP server from GitHub",
+        "tags": [
+          "MCP GitHub Integration"
+        ],
+        "description": "Sync an MCP server with its GitHub repository to update metadata and versions",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "serverId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/mcp/github/repo-info": {
+      "get": {
+        "summary": "Get GitHub repository info",
+        "tags": [
+          "MCP GitHub Integration"
+        ],
+        "description": "Get repository information from GitHub for MCP server creation/validation",
+        "responses": {
+          "200": {
+            "description": "Default Response"
           }
         }
       }
