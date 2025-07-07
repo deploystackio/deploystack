@@ -61,6 +61,7 @@ services/backend/persistent_data/*
 services/backend/tests/e2e/test-data/*.db
 
 ._*.ts
+._*.sh
 ._*.vue
 ._*.md
 ._*.js

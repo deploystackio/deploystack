@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { displayStartupBanner } from '../../../src/utils/banner';
 import type { FastifyBaseLogger } from 'fastify';
+import { getVersionString } from '../../../src/config/version';
+
+// Get version dynamically from version config
+const CURRENT_VERSION = getVersionString();
 
 // Helper function to strip ANSI color codes from strings
 const stripAnsiCodes = (str: string): string => {
@@ -10,6 +14,14 @@ const stripAnsiCodes = (str: string): string => {
 describe('banner.ts', () => {
   let mockLogger: FastifyBaseLogger;
   let originalEnv: NodeJS.ProcessEnv;
+
+  describe('Version Management', () => {
+    it('should read version from version config', () => {
+      expect(CURRENT_VERSION).toBeDefined();
+      expect(typeof CURRENT_VERSION).toBe('string');
+      expect(CURRENT_VERSION).toMatch(/^\d+\.\d+\.\d+/);
+    });
+  });
 
   beforeEach(() => {
     // Create mock logger
@@ -44,7 +56,7 @@ describe('banner.ts', () => {
       const logCall = (mockLogger.info as any).mock.calls[0];
       expect(logCall[0]).toEqual({
         port: testPort,
-        version: '0.20.9',
+        version: CURRENT_VERSION,
         environment: 'test',
         operation: 'startup_banner'
       });
@@ -98,8 +110,8 @@ describe('banner.ts', () => {
       const logCall = (mockLogger.info as any).mock.calls[0];
       const bannerOutput = logCall[1] as string;
       // Should use the version from version.ts (which reads from package.json in development)
-      expect(bannerOutput).toContain('v0.20.9');
-      expect(logCall[0].version).toBe('0.20.9');
+      expect(bannerOutput).toContain(`v${CURRENT_VERSION}`);
+      expect(logCall[0].version).toBe(CURRENT_VERSION);
     });
 
     it('should display current NODE_ENV', () => {
@@ -231,9 +243,9 @@ describe('banner.ts', () => {
       const logCall = (mockLogger.info as any).mock.calls[0];
       const bannerOutput = logCall[1] as string;
       const cleanOutput = stripAnsiCodes(bannerOutput);
-      expect(cleanOutput).toContain('v0.20.9'); // Should use version.ts data
+      expect(cleanOutput).toContain(`v${CURRENT_VERSION}`); // Should use version.ts data
       expect(cleanOutput).toContain('Environment: development'); // Should fallback to default
-      expect(logCall[0].version).toBe('0.20.9');
+      expect(logCall[0].version).toBe(CURRENT_VERSION);
       expect(logCall[0].environment).toBe('development');
       
       // Restore original environment variables
