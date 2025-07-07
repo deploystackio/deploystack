@@ -1,5 +1,9 @@
 # Changelog
 
+## <small>0.22.1 (2025-07-07)</small>
+
+* release v0.22.0 ([021a1e8](https://github.com/deploystackio/deploystack/commit/021a1e888dd2fe8cb7a85edb6518c478979a28cd))*  ([7b3b275](https://github.com/deploystackio/deploystack/commit/7b3b275347df10b3f30b0e21dd2457e7c63a6d6a))
+
 ## 0.22.0 (2025-07-07)
 
 *  ([7b3b275](https://github.com/deploystackio/deploystack/commit/7b3b275347df10b3f30b0e21dd2457e7c63a6d6a))
