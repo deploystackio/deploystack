@@ -5,6 +5,8 @@ import { RoleService } from '../../../../src/services/roleService';
 import { requirePermission } from '../../../../src/middleware/roleMiddleware';
 import { AVAILABLE_PERMISSIONS } from '../../../../src/routes/roles/schemas';
 import { ZodError } from 'zod';
+// Import auth hook to get the FastifyRequest augmentation
+import '../../../../src/hooks/authHook';
 
 // Mock dependencies
 vi.mock('../../../../src/services/roleService');
@@ -97,32 +99,32 @@ describe('Roles Route', () => {
 
       expect(mockFastify.get).toHaveBeenCalledWith('/roles', expect.objectContaining({
         schema: expect.any(Object),
-        preHandler: expect.any(Function),
+        preValidation: expect.any(Function),
       }), expect.any(Function));
 
       expect(mockFastify.get).toHaveBeenCalledWith('/roles/:id', expect.objectContaining({
         schema: expect.any(Object),
-        preHandler: expect.any(Function),
+        preValidation: expect.any(Function),
       }), expect.any(Function));
 
       expect(mockFastify.post).toHaveBeenCalledWith('/roles', expect.objectContaining({
         schema: expect.any(Object),
-        preHandler: expect.any(Function),
+        preValidation: expect.any(Function),
       }), expect.any(Function));
 
       expect(mockFastify.put).toHaveBeenCalledWith('/roles/:id', expect.objectContaining({
         schema: expect.any(Object),
-        preHandler: expect.any(Function),
+        preValidation: expect.any(Function),
       }), expect.any(Function));
 
       expect(mockFastify.delete).toHaveBeenCalledWith('/roles/:id', expect.objectContaining({
         schema: expect.any(Object),
-        preHandler: expect.any(Function),
+        preValidation: expect.any(Function),
       }), expect.any(Function));
 
       expect(mockFastify.get).toHaveBeenCalledWith('/roles/permissions', expect.objectContaining({
         schema: expect.any(Object),
-        preHandler: expect.any(Function),
+        preValidation: expect.any(Function),
       }), expect.any(Function));
 
       // Verify requirePermission is called with correct permission

@@ -1,4 +1,4 @@
-import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import type { FastifyInstance } from 'fastify';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import { requireGlobalAdmin } from '../../../middleware/roleMiddleware';
 import { GitHubService } from '../../../services/githubService';
@@ -76,6 +76,7 @@ export default async function githubTestConnectionRoute(fastify: FastifyInstance
       endpoint: '/settings/github-app/test-connection',
       method: 'POST',
       userId: request.user?.id,
+      /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
       requestId: (request as any).id
     }, '🚀 GitHub App connection test endpoint reached');
 

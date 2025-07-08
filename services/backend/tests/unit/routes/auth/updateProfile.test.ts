@@ -3,6 +3,8 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import updateProfileRoute from '../../../../src/routes/auth/updateProfile';
 import { getDb, getSchema } from '../../../../src/db';
 import { requireAuthHook } from '../../../../src/hooks/authHook';
+// Import auth hook to get the FastifyRequest augmentation
+import '../../../../src/hooks/authHook';
 
 // Mock dependencies
 vi.mock('../../../../src/db');
@@ -104,7 +106,7 @@ describe('Update Profile Route', () => {
         '/profile/update',
         expect.objectContaining({
           schema: expect.any(Object),
-          preHandler: requireAuthHook,
+          preValidation: requireAuthHook,
         }),
         expect.any(Function)
       );

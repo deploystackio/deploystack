@@ -24,7 +24,7 @@ const errorResponseSchema = z.object({
 
 export default async function deleteCategory(server: FastifyInstance) {
   server.delete('/mcp/categories/:id', {
-    preHandler: requirePermission('mcp.categories.delete'),
+    preValidation: requirePermission('mcp.categories.delete'),
     schema: {
       tags: ['MCP Categories'],
       summary: 'Delete MCP category (Admin only)',
@@ -95,6 +95,7 @@ export default async function deleteCategory(server: FastifyInstance) {
         success: true,
         message: 'Category deleted successfully'
       });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       request.log.error({
         operation: 'delete_mcp_category',

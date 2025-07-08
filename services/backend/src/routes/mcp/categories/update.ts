@@ -39,7 +39,7 @@ const errorResponseSchema = z.object({
 
 export default async function updateCategory(server: FastifyInstance) {
   server.put('/mcp/categories/:id', {
-    preHandler: requirePermission('mcp.categories.edit'),
+    preValidation: requirePermission('mcp.categories.edit'),
     schema: {
       tags: ['MCP Categories'],
       summary: 'Update MCP category (Admin only)',
@@ -135,6 +135,7 @@ export default async function updateCategory(server: FastifyInstance) {
           created_at: updatedCategory.created_at.toISOString()
         }
       });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       request.log.error({
         operation: 'update_mcp_category',

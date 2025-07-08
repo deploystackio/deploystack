@@ -4,6 +4,8 @@ import changePasswordRoute from '../../../../src/routes/auth/changePassword';
 import { verify, hash } from '@node-rs/argon2';
 import { getDb, getSchema } from '../../../../src/db';
 import { requireAuthHook } from '../../../../src/hooks/authHook';
+// Import auth hook to get the FastifyRequest augmentation
+import '../../../../src/hooks/authHook';
 
 // Mock dependencies
 vi.mock('@node-rs/argon2');
@@ -103,7 +105,7 @@ describe('Change Password Route', () => {
         '/change-password',
         expect.objectContaining({
           schema: expect.any(Object),
-          preHandler: requireAuthHook,
+          preValidation: requireAuthHook,
         }),
         expect.any(Function)
       );

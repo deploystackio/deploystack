@@ -20,6 +20,7 @@ import { ref, onMounted } from 'vue'
 
 interface Props {
   modelValue: BasicInfoFormData
+  /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
   formData: any
 }
 

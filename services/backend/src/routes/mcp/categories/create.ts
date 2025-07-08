@@ -34,7 +34,7 @@ const errorResponseSchema = z.object({
 
 export default async function createCategory(server: FastifyInstance) {
   server.post('/mcp/categories', {
-    preHandler: requirePermission('mcp.categories.create'),
+    preValidation: requirePermission('mcp.categories.create'),
     schema: {
       tags: ['MCP Categories'],
       summary: 'Create MCP category (Admin only)',
@@ -113,6 +113,7 @@ export default async function createCategory(server: FastifyInstance) {
           created_at: newCategory.created_at.toISOString()
         }
       });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       request.log.error({
         operation: 'create_mcp_category',

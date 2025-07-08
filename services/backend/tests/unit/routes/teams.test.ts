@@ -4,6 +4,8 @@ import { ZodError } from 'zod';
 import teamsRoute from '../../../src/routes/teams/index';
 import { TeamService } from '../../../src/services/teamService';
 import { requirePermission } from '../../../src/middleware/roleMiddleware';
+// Import auth hook to get the FastifyRequest augmentation
+import '../../../src/hooks/authHook';
 
 // Mock dependencies
 vi.mock('../../../src/services/teamService');
@@ -112,7 +114,7 @@ describe('Teams Route', () => {
             summary: 'Create new team',
             security: [{ cookieAuth: [] }],
           }),
-          preHandler: expect.any(Function),
+          preValidation: expect.any(Function),
         }),
         expect.any(Function)
       );

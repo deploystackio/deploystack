@@ -76,7 +76,7 @@ export default async function rolesRoute(fastify: FastifyInstance) {
         })
       }
     },
-    preHandler: requirePermission('roles.manage'),
+    preValidation: requirePermission('roles.manage'),
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const roles = await roleService.getAllRoles();
@@ -127,7 +127,7 @@ export default async function rolesRoute(fastify: FastifyInstance) {
         })
       }
     },
-    preHandler: requirePermission('roles.manage'),
+    preValidation: requirePermission('roles.manage'),
   }, async (request, reply) => {
     try {
       const { id } = request.params;
@@ -191,7 +191,7 @@ export default async function rolesRoute(fastify: FastifyInstance) {
         })
       }
     },
-    preHandler: requirePermission('roles.manage'),
+    preValidation: requirePermission('roles.manage'),
   }, async (request, reply) => {
     try {
       // Fastify has already validated request.body using CreateRoleSchema
@@ -285,7 +285,7 @@ export default async function rolesRoute(fastify: FastifyInstance) {
         })
       }
     },
-    preHandler: requirePermission('roles.manage'),
+    preValidation: requirePermission('roles.manage'),
   }, async (request, reply) => {
     try {
       const { id } = request.params;
@@ -384,7 +384,7 @@ export default async function rolesRoute(fastify: FastifyInstance) {
         })
       }
     },
-    preHandler: requirePermission('roles.manage'),
+    preValidation: requirePermission('roles.manage'),
   }, async (request, reply) => {
     try {
       const { id } = request.params;
@@ -452,7 +452,7 @@ export default async function rolesRoute(fastify: FastifyInstance) {
         })
       }
     },
-    preHandler: requirePermission('roles.manage'),
+    preValidation: requirePermission('roles.manage'),
   }, async (request, reply) => {
     return reply.status(200).send({
       success: true,

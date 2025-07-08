@@ -59,7 +59,7 @@ export default async function adminResetPasswordRoute(fastify: FastifyInstance) 
     '/admin/reset-password',
     { 
       schema: adminResetPasswordRouteSchema,
-      preHandler: requireGlobalAdmin()
+      preValidation: requireGlobalAdmin()
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
