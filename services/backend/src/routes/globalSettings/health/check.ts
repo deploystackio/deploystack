@@ -47,7 +47,7 @@ export default async function healthCheckRoute(fastify: FastifyInstance) {
         })
       }
     },
-    preHandler: requireGlobalAdmin(),
+    preValidation: requireGlobalAdmin(),
   }, async (request, reply) => {
     try {
       const encryptionWorking = validateEncryption();

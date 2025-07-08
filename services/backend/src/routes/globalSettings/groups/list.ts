@@ -44,7 +44,7 @@ export default async function listGroupsRoute(fastify: FastifyInstance) {
         })
       }
     },
-    preHandler: requireGlobalAdmin(),
+    preValidation: requireGlobalAdmin(),
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const groupsWithSettings = await GlobalSettingsService.getAllGroupsWithSettings();
