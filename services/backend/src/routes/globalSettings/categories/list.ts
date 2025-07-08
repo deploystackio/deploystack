@@ -43,7 +43,7 @@ export default async function listCategoriesRoute(fastify: FastifyInstance) {
         })
       }
     },
-    preHandler: requireGlobalAdmin(),
+    preValidation: requireGlobalAdmin(),
   }, async (request, reply) => {
     try {
       const categories = await GlobalSettingsService.getCategories();

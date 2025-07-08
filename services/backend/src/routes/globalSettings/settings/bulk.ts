@@ -68,7 +68,7 @@ export default async function bulkGlobalSettingsRoute(fastify: FastifyInstance) 
         })
       }
     },
-    preHandler: requireGlobalAdmin(),
+    preValidation: requireGlobalAdmin(),
   }, async (request, reply) => {
     try {
       // Fastify has already validated request.body using BulkGlobalSettingsSchema

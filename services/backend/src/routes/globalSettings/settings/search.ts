@@ -57,7 +57,7 @@ export default async function searchGlobalSettingsRoute(fastify: FastifyInstance
         })
       }
     },
-    preHandler: requireGlobalAdmin(),
+    preValidation: requireGlobalAdmin(),
   }, async (request, reply) => {
     try {
       // Fastify has already validated request.body using SearchGlobalSettingsSchema

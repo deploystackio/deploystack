@@ -52,7 +52,7 @@ export default async function getGroupSettingsRoute(fastify: FastifyInstance) {
         })
       }
     },
-    preHandler: requireGlobalAdmin(),
+    preValidation: requireGlobalAdmin(),
   }, async (request, reply) => {
     try {
       const { groupId } = request.params;

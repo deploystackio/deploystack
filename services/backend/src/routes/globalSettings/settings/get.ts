@@ -57,7 +57,7 @@ export default async function getGlobalSettingRoute(fastify: FastifyInstance) {
         })
       }
     },
-    preHandler: requireGlobalAdmin(),
+    preValidation: requireGlobalAdmin(),
   }, async (request, reply) => {
     try {
       const { key } = request.params;

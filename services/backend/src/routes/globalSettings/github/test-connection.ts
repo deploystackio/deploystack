@@ -69,7 +69,7 @@ export default async function githubTestConnectionRoute(fastify: FastifyInstance
         })
       }
     },
-    preHandler: requireGlobalAdmin(),
+    preValidation: requireGlobalAdmin(),
   }, async (request, reply) => {
     fastify.log.info({
       operation: 'github_app_test_connection',

@@ -44,7 +44,7 @@ export default async function listGlobalSettingsRoute(fastify: FastifyInstance) 
         })
       }
     },
-    preHandler: requireGlobalAdmin(),
+    preValidation: requireGlobalAdmin(),
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const settings = await GlobalSettingsService.getAll();
