@@ -15,7 +15,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { getSettingsComponent, hasCustomComponent } from '@/composables/useSettingsComponentRegistry'
+import { getSettingsComponent } from '@/composables/useSettingsComponentRegistry'
 
 const { t } = useI18n()
 const route = useRoute()

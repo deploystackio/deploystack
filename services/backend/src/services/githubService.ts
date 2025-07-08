@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { GlobalSettings } from '../global-settings';
 import type { FastifyBaseLogger } from 'fastify';
 
@@ -31,7 +32,7 @@ export interface GitHubPackageInfo {
 
 export class GitHubService {
    
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   private static requestWithAuth: any = null;
   private static cachedSettings: { appId: string; privateKeyBase64: string; installationId: string } | null = null;
   
@@ -468,7 +469,7 @@ export class GitHubService {
         gitCommit: data.target_commitish || ''
       };
      
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     } catch (error: any) {
       if (error.status === 404) {
         logger.debug({
@@ -542,7 +543,7 @@ export class GitHubService {
         scripts: packageJson.scripts
       };
      
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     } catch (error: any) {
       if (error.status === 404) {
         logger.debug({

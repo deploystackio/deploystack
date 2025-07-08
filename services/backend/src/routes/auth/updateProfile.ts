@@ -31,6 +31,10 @@ const updateProfileRouteSchema = {
   tags: ['Authentication'],
   summary: 'Update user profile',
   description: 'Allows authenticated users to update their profile information including username, first name, and last name. Requires an active session. At least one field must be provided. Requires Content-Type: application/json header when sending request body.',
+  body: zodToJsonSchema(UpdateProfileSchema, {
+    $refStrategy: 'none',
+    target: 'openApi3'
+  }),
   requestBody: {
     required: true,
     content: {
@@ -72,7 +76,7 @@ export default async function updateProfileRoute(fastify: FastifyInstance) {
     '/profile/update',
     { 
       schema: updateProfileRouteSchema,
-      preHandler: requireAuthHook // Require authentication
+      preValidation: requireAuthHook // Require authentication
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {

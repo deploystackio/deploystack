@@ -16,34 +16,6 @@
     "schemas": {}
   },
   "paths": {
-    "/api/plugin/example-plugin/examples": {
-      "get": {
-        "responses": {
-          "200": {
-            "description": "Default Response"
-          }
-        }
-      }
-    },
-    "/api/plugin/example-plugin/examples/{id}": {
-      "get": {
-        "parameters": [
-          {
-            "schema": {
-              "type": "string"
-            },
-            "in": "path",
-            "name": "id",
-            "required": true
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Default Response"
-          }
-        }
-      }
-    },
     "/": {
       "get": {
         "summary": "API health check",
@@ -12465,6 +12437,32 @@
           "Authentication"
         ],
         "description": "Allows authenticated users to change their password by providing their current password and a new password. Requires an active session. Requires Content-Type: application/json header when sending request body.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "current_password": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "new_password": {
+                    "type": "string",
+                    "minLength": 8,
+                    "maxLength": 100
+                  }
+                },
+                "required": [
+                  "current_password",
+                  "new_password"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": true
+        },
         "security": [
           {
             "cookieAuth": []
@@ -13300,6 +13298,32 @@
           "Authentication"
         ],
         "description": "Allows authenticated users to update their profile information including username, first name, and last name. Requires an active session. At least one field must be provided. Requires Content-Type: application/json header when sending request body.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "username": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 30,
+                    "pattern": "^[a-zA-Z0-9_]+$"
+                  },
+                  "first_name": {
+                    "type": "string",
+                    "maxLength": 50
+                  },
+                  "last_name": {
+                    "type": "string",
+                    "maxLength": 50
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
         "security": [
           {
             "cookieAuth": []

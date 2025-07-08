@@ -94,7 +94,7 @@ export default async function usersRoute(fastify: FastifyInstance) {
         })
       }
     },
-    preHandler: requirePermission('users.list'),
+    preValidation: requirePermission('users.list'),
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const users = await userService.getAllUsers();
@@ -145,7 +145,7 @@ export default async function usersRoute(fastify: FastifyInstance) {
         })
       }
     },
-    preHandler: requireOwnershipOrAdmin(getUserIdFromParams),
+    preValidation: requireOwnershipOrAdmin(getUserIdFromParams),
   }, async (request, reply) => {
     try {
       const { id } = request.params;
@@ -214,7 +214,7 @@ export default async function usersRoute(fastify: FastifyInstance) {
         })
       }
     },
-    preHandler: requireOwnershipOrAdmin(getUserIdFromParams),
+    preValidation: requireOwnershipOrAdmin(getUserIdFromParams),
   }, async (request, reply) => {
     try {
       const { id } = request.params;
@@ -312,7 +312,7 @@ export default async function usersRoute(fastify: FastifyInstance) {
         })
       }
     },
-    preHandler: requirePermission('users.delete'),
+    preValidation: requirePermission('users.delete'),
   }, async (request, reply) => {
     try {
       const { id } = request.params;
@@ -396,7 +396,7 @@ export default async function usersRoute(fastify: FastifyInstance) {
         })
       }
     },
-    preHandler: requirePermission('users.edit'),
+    preValidation: requirePermission('users.edit'),
   }, async (request, reply) => {
     try {
       const { id } = request.params;
@@ -470,7 +470,7 @@ export default async function usersRoute(fastify: FastifyInstance) {
         })
       }
     },
-    preHandler: requirePermission('users.list'),
+    preValidation: requirePermission('users.list'),
   }, async (request, reply) => {
     try {
       const userCountByRole = await userService.getUserCountByRole();
@@ -520,7 +520,7 @@ export default async function usersRoute(fastify: FastifyInstance) {
         })
       }
     },
-    preHandler: requirePermission('users.list'),
+    preValidation: requirePermission('users.list'),
   }, async (request, reply) => {
     try {
       const { roleId } = request.params;
@@ -685,7 +685,7 @@ export default async function usersRoute(fastify: FastifyInstance) {
         })
       }
     },
-    preHandler: requireOwnershipOrAdmin(getUserIdFromParams),
+    preValidation: requireOwnershipOrAdmin(getUserIdFromParams),
   }, async (request, reply) => {
     try {
       const { id } = request.params;

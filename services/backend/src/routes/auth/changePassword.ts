@@ -25,6 +25,10 @@ const changePasswordRouteSchema = {
   tags: ['Authentication'],
   summary: 'Change user password',
   description: 'Allows authenticated users to change their password by providing their current password and a new password. Requires an active session. Requires Content-Type: application/json header when sending request body.',
+  body: zodToJsonSchema(ChangePasswordSchema, {
+    $refStrategy: 'none',
+    target: 'openApi3'
+  }),
   requestBody: {
     required: true,
     content: {
@@ -66,7 +70,7 @@ export default async function changePasswordRoute(fastify: FastifyInstance) {
     '/change-password',
     { 
       schema: changePasswordRouteSchema,
-      preHandler: requireAuthHook // Require authentication
+      preValidation: requireAuthHook // Require authentication
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {

@@ -1,4 +1,4 @@
-import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import type { FastifyInstance } from 'fastify';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import { GlobalSettingsService } from '../../../services/globalSettingsService';
 import { requireGlobalAdmin } from '../../../middleware/roleMiddleware';

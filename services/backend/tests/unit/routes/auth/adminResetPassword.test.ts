@@ -3,6 +3,8 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import adminResetPasswordRoute from '../../../../src/routes/auth/adminResetPassword';
 import { PasswordResetService } from '../../../../src/services/passwordResetService';
 import { requireGlobalAdmin } from '../../../../src/middleware/roleMiddleware';
+// Import auth hook to get the FastifyRequest augmentation
+import '../../../../src/hooks/authHook';
 
 // Mock dependencies
 vi.mock('../../../../src/services/passwordResetService');
@@ -51,7 +53,6 @@ describe('Admin Reset Password Route', () => {
       },
       user: {
         id: 'admin-user-id',
-        role_id: 'global_admin',
       },
     };
 
@@ -74,7 +75,7 @@ describe('Admin Reset Password Route', () => {
         '/admin/reset-password',
         expect.objectContaining({
           schema: expect.any(Object),
-          preHandler: mockPreHandler,
+          preValidation: mockPreHandler,
         }),
         expect.any(Function)
       );
@@ -260,7 +261,7 @@ describe('Admin Reset Password Route', () => {
     });
 
     it('should handle missing user ID in request', async () => {
-      mockRequest.user = { id: undefined, role_id: 'global_admin' } as any;
+      mockRequest.user = { id: undefined } as any;
 
       const handler = routeHandlers['POST /admin/reset-password'];
       await handler(mockRequest, mockReply);

@@ -34,7 +34,6 @@ import { useEventBus } from '@/composables/useEventBus'
 import {
   Server,
   LayoutDashboard,
-  Settings,
   Key,
   ChevronDown,
   User as UserIcon,

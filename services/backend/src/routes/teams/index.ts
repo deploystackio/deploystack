@@ -240,7 +240,7 @@ export default async function teamsRoute(fastify: FastifyInstance) {
         })
       }
     },
-    preHandler: requirePermission('teams.create'),
+    preValidation: requirePermission('teams.create'),
   }, async (request: FastifyRequest<{ Body: CreateTeamInput }>, reply: FastifyReply) => {
     try {
       if (!request.user) {
@@ -346,7 +346,7 @@ export default async function teamsRoute(fastify: FastifyInstance) {
         })
       }
     },
-    preHandler: requirePermission('teams.edit'),
+    preValidation: requirePermission('teams.edit'),
   }, async (request: FastifyRequest<{ Params: { id: string }; Body: UpdateTeamInput }>, reply: FastifyReply) => {
     try {
       if (!request.user) {
@@ -455,7 +455,7 @@ export default async function teamsRoute(fastify: FastifyInstance) {
         })
       }
     },
-    preHandler: requirePermission('teams.delete'),
+    preValidation: requirePermission('teams.delete'),
   }, async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
     try {
       if (!request.user) {

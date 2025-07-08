@@ -3,7 +3,6 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
 import type { ReviewFormData, McpServerFormData } from '@/views/admin/mcp-server-catalog/types'
 
 interface Props {
@@ -18,21 +17,6 @@ interface Emits {
 const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 const { t } = useI18n()
-
-// Computed model (not really used for review step)
-const localValue = computed({
-  get: () => props.modelValue,
-  set: (value) => emit('update:modelValue', value)
-})
-
-// Helper functions
-const formatList = (items: any[], field?: string) => {
-  if (!items || items.length === 0) return 'None'
-  if (field) {
-    return items.map(item => item[field]).join(', ')
-  }
-  return items.join(', ')
-}
 
 const formatJson = (jsonString: string) => {
   if (!jsonString) return 'None'
