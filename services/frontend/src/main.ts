@@ -12,6 +12,7 @@ import { PluginManager } from './plugin-system/plugin-manager'
 import { loadPlugins } from './plugins'
 import ExtensionPoint from './components/ExtensionPoint.vue'
 import type { EventBusEvents } from './composables/useEventBus'
+import { registerSettingsComponents } from './components/settings'
 
 const app = createApp(App)
 const pinia = createPinia()
@@ -42,6 +43,9 @@ app.provide('emitter', emitter)
 // Initialize application with plugins
 async function initializeApplication() {
   try {
+    // Register custom settings components
+    registerSettingsComponents()
+
     // Load available plugins
     const plugins = await loadPlugins()
     await pluginManager.loadPlugins(plugins)

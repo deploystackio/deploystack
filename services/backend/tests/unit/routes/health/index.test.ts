@@ -57,7 +57,7 @@ describe('Health Route', () => {
       expect(schema.schema).toBeDefined();
       expect(schema.schema.tags).toEqual(['Health Check']);
       expect(schema.schema.summary).toBe('Simple API health check');
-      expect(schema.schema.description).toBe('Returns basic API health status for monitoring, load balancers, and uptime checks');
+      expect(schema.schema.description).toBe('Returns basic API health status for monitoring, load balancers, and uptime checks. No Content-Type header required for this GET request.');
       expect(schema.schema.response).toBeDefined();
       expect(schema.schema.response[200]).toBeDefined();
     });

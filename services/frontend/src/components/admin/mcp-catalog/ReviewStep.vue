@@ -1,0 +1,266 @@
+<script setup lang="ts">
+import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Separator } from '@/components/ui/separator'
+import type { ReviewFormData, McpServerFormData } from '@/views/admin/mcp-server-catalog/types'
+
+interface Props {
+  modelValue: ReviewFormData
+  formData: McpServerFormData
+}
+
+interface Emits {
+  (e: 'update:modelValue', value: ReviewFormData): void
+}
+
+const props = defineProps<Props>()
+const emit = defineEmits<Emits>()
+const { t } = useI18n()
+
+// Computed model (not really used for review step)
+const localValue = computed({
+  get: () => props.modelValue,
+  set: (value) => emit('update:modelValue', value)
+})
+
+// Helper functions
+const formatList = (items: any[], field?: string) => {
+  if (!items || items.length === 0) return 'None'
+  if (field) {
+    return items.map(item => item[field]).join(', ')
+  }
+  return items.join(', ')
+}
+
+const formatJson = (jsonString: string) => {
+  if (!jsonString) return 'None'
+  try {
+    return JSON.stringify(JSON.parse(jsonString), null, 2)
+  } catch {
+    return jsonString
+  }
+}
+</script>
+
+<template>
+  <div class="space-y-6">
+    <div>
+      <h3 class="text-lg font-medium">{{ t('mcpCatalog.form.review.title') }}</h3>
+      <p class="text-sm text-muted-foreground">{{ t('mcpCatalog.form.review.subtitle') }}</p>
+    </div>
+
+    <!-- Basic Information -->
+    <Card>
+      <CardHeader>
+        <CardTitle class="text-base">{{ t('mcpCatalog.form.review.sections.basic') }}</CardTitle>
+      </CardHeader>
+      <CardContent class="space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <h4 class="font-medium text-sm text-muted-foreground">Server Name</h4>
+            <p class="text-sm">{{ formData.basic.name || 'Not specified' }}</p>
+          </div>
+          <div>
+            <h4 class="font-medium text-sm text-muted-foreground">Category</h4>
+            <p class="text-sm">{{ formData.basic.category_id || 'Not specified' }}</p>
+          </div>
+        </div>
+
+        <div>
+          <h4 class="font-medium text-sm text-muted-foreground">Description</h4>
+          <p class="text-sm">{{ formData.basic.description || 'Not specified' }}</p>
+        </div>
+
+        <div v-if="formData.basic.long_description">
+          <h4 class="font-medium text-sm text-muted-foreground">Detailed Description</h4>
+          <p class="text-sm">{{ formData.basic.long_description }}</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <h4 class="font-medium text-sm text-muted-foreground">Author</h4>
+            <p class="text-sm">{{ formData.basic.author_name || 'Not specified' }}</p>
+          </div>
+          <div>
+            <h4 class="font-medium text-sm text-muted-foreground">Contact</h4>
+            <p class="text-sm">{{ formData.basic.author_contact || 'Not specified' }}</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <h4 class="font-medium text-sm text-muted-foreground">Organization</h4>
+            <p class="text-sm">{{ formData.basic.organization || 'Not specified' }}</p>
+          </div>
+          <div>
+            <h4 class="font-medium text-sm text-muted-foreground">License</h4>
+            <p class="text-sm">{{ formData.basic.license || 'Not specified' }}</p>
+          </div>
+        </div>
+
+        <div v-if="formData.basic.tags.length > 0">
+          <h4 class="font-medium text-sm text-muted-foreground">Tags</h4>
+          <div class="flex flex-wrap gap-1 mt-1">
+            <Badge v-for="tag in formData.basic.tags" :key="tag" variant="secondary" class="text-xs">
+              {{ tag }}
+            </Badge>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+
+    <!-- Repository Information -->
+    <Card>
+      <CardHeader>
+        <CardTitle class="text-base">{{ t('mcpCatalog.form.review.sections.repository') }}</CardTitle>
+      </CardHeader>
+      <CardContent class="space-y-4">
+        <div>
+          <h4 class="font-medium text-sm text-muted-foreground">GitHub Repository</h4>
+          <p class="text-sm">{{ formData.repository.github_url || 'Not specified' }}</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <h4 class="font-medium text-sm text-muted-foreground">Git Branch</h4>
+            <p class="text-sm">{{ formData.repository.git_branch || 'main' }}</p>
+          </div>
+          <div>
+            <h4 class="font-medium text-sm text-muted-foreground">Homepage</h4>
+            <p class="text-sm">{{ formData.repository.homepage_url || 'Not specified' }}</p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+
+    <!-- Technical Specifications -->
+    <Card>
+      <CardHeader>
+        <CardTitle class="text-base">{{ t('mcpCatalog.form.review.sections.technical') }}</CardTitle>
+      </CardHeader>
+      <CardContent class="space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <h4 class="font-medium text-sm text-muted-foreground">Language</h4>
+            <p class="text-sm">{{ formData.technical.language || 'Not specified' }}</p>
+          </div>
+          <div>
+            <h4 class="font-medium text-sm text-muted-foreground">Runtime</h4>
+            <p class="text-sm">{{ formData.technical.runtime || 'Not specified' }}</p>
+          </div>
+          <div>
+            <h4 class="font-medium text-sm text-muted-foreground">Min Version</h4>
+            <p class="text-sm">{{ formData.technical.runtime_min_version || 'Not specified' }}</p>
+          </div>
+        </div>
+
+        <div v-if="formData.technical.installation_methods.length > 0">
+          <h4 class="font-medium text-sm text-muted-foreground">Installation Methods</h4>
+          <div class="space-y-2 mt-2">
+            <div
+              v-for="(method, index) in formData.technical.installation_methods"
+              :key="index"
+              class="flex items-center gap-2 text-sm"
+            >
+              <Badge variant="outline" class="text-xs">{{ method.type }}</Badge>
+              <code class="text-xs bg-muted px-2 py-1 rounded">{{ method.command }}</code>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="formData.technical.dependencies">
+          <h4 class="font-medium text-sm text-muted-foreground">Dependencies</h4>
+          <p class="text-sm">{{ formData.technical.dependencies }}</p>
+        </div>
+      </CardContent>
+    </Card>
+
+    <!-- Capabilities -->
+    <Card>
+      <CardHeader>
+        <CardTitle class="text-base">{{ t('mcpCatalog.form.review.sections.capabilities') }}</CardTitle>
+      </CardHeader>
+      <CardContent class="space-y-4">
+        <!-- Tools -->
+        <div v-if="formData.capabilities.tools.length > 0">
+          <h4 class="font-medium text-sm text-muted-foreground">Tools ({{ formData.capabilities.tools.length }})</h4>
+          <div class="space-y-2 mt-2">
+            <div
+              v-for="(tool, index) in formData.capabilities.tools"
+              :key="index"
+              class="text-sm"
+            >
+              <span class="font-medium">{{ tool.name }}</span>
+              <span v-if="tool.description" class="text-muted-foreground"> - {{ tool.description }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Resources -->
+        <div v-if="formData.capabilities.resources.length > 0">
+          <h4 class="font-medium text-sm text-muted-foreground">Resources ({{ formData.capabilities.resources.length }})</h4>
+          <div class="space-y-2 mt-2">
+            <div
+              v-for="(resource, index) in formData.capabilities.resources"
+              :key="index"
+              class="text-sm"
+            >
+              <span class="font-medium">{{ resource.type }}</span>
+              <span v-if="resource.description" class="text-muted-foreground"> - {{ resource.description }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Prompts -->
+        <div v-if="formData.capabilities.prompts.length > 0">
+          <h4 class="font-medium text-sm text-muted-foreground">Prompts ({{ formData.capabilities.prompts.length }})</h4>
+          <div class="space-y-2 mt-2">
+            <div
+              v-for="(prompt, index) in formData.capabilities.prompts"
+              :key="index"
+              class="text-sm"
+            >
+              <span class="font-medium">{{ prompt.name }}</span>
+              <span v-if="prompt.description" class="text-muted-foreground"> - {{ prompt.description }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Environment Variables -->
+        <div v-if="formData.capabilities.environment_variables.length > 0">
+          <h4 class="font-medium text-sm text-muted-foreground">Environment Variables ({{ formData.capabilities.environment_variables.length }})</h4>
+          <div class="space-y-2 mt-2">
+            <div
+              v-for="(envVar, index) in formData.capabilities.environment_variables"
+              :key="index"
+              class="flex items-center gap-2 text-sm"
+            >
+              <code class="text-xs bg-muted px-2 py-1 rounded">{{ envVar.name }}</code>
+              <Badge v-if="envVar.required" variant="destructive" class="text-xs">Required</Badge>
+              <Badge v-else variant="secondary" class="text-xs">Optional</Badge>
+              <span v-if="envVar.description" class="text-muted-foreground">{{ envVar.description }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Default Configuration -->
+        <div v-if="formData.capabilities.default_config">
+          <h4 class="font-medium text-sm text-muted-foreground">Default Configuration</h4>
+          <pre class="text-xs bg-muted p-3 rounded mt-2 overflow-x-auto">{{ formatJson(formData.capabilities.default_config) }}</pre>
+        </div>
+      </CardContent>
+    </Card>
+
+    <!-- Submit Information -->
+    <Card class="border-green-200 bg-green-50">
+      <CardHeader>
+        <CardTitle class="text-base text-green-800">{{ t('mcpCatalog.form.review.submit.title') }}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <p class="text-sm text-green-700">{{ t('mcpCatalog.form.review.submit.description') }}</p>
+      </CardContent>
+    </Card>
+  </div>
+</template>

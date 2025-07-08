@@ -64,7 +64,7 @@ describe('MCP Servers - Create Global', () => {
       expect(schema.schema).toBeDefined();
       expect(schema.schema.tags).toEqual(['MCP Servers']);
       expect(schema.schema.summary).toBe('Create global MCP server (Admin only)');
-      expect(schema.schema.description).toBe('Create a new global MCP server - requires global admin permissions');
+      expect(schema.schema.description).toBe('Create a new global MCP server - requires global admin permissions. Will require Content-Type: application/json header when sending request body once implemented.');
     });
   });
 

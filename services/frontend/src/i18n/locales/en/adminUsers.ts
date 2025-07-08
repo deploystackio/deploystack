@@ -15,13 +15,15 @@ export default {
       },
       actions: {
         resetPassword: 'Reset Password',
-        openMenu: 'Open menu'
+        openMenu: 'Open menu',
+        view: 'View User'
       },
       status: {
         email: 'Email',
         github: 'GitHub'
       },
       noResults: 'No users found.',
+      noRole: 'No role assigned',
       loading: 'Loading users...',
       error: 'Error loading users: {error}'
     },

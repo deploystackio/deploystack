@@ -36,17 +36,24 @@ const registerErrorResponseSchema = z.object({
 const registerEmailRouteSchema = {
   tags: ['Authentication'],
   summary: 'User registration via email',
-  description: 'Creates a new user account using email and password. The first registered user automatically becomes a global administrator. Automatically creates a session and default team for the user.',
-  body: zodToJsonSchema(RegisterEmailSchema, { 
-    $refStrategy: 'none', 
-    target: 'openApi3' 
-  }),
+  description: 'Creates a new user account using email and password. The first registered user automatically becomes a global administrator. Automatically creates a session and default team for the user. Requires Content-Type: application/json header when sending request body.',
+  requestBody: {
+    required: true,
+    content: {
+      'application/json': {
+        schema: zodToJsonSchema(RegisterEmailSchema, { 
+          $refStrategy: 'none', 
+          target: 'openApi3' 
+        })
+      }
+    }
+  },
   response: {
     201: zodToJsonSchema(registerSuccessResponseSchema.describe('User registered successfully'), {
       $refStrategy: 'none',
       target: 'openApi3'
     }),
-    400: zodToJsonSchema(registerErrorResponseSchema.describe('Bad Request - Invalid input, username taken, or email already in use'), {
+    400: zodToJsonSchema(registerErrorResponseSchema.describe('Bad Request - Invalid input, username taken, email already in use, or missing Content-Type header'), {
       $refStrategy: 'none',
       target: 'openApi3'
     }),

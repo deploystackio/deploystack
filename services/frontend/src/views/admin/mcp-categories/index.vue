@@ -1,0 +1,177 @@
+<script setup lang="ts">
+import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import { Plus } from 'lucide-vue-next'
+import DashboardLayout from '@/components/DashboardLayout.vue'
+import CategoryModal from '@/components/admin/mcp-categories/CategoryModal.vue'
+import { McpCategoriesService, type McpCategory } from '@/services/mcpCategoriesService'
+import { useEventBus } from '@/composables/useEventBus'
+import CategoryTableColumns from './CategoryTableColumns.vue'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { CheckCircle } from 'lucide-vue-next'
+
+const { t } = useI18n()
+const eventBus = useEventBus()
+
+// State
+const categories = ref<McpCategory[]>([])
+const isLoading = ref(true)
+const error = ref<string | null>(null)
+const searchQuery = ref('')
+const successMessage = ref<string | null>(null)
+const showAddModal = ref(false)
+const editingCategory = ref<McpCategory | null>(null)
+
+// Filter categories based on search query
+const filteredCategories = computed(() => {
+  if (!searchQuery.value) {
+    return categories.value
+  }
+  const query = searchQuery.value.toLowerCase()
+  return categories.value.filter(category =>
+    category.name.toLowerCase().includes(query) ||
+    (category.description && category.description.toLowerCase().includes(query)) ||
+    (category.icon && category.icon.toLowerCase().includes(query))
+  )
+})
+
+// Navigation handlers
+const handleAddCategory = () => {
+  editingCategory.value = null
+  showAddModal.value = true
+}
+
+const handleEditCategory = (category: McpCategory) => {
+  editingCategory.value = category
+  showAddModal.value = true
+}
+
+const handleDeleteCategory = async (categoryId: string) => {
+  try {
+    await McpCategoriesService.deleteCategory(categoryId)
+
+    // Remove from local state
+    categories.value = categories.value.filter(c => c.id !== categoryId)
+
+    // Show success message
+    successMessage.value = t('mcpCategories.messages.deleteSuccess')
+    setTimeout(() => {
+      successMessage.value = null
+    }, 5000)
+
+    // Emit global event
+    eventBus.emit('mcp-categories-updated')
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : 'Failed to delete category'
+  }
+}
+
+// Fetch categories from API
+const fetchCategories = async (forceRefresh = false): Promise<void> => {
+  try {
+    isLoading.value = true
+    error.value = null
+
+    categories.value = await McpCategoriesService.getCategories(forceRefresh)
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : 'An unknown error occurred'
+    categories.value = []
+  } finally {
+    isLoading.value = false
+  }
+}
+
+// Handle category creation/update success
+const handleCategorySuccess = (action: 'created' | 'updated') => {
+  fetchCategories(true)
+  successMessage.value = action === 'created'
+    ? t('mcpCategories.messages.createSuccess')
+    : t('mcpCategories.messages.updateSuccess')
+  setTimeout(() => {
+    successMessage.value = null
+  }, 5000)
+
+  // Emit global event
+  eventBus.emit('mcp-categories-updated')
+}
+
+// Load data on component mount
+onMounted(async () => {
+  await fetchCategories()
+
+  // Listen for category updates from other components
+  eventBus.on('mcp-categories-updated', () => {
+    fetchCategories(true)
+  })
+})
+
+onUnmounted(() => {
+  // Clean up event listeners
+  eventBus.off('mcp-categories-updated')
+})
+</script>
+
+<template>
+  <DashboardLayout :title="t('mcpCategories.title')">
+    <div class="space-y-6">
+      <!-- Header -->
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-muted-foreground">{{ t('mcpCategories.description') }}</p>
+        </div>
+        <Button
+          @click="handleAddCategory"
+          class="flex items-center gap-2"
+        >
+          <Plus class="h-4 w-4" />
+          {{ t('mcpCategories.addButton') }}
+        </Button>
+      </div>
+
+      <!-- Success Message -->
+      <Alert v-if="successMessage" class="border-green-200 bg-green-50 text-green-800">
+        <CheckCircle class="h-4 w-4" />
+        <AlertDescription>{{ successMessage }}</AlertDescription>
+      </Alert>
+
+      <!-- Loading State -->
+      <div v-if="isLoading" class="text-muted-foreground">
+        {{ t('mcpCategories.table.loading') }}
+      </div>
+
+      <!-- Error State -->
+      <div v-else-if="error" class="text-red-500">
+        {{ t('mcpCategories.table.error', { error }) }}
+      </div>
+
+      <!-- Data Table -->
+      <div v-else class="space-y-4">
+        <!-- Search Input -->
+        <div class="flex items-center py-4">
+          <Input
+            :placeholder="t('mcpCategories.table.search.placeholder')"
+            v-model="searchQuery"
+            class="max-w-sm"
+          />
+        </div>
+
+        <!-- Categories Table Component -->
+        <CategoryTableColumns
+          :categories="filteredCategories"
+          :on-edit-category="handleEditCategory"
+          :on-delete-category="handleDeleteCategory"
+        />
+      </div>
+
+      <!-- Add/Edit Category Modal -->
+      <CategoryModal
+        v-model:open="showAddModal"
+        :category="editingCategory"
+        @category-created="() => handleCategorySuccess('created')"
+        @category-updated="() => handleCategorySuccess('updated')"
+      />
+    </div>
+  </DashboardLayout>
+</template>

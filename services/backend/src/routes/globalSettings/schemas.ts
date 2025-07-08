@@ -12,6 +12,18 @@ export const GlobalSettingSchema = z.object({
   updated_at: z.date(),
 });
 
+// Schema for global setting group
+export const GlobalSettingGroupSchema = z.object({
+  id: z.string().describe('Group ID'),
+  name: z.string().describe('Group display name'),
+  description: z.string().nullable().describe('Group description'),
+  icon: z.string().nullable().describe('Group icon'),
+  sort_order: z.number().describe('Display sort order'),
+  settings: z.array(GlobalSettingSchema).describe('Settings in this group'),
+  created_at: z.date().describe('Group creation date'),
+  updated_at: z.date().describe('Group last update date')
+});
+
 // Schema for creating a new global setting
 export const CreateGlobalSettingSchema = z.object({
   key: z.string().min(1).max(255).regex(/^[a-zA-Z0-9._-]+$/, 'Key can only contain letters, numbers, dots, underscores, and hyphens'),

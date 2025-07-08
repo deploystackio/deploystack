@@ -98,7 +98,7 @@ describe('MCP Servers - List Servers', () => {
       expect(schema.schema).toBeDefined();
       expect(schema.schema.tags).toEqual(['MCP Servers']);
       expect(schema.schema.summary).toBe('List MCP servers');
-      expect(schema.schema.description).toBe('Retrieve MCP servers visible to the current user based on their permissions');
+      expect(schema.schema.description).toBe('Retrieve MCP servers visible to the current user based on their permissions. No Content-Type header required for this GET request.');
       expect(schema.schema.querystring).toBeDefined();
       expect(schema.schema.response).toBeDefined();
       expect(schema.schema.response[200]).toBeDefined();

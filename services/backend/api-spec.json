@@ -96,7 +96,7 @@
         "tags": [
           "Health Check"
         ],
-        "description": "Returns basic API health status for monitoring, load balancers, and uptime checks",
+        "description": "Returns basic API health status for monitoring, load balancers, and uptime checks. No Content-Type header required for this GET request.",
         "responses": {
           "200": {
             "description": "Simple health check response",
@@ -3704,235 +3704,6 @@
         }
       }
     },
-    "/api/settings/groups": {
-      "get": {
-        "summary": "List all setting groups",
-        "tags": [
-          "Global Settings"
-        ],
-        "description": "Retrieves all setting groups with their associated settings. Requires settings view permissions.",
-        "security": [
-          {
-            "cookieAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successfully retrieved setting groups",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "description": "Indicates if the operation was successful"
-                    },
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "id": {
-                            "type": "string",
-                            "description": "Group ID"
-                          },
-                          "name": {
-                            "type": "string",
-                            "description": "Group display name"
-                          },
-                          "description": {
-                            "type": "string",
-                            "nullable": true,
-                            "description": "Group description"
-                          },
-                          "icon": {
-                            "type": "string",
-                            "nullable": true,
-                            "description": "Group icon"
-                          },
-                          "sort_order": {
-                            "type": "number",
-                            "description": "Display sort order"
-                          },
-                          "settings": {
-                            "type": "array",
-                            "items": {
-                              "type": "object",
-                              "properties": {
-                                "key": {
-                                  "type": "string",
-                                  "minLength": 1,
-                                  "maxLength": 255,
-                                  "pattern": "^[a-zA-Z0-9._-]+$"
-                                },
-                                "value": {
-                                  "type": "string"
-                                },
-                                "type": {
-                                  "type": "string",
-                                  "enum": [
-                                    "string",
-                                    "number",
-                                    "boolean"
-                                  ]
-                                },
-                                "description": {
-                                  "type": "string"
-                                },
-                                "is_encrypted": {
-                                  "type": "boolean"
-                                },
-                                "group_id": {
-                                  "type": "string"
-                                },
-                                "created_at": {
-                                  "type": "string",
-                                  "format": "date-time"
-                                },
-                                "updated_at": {
-                                  "type": "string",
-                                  "format": "date-time"
-                                }
-                              },
-                              "required": [
-                                "key",
-                                "value",
-                                "type",
-                                "is_encrypted",
-                                "created_at",
-                                "updated_at"
-                              ],
-                              "additionalProperties": false
-                            },
-                            "description": "Settings in this group"
-                          },
-                          "created_at": {
-                            "type": "string",
-                            "format": "date-time",
-                            "description": "Group creation date"
-                          },
-                          "updated_at": {
-                            "type": "string",
-                            "format": "date-time",
-                            "description": "Group last update date"
-                          }
-                        },
-                        "required": [
-                          "id",
-                          "name",
-                          "description",
-                          "icon",
-                          "sort_order",
-                          "settings",
-                          "created_at",
-                          "updated_at"
-                        ],
-                        "additionalProperties": false
-                      },
-                      "description": "Array of setting groups with their settings"
-                    }
-                  },
-                  "required": [
-                    "success",
-                    "data"
-                  ],
-                  "additionalProperties": false,
-                  "description": "Successfully retrieved setting groups"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized - Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "description": "Indicates if the operation was successful (false for errors)",
-                      "default": false
-                    },
-                    "error": {
-                      "type": "string",
-                      "description": "Error message"
-                    },
-                    "details": {
-                      "description": "Additional error details (validation errors)"
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ],
-                  "additionalProperties": false,
-                  "description": "Unauthorized - Authentication required"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden - Insufficient permissions",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "description": "Indicates if the operation was successful (false for errors)",
-                      "default": false
-                    },
-                    "error": {
-                      "type": "string",
-                      "description": "Error message"
-                    },
-                    "details": {
-                      "description": "Additional error details (validation errors)"
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ],
-                  "additionalProperties": false,
-                  "description": "Forbidden - Insufficient permissions"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "description": "Indicates if the operation was successful (false for errors)",
-                      "default": false
-                    },
-                    "error": {
-                      "type": "string",
-                      "description": "Error message"
-                    },
-                    "details": {
-                      "description": "Additional error details (validation errors)"
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ],
-                  "additionalProperties": false,
-                  "description": "Internal Server Error"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/settings": {
       "get": {
         "summary": "List all global settings",
@@ -5051,326 +4822,6 @@
         }
       }
     },
-    "/api/settings/group/{groupId}": {
-      "get": {
-        "summary": "Get settings by group",
-        "tags": [
-          "Global Settings"
-        ],
-        "description": "Retrieves all global settings belonging to a specific group. Requires settings view permissions.",
-        "parameters": [
-          {
-            "schema": {
-              "type": "string"
-            },
-            "in": "path",
-            "name": "groupId",
-            "required": true,
-            "description": "Group ID"
-          }
-        ],
-        "security": [
-          {
-            "cookieAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Settings retrieved successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "description": "Indicates if the operation was successful"
-                    },
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "key": {
-                            "type": "string",
-                            "minLength": 1,
-                            "maxLength": 255,
-                            "pattern": "^[a-zA-Z0-9._-]+$"
-                          },
-                          "value": {
-                            "type": "string"
-                          },
-                          "type": {
-                            "type": "string",
-                            "enum": [
-                              "string",
-                              "number",
-                              "boolean"
-                            ]
-                          },
-                          "description": {
-                            "type": "string"
-                          },
-                          "is_encrypted": {
-                            "type": "boolean"
-                          },
-                          "group_id": {
-                            "type": "string"
-                          },
-                          "created_at": {
-                            "type": "string",
-                            "format": "date-time"
-                          },
-                          "updated_at": {
-                            "type": "string",
-                            "format": "date-time"
-                          }
-                        },
-                        "required": [
-                          "key",
-                          "value",
-                          "type",
-                          "is_encrypted",
-                          "created_at",
-                          "updated_at"
-                        ],
-                        "additionalProperties": false
-                      },
-                      "description": "Array of global settings"
-                    }
-                  },
-                  "required": [
-                    "success",
-                    "data"
-                  ],
-                  "additionalProperties": false,
-                  "description": "Settings retrieved successfully"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized - Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "description": "Indicates if the operation was successful (false for errors)",
-                      "default": false
-                    },
-                    "error": {
-                      "type": "string",
-                      "description": "Error message"
-                    },
-                    "details": {
-                      "description": "Additional error details (validation errors)"
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ],
-                  "additionalProperties": false,
-                  "description": "Unauthorized - Authentication required"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden - Insufficient permissions",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "description": "Indicates if the operation was successful (false for errors)",
-                      "default": false
-                    },
-                    "error": {
-                      "type": "string",
-                      "description": "Error message"
-                    },
-                    "details": {
-                      "description": "Additional error details (validation errors)"
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ],
-                  "additionalProperties": false,
-                  "description": "Forbidden - Insufficient permissions"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "description": "Indicates if the operation was successful (false for errors)",
-                      "default": false
-                    },
-                    "error": {
-                      "type": "string",
-                      "description": "Error message"
-                    },
-                    "details": {
-                      "description": "Additional error details (validation errors)"
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ],
-                  "additionalProperties": false,
-                  "description": "Internal Server Error"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/settings/categories": {
-      "get": {
-        "summary": "Get all categories",
-        "tags": [
-          "Global Settings"
-        ],
-        "description": "Retrieves all available setting categories. Requires settings view permissions.",
-        "security": [
-          {
-            "cookieAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Categories retrieved successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "description": "Indicates if the operation was successful"
-                    },
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "type": "string"
-                      },
-                      "description": "Array of category names"
-                    }
-                  },
-                  "required": [
-                    "success",
-                    "data"
-                  ],
-                  "additionalProperties": false,
-                  "description": "Categories retrieved successfully"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized - Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "description": "Indicates if the operation was successful (false for errors)",
-                      "default": false
-                    },
-                    "error": {
-                      "type": "string",
-                      "description": "Error message"
-                    },
-                    "details": {
-                      "description": "Additional error details (validation errors)"
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ],
-                  "additionalProperties": false,
-                  "description": "Unauthorized - Authentication required"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden - Insufficient permissions",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "description": "Indicates if the operation was successful (false for errors)",
-                      "default": false
-                    },
-                    "error": {
-                      "type": "string",
-                      "description": "Error message"
-                    },
-                    "details": {
-                      "description": "Additional error details (validation errors)"
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ],
-                  "additionalProperties": false,
-                  "description": "Forbidden - Insufficient permissions"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "description": "Indicates if the operation was successful (false for errors)",
-                      "default": false
-                    },
-                    "error": {
-                      "type": "string",
-                      "description": "Error message"
-                    },
-                    "details": {
-                      "description": "Additional error details (validation errors)"
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ],
-                  "additionalProperties": false,
-                  "description": "Internal Server Error"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/settings/search": {
       "post": {
         "summary": "Search settings",
@@ -5999,6 +5450,555 @@
         }
       }
     },
+    "/api/settings/groups": {
+      "get": {
+        "summary": "List all setting groups",
+        "tags": [
+          "Global Settings"
+        ],
+        "description": "Retrieves all setting groups with their associated settings. Requires settings view permissions.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved setting groups",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "Group ID"
+                          },
+                          "name": {
+                            "type": "string",
+                            "description": "Group display name"
+                          },
+                          "description": {
+                            "type": "string",
+                            "nullable": true,
+                            "description": "Group description"
+                          },
+                          "icon": {
+                            "type": "string",
+                            "nullable": true,
+                            "description": "Group icon"
+                          },
+                          "sort_order": {
+                            "type": "number",
+                            "description": "Display sort order"
+                          },
+                          "settings": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "key": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 255,
+                                  "pattern": "^[a-zA-Z0-9._-]+$"
+                                },
+                                "value": {
+                                  "type": "string"
+                                },
+                                "type": {
+                                  "type": "string",
+                                  "enum": [
+                                    "string",
+                                    "number",
+                                    "boolean"
+                                  ]
+                                },
+                                "description": {
+                                  "type": "string"
+                                },
+                                "is_encrypted": {
+                                  "type": "boolean"
+                                },
+                                "group_id": {
+                                  "type": "string"
+                                },
+                                "created_at": {
+                                  "type": "string",
+                                  "format": "date-time"
+                                },
+                                "updated_at": {
+                                  "type": "string",
+                                  "format": "date-time"
+                                }
+                              },
+                              "required": [
+                                "key",
+                                "value",
+                                "type",
+                                "is_encrypted",
+                                "created_at",
+                                "updated_at"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "description": "Settings in this group"
+                          },
+                          "created_at": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Group creation date"
+                          },
+                          "updated_at": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Group last update date"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "description",
+                          "icon",
+                          "sort_order",
+                          "settings",
+                          "created_at",
+                          "updated_at"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "description": "Array of setting groups with their settings"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Successfully retrieved setting groups"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "details": {
+                      "description": "Additional error details"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Unauthorized - Authentication required"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Insufficient permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "details": {
+                      "description": "Additional error details"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Forbidden - Insufficient permissions"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "details": {
+                      "description": "Additional error details"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Internal Server Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/settings/group/{groupId}": {
+      "get": {
+        "summary": "Get settings by group",
+        "tags": [
+          "Global Settings"
+        ],
+        "description": "Retrieves all global settings belonging to a specific group. Requires settings view permissions.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "groupId",
+            "required": true,
+            "description": "Group ID"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Settings retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "key": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 255,
+                            "pattern": "^[a-zA-Z0-9._-]+$"
+                          },
+                          "value": {
+                            "type": "string"
+                          },
+                          "type": {
+                            "type": "string",
+                            "enum": [
+                              "string",
+                              "number",
+                              "boolean"
+                            ]
+                          },
+                          "description": {
+                            "type": "string"
+                          },
+                          "is_encrypted": {
+                            "type": "boolean"
+                          },
+                          "group_id": {
+                            "type": "string"
+                          },
+                          "created_at": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "updated_at": {
+                            "type": "string",
+                            "format": "date-time"
+                          }
+                        },
+                        "required": [
+                          "key",
+                          "value",
+                          "type",
+                          "is_encrypted",
+                          "created_at",
+                          "updated_at"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "description": "Array of global settings"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Settings retrieved successfully"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "details": {
+                      "description": "Additional error details"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Unauthorized - Authentication required"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Insufficient permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "details": {
+                      "description": "Additional error details"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Forbidden - Insufficient permissions"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "details": {
+                      "description": "Additional error details"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Internal Server Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/settings/categories": {
+      "get": {
+        "summary": "Get all categories",
+        "tags": [
+          "Global Settings"
+        ],
+        "description": "Retrieves all available setting categories. Requires settings view permissions.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Categories retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "Array of category names"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Categories retrieved successfully"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "details": {
+                      "description": "Additional error details"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Unauthorized - Authentication required"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Insufficient permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "details": {
+                      "description": "Additional error details"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Forbidden - Insufficient permissions"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "details": {
+                      "description": "Additional error details"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Internal Server Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/settings/health": {
       "get": {
         "summary": "Health check",
@@ -6075,7 +6075,7 @@
                       "description": "Error message"
                     },
                     "details": {
-                      "description": "Additional error details (validation errors)"
+                      "description": "Additional error details"
                     }
                   },
                   "required": [
@@ -6104,7 +6104,7 @@
                       "description": "Error message"
                     },
                     "details": {
-                      "description": "Additional error details (validation errors)"
+                      "description": "Additional error details"
                     }
                   },
                   "required": [
@@ -6133,7 +6133,282 @@
                       "description": "Error message"
                     },
                     "details": {
-                      "description": "Additional error details (validation errors)"
+                      "description": "Additional error details"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Internal Server Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/settings/github-app/test-connection": {
+      "post": {
+        "summary": "Test GitHub App connection (Global Admin only)",
+        "tags": [
+          "Global Settings"
+        ],
+        "description": "Tests GitHub App configuration by fetching Microsoft VS Code repository information. Only global administrators can access this endpoint.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "GitHub App connection test successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Success message"
+                    },
+                    "details": {
+                      "type": "object",
+                      "properties": {
+                        "repository": {
+                          "type": "object",
+                          "properties": {
+                            "name": {
+                              "type": "string",
+                              "description": "Repository name"
+                            },
+                            "description": {
+                              "type": "string",
+                              "description": "Repository description"
+                            },
+                            "language": {
+                              "type": "string",
+                              "description": "Primary programming language"
+                            },
+                            "homepage": {
+                              "type": "string",
+                              "description": "Repository homepage URL"
+                            },
+                            "license": {
+                              "type": "string",
+                              "description": "Repository license"
+                            },
+                            "defaultBranch": {
+                              "type": "string",
+                              "description": "Default branch name"
+                            },
+                            "stars": {
+                              "type": "number",
+                              "description": "Number of stars"
+                            },
+                            "forks": {
+                              "type": "number",
+                              "description": "Number of forks"
+                            },
+                            "topics": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              },
+                              "description": "Repository topics/tags"
+                            }
+                          },
+                          "required": [
+                            "name",
+                            "description",
+                            "language",
+                            "homepage",
+                            "license",
+                            "defaultBranch",
+                            "stars",
+                            "forks",
+                            "topics"
+                          ],
+                          "additionalProperties": false,
+                          "description": "Repository information from GitHub"
+                        },
+                        "test_url": {
+                          "type": "string",
+                          "description": "URL of the test repository"
+                        }
+                      },
+                      "required": [
+                        "repository",
+                        "test_url"
+                      ],
+                      "additionalProperties": false,
+                      "description": "GitHub App connection test details"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "message",
+                    "details"
+                  ],
+                  "additionalProperties": false,
+                  "description": "GitHub App connection test successful"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - Connection test failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "details": {
+                      "type": "object",
+                      "properties": {
+                        "message": {
+                          "type": "string",
+                          "description": "Detailed error message"
+                        }
+                      },
+                      "required": [
+                        "message"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Additional error details"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Bad Request - Connection test failed"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "details": {
+                      "type": "object",
+                      "properties": {
+                        "message": {
+                          "type": "string",
+                          "description": "Detailed error message"
+                        }
+                      },
+                      "required": [
+                        "message"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Additional error details"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Unauthorized - Authentication required"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Insufficient permissions or GitHub App disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "details": {
+                      "type": "object",
+                      "properties": {
+                        "message": {
+                          "type": "string",
+                          "description": "Detailed error message"
+                        }
+                      },
+                      "required": [
+                        "message"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Additional error details"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Forbidden - Insufficient permissions or GitHub App disabled"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful (false for errors)",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "details": {
+                      "type": "object",
+                      "properties": {
+                        "message": {
+                          "type": "string",
+                          "description": "Detailed error message"
+                        }
+                      },
+                      "required": [
+                        "message"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Additional error details"
                     }
                   },
                   "required": [
@@ -10505,7 +10780,7 @@
         "tags": [
           "MCP Categories"
         ],
-        "description": "Retrieve all available MCP server categories for organization",
+        "description": "Retrieve all available MCP server categories for organization. No Content-Type header required for this GET request.",
         "responses": {
           "200": {
             "description": "Default Response",
@@ -10594,10 +10869,191 @@
         "tags": [
           "MCP Categories"
         ],
-        "description": "Create a new MCP server category - requires global admin permissions",
+        "description": "Create a new MCP server category - requires global admin permissions. Requires Content-Type: application/json header when sending request body.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
         "responses": {
-          "200": {
-            "description": "Default Response"
+          "201": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "description": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "icon": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "sort_order": {
+                          "type": "number"
+                        },
+                        "created_at": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name",
+                        "description",
+                        "icon",
+                        "sort_order",
+                        "created_at"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - Invalid input or missing Content-Type header",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "details": {}
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Bad Request - Invalid input or missing Content-Type header"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "details": {}
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Unauthorized - Authentication required"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Insufficient permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "details": {}
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Forbidden - Insufficient permissions"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict - Category name already exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "details": {}
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Conflict - Category name already exists"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "details": {}
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Internal Server Error"
+                }
+              }
+            }
           }
         }
       }
@@ -10608,20 +11064,227 @@
         "tags": [
           "MCP Categories"
         ],
-        "description": "Update an existing MCP server category - requires global admin permissions",
+        "description": "Update an existing MCP server category - requires global admin permissions. Requires Content-Type: application/json header when sending request body.",
         "parameters": [
           {
             "schema": {
-              "type": "string"
+              "type": "string",
+              "minLength": 1
             },
             "in": "path",
             "name": "id",
             "required": true
           }
         ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
         "responses": {
           "200": {
-            "description": "Default Response"
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "description": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "icon": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "sort_order": {
+                          "type": "number"
+                        },
+                        "created_at": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name",
+                        "description",
+                        "icon",
+                        "sort_order",
+                        "created_at"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - Invalid input or missing Content-Type header",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "details": {}
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Bad Request - Invalid input or missing Content-Type header"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "details": {}
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Unauthorized - Authentication required"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Insufficient permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "details": {}
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Forbidden - Insufficient permissions"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found - Category does not exist",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "details": {}
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Not Found - Category does not exist"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict - Category name already exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "details": {}
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Conflict - Category name already exists"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "details": {}
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Internal Server Error"
+                }
+              }
+            }
           }
         }
       },
@@ -10630,20 +11293,146 @@
         "tags": [
           "MCP Categories"
         ],
-        "description": "Delete an MCP server category - requires global admin permissions",
+        "description": "Delete an MCP server category - requires global admin permissions. No Content-Type header required for this DELETE request.",
         "parameters": [
           {
             "schema": {
-              "type": "string"
+              "type": "string",
+              "minLength": 1
             },
             "in": "path",
             "name": "id",
             "required": true
           }
         ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
         "responses": {
           "200": {
-            "description": "Default Response"
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "details": {}
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Unauthorized - Authentication required"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Insufficient permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "details": {}
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Forbidden - Insufficient permissions"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found - Category does not exist",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "details": {}
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Not Found - Category does not exist"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "details": {}
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Internal Server Error"
+                }
+              }
+            }
           }
         }
       }
@@ -10654,7 +11443,7 @@
         "tags": [
           "MCP Servers"
         ],
-        "description": "Retrieve MCP servers visible to the current user based on their permissions",
+        "description": "Retrieve MCP servers visible to the current user based on their permissions. No Content-Type header required for this GET request.",
         "parameters": [
           {
             "schema": {
@@ -10943,7 +11732,7 @@
         "tags": [
           "MCP Servers"
         ],
-        "description": "Create a new global MCP server - requires global admin permissions",
+        "description": "Create a new global MCP server - requires global admin permissions. Will require Content-Type: application/json header when sending request body once implemented.",
         "responses": {
           "200": {
             "description": "Default Response"
@@ -10957,7 +11746,7 @@
         "tags": [
           "MCP Servers"
         ],
-        "description": "Update a global MCP server - requires global admin permissions",
+        "description": "Update a global MCP server - requires global admin permissions. Will require Content-Type: application/json header when sending request body once implemented.",
         "parameters": [
           {
             "schema": {
@@ -11214,9 +12003,127 @@
           "MCP GitHub Integration"
         ],
         "description": "Get repository information from GitHub for MCP server creation/validation",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uri"
+            },
+            "in": "query",
+            "name": "url",
+            "required": true,
+            "description": "GitHub repository URL"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "default": "main"
+            },
+            "in": "query",
+            "name": "branch",
+            "required": false,
+            "description": "Git branch to analyze"
+          }
+        ],
         "responses": {
           "200": {
-            "description": "Default Response"
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string"
+                        },
+                        "description": {
+                          "type": "string"
+                        },
+                        "github_url": {
+                          "type": "string"
+                        },
+                        "git_branch": {
+                          "type": "string"
+                        },
+                        "homepage_url": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "author_name": {
+                          "type": "string"
+                        },
+                        "organization": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "license": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "language": {
+                          "type": "string"
+                        },
+                        "runtime": {
+                          "type": "string"
+                        },
+                        "runtime_min_version": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "tags": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "installation_methods": {
+                          "type": "array"
+                        },
+                        "dependencies": {
+                          "type": "object",
+                          "nullable": true
+                        },
+                        "latest_version": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "stars": {
+                          "type": "number"
+                        },
+                        "forks": {
+                          "type": "number"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -11227,48 +12134,7 @@
         "tags": [
           "Authentication"
         ],
-        "description": "Creates a new user account using email and password. The first registered user automatically becomes a global administrator. Automatically creates a session and default team for the user.",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "username": {
-                    "type": "string",
-                    "minLength": 3,
-                    "maxLength": 30,
-                    "pattern": "^[a-zA-Z0-9_]+$"
-                  },
-                  "email": {
-                    "type": "string",
-                    "format": "email"
-                  },
-                  "password": {
-                    "type": "string",
-                    "minLength": 8,
-                    "maxLength": 100
-                  },
-                  "first_name": {
-                    "type": "string",
-                    "maxLength": 50
-                  },
-                  "last_name": {
-                    "type": "string",
-                    "maxLength": 50
-                  }
-                },
-                "required": [
-                  "username",
-                  "email",
-                  "password"
-                ],
-                "additionalProperties": false
-              }
-            }
-          },
-          "required": true
-        },
+        "description": "Creates a new user account using email and password. The first registered user automatically becomes a global administrator. Automatically creates a session and default team for the user. Requires Content-Type: application/json header when sending request body.",
         "responses": {
           "201": {
             "description": "User registered successfully",
@@ -11340,7 +12206,7 @@
             }
           },
           "400": {
-            "description": "Bad Request - Invalid input, username taken, or email already in use",
+            "description": "Bad Request - Invalid input, username taken, email already in use, or missing Content-Type header",
             "content": {
               "application/json": {
                 "schema": {
@@ -11360,7 +12226,7 @@
                     "error"
                   ],
                   "additionalProperties": false,
-                  "description": "Bad Request - Invalid input, username taken, or email already in use"
+                  "description": "Bad Request - Invalid input, username taken, email already in use, or missing Content-Type header"
                 }
               }
             }
@@ -11426,32 +12292,7 @@
         "tags": [
           "Authentication"
         ],
-        "description": "Authenticates a user using their registered identifier (email or username) and password. This endpoint is accessed via the /api/auth/email/login path due to server-level prefixing. Establishes a session by setting an authentication cookie.",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "login": {
-                    "type": "string",
-                    "description": "User's registered email address or username."
-                  },
-                  "password": {
-                    "type": "string",
-                    "description": "User's password."
-                  }
-                },
-                "required": [
-                  "login",
-                  "password"
-                ],
-                "additionalProperties": false
-              }
-            }
-          },
-          "required": true
-        },
+        "description": "Authenticates a user using their registered identifier (email or username) and password. This endpoint is accessed via the /api/auth/email/login path due to server-level prefixing. Establishes a session by setting an authentication cookie. Requires Content-Type: application/json header when sending request body.",
         "security": [
           {
             "cookieAuth": []
@@ -11526,7 +12367,7 @@
             }
           },
           "400": {
-            "description": "Bad Request - Invalid input or invalid credentials.",
+            "description": "Bad Request - Invalid input, invalid credentials, or missing Content-Type header.",
             "content": {
               "application/json": {
                 "schema": {
@@ -11546,7 +12387,7 @@
                     "error"
                   ],
                   "additionalProperties": false,
-                  "description": "Bad Request - Invalid input or invalid credentials."
+                  "description": "Bad Request - Invalid input, invalid credentials, or missing Content-Type header."
                 }
               }
             }
@@ -11612,33 +12453,7 @@
         "tags": [
           "Authentication"
         ],
-        "description": "Allows authenticated users to change their password by providing their current password and a new password. Requires an active session.",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "current_password": {
-                    "type": "string",
-                    "minLength": 1
-                  },
-                  "new_password": {
-                    "type": "string",
-                    "minLength": 8,
-                    "maxLength": 100
-                  }
-                },
-                "required": [
-                  "current_password",
-                  "new_password"
-                ],
-                "additionalProperties": false
-              }
-            }
-          },
-          "required": true
-        },
+        "description": "Allows authenticated users to change their password by providing their current password and a new password. Requires an active session. Requires Content-Type: application/json header when sending request body.",
         "security": [
           {
             "cookieAuth": []
@@ -11672,7 +12487,7 @@
             }
           },
           "400": {
-            "description": "Bad Request - Invalid input or incorrect current password",
+            "description": "Bad Request - Invalid input, incorrect current password, or missing Content-Type header",
             "content": {
               "application/json": {
                 "schema": {
@@ -11692,7 +12507,7 @@
                     "error"
                   ],
                   "additionalProperties": false,
-                  "description": "Bad Request - Invalid input or incorrect current password"
+                  "description": "Bad Request - Invalid input, incorrect current password, or missing Content-Type header"
                 }
               }
             }
@@ -12024,27 +12839,7 @@
         "tags": [
           "Authentication"
         ],
-        "description": "Sends a password reset email to users with email authentication. Always returns success for security (does not reveal if email exists). Requires email functionality to be enabled via global.send_mail setting. Reset tokens expire in 10 minutes.",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "email": {
-                    "type": "string",
-                    "format": "email"
-                  }
-                },
-                "required": [
-                  "email"
-                ],
-                "additionalProperties": false
-              }
-            }
-          },
-          "required": true
-        },
+        "description": "Sends a password reset email to users with email authentication. Always returns success for security (does not reveal if email exists). Requires email functionality to be enabled via global.send_mail setting. Reset tokens expire in 10 minutes. Requires Content-Type: application/json header when sending request body.",
         "responses": {
           "200": {
             "description": "Request processed successfully",
@@ -12073,7 +12868,7 @@
             }
           },
           "400": {
-            "description": "Bad Request - Invalid email format",
+            "description": "Bad Request - Invalid email format or missing Content-Type header",
             "content": {
               "application/json": {
                 "schema": {
@@ -12093,7 +12888,7 @@
                     "error"
                   ],
                   "additionalProperties": false,
-                  "description": "Bad Request - Invalid email format"
+                  "description": "Bad Request - Invalid email format or missing Content-Type header"
                 }
               }
             }
@@ -12159,33 +12954,7 @@
         "tags": [
           "Authentication"
         ],
-        "description": "Resets the password for email users using a valid reset token. The token must be valid and not expired (10-minute expiration). After successful reset, all user sessions are invalidated for security. Only works for users with email authentication.",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "token": {
-                    "type": "string",
-                    "minLength": 1
-                  },
-                  "new_password": {
-                    "type": "string",
-                    "minLength": 8,
-                    "maxLength": 100
-                  }
-                },
-                "required": [
-                  "token",
-                  "new_password"
-                ],
-                "additionalProperties": false
-              }
-            }
-          },
-          "required": true
-        },
+        "description": "Resets the password for email users using a valid reset token. The token must be valid and not expired (10-minute expiration). After successful reset, all user sessions are invalidated for security. Only works for users with email authentication. Requires Content-Type: application/json header when sending request body.",
         "responses": {
           "200": {
             "description": "Password reset successfully",
@@ -12214,7 +12983,7 @@
             }
           },
           "400": {
-            "description": "Bad Request - Invalid token, expired token, or invalid password",
+            "description": "Bad Request - Invalid token, expired token, invalid password, or missing Content-Type header",
             "content": {
               "application/json": {
                 "schema": {
@@ -12234,7 +13003,7 @@
                     "error"
                   ],
                   "additionalProperties": false,
-                  "description": "Bad Request - Invalid token, expired token, or invalid password"
+                  "description": "Bad Request - Invalid token, expired token, invalid password, or missing Content-Type header"
                 }
               }
             }
@@ -12519,33 +13288,7 @@
         "tags": [
           "Authentication"
         ],
-        "description": "Allows authenticated users to update their profile information including username, first name, and last name. Requires an active session. At least one field must be provided.",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "username": {
-                    "type": "string",
-                    "minLength": 3,
-                    "maxLength": 30,
-                    "pattern": "^[a-zA-Z0-9_]+$"
-                  },
-                  "first_name": {
-                    "type": "string",
-                    "maxLength": 50
-                  },
-                  "last_name": {
-                    "type": "string",
-                    "maxLength": 50
-                  }
-                },
-                "additionalProperties": false
-              }
-            }
-          }
-        },
+        "description": "Allows authenticated users to update their profile information including username, first name, and last name. Requires an active session. At least one field must be provided. Requires Content-Type: application/json header when sending request body.",
         "security": [
           {
             "cookieAuth": []
@@ -12627,7 +13370,7 @@
             }
           },
           "400": {
-            "description": "Bad Request - Invalid input, no fields provided, or username already taken",
+            "description": "Bad Request - Invalid input, no fields provided, username already taken, or missing Content-Type header",
             "content": {
               "application/json": {
                 "schema": {
@@ -12647,7 +13390,7 @@
                     "error"
                   ],
                   "additionalProperties": false,
-                  "description": "Bad Request - Invalid input, no fields provided, or username already taken"
+                  "description": "Bad Request - Invalid input, no fields provided, username already taken, or missing Content-Type header"
                 }
               }
             }

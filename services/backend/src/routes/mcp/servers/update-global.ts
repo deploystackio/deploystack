@@ -5,7 +5,7 @@ export default async function updateGlobalServer(server: FastifyInstance) {
     schema: {
       tags: ['MCP Servers'],
       summary: 'Update global MCP server (Admin only)',
-      description: 'Update a global MCP server - requires global admin permissions'
+      description: 'Update a global MCP server - requires global admin permissions. Will require Content-Type: application/json header when sending request body once implemented.'
     }
   }, async (request, reply) => {
     return reply.status(501).send({

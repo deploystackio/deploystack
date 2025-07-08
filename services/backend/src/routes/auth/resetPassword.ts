@@ -19,17 +19,24 @@ const resetPasswordErrorResponseSchema = z.object({
 const resetPasswordRouteSchema = {
   tags: ['Authentication'],
   summary: 'Reset password using reset token',
-  description: 'Resets the password for email users using a valid reset token. The token must be valid and not expired (10-minute expiration). After successful reset, all user sessions are invalidated for security. Only works for users with email authentication.',
-  body: zodToJsonSchema(ResetPasswordSchema, { 
-    $refStrategy: 'none', 
-    target: 'openApi3' 
-  }),
+  description: 'Resets the password for email users using a valid reset token. The token must be valid and not expired (10-minute expiration). After successful reset, all user sessions are invalidated for security. Only works for users with email authentication. Requires Content-Type: application/json header when sending request body.',
+  requestBody: {
+    required: true,
+    content: {
+      'application/json': {
+        schema: zodToJsonSchema(ResetPasswordSchema, { 
+          $refStrategy: 'none', 
+          target: 'openApi3' 
+        })
+      }
+    }
+  },
   response: {
     200: zodToJsonSchema(resetPasswordSuccessResponseSchema.describe('Password reset successfully'), {
       $refStrategy: 'none',
       target: 'openApi3'
     }),
-    400: zodToJsonSchema(resetPasswordErrorResponseSchema.describe('Bad Request - Invalid token, expired token, or invalid password'), {
+    400: zodToJsonSchema(resetPasswordErrorResponseSchema.describe('Bad Request - Invalid token, expired token, invalid password, or missing Content-Type header'), {
       $refStrategy: 'none',
       target: 'openApi3'
     }),
