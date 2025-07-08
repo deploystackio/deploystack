@@ -13,7 +13,7 @@ export default async function healthRoute(server: FastifyInstance) {
     schema: {
       tags: ['Health Check'],
       summary: 'Simple API health check',
-      description: 'Returns basic API health status for monitoring, load balancers, and uptime checks',
+      description: 'Returns basic API health status for monitoring, load balancers, and uptime checks. No Content-Type header required for this GET request.',
       response: {
         200: zodToJsonSchema(healthResponseSchema.describe('Simple health check response'), {
           $refStrategy: 'none',

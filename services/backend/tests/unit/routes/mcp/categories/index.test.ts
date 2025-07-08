@@ -10,14 +10,17 @@ import updateCategory from '../../../../../src/routes/mcp/categories/update';
 // Import dependencies that need mocking
 import { getDb } from '../../../../../src/db';
 import { McpCategoriesService } from '../../../../../src/services/mcpCategoriesService';
+import { requirePermission } from '../../../../../src/middleware/roleMiddleware';
 
 // Mock dependencies
 vi.mock('../../../../../src/db');
 vi.mock('../../../../../src/services/mcpCategoriesService');
+vi.mock('../../../../../src/middleware/roleMiddleware');
 
 // Type the mocked functions
 const mockGetDb = getDb as MockedFunction<typeof getDb>;
 const MockedMcpCategoriesService = McpCategoriesService as any;
+const mockRequirePermission = requirePermission as MockedFunction<typeof requirePermission>;
 
 describe('MCP Categories Routes', () => {
   let mockFastify: Partial<FastifyInstance>;
@@ -57,6 +60,11 @@ describe('MCP Categories Routes', () => {
     mockGetDb.mockReturnValue(mockDb);
     MockedMcpCategoriesService.mockImplementation(() => mockService);
 
+    // Mock the requirePermission middleware to return a no-op function
+    mockRequirePermission.mockReturnValue(async (request: FastifyRequest, reply: FastifyReply) => {
+      // No-op middleware for testing
+    });
+
     // Setup route handlers storage
     routeHandlers = {};
 
@@ -84,6 +92,20 @@ describe('MCP Categories Routes', () => {
         debug: vi.fn(),
         warn: vi.fn(),
       },
+    } as any;
+
+    // Setup mock request
+    mockRequest = {
+      query: {},
+      body: {},
+      params: {},
+      user: { id: 'test-user-id', role: 'user' },
+      log: {
+        error: vi.fn(),
+        info: vi.fn(),
+        debug: vi.fn(),
+        warn: vi.fn(),
+      }
     } as any;
 
     // Setup mock reply
@@ -232,14 +254,88 @@ describe('MCP Categories Routes', () => {
       expect(mockFastify.post).toHaveBeenCalledWith('/mcp/categories', expect.any(Object), expect.any(Function));
     });
 
-    it('should return 501 not implemented for create category', async () => {
-      const handler = routeHandlers['POST /mcp/categories'];
-      await handler(mockRequest, mockReply);
+    it('should successfully create a new category', async () => {
+      const newCategory = {
+        id: 'cat-new',
+        name: 'Test Category',
+        description: 'Test description',
+        icon: 'test-icon',
+        sort_order: 1,
+        created_at: new Date('2024-01-01T00:00:00Z'),
+      };
 
-      expect(mockReply.status).toHaveBeenCalledWith(501);
+      mockService.createCategory.mockResolvedValue(newCategory);
+
+      const mockRequestWithBody = {
+        ...mockRequest,
+        body: { 
+          name: 'Test Category',
+          description: 'Test description',
+          icon: 'test-icon',
+          sort_order: 1
+        },
+        user: { id: 'test-user' },
+        log: mockFastify.log
+      };
+      
+      const handler = routeHandlers['POST /mcp/categories'];
+      await handler(mockRequestWithBody, mockReply);
+
+      expect(mockService.createCategory).toHaveBeenCalledWith({
+        name: 'Test Category',
+        description: 'Test description',
+        icon: 'test-icon',
+        sort_order: 1
+      });
+      expect(mockReply.status).toHaveBeenCalledWith(201);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        success: true,
+        data: {
+          ...newCategory,
+          created_at: '2024-01-01T00:00:00.000Z',
+        }
+      });
+    });
+
+    it('should handle duplicate category name error', async () => {
+      const error = new Error('UNIQUE constraint failed');
+      mockService.createCategory.mockRejectedValue(error);
+
+      const mockRequestWithBody = {
+        ...mockRequest,
+        body: { name: 'Duplicate Category' },
+        user: { id: 'test-user' },
+        log: mockFastify.log
+      };
+      
+      const handler = routeHandlers['POST /mcp/categories'];
+      await handler(mockRequestWithBody, mockReply);
+
+      expect(mockReply.status).toHaveBeenCalledWith(409);
       expect(mockReply.send).toHaveBeenCalledWith({
         success: false,
-        error: 'Not implemented yet',
+        error: 'Category name already exists',
+      });
+    });
+
+    it('should handle general errors', async () => {
+      const error = new Error('Database error');
+      mockService.createCategory.mockRejectedValue(error);
+
+      const mockRequestWithBody = {
+        ...mockRequest,
+        body: { name: 'Test Category' },
+        user: { id: 'test-user' },
+        log: mockFastify.log
+      };
+      
+      const handler = routeHandlers['POST /mcp/categories'];
+      await handler(mockRequestWithBody, mockReply);
+
+      expect(mockReply.status).toHaveBeenCalledWith(500);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        success: false,
+        error: 'Failed to create category',
       });
     });
 
@@ -250,7 +346,7 @@ describe('MCP Categories Routes', () => {
           schema: expect.objectContaining({
             tags: ['MCP Categories'],
             summary: 'Create MCP category (Admin only)',
-            description: 'Create a new MCP server category - requires global admin permissions',
+            description: expect.stringContaining('Create a new MCP server category'),
           }),
         }),
         expect.any(Function)
@@ -271,14 +367,90 @@ describe('MCP Categories Routes', () => {
       expect(mockFastify.put).toHaveBeenCalledWith('/mcp/categories/:id', expect.any(Object), expect.any(Function));
     });
 
-    it('should return 501 not implemented for update category', async () => {
-      const handler = routeHandlers['PUT /mcp/categories/:id'];
-      await handler(mockRequest, mockReply);
+    it('should successfully update a category', async () => {
+      const updatedCategory = {
+        id: 'cat-1',
+        name: 'Updated Category',
+        description: 'Updated description',
+        icon: 'updated-icon',
+        sort_order: 2,
+        created_at: new Date('2024-01-01T00:00:00Z'),
+      };
 
-      expect(mockReply.status).toHaveBeenCalledWith(501);
+      mockService.updateCategory.mockResolvedValue(updatedCategory);
+
+      const mockRequestWithParams = {
+        ...mockRequest,
+        params: { id: 'cat-1' },
+        body: { 
+          name: 'Updated Category',
+          description: 'Updated description',
+          icon: 'updated-icon',
+          sort_order: 2
+        },
+        user: { id: 'test-user' },
+        log: mockFastify.log
+      };
+      
+      const handler = routeHandlers['PUT /mcp/categories/:id'];
+      await handler(mockRequestWithParams, mockReply);
+
+      expect(mockService.updateCategory).toHaveBeenCalledWith('cat-1', {
+        name: 'Updated Category',
+        description: 'Updated description',
+        icon: 'updated-icon',
+        sort_order: 2
+      });
+      expect(mockReply.status).toHaveBeenCalledWith(200);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        success: true,
+        data: {
+          ...updatedCategory,
+          created_at: '2024-01-01T00:00:00.000Z',
+        }
+      });
+    });
+
+    it('should handle category not found', async () => {
+      mockService.updateCategory.mockResolvedValue(null);
+
+      const mockRequestWithParams = {
+        ...mockRequest,
+        params: { id: 'non-existent' },
+        body: { name: 'Updated Category' },
+        user: { id: 'test-user' },
+        log: mockFastify.log
+      };
+      
+      const handler = routeHandlers['PUT /mcp/categories/:id'];
+      await handler(mockRequestWithParams, mockReply);
+
+      expect(mockReply.status).toHaveBeenCalledWith(404);
       expect(mockReply.send).toHaveBeenCalledWith({
         success: false,
-        error: 'Not implemented yet',
+        error: 'Category not found',
+      });
+    });
+
+    it('should handle duplicate name error', async () => {
+      const error = new Error('UNIQUE constraint failed');
+      mockService.updateCategory.mockRejectedValue(error);
+
+      const mockRequestWithParams = {
+        ...mockRequest,
+        params: { id: 'cat-1' },
+        body: { name: 'Duplicate Name' },
+        user: { id: 'test-user' },
+        log: mockFastify.log
+      };
+      
+      const handler = routeHandlers['PUT /mcp/categories/:id'];
+      await handler(mockRequestWithParams, mockReply);
+
+      expect(mockReply.status).toHaveBeenCalledWith(409);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        success: false,
+        error: 'Category name already exists',
       });
     });
 
@@ -289,7 +461,7 @@ describe('MCP Categories Routes', () => {
           schema: expect.objectContaining({
             tags: ['MCP Categories'],
             summary: 'Update MCP category (Admin only)',
-            description: 'Update an existing MCP server category - requires global admin permissions',
+            description: expect.stringContaining('Update an existing MCP server category'),
           }),
         }),
         expect.any(Function)
@@ -310,14 +482,65 @@ describe('MCP Categories Routes', () => {
       expect(mockFastify.delete).toHaveBeenCalledWith('/mcp/categories/:id', expect.any(Object), expect.any(Function));
     });
 
-    it('should return 501 not implemented for delete category', async () => {
-      const handler = routeHandlers['DELETE /mcp/categories/:id'];
-      await handler(mockRequest, mockReply);
+    it('should successfully delete a category', async () => {
+      mockService.deleteCategory.mockResolvedValue(true);
 
-      expect(mockReply.status).toHaveBeenCalledWith(501);
+      const mockRequestWithParams = {
+        ...mockRequest,
+        params: { id: 'cat-1' },
+        user: { id: 'test-user' },
+        log: mockFastify.log
+      };
+      
+      const handler = routeHandlers['DELETE /mcp/categories/:id'];
+      await handler(mockRequestWithParams, mockReply);
+
+      expect(mockService.deleteCategory).toHaveBeenCalledWith('cat-1');
+      expect(mockReply.status).toHaveBeenCalledWith(200);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        success: true,
+        message: 'Category deleted successfully',
+      });
+    });
+
+    it('should handle category not found', async () => {
+      mockService.deleteCategory.mockResolvedValue(false);
+
+      const mockRequestWithParams = {
+        ...mockRequest,
+        params: { id: 'non-existent' },
+        user: { id: 'test-user' },
+        log: mockFastify.log
+      };
+      
+      const handler = routeHandlers['DELETE /mcp/categories/:id'];
+      await handler(mockRequestWithParams, mockReply);
+
+      expect(mockReply.status).toHaveBeenCalledWith(404);
       expect(mockReply.send).toHaveBeenCalledWith({
         success: false,
-        error: 'Not implemented yet',
+        error: 'Category not found',
+      });
+    });
+
+    it('should handle general errors', async () => {
+      const error = new Error('Database error');
+      mockService.deleteCategory.mockRejectedValue(error);
+
+      const mockRequestWithParams = {
+        ...mockRequest,
+        params: { id: 'cat-1' },
+        user: { id: 'test-user' },
+        log: mockFastify.log
+      };
+      
+      const handler = routeHandlers['DELETE /mcp/categories/:id'];
+      await handler(mockRequestWithParams, mockReply);
+
+      expect(mockReply.status).toHaveBeenCalledWith(500);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        success: false,
+        error: 'Failed to delete category',
       });
     });
 
@@ -328,7 +551,7 @@ describe('MCP Categories Routes', () => {
           schema: expect.objectContaining({
             tags: ['MCP Categories'],
             summary: 'Delete MCP category (Admin only)',
-            description: 'Delete an MCP server category - requires global admin permissions',
+            description: expect.stringContaining('Delete an MCP server category'),
           }),
         }),
         expect.any(Function)

@@ -222,11 +222,6 @@ onUnmounted(() => {
           :on-manage-team="handleManageTeam"
           :on-switch-team="handleSwitchTeam"
         />
-
-        <!-- No Results Message -->
-        <div v-if="filteredTeams.length === 0" class="text-center py-8">
-          <p class="text-muted-foreground">{{ t('teams.table.noResults') }}</p>
-        </div>
       </div>
 
       <!-- Add Team Modal -->

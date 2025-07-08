@@ -30,8 +30,16 @@ describe('MCP Servers - Get Server', () => {
     // Setup mock request
     mockRequest = {
       params: { id: 'test-server-id' },
-      user: { id: 'test-user-id', role: 'user' },
-    };
+      user: { 
+        id: 'test-user-id',
+        username: 'test-user',
+        email: 'test@example.com',
+        firstName: 'Test',
+        lastName: 'User',
+        authType: 'email',
+        githubId: null
+      },
+    } as any;
 
     // Setup mock reply
     mockReply = {
@@ -182,18 +190,22 @@ describe('MCP Servers - Get Server', () => {
       });
     });
 
-    it('should handle request with different user roles', async () => {
+    it('should handle request with different user types', async () => {
       const handler = routeHandlers['GET /mcp/servers/:id'];
       
-      const userRoles = ['user', 'admin', 'global_admin', 'team_admin'];
+      const userTypes = [
+        { id: 'user-1', username: 'user1', email: 'user1@example.com', firstName: 'User', lastName: 'One', authType: 'email', githubId: null },
+        { id: 'admin-1', username: 'admin1', email: 'admin1@example.com', firstName: 'Admin', lastName: 'One', authType: 'email', githubId: null },
+        { id: 'github-1', username: 'github1', email: 'github1@example.com', firstName: 'GitHub', lastName: 'User', authType: 'github', githubId: '12345' }
+      ];
 
-      for (const role of userRoles) {
-        const requestWithRole = {
+      for (const user of userTypes) {
+        const requestWithUser = {
           ...mockRequest,
-          user: { id: 'user-id', role }
+          user
         };
         
-        await handler(requestWithRole, mockReply);
+        await handler(requestWithUser, mockReply);
         
         expect(mockReply.status).toHaveBeenCalledWith(501);
         expect(mockReply.send).toHaveBeenCalledWith({

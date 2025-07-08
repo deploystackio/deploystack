@@ -124,7 +124,7 @@ export const teamCloudCredentials = sqliteTable('teamCloudCredentials', {
 // MCP Server Categories for better organization
 export const mcpCategories = sqliteTable('mcpCategories', {
   id: text('id').primaryKey(),
-  name: text('name').notNull(),
+  name: text('name').notNull().unique(),
   description: text('description'),
   icon: text('icon'), // Icon name/class for UI
   sort_order: integer('sort_order').notNull().default(0),

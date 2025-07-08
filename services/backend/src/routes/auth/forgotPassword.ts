@@ -19,17 +19,24 @@ const forgotPasswordErrorResponseSchema = z.object({
 const forgotPasswordRouteSchema = {
   tags: ['Authentication'],
   summary: 'Request password reset for email users',
-  description: 'Sends a password reset email to users with email authentication. Always returns success for security (does not reveal if email exists). Requires email functionality to be enabled via global.send_mail setting. Reset tokens expire in 10 minutes.',
-  body: zodToJsonSchema(ForgotPasswordSchema, { 
-    $refStrategy: 'none', 
-    target: 'openApi3' 
-  }),
+  description: 'Sends a password reset email to users with email authentication. Always returns success for security (does not reveal if email exists). Requires email functionality to be enabled via global.send_mail setting. Reset tokens expire in 10 minutes. Requires Content-Type: application/json header when sending request body.',
+  requestBody: {
+    required: true,
+    content: {
+      'application/json': {
+        schema: zodToJsonSchema(ForgotPasswordSchema, { 
+          $refStrategy: 'none', 
+          target: 'openApi3' 
+        })
+      }
+    }
+  },
   response: {
     200: zodToJsonSchema(forgotPasswordSuccessResponseSchema.describe('Request processed successfully'), {
       $refStrategy: 'none',
       target: 'openApi3'
     }),
-    400: zodToJsonSchema(forgotPasswordErrorResponseSchema.describe('Bad Request - Invalid email format'), {
+    400: zodToJsonSchema(forgotPasswordErrorResponseSchema.describe('Bad Request - Invalid email format or missing Content-Type header'), {
       $refStrategy: 'none',
       target: 'openApi3'
     }),

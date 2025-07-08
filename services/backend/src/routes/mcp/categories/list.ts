@@ -29,7 +29,7 @@ export default async function listCategories(server: FastifyInstance) {
     schema: {
       tags: ['MCP Categories'],
       summary: 'List all MCP server categories',
-      description: 'Retrieve all available MCP server categories for organization',
+      description: 'Retrieve all available MCP server categories for organization. No Content-Type header required for this GET request.',
       response: {
         200: zodToJsonSchema(listCategoriesResponseSchema, {
           $refStrategy: 'none',

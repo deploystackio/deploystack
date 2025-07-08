@@ -41,7 +41,8 @@ import {
   LogOut,
   Users,
   UserRoundPen,
-  FileSliders
+  FileSliders,
+  FolderTree
 } from 'lucide-vue-next'
 
 // Define props, including variant
@@ -95,11 +96,6 @@ const navigationItems = [
     title: t('sidebar.navigation.mcpServer'),
     icon: Server,
     url: '/mcp-server',
-  },
-  {
-    title: t('sidebar.navigation.provider'),
-    icon: Settings,
-    url: '/provider',
   },
   {
     title: t('sidebar.navigation.credentials'),
@@ -311,6 +307,28 @@ onUnmounted(() => {
               >
                 <Users class="mr-2 h-4 w-4 shrink-0" />
                 <span>{{ t('sidebar.adminArea.users') }}</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                @click="navigateTo('/admin/mcp-server-catalog')"
+                :is-active="router.currentRoute.value.path.startsWith('/admin/mcp-server-catalog')"
+                class="w-full justify-start"
+                :aria-current="router.currentRoute.value.path.startsWith('/admin/mcp-server-catalog') ? 'page' : undefined"
+              >
+                <Server class="mr-2 h-4 w-4 shrink-0" />
+                <span>{{ t('sidebar.adminArea.mcpCatalog') }}</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                @click="navigateTo('/admin/mcp-categories')"
+                :is-active="router.currentRoute.value.path.startsWith('/admin/mcp-categories')"
+                class="w-full justify-start"
+                :aria-current="router.currentRoute.value.path.startsWith('/admin/mcp-categories') ? 'page' : undefined"
+              >
+                <FolderTree class="mr-2 h-4 w-4 shrink-0" />
+                <span>{{ t('sidebar.adminArea.mcpCategories') }}</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>

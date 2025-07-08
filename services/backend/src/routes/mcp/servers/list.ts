@@ -60,7 +60,7 @@ export default async function listServers(server: FastifyInstance) {
     schema: {
       tags: ['MCP Servers'],
       summary: 'List MCP servers',
-      description: 'Retrieve MCP servers visible to the current user based on their permissions',
+      description: 'Retrieve MCP servers visible to the current user based on their permissions. No Content-Type header required for this GET request.',
       querystring: zodToJsonSchema(querySchema, {
         $refStrategy: 'none',
         target: 'openApi3'

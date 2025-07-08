@@ -24,18 +24,25 @@ const changePasswordErrorResponseSchema = z.object({
 const changePasswordRouteSchema = {
   tags: ['Authentication'],
   summary: 'Change user password',
-  description: 'Allows authenticated users to change their password by providing their current password and a new password. Requires an active session.',
-  body: zodToJsonSchema(ChangePasswordSchema, { 
-    $refStrategy: 'none', 
-    target: 'openApi3' 
-  }),
+  description: 'Allows authenticated users to change their password by providing their current password and a new password. Requires an active session. Requires Content-Type: application/json header when sending request body.',
+  requestBody: {
+    required: true,
+    content: {
+      'application/json': {
+        schema: zodToJsonSchema(ChangePasswordSchema, { 
+          $refStrategy: 'none', 
+          target: 'openApi3' 
+        })
+      }
+    }
+  },
   security: [{ cookieAuth: [] }],
   response: {
     200: zodToJsonSchema(changePasswordSuccessResponseSchema.describe('Password changed successfully'), {
       $refStrategy: 'none',
       target: 'openApi3'
     }),
-    400: zodToJsonSchema(changePasswordErrorResponseSchema.describe('Bad Request - Invalid input or incorrect current password'), {
+    400: zodToJsonSchema(changePasswordErrorResponseSchema.describe('Bad Request - Invalid input, incorrect current password, or missing Content-Type header'), {
       $refStrategy: 'none',
       target: 'openApi3'
     }),

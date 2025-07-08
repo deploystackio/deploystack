@@ -2,6 +2,7 @@
 import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import { useEventBus } from '@/composables/useEventBus'
 import GlobalSettingsSidebarNav, { type GlobalSettingGroup } from '@/components/settings/GlobalSettingsSidebarNav.vue'
 import DashboardLayout from '@/components/DashboardLayout.vue'
 import { getEnv } from '@/utils/env'
@@ -14,6 +15,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { getSettingsComponent, hasCustomComponent } from '@/composables/useSettingsComponentRegistry'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -79,6 +81,46 @@ const selectedGroup = computed(() => {
   const group = settingGroups.value.find(g => g.id === currentGroupId.value)
   return group
 })
+
+// Check if the selected group has a custom component
+const customComponent = computed(() => {
+  if (!selectedGroup.value) return null
+  return getSettingsComponent(selectedGroup.value.id)
+})
+
+// Event bus for cross-component communication
+const eventBus = useEventBus()
+
+// Handle settings updated from custom components
+function handleSettingsUpdated(updatedSettings: Setting[]) {
+  if (!selectedGroup.value) return
+
+  // Update the local state
+  const groupIndex = settingGroups.value.findIndex(g => g.id === selectedGroup.value?.id)
+  if (groupIndex !== -1) {
+    const updatedGroup = {
+      ...settingGroups.value[groupIndex],
+      settings: updatedSettings
+    }
+
+    const newSettingGroups = [...settingGroups.value]
+    newSettingGroups[groupIndex] = updatedGroup
+    settingGroups.value = newSettingGroups
+  }
+
+  // Show success message
+  successAlertMessage.value = t('globalSettings.alerts.saveSuccess')
+  showSuccessAlert.value = true
+
+  // Emit event for other components
+  eventBus.emit('settings-updated')
+}
+
+// Handle connection test results from custom components
+function handleConnectionTested(result: { success: boolean; message: string }) {
+  // You can add global handling for connection test results here
+  // Connection test results are handled by individual components
+}
 
 // For editable form
 import { type Setting } from '@/components/settings/GlobalSettingsSidebarNav.vue' // Import Setting interface
@@ -247,8 +289,19 @@ async function handleSubmit(event: Event) {
 
 
           <div v-else-if="selectedGroup" class="space-y-6">
+            <!-- Custom Component -->
+            <component
+              v-if="customComponent"
+              :is="customComponent.component"
+              :group="selectedGroup"
+              :settings="selectedGroup.settings || []"
+              @settings-updated="handleSettingsUpdated"
+              @connection-tested="handleConnectionTested"
+              v-bind="customComponent.props"
+            />
 
-            <Card>
+            <!-- Fallback: Standard Form (for groups without custom components) -->
+            <Card v-else>
               <CardHeader>
                 <CardTitle class="text-xl">
                   {{ selectedGroup.name }}
@@ -258,7 +311,6 @@ async function handleSubmit(event: Event) {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-
                 <form v-if="selectedGroup.settings && selectedGroup.settings.length > 0" class="space-y-6" @submit="handleSubmit">
                   <div v-for="setting in selectedGroup.settings" :key="setting.key" class="space-y-2">
                     <Label :for="`setting-${setting.key}`">{{ setting.description || setting.key }}</Label>
@@ -305,11 +357,8 @@ async function handleSubmit(event: Event) {
                 <div v-else>
                   <p class="text-sm text-muted-foreground">Group not found or settings unavailable.</p>
                 </div>
-
               </CardContent>
             </Card>
-
-
           </div>
 
 

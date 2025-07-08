@@ -139,6 +139,21 @@ const routes = [
         name: 'AdminUserDetail',
         component: () => import('../views/admin/UserDetail.vue'),
       },
+      {
+        path: 'mcp-server-catalog',
+        name: 'AdminMcpServerCatalog',
+        component: () => import('../views/admin/mcp-server-catalog/index.vue'),
+      },
+      {
+        path: 'mcp-server-catalog/add',
+        name: 'AdminMcpServerCatalogAdd',
+        component: () => import('../views/admin/mcp-server-catalog/add.vue'),
+      },
+      {
+        path: 'mcp-categories',
+        name: 'AdminMcpCategories',
+        component: () => import('../views/admin/mcp-categories/index.vue'),
+      },
     ],
   },
   {

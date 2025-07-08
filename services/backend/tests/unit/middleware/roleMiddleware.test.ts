@@ -254,6 +254,7 @@ describe('Role Middleware', () => {
 
       expect(mockReply.status).toHaveBeenCalledWith(401);
       expect(mockReply.send).toHaveBeenCalledWith({
+        success: false,
         error: 'Authentication required',
       });
       expect(mockRoleServiceInstance.getUserRole).not.toHaveBeenCalled();
@@ -268,8 +269,10 @@ describe('Role Middleware', () => {
       expect(mockRoleServiceInstance.getUserRole).toHaveBeenCalledWith('user-123');
       expect(mockReply.status).toHaveBeenCalledWith(403);
       expect(mockReply.send).toHaveBeenCalledWith({
+        success: false,
         error: 'Insufficient permissions',
         required_role: 'admin',
+        user_role: null,
       });
     });
 
@@ -287,8 +290,10 @@ describe('Role Middleware', () => {
       expect(mockRoleServiceInstance.getUserRole).toHaveBeenCalledWith('user-123');
       expect(mockReply.status).toHaveBeenCalledWith(403);
       expect(mockReply.send).toHaveBeenCalledWith({
+        success: false,
         error: 'Insufficient permissions',
         required_role: 'admin',
+        user_role: 'user',
       });
     });
 
@@ -299,10 +304,18 @@ describe('Role Middleware', () => {
       const middleware = requireRole('admin');
       await middleware(mockRequest as FastifyRequest, mockReply as FastifyReply);
 
-      expect(mockRequest.log?.error).toHaveBeenCalledWith(error, 'Error checking user role');
+      expect(mockRequest.log?.error).toHaveBeenCalledWith({
+        operation: 'role_middleware_check',
+        step: 'error',
+        requiredRole: 'admin',
+        userId: 'user-123',
+        error
+      }, '❌ Error checking user role: Database error');
       expect(mockReply.status).toHaveBeenCalledWith(500);
       expect(mockReply.send).toHaveBeenCalledWith({
+        success: false,
         error: 'Internal server error',
+        details: 'Database error',
       });
     });
   });
@@ -337,8 +350,10 @@ describe('Role Middleware', () => {
 
       expect(mockReply.status).toHaveBeenCalledWith(403);
       expect(mockReply.send).toHaveBeenCalledWith({
+        success: false,
         error: 'Insufficient permissions',
         required_role: 'global_admin',
+        user_role: 'user',
       });
     });
   });

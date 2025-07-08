@@ -37,14 +37,21 @@ const errorResponseSchema = z.object({
 const loginEmailRouteSchema = {
   tags: ['Authentication'],
   summary: 'User login via email/password',
-  description: "Authenticates a user using their registered identifier (email or username) and password. This endpoint is accessed via the /api/auth/email/login path due to server-level prefixing. Establishes a session by setting an authentication cookie.",
-  body: zodToJsonSchema(loginEmailBodySchema, { $refStrategy: 'none', target: 'openApi3' }),
+  description: "Authenticates a user using their registered identifier (email or username) and password. This endpoint is accessed via the /api/auth/email/login path due to server-level prefixing. Establishes a session by setting an authentication cookie. Requires Content-Type: application/json header when sending request body.",
+  requestBody: {
+    required: true,
+    content: {
+      'application/json': {
+        schema: zodToJsonSchema(loginEmailBodySchema, { $refStrategy: 'none', target: 'openApi3' })
+      }
+    }
+  },
   response: {
     200: zodToJsonSchema(successResponseSchema.describe('Login successful. Session cookie is set.'), {
       $refStrategy: 'none',
       target: 'openApi3'
     }),
-    400: zodToJsonSchema(errorResponseSchema.describe('Bad Request - Invalid input or invalid credentials.'), {
+    400: zodToJsonSchema(errorResponseSchema.describe('Bad Request - Invalid input, invalid credentials, or missing Content-Type header.'), {
       $refStrategy: 'none',
       target: 'openApi3',
       // examples: [

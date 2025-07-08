@@ -76,24 +76,98 @@ export function requireAnyPermission(permissions: string[]) {
  */
 export function requireRole(roleId: string) {
   return async (request: FastifyRequest, reply: FastifyReply) => {
+    request.log.debug({
+      operation: 'role_middleware_check',
+      step: 'start',
+      requiredRole: roleId,
+      userId: request.user?.id
+    }, `🔐 Checking if user has required role: ${roleId}`);
+
     // Check if user is authenticated
     if (!request.user) {
-      return reply.status(401).send({ error: 'Authentication required' });
+      request.log.warn({
+        operation: 'role_middleware_check',
+        step: 'auth_check',
+        requiredRole: roleId,
+        authenticated: false
+      }, '❌ User not authenticated');
+      
+      return reply.status(401).send({ 
+        success: false,
+        error: 'Authentication required' 
+      });
     }
+
+    request.log.debug({
+      operation: 'role_middleware_check',
+      step: 'auth_check',
+      requiredRole: roleId,
+      userId: request.user.id,
+      authenticated: true
+    }, `✅ User authenticated: ${request.user.id}`);
 
     // Get user's role from database since Lucia User might not have role_id
     const roleService = new RoleService();
     try {
+      request.log.debug({
+        operation: 'role_middleware_check',
+        step: 'get_user_role',
+        requiredRole: roleId,
+        userId: request.user.id
+      }, '📋 Fetching user role from database');
+
       const userRole = await roleService.getUserRole(request.user.id);
+      
+      request.log.debug({
+        operation: 'role_middleware_check',
+        step: 'get_user_role',
+        requiredRole: roleId,
+        userId: request.user.id,
+        userRole: userRole ? { id: userRole.id, name: userRole.name } : null,
+        hasRole: !!userRole
+      }, `📋 User role retrieved: ${userRole ? `${userRole.name} (${userRole.id})` : 'none'}`);
+
       if (!userRole || userRole.id !== roleId) {
+        request.log.warn({
+          operation: 'role_middleware_check',
+          step: 'role_check',
+          requiredRole: roleId,
+          userId: request.user.id,
+          userRole: userRole ? { id: userRole.id, name: userRole.name } : null,
+          hasRequiredRole: false
+        }, `❌ User does not have required role. Required: ${roleId}, User has: ${userRole ? userRole.id : 'none'}`);
+        
         return reply.status(403).send({ 
+          success: false,
           error: 'Insufficient permissions',
-          required_role: roleId 
+          required_role: roleId,
+          user_role: userRole ? userRole.id : null
         });
       }
+
+      request.log.debug({
+        operation: 'role_middleware_check',
+        step: 'role_check',
+        requiredRole: roleId,
+        userId: request.user.id,
+        userRole: { id: userRole.id, name: userRole.name },
+        hasRequiredRole: true
+      }, `✅ User has required role: ${userRole.name} (${userRole.id})`);
+
     } catch (error) {
-      request.log.error(error, 'Error checking user role');
-      return reply.status(500).send({ error: 'Internal server error' });
+      request.log.error({
+        operation: 'role_middleware_check',
+        step: 'error',
+        requiredRole: roleId,
+        userId: request.user.id,
+        error
+      }, `❌ Error checking user role: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      
+      return reply.status(500).send({ 
+        success: false,
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   };
 }

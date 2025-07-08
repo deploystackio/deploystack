@@ -1,5 +1,14 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Settings, ArrowRightLeft } from 'lucide-vue-next'
@@ -15,6 +24,11 @@ interface Props {
 
 const props = defineProps<Props>()
 const { t } = useI18n()
+
+// Sort teams by name for consistency
+const sortedTeams = computed(() => {
+  return [...props.teams].sort((a, b) => a.name.localeCompare(b.name))
+})
 
 // Helper function to check if user can manage a specific team
 const canManageTeam = (team: TeamWithRole): boolean => {
@@ -32,95 +46,85 @@ const getRoleDisplay = (role: string) => {
   const isAdmin = role === 'team_admin'
   return {
     text: isAdmin ? 'Admin' : 'User',
-    class: isAdmin
-      ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300'
-      : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'
+    variant: (isAdmin ? 'default' : 'secondary') as 'default' | 'secondary'
   }
 }
 </script>
 
 <template>
   <div class="rounded-md border">
-    <table class="w-full">
-      <thead>
-        <tr class="border-b bg-muted/50">
-          <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground text-sm">
-            {{ t('teams.table.columns.name') }}
-          </th>
-          <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground text-sm">
-            {{ t('teams.table.columns.description') }}
-          </th>
-          <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground text-sm">
-            {{ t('teams.table.columns.role') }}
-          </th>
-          <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground text-sm">
-            {{ t('teams.table.columns.created') }}
-          </th>
-          <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground text-sm">
-            {{ t('teams.table.columns.switch') }}
-          </th>
-          <th class="h-12 px-4 text-right align-middle font-medium text-muted-foreground text-sm">
-            {{ t('teams.table.columns.actions') }}
-          </th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr
-          v-for="team in teams"
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>{{ t('teams.table.columns.name') }}</TableHead>
+          <TableHead>{{ t('teams.table.columns.description') }}</TableHead>
+          <TableHead>{{ t('teams.table.columns.role') }}</TableHead>
+          <TableHead>{{ t('teams.table.columns.created') }}</TableHead>
+          <TableHead>{{ t('teams.table.columns.switch') }}</TableHead>
+          <TableHead class="w-[100px]">{{ t('teams.table.columns.actions') }}</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        <!-- Empty State -->
+        <TableRow v-if="sortedTeams.length === 0">
+          <TableCell :colspan="6" class="h-24 text-center">
+            {{ t('teams.table.noResults') }}
+          </TableCell>
+        </TableRow>
+
+        <!-- Data Rows -->
+        <TableRow
+          v-for="team in sortedTeams"
           :key="team.id"
-          class="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
+          :class="{ 'bg-muted/50': selectedTeamId === team.id }"
         >
           <!-- Team Name -->
-          <td class="p-4 align-middle">
-            <div class="font-medium">{{ team.name }}</div>
-          </td>
+          <TableCell class="font-medium">
+            {{ team.name }}
+          </TableCell>
 
           <!-- Description -->
-          <td class="p-4 align-middle">
-            <div class="text-muted-foreground">
-              {{ team.description || t('teams.table.noDescription') }}
-            </div>
-          </td>
+          <TableCell>
+            <span v-if="team.description" class="text-sm text-muted-foreground">
+              {{ team.description }}
+            </span>
+            <span v-else class="text-sm text-muted-foreground italic">
+              {{ t('teams.table.noDescription') }}
+            </span>
+          </TableCell>
 
           <!-- Role -->
-          <td class="p-4 align-middle">
-            <Badge
-              :class="getRoleDisplay(team.role).class"
-              class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-            >
+          <TableCell>
+            <Badge :variant="getRoleDisplay(team.role).variant">
               {{ getRoleDisplay(team.role).text }}
             </Badge>
-          </td>
+          </TableCell>
 
           <!-- Created Date -->
-          <td class="p-4 align-middle">
-            <div class="text-sm text-muted-foreground">
-              {{ formatDate(team.created_at) }}
-            </div>
-          </td>
+          <TableCell class="text-sm text-muted-foreground">
+            {{ formatDate(team.created_at) }}
+          </TableCell>
 
           <!-- Switch Team -->
-          <td class="p-4 align-middle">
-            <div class="flex justify-start">
-              <Button
-                :variant="selectedTeamId === team.id ? 'default' : 'outline'"
-                size="sm"
-                class="h-8 px-3"
-                :disabled="selectedTeamId === team.id"
-                @click="() => {
-                  if (selectedTeamId !== team.id) {
-                    props.onSwitchTeam(team.id)
-                  }
-                }"
-              >
-                <ArrowRightLeft class="h-4 w-4 mr-1" />
-                {{ selectedTeamId === team.id ? t('teams.table.selected') : t('teams.table.switch') }}
-              </Button>
-            </div>
-          </td>
+          <TableCell>
+            <Button
+              :variant="selectedTeamId === team.id ? 'default' : 'outline'"
+              size="sm"
+              class="h-8 px-3"
+              :disabled="selectedTeamId === team.id"
+              @click="() => {
+                if (selectedTeamId !== team.id) {
+                  props.onSwitchTeam(team.id)
+                }
+              }"
+            >
+              <ArrowRightLeft class="h-4 w-4 mr-1" />
+              {{ selectedTeamId === team.id ? t('teams.table.selected') : t('teams.table.switch') }}
+            </Button>
+          </TableCell>
 
           <!-- Actions -->
-          <td class="p-4 align-middle">
+          <TableCell>
             <div class="flex justify-end">
               <Button
                 v-if="canManageTeam(team)"
@@ -132,16 +136,16 @@ const getRoleDisplay = (role: string) => {
                 <Settings class="h-4 w-4 mr-1" />
                 {{ t('teams.table.manage') }}
               </Button>
-              <div
+              <span
                 v-else
                 class="text-muted-foreground text-sm"
               >
                 {{ t('teams.table.noActions') }}
-              </div>
+              </span>
             </div>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+          </TableCell>
+        </TableRow>
+      </TableBody>
+    </Table>
   </div>
 </template>
