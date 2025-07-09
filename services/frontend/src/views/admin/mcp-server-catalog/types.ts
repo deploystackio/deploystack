@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 export interface McpServer {
   id: string
   name: string
@@ -174,9 +176,7 @@ export interface GitHubFormData {
   repo_data?: any
 }
 
-export interface ReviewFormData {
-  // Review step doesn't have its own data, it just displays other steps
-}
+export type ReviewFormData = object
 
 export interface McpServerFormData {
   basic: BasicInfoFormData
@@ -191,7 +191,9 @@ export interface McpServerFormData {
 export interface FormStep {
   key: keyof McpServerFormData
   label: string
+   
   icon: any
+   
   component: any
 }
 

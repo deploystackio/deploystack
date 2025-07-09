@@ -12,28 +12,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog'
-import {
-  MoreHorizontal,
   Edit,
-  Trash2,
-  Eye,
   Star,
   StarOff,
   Github,
@@ -44,9 +23,7 @@ import type { McpServer } from './types'
 interface Props {
   servers: McpServer[]
   onEditServer: (serverId: string) => void
-  onDeleteServer: (serverId: string) => void
   onToggleFeatured: (serverId: string, featured: boolean) => void
-  onViewServer: (serverId: string) => void
 }
 
 const props = defineProps<Props>()
@@ -216,50 +193,15 @@ const sortedServers = computed(() => {
 
           <!-- Actions -->
           <TableCell>
-            <DropdownMenu>
-              <DropdownMenuTrigger as-child>
-                <Button variant="ghost" class="h-8 w-8 p-0">
-                  <span class="sr-only">{{ t('mcpCatalog.table.openMenu') }}</span>
-                  <MoreHorizontal class="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem @click="props.onViewServer(server.id)">
-                  <Eye class="mr-2 h-4 w-4" />
-                  {{ t('mcpCatalog.table.actions.view') }}
-                </DropdownMenuItem>
-                <DropdownMenuItem @click="props.onEditServer(server.id)">
-                  <Edit class="mr-2 h-4 w-4" />
-                  {{ t('mcpCatalog.table.actions.edit') }}
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <AlertDialog>
-                  <AlertDialogTrigger as-child>
-                    <DropdownMenuItem @click.prevent class="text-destructive focus:text-destructive">
-                      <Trash2 class="mr-2 h-4 w-4" />
-                      {{ t('mcpCatalog.table.actions.delete') }}
-                    </DropdownMenuItem>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>{{ t('mcpCatalog.deleteDialog.title') }}</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        {{ t('mcpCatalog.deleteDialog.description', { serverName: server.name }) }}
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>{{ t('mcpCatalog.deleteDialog.cancel') }}</AlertDialogCancel>
-                      <AlertDialogAction
-                        @click="props.onDeleteServer(server.id)"
-                        class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                      >
-                        {{ t('mcpCatalog.deleteDialog.confirm') }}
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <Button
+              variant="outline"
+              size="sm"
+              @click="props.onEditServer(server.id)"
+              class="h-8"
+            >
+              <Edit class="h-4 w-4 mr-2" />
+              {{ t('mcpCatalog.table.actions.edit') }}
+            </Button>
           </TableCell>
         </TableRow>
       </TableBody>

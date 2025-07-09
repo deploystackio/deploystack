@@ -63,4 +63,6 @@ CREATE UNIQUE INDEX `mcpServers_slug_unique` ON `mcpServers` (`slug`);--> statem
 CREATE INDEX `mcp_servers_visibility_idx` ON `mcpServers` (`visibility`);--> statement-breakpoint
 CREATE INDEX `mcp_servers_category_idx` ON `mcpServers` (`category_id`);--> statement-breakpoint
 CREATE INDEX `mcp_servers_status_idx` ON `mcpServers` (`status`);--> statement-breakpoint
-CREATE INDEX `mcp_servers_owner_team_idx` ON `mcpServers` (`owner_team_id`);
+CREATE INDEX `mcp_servers_owner_team_idx` ON `mcpServers` (`owner_team_id`);--> statement-breakpoint
+INSERT INTO `mcpCategories` (`id`, `name`, `description`, `icon`, `sort_order`, `created_at`) 
+VALUES ('default-category-id', 'Default', 'Default category', 'Tags', 0, strftime('%s', 'now') * 1000);

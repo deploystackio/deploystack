@@ -1,12 +1,25 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import getServer from '../../../../../src/routes/mcp/servers/get';
+import { McpCatalogService } from '../../../../../src/services/mcpCatalogService';
+import { TeamService } from '../../../../../src/services/teamService';
+import { getUserRole } from '../../../../../src/middleware/roleMiddleware';
+import { getDb } from '../../../../../src/db';
+
+// Mock dependencies
+vi.mock('../../../../../src/services/mcpCatalogService');
+vi.mock('../../../../../src/services/teamService');
+vi.mock('../../../../../src/middleware/roleMiddleware');
+vi.mock('../../../../../src/db');
 
 describe('MCP Servers - Get Server', () => {
   let mockFastify: Partial<FastifyInstance>;
   let mockRequest: Partial<FastifyRequest>;
   let mockReply: Partial<FastifyReply>;
   let routeHandlers: Record<string, any>;
+  let mockMcpService: any;
+  let mockDb: any;
+  let mockLogger: any;
 
   beforeEach(() => {
     // Reset all mocks
@@ -14,6 +27,42 @@ describe('MCP Servers - Get Server', () => {
 
     // Setup route handlers storage
     routeHandlers = {};
+
+    // Setup mock logger
+    mockLogger = {
+      info: vi.fn(),
+      debug: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn()
+    };
+
+    // Setup mock database
+    mockDb = {
+      select: vi.fn().mockReturnThis(),
+      from: vi.fn().mockReturnThis(),
+      where: vi.fn().mockReturnThis(),
+      orderBy: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis()
+    };
+
+    // Setup mock MCP service
+    mockMcpService = {
+      getServerById: vi.fn()
+    };
+
+    // Setup mocks
+    vi.mocked(getDb).mockReturnValue(mockDb);
+    vi.mocked(McpCatalogService).mockImplementation(() => mockMcpService);
+    vi.mocked(getUserRole).mockResolvedValue({ 
+      id: 'global_user', 
+      name: 'Global User',
+      description: 'Global user role',
+      permissions: [],
+      is_system_role: true,
+      created_at: new Date(),
+      updated_at: new Date()
+    });
+    vi.mocked(TeamService.getUserTeams).mockResolvedValue([]);
 
     // Setup mock Fastify instance
     mockFastify = {
@@ -30,15 +79,8 @@ describe('MCP Servers - Get Server', () => {
     // Setup mock request
     mockRequest = {
       params: { id: 'test-server-id' },
-      user: { 
-        id: 'test-user-id',
-        username: 'test-user',
-        email: 'test@example.com',
-        firstName: 'Test',
-        lastName: 'User',
-        authType: 'email',
-        githubId: null
-      },
+      user: { id: 'test-user-id' },
+      log: mockLogger
     } as any;
 
     // Setup mock reply
@@ -46,6 +88,10 @@ describe('MCP Servers - Get Server', () => {
       status: vi.fn().mockReturnThis(),
       send: vi.fn().mockReturnThis(),
     };
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   describe('Route Registration', () => {
@@ -72,7 +118,57 @@ describe('MCP Servers - Get Server', () => {
       expect(schema.schema).toBeDefined();
       expect(schema.schema.tags).toEqual(['MCP Servers']);
       expect(schema.schema.summary).toBe('Get MCP server by ID');
-      expect(schema.schema.description).toBe('Retrieve a specific MCP server by its ID');
+      expect(schema.schema.description).toContain('Retrieve a specific MCP server by its ID');
+      expect(schema.schema.security).toEqual([{ cookieAuth: [] }]);
+    });
+
+    it('should have preValidation hook for authentication', async () => {
+      await getServer(mockFastify as FastifyInstance);
+
+      const getCall = (mockFastify.get as any).mock.calls.find(
+        (call: any[]) => call[0] === '/mcp/servers/:id'
+      );
+      
+      expect(getCall).toBeDefined();
+      const [, schema] = getCall;
+      
+      expect(schema.preValidation).toBeDefined();
+      expect(typeof schema.preValidation).toBe('function');
+    });
+  });
+
+  describe('Authentication', () => {
+    beforeEach(async () => {
+      await getServer(mockFastify as FastifyInstance);
+    });
+
+    it('should require authentication', async () => {
+      const getCall = (mockFastify.get as any).mock.calls.find(
+        (call: any[]) => call[0] === '/mcp/servers/:id'
+      );
+      const preValidation = getCall[1].preValidation;
+
+      const unauthenticatedRequest = { user: null };
+      await preValidation(unauthenticatedRequest, mockReply);
+
+      expect(mockReply.status).toHaveBeenCalledWith(401);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        success: false,
+        error: 'Authentication required'
+      });
+    });
+
+    it('should allow authenticated users', async () => {
+      const getCall = (mockFastify.get as any).mock.calls.find(
+        (call: any[]) => call[0] === '/mcp/servers/:id'
+      );
+      const preValidation = getCall[1].preValidation;
+
+      const authenticatedRequest = { user: { id: 'test-user' } };
+      const result = await preValidation(authenticatedRequest, mockReply);
+
+      expect(result).toBeUndefined(); // No return means validation passed
+      expect(mockReply.status).not.toHaveBeenCalled();
     });
   });
 
@@ -81,63 +177,437 @@ describe('MCP Servers - Get Server', () => {
       await getServer(mockFastify as FastifyInstance);
     });
 
-    it('should return 501 Not Implemented', async () => {
-      const handler = routeHandlers['GET /mcp/servers/:id'];
-      await handler(mockRequest, mockReply);
-
-      expect(mockReply.status).toHaveBeenCalledWith(501);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        success: false,
-        error: 'Not implemented yet'
-      });
-    });
-
-    it('should return consistent response structure', async () => {
-      const handler = routeHandlers['GET /mcp/servers/:id'];
-      
-      // Call multiple times to ensure consistency
-      await handler(mockRequest, mockReply);
-      await handler(mockRequest, mockReply);
-      await handler(mockRequest, mockReply);
-
-      expect(mockReply.status).toHaveBeenCalledTimes(3);
-      expect(mockReply.send).toHaveBeenCalledTimes(3);
-      
-      // Check that all calls had the same arguments
-      const statusCalls = (mockReply.status as any).mock.calls;
-      const sendCalls = (mockReply.send as any).mock.calls;
-      
-      statusCalls.forEach((call: any[]) => {
-        expect(call[0]).toBe(501);
-      });
-      
-      sendCalls.forEach((call: any[]) => {
-        expect(call[0]).toEqual({
-          success: false,
-          error: 'Not implemented yet'
-        });
-      });
-    });
-
-    it('should handle request with valid server ID', async () => {
-      const handler = routeHandlers['GET /mcp/servers/:id'];
-      const requestWithId = {
-        ...mockRequest,
-        params: { id: 'valid-server-id-123' }
+    it('should get server successfully when server exists and user has access', async () => {
+      const mockServer = {
+        id: 'server-1',
+        name: 'Test Server',
+        slug: 'test-server',
+        description: 'A test server',
+        installation_methods: '[]',
+        tools: '[]',
+        resources: null,
+        prompts: null,
+        default_config: null,
+        environment_variables: null,
+        dependencies: null,
+        tags: null,
+        created_at: new Date('2024-01-01'),
+        updated_at: new Date('2024-01-01'),
+        last_sync_at: null,
+        visibility: 'global',
+        owner_team_id: null,
+        created_by: 'user-1',
+        language: 'javascript',
+        runtime: 'node',
+        status: 'active',
+        featured: false
       };
 
-      await handler(requestWithId, mockReply);
+      mockMcpService.getServerById.mockResolvedValue(mockServer);
 
-      expect(mockReply.status).toHaveBeenCalledWith(501);
+      const handler = routeHandlers['GET /mcp/servers/:id'];
+      await handler(mockRequest, mockReply);
+
+      expect(mockMcpService.getServerById).toHaveBeenCalledWith('test-server-id');
+      expect(mockReply.status).toHaveBeenCalledWith(200);
       expect(mockReply.send).toHaveBeenCalledWith({
-        success: false,
-        error: 'Not implemented yet'
+        success: true,
+        data: expect.objectContaining({
+          id: 'server-1',
+          name: 'Test Server',
+          installation_methods: [],
+          tools: [],
+          resources: null,
+          prompts: null,
+          default_config: null,
+          environment_variables: null,
+          dependencies: null,
+          tags: null,
+          created_at: '2024-01-01T00:00:00.000Z',
+          updated_at: '2024-01-01T00:00:00.000Z',
+          last_sync_at: null
+        })
       });
     });
 
-    it('should handle request with different ID formats', async () => {
+    it('should return 404 when server does not exist', async () => {
+      mockMcpService.getServerById.mockResolvedValue(null);
+
       const handler = routeHandlers['GET /mcp/servers/:id'];
-      
+      await handler(mockRequest, mockReply);
+
+      expect(mockMcpService.getServerById).toHaveBeenCalledWith('test-server-id');
+      expect(mockReply.status).toHaveBeenCalledWith(404);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        success: false,
+        error: 'Server not found'
+      });
+    });
+
+    it('should allow global admin to access any server', async () => {
+      vi.mocked(getUserRole).mockResolvedValue({ 
+        id: 'global_admin', 
+        name: 'Global Admin',
+        description: 'Global admin role',
+        permissions: [],
+        is_system_role: true,
+        created_at: new Date(),
+        updated_at: new Date()
+      });
+
+      const mockServer = {
+        id: 'server-1',
+        name: 'Team Server',
+        slug: 'team-server',
+        description: 'A team server',
+        installation_methods: '[]',
+        tools: '[]',
+        resources: null,
+        prompts: null,
+        default_config: null,
+        environment_variables: null,
+        dependencies: null,
+        tags: null,
+        created_at: new Date('2024-01-01'),
+        updated_at: new Date('2024-01-01'),
+        last_sync_at: null,
+        visibility: 'team',
+        owner_team_id: 'team-1',
+        created_by: 'user-1',
+        language: 'javascript',
+        runtime: 'node',
+        status: 'active',
+        featured: false
+      };
+
+      mockMcpService.getServerById.mockResolvedValue(mockServer);
+
+      const handler = routeHandlers['GET /mcp/servers/:id'];
+      await handler(mockRequest, mockReply);
+
+      expect(mockReply.status).toHaveBeenCalledWith(200);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        success: true,
+        data: expect.objectContaining({
+          id: 'server-1',
+          name: 'Team Server',
+          visibility: 'team'
+        })
+      });
+    });
+
+    it('should allow access to global servers for any authenticated user', async () => {
+      const mockServer = {
+        id: 'server-1',
+        name: 'Global Server',
+        slug: 'global-server',
+        description: 'A global server',
+        installation_methods: '[]',
+        tools: '[]',
+        resources: null,
+        prompts: null,
+        default_config: null,
+        environment_variables: null,
+        dependencies: null,
+        tags: null,
+        created_at: new Date('2024-01-01'),
+        updated_at: new Date('2024-01-01'),
+        last_sync_at: null,
+        visibility: 'global',
+        owner_team_id: null,
+        created_by: 'user-1',
+        language: 'javascript',
+        runtime: 'node',
+        status: 'active',
+        featured: false
+      };
+
+      mockMcpService.getServerById.mockResolvedValue(mockServer);
+
+      const handler = routeHandlers['GET /mcp/servers/:id'];
+      await handler(mockRequest, mockReply);
+
+      expect(mockReply.status).toHaveBeenCalledWith(200);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        success: true,
+        data: expect.objectContaining({
+          id: 'server-1',
+          name: 'Global Server',
+          visibility: 'global'
+        })
+      });
+    });
+
+    it('should allow team members to access their team servers', async () => {
+      const mockTeams = [
+        { 
+          id: 'team-1', 
+          name: 'Team 1',
+          slug: 'team-1',
+          owner_id: 'user-1',
+          is_default: false,
+          created_at: new Date(),
+          updated_at: new Date()
+        }
+      ];
+      vi.mocked(TeamService.getUserTeams).mockResolvedValue(mockTeams);
+
+      const mockServer = {
+        id: 'server-1',
+        name: 'Team Server',
+        slug: 'team-server',
+        description: 'A team server',
+        installation_methods: '[]',
+        tools: '[]',
+        resources: null,
+        prompts: null,
+        default_config: null,
+        environment_variables: null,
+        dependencies: null,
+        tags: null,
+        created_at: new Date('2024-01-01'),
+        updated_at: new Date('2024-01-01'),
+        last_sync_at: null,
+        visibility: 'team',
+        owner_team_id: 'team-1',
+        created_by: 'user-1',
+        language: 'javascript',
+        runtime: 'node',
+        status: 'active',
+        featured: false
+      };
+
+      mockMcpService.getServerById.mockResolvedValue(mockServer);
+
+      const handler = routeHandlers['GET /mcp/servers/:id'];
+      await handler(mockRequest, mockReply);
+
+      expect(mockReply.status).toHaveBeenCalledWith(200);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        success: true,
+        data: expect.objectContaining({
+          id: 'server-1',
+          name: 'Team Server',
+          visibility: 'team',
+          owner_team_id: 'team-1'
+        })
+      });
+    });
+
+    it('should deny access to team servers for non-members', async () => {
+      const mockTeams = [
+        { 
+          id: 'team-2', 
+          name: 'Team 2',
+          slug: 'team-2',
+          owner_id: 'user-1',
+          is_default: false,
+          created_at: new Date(),
+          updated_at: new Date()
+        }
+      ];
+      vi.mocked(TeamService.getUserTeams).mockResolvedValue(mockTeams);
+
+      const mockServer = {
+        id: 'server-1',
+        name: 'Team Server',
+        slug: 'team-server',
+        description: 'A team server',
+        installation_methods: '[]',
+        tools: '[]',
+        resources: null,
+        prompts: null,
+        default_config: null,
+        environment_variables: null,
+        dependencies: null,
+        tags: null,
+        created_at: new Date('2024-01-01'),
+        updated_at: new Date('2024-01-01'),
+        last_sync_at: null,
+        visibility: 'team',
+        owner_team_id: 'team-1', // User is not a member of team-1
+        created_by: 'user-1',
+        language: 'javascript',
+        runtime: 'node',
+        status: 'active',
+        featured: false
+      };
+
+      mockMcpService.getServerById.mockResolvedValue(mockServer);
+
+      const handler = routeHandlers['GET /mcp/servers/:id'];
+      await handler(mockRequest, mockReply);
+
+      expect(mockReply.status).toHaveBeenCalledWith(404);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        success: false,
+        error: 'Server not found'
+      });
+    });
+
+    it('should handle team service errors gracefully', async () => {
+      vi.mocked(TeamService.getUserTeams).mockRejectedValue(new Error('Team service error'));
+
+      const mockServer = {
+        id: 'server-1',
+        name: 'Global Server',
+        slug: 'global-server',
+        description: 'A global server',
+        installation_methods: '[]',
+        tools: '[]',
+        resources: null,
+        prompts: null,
+        default_config: null,
+        environment_variables: null,
+        dependencies: null,
+        tags: null,
+        created_at: new Date('2024-01-01'),
+        updated_at: new Date('2024-01-01'),
+        last_sync_at: null,
+        visibility: 'global',
+        owner_team_id: null,
+        created_by: 'user-1',
+        language: 'javascript',
+        runtime: 'node',
+        status: 'active',
+        featured: false
+      };
+
+      mockMcpService.getServerById.mockResolvedValue(mockServer);
+
+      const handler = routeHandlers['GET /mcp/servers/:id'];
+      await handler(mockRequest, mockReply);
+
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          operation: 'get_mcp_server',
+          userId: 'test-user-id',
+          serverId: 'test-server-id',
+          teamError: expect.any(Error)
+        }),
+        'Failed to get user teams, continuing with empty team list'
+      );
+
+      // Should still work for global servers
+      expect(mockReply.status).toHaveBeenCalledWith(200);
+    });
+
+    it('should handle service errors', async () => {
+      mockMcpService.getServerById.mockRejectedValue(new Error('Database error'));
+
+      const handler = routeHandlers['GET /mcp/servers/:id'];
+      await handler(mockRequest, mockReply);
+
+      expect(mockReply.status).toHaveBeenCalledWith(500);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        success: false,
+        error: 'Failed to get MCP server'
+      });
+
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        expect.objectContaining({
+          operation: 'get_mcp_server',
+          userId: 'test-user-id',
+          serverId: 'test-server-id',
+          error: expect.any(Error)
+        }),
+        'Failed to get MCP server'
+      );
+    });
+
+    it('should parse JSON fields correctly', async () => {
+      const mockServer = {
+        id: 'server-1',
+        name: 'Test Server',
+        slug: 'test-server',
+        description: 'A test server',
+        installation_methods: '["npm", "yarn"]',
+        tools: '[{"name": "test-tool"}]',
+        resources: '[{"name": "test-resource"}]',
+        prompts: '[{"name": "test-prompt"}]',
+        default_config: '{"key": "value"}',
+        environment_variables: '[{"name": "TEST_VAR"}]',
+        dependencies: '{"dep1": "^1.0.0"}',
+        tags: '["tag1", "tag2"]',
+        created_at: new Date('2024-01-01'),
+        updated_at: new Date('2024-01-01'),
+        last_sync_at: new Date('2024-01-02'),
+        visibility: 'global',
+        owner_team_id: null,
+        created_by: 'user-1',
+        language: 'javascript',
+        runtime: 'node',
+        status: 'active',
+        featured: false
+      };
+
+      mockMcpService.getServerById.mockResolvedValue(mockServer);
+
+      const handler = routeHandlers['GET /mcp/servers/:id'];
+      await handler(mockRequest, mockReply);
+
+      const response = (mockReply.send as any).mock.calls[0][0];
+      const server = response.data;
+
+      expect(server.installation_methods).toEqual(['npm', 'yarn']);
+      expect(server.tools).toEqual([{ name: 'test-tool' }]);
+      expect(server.resources).toEqual([{ name: 'test-resource' }]);
+      expect(server.prompts).toEqual([{ name: 'test-prompt' }]);
+      expect(server.default_config).toEqual({ key: 'value' });
+      expect(server.environment_variables).toEqual([{ name: 'TEST_VAR' }]);
+      expect(server.dependencies).toEqual({ dep1: '^1.0.0' });
+      expect(server.tags).toEqual(['tag1', 'tag2']);
+      expect(server.created_at).toBe('2024-01-01T00:00:00.000Z');
+      expect(server.updated_at).toBe('2024-01-01T00:00:00.000Z');
+      expect(server.last_sync_at).toBe('2024-01-02T00:00:00.000Z');
+    });
+
+    it('should handle null JSON fields correctly', async () => {
+      const mockServer = {
+        id: 'server-1',
+        name: 'Test Server',
+        slug: 'test-server',
+        description: 'A test server',
+        installation_methods: '[]',
+        tools: '[]',
+        resources: null,
+        prompts: null,
+        default_config: null,
+        environment_variables: null,
+        dependencies: null,
+        tags: null,
+        created_at: new Date('2024-01-01'),
+        updated_at: new Date('2024-01-01'),
+        last_sync_at: null,
+        visibility: 'global',
+        owner_team_id: null,
+        created_by: 'user-1',
+        language: 'javascript',
+        runtime: 'node',
+        status: 'active',
+        featured: false
+      };
+
+      mockMcpService.getServerById.mockResolvedValue(mockServer);
+
+      const handler = routeHandlers['GET /mcp/servers/:id'];
+      await handler(mockRequest, mockReply);
+
+      const response = (mockReply.send as any).mock.calls[0][0];
+      const server = response.data;
+
+      expect(server.installation_methods).toEqual([]);
+      expect(server.tools).toEqual([]);
+      expect(server.resources).toBeNull();
+      expect(server.prompts).toBeNull();
+      expect(server.default_config).toBeNull();
+      expect(server.environment_variables).toBeNull();
+      expect(server.dependencies).toBeNull();
+      expect(server.tags).toBeNull();
+      expect(server.last_sync_at).toBeNull();
+    });
+
+    it('should handle different server ID formats', async () => {
       const testIds = [
         'uuid-123-456-789',
         'simple-id',
@@ -146,237 +616,266 @@ describe('MCP Servers - Get Server', () => {
         'server-with-dashes'
       ];
 
-      for (const id of testIds) {
-        const requestWithId = { ...mockRequest, params: { id } };
-        await handler(requestWithId, mockReply);
-        
-        expect(mockReply.status).toHaveBeenCalledWith(501);
-        expect(mockReply.send).toHaveBeenCalledWith({
-          success: false,
-          error: 'Not implemented yet'
-        });
-      }
-    });
+      for (const testId of testIds) {
+        mockMcpService.getServerById.mockResolvedValue(null);
 
-    it('should handle request without ID parameter', async () => {
-      const handler = routeHandlers['GET /mcp/servers/:id'];
-      const requestWithoutId = {
-        ...mockRequest,
-        params: {}
-      };
-
-      await handler(requestWithoutId, mockReply);
-
-      expect(mockReply.status).toHaveBeenCalledWith(501);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        success: false,
-        error: 'Not implemented yet'
-      });
-    });
-
-    it('should handle request without user authentication', async () => {
-      const handler = routeHandlers['GET /mcp/servers/:id'];
-      const unauthenticatedRequest = {
-        ...mockRequest,
-        user: undefined
-      };
-
-      await handler(unauthenticatedRequest, mockReply);
-
-      expect(mockReply.status).toHaveBeenCalledWith(501);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        success: false,
-        error: 'Not implemented yet'
-      });
-    });
-
-    it('should handle request with different user types', async () => {
-      const handler = routeHandlers['GET /mcp/servers/:id'];
-      
-      const userTypes = [
-        { id: 'user-1', username: 'user1', email: 'user1@example.com', firstName: 'User', lastName: 'One', authType: 'email', githubId: null },
-        { id: 'admin-1', username: 'admin1', email: 'admin1@example.com', firstName: 'Admin', lastName: 'One', authType: 'email', githubId: null },
-        { id: 'github-1', username: 'github1', email: 'github1@example.com', firstName: 'GitHub', lastName: 'User', authType: 'github', githubId: '12345' }
-      ];
-
-      for (const user of userTypes) {
-        const requestWithUser = {
+        const handler = routeHandlers['GET /mcp/servers/:id'];
+        const requestWithId = {
           ...mockRequest,
-          user
+          params: { id: testId }
         };
-        
-        await handler(requestWithUser, mockReply);
-        
-        expect(mockReply.status).toHaveBeenCalledWith(501);
-        expect(mockReply.send).toHaveBeenCalledWith({
-          success: false,
-          error: 'Not implemented yet'
-        });
+
+        await handler(requestWithId, mockReply);
+
+        expect(mockMcpService.getServerById).toHaveBeenCalledWith(testId);
       }
     });
   });
 
-  describe('Error Handling', () => {
-    it('should handle handler execution without throwing', async () => {
+  describe('Access Control Logic', () => {
+    beforeEach(async () => {
       await getServer(mockFastify as FastifyInstance);
-      const handler = routeHandlers['GET /mcp/servers/:id'];
-
-      expect(async () => {
-        await handler(mockRequest, mockReply);
-      }).not.toThrow();
     });
 
-    it('should work with malformed request objects', async () => {
-      await getServer(mockFastify as FastifyInstance);
-      const handler = routeHandlers['GET /mcp/servers/:id'];
-
-      const malformedRequests = [
-        null,
-        undefined,
-        { invalidProperty: 'test' },
-        { params: null },
-        { user: null }
+    it('should correctly determine access for different user roles and server types', async () => {
+      const testCases = [
+        {
+          description: 'global admin accessing global server',
+          userRole: 'global_admin',
+          serverVisibility: 'global',
+          serverOwnerTeamId: null,
+          userTeams: [],
+          expectedAccess: true
+        },
+        {
+          description: 'global admin accessing team server',
+          userRole: 'global_admin',
+          serverVisibility: 'team',
+          serverOwnerTeamId: 'team-1',
+          userTeams: [],
+          expectedAccess: true
+        },
+        {
+          description: 'regular user accessing global server',
+          userRole: 'global_user',
+          serverVisibility: 'global',
+          serverOwnerTeamId: null,
+          userTeams: [],
+          expectedAccess: true
+        },
+        {
+          description: 'team member accessing their team server',
+          userRole: 'global_user',
+          serverVisibility: 'team',
+          serverOwnerTeamId: 'team-1',
+          userTeams: ['team-1'],
+          expectedAccess: true
+        },
+        {
+          description: 'non-team member accessing team server',
+          userRole: 'global_user',
+          serverVisibility: 'team',
+          serverOwnerTeamId: 'team-1',
+          userTeams: ['team-2'],
+          expectedAccess: false
+        }
       ];
 
-      for (const malformedRequest of malformedRequests) {
-        await handler(malformedRequest, mockReply);
-        
-        expect(mockReply.status).toHaveBeenCalledWith(501);
-        expect(mockReply.send).toHaveBeenCalledWith({
-          success: false,
-          error: 'Not implemented yet'
+      for (const testCase of testCases) {
+        // Setup mocks for this test case
+        vi.mocked(getUserRole).mockResolvedValue({ 
+          id: testCase.userRole, 
+          name: testCase.userRole,
+          description: `${testCase.userRole} role`,
+          permissions: [],
+          is_system_role: true,
+          created_at: new Date(),
+          updated_at: new Date()
         });
+
+        const mockTeams = testCase.userTeams.map(teamId => ({
+          id: teamId,
+          name: `Team ${teamId}`,
+          slug: teamId,
+          owner_id: 'user-1',
+          is_default: false,
+          created_at: new Date(),
+          updated_at: new Date()
+        }));
+        vi.mocked(TeamService.getUserTeams).mockResolvedValue(mockTeams);
+
+        const mockServer = {
+          id: 'server-1',
+          name: 'Test Server',
+          slug: 'test-server',
+          description: 'A test server',
+          installation_methods: '[]',
+          tools: '[]',
+          resources: null,
+          prompts: null,
+          default_config: null,
+          environment_variables: null,
+          dependencies: null,
+          tags: null,
+          created_at: new Date('2024-01-01'),
+          updated_at: new Date('2024-01-01'),
+          last_sync_at: null,
+          visibility: testCase.serverVisibility as 'global' | 'team',
+          owner_team_id: testCase.serverOwnerTeamId,
+          created_by: 'user-1',
+          language: 'javascript',
+          runtime: 'node',
+          status: 'active' as const,
+          featured: false
+        };
+
+        mockMcpService.getServerById.mockResolvedValue(mockServer);
+
+        const handler = routeHandlers['GET /mcp/servers/:id'];
+        await handler(mockRequest, mockReply);
+
+        if (testCase.expectedAccess) {
+          expect(mockReply.status).toHaveBeenCalledWith(200);
+        } else {
+          expect(mockReply.status).toHaveBeenCalledWith(404);
+          expect(mockReply.send).toHaveBeenCalledWith({
+            success: false,
+            error: 'Server not found'
+          });
+        }
+
+        // Reset mocks for next iteration
+        vi.clearAllMocks();
+        mockMcpService.getServerById.mockClear();
       }
     });
+  });
 
-    it('should work with malformed reply objects', async () => {
+  describe('Logging', () => {
+    beforeEach(async () => {
       await getServer(mockFastify as FastifyInstance);
-      const handler = routeHandlers['GET /mcp/servers/:id'];
+    });
 
-      const malformedReply = {
-        status: vi.fn().mockReturnThis(),
-        send: vi.fn()
+    it('should log get operation start', async () => {
+      mockMcpService.getServerById.mockResolvedValue(null);
+
+      const handler = routeHandlers['GET /mcp/servers/:id'];
+      await handler(mockRequest, mockReply);
+
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        expect.objectContaining({
+          operation: 'get_mcp_server',
+          userId: 'test-user-id',
+          serverId: 'test-server-id'
+        }),
+        'Getting MCP server by ID'
+      );
+    });
+
+    it('should log when server not found', async () => {
+      mockMcpService.getServerById.mockResolvedValue(null);
+
+      const handler = routeHandlers['GET /mcp/servers/:id'];
+      await handler(mockRequest, mockReply);
+
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        expect.objectContaining({
+          operation: 'get_mcp_server',
+          userId: 'test-user-id',
+          serverId: 'test-server-id',
+          userRole: 'global_user'
+        }),
+        'MCP server not found'
+      );
+    });
+
+    it('should log access denied', async () => {
+      const mockServer = {
+        id: 'server-1',
+        name: 'Team Server',
+        slug: 'team-server',
+        description: 'A team server',
+        installation_methods: '[]',
+        tools: '[]',
+        resources: null,
+        prompts: null,
+        default_config: null,
+        environment_variables: null,
+        dependencies: null,
+        tags: null,
+        created_at: new Date('2024-01-01'),
+        updated_at: new Date('2024-01-01'),
+        last_sync_at: null,
+        visibility: 'team',
+        owner_team_id: 'team-1',
+        created_by: 'user-1',
+        language: 'javascript',
+        runtime: 'node',
+        status: 'active',
+        featured: false
       };
 
-      expect(async () => {
-        await handler(mockRequest, malformedReply);
-      }).not.toThrow();
+      mockMcpService.getServerById.mockResolvedValue(mockServer);
 
-      expect(malformedReply.status).toHaveBeenCalledWith(501);
-      expect(malformedReply.send).toHaveBeenCalledWith({
-        success: false,
-        error: 'Not implemented yet'
-      });
-    });
-  });
-
-  describe('Response Format', () => {
-    it('should return response in correct format', async () => {
-      await getServer(mockFastify as FastifyInstance);
       const handler = routeHandlers['GET /mcp/servers/:id'];
-
       await handler(mockRequest, mockReply);
 
-      const sendCall = (mockReply.send as any).mock.calls[0];
-      const response = sendCall[0];
-
-      expect(response).toHaveProperty('success');
-      expect(response).toHaveProperty('error');
-      expect(response.success).toBe(false);
-      expect(response.error).toBe('Not implemented yet');
-      expect(typeof response.success).toBe('boolean');
-      expect(typeof response.error).toBe('string');
-    });
-
-    it('should set correct HTTP status code', async () => {
-      await getServer(mockFastify as FastifyInstance);
-      const handler = routeHandlers['GET /mcp/servers/:id'];
-
-      await handler(mockRequest, mockReply);
-
-      expect(mockReply.status).toHaveBeenCalledWith(501);
-      expect(mockReply.status).toHaveBeenCalledTimes(1);
-    });
-
-    it('should chain status and send correctly', async () => {
-      await getServer(mockFastify as FastifyInstance);
-      const handler = routeHandlers['GET /mcp/servers/:id'];
-
-      await handler(mockRequest, mockReply);
-
-      expect(mockReply.status).toHaveBeenCalledBefore(mockReply.send as any);
-    });
-  });
-
-  describe('Performance', () => {
-    it('should handle multiple concurrent requests', async () => {
-      await getServer(mockFastify as FastifyInstance);
-      const handler = routeHandlers['GET /mcp/servers/:id'];
-
-      const promises = Array.from({ length: 10 }, () => 
-        handler(mockRequest, mockReply)
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        expect.objectContaining({
+          operation: 'get_mcp_server',
+          userId: 'test-user-id',
+          serverId: 'test-server-id',
+          userRole: 'global_user',
+          serverVisibility: 'team',
+          serverOwnerTeamId: 'team-1',
+          userTeamIds: []
+        }),
+        'Access denied to MCP server'
       );
-
-      await Promise.all(promises);
-
-      expect(mockReply.status).toHaveBeenCalledTimes(10);
-      expect(mockReply.send).toHaveBeenCalledTimes(10);
     });
 
-    it('should be fast and not block', async () => {
-      await getServer(mockFastify as FastifyInstance);
+    it('should log successful access', async () => {
+      const mockServer = {
+        id: 'server-1',
+        name: 'Global Server',
+        slug: 'global-server',
+        description: 'A global server',
+        installation_methods: '[]',
+        tools: '[]',
+        resources: null,
+        prompts: null,
+        default_config: null,
+        environment_variables: null,
+        dependencies: null,
+        tags: null,
+        created_at: new Date('2024-01-01'),
+        updated_at: new Date('2024-01-01'),
+        last_sync_at: null,
+        visibility: 'global',
+        owner_team_id: null,
+        created_by: 'user-1',
+        language: 'javascript',
+        runtime: 'node',
+        status: 'active',
+        featured: false
+      };
+
+      mockMcpService.getServerById.mockResolvedValue(mockServer);
+
       const handler = routeHandlers['GET /mcp/servers/:id'];
-
-      const startTime = Date.now();
       await handler(mockRequest, mockReply);
-      const endTime = Date.now();
 
-      // Should be very fast for a simple 501 response
-      expect(endTime - startTime).toBeLessThan(100);
-    });
-  });
-
-  describe('Route Metadata', () => {
-    it('should have appropriate tags for API documentation', async () => {
-      await getServer(mockFastify as FastifyInstance);
-
-      const getCall = (mockFastify.get as any).mock.calls[0];
-      const [, schema] = getCall;
-
-      expect(schema.schema.tags).toContain('MCP Servers');
-    });
-
-    it('should have descriptive summary and description', async () => {
-      await getServer(mockFastify as FastifyInstance);
-
-      const getCall = (mockFastify.get as any).mock.calls[0];
-      const [, schema] = getCall;
-
-      expect(schema.schema.summary).toContain('Get MCP server by ID');
-      expect(schema.schema.description).toContain('Retrieve a specific MCP server');
-    });
-
-    it('should use correct HTTP method and path pattern', async () => {
-      await getServer(mockFastify as FastifyInstance);
-
-      const getCall = (mockFastify.get as any).mock.calls[0];
-      const [path] = getCall;
-
-      expect(path).toBe('/mcp/servers/:id');
-      expect(path).toContain(':id'); // Should have ID parameter
-    });
-
-    it('should not indicate admin-only access (should be accessible to users)', async () => {
-      await getServer(mockFastify as FastifyInstance);
-
-      const getCall = (mockFastify.get as any).mock.calls[0];
-      const [, schema] = getCall;
-
-      const hasAdminOnlyReference = 
-        schema.schema.summary.toLowerCase().includes('admin only') ||
-        schema.schema.description.toLowerCase().includes('admin only');
-
-      expect(hasAdminOnlyReference).toBe(false);
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        expect.objectContaining({
+          operation: 'get_mcp_server',
+          userId: 'test-user-id',
+          serverId: 'test-server-id',
+          userRole: 'global_user',
+          serverVisibility: 'global',
+          teamCount: 0
+        }),
+        'MCP server access granted'
+      );
     });
   });
 });

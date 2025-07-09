@@ -18,6 +18,7 @@ import type {
 
 interface Props {
   modelValue: CapabilitiesFormData
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   formData: any
 }
 

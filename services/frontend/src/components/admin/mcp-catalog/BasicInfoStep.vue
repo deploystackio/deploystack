@@ -13,7 +13,8 @@ import {
 } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { X, Plus } from 'lucide-vue-next'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { X, Plus, CheckCircle } from 'lucide-vue-next'
 import type { BasicInfoFormData, McpCategory } from '@/views/admin/mcp-server-catalog/types'
 import { McpCategoriesCache } from '@/services/mcpCatalogService'
 import { ref, onMounted } from 'vue'
@@ -44,6 +45,12 @@ const localValue = computed({
   get: () => props.modelValue,
   set: (value) => emit('update:modelValue', value)
 })
+
+// Check if data was auto-populated from GitHub
+const isAutoPopulated = computed(() => {
+  return props.formData.github?.auto_populated || false
+})
+
 
 // Load categories
 const loadCategories = async () => {
@@ -91,8 +98,19 @@ onMounted(() => {
   <div class="space-y-6">
     <div>
       <h3 class="text-lg font-medium">{{ t('mcpCatalog.form.basic.title') }}</h3>
-      <p class="text-sm text-muted-foreground">{{ t('mcpCatalog.form.basic.subtitle') }}</p>
+      <p class="text-sm text-muted-foreground">
+        {{ t('mcpCatalog.form.basic.subtitle') }}
+        <span v-if="isAutoPopulated"> (auto-populated from GitHub)</span>
+      </p>
     </div>
+
+    <!-- Auto-population success indicator -->
+    <Alert v-if="isAutoPopulated" class="border-green-200 bg-green-50">
+      <CheckCircle class="h-4 w-4 text-green-600" />
+      <AlertDescription class="text-green-800">
+        Information automatically populated from GitHub repository. Please review and edit as needed.
+      </AlertDescription>
+    </Alert>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
       <!-- Server Name -->

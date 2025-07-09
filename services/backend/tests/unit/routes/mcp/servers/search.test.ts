@@ -1,12 +1,25 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import searchServers from '../../../../../src/routes/mcp/servers/search';
+import { McpCatalogService } from '../../../../../src/services/mcpCatalogService';
+import { TeamService } from '../../../../../src/services/teamService';
+import { getUserRole } from '../../../../../src/middleware/roleMiddleware';
+import { getDb } from '../../../../../src/db';
+
+// Mock dependencies
+vi.mock('../../../../../src/services/mcpCatalogService');
+vi.mock('../../../../../src/services/teamService');
+vi.mock('../../../../../src/middleware/roleMiddleware');
+vi.mock('../../../../../src/db');
 
 describe('MCP Servers - Search Servers', () => {
   let mockFastify: Partial<FastifyInstance>;
   let mockRequest: Partial<FastifyRequest>;
   let mockReply: Partial<FastifyReply>;
   let routeHandlers: Record<string, any>;
+  let mockMcpService: any;
+  let mockDb: any;
+  let mockLogger: any;
 
   beforeEach(() => {
     // Reset all mocks
@@ -14,6 +27,42 @@ describe('MCP Servers - Search Servers', () => {
 
     // Setup route handlers storage
     routeHandlers = {};
+
+    // Setup mock logger
+    mockLogger = {
+      info: vi.fn(),
+      debug: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn()
+    };
+
+    // Setup mock database
+    mockDb = {
+      select: vi.fn().mockReturnThis(),
+      from: vi.fn().mockReturnThis(),
+      where: vi.fn().mockReturnThis(),
+      orderBy: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis()
+    };
+
+    // Setup mock MCP service
+    mockMcpService = {
+      getServersForUser: vi.fn()
+    };
+
+    // Setup mocks
+    vi.mocked(getDb).mockReturnValue(mockDb);
+    vi.mocked(McpCatalogService).mockImplementation(() => mockMcpService);
+    vi.mocked(getUserRole).mockResolvedValue({ 
+      id: 'global_user', 
+      name: 'Global User',
+      description: 'Global user role',
+      permissions: [],
+      is_system_role: true,
+      created_at: new Date(),
+      updated_at: new Date()
+    });
+    vi.mocked(TeamService.getUserTeams).mockResolvedValue([]);
 
     // Setup mock Fastify instance
     mockFastify = {
@@ -29,15 +78,20 @@ describe('MCP Servers - Search Servers', () => {
 
     // Setup mock request
     mockRequest = {
-      query: { q: 'test search' },
-      user: { id: 'test-user-id', role: 'user' },
-    };
+      query: { q: 'test search', limit: 20, offset: 0 }, // Simulate Zod defaults
+      user: { id: 'test-user-id' },
+      log: mockLogger
+    } as any;
 
     // Setup mock reply
     mockReply = {
       status: vi.fn().mockReturnThis(),
       send: vi.fn().mockReturnThis(),
     };
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   describe('Route Registration', () => {
@@ -64,7 +118,57 @@ describe('MCP Servers - Search Servers', () => {
       expect(schema.schema).toBeDefined();
       expect(schema.schema.tags).toEqual(['MCP Servers']);
       expect(schema.schema.summary).toBe('Search MCP servers');
-      expect(schema.schema.description).toBe('Search MCP servers by query string');
+      expect(schema.schema.description).toContain('Search MCP servers by query string');
+      expect(schema.schema.security).toEqual([{ cookieAuth: [] }]);
+    });
+
+    it('should have preValidation hook for authentication', async () => {
+      await searchServers(mockFastify as FastifyInstance);
+
+      const getCall = (mockFastify.get as any).mock.calls.find(
+        (call: any[]) => call[0] === '/mcp/servers/search'
+      );
+      
+      expect(getCall).toBeDefined();
+      const [, schema] = getCall;
+      
+      expect(schema.preValidation).toBeDefined();
+      expect(typeof schema.preValidation).toBe('function');
+    });
+  });
+
+  describe('Authentication', () => {
+    beforeEach(async () => {
+      await searchServers(mockFastify as FastifyInstance);
+    });
+
+    it('should require authentication', async () => {
+      const getCall = (mockFastify.get as any).mock.calls.find(
+        (call: any[]) => call[0] === '/mcp/servers/search'
+      );
+      const preValidation = getCall[1].preValidation;
+
+      const unauthenticatedRequest = { user: null };
+      await preValidation(unauthenticatedRequest, mockReply);
+
+      expect(mockReply.status).toHaveBeenCalledWith(401);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        success: false,
+        error: 'Authentication required'
+      });
+    });
+
+    it('should allow authenticated users', async () => {
+      const getCall = (mockFastify.get as any).mock.calls.find(
+        (call: any[]) => call[0] === '/mcp/servers/search'
+      );
+      const preValidation = getCall[1].preValidation;
+
+      const authenticatedRequest = { user: { id: 'test-user' } };
+      const result = await preValidation(authenticatedRequest, mockReply);
+
+      expect(result).toBeUndefined(); // No return means validation passed
+      expect(mockReply.status).not.toHaveBeenCalled();
     });
   });
 
@@ -73,261 +177,577 @@ describe('MCP Servers - Search Servers', () => {
       await searchServers(mockFastify as FastifyInstance);
     });
 
-    it('should return 501 Not Implemented', async () => {
-      const handler = routeHandlers['GET /mcp/servers/search'];
-      await handler(mockRequest, mockReply);
+    it('should search servers successfully with valid query', async () => {
+      const mockServers = [
+        {
+          id: 'server-1',
+          name: 'Test Server',
+          slug: 'test-server',
+          description: 'A test server',
+          long_description: null,
+          github_url: null,
+          git_branch: null,
+          homepage_url: null,
+          installation_methods: '[]',
+          tools: '[]',
+          resources: null,
+          prompts: null,
+          default_config: null,
+          environment_variables: null,
+          dependencies: null,
+          tags: null,
+          created_at: new Date('2024-01-01'),
+          updated_at: new Date('2024-01-01'),
+          last_sync_at: null,
+          visibility: 'global',
+          owner_team_id: null,
+          created_by: 'user-1',
+          language: 'javascript',
+          runtime: 'node',
+          runtime_min_version: null,
+          author_name: null,
+          author_contact: null,
+          organization: null,
+          license: null,
+          category_id: null,
+          status: 'active',
+          featured: false
+        }
+      ];
 
-      expect(mockReply.status).toHaveBeenCalledWith(501);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        success: false,
-        error: 'Not implemented yet'
-      });
-    });
+      mockMcpService.getServersForUser.mockResolvedValue(mockServers);
 
-    it('should return consistent response structure', async () => {
-      const handler = routeHandlers['GET /mcp/servers/search'];
-      
-      // Call multiple times to ensure consistency
-      await handler(mockRequest, mockReply);
-      await handler(mockRequest, mockReply);
-      await handler(mockRequest, mockReply);
-
-      expect(mockReply.status).toHaveBeenCalledTimes(3);
-      expect(mockReply.send).toHaveBeenCalledTimes(3);
-      
-      // Check that all calls had the same arguments
-      const statusCalls = (mockReply.status as any).mock.calls;
-      const sendCalls = (mockReply.send as any).mock.calls;
-      
-      statusCalls.forEach((call: any[]) => {
-        expect(call[0]).toBe(501);
-      });
-      
-      sendCalls.forEach((call: any[]) => {
-        expect(call[0]).toEqual({
-          success: false,
-          error: 'Not implemented yet'
-        });
-      });
-    });
-
-    it('should handle request with search query', async () => {
       const handler = routeHandlers['GET /mcp/servers/search'];
       const requestWithQuery = {
         ...mockRequest,
-        query: { q: 'nodejs server', limit: 10, offset: 0 }
+        query: { q: 'test', limit: 10, offset: 0 } // Simulate Zod transformation to numbers
       };
 
       await handler(requestWithQuery, mockReply);
 
-      expect(mockReply.status).toHaveBeenCalledWith(501);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        success: false,
-        error: 'Not implemented yet'
-      });
-    });
-
-    it('should handle request with different query formats', async () => {
-      const handler = routeHandlers['GET /mcp/servers/search'];
-      
-      const testQueries = [
-        { q: 'simple search' },
-        { q: 'multi word search term' },
-        { q: 'special-chars_search' },
-        { q: '' },
-        { search: 'alternative parameter' },
-        {}
-      ];
-
-      for (const query of testQueries) {
-        const requestWithQuery = { ...mockRequest, query };
-        await handler(requestWithQuery, mockReply);
-        
-        expect(mockReply.status).toHaveBeenCalledWith(501);
-        expect(mockReply.send).toHaveBeenCalledWith({
-          success: false,
-          error: 'Not implemented yet'
-        });
-      }
-    });
-
-    it('should handle request without user authentication', async () => {
-      const handler = routeHandlers['GET /mcp/servers/search'];
-      const unauthenticatedRequest = {
-        ...mockRequest,
-        user: undefined
-      };
-
-      await handler(unauthenticatedRequest, mockReply);
-
-      expect(mockReply.status).toHaveBeenCalledWith(501);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        success: false,
-        error: 'Not implemented yet'
-      });
-    });
-  });
-
-  describe('Error Handling', () => {
-    it('should handle handler execution without throwing', async () => {
-      await searchServers(mockFastify as FastifyInstance);
-      const handler = routeHandlers['GET /mcp/servers/search'];
-
-      expect(async () => {
-        await handler(mockRequest, mockReply);
-      }).not.toThrow();
-    });
-
-    it('should work with malformed request objects', async () => {
-      await searchServers(mockFastify as FastifyInstance);
-      const handler = routeHandlers['GET /mcp/servers/search'];
-
-      const malformedRequests = [
-        null,
-        undefined,
-        { invalidProperty: 'test' },
-        { query: null },
-        { user: null }
-      ];
-
-      for (const malformedRequest of malformedRequests) {
-        await handler(malformedRequest, mockReply);
-        
-        expect(mockReply.status).toHaveBeenCalledWith(501);
-        expect(mockReply.send).toHaveBeenCalledWith({
-          success: false,
-          error: 'Not implemented yet'
-        });
-      }
-    });
-
-    it('should work with malformed reply objects', async () => {
-      await searchServers(mockFastify as FastifyInstance);
-      const handler = routeHandlers['GET /mcp/servers/search'];
-
-      const malformedReply = {
-        status: vi.fn().mockReturnThis(),
-        send: vi.fn()
-      };
-
-      expect(async () => {
-        await handler(mockRequest, malformedReply);
-      }).not.toThrow();
-
-      expect(malformedReply.status).toHaveBeenCalledWith(501);
-      expect(malformedReply.send).toHaveBeenCalledWith({
-        success: false,
-        error: 'Not implemented yet'
-      });
-    });
-  });
-
-  describe('Response Format', () => {
-    it('should return response in correct format', async () => {
-      await searchServers(mockFastify as FastifyInstance);
-      const handler = routeHandlers['GET /mcp/servers/search'];
-
-      await handler(mockRequest, mockReply);
-
-      const sendCall = (mockReply.send as any).mock.calls[0];
-      const response = sendCall[0];
-
-      expect(response).toHaveProperty('success');
-      expect(response).toHaveProperty('error');
-      expect(response.success).toBe(false);
-      expect(response.error).toBe('Not implemented yet');
-      expect(typeof response.success).toBe('boolean');
-      expect(typeof response.error).toBe('string');
-    });
-
-    it('should set correct HTTP status code', async () => {
-      await searchServers(mockFastify as FastifyInstance);
-      const handler = routeHandlers['GET /mcp/servers/search'];
-
-      await handler(mockRequest, mockReply);
-
-      expect(mockReply.status).toHaveBeenCalledWith(501);
-      expect(mockReply.status).toHaveBeenCalledTimes(1);
-    });
-
-    it('should chain status and send correctly', async () => {
-      await searchServers(mockFastify as FastifyInstance);
-      const handler = routeHandlers['GET /mcp/servers/search'];
-
-      await handler(mockRequest, mockReply);
-
-      expect(mockReply.status).toHaveBeenCalledBefore(mockReply.send as any);
-    });
-  });
-
-  describe('Performance', () => {
-    it('should handle multiple concurrent requests', async () => {
-      await searchServers(mockFastify as FastifyInstance);
-      const handler = routeHandlers['GET /mcp/servers/search'];
-
-      const promises = Array.from({ length: 10 }, () => 
-        handler(mockRequest, mockReply)
+      expect(mockMcpService.getServersForUser).toHaveBeenCalledWith(
+        'test-user-id',
+        'global_user',
+        [],
+        expect.objectContaining({
+          search: 'test'
+        })
       );
 
-      await Promise.all(promises);
-
-      expect(mockReply.status).toHaveBeenCalledTimes(10);
-      expect(mockReply.send).toHaveBeenCalledTimes(10);
+      expect(mockReply.status).toHaveBeenCalledWith(200);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        success: true,
+        data: {
+          servers: [
+            {
+              id: 'server-1',
+              name: 'Test Server',
+              slug: 'test-server',
+              description: 'A test server',
+              long_description: null,
+              github_url: null,
+              git_branch: null,
+              homepage_url: null,
+              installation_methods: [],
+              tools: [],
+              resources: null,
+              prompts: null,
+              default_config: null,
+              environment_variables: null,
+              dependencies: null,
+              tags: null,
+              created_at: '2024-01-01T00:00:00.000Z',
+              updated_at: '2024-01-01T00:00:00.000Z',
+              last_sync_at: null,
+              visibility: 'global',
+              owner_team_id: null,
+              created_by: 'user-1',
+              language: 'javascript',
+              runtime: 'node',
+              runtime_min_version: null,
+              author_name: null,
+              author_contact: null,
+              organization: null,
+              license: null,
+              category_id: null,
+              status: 'active',
+              featured: false
+            }
+          ],
+          pagination: {
+            total: 1,
+            limit: 10,
+            offset: 0,
+            has_more: false
+          },
+          filters: {
+            query: 'test',
+            category: null,
+            language: null,
+            runtime: null,
+            status: null,
+            featured: null
+          }
+        }
+      });
     });
 
-    it('should be fast and not block', async () => {
-      await searchServers(mockFastify as FastifyInstance);
+    it('should handle search with filters', async () => {
+      mockMcpService.getServersForUser.mockResolvedValue([]);
+
       const handler = routeHandlers['GET /mcp/servers/search'];
+      const requestWithFilters = {
+        ...mockRequest,
+        query: {
+          q: 'test',
+          category: 'web',
+          language: 'javascript',
+          runtime: 'node',
+          status: 'active',
+          featured: true, // Simulate Zod transformation to boolean
+          limit: 20, // Simulate Zod transformation to number
+          offset: 10 // Simulate Zod transformation to number
+        }
+      };
 
-      const startTime = Date.now();
+      await handler(requestWithFilters, mockReply);
+
+      expect(mockMcpService.getServersForUser).toHaveBeenCalledWith(
+        'test-user-id',
+        'global_user',
+        [],
+        {
+          search: 'test',
+          category_id: 'web',
+          language: 'javascript',
+          runtime: 'node',
+          status: 'active',
+          featured: true
+        }
+      );
+
+      expect(mockReply.status).toHaveBeenCalledWith(200);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        success: true,
+        data: {
+          servers: [],
+          pagination: {
+            total: 0,
+            limit: 20,
+            offset: 10,
+            has_more: false
+          },
+          filters: {
+            query: 'test',
+            category: 'web',
+            language: 'javascript',
+            runtime: 'node',
+            status: 'active',
+            featured: true
+          }
+        }
+      });
+    });
+
+    it('should handle pagination correctly', async () => {
+      const mockServers = Array.from({ length: 25 }, (_, i) => ({
+        id: `server-${i}`,
+        name: `Server ${i}`,
+        slug: `server-${i}`,
+        description: `Server ${i} description`,
+        long_description: null,
+        github_url: null,
+        git_branch: null,
+        homepage_url: null,
+        installation_methods: '[]',
+        tools: '[]',
+        resources: null,
+        prompts: null,
+        default_config: null,
+        environment_variables: null,
+        dependencies: null,
+        tags: null,
+        created_at: new Date('2024-01-01'),
+        updated_at: new Date('2024-01-01'),
+        last_sync_at: null,
+        visibility: 'global',
+        owner_team_id: null,
+        created_by: 'user-1',
+        language: 'javascript',
+        runtime: 'node',
+        runtime_min_version: null,
+        author_name: null,
+        author_contact: null,
+        organization: null,
+        license: null,
+        category_id: null,
+        status: 'active',
+        featured: false
+      }));
+
+      mockMcpService.getServersForUser.mockResolvedValue(mockServers);
+
+      const handler = routeHandlers['GET /mcp/servers/search'];
+      const requestWithPagination = {
+        ...mockRequest,
+        query: { q: 'test', limit: 10, offset: 5 } // Simulate Zod transformation to numbers
+      };
+
+      await handler(requestWithPagination, mockReply);
+
+      const response = (mockReply.send as any).mock.calls[0][0];
+      expect(response.data.servers).toHaveLength(10); // slice(5, 15) = 10 items
+      expect(response.data.pagination).toEqual({
+        total: 25,
+        limit: 10,
+        offset: 5,
+        has_more: true
+      });
+    });
+
+    it('should handle global admin role', async () => {
+      vi.mocked(getUserRole).mockResolvedValue({ 
+        id: 'global_admin', 
+        name: 'Global Admin',
+        description: 'Global admin role',
+        permissions: [],
+        is_system_role: true,
+        created_at: new Date(),
+        updated_at: new Date()
+      });
+      mockMcpService.getServersForUser.mockResolvedValue([]);
+
+      const handler = routeHandlers['GET /mcp/servers/search'];
       await handler(mockRequest, mockReply);
-      const endTime = Date.now();
 
-      // Should be very fast for a simple 501 response
-      expect(endTime - startTime).toBeLessThan(100);
+      expect(mockMcpService.getServersForUser).toHaveBeenCalledWith(
+        'test-user-id',
+        'global_admin',
+        [],
+        expect.any(Object)
+      );
+    });
+
+    it('should handle user with teams', async () => {
+      const mockTeams = [
+        { 
+          id: 'team-1', 
+          name: 'Team 1',
+          slug: 'team-1',
+          owner_id: 'user-1',
+          is_default: false,
+          created_at: new Date(),
+          updated_at: new Date()
+        },
+        { 
+          id: 'team-2', 
+          name: 'Team 2',
+          slug: 'team-2',
+          owner_id: 'user-1',
+          is_default: false,
+          created_at: new Date(),
+          updated_at: new Date()
+        }
+      ];
+      vi.mocked(TeamService.getUserTeams).mockResolvedValue(mockTeams);
+      mockMcpService.getServersForUser.mockResolvedValue([]);
+
+      const handler = routeHandlers['GET /mcp/servers/search'];
+      await handler(mockRequest, mockReply);
+
+      expect(mockMcpService.getServersForUser).toHaveBeenCalledWith(
+        'test-user-id',
+        'global_user',
+        ['team-1', 'team-2'],
+        expect.any(Object)
+      );
+    });
+
+    it('should handle team service errors gracefully', async () => {
+      vi.mocked(TeamService.getUserTeams).mockRejectedValue(new Error('Team service error'));
+      mockMcpService.getServersForUser.mockResolvedValue([]);
+
+      const handler = routeHandlers['GET /mcp/servers/search'];
+      await handler(mockRequest, mockReply);
+
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          operation: 'search_mcp_servers',
+          userId: 'test-user-id',
+          teamError: expect.any(Error)
+        }),
+        'Failed to get user teams, continuing with empty team list'
+      );
+
+      expect(mockMcpService.getServersForUser).toHaveBeenCalledWith(
+        'test-user-id',
+        'global_user',
+        [],
+        expect.any(Object)
+      );
+    });
+
+    it('should handle service errors', async () => {
+      mockMcpService.getServersForUser.mockRejectedValue(new Error('Database error'));
+
+      const handler = routeHandlers['GET /mcp/servers/search'];
+      await handler(mockRequest, mockReply);
+
+      expect(mockReply.status).toHaveBeenCalledWith(500);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        success: false,
+        error: 'Failed to search MCP servers'
+      });
+
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        expect.objectContaining({
+          operation: 'search_mcp_servers',
+          userId: 'test-user-id',
+          error: expect.any(Error)
+        }),
+        'Failed to search MCP servers'
+      );
+    });
+
+    it('should parse JSON fields correctly', async () => {
+      const mockServer = {
+        id: 'server-1',
+        name: 'Test Server',
+        slug: 'test-server',
+        description: 'A test server',
+        long_description: null,
+        github_url: null,
+        git_branch: null,
+        homepage_url: null,
+        installation_methods: '["npm", "yarn"]',
+        tools: '[{"name": "test-tool"}]',
+        resources: '[{"name": "test-resource"}]',
+        prompts: '[{"name": "test-prompt"}]',
+        default_config: '{"key": "value"}',
+        environment_variables: '[{"name": "TEST_VAR"}]',
+        dependencies: '{"dep1": "^1.0.0"}',
+        tags: '["tag1", "tag2"]',
+        created_at: new Date('2024-01-01'),
+        updated_at: new Date('2024-01-01'),
+        last_sync_at: new Date('2024-01-02'),
+        visibility: 'global',
+        owner_team_id: null,
+        created_by: 'user-1',
+        language: 'javascript',
+        runtime: 'node',
+        runtime_min_version: null,
+        author_name: null,
+        author_contact: null,
+        organization: null,
+        license: null,
+        category_id: null,
+        status: 'active',
+        featured: false
+      };
+
+      mockMcpService.getServersForUser.mockResolvedValue([mockServer]);
+
+      const handler = routeHandlers['GET /mcp/servers/search'];
+      await handler(mockRequest, mockReply);
+
+      const response = (mockReply.send as any).mock.calls[0][0];
+      const server = response.data.servers[0];
+
+      expect(server.installation_methods).toEqual(['npm', 'yarn']);
+      expect(server.tools).toEqual([{ name: 'test-tool' }]);
+      expect(server.resources).toEqual([{ name: 'test-resource' }]);
+      expect(server.prompts).toEqual([{ name: 'test-prompt' }]);
+      expect(server.default_config).toEqual({ key: 'value' });
+      expect(server.environment_variables).toEqual([{ name: 'TEST_VAR' }]);
+      expect(server.dependencies).toEqual({ dep1: '^1.0.0' });
+      expect(server.tags).toEqual(['tag1', 'tag2']);
+      expect(server.created_at).toBe('2024-01-01T00:00:00.000Z');
+      expect(server.updated_at).toBe('2024-01-01T00:00:00.000Z');
+      expect(server.last_sync_at).toBe('2024-01-02T00:00:00.000Z');
+    });
+
+    it('should handle null JSON fields correctly', async () => {
+      const mockServer = {
+        id: 'server-1',
+        name: 'Test Server',
+        slug: 'test-server',
+        description: 'A test server',
+        long_description: null,
+        github_url: null,
+        git_branch: null,
+        homepage_url: null,
+        installation_methods: '[]',
+        tools: '[]',
+        resources: null,
+        prompts: null,
+        default_config: null,
+        environment_variables: null,
+        dependencies: null,
+        tags: null,
+        created_at: new Date('2024-01-01'),
+        updated_at: new Date('2024-01-01'),
+        last_sync_at: null,
+        visibility: 'global',
+        owner_team_id: null,
+        created_by: 'user-1',
+        language: 'javascript',
+        runtime: 'node',
+        runtime_min_version: null,
+        author_name: null,
+        author_contact: null,
+        organization: null,
+        license: null,
+        category_id: null,
+        status: 'active',
+        featured: false
+      };
+
+      mockMcpService.getServersForUser.mockResolvedValue([mockServer]);
+
+      const handler = routeHandlers['GET /mcp/servers/search'];
+      await handler(mockRequest, mockReply);
+
+      const response = (mockReply.send as any).mock.calls[0][0];
+      const server = response.data.servers[0];
+
+      expect(server.installation_methods).toEqual([]);
+      expect(server.tools).toEqual([]);
+      expect(server.resources).toBeNull();
+      expect(server.prompts).toBeNull();
+      expect(server.default_config).toBeNull();
+      expect(server.environment_variables).toBeNull();
+      expect(server.dependencies).toBeNull();
+      expect(server.tags).toBeNull();
+      expect(server.last_sync_at).toBeNull();
     });
   });
 
-  describe('Route Metadata', () => {
-    it('should have appropriate tags for API documentation', async () => {
+  describe('Query Parameter Validation', () => {
+    beforeEach(async () => {
       await searchServers(mockFastify as FastifyInstance);
-
-      const getCall = (mockFastify.get as any).mock.calls[0];
-      const [, schema] = getCall;
-
-      expect(schema.schema.tags).toContain('MCP Servers');
     });
 
-    it('should have descriptive summary and description', async () => {
-      await searchServers(mockFastify as FastifyInstance);
+    it('should use default values for limit and offset', async () => {
+      mockMcpService.getServersForUser.mockResolvedValue([]);
 
-      const getCall = (mockFastify.get as any).mock.calls[0];
-      const [, schema] = getCall;
+      const handler = routeHandlers['GET /mcp/servers/search'];
+      const requestMinimal = {
+        ...mockRequest,
+        query: { q: 'test', limit: 20, offset: 0 } // Simulate Zod defaults
+      };
 
-      expect(schema.schema.summary).toContain('Search MCP servers');
-      expect(schema.schema.description).toContain('Search MCP servers by query string');
+      await handler(requestMinimal, mockReply);
+
+      const response = (mockReply.send as any).mock.calls[0][0];
+      expect(response.data.pagination.limit).toBe(20);
+      expect(response.data.pagination.offset).toBe(0);
     });
 
-    it('should use correct HTTP method and path', async () => {
+    it('should handle featured filter transformation', async () => {
+      mockMcpService.getServersForUser.mockResolvedValue([]);
+
+      const handler = routeHandlers['GET /mcp/servers/search'];
+      
+      // Test featured: true (after Zod transformation)
+      await handler({
+        ...mockRequest,
+        query: { q: 'test', featured: true, limit: 20, offset: 0 }
+      }, mockReply);
+
+      expect(mockMcpService.getServersForUser).toHaveBeenCalledWith(
+        'test-user-id',
+        'global_user',
+        [],
+        expect.objectContaining({ featured: true })
+      );
+
+      // Test featured: false (after Zod transformation)
+      await handler({
+        ...mockRequest,
+        query: { q: 'test', featured: false, limit: 20, offset: 0 }
+      }, mockReply);
+
+      expect(mockMcpService.getServersForUser).toHaveBeenCalledWith(
+        'test-user-id',
+        'global_user',
+        [],
+        expect.objectContaining({ featured: false })
+      );
+    });
+  });
+
+  describe('Logging', () => {
+    beforeEach(async () => {
       await searchServers(mockFastify as FastifyInstance);
-
-      const getCall = (mockFastify.get as any).mock.calls[0];
-      const [path] = getCall;
-
-      expect(path).toBe('/mcp/servers/search');
     });
 
-    it('should not indicate admin-only access (should be accessible to users)', async () => {
-      await searchServers(mockFastify as FastifyInstance);
+    it('should log search operation start', async () => {
+      mockMcpService.getServersForUser.mockResolvedValue([]);
 
-      const getCall = (mockFastify.get as any).mock.calls[0];
-      const [, schema] = getCall;
+      const handler = routeHandlers['GET /mcp/servers/search'];
+      await handler(mockRequest, mockReply);
 
-      const hasAdminOnlyReference = 
-        schema.schema.summary.toLowerCase().includes('admin only') ||
-        schema.schema.description.toLowerCase().includes('admin only');
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        expect.objectContaining({
+          operation: 'search_mcp_servers',
+          userId: 'test-user-id',
+          query: 'test search'
+        }),
+        'Searching MCP servers'
+      );
+    });
 
-      expect(hasAdminOnlyReference).toBe(false);
+    it('should log search completion', async () => {
+      const mockServers = [{ 
+        id: 'server-1',
+        name: 'Test Server',
+        slug: 'test-server',
+        description: 'A test server',
+        long_description: null,
+        github_url: null,
+        git_branch: null,
+        homepage_url: null,
+        installation_methods: '[]',
+        tools: '[]',
+        resources: null,
+        prompts: null,
+        default_config: null,
+        environment_variables: null,
+        dependencies: null,
+        tags: null,
+        created_at: new Date('2024-01-01'),
+        updated_at: new Date('2024-01-01'),
+        last_sync_at: null,
+        visibility: 'global',
+        owner_team_id: null,
+        created_by: 'user-1',
+        language: 'javascript',
+        runtime: 'node',
+        runtime_min_version: null,
+        author_name: null,
+        author_contact: null,
+        organization: null,
+        license: null,
+        category_id: null,
+        status: 'active',
+        featured: false
+      }];
+      mockMcpService.getServersForUser.mockResolvedValue(mockServers);
+
+      const handler = routeHandlers['GET /mcp/servers/search'];
+      await handler(mockRequest, mockReply);
+
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        expect.objectContaining({
+          operation: 'search_mcp_servers',
+          userId: 'test-user-id',
+          totalResults: 1,
+          returnedResults: 1,
+          userRole: 'global_user',
+          teamCount: 0
+        }),
+        'MCP server search completed'
+      );
     });
   });
 });

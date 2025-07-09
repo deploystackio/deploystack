@@ -16,14 +16,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Plus, Trash2 } from 'lucide-vue-next'
 import type {
   TechnicalFormData,
-  InstallationMethod,
-  LANGUAGE_OPTIONS,
-  RUNTIME_OPTIONS,
-  INSTALLATION_TYPE_OPTIONS
+  InstallationMethod
 } from '@/views/admin/mcp-server-catalog/types'
 
 interface Props {
   modelValue: TechnicalFormData
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   formData: any
 }
 

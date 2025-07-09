@@ -150,6 +150,11 @@ const routes = [
         component: () => import('../views/admin/mcp-server-catalog/add.vue'),
       },
       {
+        path: 'mcp-server-catalog/edit/:id',
+        name: 'AdminMcpServerCatalogEdit',
+        component: () => import('../views/admin/mcp-server-catalog/edit/[id].vue'),
+      },
+      {
         path: 'mcp-categories',
         name: 'AdminMcpCategories',
         component: () => import('../views/admin/mcp-categories/index.vue'),

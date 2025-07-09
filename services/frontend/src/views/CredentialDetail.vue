@@ -5,6 +5,8 @@ import { useI18n } from 'vue-i18n'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,12 +24,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { ArrowLeft, Key, Shield, Calendar, User, AlertTriangle, Trash2, Settings, Edit } from 'lucide-vue-next'
+import { ArrowLeft, Key, Shield, Calendar, User, AlertTriangle, Trash2, Settings, Edit, CheckCircle } from 'lucide-vue-next'
 import DashboardLayout from '@/components/DashboardLayout.vue'
 import { CredentialsService } from '@/services/credentialsService'
 import { TeamService, type Team } from '@/services/teamService'
 import { useEventBus } from '@/composables/useEventBus'
-import type { CloudCredential } from '@/types/credentials'
+import type { CloudCredential, CloudProvider, CredentialField } from '@/types/credentials'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -35,6 +37,7 @@ const router = useRouter()
 const eventBus = useEventBus()
 
 const credential = ref<CloudCredential | null>(null)
+const fullProvider = ref<CloudProvider | null>(null)
 const selectedTeam = ref<Team | null>(null)
 const userRole = ref<string | null>(null)
 const isLoading = ref(true)
@@ -42,6 +45,17 @@ const error = ref<string | null>(null)
 const showDeleteModal = ref(false)
 const isDeleting = ref(false)
 const deleteError = ref<string | null>(null)
+
+// Update Secrets modal state
+const showUpdateSecretsModal = ref(false)
+const secretsForm = ref<Record<string, string>>({})
+const secretsErrors = ref<Record<string, string>>({})
+const isUpdatingSecrets = ref(false)
+const updateSecretsError = ref<string | null>(null)
+
+// Success message state for main page
+const showSuccessMessage = ref(false)
+const successMessage = ref<string | null>(null)
 
 const credentialId = route.params.id as string
 
@@ -67,6 +81,16 @@ async function findCredentialTeam(): Promise<void> {
         credential.value = foundCredential
         selectedTeam.value = team
         userRole.value = team.role || 'team_user'
+
+        // Fetch the full provider configuration to get field definitions
+        try {
+          const providers = await CredentialsService.getCloudProviders(team.id)
+          fullProvider.value = providers.find(p => p.id === foundCredential.providerId) || null
+        } catch (providerErr) {
+          console.warn('Failed to fetch provider configuration:', providerErr)
+          // Continue without provider config - Update Secrets will be disabled
+        }
+
         return
 
       } catch (err) {
@@ -111,6 +135,28 @@ const providerBadge = computed(() => {
     variant: 'secondary' as const,
     text: credential.value.provider.name
   }
+})
+
+// Update Secrets computed properties
+const secretFields = computed(() => {
+  if (!fullProvider.value?.fields) return []
+  return fullProvider.value.fields.filter((field: CredentialField) => field.secret)
+})
+
+const hasSecretFields = computed(() => {
+  return secretFields.value.length > 0
+})
+
+const isSecretsFormValid = computed(() => {
+  // Check if there are any validation errors
+  if (Object.keys(secretsErrors.value).length > 0) return false
+
+  // Check if at least one field has a value (for partial update)
+  const hasAnyValue = Object.values(secretsForm.value).some(value =>
+    value && value.trim() !== ''
+  )
+
+  return hasAnyValue
 })
 
 const formatDate = (dateString: string) => {
@@ -182,15 +228,116 @@ const cancelDelete = () => {
   showDeleteModal.value = false
 }
 
-// Placeholder functions for new dropdown actions
-const handleEditName = () => {
-  console.log('Edit Name clicked - functionality to be implemented')
-  // TODO: Implement edit name functionality
+// Update Secrets functionality
+const initializeSecretsForm = () => {
+  // Initialize form with empty values for all secret fields
+  const form: Record<string, string> = {}
+  secretFields.value.forEach(field => {
+    form[field.key] = ''
+  })
+  secretsForm.value = form
+  secretsErrors.value = {}
+  updateSecretsError.value = null
+}
+
+const validateSecretsForm = () => {
+  const errors: Record<string, string> = {}
+
+  secretFields.value.forEach(field => {
+    const value = secretsForm.value[field.key]
+
+    // Only validate if user provided a value (partial update)
+    if (value && value.trim() !== '') {
+      if (field.validation) {
+        // Apply validation rules
+        if (field.validation.minLength && value.length < field.validation.minLength) {
+          errors[field.key] = t('credentials.form.validation.minLength', {
+            field: field.label,
+            min: field.validation.minLength
+          })
+        }
+        if (field.validation.maxLength && value.length > field.validation.maxLength) {
+          errors[field.key] = t('credentials.form.validation.maxLength', {
+            field: field.label,
+            max: field.validation.maxLength
+          })
+        }
+        if (field.validation.pattern && !new RegExp(field.validation.pattern).test(value)) {
+          errors[field.key] = t('credentials.form.validation.pattern', { field: field.label })
+        }
+      }
+    }
+  })
+
+  secretsErrors.value = errors
+  return Object.keys(errors).length === 0
 }
 
 const handleUpdateSecrets = () => {
-  console.log('Update Secrets clicked - functionality to be implemented')
-  // TODO: Implement update secrets functionality
+  if (!hasSecretFields.value) {
+    console.warn('No secret fields available for this provider')
+    return
+  }
+
+  initializeSecretsForm()
+  showUpdateSecretsModal.value = true
+}
+
+const handleSubmitSecrets = async () => {
+  if (!validateSecretsForm() || !selectedTeam.value || !credential.value) return
+
+  try {
+    isUpdatingSecrets.value = true
+    updateSecretsError.value = null
+
+    // Only send fields that have values (partial update)
+    const credentialsToUpdate: Record<string, string> = {}
+    Object.entries(secretsForm.value).forEach(([key, value]) => {
+      if (value && value.trim() !== '') {
+        credentialsToUpdate[key] = value.trim()
+      }
+    })
+
+    // Check if any changes were made
+    if (Object.keys(credentialsToUpdate).length === 0) {
+      updateSecretsError.value = t('credentials.updateSecrets.messages.noChanges')
+      return
+    }
+
+    // Call the update API with only the credentials object
+    await CredentialsService.updateCredential(
+      selectedTeam.value.id,
+      credential.value.id,
+      { credentials: credentialsToUpdate }
+    )
+
+    // Close modal immediately after successful API call
+    showUpdateSecretsModal.value = false
+
+    // Show success message on main page
+    showSuccessMessage.value = true
+    successMessage.value = t('credentials.updateSecrets.messages.success')
+
+    // Emit success event
+    eventBus.emit('credentials-updated')
+
+  } catch (err) {
+    console.error('Error updating secrets:', err)
+    updateSecretsError.value = err instanceof Error ? err.message : t('credentials.updateSecrets.messages.error')
+  } finally {
+    isUpdatingSecrets.value = false
+  }
+}
+
+const cancelUpdateSecrets = () => {
+  showUpdateSecretsModal.value = false
+  initializeSecretsForm()
+}
+
+// Placeholder function for edit name
+const handleEditName = () => {
+  console.log('Edit Name clicked - functionality to be implemented')
+  // TODO: Implement edit name functionality
 }
 </script>
 
@@ -245,6 +392,13 @@ const handleUpdateSecrets = () => {
 
       <!-- Credential Details -->
       <div v-else-if="credential">
+        <!-- Success Message -->
+        <Alert v-if="showSuccessMessage" class="mb-6 border-green-200 bg-green-50 text-green-800">
+          <CheckCircle class="h-4 w-4" />
+          <AlertDescription>
+            {{ successMessage }}
+          </AlertDescription>
+        </Alert>
         <div class="px-4 sm:px-0">
           <h3 class="text-base/7 font-semibold text-gray-900">{{ t('credentials.detail.credentialInformation') }}</h3>
           <p class="mt-1 max-w-2xl text-sm/6 text-gray-500">{{ t('credentials.detail.fields.name') }}: {{ credential.name }}</p>
@@ -427,6 +581,84 @@ const handleUpdateSecrets = () => {
             <Trash2 v-if="!isDeleting" class="h-4 w-4 mr-2" />
             <div v-else class="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
             {{ isDeleting ? 'Deleting...' : 'Delete Credential' }}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
+    <!-- Update Secrets Modal -->
+    <AlertDialog v-model:open="showUpdateSecretsModal">
+      <AlertDialogContent class="sm:max-w-[500px]">
+        <AlertDialogHeader>
+          <AlertDialogTitle class="flex items-center gap-2">
+            <Key class="h-5 w-5" />
+            {{ t('credentials.updateSecrets.title') }}
+          </AlertDialogTitle>
+          <AlertDialogDescription class="text-left">
+            {{ t('credentials.updateSecrets.description', { credentialName: credential?.name || '' }) }}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+
+        <!-- Error Display -->
+        <Alert v-if="updateSecretsError" variant="destructive" class="mx-6">
+          <AlertTriangle class="h-4 w-4" />
+          <AlertDescription>
+            {{ updateSecretsError }}
+          </AlertDescription>
+        </Alert>
+
+        <!-- Form Content -->
+        <div class="px-6 space-y-4">
+          <!-- Info Note -->
+          <div class="text-xs text-blue-600 bg-blue-50 p-3 rounded-md">
+            {{ t('credentials.updateSecrets.note') }}
+          </div>
+
+          <!-- Security Note -->
+          <div class="text-xs text-amber-600 bg-amber-50 p-3 rounded-md flex items-start gap-2">
+            <Shield class="h-4 w-4 mt-0.5 flex-shrink-0" />
+            <span>{{ t('credentials.updateSecrets.securityNote') }}</span>
+          </div>
+
+          <!-- No Secret Fields Message -->
+          <div v-if="!hasSecretFields" class="text-center py-4">
+            <AlertTriangle class="h-8 w-8 text-gray-400 mx-auto mb-2" />
+            <p class="text-sm text-gray-600">{{ t('credentials.updateSecrets.noSecretFields') }}</p>
+          </div>
+
+          <!-- Secret Fields Form -->
+          <form v-else @submit.prevent="handleSubmitSecrets" class="space-y-4">
+            <div v-for="field in secretFields" :key="field.key" class="space-y-2">
+              <Label :for="`secret-${field.key}`">{{ field.label }}</Label>
+              <Input
+                :id="`secret-${field.key}`"
+                :type="field.type"
+                v-model="secretsForm[field.key]"
+                :placeholder="field.placeholder"
+                :class="{ 'border-destructive': secretsErrors[field.key] }"
+                @input="validateSecretsForm"
+              />
+              <div v-if="secretsErrors[field.key]" class="text-sm text-destructive">
+                {{ secretsErrors[field.key] }}
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <AlertDialogFooter class="flex gap-2">
+          <AlertDialogCancel
+            @click="cancelUpdateSecrets"
+            :disabled="isUpdatingSecrets"
+          >
+            {{ t('credentials.updateSecrets.form.cancel') }}
+          </AlertDialogCancel>
+          <AlertDialogAction
+            @click="handleSubmitSecrets"
+            :disabled="!isSecretsFormValid || isUpdatingSecrets || !hasSecretFields"
+          >
+            <Key v-if="!isUpdatingSecrets" class="h-4 w-4 mr-2" />
+            <div v-else class="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+            {{ isUpdatingSecrets ? t('credentials.updateSecrets.form.saving') : t('credentials.updateSecrets.form.save') }}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

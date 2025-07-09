@@ -322,6 +322,70 @@ export default {
     unfeatureSuccess: 'Server unfeatured successfully'
   },
 
+  edit: {
+    title: 'MCP Server Details - {name}',
+    titleLoading: 'Loading MCP Server...',
+    backToCatalog: 'Back to Catalog',
+    deleteButton: 'Delete Server',
+    loading: 'Loading server details...',
+    errorLoading: 'Error loading server: {error}',
+    serverInformation: 'Server Information',
+    serverDetails: 'Detailed information about this MCP server',
+
+    fields: {
+      name: 'Server Name',
+      description: 'Description',
+      longDescription: 'Detailed Description',
+      author: 'Author Information',
+      technical: 'Technical Specifications',
+      links: 'Repository Links',
+      status: 'Status & Classification',
+      tags: 'Tags',
+      installation: 'Installation Methods',
+      tools: 'Available Tools',
+      resources: 'Available Resources',
+      prompts: 'Available Prompts',
+      systemInfo: 'System Information'
+    },
+
+    values: {
+      featured: 'Featured',
+      notProvided: 'Not provided',
+      authorName: 'Name:',
+      authorContact: 'Contact:',
+      organization: 'Organization:',
+      language: 'Language:',
+      runtime: 'Runtime:',
+      minVersion: 'Min Version:',
+      license: 'License:',
+      repository: 'Repository',
+      homepage: 'Homepage',
+      noLinks: 'No links provided',
+      status: 'Status:',
+      visibility: 'Visibility:',
+      created: 'Created:',
+      updated: 'Updated:',
+      lastSync: 'Last Sync:',
+      serverId: 'Server ID:',
+      slug: 'Slug:'
+    },
+
+    deleteDialog: {
+      title: 'Delete MCP Server',
+      warning: 'Are you sure you want to delete this MCP server?',
+      serverName: 'Server name',
+      consequences: 'This action will permanently remove:',
+      consequencesList: {
+        server: 'The server from the global catalog',
+        configurations: 'All associated configurations',
+        history: 'Installation and usage history'
+      },
+      cancel: 'Cancel',
+      confirm: 'Delete Server',
+      deleting: 'Deleting...'
+    }
+  },
+
   validation: {
     nameRequired: 'Server name is required',
     descriptionRequired: 'Description is required',
@@ -330,5 +394,14 @@ export default {
     githubUrlInvalid: 'Please enter a valid GitHub repository URL',
     homepageUrlInvalid: 'Please enter a valid URL',
     jsonInvalid: 'Please enter valid JSON'
+  },
+
+  pagination: {
+    showing: 'Showing {start} to {end} of {total} servers',
+    noItems: 'No servers to display',
+    itemsPerPage: 'Items per page:',
+    pageInfo: 'Page {current} of {total}',
+    previous: 'Previous',
+    next: 'Next'
   }
 }

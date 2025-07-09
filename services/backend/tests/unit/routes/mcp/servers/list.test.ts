@@ -4,10 +4,14 @@ import listServers from '../../../../../src/routes/mcp/servers/list';
 
 // Mock dependencies
 vi.mock('../../../../../src/services/mcpCatalogService');
+vi.mock('../../../../../src/services/teamService');
+vi.mock('../../../../../src/middleware/roleMiddleware');
 vi.mock('../../../../../src/db');
 
 // Import the mocked modules
 import { McpCatalogService } from '../../../../../src/services/mcpCatalogService';
+import { TeamService } from '../../../../../src/services/teamService';
+import { getUserRole } from '../../../../../src/middleware/roleMiddleware';
 import { getDb } from '../../../../../src/db';
 
 describe('MCP Servers - List Servers', () => {
@@ -18,6 +22,8 @@ describe('MCP Servers - List Servers', () => {
   let mockCatalogService: any;
   let mockDb: any;
   let mockLogger: any;
+  let mockGetUserRole: any;
+  let mockTeamService: any;
 
   beforeEach(() => {
     // Reset all mocks
@@ -42,8 +48,22 @@ describe('MCP Servers - List Servers', () => {
       getServersForUser: vi.fn()
     };
 
+    // Mock team service
+    mockTeamService = {
+      getUserTeams: vi.fn()
+    };
+
+    // Mock getUserRole
+    mockGetUserRole = vi.fn();
+
     // Mock the McpCatalogService constructor
     vi.mocked(McpCatalogService).mockImplementation(() => mockCatalogService);
+
+    // Mock TeamService static methods
+    vi.mocked(TeamService.getUserTeams).mockImplementation(mockTeamService.getUserTeams);
+
+    // Mock getUserRole function
+    vi.mocked(getUserRole).mockImplementation(mockGetUserRole);
 
     // Mock getDb
     vi.mocked(getDb).mockReturnValue(mockDb);
@@ -98,7 +118,7 @@ describe('MCP Servers - List Servers', () => {
       expect(schema.schema).toBeDefined();
       expect(schema.schema.tags).toEqual(['MCP Servers']);
       expect(schema.schema.summary).toBe('List MCP servers');
-      expect(schema.schema.description).toBe('Retrieve MCP servers visible to the current user based on their permissions. No Content-Type header required for this GET request.');
+      expect(schema.schema.description).toBe('Retrieve MCP servers visible to the current user based on their permissions with pagination support. Authentication is required. Supports filtering by category, language, runtime, status, featured flag, and search query. Results are paginated with configurable limit (1-100, default: 20) and offset (default: 0).');
       expect(schema.schema.querystring).toBeDefined();
       expect(schema.schema.response).toBeDefined();
       expect(schema.schema.response[200]).toBeDefined();
@@ -144,6 +164,9 @@ describe('MCP Servers - List Servers', () => {
         }
       ];
 
+      // Mock the dependencies
+      mockGetUserRole.mockResolvedValue({ id: 'global_user', name: 'Global User' });
+      mockTeamService.getUserTeams.mockResolvedValue([{ id: 'team-1', name: 'Test Team' }]);
       mockCatalogService.getServersForUser.mockResolvedValue(mockServers);
 
       const handler = routeHandlers['GET /mcp/servers'];
@@ -151,19 +174,31 @@ describe('MCP Servers - List Servers', () => {
 
       expect(mockReply.send).toHaveBeenCalledWith({
         success: true,
-        data: expect.arrayContaining([
-          expect.objectContaining({
-            id: 'server-1',
-            name: 'Test Server 1',
-            created_at: '2024-01-01T00:00:00.000Z',
-            updated_at: '2024-01-01T00:00:00.000Z',
-            last_sync_at: null
-          })
-        ])
+        data: {
+          servers: expect.arrayContaining([
+            expect.objectContaining({
+              id: 'server-1',
+              name: 'Test Server 1',
+              created_at: '2024-01-01T00:00:00.000Z',
+              updated_at: '2024-01-01T00:00:00.000Z',
+              last_sync_at: null
+            })
+          ]),
+          pagination: {
+            total: 1,
+            limit: 20,
+            offset: 0,
+            has_more: false
+          }
+        }
       });
     });
 
     it('should handle service errors gracefully', async () => {
+      // Mock the dependencies to succeed initially
+      mockGetUserRole.mockResolvedValue({ id: 'global_user', name: 'Global User' });
+      mockTeamService.getUserTeams.mockResolvedValue([]);
+      // But make the catalog service fail
       mockCatalogService.getServersForUser.mockRejectedValue(new Error('Database connection failed'));
 
       const handler = routeHandlers['GET /mcp/servers'];
@@ -172,6 +207,7 @@ describe('MCP Servers - List Servers', () => {
       expect(mockLogger.error).toHaveBeenCalledWith(
         {
           operation: 'list_servers',
+          userId: 'test-user-id',
           error: expect.any(Error)
         },
         'Failed to list MCP servers'
@@ -185,6 +221,9 @@ describe('MCP Servers - List Servers', () => {
     });
 
     it('should handle empty server list', async () => {
+      // Mock the dependencies
+      mockGetUserRole.mockResolvedValue({ id: 'global_user', name: 'Global User' });
+      mockTeamService.getUserTeams.mockResolvedValue([]);
       mockCatalogService.getServersForUser.mockResolvedValue([]);
 
       const handler = routeHandlers['GET /mcp/servers'];
@@ -192,28 +231,44 @@ describe('MCP Servers - List Servers', () => {
 
       expect(mockReply.send).toHaveBeenCalledWith({
         success: true,
-        data: []
+        data: {
+          servers: [],
+          pagination: {
+            total: 0,
+            limit: 20,
+            offset: 0,
+            has_more: false
+          }
+        }
       });
     });
 
     it('should handle unauthenticated users', async () => {
-      const mockServers = [];
-      mockCatalogService.getServersForUser.mockResolvedValue(mockServers);
-
       const unauthenticatedRequest = {
         ...mockRequest,
         user: undefined
       };
 
-      const handler = routeHandlers['GET /mcp/servers'];
-      await handler(unauthenticatedRequest, mockReply);
-
-      expect(mockCatalogService.getServersForUser).toHaveBeenCalledWith(
-        'anonymous',
-        'user',
-        [],
-        {}
+      // Get the route configuration to access preValidation
+      const getCall = (mockFastify.get as any).mock.calls.find(
+        (call: any[]) => call[0] === '/mcp/servers'
       );
+      const [, routeConfig, handler] = getCall;
+
+      // Execute preValidation hook first
+      if (routeConfig.preValidation) {
+        await routeConfig.preValidation(unauthenticatedRequest, mockReply);
+      }
+
+      // Should return 401 for unauthenticated users
+      expect(mockReply.status).toHaveBeenCalledWith(401);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        success: false,
+        error: 'Authentication required'
+      });
+
+      // Should not call the catalog service
+      expect(mockCatalogService.getServersForUser).not.toHaveBeenCalled();
     });
   });
 
@@ -223,6 +278,9 @@ describe('MCP Servers - List Servers', () => {
     });
 
     it('should handle multiple concurrent requests', async () => {
+      // Mock the dependencies
+      mockGetUserRole.mockResolvedValue({ id: 'global_user', name: 'Global User' });
+      mockTeamService.getUserTeams.mockResolvedValue([]);
       mockCatalogService.getServersForUser.mockResolvedValue([]);
 
       const handler = routeHandlers['GET /mcp/servers'];

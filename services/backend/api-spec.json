@@ -11426,7 +11426,7 @@
         "tags": [
           "MCP Servers"
         ],
-        "description": "Retrieve MCP servers visible to the current user based on their permissions. No Content-Type header required for this GET request.",
+        "description": "Retrieve MCP servers visible to the current user based on their permissions with pagination support. Authentication is required. Supports filtering by category, language, runtime, status, featured flag, and search query. Results are paginated with configurable limit (1-100, default: 20) and offset (default: 0).",
         "parameters": [
           {
             "schema": {
@@ -11480,6 +11480,31 @@
             "in": "query",
             "name": "search",
             "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d+$",
+              "default": "20"
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d+$",
+              "default": "0"
+            },
+            "in": "query",
+            "name": "offset",
+            "required": false
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
           }
         ],
         "responses": {
@@ -11494,146 +11519,180 @@
                       "type": "boolean"
                     },
                     "data": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "id": {
-                            "type": "string"
-                          },
-                          "name": {
-                            "type": "string"
-                          },
-                          "slug": {
-                            "type": "string"
-                          },
-                          "description": {
-                            "type": "string"
-                          },
-                          "long_description": {
-                            "type": "string",
-                            "nullable": true
-                          },
-                          "github_url": {
-                            "type": "string",
-                            "nullable": true
-                          },
-                          "homepage_url": {
-                            "type": "string",
-                            "nullable": true
-                          },
-                          "language": {
-                            "type": "string"
-                          },
-                          "runtime": {
-                            "type": "string"
-                          },
-                          "runtime_min_version": {
-                            "type": "string",
-                            "nullable": true
-                          },
-                          "installation_methods": {
-                            "type": "string"
-                          },
-                          "tools": {
-                            "type": "string"
-                          },
-                          "resources": {
-                            "type": "string",
-                            "nullable": true
-                          },
-                          "prompts": {
-                            "type": "string",
-                            "nullable": true
-                          },
-                          "visibility": {
-                            "type": "string",
-                            "enum": [
-                              "global",
-                              "team"
-                            ]
-                          },
-                          "owner_team_id": {
-                            "type": "string",
-                            "nullable": true
-                          },
-                          "author_name": {
-                            "type": "string",
-                            "nullable": true
-                          },
-                          "author_contact": {
-                            "type": "string",
-                            "nullable": true
-                          },
-                          "organization": {
-                            "type": "string",
-                            "nullable": true
-                          },
-                          "license": {
-                            "type": "string",
-                            "nullable": true
-                          },
-                          "category_id": {
-                            "type": "string",
-                            "nullable": true
-                          },
-                          "tags": {
-                            "type": "string",
-                            "nullable": true
-                          },
-                          "status": {
-                            "type": "string",
-                            "enum": [
-                              "active",
-                              "deprecated",
-                              "maintenance"
-                            ]
-                          },
-                          "featured": {
-                            "type": "boolean"
-                          },
-                          "created_at": {
-                            "type": "string"
-                          },
-                          "updated_at": {
-                            "type": "string"
-                          },
-                          "last_sync_at": {
-                            "type": "string",
-                            "nullable": true
+                      "type": "object",
+                      "properties": {
+                        "servers": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "slug": {
+                                "type": "string"
+                              },
+                              "description": {
+                                "type": "string"
+                              },
+                              "long_description": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "github_url": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "homepage_url": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "language": {
+                                "type": "string"
+                              },
+                              "runtime": {
+                                "type": "string"
+                              },
+                              "runtime_min_version": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "installation_methods": {
+                                "type": "string"
+                              },
+                              "tools": {
+                                "type": "string"
+                              },
+                              "resources": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "prompts": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "visibility": {
+                                "type": "string",
+                                "enum": [
+                                  "global",
+                                  "team"
+                                ]
+                              },
+                              "owner_team_id": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "author_name": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "author_contact": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "organization": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "license": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "category_id": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "tags": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "active",
+                                  "deprecated",
+                                  "maintenance"
+                                ]
+                              },
+                              "featured": {
+                                "type": "boolean"
+                              },
+                              "created_at": {
+                                "type": "string"
+                              },
+                              "updated_at": {
+                                "type": "string"
+                              },
+                              "last_sync_at": {
+                                "type": "string",
+                                "nullable": true
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name",
+                              "slug",
+                              "description",
+                              "long_description",
+                              "github_url",
+                              "homepage_url",
+                              "language",
+                              "runtime",
+                              "runtime_min_version",
+                              "installation_methods",
+                              "tools",
+                              "resources",
+                              "prompts",
+                              "visibility",
+                              "owner_team_id",
+                              "author_name",
+                              "author_contact",
+                              "organization",
+                              "license",
+                              "category_id",
+                              "tags",
+                              "status",
+                              "featured",
+                              "created_at",
+                              "updated_at",
+                              "last_sync_at"
+                            ],
+                            "additionalProperties": false
                           }
                         },
-                        "required": [
-                          "id",
-                          "name",
-                          "slug",
-                          "description",
-                          "long_description",
-                          "github_url",
-                          "homepage_url",
-                          "language",
-                          "runtime",
-                          "runtime_min_version",
-                          "installation_methods",
-                          "tools",
-                          "resources",
-                          "prompts",
-                          "visibility",
-                          "owner_team_id",
-                          "author_name",
-                          "author_contact",
-                          "organization",
-                          "license",
-                          "category_id",
-                          "tags",
-                          "status",
-                          "featured",
-                          "created_at",
-                          "updated_at",
-                          "last_sync_at"
-                        ],
-                        "additionalProperties": false
-                      }
+                        "pagination": {
+                          "type": "object",
+                          "properties": {
+                            "total": {
+                              "type": "number"
+                            },
+                            "limit": {
+                              "type": "number"
+                            },
+                            "offset": {
+                              "type": "number"
+                            },
+                            "has_more": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "total",
+                            "limit",
+                            "offset",
+                            "has_more"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "servers",
+                        "pagination"
+                      ],
+                      "additionalProperties": false
                     }
                   },
                   "required": [
@@ -11641,6 +11700,30 @@
                     "data"
                   ],
                   "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Unauthorized - Authentication required"
                 }
               }
             }
@@ -11677,20 +11760,286 @@
         "tags": [
           "MCP Servers"
         ],
-        "description": "Retrieve a specific MCP server by its ID",
+        "description": "Retrieve a specific MCP server by its ID. Access is controlled based on user role and team membership - users can access global servers and their team servers, while global admins can access all servers.",
         "parameters": [
           {
             "schema": {
-              "type": "string"
+              "type": "string",
+              "minLength": 1
             },
             "in": "path",
             "name": "id",
             "required": true
           }
         ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
         "responses": {
           "200": {
-            "description": "Default Response"
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "slug": {
+                          "type": "string"
+                        },
+                        "description": {
+                          "type": "string"
+                        },
+                        "long_description": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "github_url": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "git_branch": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "homepage_url": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "language": {
+                          "type": "string"
+                        },
+                        "runtime": {
+                          "type": "string"
+                        },
+                        "runtime_min_version": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "installation_methods": {
+                          "type": "array"
+                        },
+                        "tools": {
+                          "type": "array"
+                        },
+                        "resources": {
+                          "type": "array",
+                          "nullable": true
+                        },
+                        "prompts": {
+                          "type": "array",
+                          "nullable": true
+                        },
+                        "visibility": {
+                          "type": "string",
+                          "enum": [
+                            "global",
+                            "team"
+                          ]
+                        },
+                        "owner_team_id": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "created_by": {
+                          "type": "string"
+                        },
+                        "author_name": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "author_contact": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "organization": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "license": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "default_config": {
+                          "type": "object",
+                          "additionalProperties": {},
+                          "nullable": true
+                        },
+                        "environment_variables": {
+                          "type": "array",
+                          "nullable": true
+                        },
+                        "dependencies": {
+                          "type": "object",
+                          "additionalProperties": {},
+                          "nullable": true
+                        },
+                        "category_id": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "tags": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "nullable": true
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "active",
+                            "deprecated",
+                            "maintenance"
+                          ]
+                        },
+                        "featured": {
+                          "type": "boolean"
+                        },
+                        "created_at": {
+                          "type": "string"
+                        },
+                        "updated_at": {
+                          "type": "string"
+                        },
+                        "last_sync_at": {
+                          "type": "string",
+                          "nullable": true
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name",
+                        "slug",
+                        "description",
+                        "long_description",
+                        "github_url",
+                        "git_branch",
+                        "homepage_url",
+                        "language",
+                        "runtime",
+                        "runtime_min_version",
+                        "installation_methods",
+                        "tools",
+                        "resources",
+                        "prompts",
+                        "visibility",
+                        "owner_team_id",
+                        "created_by",
+                        "author_name",
+                        "author_contact",
+                        "organization",
+                        "license",
+                        "default_config",
+                        "environment_variables",
+                        "dependencies",
+                        "category_id",
+                        "tags",
+                        "status",
+                        "featured",
+                        "created_at",
+                        "updated_at",
+                        "last_sync_at"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "details": {}
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Unauthorized - Authentication required"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found - Server not found or access denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "details": {}
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Not Found - Server not found or access denied"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "details": {}
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Internal Server Error"
+                }
+              }
+            }
           }
         }
       }
@@ -11701,70 +12050,1294 @@
         "tags": [
           "MCP Servers"
         ],
-        "description": "Search MCP servers by query string",
+        "description": "Search MCP servers by query string with optional filters. Authentication is required. Results are filtered based on user permissions - users see global servers plus their team servers, while global admins see all servers.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            },
+            "in": "query",
+            "name": "q",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "category",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "language",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "runtime",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "active",
+                "deprecated",
+                "maintenance"
+              ]
+            },
+            "in": "query",
+            "name": "status",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            },
+            "in": "query",
+            "name": "featured",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d+$",
+              "default": "20"
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d+$",
+              "default": "0"
+            },
+            "in": "query",
+            "name": "offset",
+            "required": false
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
         "responses": {
           "200": {
-            "description": "Default Response"
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "servers": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "slug": {
+                                "type": "string"
+                              },
+                              "description": {
+                                "type": "string"
+                              },
+                              "long_description": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "github_url": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "git_branch": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "homepage_url": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "language": {
+                                "type": "string"
+                              },
+                              "runtime": {
+                                "type": "string"
+                              },
+                              "runtime_min_version": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "installation_methods": {
+                                "type": "array"
+                              },
+                              "tools": {
+                                "type": "array"
+                              },
+                              "resources": {
+                                "type": "array",
+                                "nullable": true
+                              },
+                              "prompts": {
+                                "type": "array",
+                                "nullable": true
+                              },
+                              "visibility": {
+                                "type": "string",
+                                "enum": [
+                                  "global",
+                                  "team"
+                                ]
+                              },
+                              "owner_team_id": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "created_by": {
+                                "type": "string"
+                              },
+                              "author_name": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "author_contact": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "organization": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "license": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "default_config": {
+                                "type": "object",
+                                "additionalProperties": {},
+                                "nullable": true
+                              },
+                              "environment_variables": {
+                                "type": "array",
+                                "nullable": true
+                              },
+                              "dependencies": {
+                                "type": "object",
+                                "additionalProperties": {},
+                                "nullable": true
+                              },
+                              "category_id": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "tags": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                },
+                                "nullable": true
+                              },
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "active",
+                                  "deprecated",
+                                  "maintenance"
+                                ]
+                              },
+                              "featured": {
+                                "type": "boolean"
+                              },
+                              "created_at": {
+                                "type": "string"
+                              },
+                              "updated_at": {
+                                "type": "string"
+                              },
+                              "last_sync_at": {
+                                "type": "string",
+                                "nullable": true
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name",
+                              "slug",
+                              "description",
+                              "long_description",
+                              "github_url",
+                              "git_branch",
+                              "homepage_url",
+                              "language",
+                              "runtime",
+                              "runtime_min_version",
+                              "installation_methods",
+                              "tools",
+                              "resources",
+                              "prompts",
+                              "visibility",
+                              "owner_team_id",
+                              "created_by",
+                              "author_name",
+                              "author_contact",
+                              "organization",
+                              "license",
+                              "default_config",
+                              "environment_variables",
+                              "dependencies",
+                              "category_id",
+                              "tags",
+                              "status",
+                              "featured",
+                              "created_at",
+                              "updated_at",
+                              "last_sync_at"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "pagination": {
+                          "type": "object",
+                          "properties": {
+                            "total": {
+                              "type": "number"
+                            },
+                            "limit": {
+                              "type": "number"
+                            },
+                            "offset": {
+                              "type": "number"
+                            },
+                            "has_more": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "total",
+                            "limit",
+                            "offset",
+                            "has_more"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "filters": {
+                          "type": "object",
+                          "properties": {
+                            "query": {
+                              "type": "string"
+                            },
+                            "category": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "language": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "runtime": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "status": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "featured": {
+                              "type": "boolean",
+                              "nullable": true
+                            }
+                          },
+                          "required": [
+                            "query",
+                            "category",
+                            "language",
+                            "runtime",
+                            "status",
+                            "featured"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "servers",
+                        "pagination",
+                        "filters"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - Invalid query parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "details": {}
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Bad Request - Invalid query parameters"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "details": {}
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Unauthorized - Authentication required"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "details": {}
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Internal Server Error"
+                }
+              }
+            }
           }
         }
       }
     },
     "/api/mcp/servers/global": {
       "post": {
-        "summary": "Create global MCP server (Admin only)",
+        "summary": "Create global MCP server (Global Admin only)",
         "tags": [
           "MCP Servers"
         ],
-        "description": "Create a new global MCP server - requires global admin permissions. Will require Content-Type: application/json header when sending request body once implemented.",
+        "description": "Create a new global MCP server - requires global admin permissions. Global servers are visible to all users. Requires Content-Type: application/json header when sending request body.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
         "responses": {
-          "200": {
-            "description": "Default Response"
+          "201": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "slug": {
+                          "type": "string"
+                        },
+                        "description": {
+                          "type": "string"
+                        },
+                        "long_description": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "github_url": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "git_branch": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "homepage_url": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "language": {
+                          "type": "string"
+                        },
+                        "runtime": {
+                          "type": "string"
+                        },
+                        "runtime_min_version": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "installation_methods": {
+                          "type": "array"
+                        },
+                        "tools": {
+                          "type": "array"
+                        },
+                        "resources": {
+                          "type": "array",
+                          "nullable": true
+                        },
+                        "prompts": {
+                          "type": "array",
+                          "nullable": true
+                        },
+                        "visibility": {
+                          "type": "string",
+                          "enum": [
+                            "global",
+                            "team"
+                          ]
+                        },
+                        "owner_team_id": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "created_by": {
+                          "type": "string"
+                        },
+                        "author_name": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "author_contact": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "organization": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "license": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "default_config": {
+                          "type": "object",
+                          "additionalProperties": {},
+                          "nullable": true
+                        },
+                        "environment_variables": {
+                          "type": "array",
+                          "nullable": true
+                        },
+                        "dependencies": {
+                          "type": "object",
+                          "additionalProperties": {},
+                          "nullable": true
+                        },
+                        "category_id": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "tags": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "nullable": true
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "active",
+                            "deprecated",
+                            "maintenance"
+                          ]
+                        },
+                        "featured": {
+                          "type": "boolean"
+                        },
+                        "created_at": {
+                          "type": "string"
+                        },
+                        "updated_at": {
+                          "type": "string"
+                        },
+                        "last_sync_at": {
+                          "type": "string",
+                          "nullable": true
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name",
+                        "slug",
+                        "description",
+                        "long_description",
+                        "github_url",
+                        "git_branch",
+                        "homepage_url",
+                        "language",
+                        "runtime",
+                        "runtime_min_version",
+                        "installation_methods",
+                        "tools",
+                        "resources",
+                        "prompts",
+                        "visibility",
+                        "owner_team_id",
+                        "created_by",
+                        "author_name",
+                        "author_contact",
+                        "organization",
+                        "license",
+                        "default_config",
+                        "environment_variables",
+                        "dependencies",
+                        "category_id",
+                        "tags",
+                        "status",
+                        "featured",
+                        "created_at",
+                        "updated_at",
+                        "last_sync_at"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - Invalid input or missing Content-Type header",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "details": {}
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Bad Request - Invalid input or missing Content-Type header"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "details": {}
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Unauthorized - Authentication required"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Global admin permissions required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "details": {}
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Forbidden - Global admin permissions required"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict - Server name already exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "details": {}
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Conflict - Server name already exists"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "details": {}
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Internal Server Error"
+                }
+              }
+            }
           }
         }
       }
     },
     "/api/mcp/servers/global/{id}": {
       "put": {
-        "summary": "Update global MCP server (Admin only)",
+        "summary": "Update global MCP server (Global Admin only)",
         "tags": [
           "MCP Servers"
         ],
-        "description": "Update a global MCP server - requires global admin permissions. Will require Content-Type: application/json header when sending request body once implemented.",
+        "description": "Update an existing global MCP server - requires global admin permissions. Only global servers can be updated through this endpoint. Requires Content-Type: application/json header when sending request body.",
         "parameters": [
           {
             "schema": {
-              "type": "string"
+              "type": "string",
+              "minLength": 1
             },
             "in": "path",
             "name": "id",
             "required": true
           }
         ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
         "responses": {
           "200": {
-            "description": "Default Response"
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "slug": {
+                          "type": "string"
+                        },
+                        "description": {
+                          "type": "string"
+                        },
+                        "long_description": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "github_url": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "git_branch": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "homepage_url": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "language": {
+                          "type": "string"
+                        },
+                        "runtime": {
+                          "type": "string"
+                        },
+                        "runtime_min_version": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "installation_methods": {
+                          "type": "array"
+                        },
+                        "tools": {
+                          "type": "array"
+                        },
+                        "resources": {
+                          "type": "array",
+                          "nullable": true
+                        },
+                        "prompts": {
+                          "type": "array",
+                          "nullable": true
+                        },
+                        "visibility": {
+                          "type": "string",
+                          "enum": [
+                            "global",
+                            "team"
+                          ]
+                        },
+                        "owner_team_id": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "created_by": {
+                          "type": "string"
+                        },
+                        "author_name": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "author_contact": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "organization": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "license": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "default_config": {
+                          "type": "object",
+                          "additionalProperties": {},
+                          "nullable": true
+                        },
+                        "environment_variables": {
+                          "type": "array",
+                          "nullable": true
+                        },
+                        "dependencies": {
+                          "type": "object",
+                          "additionalProperties": {},
+                          "nullable": true
+                        },
+                        "category_id": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "tags": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "nullable": true
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "active",
+                            "deprecated",
+                            "maintenance"
+                          ]
+                        },
+                        "featured": {
+                          "type": "boolean"
+                        },
+                        "created_at": {
+                          "type": "string"
+                        },
+                        "updated_at": {
+                          "type": "string"
+                        },
+                        "last_sync_at": {
+                          "type": "string",
+                          "nullable": true
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name",
+                        "slug",
+                        "description",
+                        "long_description",
+                        "github_url",
+                        "git_branch",
+                        "homepage_url",
+                        "language",
+                        "runtime",
+                        "runtime_min_version",
+                        "installation_methods",
+                        "tools",
+                        "resources",
+                        "prompts",
+                        "visibility",
+                        "owner_team_id",
+                        "created_by",
+                        "author_name",
+                        "author_contact",
+                        "organization",
+                        "license",
+                        "default_config",
+                        "environment_variables",
+                        "dependencies",
+                        "category_id",
+                        "tags",
+                        "status",
+                        "featured",
+                        "created_at",
+                        "updated_at",
+                        "last_sync_at"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - Invalid input or missing Content-Type header",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "details": {}
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Bad Request - Invalid input or missing Content-Type header"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "details": {}
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Unauthorized - Authentication required"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Global admin permissions required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "details": {}
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Forbidden - Global admin permissions required"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found - Server not found or not a global server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "details": {}
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Not Found - Server not found or not a global server"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict - Server name already exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "details": {}
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Conflict - Server name already exists"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "details": {}
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Internal Server Error"
+                }
+              }
+            }
           }
         }
       },
       "delete": {
-        "summary": "Delete global MCP server (Admin only)",
+        "summary": "Delete global MCP server (Global Admin only)",
         "tags": [
           "MCP Servers"
         ],
-        "description": "Delete a global MCP server - requires global admin permissions",
+        "description": "Delete an existing global MCP server - requires global admin permissions. Only global servers can be deleted through this endpoint. This action is irreversible.",
         "parameters": [
           {
             "schema": {
-              "type": "string"
+              "type": "string",
+              "minLength": 1
             },
             "in": "path",
             "name": "id",
             "required": true
           }
         ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
         "responses": {
           "200": {
-            "description": "Default Response"
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "deleted_at": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name",
+                        "deleted_at"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "message",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "details": {}
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Unauthorized - Authentication required"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Global admin permissions required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "details": {}
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Forbidden - Global admin permissions required"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found - Server not found or not a global server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "details": {}
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Not Found - Server not found or not a global server"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "details": {}
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Internal Server Error"
+                }
+              }
+            }
           }
         }
       }

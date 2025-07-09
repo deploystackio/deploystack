@@ -1,4 +1,14 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Settings } from 'lucide-vue-next'
@@ -10,6 +20,12 @@ interface Props {
 }
 
 const props = defineProps<Props>()
+const { t } = useI18n()
+
+// Sort credentials by name for consistency
+const sortedCredentials = computed(() => {
+  return [...props.credentials].sort((a, b) => a.name.localeCompare(b.name))
+})
 
 const formatDate = (dateString: string) => {
   const date = new Date(dateString)
@@ -29,7 +45,7 @@ const getCreatedByDisplay = (createdBy: any) => {
     }
   }
   return {
-    username: typeof createdBy === 'string' ? createdBy : 'Unknown',
+    username: typeof createdBy === 'string' ? createdBy : t('credentials.table.values.unknown'),
     email: null
   }
 }
@@ -37,42 +53,34 @@ const getCreatedByDisplay = (createdBy: any) => {
 
 <template>
   <div class="rounded-md border">
-    <table class="w-full">
-      <thead>
-        <tr class="border-b bg-muted/50">
-          <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground text-sm">
-            Name
-          </th>
-          <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground text-sm">
-            Provider
-          </th>
-          <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground text-sm">
-            Comment
-          </th>
-          <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground text-sm">
-            Created By
-          </th>
-          <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground text-sm">
-            Created
-          </th>
-          <th class="h-12 px-4 text-right align-middle font-medium text-muted-foreground text-sm">
-            Manage
-          </th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr
-          v-for="credential in credentials"
-          :key="credential.id"
-          class="border-b transition-colors hover:bg-muted/50"
-        >
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>{{ t('credentials.table.columns.name') }}</TableHead>
+          <TableHead>{{ t('credentials.table.columns.provider') }}</TableHead>
+          <TableHead>{{ t('credentials.table.columns.comment') }}</TableHead>
+          <TableHead>{{ t('credentials.table.columns.createdBy') }}</TableHead>
+          <TableHead>{{ t('credentials.table.columns.createdAt') }}</TableHead>
+          <TableHead class="w-[100px]">{{ t('credentials.table.columns.actions') }}</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        <!-- Empty State -->
+        <TableRow v-if="sortedCredentials.length === 0">
+          <TableCell :colspan="6" class="h-24 text-center">
+            {{ t('credentials.table.noData') }}
+          </TableCell>
+        </TableRow>
+
+        <!-- Data Rows -->
+        <TableRow v-for="credential in sortedCredentials" :key="credential.id">
           <!-- Name -->
-          <td class="p-4 align-middle">
-            <div class="font-medium">{{ credential.name }}</div>
-          </td>
+          <TableCell class="font-medium">
+            {{ credential.name }}
+          </TableCell>
 
           <!-- Provider -->
-          <td class="p-4 align-middle">
+          <TableCell>
             <div class="flex items-center gap-2">
               <img
                 :src="`/images/provider/${credential.provider.id}.svg`"
@@ -82,19 +90,20 @@ const getCreatedByDisplay = (createdBy: any) => {
               />
               <Badge variant="secondary">{{ credential.provider.name }}</Badge>
             </div>
-          </td>
+          </TableCell>
 
           <!-- Comment -->
-          <td class="p-4 align-middle">
-            <div
-              :class="credential.comment ? 'text-sm' : 'text-sm text-muted-foreground italic'"
-            >
-              {{ credential.comment || 'No comment' }}
-            </div>
-          </td>
+          <TableCell>
+            <span v-if="credential.comment" class="text-sm text-muted-foreground">
+              {{ credential.comment }}
+            </span>
+            <span v-else class="text-sm text-muted-foreground italic">
+              {{ t('credentials.detail.values.noComment') }}
+            </span>
+          </TableCell>
 
           <!-- Created By -->
-          <td class="p-4 align-middle">
+          <TableCell>
             <div class="text-sm">
               <div class="font-medium">{{ getCreatedByDisplay(credential.createdBy).username }}</div>
               <div
@@ -104,38 +113,27 @@ const getCreatedByDisplay = (createdBy: any) => {
                 {{ getCreatedByDisplay(credential.createdBy).email }}
               </div>
             </div>
-          </td>
+          </TableCell>
 
           <!-- Created -->
-          <td class="p-4 align-middle">
-            <div class="text-sm text-muted-foreground">
-              {{ formatDate(credential.createdAt) }}
-            </div>
-          </td>
+          <TableCell class="text-sm text-muted-foreground">
+            {{ formatDate(credential.createdAt) }}
+          </TableCell>
 
-          <!-- Manage -->
-          <td class="p-4 align-middle">
-            <div class="flex justify-end">
-              <Button
-                variant="outline"
-                size="sm"
-                class="h-8 px-3"
-                @click="props.onManage(credential.id)"
-              >
-                <Settings class="h-4 w-4 mr-1" />
-                Manage
-              </Button>
-            </div>
-          </td>
-        </tr>
-
-        <!-- Empty state -->
-        <tr v-if="credentials.length === 0">
-          <td colspan="6" class="h-24 text-center">
-            No credentials found
-          </td>
-        </tr>
-      </tbody>
-    </table>
+          <!-- Actions -->
+          <TableCell>
+            <Button
+              variant="outline"
+              size="sm"
+              @click="props.onManage(credential.id)"
+              class="h-8"
+            >
+              <Settings class="h-4 w-4 mr-2" />
+              {{ t('credentials.actions.view') }}
+            </Button>
+          </TableCell>
+        </TableRow>
+      </TableBody>
+    </Table>
   </div>
 </template>

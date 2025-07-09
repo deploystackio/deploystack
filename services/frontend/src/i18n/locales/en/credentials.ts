@@ -14,12 +14,17 @@ export default {
         name: 'Name',
         provider: 'Provider',
         comment: 'Comment',
+        createdBy: 'Created By',
         createdAt: 'Created',
         actions: 'Actions'
       },
       loading: 'Loading credentials...',
       error: 'Failed to load credentials: {error}',
-      noResults: 'No credentials found for this team'
+      noResults: 'No credentials found for this team',
+      noData: 'No credentials found',
+      values: {
+        unknown: 'Unknown'
+      }
     },
     form: {
       title: {
@@ -75,6 +80,26 @@ export default {
       editCredential: 'Edit Credential',
       editName: 'Edit Name',
       updateSecrets: 'Update Secrets'
+    },
+    updateSecrets: {
+      title: 'Update Secrets',
+      description: 'Update secret values for "{credentialName}"',
+      updating: 'Updating...',
+      update: 'Update Secrets',
+      success: 'Secrets updated successfully',
+      note: 'Only provide values for secrets you want to update. Leave fields empty to keep current values.',
+      securityNote: 'Secret values are encrypted and never displayed for security reasons.',
+      noSecretFields: 'This credential has no secret fields to update.',
+      form: {
+        cancel: 'Cancel',
+        save: 'Update Secrets',
+        saving: 'Updating...'
+      },
+      messages: {
+        success: 'Secret values updated successfully',
+        error: 'Failed to update secret values',
+        noChanges: 'No changes were made'
+      }
     },
     delete: {
       title: 'Delete Credential',
