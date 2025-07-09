@@ -17,9 +17,13 @@ export type EventBusEvents = {
   'mcp-category-created': void
   'mcp-category-updated': { categoryId: string }
   'mcp-category-deleted': { categoryId: string }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   'mcp-form-data-updated': { step: number; data: any }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   'mcp-form-data-loaded': { formData: any; currentStep: number }
   'mcp-form-data-cleared': void
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  'mcp-github-data-populated': any
   'icons-cache-loaded': { count: number }
   'icons-cache-error': { message: string }
   'icons-cache-cleared': void

@@ -4,6 +4,7 @@ import { getEnv } from '@/utils/env'
 export interface ConnectionTestResult {
   success: boolean
   message: string
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   details?: Record<string, any>
   timestamp: Date
 }
@@ -31,6 +32,7 @@ export function useConnectionTest() {
    */
   async function testConnection(
     serviceType: string,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     credentials: Record<string, any>,
     options: ConnectionTestOptions = {}
   ): Promise<ConnectionTestResult> {
@@ -88,11 +90,7 @@ export function useConnectionTest() {
   /**
    * Test GitHub App connection
    */
-  async function testGitHubAppConnection(credentials: {
-    app_id: string
-    private_key_base64: string
-    installation_id: string
-  }): Promise<ConnectionTestResult> {
+  async function testGitHubAppConnection(): Promise<ConnectionTestResult> {
     if (!apiUrl) {
       throw new Error('VITE_DEPLOYSTACK_BACKEND_URL is not configured')
     }

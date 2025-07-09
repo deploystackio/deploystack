@@ -117,6 +117,7 @@ function handleSettingsUpdated(updatedSettings: Setting[]) {
 }
 
 // Handle connection test results from custom components
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function handleConnectionTested(result: { success: boolean; message: string }) {
   // You can add global handling for connection test results here
   // Connection test results are handled by individual components
@@ -224,6 +225,8 @@ async function handleSubmit(event: Event) {
       throw new Error(errorData.error || errorData.message || `Failed to save settings: ${response.statusText} (status: ${response.status})`)
     }
 
+
+     
     const result = await response.json()
 
     if (!result.success) {
@@ -250,8 +253,9 @@ async function handleSubmit(event: Event) {
       settingGroups.value = newSettingGroups
     }
 
-  } catch {
+  } catch (err) {
     // Handle save error silently or show user-friendly error message
+    console.error('Failed to save settings:', err)
   }
 }
 

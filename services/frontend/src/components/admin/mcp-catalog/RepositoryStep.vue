@@ -7,6 +7,7 @@ import type { RepositoryFormData } from '@/views/admin/mcp-server-catalog/types'
 
 interface Props {
   modelValue: RepositoryFormData
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   formData: any
 }
 

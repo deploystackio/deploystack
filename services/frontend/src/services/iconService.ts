@@ -65,18 +65,32 @@ export class IconService {
   static async getAllIcons(): Promise<IconOption[]> {
     // Check session cache first
     if (this.sessionCache) {
-      console.log('[IconService] Using cached icons')
       return this.sessionCache
     }
-
-    console.log('[IconService] Loading all icons for the first time...')
 
     try {
       // Dynamic import of all Lucide icons
       const lucideIcons = await import('lucide-vue-next')
 
       const allIcons = Object.keys(lucideIcons)
-        .filter(name => name !== 'default' && typeof (lucideIcons as any)[name] === 'object')
+        .filter(name => {
+          // Exclude non-icon exports
+          if (name === 'default' || name === 'createLucideIcon' || name === 'Icon' || name === 'icons') {
+            return false
+          }
+
+          // Check if it's a valid Vue component (icon)
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const component = (lucideIcons as any)[name]
+
+          // Lucide icons are functions that create Vue components
+          const isValidIcon = component &&
+            typeof component === 'function' &&
+            !name.endsWith('Icon') && // Exclude duplicate *Icon exports
+            !name.startsWith('Lucide') // Exclude duplicate Lucide* exports
+
+          return isValidIcon
+        })
         .map(name => ({
           value: name,
           label: name
@@ -86,7 +100,6 @@ export class IconService {
       // Cache in session
       this.sessionCache = allIcons
 
-      console.log(`[IconService] Loaded and cached ${allIcons.length} icons`)
       return allIcons
 
     } catch (error) {
@@ -105,17 +118,32 @@ export class IconService {
       )
     }
 
-    // 3+ characters = load all icons and search
-    const allIcons = await this.getAllIcons()
-    return allIcons.filter(icon =>
-      icon.label.toLowerCase().includes(query.toLowerCase())
-    )
+    try {
+      // 3+ characters = load all icons and search
+      const allIcons = await this.getAllIcons()
+
+      // If no icons were loaded, fall back to common icons
+      if (allIcons.length === 0) {
+        return this.getCommonIcons().filter(icon =>
+          icon.label.toLowerCase().includes(query.toLowerCase())
+        )
+      }
+
+      return allIcons.filter(icon =>
+        icon.label.toLowerCase().includes(query.toLowerCase())
+      )
+    } catch (error) {
+      console.error('[IconService] Search failed:', error)
+      // Fallback to common icons search
+      return this.getCommonIcons().filter(icon =>
+        icon.label.toLowerCase().includes(query.toLowerCase())
+      )
+    }
   }
 
   // Clear cache (useful for development or if needed)
   static clearCache(): void {
     this.sessionCache = null
-    console.log('[IconService] Icon cache cleared')
   }
 
   // Get cache status

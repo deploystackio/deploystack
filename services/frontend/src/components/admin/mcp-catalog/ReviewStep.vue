@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { useI18n } from 'vue-i18n'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { useI18n } from 'vue-i18n'
 import type { ReviewFormData, McpServerFormData } from '@/views/admin/mcp-server-catalog/types'
 
 interface Props {
@@ -14,8 +13,8 @@ interface Emits {
   (e: 'update:modelValue', value: ReviewFormData): void
 }
 
-const props = defineProps<Props>()
-const emit = defineEmits<Emits>()
+defineProps<Props>()
+defineEmits<Emits>()
 const { t } = useI18n()
 
 const formatJson = (jsonString: string) => {

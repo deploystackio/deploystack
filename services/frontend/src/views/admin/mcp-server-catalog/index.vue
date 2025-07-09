@@ -1,20 +1,22 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-vue-next'
 import DashboardLayout from '@/components/DashboardLayout.vue'
-import { McpCatalogService } from '@/services/mcpCatalogService'
+import { McpCatalogService, type PaginationMeta } from '@/services/mcpCatalogService'
 import { useEventBus } from '@/composables/useEventBus'
 import McpServerTableColumns from './McpServerTableColumns.vue'
+import PaginationControls from '@/components/ui/pagination/PaginationControls.vue'
 import type { McpServer, McpServerFilters } from './types'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { CheckCircle } from 'lucide-vue-next'
 
 const { t } = useI18n()
 const router = useRouter()
+const route = useRoute()
 const eventBus = useEventBus()
 
 // State
@@ -24,12 +26,24 @@ const error = ref<string | null>(null)
 const searchQuery = ref('')
 const successMessage = ref<string | null>(null)
 
+// Pagination state
+const currentPage = ref(1)
+const pageSize = ref(20)
+const totalItems = ref(0)
+const pagination = ref<PaginationMeta>({
+  total: 0,
+  limit: 20,
+  offset: 0,
+  has_more: false
+})
+
 // Filters
 const filters = ref<McpServerFilters>({
   visibility: 'global' // Only show global servers in admin catalog
 })
 
-// Filter servers based on search query
+// For search, we'll use client-side filtering since the backend pagination
+// doesn't support search yet. In the future, this could be moved to server-side
 const filteredServers = computed(() => {
   if (!searchQuery.value) {
     return servers.value
@@ -45,34 +59,24 @@ const filteredServers = computed(() => {
   )
 })
 
+// Computed values for pagination display
+const displayedServers = computed(() => {
+  // If searching, show filtered results without pagination
+  if (searchQuery.value) {
+    return filteredServers.value
+  }
+  // Otherwise show paginated results
+  return servers.value
+})
+
+
 // Navigation handlers
 const handleAddServer = () => {
   router.push('/admin/mcp-server-catalog/add')
 }
 
 const handleEditServer = (serverId: string) => {
-  // TODO: Implement edit functionality
-  console.log('Edit server:', serverId)
-}
-
-const handleDeleteServer = async (serverId: string) => {
-  try {
-    await McpCatalogService.deleteGlobalServer(serverId)
-
-    // Remove from local state
-    servers.value = servers.value.filter(s => s.id !== serverId)
-
-    // Show success message
-    successMessage.value = t('mcpCatalog.messages.deleteSuccess')
-    setTimeout(() => {
-      successMessage.value = null
-    }, 5000)
-
-    // Emit global event
-    eventBus.emit('mcp-catalog-updated')
-  } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Failed to delete server'
-  }
+  router.push(`/admin/mcp-server-catalog/edit/${serverId}`)
 }
 
 const handleToggleFeatured = async (serverId: string, featured: boolean) => {
@@ -100,29 +104,46 @@ const handleToggleFeatured = async (serverId: string, featured: boolean) => {
   }
 }
 
-const handleViewServer = (serverId: string) => {
-  // TODO: Implement view server details
-  console.log('View server:', serverId)
-}
 
-// Fetch servers from API
-const fetchServers = async (forceRefresh = false): Promise<void> => {
+// Fetch servers from API with pagination
+const fetchServers = async (): Promise<void> => {
   try {
     isLoading.value = true
     error.value = null
 
-    servers.value = await McpCatalogService.getGlobalServers(filters.value)
+    const offset = (currentPage.value - 1) * pageSize.value
+    const response = await McpCatalogService.getGlobalServersPaginated(
+      filters.value,
+      { limit: pageSize.value, offset }
+    )
+
+    servers.value = response.items
+    pagination.value = response.pagination
+    totalItems.value = response.pagination.total
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'An unknown error occurred'
     servers.value = []
+    totalItems.value = 0
   } finally {
     isLoading.value = false
   }
 }
 
+// Pagination event handlers
+const handlePageChange = async (page: number) => {
+  currentPage.value = page
+  await fetchServers()
+}
+
+const handlePageSizeChange = async (newPageSize: number) => {
+  pageSize.value = newPageSize
+  currentPage.value = 1 // Reset to first page when changing page size
+  await fetchServers()
+}
+
 // Handle server creation success from add page
 const handleServerCreated = () => {
-  fetchServers(true)
+  fetchServers()
   successMessage.value = t('mcpCatalog.messages.createSuccess')
   setTimeout(() => {
     successMessage.value = null
@@ -133,9 +154,21 @@ const handleServerCreated = () => {
 onMounted(async () => {
   await fetchServers()
 
+  // Check for delete success message from query parameters
+  const deletedServerName = route.query.deleted as string
+  if (deletedServerName) {
+    successMessage.value = t('mcpCatalog.messages.deleteSuccess')
+    setTimeout(() => {
+      successMessage.value = null
+    }, 5000)
+
+    // Clean up the query parameter
+    router.replace({ query: {} })
+  }
+
   // Listen for catalog updates from other components
   eventBus.on('mcp-catalog-updated', () => {
-    fetchServers(true)
+    fetchServers()
   })
 
   // Listen for server creation from add page
@@ -195,12 +228,30 @@ onUnmounted(() => {
 
         <!-- Servers Table Component -->
         <McpServerTableColumns
-          :servers="filteredServers"
+          :servers="displayedServers"
           :on-edit-server="handleEditServer"
-          :on-delete-server="handleDeleteServer"
           :on-toggle-featured="handleToggleFeatured"
-          :on-view-server="handleViewServer"
         />
+
+        <!-- Pagination Controls (only show when not searching) -->
+        <PaginationControls
+          v-if="!searchQuery && totalItems > 0"
+          :current-page="currentPage"
+          :page-size="pageSize"
+          :total-items="totalItems"
+          :is-loading="isLoading"
+          @page-change="handlePageChange"
+          @page-size-change="handlePageSizeChange"
+        />
+
+        <!-- Search Results Info (show when searching) -->
+        <div v-if="searchQuery" class="text-sm text-muted-foreground py-4">
+          {{ t('mcpCatalog.pagination.showing', {
+            start: filteredServers.length > 0 ? 1 : 0,
+            end: filteredServers.length,
+            total: filteredServers.length
+          }) }}
+        </div>
       </div>
     </div>
   </DashboardLayout>

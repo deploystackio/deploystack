@@ -2,11 +2,28 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import deleteGlobalServer from '../../../../../src/routes/mcp/servers/delete-global';
 
+// Mock the dependencies
+vi.mock('../../../../../src/middleware/roleMiddleware', () => ({
+  requireGlobalAdmin: () => vi.fn()
+}));
+
+vi.mock('../../../../../src/services/mcpCatalogService', () => ({
+  McpCatalogService: vi.fn().mockImplementation(() => ({
+    getServerById: vi.fn(),
+    deleteServer: vi.fn()
+  }))
+}));
+
+vi.mock('../../../../../src/db', () => ({
+  getDb: vi.fn()
+}));
+
 describe('MCP Servers - Delete Global', () => {
   let mockFastify: Partial<FastifyInstance>;
   let mockRequest: Partial<FastifyRequest>;
   let mockReply: Partial<FastifyReply>;
   let routeHandlers: Record<string, any>;
+  let mockLog: any;
 
   beforeEach(() => {
     // Reset all mocks
@@ -14,6 +31,13 @@ describe('MCP Servers - Delete Global', () => {
 
     // Setup route handlers storage
     routeHandlers = {};
+
+    // Setup mock logger
+    mockLog = {
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn()
+    };
 
     // Setup mock Fastify instance
     mockFastify = {
@@ -30,8 +54,9 @@ describe('MCP Servers - Delete Global', () => {
     // Setup mock request
     mockRequest = {
       params: { id: 'test-server-id' },
-      user: { id: 'test-user-id', role: 'admin' },
-    };
+      user: { id: 'test-user-id', role: 'global_admin' },
+      log: mockLog,
+    } as any;
 
     // Setup mock reply
     mockReply = {
@@ -63,147 +88,157 @@ describe('MCP Servers - Delete Global', () => {
       
       expect(schema.schema).toBeDefined();
       expect(schema.schema.tags).toEqual(['MCP Servers']);
-      expect(schema.schema.summary).toBe('Delete global MCP server (Admin only)');
-      expect(schema.schema.description).toBe('Delete a global MCP server - requires global admin permissions');
+      expect(schema.schema.summary).toBe('Delete global MCP server (Global Admin only)');
+      expect(schema.schema.description).toBe('Delete an existing global MCP server - requires global admin permissions. Only global servers can be deleted through this endpoint. This action is irreversible.');
     });
   });
 
   describe('DELETE /mcp/servers/global/:id', () => {
+    let mockMcpService: any;
+
     beforeEach(async () => {
+      const { McpCatalogService } = await import('../../../../../src/services/mcpCatalogService');
+      mockMcpService = {
+        getServerById: vi.fn(),
+        deleteServer: vi.fn()
+      };
+      (McpCatalogService as any).mockImplementation(() => mockMcpService);
+      
       await deleteGlobalServer(mockFastify as FastifyInstance);
     });
 
-    it('should return 501 Not Implemented', async () => {
+    it('should return 404 when server not found', async () => {
       const handler = routeHandlers['DELETE /mcp/servers/global/:id'];
+      mockMcpService.getServerById.mockResolvedValue(null);
+
       await handler(mockRequest, mockReply);
 
-      expect(mockReply.status).toHaveBeenCalledWith(501);
+      expect(mockReply.status).toHaveBeenCalledWith(404);
       expect(mockReply.send).toHaveBeenCalledWith({
         success: false,
-        error: 'Not implemented yet'
+        error: 'Server not found'
       });
     });
 
-    it('should return consistent response structure', async () => {
+    it('should return 404 when server is not global', async () => {
       const handler = routeHandlers['DELETE /mcp/servers/global/:id'];
-      
-      // Call multiple times to ensure consistency
+      mockMcpService.getServerById.mockResolvedValue({
+        id: 'test-server-id',
+        name: 'Test Server',
+        visibility: 'private'
+      });
+
       await handler(mockRequest, mockReply);
+
+      expect(mockReply.status).toHaveBeenCalledWith(404);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        success: false,
+        error: 'Server not found or not a global server'
+      });
+    });
+
+    it('should successfully delete global server', async () => {
+      const handler = routeHandlers['DELETE /mcp/servers/global/:id'];
+      const mockServer = {
+        id: 'test-server-id',
+        name: 'Test Global Server',
+        visibility: 'global'
+      };
+      
+      mockMcpService.getServerById.mockResolvedValue(mockServer);
+      mockMcpService.deleteServer.mockResolvedValue(true);
+
       await handler(mockRequest, mockReply);
+
+      expect(mockReply.status).toHaveBeenCalledWith(200);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        success: true,
+        message: 'Global MCP server deleted successfully',
+        data: {
+          id: mockServer.id,
+          name: mockServer.name,
+          deleted_at: expect.any(String)
+        }
+      });
+    });
+
+    it('should handle deletion failure', async () => {
+      const handler = routeHandlers['DELETE /mcp/servers/global/:id'];
+      const mockServer = {
+        id: 'test-server-id',
+        name: 'Test Global Server',
+        visibility: 'global'
+      };
+      
+      mockMcpService.getServerById.mockResolvedValue(mockServer);
+      mockMcpService.deleteServer.mockResolvedValue(false);
+
       await handler(mockRequest, mockReply);
 
-      expect(mockReply.status).toHaveBeenCalledTimes(3);
-      expect(mockReply.send).toHaveBeenCalledTimes(3);
-      
-      // Check that all calls had the same arguments
-      const statusCalls = (mockReply.status as any).mock.calls;
-      const sendCalls = (mockReply.send as any).mock.calls;
-      
-      statusCalls.forEach((call: any[]) => {
-        expect(call[0]).toBe(501);
-      });
-      
-      sendCalls.forEach((call: any[]) => {
-        expect(call[0]).toEqual({
-          success: false,
-          error: 'Not implemented yet'
-        });
-      });
-    });
-
-    it('should handle request with valid server ID', async () => {
-      const handler = routeHandlers['DELETE /mcp/servers/global/:id'];
-      const requestWithId = {
-        ...mockRequest,
-        params: { id: 'valid-server-id-123' },
-        user: { id: 'admin-user-id', role: 'global_admin' }
-      };
-
-      await handler(requestWithId, mockReply);
-
-      expect(mockReply.status).toHaveBeenCalledWith(501);
+      expect(mockReply.status).toHaveBeenCalledWith(404);
       expect(mockReply.send).toHaveBeenCalledWith({
         success: false,
-        error: 'Not implemented yet'
+        error: 'Server not found'
       });
     });
 
-    it('should handle request with different ID formats', async () => {
+    it('should handle service errors', async () => {
       const handler = routeHandlers['DELETE /mcp/servers/global/:id'];
-      
-      const testIds = [
-        'uuid-123-456-789',
-        'simple-id',
-        '12345',
-        'server_with_underscores',
-        'server-with-dashes'
-      ];
+      mockMcpService.getServerById.mockRejectedValue(new Error('Database error'));
 
-      for (const id of testIds) {
-        const requestWithId = { ...mockRequest, params: { id } };
-        await handler(requestWithId, mockReply);
-        
-        expect(mockReply.status).toHaveBeenCalledWith(501);
-        expect(mockReply.send).toHaveBeenCalledWith({
-          success: false,
-          error: 'Not implemented yet'
-        });
-      }
-    });
+      await handler(mockRequest, mockReply);
 
-    it('should handle request without ID parameter', async () => {
-      const handler = routeHandlers['DELETE /mcp/servers/global/:id'];
-      const requestWithoutId = {
-        ...mockRequest,
-        params: {}
-      };
-
-      await handler(requestWithoutId, mockReply);
-
-      expect(mockReply.status).toHaveBeenCalledWith(501);
+      expect(mockReply.status).toHaveBeenCalledWith(500);
       expect(mockReply.send).toHaveBeenCalledWith({
         success: false,
-        error: 'Not implemented yet'
+        error: 'Failed to delete global MCP server'
       });
     });
 
-    it('should handle request without user authentication', async () => {
+    it('should handle specific error messages', async () => {
       const handler = routeHandlers['DELETE /mcp/servers/global/:id'];
-      const unauthenticatedRequest = {
-        ...mockRequest,
-        user: undefined
-      };
+      mockMcpService.getServerById.mockRejectedValue(new Error('Server not found'));
 
-      await handler(unauthenticatedRequest, mockReply);
+      await handler(mockRequest, mockReply);
 
-      expect(mockReply.status).toHaveBeenCalledWith(501);
+      expect(mockReply.status).toHaveBeenCalledWith(404);
       expect(mockReply.send).toHaveBeenCalledWith({
         success: false,
-        error: 'Not implemented yet'
+        error: 'Server not found'
       });
     });
 
-    it('should handle request with non-admin user', async () => {
+    it('should handle insufficient permissions error', async () => {
       const handler = routeHandlers['DELETE /mcp/servers/global/:id'];
-      const regularUserRequest = {
-        ...mockRequest,
-        user: { id: 'regular-user-id', role: 'user' }
-      };
+      mockMcpService.getServerById.mockRejectedValue(new Error('Insufficient permissions'));
 
-      await handler(regularUserRequest, mockReply);
+      await handler(mockRequest, mockReply);
 
-      expect(mockReply.status).toHaveBeenCalledWith(501);
+      expect(mockReply.status).toHaveBeenCalledWith(403);
       expect(mockReply.send).toHaveBeenCalledWith({
         success: false,
-        error: 'Not implemented yet'
+        error: 'Global admin permissions required'
       });
     });
   });
 
   describe('Error Handling', () => {
-    it('should handle handler execution without throwing', async () => {
+    let mockMcpService: any;
+
+    beforeEach(async () => {
+      const { McpCatalogService } = await import('../../../../../src/services/mcpCatalogService');
+      mockMcpService = {
+        getServerById: vi.fn(),
+        deleteServer: vi.fn()
+      };
+      (McpCatalogService as any).mockImplementation(() => mockMcpService);
+      
       await deleteGlobalServer(mockFastify as FastifyInstance);
+    });
+
+    it('should handle handler execution without throwing', async () => {
       const handler = routeHandlers['DELETE /mcp/servers/global/:id'];
+      mockMcpService.getServerById.mockResolvedValue(null);
 
       expect(async () => {
         await handler(mockRequest, mockReply);
@@ -211,53 +246,81 @@ describe('MCP Servers - Delete Global', () => {
     });
 
     it('should work with malformed request objects', async () => {
-      await deleteGlobalServer(mockFastify as FastifyInstance);
       const handler = routeHandlers['DELETE /mcp/servers/global/:id'];
 
-      const malformedRequests = [
-        null,
-        undefined,
-        { invalidProperty: 'test' },
-        { params: null },
-        { user: null }
-      ];
+      const malformedRequest = {
+        params: null,
+        user: null,
+        log: mockLog
+      };
 
-      for (const malformedRequest of malformedRequests) {
-        await handler(malformedRequest, mockReply);
-        
-        expect(mockReply.status).toHaveBeenCalledWith(501);
-        expect(mockReply.send).toHaveBeenCalledWith({
-          success: false,
-          error: 'Not implemented yet'
-        });
-      }
+      // This should throw an error due to destructuring null params
+      await expect(handler(malformedRequest, mockReply)).rejects.toThrow();
     });
 
     it('should work with malformed reply objects', async () => {
-      await deleteGlobalServer(mockFastify as FastifyInstance);
       const handler = routeHandlers['DELETE /mcp/servers/global/:id'];
+      mockMcpService.getServerById.mockResolvedValue(null);
 
       const malformedReply = {
         status: vi.fn().mockReturnThis(),
         send: vi.fn()
       };
 
-      expect(async () => {
-        await handler(mockRequest, malformedReply);
-      }).not.toThrow();
+      await handler(mockRequest, malformedReply);
 
-      expect(malformedReply.status).toHaveBeenCalledWith(501);
+      expect(malformedReply.status).toHaveBeenCalledWith(404);
       expect(malformedReply.send).toHaveBeenCalledWith({
         success: false,
-        error: 'Not implemented yet'
+        error: 'Server not found'
       });
     });
   });
 
   describe('Response Format', () => {
-    it('should return response in correct format', async () => {
+    let mockMcpService: any;
+
+    beforeEach(async () => {
+      const { McpCatalogService } = await import('../../../../../src/services/mcpCatalogService');
+      mockMcpService = {
+        getServerById: vi.fn(),
+        deleteServer: vi.fn()
+      };
+      (McpCatalogService as any).mockImplementation(() => mockMcpService);
+      
       await deleteGlobalServer(mockFastify as FastifyInstance);
+    });
+
+    it('should return response in correct format for success', async () => {
       const handler = routeHandlers['DELETE /mcp/servers/global/:id'];
+      const mockServer = {
+        id: 'test-server-id',
+        name: 'Test Global Server',
+        visibility: 'global'
+      };
+      
+      mockMcpService.getServerById.mockResolvedValue(mockServer);
+      mockMcpService.deleteServer.mockResolvedValue(true);
+
+      await handler(mockRequest, mockReply);
+
+      const sendCall = (mockReply.send as any).mock.calls[0];
+      const response = sendCall[0];
+
+      expect(response).toHaveProperty('success');
+      expect(response).toHaveProperty('message');
+      expect(response).toHaveProperty('data');
+      expect(response.success).toBe(true);
+      expect(typeof response.success).toBe('boolean');
+      expect(typeof response.message).toBe('string');
+      expect(response.data).toHaveProperty('id');
+      expect(response.data).toHaveProperty('name');
+      expect(response.data).toHaveProperty('deleted_at');
+    });
+
+    it('should return response in correct format for error', async () => {
+      const handler = routeHandlers['DELETE /mcp/servers/global/:id'];
+      mockMcpService.getServerById.mockResolvedValue(null);
 
       await handler(mockRequest, mockReply);
 
@@ -267,24 +330,40 @@ describe('MCP Servers - Delete Global', () => {
       expect(response).toHaveProperty('success');
       expect(response).toHaveProperty('error');
       expect(response.success).toBe(false);
-      expect(response.error).toBe('Not implemented yet');
       expect(typeof response.success).toBe('boolean');
       expect(typeof response.error).toBe('string');
     });
 
-    it('should set correct HTTP status code', async () => {
-      await deleteGlobalServer(mockFastify as FastifyInstance);
+    it('should set correct HTTP status code for success', async () => {
       const handler = routeHandlers['DELETE /mcp/servers/global/:id'];
+      const mockServer = {
+        id: 'test-server-id',
+        name: 'Test Global Server',
+        visibility: 'global'
+      };
+      
+      mockMcpService.getServerById.mockResolvedValue(mockServer);
+      mockMcpService.deleteServer.mockResolvedValue(true);
 
       await handler(mockRequest, mockReply);
 
-      expect(mockReply.status).toHaveBeenCalledWith(501);
+      expect(mockReply.status).toHaveBeenCalledWith(200);
+      expect(mockReply.status).toHaveBeenCalledTimes(1);
+    });
+
+    it('should set correct HTTP status code for not found', async () => {
+      const handler = routeHandlers['DELETE /mcp/servers/global/:id'];
+      mockMcpService.getServerById.mockResolvedValue(null);
+
+      await handler(mockRequest, mockReply);
+
+      expect(mockReply.status).toHaveBeenCalledWith(404);
       expect(mockReply.status).toHaveBeenCalledTimes(1);
     });
 
     it('should chain status and send correctly', async () => {
-      await deleteGlobalServer(mockFastify as FastifyInstance);
       const handler = routeHandlers['DELETE /mcp/servers/global/:id'];
+      mockMcpService.getServerById.mockResolvedValue(null);
 
       await handler(mockRequest, mockReply);
 
@@ -293,9 +372,22 @@ describe('MCP Servers - Delete Global', () => {
   });
 
   describe('Performance', () => {
-    it('should handle multiple concurrent requests', async () => {
+    let mockMcpService: any;
+
+    beforeEach(async () => {
+      const { McpCatalogService } = await import('../../../../../src/services/mcpCatalogService');
+      mockMcpService = {
+        getServerById: vi.fn(),
+        deleteServer: vi.fn()
+      };
+      (McpCatalogService as any).mockImplementation(() => mockMcpService);
+      
       await deleteGlobalServer(mockFastify as FastifyInstance);
+    });
+
+    it('should handle multiple concurrent requests', async () => {
       const handler = routeHandlers['DELETE /mcp/servers/global/:id'];
+      mockMcpService.getServerById.mockResolvedValue(null);
 
       const promises = Array.from({ length: 10 }, () => 
         handler(mockRequest, mockReply)
@@ -308,15 +400,15 @@ describe('MCP Servers - Delete Global', () => {
     });
 
     it('should be fast and not block', async () => {
-      await deleteGlobalServer(mockFastify as FastifyInstance);
       const handler = routeHandlers['DELETE /mcp/servers/global/:id'];
+      mockMcpService.getServerById.mockResolvedValue(null);
 
       const startTime = Date.now();
       await handler(mockRequest, mockReply);
       const endTime = Date.now();
 
-      // Should be very fast for a simple 501 response
-      expect(endTime - startTime).toBeLessThan(100);
+      // Should be reasonably fast for a database operation
+      expect(endTime - startTime).toBeLessThan(1000);
     });
   });
 
@@ -337,7 +429,7 @@ describe('MCP Servers - Delete Global', () => {
       const [, schema] = deleteCall;
 
       expect(schema.schema.summary).toContain('Delete global MCP server');
-      expect(schema.schema.summary).toContain('Admin only');
+      expect(schema.schema.summary).toContain('Global Admin only');
       expect(schema.schema.description).toContain('global admin permissions');
     });
 

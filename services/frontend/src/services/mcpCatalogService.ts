@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { getEnv } from '@/utils/env'
 import type {
   McpServer,
@@ -7,8 +9,81 @@ import type {
   McpServerFilters
 } from '@/views/admin/mcp-server-catalog/types'
 
+export interface PaginationParams {
+  limit?: number
+  offset?: number
+}
+
+export interface PaginationMeta {
+  total: number
+  limit: number
+  offset: number
+  has_more: boolean
+}
+
+export interface PaginatedResponse<T> {
+  items: T[]
+  pagination: PaginationMeta
+}
+
 export class McpCatalogService {
   private static baseUrl = getEnv('VITE_DEPLOYSTACK_BACKEND_URL')
+
+  /**
+   * Parse server data from API response to ensure proper typing
+   */
+  private static parseServerData(server: any): McpServer {
+    const safeJsonParse = (value: any, fallback: any = null) => {
+      if (!value || value === 'null' || value === 'undefined') {
+        return fallback
+      }
+
+      // If it's already an object/array, return as-is
+      if (typeof value === 'object') {
+        return value
+      }
+
+      // If it's a string, try to parse it
+      if (typeof value === 'string') {
+        // Handle the case where objects were stringified incorrectly as "[object Object],[object Object]"
+        if (value.includes('[object Object]')) {
+          // Silently handle malformed object strings - this is expected for some legacy data
+          return fallback
+        }
+
+        // First try JSON parsing
+        try {
+          return JSON.parse(value)
+        } catch (error) {
+          // If JSON parsing fails, check if it's a comma-separated string (for tags)
+          if (value.includes(',') && !value.startsWith('[') && !value.startsWith('{')) {
+            // Split by comma and trim whitespace, filter out empty and malformed entries
+            const items = value.split(',')
+              .map(item => item.trim())
+              .filter(item => item.length > 0 && !item.includes('[object Object]'))
+
+            return items.length > 0 ? items : fallback
+          }
+          console.warn('Failed to parse JSON field:', value, error)
+          return fallback
+        }
+      }
+
+      return fallback
+    }
+
+    return {
+      ...server,
+      tags: safeJsonParse(server.tags, null),
+      installation_methods: safeJsonParse(server.installation_methods, []),
+      tools: safeJsonParse(server.tools, []),
+      resources: safeJsonParse(server.resources, null),
+      prompts: safeJsonParse(server.prompts, null),
+      environment_variables: safeJsonParse(server.environment_variables, null),
+      default_config: safeJsonParse(server.default_config, null),
+      dependencies: safeJsonParse(server.dependencies, null)
+    }
+  }
 
   /**
    * Get all global MCP servers (admin only)
@@ -38,7 +113,79 @@ export class McpCatalogService {
     }
 
     const data = await response.json()
-    return data.data || data
+
+    // Handle paginated response structure
+    if (data.data && data.data.servers && Array.isArray(data.data.servers)) {
+      return data.data.servers.map(this.parseServerData)
+    }
+
+    // Fallback for non-paginated response (backward compatibility)
+    const servers = data.data || data
+    return Array.isArray(servers) ? servers.map(this.parseServerData) : []
+  }
+
+  /**
+   * Get global MCP servers with pagination support (admin only)
+   */
+  static async getGlobalServersPaginated(
+    filters?: McpServerFilters,
+    pagination?: PaginationParams
+  ): Promise<PaginatedResponse<McpServer>> {
+    const url = new URL(`${this.baseUrl}/api/mcp/servers`)
+
+    // Add filters
+    if (filters) {
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          url.searchParams.append(key, String(value))
+        }
+      })
+    }
+
+    // Add pagination parameters
+    if (pagination) {
+      if (pagination.limit !== undefined) {
+        url.searchParams.append('limit', String(pagination.limit))
+      }
+      if (pagination.offset !== undefined) {
+        url.searchParams.append('offset', String(pagination.offset))
+      }
+    }
+
+    const response = await fetch(url.toString(), {
+      method: 'GET',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.message || `Failed to fetch MCP servers: ${response.status}`)
+    }
+
+    const data = await response.json()
+
+    // Handle paginated response structure
+    if (data.data && data.data.servers && data.data.pagination) {
+      return {
+        items: data.data.servers.map(this.parseServerData),
+        pagination: data.data.pagination
+      }
+    }
+
+    // Fallback for non-paginated response (backward compatibility)
+    const servers = data.data || data
+    return {
+      items: Array.isArray(servers) ? servers.map(this.parseServerData) : [],
+      pagination: {
+        total: Array.isArray(servers) ? servers.length : 0,
+        limit: pagination?.limit || 20,
+        offset: pagination?.offset || 0,
+        has_more: false
+      }
+    }
   }
 
   /**
@@ -59,7 +206,7 @@ export class McpCatalogService {
     }
 
     const data = await response.json()
-    return data.data || data
+    return this.parseServerData(data.data || data)
   }
 
   /**
@@ -84,7 +231,7 @@ export class McpCatalogService {
     }
 
     const data = await response.json()
-    return data.data || data
+    return this.parseServerData(data.data || data)
   }
 
   /**
@@ -106,7 +253,7 @@ export class McpCatalogService {
     }
 
     const data = await response.json()
-    return data.data || data
+    return this.parseServerData(data.data || data)
   }
 
   /**
@@ -116,9 +263,6 @@ export class McpCatalogService {
     const response = await fetch(`${this.baseUrl}/api/mcp/servers/global/${serverId}`, {
       method: 'DELETE',
       credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-      },
     })
 
     if (!response.ok) {
@@ -145,7 +289,8 @@ export class McpCatalogService {
     }
 
     const data = await response.json()
-    return data.data || data
+    const servers = data.data || data
+    return Array.isArray(servers) ? servers.map(this.parseServerData) : []
   }
 
   /**

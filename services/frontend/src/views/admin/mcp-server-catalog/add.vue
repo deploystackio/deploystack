@@ -11,7 +11,8 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb'
-import { ArrowLeft, FileText, Github, Code, Zap, CheckCircle } from 'lucide-vue-next'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { ArrowLeft, FileText, Github, Code, Zap, CheckCircle, Loader2 } from 'lucide-vue-next'
 import DashboardLayout from '@/components/DashboardLayout.vue'
 import { McpCatalogService } from '@/services/mcpCatalogService'
 import { useEventBus } from '@/composables/useEventBus'
@@ -67,6 +68,8 @@ const steps = [
 const currentStep = ref(0)
 const isSubmitting = ref(false)
 const submitError = ref<string | null>(null)
+const isFetchingGitHub = ref(false)
+const githubFetchError = ref<string | null>(null)
 
 // Form data with proper initialization
 const formData = ref<McpServerFormData>({
@@ -115,6 +118,14 @@ const isLastStep = computed(() => currentStep.value === steps.length - 1)
 const canGoNext = computed(() => !isLastStep.value)
 const canGoPrevious = computed(() => !isFirstStep.value)
 
+const canProceedFromGitHub = computed(() => {
+  const githubUrl = formData.value.github.github_url
+  return githubUrl &&
+         githubUrl.includes('github.com') &&
+         githubUrl.includes('/') &&
+         !isFetchingGitHub.value
+})
+
 // Navigation methods
 const goToStep = (stepIndex: number) => {
   if (stepIndex >= 0 && stepIndex < currentStep.value) {
@@ -136,6 +147,120 @@ const previousStep = () => {
 
 const goBack = () => {
   router.push('/admin/mcp-server-catalog')
+}
+
+// New method for GitHub step navigation
+const handleGitHubStepNext = async () => {
+  if (currentStep.value !== 0) return
+
+  try {
+    isFetchingGitHub.value = true
+    githubFetchError.value = null
+
+    const githubUrl = formData.value.github.github_url
+
+    // Call backend API to fetch GitHub data
+    const response = await McpCatalogService.getGitHubRepoInfo(githubUrl)
+
+    if (response.success && response.data) {
+      // Auto-populate all form data
+      autoPopulateFromGitHub(response.data)
+
+      // Advance to next step
+      nextStep()
+    } else {
+      throw new Error(response.message || 'Failed to fetch repository information')
+    }
+  } catch (error) {
+    githubFetchError.value = error instanceof Error ? error.message : 'Failed to fetch repository data'
+    // Stay on current step - user must retry
+  } finally {
+    isFetchingGitHub.value = false
+  }
+}
+
+// Enhanced auto-population function
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const autoPopulateFromGitHub = (githubData: any) => {
+  formData.value = {
+    ...formData.value,
+    basic: {
+      name: githubData.name || '',
+      description: githubData.description || '',
+      long_description: githubData.readme_content || githubData.description || '',
+      category_id: formData.value.basic.category_id, // Keep user selection
+      author_name: githubData.owner?.login || githubData.author_name || '',
+      author_contact: githubData.owner?.email || githubData.author_contact || '',
+      organization: githubData.owner?.type === 'Organization' ? githubData.owner.login : (githubData.organization || ''),
+      license: githubData.license?.spdx_id || githubData.license || '',
+      tags: githubData.topics || githubData.tags || []
+    },
+    repository: {
+      github_url: githubData.html_url || githubData.github_url || formData.value.github.github_url,
+      git_branch: githubData.default_branch || 'main',
+      homepage_url: githubData.homepage || githubData.homepage_url || ''
+    },
+    technical: {
+      language: githubData.language || '',
+      runtime: detectRuntime(githubData.language || ''),
+      runtime_min_version: githubData.runtime_min_version || '',
+      installation_methods: githubData.installation_methods || parseInstallationMethods(githubData),
+      dependencies: githubData.dependencies ? JSON.stringify(githubData.dependencies, null, 2) : ''
+    },
+    capabilities: {
+      tools: githubData.mcp_tools || githubData.tools || [],
+      resources: githubData.mcp_resources || githubData.resources || [],
+      prompts: githubData.mcp_prompts || githubData.prompts || [],
+      environment_variables: githubData.mcp_env_vars || githubData.environment_variables || [],
+      default_config: githubData.mcp_config ? JSON.stringify(githubData.mcp_config, null, 2) : (githubData.default_config || '')
+    },
+    github: {
+      github_url: githubData.html_url || githubData.github_url || formData.value.github.github_url,
+      git_branch: githubData.default_branch || 'main',
+      auto_populated: true,
+      repo_data: githubData
+    }
+  }
+
+  // Emit event for other components to know data was auto-populated
+  eventBus.emit('mcp-github-data-populated', githubData)
+}
+
+// Helper functions
+const detectRuntime = (language: string): string => {
+  const runtimeMap: Record<string, string> = {
+    'JavaScript': 'node',
+    'TypeScript': 'node',
+    'Python': 'python',
+    'Go': 'go',
+    'Rust': 'rust',
+    'Java': 'java',
+    'C#': 'dotnet',
+    'Ruby': 'ruby',
+    'PHP': 'php'
+  }
+  return runtimeMap[language] || ''
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const parseInstallationMethods = (githubData: any): string[] => {
+  const methods: string[] = []
+
+  // Check for common package files
+  if (githubData.has_package_json || githubData.language === 'JavaScript' || githubData.language === 'TypeScript') {
+    methods.push('npm')
+  }
+  if (githubData.has_requirements_txt || githubData.has_pyproject_toml || githubData.language === 'Python') {
+    methods.push('pip')
+  }
+  if (githubData.has_dockerfile) {
+    methods.push('docker')
+  }
+  if (githubData.has_go_mod || githubData.language === 'Go') {
+    methods.push('go')
+  }
+
+  return methods.length > 0 ? methods : ['manual']
 }
 
 // Form persistence using event bus
@@ -347,13 +472,26 @@ onUnmounted(() => {
             {{ t('mcpCatalog.form.navigation.cancel') }}
           </Button>
 
+          <!-- Special GitHub step button with loading -->
           <Button
-            v-if="canGoNext"
+            v-if="currentStep === 0"
+            @click="handleGitHubStepNext"
+            :disabled="!canProceedFromGitHub"
+            class="min-w-[120px]"
+          >
+            <Loader2 v-if="isFetchingGitHub" class="h-4 w-4 animate-spin mr-2" />
+            {{ isFetchingGitHub ? 'Fetching...' : t('mcpCatalog.form.navigation.next') }}
+          </Button>
+
+          <!-- Normal next button for other steps -->
+          <Button
+            v-else-if="canGoNext"
             @click="nextStep"
           >
             {{ t('mcpCatalog.form.navigation.next') }}
           </Button>
 
+          <!-- Submit button for final step -->
           <Button
             v-else
             @click="submitForm"
@@ -363,6 +501,15 @@ onUnmounted(() => {
           </Button>
         </div>
       </div>
+
+      <!-- GitHub Fetch Error (show below navigation) -->
+      <Alert v-if="githubFetchError && currentStep === 0" variant="destructive" class="mt-4">
+        <AlertDescription>
+          {{ githubFetchError }}
+          <br>
+          <span class="text-sm">Please check the URL and try again.</span>
+        </AlertDescription>
+      </Alert>
     </div>
   </DashboardLayout>
 </template>

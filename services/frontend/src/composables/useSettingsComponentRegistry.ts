@@ -14,6 +14,8 @@ export interface SettingsComponentEvents {
 
 export interface SettingsComponentDefinition {
   component: Component
+  events?: SettingsComponentEvents
+  /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
   props?: Record<string, any>
   description?: string
   author?: string

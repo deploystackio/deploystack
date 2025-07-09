@@ -43,7 +43,6 @@ const {
   isTestingConnection,
   lastTestResult,
   testGitHubAppConnection,
-  clearTestResult,
   getStatusMessage,
   getAlertVariant
 } = useConnectionTest()
@@ -68,11 +67,7 @@ async function handleSave() {
 // Handle connection test
 async function handleTestConnection() {
   // Test uses saved settings from the backend, no credentials needed
-  const result = await testGitHubAppConnection({
-    app_id: '',
-    private_key_base64: '',
-    installation_id: ''
-  })
+  const result = await testGitHubAppConnection()
   emit('connection-tested', result)
 }
 
