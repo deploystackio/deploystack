@@ -128,12 +128,36 @@ const fetchTeams = async (forceRefresh = false) => {
   try {
     teamsLoading.value = true; teamsError.value = '';
     const userTeams = await TeamService.getUserTeams(forceRefresh); teams.value = userTeams;
-    if (userTeams.length > 0) { selectedTeam.value = userTeams[0]; }
+    
+    // Initialize selected team from storage or fallback to default
+    if (userTeams.length > 0) {
+      const storedTeamId = eventBus.getState<string>('selected_team_id')
+      
+      if (storedTeamId) {
+        // Try to find the stored team in available teams
+        const storedTeam = userTeams.find(team => team.id === storedTeamId)
+        if (storedTeam) {
+          selectedTeam.value = storedTeam
+        } else {
+          // Stored team not found, fallback to default team
+          const defaultTeam = userTeams.find(team => team.is_default) || userTeams[0]
+          selectedTeam.value = defaultTeam
+          eventBus.setState('selected_team_id', defaultTeam.id)
+        }
+      } else {
+        // No stored team, use default team
+        const defaultTeam = userTeams.find(team => team.is_default) || userTeams[0]
+        selectedTeam.value = defaultTeam
+        eventBus.setState('selected_team_id', defaultTeam.id)
+      }
+    }
   } catch (error) { console.error('Error fetching teams:', error); teamsError.value = error instanceof Error ? error.message : 'Failed to load teams'; } finally { teamsLoading.value = false; }
 }
 
 const selectTeam = (team: Team) => {
   selectedTeam.value = team
+  // Store team selection in persistent storage
+  eventBus.setState('selected_team_id', team.id)
   // Emit global event for team selection
   eventBus.emit('team-selected', { teamId: team.id, teamName: team.name })
 }

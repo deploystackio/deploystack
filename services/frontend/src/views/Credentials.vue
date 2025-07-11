@@ -43,8 +43,38 @@ const userPermissions = ref<string[]>([])
 const searchQuery = ref('')
 const deleteSuccessMessage = ref<string | null>(null)
 
-// Team context (same pattern as teams page)
+// Team context using event bus storage
 const selectedTeam = ref<Team | null>(null)
+
+// Initialize selected team from storage
+const initializeSelectedTeam = async () => {
+  try {
+    const userTeams = await TeamService.getUserTeams()
+    if (userTeams.length > 0) {
+      const storedTeamId = eventBus.getState<string>('selected_team_id')
+      
+      if (storedTeamId) {
+        // Try to find the stored team in available teams
+        const storedTeam = userTeams.find(team => team.id === storedTeamId)
+        if (storedTeam) {
+          selectedTeam.value = storedTeam
+        } else {
+          // Stored team not found, fallback to default team
+          const defaultTeam = userTeams.find(team => team.is_default) || userTeams[0]
+          selectedTeam.value = defaultTeam
+          eventBus.setState('selected_team_id', defaultTeam.id)
+        }
+      } else {
+        // No stored team, use default team
+        const defaultTeam = userTeams.find(team => team.is_default) || userTeams[0]
+        selectedTeam.value = defaultTeam
+        eventBus.setState('selected_team_id', defaultTeam.id)
+      }
+    }
+  } catch (error) {
+    console.error('Error initializing selected team:', error)
+  }
+}
 
 // Handle team selection from sidebar
 const handleTeamSelected = async (data: { teamId: string; teamName: string }) => {
@@ -64,18 +94,6 @@ const handleTeamSelected = async (data: { teamId: string; teamName: string }) =>
     console.error('Error handling team selection:', error)
     selectedTeam.value = { id: data.teamId, name: data.teamName } as Team
     fetchCredentials()
-  }
-}
-
-// Initialize selected team from sidebar teams
-const initializeSelectedTeam = async () => {
-  try {
-    const userTeams = await TeamService.getUserTeams()
-    if (userTeams.length > 0) {
-      selectedTeam.value = userTeams[0] // Default to first team
-    }
-  } catch (error) {
-    console.error('Error initializing selected team:', error)
   }
 }
 
