@@ -86,13 +86,13 @@ const routes = [
   {
     path: '/credentials',
     name: 'Credentials',
-    component: () => import('../views/Credentials.vue'),
+    component: () => import('../views/credentials/index.vue'),
     meta: { requiresSetup: true },
   },
   {
     path: '/credentials/:id',
     name: 'CredentialDetail',
-    component: () => import('../views/CredentialDetail.vue'),
+    component: () => import('../views/credentials/[id].vue'),
     meta: { requiresSetup: true },
   },
   {
