@@ -81,6 +81,10 @@ export default {
       editName: 'Edit Name',
       updateSecrets: 'Update Secrets'
     },
+    editName: {
+      title: 'Edit Name',
+      description: 'Edit the name and comment for "{credentialName}"'
+    },
     updateSecrets: {
       title: 'Update Secrets',
       description: 'Update secret values for "{credentialName}"',

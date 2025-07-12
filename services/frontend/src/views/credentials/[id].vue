@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -52,6 +53,16 @@ const secretsForm = ref<Record<string, string>>({})
 const secretsErrors = ref<Record<string, string>>({})
 const isUpdatingSecrets = ref(false)
 const updateSecretsError = ref<string | null>(null)
+
+// Edit Name modal state
+const showEditNameModal = ref(false)
+const editNameForm = ref({
+  name: '',
+  comment: ''
+})
+const editNameErrors = ref<Record<string, string>>({})
+const isUpdatingName = ref(false)
+const updateNameError = ref<string | null>(null)
 
 // Success message state for main page
 const showSuccessMessage = ref(false)
@@ -157,6 +168,19 @@ const isSecretsFormValid = computed(() => {
   )
 
   return hasAnyValue
+})
+
+// Edit Name computed properties
+const isEditNameFormValid = computed(() => {
+  // Check if there are any validation errors
+  if (Object.keys(editNameErrors.value).length > 0) return false
+
+  // Name is required and must be different from current name or comment must be different
+  const nameChanged = editNameForm.value.name.trim() !== credential.value?.name
+  const commentChanged = editNameForm.value.comment.trim() !== (credential.value?.comment || '')
+
+  // Must have a valid name and at least one field changed
+  return editNameForm.value.name.trim() !== '' && (nameChanged || commentChanged)
 })
 
 const formatDate = (dateString: string) => {
@@ -334,10 +358,88 @@ const cancelUpdateSecrets = () => {
   initializeSecretsForm()
 }
 
-// Placeholder function for edit name
+// Edit Name functionality
+const initializeEditNameForm = () => {
+  if (!credential.value) return
+
+  editNameForm.value = {
+    name: credential.value.name,
+    comment: credential.value.comment || ''
+  }
+  editNameErrors.value = {}
+  updateNameError.value = null
+}
+
+const validateEditNameForm = () => {
+  const errors: Record<string, string> = {}
+
+  // Name validation
+  if (!editNameForm.value.name.trim()) {
+    errors.name = t('credentials.form.fields.name.required')
+  } else if (editNameForm.value.name.length > 100) {
+    errors.name = t('credentials.form.fields.name.maxLength')
+  }
+
+  // Comment validation
+  if (editNameForm.value.comment.length > 500) {
+    errors.comment = t('credentials.form.fields.comment.maxLength')
+  }
+
+  editNameErrors.value = errors
+  return Object.keys(errors).length === 0
+}
+
 const handleEditName = () => {
-  console.log('Edit Name clicked - functionality to be implemented')
-  // TODO: Implement edit name functionality
+  if (!credential.value) return
+
+  initializeEditNameForm()
+  showEditNameModal.value = true
+}
+
+const handleSubmitEditName = async () => {
+  if (!validateEditNameForm() || !selectedTeam.value || !credential.value) return
+
+  try {
+    isUpdatingName.value = true
+    updateNameError.value = null
+
+    // Prepare update data
+    const updateData = {
+      name: editNameForm.value.name.trim(),
+      comment: editNameForm.value.comment.trim() || undefined
+    }
+
+    // Call the update API with name and comment only
+    const updatedCredential = await CredentialsService.updateCredential(
+      selectedTeam.value.id,
+      credential.value.id,
+      updateData
+    )
+
+    // Update local credential data
+    credential.value = updatedCredential
+
+    // Close modal immediately after successful API call
+    showEditNameModal.value = false
+
+    // Show success message on main page
+    showSuccessMessage.value = true
+    successMessage.value = t('credentials.form.messages.success.update', { name: updatedCredential.name })
+
+    // Emit success event
+    eventBus.emit('credentials-updated')
+
+  } catch (err) {
+    console.error('Error updating credential name:', err)
+    updateNameError.value = err instanceof Error ? err.message : t('credentials.form.messages.error.update')
+  } finally {
+    isUpdatingName.value = false
+  }
+}
+
+const cancelEditName = () => {
+  showEditNameModal.value = false
+  initializeEditNameForm()
 }
 </script>
 
@@ -659,6 +761,83 @@ const handleEditName = () => {
             <Key v-if="!isUpdatingSecrets" class="h-4 w-4 mr-2" />
             <div v-else class="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
             {{ isUpdatingSecrets ? t('credentials.updateSecrets.form.saving') : t('credentials.updateSecrets.form.save') }}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
+    <!-- Edit Name Modal -->
+    <AlertDialog v-model:open="showEditNameModal">
+      <AlertDialogContent class="sm:max-w-[500px]">
+        <AlertDialogHeader>
+          <AlertDialogTitle class="flex items-center gap-2">
+            <Edit class="h-5 w-5" />
+            {{ t('credentials.editName.title') }}
+          </AlertDialogTitle>
+          <AlertDialogDescription class="text-left">
+            {{ t('credentials.editName.description', { credentialName: credential?.name || '' }) }}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+
+        <!-- Error Display -->
+        <Alert v-if="updateNameError" variant="destructive" class="mx-6">
+          <AlertTriangle class="h-4 w-4" />
+          <AlertDescription>
+            {{ updateNameError }}
+          </AlertDescription>
+        </Alert>
+
+        <!-- Form Content -->
+        <div class="px-6 space-y-4">
+          <form @submit.prevent="handleSubmitEditName" class="space-y-4">
+            <!-- Name Field -->
+            <div class="space-y-2">
+              <Label for="edit-name">{{ t('credentials.form.fields.name.label') }}</Label>
+              <Input
+                id="edit-name"
+                v-model="editNameForm.name"
+                :placeholder="t('credentials.form.fields.name.placeholder')"
+                :class="{ 'border-destructive': editNameErrors.name }"
+                @input="validateEditNameForm"
+                required
+              />
+              <div v-if="editNameErrors.name" class="text-sm text-destructive">
+                {{ editNameErrors.name }}
+              </div>
+            </div>
+
+            <!-- Comment Field -->
+            <div class="space-y-2">
+              <Label for="edit-comment">{{ t('credentials.form.fields.comment.label') }}</Label>
+              <Textarea
+                id="edit-comment"
+                v-model="editNameForm.comment"
+                :placeholder="t('credentials.form.fields.comment.placeholder')"
+                :class="{ 'border-destructive': editNameErrors.comment }"
+                @input="validateEditNameForm"
+                rows="3"
+              />
+              <div v-if="editNameErrors.comment" class="text-sm text-destructive">
+                {{ editNameErrors.comment }}
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <AlertDialogFooter class="flex gap-2">
+          <AlertDialogCancel
+            @click="cancelEditName"
+            :disabled="isUpdatingName"
+          >
+            {{ t('credentials.form.buttons.cancel') }}
+          </AlertDialogCancel>
+          <AlertDialogAction
+            @click="handleSubmitEditName"
+            :disabled="!isEditNameFormValid || isUpdatingName"
+          >
+            <Edit v-if="!isUpdatingName" class="h-4 w-4 mr-2" />
+            <div v-else class="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+            {{ isUpdatingName ? t('credentials.form.buttons.saving') : t('credentials.form.buttons.save') }}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
