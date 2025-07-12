@@ -29,7 +29,7 @@ import DashboardLayout from '@/components/DashboardLayout.vue'
 import { CredentialsService } from '@/services/credentialsService'
 import { TeamService, type Team } from '@/services/teamService'
 import { useEventBus } from '@/composables/useEventBus'
-import type { CloudCredential, CloudProvider, CredentialField } from '@/types/credentials'
+import type { CloudCredential, CloudProvider, CredentialField } from './types'
 
 const { t } = useI18n()
 const route = useRoute()

@@ -11,11 +11,11 @@ import { CredentialsService } from '@/services/credentialsService'
 import { UserService } from '@/services/userService'
 import { TeamService, type Team } from '@/services/teamService'
 import { useEventBus } from '@/composables/useEventBus'
-import type { CloudCredential, CloudCredentialBasic } from '@/types/credentials'
+import type { CloudCredential, CloudCredentialBasic } from './types'
 import CredentialsTable from '@/components/credentials/CredentialsTable.vue'
 import AddCredentialDialog from '@/components/credentials/AddCredentialDialog.vue'
 
-// Simple debounce function
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function debounce<T extends (...args: any[]) => any>(func: T, wait: number): T {
   let timeout: ReturnType<typeof setTimeout>
@@ -52,7 +52,7 @@ const initializeSelectedTeam = async () => {
     const userTeams = await TeamService.getUserTeams()
     if (userTeams.length > 0) {
       const storedTeamId = eventBus.getState<string>('selected_team_id')
-      
+
       if (storedTeamId) {
         // Try to find the stored team in available teams
         const storedTeam = userTeams.find(team => team.id === storedTeamId)
@@ -219,11 +219,6 @@ const checkDeleteSuccess = () => {
 
     // Clear the query parameter from URL
     router.replace({ path: '/credentials' })
-
-    // Clear the message after 5 seconds
-    setTimeout(() => {
-      deleteSuccessMessage.value = null
-    }, 5000)
   }
 }
 
