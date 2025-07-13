@@ -336,6 +336,12 @@ export default {
     serverInformation: 'Server Information',
     serverDetails: 'Detailed information about this MCP server',
 
+    actions: {
+      manageServer: 'Manage Server',
+      editServer: 'Edit MCP Server',
+      deleteServer: 'Delete MCP Server'
+    },
+
     fields: {
       name: 'Server Name',
       description: 'Description',
