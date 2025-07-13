@@ -27,6 +27,7 @@ export default {
       edit: 'Edit',
       delete: 'Delete',
       view: 'View Details',
+      manage: 'Manage',
       feature: 'Feature',
       unfeature: 'Unfeature'
     }
