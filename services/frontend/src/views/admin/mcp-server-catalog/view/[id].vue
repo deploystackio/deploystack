@@ -4,7 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, Github, ExternalLink, Star, Package, Code, Settings, Calendar, Tag, Trash2, AlertTriangle } from 'lucide-vue-next'
+import { ArrowLeft, Github, ExternalLink, Star, Package, Code, Settings, Calendar, Tag, Trash2, AlertTriangle, Edit } from 'lucide-vue-next'
 import DashboardLayout from '@/components/DashboardLayout.vue'
 import { McpCatalogService } from '@/services/mcpCatalogService'
 import type { McpServer } from '../types'
@@ -18,6 +18,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -175,6 +182,12 @@ const deleteServer = async () => {
   }
 }
 
+// Placeholder function for edit functionality (not implemented yet)
+const handleEditServer = () => {
+  // TODO: Implement edit functionality
+  console.log('Edit server functionality not implemented yet')
+}
+
 const goBack = () => {
   router.push('/admin/mcp-server-catalog')
 }
@@ -183,7 +196,7 @@ const goBack = () => {
 <template>
   <DashboardLayout :title="server ? t('mcpCatalog.edit.title', { name: server.name }) : t('mcpCatalog.edit.titleLoading')">
     <div class="space-y-6">
-      <!-- Header with Back and Delete Buttons -->
+      <!-- Header with Back and Manage Dropdown -->
       <div class="flex items-center justify-between">
         <Button
           variant="outline"
@@ -193,15 +206,26 @@ const goBack = () => {
           {{ t('mcpCatalog.edit.backToCatalog') }}
         </Button>
 
-        <Button
-          v-if="server"
-          variant="destructive"
-          @click="showDeleteDialog = true"
-          class="flex items-center gap-2"
-        >
-          <Trash2 class="h-4 w-4" />
-          {{ t('mcpCatalog.edit.deleteButton') }}
-        </Button>
+        <!-- Manage Server Dropdown -->
+        <DropdownMenu v-if="server">
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" :disabled="isDeleting">
+              <Settings class="h-4 w-4 mr-2" />
+              {{ t('mcpCatalog.edit.actions.manageServer') }}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem @click="handleEditServer">
+              <Edit class="h-4 w-4 mr-2" />
+              {{ t('mcpCatalog.edit.actions.editServer') }}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem @click="showDeleteDialog = true" class="text-red-600 focus:text-red-600">
+              <Trash2 class="h-4 w-4 mr-2" />
+              {{ t('mcpCatalog.edit.actions.deleteServer') }}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       <!-- Loading State -->
