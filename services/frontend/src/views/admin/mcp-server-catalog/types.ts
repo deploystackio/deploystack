@@ -45,8 +45,10 @@ export interface McpCategory {
 }
 
 export interface InstallationMethod {
-  type: 'npm' | 'pip' | 'docker' | 'git' | 'binary' | 'other'
+  client: 'claude-desktop'
   command: string
+  args: string[]
+  env: Record<string, string>
 }
 
 export interface McpTool {
@@ -191,9 +193,9 @@ export interface McpServerFormData {
 export interface FormStep {
   key: keyof McpServerFormData
   label: string
-   
+
   icon: any
-   
+
   component: any
 }
 
@@ -218,6 +220,10 @@ export const RUNTIME_OPTIONS = [
   { value: 'java', label: 'Java' },
   { value: 'dotnet', label: '.NET' },
   { value: 'other', label: 'Other' }
+]
+
+export const CLIENT_TYPE_OPTIONS = [
+  { value: 'claude-desktop', label: 'Claude Desktop' }
 ]
 
 export const INSTALLATION_TYPE_OPTIONS = [

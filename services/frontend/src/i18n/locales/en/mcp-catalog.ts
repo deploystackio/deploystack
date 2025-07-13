@@ -327,9 +327,9 @@ export default {
   },
 
   edit: {
-    title: 'MCP Server Details - {name}',
+    title: 'Edit MCP Server - {name}',
     titleLoading: 'Loading MCP Server...',
-    backToCatalog: 'Back to Catalog',
+    backToCatalog: 'Back to View',
     deleteButton: 'Delete Server',
     loading: 'Loading server details...',
     errorLoading: 'Error loading server: {error}',
@@ -355,6 +355,9 @@ export default {
       tools: 'Available Tools',
       resources: 'Available Resources',
       prompts: 'Available Prompts',
+      environmentVariables: 'Environment Variables',
+      defaultConfig: 'Default Configuration',
+      dependencies: 'Dependencies',
       systemInfo: 'System Information'
     },
 

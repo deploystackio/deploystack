@@ -147,8 +147,14 @@ const formatJson = (jsonString: string) => {
               :key="index"
               class="flex items-center gap-2 text-sm"
             >
-              <Badge variant="outline" class="text-xs">{{ method.type }}</Badge>
+              <Badge variant="outline" class="text-xs">{{ method.client || 'Unknown' }}</Badge>
               <code class="text-xs bg-muted px-2 py-1 rounded">{{ method.command }}</code>
+              <span v-if="method.args && method.args.length > 0" class="text-xs text-muted-foreground">
+                + {{ method.args.length }} arg{{ method.args.length > 1 ? 's' : '' }}
+              </span>
+              <span v-if="method.env && Object.keys(method.env).length > 0" class="text-xs text-muted-foreground">
+                + {{ Object.keys(method.env).length }} env var{{ Object.keys(method.env).length > 1 ? 's' : '' }}
+              </span>
             </div>
           </div>
         </div>

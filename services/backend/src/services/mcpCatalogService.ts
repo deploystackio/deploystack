@@ -227,7 +227,8 @@ export class McpCatalogService {
       serversFound: servers.length
     }, 'Retrieved MCP servers for user');
     
-    return servers as McpServer[];
+    // Parse JSON fields for all servers
+    return servers.map((server: any) => this.parseServerJsonFields(server)) as McpServer[];
   }
   
   async getServerById(serverId: string): Promise<McpServer | null> {
@@ -246,7 +247,7 @@ export class McpCatalogService {
       return null;
     }
     
-    return servers[0] as McpServer;
+    return this.parseServerJsonFields(servers[0]) as McpServer;
   }
   
   async createServer(
@@ -449,6 +450,86 @@ export class McpCatalogService {
     }, 'Successfully deleted MCP server');
     
     return true;
+  }
+  
+  private parseServerJsonFields(server: any): any {
+    // Parse JSON string fields back to objects/arrays
+    const parsed = { ...server };
+    
+    // Parse JSON fields that should be arrays/objects
+    try {
+      if (parsed.installation_methods && typeof parsed.installation_methods === 'string') {
+        parsed.installation_methods = JSON.parse(parsed.installation_methods);
+      }
+    } catch (e) {
+      this.logger.warn({ field: 'installation_methods', error: e }, 'Failed to parse JSON field');
+      parsed.installation_methods = [];
+    }
+    
+    try {
+      if (parsed.tools && typeof parsed.tools === 'string') {
+        parsed.tools = JSON.parse(parsed.tools);
+      }
+    } catch (e) {
+      this.logger.warn({ field: 'tools', error: e }, 'Failed to parse JSON field');
+      parsed.tools = [];
+    }
+    
+    try {
+      if (parsed.resources && typeof parsed.resources === 'string') {
+        parsed.resources = JSON.parse(parsed.resources);
+      }
+    } catch (e) {
+      this.logger.warn({ field: 'resources', error: e }, 'Failed to parse JSON field');
+      parsed.resources = [];
+    }
+    
+    try {
+      if (parsed.prompts && typeof parsed.prompts === 'string') {
+        parsed.prompts = JSON.parse(parsed.prompts);
+      }
+    } catch (e) {
+      this.logger.warn({ field: 'prompts', error: e }, 'Failed to parse JSON field');
+      parsed.prompts = [];
+    }
+    
+    try {
+      if (parsed.environment_variables && typeof parsed.environment_variables === 'string') {
+        parsed.environment_variables = JSON.parse(parsed.environment_variables);
+      }
+    } catch (e) {
+      this.logger.warn({ field: 'environment_variables', error: e }, 'Failed to parse JSON field');
+      parsed.environment_variables = {};
+    }
+    
+    try {
+      if (parsed.default_config && typeof parsed.default_config === 'string') {
+        parsed.default_config = JSON.parse(parsed.default_config);
+      }
+    } catch (e) {
+      this.logger.warn({ field: 'default_config', error: e }, 'Failed to parse JSON field');
+      parsed.default_config = {};
+    }
+    
+    try {
+      if (parsed.dependencies && typeof parsed.dependencies === 'string') {
+        parsed.dependencies = JSON.parse(parsed.dependencies);
+      }
+    } catch (e) {
+      this.logger.warn({ field: 'dependencies', error: e }, 'Failed to parse JSON field');
+      parsed.dependencies = {};
+    }
+    
+    try {
+      if (parsed.tags && typeof parsed.tags === 'string') {
+        parsed.tags = JSON.parse(parsed.tags);
+      }
+    } catch (e) {
+      this.logger.warn({ field: 'tags', error: e }, 'Failed to parse JSON field');
+      parsed.tags = [];
+    }
+    
+    return parsed;
   }
   
   private canUserManageServer(server: McpServer, userId: string, userRole: string): boolean {

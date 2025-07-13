@@ -128,6 +128,48 @@ const displayInstallationMethods = computed(() => {
   }
 })
 
+const displayEnvironmentVariables = computed(() => {
+  if (!server.value?.environment_variables) return null
+  // Handle both object and JSON string formats
+  if (typeof server.value.environment_variables === 'object') {
+    return server.value.environment_variables
+  }
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return JSON.parse(server.value.environment_variables as any)
+  } catch {
+    return null
+  }
+})
+
+const displayDefaultConfig = computed(() => {
+  if (!server.value?.default_config) return null
+  // Handle both object and JSON string formats
+  if (typeof server.value.default_config === 'object') {
+    return server.value.default_config
+  }
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return JSON.parse(server.value.default_config as any)
+  } catch {
+    return null
+  }
+})
+
+const displayDependencies = computed(() => {
+  if (!server.value?.dependencies) return null
+  // Handle both object and JSON string formats
+  if (typeof server.value.dependencies === 'object') {
+    return server.value.dependencies
+  }
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return JSON.parse(server.value.dependencies as any)
+  } catch {
+    return null
+  }
+})
+
 // Get status badge variant
 const getStatusVariant = (status: string) => {
   switch (status) {
@@ -182,10 +224,9 @@ const deleteServer = async () => {
   }
 }
 
-// Placeholder function for edit functionality (not implemented yet)
+// Navigate to edit page
 const handleEditServer = () => {
-  // TODO: Implement edit functionality
-  console.log('Edit server functionality not implemented yet')
+  router.push(`/admin/mcp-server-catalog/edit/${serverId}`)
 }
 
 const goBack = () => {
@@ -389,13 +430,55 @@ const goBack = () => {
                   <li
                     v-for="(method, index) in displayInstallationMethods"
                     :key="index"
-                    class="flex items-center justify-between py-4 pr-5 pl-4 text-sm/6"
+                    class="py-4 pr-5 pl-4 text-sm/6"
                   >
-                    <div class="flex w-0 flex-1 items-center">
-                      <Package class="size-5 shrink-0 text-gray-400" aria-hidden="true" />
-                      <div class="ml-4 flex min-w-0 flex-1 gap-2">
-                        <span class="truncate font-medium">{{ method.type || 'Installation Method' }}</span>
-                        <span v-if="method.command" class="truncate text-gray-500 font-mono text-xs">{{ method.command }}</span>
+                    <div class="flex items-start gap-3">
+                      <Package class="size-5 shrink-0 text-gray-400 mt-0.5" aria-hidden="true" />
+                      <div class="flex-1 space-y-3">
+                        <!-- Client and Command -->
+                        <div class="flex items-center gap-2">
+                          <span class="font-medium">{{ method.client || 'Unknown Client' }}</span>
+                          <span class="text-gray-500">•</span>
+                          <code class="bg-gray-100 px-2 py-1 rounded text-xs font-mono">{{ method.command }}</code>
+                        </div>
+
+                        <!-- Arguments -->
+                        <div v-if="method.args && method.args.length > 0" class="space-y-1">
+                          <div class="text-xs font-medium text-gray-600">Arguments:</div>
+                          <div class="flex flex-wrap gap-1">
+                            <code
+                              v-for="(arg, argIndex) in method.args"
+                              :key="argIndex"
+                              class="bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs font-mono"
+                            >
+                              {{ arg }}
+                            </code>
+                          </div>
+                        </div>
+
+                        <!-- Environment Variables -->
+                        <div v-if="method.env && Object.keys(method.env).length > 0" class="space-y-1">
+                          <div class="text-xs font-medium text-gray-600">Environment Variables:</div>
+                          <div class="space-y-1">
+                            <div
+                              v-for="(value, key) in method.env"
+                              :key="key"
+                              class="flex items-center gap-2 text-xs"
+                            >
+                              <code class="bg-green-50 text-green-700 px-2 py-1 rounded font-mono">{{ key }}</code>
+                              <span class="text-gray-400">=</span>
+                              <code class="bg-gray-50 text-gray-600 px-2 py-1 rounded font-mono">{{ value }}</code>
+                            </div>
+                          </div>
+                        </div>
+
+                        <!-- Full Command Preview -->
+                        <div class="bg-gray-50 rounded-md p-2">
+                          <div class="text-xs font-medium text-gray-600 mb-1">Command Preview:</div>
+                          <code class="text-xs font-mono text-gray-800">
+                            {{ method.command }}{{ method.args && method.args.length > 0 ? ' ' + method.args.join(' ') : '' }}
+                          </code>
+                        </div>
                       </div>
                     </div>
                   </li>
@@ -472,6 +555,65 @@ const goBack = () => {
                     </div>
                   </li>
                 </ul>
+              </dd>
+            </div>
+
+            <!-- Environment Variables -->
+            <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+              <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.edit.fields.environmentVariables') }}</dt>
+              <dd class="mt-2 text-sm text-gray-900 sm:col-span-2 sm:mt-0">
+                <div v-if="displayEnvironmentVariables && Object.keys(displayEnvironmentVariables).length > 0">
+                  <ul role="list" class="divide-y divide-gray-100 rounded-md border border-gray-200">
+                    <li
+                      v-for="(variable, name) in displayEnvironmentVariables"
+                      :key="name"
+                      class="flex items-center justify-between py-4 pr-5 pl-4 text-sm/6"
+                    >
+                      <div class="flex w-0 flex-1 items-center">
+                        <Settings class="size-5 shrink-0 text-gray-400" aria-hidden="true" />
+                        <div class="ml-4 flex min-w-0 flex-1 gap-2">
+                          <div class="flex flex-col">
+                            <span class="truncate font-medium font-mono">{{ name }}</span>
+                            <span v-if="variable.description" class="truncate text-xs text-gray-500">{{ variable.description }}</span>
+                            <div class="flex gap-2 mt-1">
+                              <Badge v-if="variable.required" variant="destructive" class="text-xs">Required</Badge>
+                              <Badge v-if="variable.type" variant="outline" class="text-xs">{{ variable.type }}</Badge>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </li>
+                  </ul>
+                </div>
+                <div v-else class="text-sm text-gray-500 italic">
+                  {{ t('mcpCatalog.edit.values.notProvided') }}
+                </div>
+              </dd>
+            </div>
+
+            <!-- Default Configuration -->
+            <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+              <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.edit.fields.defaultConfig') }}</dt>
+              <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
+                <div v-if="displayDefaultConfig && Object.keys(displayDefaultConfig).length > 0" class="bg-gray-50 rounded-md p-4">
+                  <pre class="text-xs text-gray-800 whitespace-pre-wrap font-mono">{{ JSON.stringify(displayDefaultConfig, null, 2) }}</pre>
+                </div>
+                <div v-else class="text-sm text-gray-500 italic">
+                  {{ t('mcpCatalog.edit.values.notProvided') }}
+                </div>
+              </dd>
+            </div>
+
+            <!-- Dependencies -->
+            <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+              <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.edit.fields.dependencies') }}</dt>
+              <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
+                <div v-if="displayDependencies && Object.keys(displayDependencies).length > 0" class="bg-gray-50 rounded-md p-4">
+                  <pre class="text-xs text-gray-800 whitespace-pre-wrap font-mono">{{ JSON.stringify(displayDependencies, null, 2) }}</pre>
+                </div>
+                <div v-else class="text-sm text-gray-500 italic">
+                  {{ t('mcpCatalog.edit.values.notProvided') }}
+                </div>
               </dd>
             </div>
 

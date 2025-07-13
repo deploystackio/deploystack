@@ -151,10 +151,7 @@ async function createDatabaseInstance(config: DatabaseConfig, schema: AnySchema,
  * Apply migrations for any database type
  */
 async function applyMigrations(db: AnyDatabase, config: DatabaseConfig, logger: FastifyBaseLogger) {
-  // Skip migrations in test mode
-  if (isTestMode()) {
-    return;
-  }
+  // Note: Migrations now run in test mode to ensure plugin tables are created
 
   const projectRootMigrationsDir = path.join(process.cwd(), 'drizzle');
   const migrationsPath = path.join(projectRootMigrationsDir, 'migrations_sqlite');
