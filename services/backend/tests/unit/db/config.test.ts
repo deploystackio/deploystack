@@ -1,6 +1,25 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { validateDatabaseConfig, getDatabaseStatus } from '../../../src/db/config';
+import { validateDatabaseConfig, getDatabaseStatus, getDatabaseConfig } from '../../../src/db/config';
 import type { DatabaseConfig } from '../../../src/db/config';
+import * as fs from 'fs';
+import * as path from 'path';
+
+// Mock the fs module
+vi.mock('fs', () => ({
+  existsSync: vi.fn(),
+  readFileSync: vi.fn(),
+}));
+
+// Mock the path module
+vi.mock('path', () => ({
+  join: vi.fn((...paths) => paths.join('/')),
+}));
+
+// Mock process.cwd
+const originalCwd = process.cwd;
+
+const mockedFs = vi.mocked(fs);
+const mockedPath = vi.mocked(path);
 
 describe('Database Configuration', () => {
   let originalEnv: string | undefined;
@@ -8,6 +27,7 @@ describe('Database Configuration', () => {
   let originalSqliteDbPath: string | undefined;
   let originalTursoUrl: string | undefined;
   let originalTursoToken: string | undefined;
+  let mockLogger: any;
 
   beforeEach(() => {
     // Store original environment variables
@@ -22,6 +42,26 @@ describe('Database Configuration', () => {
     delete process.env.SQLITE_DB_PATH;
     delete process.env.TURSO_DATABASE_URL;
     delete process.env.TURSO_AUTH_TOKEN;
+    
+    // Create mock logger
+    mockLogger = {
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+    };
+    
+    // Reset mocks
+    vi.clearAllMocks();
+    
+    // Default mock implementations
+    mockedFs.existsSync.mockReturnValue(false);
+    mockedFs.readFileSync.mockReturnValue('');
+    
+    // Mock path.join
+    mockedPath.join.mockImplementation((...paths) => paths.join('/'));
+    
+    // Mock process.cwd
+    process.cwd = vi.fn(() => '/mock/cwd');
   });
 
   afterEach(() => {
@@ -49,6 +89,9 @@ describe('Database Configuration', () => {
     } else {
       delete process.env.TURSO_AUTH_TOKEN;
     }
+    
+    // Restore process.cwd
+    process.cwd = originalCwd;
   });
 
   describe('validateDatabaseConfig', () => {
@@ -369,6 +412,81 @@ describe('Database Configuration', () => {
 
       const result = validateDatabaseConfig(config);
       expect(result).toBe(false);
+    });
+  });
+
+  describe('Integration scenarios', () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('should handle complete SQLite workflow', () => {
+      // Simulate no selection file, use environment
+      mockedFs.existsSync.mockReturnValue(false);
+      process.env.NODE_ENV = 'production'; // Override test mode
+      process.env.DB_TYPE = 'sqlite';
+      process.env.SQLITE_DB_PATH = '/production/path/database.db';
+
+      const config = getDatabaseConfig(mockLogger);
+      const isValid = validateDatabaseConfig(config);
+      const status = getDatabaseStatus(config);
+
+      expect(config).toEqual({
+        type: 'sqlite',
+        dbPath: '/production/path/database.db'
+      });
+      expect(isValid).toBe(true);
+      expect(status).toEqual({
+        configured: true,
+        dialect: 'sqlite',
+        type: 'sqlite'
+      });
+    });
+
+    it('should handle fallback scenario with partial configuration', () => {
+      // Simulate corrupted selection file, fallback to environment
+      mockedFs.existsSync.mockReturnValue(true);
+      mockedFs.readFileSync.mockImplementation(() => {
+        throw new Error('File corrupted');
+      });
+      
+      process.env.NODE_ENV = 'production'; // Override test mode
+      process.env.DB_TYPE = 'turso';
+      process.env.TURSO_DATABASE_URL = 'libsql://fallback.turso.io';
+      // Missing auth token - should throw error
+
+      expect(() => getDatabaseConfig(mockLogger)).toThrow(
+        'Turso configuration incomplete. Required: TURSO_DATABASE_URL, TURSO_AUTH_TOKEN'
+      );
+    });
+  });
+
+  describe('Performance and reliability', () => {
+    it('should handle file system race conditions', () => {
+      process.env.NODE_ENV = 'production'; // Override test mode
+      let callCount = 0;
+      mockedFs.existsSync.mockImplementation(() => {
+        callCount++;
+        if (callCount === 1) {
+          return true; // First call says file exists
+        }
+        return false; // Subsequent calls say it doesn't (race condition)
+      });
+      
+      mockedFs.readFileSync.mockImplementation(() => {
+        throw new Error('File disappeared');
+      });
+      
+      process.env.DB_TYPE = 'sqlite';
+
+      const config = getDatabaseConfig(mockLogger);
+      
+      expect(config.type).toBe('sqlite');
+      expect(config.dbPath).toBe('persistent_data/database/deploystack.db');
     });
   });
 });

@@ -151,18 +151,21 @@ async function createDatabaseInstance(config: DatabaseConfig, schema: AnySchema,
  * Apply migrations for any database type
  */
 async function applyMigrations(db: AnyDatabase, config: DatabaseConfig, logger: FastifyBaseLogger) {
+  // Skip migrations in test mode
+  if (isTestMode()) {
+    return;
+  }
+
   const projectRootMigrationsDir = path.join(process.cwd(), 'drizzle');
   const migrationsPath = path.join(projectRootMigrationsDir, 'migrations_sqlite');
 
   try {
     await fs.access(migrationsPath);
   } catch {
-    if (!isTestMode()) {
-      logger.info({
-        operation: 'apply_migrations',
-        migrationsPath
-      }, `Migrations directory not found at: ${migrationsPath}, skipping migrations.`);
-    }
+    logger.info({
+      operation: 'apply_migrations',
+      migrationsPath
+    }, `Migrations directory not found at: ${migrationsPath}, skipping migrations.`);
     return;
   }
 
@@ -369,11 +372,9 @@ async function applyMigrations(db: AnyDatabase, config: DatabaseConfig, logger: 
  */
 export async function initializeDatabase(logger: FastifyBaseLogger): Promise<boolean> {
   if (isDbInitialized) {
-    if (!isTestMode()) {
-      logger.info({
-        operation: 'initialize_database'
-      }, 'Database already initialized.');
-    }
+    logger.info({
+      operation: 'initialize_database'
+    }, 'Database already initialized.');
     return true;
   }
 
@@ -419,11 +420,9 @@ export async function initializeDatabase(logger: FastifyBaseLogger): Promise<boo
   } catch (error) {
     const typedError = error as Error;
     if (typedError.message.includes('No database selection found')) {
-      if (!isTestMode()) {
-        logger.info({
-          operation: 'initialize_database'
-        }, 'No database configured yet. Please use the /api/db/setup endpoint to configure your database.');
-      }
+      logger.info({
+        operation: 'initialize_database'
+      }, 'No database configured yet. Please use the /api/db/setup endpoint to configure your database.');
     } else {
       logger.error({
         operation: 'initialize_database',
@@ -459,7 +458,36 @@ export function getSchema(): AnySchema {
  * Get database status
  */
 export function getDbStatus() {
-  if (!dbConfig) {
+  try {
+    if (!dbConfig) {
+      // Try to get config to see if one exists
+      const config = getDatabaseConfig();
+      if (config) {
+        return {
+          configured: validateDatabaseConfig(config),
+          initialized: isDbInitialized,
+          dialect: config.type,
+          type: config.type
+        };
+      }
+    }
+    
+    if (!dbConfig) {
+      return {
+        configured: false,
+        initialized: false,
+        dialect: null,
+        type: null
+      };
+    }
+    
+    return {
+      configured: validateDatabaseConfig(dbConfig),
+      initialized: isDbInitialized,
+      dialect: dbConfig.type,
+      type: dbConfig.type
+    };
+  } catch {
     return {
       configured: false,
       initialized: false,
@@ -467,13 +495,16 @@ export function getDbStatus() {
       type: null
     };
   }
-  
-  return {
-    configured: validateDatabaseConfig(dbConfig),
-    initialized: isDbInitialized,
-    dialect: dbConfig.type,
-    type: dbConfig.type
-  };
+}
+
+/**
+ * Reset database state (for testing)
+ */
+export function resetDatabaseState() {
+  dbInstance = null;
+  dbSchema = null;
+  dbConfig = null;
+  isDbInitialized = false;
 }
 
 /**
@@ -492,7 +523,7 @@ export function executeDbOperation<T>(
 interface DatabaseExtensionWithTables extends DatabaseExtension {
    
   tableDefinitions?: Record<string, Record<string, (columnBuilder: any) => any>>;
-  onDatabaseInit?: (db: AnyDatabase, logger: FastifyBaseLogger) => Promise<void>;
+  onDatabaseInit?: (db: AnyDatabase, schema: AnySchema) => Promise<void>;
 }
 
 export function registerPluginTables(plugins: Plugin[], logger?: FastifyBaseLogger) {
@@ -515,11 +546,9 @@ export function registerPluginTables(plugins: Plugin[], logger?: FastifyBaseLogg
 }
 
 export async function createPluginTables(plugins: Plugin[], logger: FastifyBaseLogger) {
-  if (!isTestMode()) {
-    logger.info({
-      operation: 'create_plugin_tables'
-    }, 'Plugin tables are handled by migrations.');
-  }
+  logger.info({
+    operation: 'create_plugin_tables'
+  }, 'Plugin tables are handled by migrations.');
 }
 
 export async function initializePluginDatabases(db: AnyDatabase, plugins: Plugin[], logger: FastifyBaseLogger) {
@@ -535,7 +564,15 @@ export async function initializePluginDatabases(db: AnyDatabase, plugins: Plugin
       try {
         // Create a child logger for this plugin
         const pluginLogger = logger.child({ pluginId: plugin.meta.id });
-        await ext.onDatabaseInit(db, pluginLogger);
+        // Get the current schema - use dbSchema directly if available, otherwise generate one
+        let schema: AnySchema;
+        try {
+          schema = getSchema();
+        } catch {
+          // If getSchema fails, generate a basic schema for the plugin
+          schema = generateSchema();
+        }
+        await ext.onDatabaseInit(db, schema);
         if (!isTestMode()) {
           logger.info({
             operation: 'initialize_plugin_databases',
