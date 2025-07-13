@@ -52,7 +52,7 @@ export interface CreateMcpServerRequest {
   language: string;
   runtime: string;
   runtime_min_version?: string;
-  installation_methods: any[]; // Will be JSON stringified
+  installation_methods: any[]; // Will be JSON stringified - auto-extracted from Claude Desktop config
   tools: any[]; // Will be JSON stringified
   resources?: any[]; // Will be JSON stringified
   prompts?: any[]; // Will be JSON stringified
@@ -61,8 +61,8 @@ export interface CreateMcpServerRequest {
   author_contact?: string;
   organization?: string;
   license?: string;
-  default_config?: any; // Will be JSON stringified
-  environment_variables?: any[]; // Will be JSON stringified
+  default_config?: any; // Will be JSON stringified - auto-extracted from Claude Desktop config
+  environment_variables?: any[]; // Will be JSON stringified - auto-extracted from Claude Desktop config
   dependencies?: any; // Will be JSON stringified
   category_id?: string;
   tags?: string[];
