@@ -24,6 +24,7 @@ export type EventBusEvents = {
   'mcp-form-data-cleared': void
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   'mcp-github-data-populated': any
+  'mcp-form-step-changed': { from: number; to: number; stepKey: string }
   'icons-cache-loaded': { count: number }
   'icons-cache-error': { message: string }
   'icons-cache-cleared': void
@@ -89,10 +90,10 @@ export function useEventBus(): EnhancedEventBus {
   enhancedEmitter.setState = function<T>(key: string, value: T): void {
     const storageKey = getStorageKey(key)
     const oldValue = safeJsonParse(localStorage.getItem(storageKey))
-    
+
     try {
       localStorage.setItem(storageKey, safeJsonStringify(value))
-      
+
       // Emit storage change event
       this.emit('storage-changed', { key, oldValue, newValue: value })
     } catch (error) {
@@ -103,7 +104,7 @@ export function useEventBus(): EnhancedEventBus {
   // Get state from localStorage
   enhancedEmitter.getState = function<T>(key: string, defaultValue?: T): T | null {
     const storageKey = getStorageKey(key)
-    
+
     try {
       const value = localStorage.getItem(storageKey)
       return safeJsonParse<T>(value, defaultValue)
@@ -117,10 +118,10 @@ export function useEventBus(): EnhancedEventBus {
   enhancedEmitter.clearState = function(key: string): void {
     const storageKey = getStorageKey(key)
     const oldValue = safeJsonParse(localStorage.getItem(storageKey))
-    
+
     try {
       localStorage.removeItem(storageKey)
-      
+
       // Emit storage change event
       this.emit('storage-changed', { key, oldValue, newValue: null })
     } catch (error) {
@@ -131,7 +132,7 @@ export function useEventBus(): EnhancedEventBus {
   // Check if state exists
   enhancedEmitter.hasState = function(key: string): boolean {
     const storageKey = getStorageKey(key)
-    
+
     try {
       return localStorage.getItem(storageKey) !== null
     } catch (error) {
@@ -145,7 +146,7 @@ export function useEventBus(): EnhancedEventBus {
   enhancedEmitter.getAllState = function(): Record<string, any> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const result: Record<string, any> = {}
-    
+
     try {
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i)
@@ -158,7 +159,7 @@ export function useEventBus(): EnhancedEventBus {
     } catch (error) {
       console.error('Failed to get all storage:', error)
     }
-    
+
     return result
   }
 
@@ -166,19 +167,19 @@ export function useEventBus(): EnhancedEventBus {
   enhancedEmitter.clearAllState = function(): void {
     try {
       const keysToRemove: string[] = []
-      
+
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i)
         if (key && key.startsWith(STORAGE_CONFIG.prefix)) {
           keysToRemove.push(key)
         }
       }
-      
+
       keysToRemove.forEach(key => {
         const cleanKey = key.replace(STORAGE_CONFIG.prefix, '')
         const oldValue = safeJsonParse(localStorage.getItem(key))
         localStorage.removeItem(key)
-        
+
         // Emit storage change event for each cleared key
         this.emit('storage-changed', { key: cleanKey, oldValue, newValue: null })
       })

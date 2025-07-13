@@ -236,14 +236,5 @@ const formatJson = (jsonString: string) => {
       </CardContent>
     </Card>
 
-    <!-- Submit Information -->
-    <Card class="border-green-200 bg-green-50">
-      <CardHeader>
-        <CardTitle class="text-base text-green-800">{{ t('mcpCatalog.form.review.submit.title') }}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <p class="text-sm text-green-700">{{ t('mcpCatalog.form.review.submit.description') }}</p>
-      </CardContent>
-    </Card>
   </div>
 </template>
