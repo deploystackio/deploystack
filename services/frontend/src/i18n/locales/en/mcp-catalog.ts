@@ -80,6 +80,9 @@ export default {
       next: 'Next',
       previous: 'Previous',
       submit: 'Create Server',
+      update: 'Update Server',
+      creating: 'Creating...',
+      updating: 'Updating...',
       cancel: 'Cancel'
     },
 
