@@ -76,7 +76,7 @@ const handleAddServer = () => {
 }
 
 const handleEditServer = (serverId: string) => {
-  router.push(`/admin/mcp-server-catalog/edit/${serverId}`)
+  router.push(`/admin/mcp-server-catalog/view/${serverId}`)
 }
 
 const handleToggleFeatured = async (serverId: string, featured: boolean) => {

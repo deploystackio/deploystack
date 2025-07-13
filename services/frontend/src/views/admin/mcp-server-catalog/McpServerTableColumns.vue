@@ -200,7 +200,7 @@ const sortedServers = computed(() => {
               class="h-8"
             >
               <Edit class="h-4 w-4 mr-2" />
-              {{ t('mcpCatalog.table.actions.edit') }}
+              {{ t('mcpCatalog.table.actions.manage') }}
             </Button>
           </TableCell>
         </TableRow>
