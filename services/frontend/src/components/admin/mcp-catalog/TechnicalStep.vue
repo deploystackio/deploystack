@@ -11,12 +11,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Plus, Trash2 } from 'lucide-vue-next'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Info } from 'lucide-vue-next'
 import type {
-  TechnicalFormData,
-  InstallationMethod
+  TechnicalFormData
 } from '@/views/admin/mcp-server-catalog/types'
 
 interface Props {
@@ -56,47 +54,87 @@ const runtimeOptions = [
   { value: 'other', label: 'Other' }
 ]
 
-const installationTypeOptions = [
-  { value: 'npm', label: 'npm' },
-  { value: 'pip', label: 'pip' },
-  { value: 'docker', label: 'Docker' },
-  { value: 'git', label: 'Git Clone' },
-  { value: 'binary', label: 'Binary Download' },
-  { value: 'other', label: 'Other' }
-]
-
 // Computed model
 const localValue = computed({
   get: () => props.modelValue,
   set: (value) => emit('update:modelValue', value)
 })
 
-// Installation methods management
-const addInstallationMethod = () => {
-  localValue.value = {
-    ...localValue.value,
-    installation_methods: [
-      ...localValue.value.installation_methods,
-      { type: 'npm', command: '' }
-    ]
-  }
-}
+// Claude Desktop configuration as JSON string
+const claudeDesktopConfig = computed({
+  get: () => {
+    // Convert installation_methods array to Claude Desktop JSON format
+    if (localValue.value.installation_methods.length === 0) {
+      return JSON.stringify({
+        "mcpServers": {
+          "server-name": {
+            "command": "npx",
+            "args": ["@package/name"],
+            "env": {
+              "API_TOKEN": "<your-api-token>"
+            }
+          }
+        }
+      }, null, 2)
+    }
 
-const removeInstallationMethod = (index: number) => {
-  localValue.value = {
-    ...localValue.value,
-    installation_methods: localValue.value.installation_methods.filter((_, i) => i !== index)
-  }
-}
+    // Convert existing data to Claude Desktop format
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const mcpServers: Record<string, any> = {}
+    localValue.value.installation_methods.forEach((method, index) => {
+      const serverName = `server-${index + 1}`
+      mcpServers[serverName] = {
+        command: method.command,
+        args: method.args || [],
+        env: method.env || {}
+      }
+    })
 
-const updateInstallationMethod = (index: number, field: keyof InstallationMethod, value: string) => {
-  const methods = [...localValue.value.installation_methods]
-  methods[index] = { ...methods[index], [field]: value }
-  localValue.value = {
-    ...localValue.value,
-    installation_methods: methods
+    return JSON.stringify({ mcpServers }, null, 2)
+  },
+  set: (jsonString: string) => {
+    // Don't try to parse empty or whitespace-only strings
+    if (!jsonString.trim()) {
+      return
+    }
+
+    try {
+      const parsed = JSON.parse(jsonString)
+
+      // Extract mcpServers from the JSON
+      const mcpServers = parsed.mcpServers || {}
+
+      // Convert to installation_methods array
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const installationMethods = Object.entries(mcpServers).map(([, config]: [string, any]) => ({
+        client: 'claude-desktop' as const,
+        command: config.command || 'npx',
+        args: config.args || [],
+        env: config.env || {}
+      }))
+
+      localValue.value = {
+        ...localValue.value,
+        installation_methods: installationMethods
+      }
+    } catch {
+      // Invalid JSON - silently ignore while user is typing
+      // No logging to avoid console spam
+    }
   }
-}
+})
+
+const exampleConfig = `{
+  "mcpServers": {
+    "brightdata": {
+      "command": "npx",
+      "args": ["-y", "@brightdata/mcp"],
+      "env": {
+        "API_TOKEN": "<your-bright-data-api-token>"
+      }
+    }
+  }
+}`
 </script>
 
 <template>
@@ -165,87 +203,58 @@ const updateInstallationMethod = (index: number, field: keyof InstallationMethod
       </p>
     </div>
 
-    <!-- Installation Methods -->
+    <!-- Claude Desktop Configuration -->
     <div class="space-y-4">
-      <div class="flex items-center justify-between">
-        <div>
-          <Label>{{ t('mcpCatalog.form.technical.installationMethods.label') }}</Label>
-          <p class="text-xs text-muted-foreground">
-            {{ t('mcpCatalog.form.technical.installationMethods.description') }}
-          </p>
-        </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          @click="addInstallationMethod"
-          class="flex items-center gap-2"
-        >
-          <Plus class="h-4 w-4" />
-          {{ t('mcpCatalog.form.technical.installationMethods.addMethod') }}
-        </Button>
+      <div>
+        <Label>Claude Desktop Configuration</Label>
+        <p class="text-xs text-muted-foreground">
+          Paste the complete Claude Desktop configuration JSON. You can copy this from GitHub repositories or documentation.
+        </p>
       </div>
 
-      <div v-if="localValue.installation_methods.length === 0" class="text-center py-8 text-muted-foreground">
-        No installation methods added yet. Click "Add Installation Method" to get started.
+      <!-- Client Type (Fixed to Claude Desktop) -->
+      <div class="space-y-2">
+        <Label>Client Type</Label>
+        <Select model-value="claude-desktop" disabled>
+          <SelectTrigger>
+            <SelectValue placeholder="Claude Desktop" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="claude-desktop">Claude Desktop</SelectItem>
+          </SelectContent>
+        </Select>
+        <p class="text-xs text-muted-foreground">
+          Currently only Claude Desktop is supported. More clients will be added in the future.
+        </p>
       </div>
 
-      <div v-else class="space-y-4">
-        <Card
-          v-for="(method, index) in localValue.installation_methods"
-          :key="index"
-          class="relative"
-        >
-          <CardHeader class="pb-3">
-            <div class="flex items-center justify-between">
-              <CardTitle class="text-sm">Installation Method {{ index + 1 }}</CardTitle>
-              <Button
-                variant="ghost"
-                size="sm"
-                @click="removeInstallationMethod(index)"
-                class="h-8 w-8 p-0 text-red-600 hover:text-red-700"
-              >
-                <Trash2 class="h-4 w-4" />
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent class="space-y-4">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <!-- Installation Type -->
-              <div class="space-y-2">
-                <Label>{{ t('mcpCatalog.form.technical.installationMethods.type.label') }}</Label>
-                <Select
-                  :model-value="method.type"
-                  @update:model-value="(value) => updateInstallationMethod(index, 'type', value as string)"
-                >
-                  <SelectTrigger>
-                    <SelectValue :placeholder="t('mcpCatalog.form.technical.installationMethods.type.placeholder')" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem
-                      v-for="option in installationTypeOptions"
-                      :key="option.value"
-                      :value="option.value"
-                    >
-                      {{ option.label }}
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <!-- Command -->
-              <div class="space-y-2">
-                <Label>{{ t('mcpCatalog.form.technical.installationMethods.command.label') }}</Label>
-                <Input
-                  :model-value="method.command"
-                  @update:model-value="(value) => updateInstallationMethod(index, 'command', String(value))"
-                  :placeholder="t('mcpCatalog.form.technical.installationMethods.command.placeholder')"
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      <!-- Configuration JSON Textarea -->
+      <div class="space-y-2">
+        <Label>Configuration JSON</Label>
+        <Textarea
+          v-model="claudeDesktopConfig"
+          placeholder="Paste Claude Desktop configuration JSON here..."
+          rows="12"
+          class="font-mono text-sm"
+        />
+        <p class="text-xs text-muted-foreground">
+          Paste the complete <code class="bg-muted px-1 rounded">claude_desktop_config.json</code> content here.
+        </p>
       </div>
+
+      <!-- Example Configuration -->
+      <Alert>
+        <Info class="h-4 w-4" />
+        <AlertDescription>
+          <div class="space-y-2">
+            <p class="font-medium">Example Configuration:</p>
+            <pre class="text-xs bg-muted p-3 rounded mt-2 overflow-x-auto">{{ exampleConfig }}</pre>
+            <p class="text-xs">
+              You can copy configurations like this from GitHub repositories or the Claude Desktop documentation.
+            </p>
+          </div>
+        </AlertDescription>
+      </Alert>
     </div>
 
     <!-- Dependencies -->

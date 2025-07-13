@@ -187,17 +187,9 @@ export default async function getServer(server: FastifyInstance) {
         teamCount: teamIds.length
       }, 'MCP server access granted');
 
-      // Parse JSON fields for response with proper null checks
+      // Format dates for response - JSON fields are already parsed by the service
       const responseServer = {
         ...server,
-        installation_methods: server.installation_methods ? JSON.parse(server.installation_methods) : [],
-        tools: server.tools ? JSON.parse(server.tools) : [],
-        resources: server.resources ? JSON.parse(server.resources) : null,
-        prompts: server.prompts ? JSON.parse(server.prompts) : null,
-        default_config: server.default_config ? JSON.parse(server.default_config) : null,
-        environment_variables: server.environment_variables ? JSON.parse(server.environment_variables) : null,
-        dependencies: server.dependencies ? JSON.parse(server.dependencies) : null,
-        tags: server.tags ? JSON.parse(server.tags) : null,
         created_at: server.created_at.toISOString(),
         updated_at: server.updated_at.toISOString(),
         last_sync_at: server.last_sync_at?.toISOString() || null

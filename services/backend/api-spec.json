@@ -16,6 +16,34 @@
     "schemas": {}
   },
   "paths": {
+    "/api/plugin/example-plugin/examples": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/plugin/example-plugin/examples/{id}": {
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
     "/": {
       "get": {
         "summary": "API health check",
