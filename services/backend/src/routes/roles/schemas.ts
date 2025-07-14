@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { AVAILABLE_PERMISSIONS } from '../../permissions';
 
 // Role schemas
 export const RoleSchema = z.object({
@@ -59,31 +60,7 @@ export type UpdateRoleInput = z.infer<typeof UpdateRoleSchema>;
 export type AssignRoleInput = z.infer<typeof AssignRoleSchema>;
 export type UpdateUserInput = z.infer<typeof UpdateUserSchema>;
 
-// Available permissions list
-export const AVAILABLE_PERMISSIONS = [
-  'users.list',
-  'users.view',
-  'users.edit',
-  'users.delete',
-  'users.create',
-  'roles.manage',
-  'system.admin',
-  'settings.view',
-  'settings.edit',
-  'settings.delete',
-  'profile.view',
-  'profile.edit',
-  'teams.create',
-  'teams.view',
-  'teams.edit',
-  'teams.delete',
-  'teams.manage',
-  'team.members.view',
-  'team.members.manage',
-  'cloud_credentials.view',
-  'cloud_credentials.create',
-  'cloud_credentials.edit',
-  'cloud_credentials.delete',
-] as const;
-
+// Available permissions are now imported from centralized permissions registry
+// This ensures consistency across the entire application
+export { AVAILABLE_PERMISSIONS } from '../../permissions';
 export type Permission = typeof AVAILABLE_PERMISSIONS[number];

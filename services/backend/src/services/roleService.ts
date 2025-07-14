@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { getDb, getSchema } from '../db';
 import { eq } from 'drizzle-orm';
+import { getAllRoleDefinitions } from '../permissions';
 
 export interface Role {
   id: string;
@@ -238,66 +239,9 @@ export class RoleService {
 
   /**
    * Get default permissions for each role
+   * Uses centralized permission definitions
    */
   static getDefaultPermissions() {
-    return {
-      global_admin: [
-        'users.list',
-        'users.view',
-        'users.edit',
-        'users.delete',
-        'users.create',
-        'roles.manage',
-        'system.admin',
-        'settings.view',
-        'settings.edit',
-        'settings.delete',
-        'teams.create',
-        'teams.view',
-        'teams.edit',
-        'teams.delete',
-        'teams.manage',
-        'team.members.view',
-        'team.members.manage',
-        'mcp.categories.view',
-        'mcp.categories.create',
-        'mcp.categories.edit',
-        'mcp.categories.delete',
-        'mcp.servers.read',
-        'mcp.servers.global.view',
-        'mcp.servers.global.create',
-        'mcp.servers.global.edit',
-        'mcp.servers.global.delete',
-        'mcp.servers.team.view_all',
-        'mcp.versions.manage',
-      ],
-      global_user: [
-        'profile.view',
-        'profile.edit',
-        'teams.create',
-        'teams.view',
-        'teams.edit',
-        'teams.delete',
-        'team.members.view',
-        'mcp.servers.read',
-      ],
-      team_admin: [
-        'teams.view',
-        'teams.edit',
-        'teams.delete',
-        'teams.manage',
-        'team.members.view',
-        'team.members.manage',
-        'cloud_credentials.view',
-        'cloud_credentials.create',
-        'cloud_credentials.edit',
-        'cloud_credentials.delete'
-      ],
-      team_user: [
-        'teams.view',
-        'team.members.view',
-        'cloud_credentials.view'
-      ],
-    };
+    return getAllRoleDefinitions();
   }
 }

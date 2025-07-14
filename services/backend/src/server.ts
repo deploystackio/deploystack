@@ -33,6 +33,7 @@ import {
 import { GlobalSettingsInitService } from './global-settings'
 import { GlobalSettings } from './global-settings/helpers';
 import { GlobalSettingsService } from './services/globalSettingsService'; // Import the service
+import { RoleSyncService } from './services/roleSyncService'; // Import the role sync service
 import type SqliteDriver from 'better-sqlite3'; // For type checking in onClose
 import type { FastifyInstance } from 'fastify'
 
@@ -97,6 +98,22 @@ export async function initializeDatabaseDependentServices(
       server.log.debug(`🔍 Found ${dbExtensions.length} plugins with database extensions`);
       await initializePluginDatabases(dbInstance, dbExtensions, server.log);
       server.log.debug('✅ Plugin database extensions initialized');
+      
+      // Synchronize role permissions from code to database
+      try {
+        server.log.debug('🔄 Starting role synchronization...');
+        const roleSyncService = new RoleSyncService(server.log);
+        await roleSyncService.syncRoles();
+        server.log.debug('✅ Role synchronization completed');
+      } catch (roleSyncError) {
+        server.log.error('❌ Role synchronization failed:', {
+          error: roleSyncError,
+          message: roleSyncError instanceof Error ? roleSyncError.message : 'Unknown error',
+          stack: roleSyncError instanceof Error ? roleSyncError.stack : 'No stack trace'
+        });
+        // Don't throw - continue with startup but log the error
+        server.log.warn('⚠️ Continuing without role synchronization due to error');
+      }
       
       // Initialize global settings with comprehensive debugging
       try {
