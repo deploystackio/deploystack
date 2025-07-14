@@ -520,7 +520,7 @@ export function executeDbOperation<T>(
 interface DatabaseExtensionWithTables extends DatabaseExtension {
    
   tableDefinitions?: Record<string, Record<string, (columnBuilder: any) => any>>;
-  onDatabaseInit?: (db: AnyDatabase, schema: AnySchema) => Promise<void>;
+  onDatabaseInit?: (db: AnyDatabase, schema: AnySchema, logger: FastifyBaseLogger) => Promise<void>;
 }
 
 export function registerPluginTables(plugins: Plugin[], logger?: FastifyBaseLogger) {
@@ -560,7 +560,7 @@ export async function initializePluginDatabases(db: AnyDatabase, plugins: Plugin
       }
       try {
         // Create a child logger for this plugin
-        logger.child({ pluginId: plugin.meta.id });
+        const pluginLogger = logger.child({ pluginId: plugin.meta.id });
         // Get the current schema - use dbSchema directly if available, otherwise generate one
         let schema: AnySchema;
         try {
@@ -569,7 +569,7 @@ export async function initializePluginDatabases(db: AnyDatabase, plugins: Plugin
           // If getSchema fails, generate a basic schema for the plugin
           schema = generateSchema();
         }
-        await ext.onDatabaseInit(db, schema);
+        await ext.onDatabaseInit(db, schema, pluginLogger);
         if (!isTestMode()) {
           logger.info({
             operation: 'initialize_plugin_databases',
