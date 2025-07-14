@@ -201,6 +201,9 @@ describe('Database Service (db/index.ts)', () => {
     // Reset plugin table definitions
     const ptd = staticSchemaModule.pluginTableDefinitions as Record<string, any>;
     Object.keys(ptd).forEach(key => delete ptd[key]);
+
+    // Reset mock logger child method
+    mockLogger.child.mockReturnValue(mockChildLogger);
   });
 
   afterEach(() => {
@@ -220,17 +223,19 @@ describe('Database Service (db/index.ts)', () => {
   };
 
   // Create a mock logger for tests
+  const mockChildLogger = {
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+  };
+  
   const mockLogger = {
     info: vi.fn(),
     error: vi.fn(),
     warn: vi.fn(),
     debug: vi.fn(),
-    child: vi.fn().mockReturnValue({
-      info: vi.fn(),
-      error: vi.fn(),
-      warn: vi.fn(),
-      debug: vi.fn(),
-    }),
+    child: vi.fn().mockReturnValue(mockChildLogger),
   } as any;
 
   describe('initializeDatabase', () => {
@@ -447,7 +452,8 @@ describe('Database Service (db/index.ts)', () => {
         
         expect(pluginWithDbInit.databaseExtension?.onDatabaseInit).toHaveBeenCalledWith(
           mockDb,
-          expect.any(Object)
+          expect.any(Object),
+          mockChildLogger
         );
         expect(mockLogger.info).toHaveBeenCalledWith(
           { operation: 'initialize_plugin_databases', pluginId: 'dbPlugin' },
