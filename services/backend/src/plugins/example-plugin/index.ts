@@ -97,20 +97,23 @@ class ExamplePlugin implements Plugin {
     tableDefinitions: examplePluginTableDefinitions, // Use tableDefinitions
     
     // Optional initialization function
-    onDatabaseInit: async (db: AnyDatabase, schema: AnySchema) => {
-      // Note: The function signature expects (db, schema) not (db, logger)
-      // We'll use console.log for now since logger is not available
-      console.log('Initializing example plugin database...');
+    onDatabaseInit: async (db: AnyDatabase, schema: AnySchema, logger: FastifyBaseLogger) => {
+      logger.debug({
+        operation: 'plugin_database_init',
+        pluginId: 'example-plugin'
+      }, 'Initializing example plugin database...');
 
       // Use hardcoded plugin ID since 'this' is not available in arrow function
       const tableNameInSchema = `example-plugin_example_entities`; 
       const table = schema[tableNameInSchema];
 
       if (!table) {
-        console.error('Critical: Table not found in global schema! Cannot initialize database for plugin.', {
+        logger.error({
+          operation: 'plugin_database_init',
+          pluginId: 'example-plugin',
           tableNameInSchema,
           availableTables: Object.keys(schema)
-        });
+        }, 'Critical: Table not found in global schema! Cannot initialize database for plugin.');
         return;
       }
       
@@ -130,7 +133,10 @@ class ExamplePlugin implements Plugin {
       }
       
       if (currentCount === 0) {
-        console.log('Seeding initial data for example plugin...');
+        logger.debug({
+          operation: 'plugin_database_seed',
+          pluginId: 'example-plugin'
+        }, 'Seeding initial data for example plugin...');
         const dataToSeed = {
           id: 'example1',
           name: 'Example Entity',
@@ -142,7 +148,10 @@ class ExamplePlugin implements Plugin {
           // Assume NodePgDatabase-like behavior
           await (db as NodePgDatabase).insert(table as PgTable).values(dataToSeed);
         }
-        console.log('Seeded initial data for example plugin');
+        logger.info({
+          operation: 'plugin_database_seed',
+          pluginId: 'example-plugin'
+        }, 'Seeded initial data for example plugin');
       }
     },
   };
