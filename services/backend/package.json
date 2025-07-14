@@ -1,6 +1,6 @@
 {
   "name": "@deploystack/backend",
-  "version": "0.24.0",
+  "version": "0.24.1",
   "scripts": {
     "dev": "nodemon",
     "build": "tsc",
