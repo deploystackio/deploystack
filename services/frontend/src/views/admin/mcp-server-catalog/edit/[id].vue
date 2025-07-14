@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { ArrowLeft, Loader2 } from 'lucide-vue-next'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import DashboardLayout from '@/components/DashboardLayout.vue'
-import McpServerFormWizard from '@/components/admin/mcp-catalog/McpServerFormWizard.vue'
+import McpServerFormWizard from '@/components/admin/mcp-catalog/McpServerEditFormWizard.vue'
 import { McpCatalogService } from '@/services/mcpCatalogService'
 import { useEventBus } from '@/composables/useEventBus'
 import type {

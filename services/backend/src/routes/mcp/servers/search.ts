@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import { McpCatalogService } from '../../../services/mcpCatalogService';
 import { TeamService } from '../../../services/teamService';
-import { getUserRole } from '../../../middleware/roleMiddleware';
+import { getUserRole, requirePermission } from '../../../middleware/roleMiddleware';
 import { getDb } from '../../../db';
 
 // Query parameters schema
@@ -110,15 +110,7 @@ export default async function searchServers(server: FastifyInstance) {
         })
       }
     },
-    preValidation: async (request, reply) => {
-      // Require authentication for all MCP server access
-      if (!request.user) {
-        return reply.status(401).send({
-          success: false,
-          error: 'Authentication required'
-        });
-      }
-    }
+    preValidation: requirePermission('mcp.servers.read')
   }, async (request, reply) => {
     const queryParams = request.query as z.infer<typeof searchServersQuerySchema>;
     
@@ -194,21 +186,39 @@ export default async function searchServers(server: FastifyInstance) {
         teamCount: teamIds.length
       }, 'MCP server search completed');
 
-      // Parse JSON fields for response with proper null checks
-      const responseServers = paginatedServers.map(server => ({
-        ...server,
-        installation_methods: server.installation_methods ? JSON.parse(server.installation_methods) : [],
-        tools: server.tools ? JSON.parse(server.tools) : [],
-        resources: server.resources ? JSON.parse(server.resources) : null,
-        prompts: server.prompts ? JSON.parse(server.prompts) : null,
-        default_config: server.default_config ? JSON.parse(server.default_config) : null,
-        environment_variables: server.environment_variables ? JSON.parse(server.environment_variables) : null,
-        dependencies: server.dependencies ? JSON.parse(server.dependencies) : null,
-        tags: server.tags ? JSON.parse(server.tags) : null,
-        created_at: server.created_at.toISOString(),
-        updated_at: server.updated_at.toISOString(),
-        last_sync_at: server.last_sync_at?.toISOString() || null
-      }));
+      // Format dates for response (JSON fields are already parsed by the service)
+      const responseServers = paginatedServers.map(server => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const formatDate = (date: any) => {
+          if (!date) return null;
+          try {
+            // Handle both Date objects and timestamp numbers
+            if (typeof date === 'number') {
+              return new Date(date).toISOString();
+            }
+            if (date instanceof Date) {
+              return date.toISOString();
+            }
+            return new Date(date).toISOString();
+          } catch (error) {
+            request.log.warn({
+              operation: 'search_mcp_servers',
+              serverId: server.id,
+              field: 'date_format_error',
+              dateValue: date,
+              error
+            }, 'Failed to format date field, using null');
+            return null;
+          }
+        };
+
+        return {
+          ...server,
+          created_at: formatDate(server.created_at),
+          updated_at: formatDate(server.updated_at),
+          last_sync_at: formatDate(server.last_sync_at)
+        };
+      });
 
       return reply.status(200).send({
         success: true,

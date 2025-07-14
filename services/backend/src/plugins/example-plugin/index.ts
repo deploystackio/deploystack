@@ -7,11 +7,11 @@ import {
   type PluginRouteManager
 } from '../../plugin-system/types';
 
-import { type AnyDatabase, type AnySchema, getSchema } from '../../db'; // Import getSchema and AnySchema
-import { type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3'; // For type guard
-import { type NodePgDatabase } from 'drizzle-orm/node-postgres'; // For casting db
-import { type SQLiteTable } from 'drizzle-orm/sqlite-core';     // For casting table from schema
-import { type PgTable } from 'drizzle-orm/pg-core';         // For casting table from schema
+import { type AnyDatabase, type AnySchema } from '../../db';
+import { type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
+import { type NodePgDatabase } from 'drizzle-orm/node-postgres';
+import { type SQLiteTable } from 'drizzle-orm/sqlite-core'; 
+import { type PgTable } from 'drizzle-orm/pg-core'; 
 // import { exampleEntities } from './schema'; // No longer directly used for queries
 import { sql } from 'drizzle-orm';
 

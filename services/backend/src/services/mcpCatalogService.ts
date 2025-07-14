@@ -453,81 +453,38 @@ export class McpCatalogService {
   }
   
   private parseServerJsonFields(server: any): any {
-    // Parse JSON string fields back to objects/arrays
+    // Parse JSON string fields back to objects/arrays with proper error handling
     const parsed = { ...server };
     
+    const parseJsonField = (fieldName: string, fieldValue: any, defaultValue: any) => {
+      if (!fieldValue || fieldValue === '' || fieldValue.trim() === '') {
+        return defaultValue;
+      }
+      if (typeof fieldValue !== 'string') {
+        return fieldValue; // Already parsed or not a string
+      }
+      try {
+        return JSON.parse(fieldValue);
+      } catch (e) {
+        this.logger.warn({ 
+          field: fieldName, 
+          fieldValue, 
+          error: e,
+          serverId: server.id 
+        }, 'Failed to parse JSON field, using default value');
+        return defaultValue;
+      }
+    };
+    
     // Parse JSON fields that should be arrays/objects
-    try {
-      if (parsed.installation_methods && typeof parsed.installation_methods === 'string') {
-        parsed.installation_methods = JSON.parse(parsed.installation_methods);
-      }
-    } catch (e) {
-      this.logger.warn({ field: 'installation_methods', error: e }, 'Failed to parse JSON field');
-      parsed.installation_methods = [];
-    }
-    
-    try {
-      if (parsed.tools && typeof parsed.tools === 'string') {
-        parsed.tools = JSON.parse(parsed.tools);
-      }
-    } catch (e) {
-      this.logger.warn({ field: 'tools', error: e }, 'Failed to parse JSON field');
-      parsed.tools = [];
-    }
-    
-    try {
-      if (parsed.resources && typeof parsed.resources === 'string') {
-        parsed.resources = JSON.parse(parsed.resources);
-      }
-    } catch (e) {
-      this.logger.warn({ field: 'resources', error: e }, 'Failed to parse JSON field');
-      parsed.resources = [];
-    }
-    
-    try {
-      if (parsed.prompts && typeof parsed.prompts === 'string') {
-        parsed.prompts = JSON.parse(parsed.prompts);
-      }
-    } catch (e) {
-      this.logger.warn({ field: 'prompts', error: e }, 'Failed to parse JSON field');
-      parsed.prompts = [];
-    }
-    
-    try {
-      if (parsed.environment_variables && typeof parsed.environment_variables === 'string') {
-        parsed.environment_variables = JSON.parse(parsed.environment_variables);
-      }
-    } catch (e) {
-      this.logger.warn({ field: 'environment_variables', error: e }, 'Failed to parse JSON field');
-      parsed.environment_variables = {};
-    }
-    
-    try {
-      if (parsed.default_config && typeof parsed.default_config === 'string') {
-        parsed.default_config = JSON.parse(parsed.default_config);
-      }
-    } catch (e) {
-      this.logger.warn({ field: 'default_config', error: e }, 'Failed to parse JSON field');
-      parsed.default_config = {};
-    }
-    
-    try {
-      if (parsed.dependencies && typeof parsed.dependencies === 'string') {
-        parsed.dependencies = JSON.parse(parsed.dependencies);
-      }
-    } catch (e) {
-      this.logger.warn({ field: 'dependencies', error: e }, 'Failed to parse JSON field');
-      parsed.dependencies = {};
-    }
-    
-    try {
-      if (parsed.tags && typeof parsed.tags === 'string') {
-        parsed.tags = JSON.parse(parsed.tags);
-      }
-    } catch (e) {
-      this.logger.warn({ field: 'tags', error: e }, 'Failed to parse JSON field');
-      parsed.tags = [];
-    }
+    parsed.installation_methods = parseJsonField('installation_methods', parsed.installation_methods, []);
+    parsed.tools = parseJsonField('tools', parsed.tools, []);
+    parsed.resources = parseJsonField('resources', parsed.resources, null);
+    parsed.prompts = parseJsonField('prompts', parsed.prompts, null);
+    parsed.environment_variables = parseJsonField('environment_variables', parsed.environment_variables, null);
+    parsed.default_config = parseJsonField('default_config', parsed.default_config, null);
+    parsed.dependencies = parseJsonField('dependencies', parsed.dependencies, null);
+    parsed.tags = parseJsonField('tags', parsed.tags, null);
     
     return parsed;
   }

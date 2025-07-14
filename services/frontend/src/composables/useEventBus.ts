@@ -20,6 +20,8 @@ export type EventBusEvents = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   'mcp-form-data-updated': { step: number; data: any }
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  'mcp-add-form-data-updated': { step: number; data: any }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   'mcp-form-data-loaded': { formData: any; currentStep: number }
   'mcp-form-data-cleared': void
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

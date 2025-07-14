@@ -45,6 +45,74 @@ export class GitHubService {
     this.cachedSettings = null;
   }
   
+  /**
+   * Get unauthenticated request client for public GitHub API
+   * Used when GitHub App integration is disabled
+   */
+  private static async getUnauthenticatedRequest(logger: FastifyBaseLogger) {
+    logger.debug({
+      operation: 'github_unauthenticated_setup',
+      step: 'start'
+    }, '🌐 Setting up unauthenticated GitHub API client');
+
+    try {
+      const requestModule = await import('@octokit/request');
+      const request = requestModule.request;
+      
+      const unauthenticatedClient = request.defaults({
+        headers: {
+          'User-Agent': 'DeployStack-App',
+          'X-GitHub-Api-Version': '2022-11-28'
+        },
+        request: {
+          retries: 3,
+          retryAfter: 3
+        }
+      });
+
+      logger.info({
+        operation: 'github_unauthenticated_setup',
+        step: 'complete'
+      }, '✅ Unauthenticated GitHub API client configured successfully');
+
+      return unauthenticatedClient;
+    } catch (error) {
+      logger.error({
+        operation: 'github_unauthenticated_setup',
+        step: 'failed',
+        error
+      }, '❌ Failed to create unauthenticated GitHub API client');
+      throw new Error(`Failed to create unauthenticated GitHub API client: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Get the appropriate request client based on GitHub App configuration
+   * Returns authenticated client if enabled, unauthenticated client otherwise
+   */
+  private static async getRequest(logger: FastifyBaseLogger) {
+    const enabled = await GlobalSettings.getBoolean('github.app.enabled', false);
+    
+    logger.debug({
+      operation: 'github_get_request',
+      githubAppEnabled: enabled
+    }, `🔄 Getting GitHub request client (GitHub App ${enabled ? 'enabled' : 'disabled'})`);
+
+    if (enabled) {
+      logger.debug({
+        operation: 'github_get_request',
+        mode: 'authenticated'
+      }, '🔐 Using authenticated GitHub App client');
+      return await this.getAuthenticatedRequest(logger);
+    } else {
+      logger.debug({
+        operation: 'github_get_request',
+        mode: 'unauthenticated'
+      }, '🌐 Using unauthenticated public API client');
+      return await this.getUnauthenticatedRequest(logger);
+    }
+  }
+
   private static async getAuthenticatedRequest(logger: FastifyBaseLogger) {
     // Get current settings first
     logger.debug({
@@ -299,29 +367,29 @@ export class GitHubService {
 
     logger.debug({
       operation: 'github_get_repo_info',
-      step: 'get_auth_request',
+      step: 'get_request_client',
       owner,
       repo
-    }, '🔐 Getting authenticated request client');
+    }, '🔐 Getting GitHub request client');
 
     let request: any;
     try {
-      request = await this.getAuthenticatedRequest(logger);
+      request = await this.getRequest(logger);
       logger.debug({
         operation: 'github_get_repo_info',
-        step: 'get_auth_request',
+        step: 'get_request_client',
         success: true,
         owner,
         repo
-      }, '🔐 Authenticated request client obtained');
+      }, '🔐 GitHub request client obtained');
     } catch (error) {
       logger.error({
         operation: 'github_get_repo_info',
-        step: 'get_auth_request',
+        step: 'get_request_client',
         error,
         owner,
         repo
-      }, '❌ Failed to get authenticated request client');
+      }, '❌ Failed to get GitHub request client');
       throw error;
     }
     
@@ -436,7 +504,7 @@ export class GitHubService {
   }
   
   static async getLatestRelease(owner: string, repo: string, logger: FastifyBaseLogger): Promise<GitHubRelease | null> {
-    const request = await this.getAuthenticatedRequest(logger);
+    const request = await this.getRequest(logger);
     
     logger.debug({
       operation: 'github_get_latest_release',
@@ -491,7 +559,7 @@ export class GitHubService {
   }
   
   static async getPackageJson(owner: string, repo: string, branch: string = 'main', logger: FastifyBaseLogger): Promise<GitHubPackageInfo | null> {
-    const request = await this.getAuthenticatedRequest(logger);
+    const request = await this.getRequest(logger);
     
     logger.debug({
       operation: 'github_get_package_json',
@@ -602,25 +670,46 @@ export class GitHubService {
   
   static async testConnection(logger: FastifyBaseLogger): Promise<boolean> {
     try {
-      const request = await this.getAuthenticatedRequest(logger);
+      const enabled = await GlobalSettings.getBoolean('github.app.enabled', false);
       
-      // Test with a simple API call
-      await request('GET /user/installations', {
-        headers: {
-          'X-GitHub-Api-Version': '2022-11-28'
-        }
-      });
-      
-      logger.info({
-        operation: 'github_test_connection'
-      }, 'GitHub App connection test successful');
+      if (enabled) {
+        // Test authenticated connection with GitHub App
+        const request = await this.getAuthenticatedRequest(logger);
+        
+        // Test with a simple API call that requires authentication
+        await request('GET /user/installations', {
+          headers: {
+            'X-GitHub-Api-Version': '2022-11-28'
+          }
+        });
+        
+        logger.info({
+          operation: 'github_test_connection',
+          mode: 'authenticated'
+        }, 'GitHub App connection test successful');
+      } else {
+        // Test unauthenticated connection with public API
+        const request = await this.getUnauthenticatedRequest(logger);
+        
+        // Test with a simple public API call
+        await request('GET /repos/octocat/Hello-World', {
+          headers: {
+            'X-GitHub-Api-Version': '2022-11-28'
+          }
+        });
+        
+        logger.info({
+          operation: 'github_test_connection',
+          mode: 'unauthenticated'
+        }, 'GitHub public API connection test successful');
+      }
       
       return true;
     } catch (error) {
       logger.error({
         operation: 'github_test_connection',
         error
-      }, 'GitHub App connection test failed');
+      }, 'GitHub connection test failed');
       
       return false;
     }

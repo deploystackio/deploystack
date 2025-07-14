@@ -560,7 +560,7 @@ export async function initializePluginDatabases(db: AnyDatabase, plugins: Plugin
       }
       try {
         // Create a child logger for this plugin
-        const pluginLogger = logger.child({ pluginId: plugin.meta.id });
+        logger.child({ pluginId: plugin.meta.id });
         // Get the current schema - use dbSchema directly if available, otherwise generate one
         let schema: AnySchema;
         try {
