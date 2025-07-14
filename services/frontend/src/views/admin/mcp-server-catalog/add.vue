@@ -4,25 +4,68 @@ import { useRouter } from 'vue-router'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft } from 'lucide-vue-next'
 import DashboardLayout from '@/components/DashboardLayout.vue'
-import McpServerFormWizard from '@/components/admin/mcp-catalog/McpServerFormWizard.vue'
+import McpServerAddFormWizard from '@/components/admin/mcp-catalog/McpServerAddFormWizard.vue'
 import { McpCatalogService } from '@/services/mcpCatalogService'
-import { useEventBus } from '@/composables/useEventBus'
-import type {
-  McpServerFormData,
-  CreateMcpServerRequest
-} from './types'
+import type { CreateMcpServerRequest } from './types'
+
+// Form data interface for add wizard
+interface McpServerAddFormData {
+  github: {
+    github_url: string
+    git_branch: string
+    auto_populated: boolean
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    repo_data?: any
+  }
+  claudeConfig: {
+    claude_desktop_config: object
+    raw_json: string
+  }
+  basic: {
+    name: string
+    description: string
+    long_description: string
+    category_id: string
+    author_name: string
+    author_contact: string
+    organization: string
+    license: string
+    tags: string[]
+  }
+}
 
 const { t } = useI18n()
 const router = useRouter()
-const eventBus = useEventBus()
 
 const goBack = () => {
   router.push('/admin/mcp-server-catalog')
 }
 
-const handleSubmit = async (formData: McpServerFormData) => {
+const handleSubmit = async (formData: McpServerAddFormData) => {
   try {
-    // Convert form data to API request format
+    // Extract technical details from Claude Desktop config
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const claudeConfig = formData.claudeConfig.claude_desktop_config as any
+    const serverKeys = Object.keys(claudeConfig.mcpServers || {})
+    const serverKey = serverKeys[0]
+    const serverConfig = claudeConfig.mcpServers?.[serverKey] || {}
+
+    // Create installation methods from Claude config
+    const installationMethods = [{
+      client: 'claude-desktop' as const,
+      command: serverConfig.command || 'npx',
+      args: serverConfig.args || [],
+      env: serverConfig.env || {}
+    }]
+
+    // Create environment variables from Claude config
+    const environmentVariables = Object.keys(serverConfig.env || {}).map(key => ({
+      name: key,
+      description: `Environment variable: ${key}`,
+      required: true
+    }))
+
+    // Convert form data to current API request format (until backend is updated)
     const requestData: CreateMcpServerRequest = {
       // Basic info
       name: formData.basic.name,
@@ -35,24 +78,30 @@ const handleSubmit = async (formData: McpServerFormData) => {
       license: formData.basic.license || undefined,
       tags: formData.basic.tags.length > 0 ? formData.basic.tags : undefined,
 
-      // Repository (use GitHub data if available, fallback to repository data)
-      github_url: formData.github.github_url || formData.repository.github_url || undefined,
-      git_branch: formData.github.git_branch || formData.repository.git_branch || 'main',
-      homepage_url: formData.repository.homepage_url || undefined,
+      // GitHub repository info
+      github_url: formData.github.github_url,
+      git_branch: formData.github.git_branch || 'main',
 
-      // Technical
-      language: formData.technical.language,
-      runtime: formData.technical.runtime,
-      runtime_min_version: formData.technical.runtime_min_version || undefined,
-      installation_methods: formData.technical.installation_methods,
-      dependencies: formData.technical.dependencies ? JSON.parse(formData.technical.dependencies) : undefined,
+      // Technical details (required by current backend)
+      language: 'JavaScript', // Default, will be updated by GitHub sync
+      runtime: 'node', // Default, will be updated by GitHub sync
+      runtime_min_version: '18.0.0',
+      installation_methods: installationMethods,
+      environment_variables: environmentVariables,
 
-      // Capabilities
-      tools: formData.capabilities.tools,
-      resources: formData.capabilities.resources.length > 0 ? formData.capabilities.resources : undefined,
-      prompts: formData.capabilities.prompts.length > 0 ? formData.capabilities.prompts : undefined,
-      environment_variables: formData.capabilities.environment_variables.length > 0 ? formData.capabilities.environment_variables : undefined,
-      default_config: formData.capabilities.default_config ? JSON.parse(formData.capabilities.default_config) : undefined,
+      // Default tools (required by current backend)
+      tools: [{
+        name: 'mcp_tool',
+        description: 'MCP server tool'
+      }],
+
+      // Optional fields
+      resources: [],
+      prompts: [],
+      dependencies: {},
+
+      // Claude Desktop configuration (for future backend use)
+      claude_desktop_config: formData.claudeConfig.claude_desktop_config,
 
       // Server settings
       visibility: 'global',
@@ -62,11 +111,11 @@ const handleSubmit = async (formData: McpServerFormData) => {
     // Submit to API
     await McpCatalogService.createGlobalServer(requestData)
 
-    // Emit success event
-    eventBus.emit('mcp-server-created')
-
-    // Navigate back to catalog
-    router.push('/admin/mcp-server-catalog')
+    // Navigate back to catalog with success parameter
+    await router.push({
+      path: '/admin/mcp-server-catalog',
+      query: { created: 'true', serverName: formData.basic.name }
+    })
 
   } catch (error) {
     // Re-throw error to let the wizard handle it
@@ -86,13 +135,12 @@ const handleCancel = () => {
       <div class="flex items-center gap-4">
         <Button variant="ghost" size="sm" @click="goBack" class="flex items-center gap-2">
           <ArrowLeft class="h-4 w-4" />
-          Back to Catalog
+          {{ t('mcpCatalog.edit.backToCatalog') }}
         </Button>
       </div>
 
       <!-- Form Wizard Component -->
-      <McpServerFormWizard
-        mode="create"
+      <McpServerAddFormWizard
         @submit="handleSubmit"
         @cancel="handleCancel"
       />

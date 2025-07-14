@@ -183,8 +183,8 @@ describe('MCP Servers - Get Server', () => {
         name: 'Test Server',
         slug: 'test-server',
         description: 'A test server',
-        installation_methods: '[]',
-        tools: '[]',
+        installation_methods: [], // Already parsed by service
+        tools: [], // Already parsed by service
         resources: null,
         prompts: null,
         default_config: null,
@@ -260,8 +260,8 @@ describe('MCP Servers - Get Server', () => {
         name: 'Team Server',
         slug: 'team-server',
         description: 'A team server',
-        installation_methods: '[]',
-        tools: '[]',
+        installation_methods: [], // Already parsed by service
+        tools: [], // Already parsed by service
         resources: null,
         prompts: null,
         default_config: null,
@@ -302,8 +302,8 @@ describe('MCP Servers - Get Server', () => {
         name: 'Global Server',
         slug: 'global-server',
         description: 'A global server',
-        installation_methods: '[]',
-        tools: '[]',
+        installation_methods: [], // Already parsed by service
+        tools: [], // Already parsed by service
         resources: null,
         prompts: null,
         default_config: null,
@@ -357,8 +357,8 @@ describe('MCP Servers - Get Server', () => {
         name: 'Team Server',
         slug: 'team-server',
         description: 'A team server',
-        installation_methods: '[]',
-        tools: '[]',
+        installation_methods: [], // Already parsed by service
+        tools: [], // Already parsed by service
         resources: null,
         prompts: null,
         default_config: null,
@@ -413,8 +413,8 @@ describe('MCP Servers - Get Server', () => {
         name: 'Team Server',
         slug: 'team-server',
         description: 'A team server',
-        installation_methods: '[]',
-        tools: '[]',
+        installation_methods: [], // Already parsed by service
+        tools: [], // Already parsed by service
         resources: null,
         prompts: null,
         default_config: null,
@@ -453,8 +453,8 @@ describe('MCP Servers - Get Server', () => {
         name: 'Global Server',
         slug: 'global-server',
         description: 'A global server',
-        installation_methods: '[]',
-        tools: '[]',
+        installation_methods: [], // Already parsed by service
+        tools: [], // Already parsed by service
         resources: null,
         prompts: null,
         default_config: null,
@@ -521,14 +521,14 @@ describe('MCP Servers - Get Server', () => {
         name: 'Test Server',
         slug: 'test-server',
         description: 'A test server',
-        installation_methods: '["npm", "yarn"]',
-        tools: '[{"name": "test-tool"}]',
-        resources: '[{"name": "test-resource"}]',
-        prompts: '[{"name": "test-prompt"}]',
-        default_config: '{"key": "value"}',
-        environment_variables: '[{"name": "TEST_VAR"}]',
-        dependencies: '{"dep1": "^1.0.0"}',
-        tags: '["tag1", "tag2"]',
+        installation_methods: ['npm', 'yarn'], // Already parsed by service
+        tools: [{ name: 'test-tool' }], // Already parsed by service
+        resources: [{ name: 'test-resource' }], // Already parsed by service
+        prompts: [{ name: 'test-prompt' }], // Already parsed by service
+        default_config: { key: 'value' }, // Already parsed by service
+        environment_variables: [{ name: 'TEST_VAR' }], // Already parsed by service
+        dependencies: { dep1: '^1.0.0' }, // Already parsed by service
+        tags: ['tag1', 'tag2'], // Already parsed by service
         created_at: new Date('2024-01-01'),
         updated_at: new Date('2024-01-01'),
         last_sync_at: new Date('2024-01-02'),
@@ -568,8 +568,8 @@ describe('MCP Servers - Get Server', () => {
         name: 'Test Server',
         slug: 'test-server',
         description: 'A test server',
-        installation_methods: '[]',
-        tools: '[]',
+        installation_methods: [], // Already parsed by service
+        tools: [], // Already parsed by service
         resources: null,
         prompts: null,
         default_config: null,
@@ -709,8 +709,8 @@ describe('MCP Servers - Get Server', () => {
           name: 'Test Server',
           slug: 'test-server',
           description: 'A test server',
-          installation_methods: '[]',
-          tools: '[]',
+          installation_methods: [], // Already parsed by service
+          tools: [], // Already parsed by service
           resources: null,
           prompts: null,
           default_config: null,
@@ -795,8 +795,8 @@ describe('MCP Servers - Get Server', () => {
         name: 'Team Server',
         slug: 'team-server',
         description: 'A team server',
-        installation_methods: '[]',
-        tools: '[]',
+        installation_methods: [], // Already parsed by service
+        tools: [], // Already parsed by service
         resources: null,
         prompts: null,
         default_config: null,
@@ -840,8 +840,8 @@ describe('MCP Servers - Get Server', () => {
         name: 'Global Server',
         slug: 'global-server',
         description: 'A global server',
-        installation_methods: '[]',
-        tools: '[]',
+        installation_methods: [], // Already parsed by service
+        tools: [], // Already parsed by service
         resources: null,
         prompts: null,
         default_config: null,

@@ -76,7 +76,15 @@ describe('MCP Servers - Create Global', () => {
         description: 'A test global MCP server',
         language: 'javascript',
         runtime: 'node',
-        installation_methods: [{ type: 'npm', command: 'npm install test-server' }],
+        claude_desktop_config: {
+          mcpServers: {
+            'test-server': {
+              command: 'npm',
+              args: ['install', 'test-server'],
+              env: {}
+            }
+          }
+        },
         tools: [{ name: 'test-tool', description: 'A test tool' }],
         featured: false
       },
@@ -230,7 +238,12 @@ describe('MCP Servers - Create Global', () => {
           description: 'A test global MCP server',
           language: 'javascript',
           runtime: 'node',
-          installation_methods: [{ type: 'npm', command: 'npm install test-server' }],
+          installation_methods: [{
+            client: 'claude-desktop',
+            command: 'npm',
+            args: ['install', 'test-server'],
+            env: {}
+          }],
           tools: [{ name: 'test-tool', description: 'A test tool' }],
           visibility: 'global'
         })
@@ -273,10 +286,18 @@ describe('MCP Servers - Create Global', () => {
           language: 'typescript',
           runtime: 'node',
           runtime_min_version: '18.0.0',
-          installation_methods: [
-            { type: 'npm', command: 'npm install complex-server', description: 'Install via npm' },
-            { type: 'docker', image: 'complex-server:latest', description: 'Run with Docker' }
-          ],
+          claude_desktop_config: {
+            mcpServers: {
+              'complex-server': {
+                command: 'npx',
+                args: ['complex-server'],
+                env: {
+                  'TEST_VAR': 'test_value',
+                  'API_KEY': 'secret'
+                }
+              }
+            }
+          },
           tools: [
             { name: 'complex-tool', description: 'A complex tool' },
             { name: 'another-tool', description: 'Another tool' }
@@ -292,10 +313,6 @@ describe('MCP Servers - Create Global', () => {
           author_contact: 'author@example.com',
           organization: 'Test Organization',
           license: 'MIT',
-          default_config: { key: 'value', nested: { prop: 'test' } },
-          environment_variables: [
-            { name: 'TEST_VAR', description: 'Test variable', required: true, default_value: 'test' }
-          ],
           dependencies: { lodash: '^4.17.21', express: '^4.18.0' },
           category_id: 'category-123',
           tags: ['testing', 'example', 'complex'],
@@ -832,7 +849,15 @@ describe('MCP Servers - Create Global', () => {
           description: 'A minimal server',
           language: 'python',
           runtime: 'python',
-          installation_methods: [{ type: 'pip' }],
+          claude_desktop_config: {
+            mcpServers: {
+              'minimal-server': {
+                command: 'python',
+                args: ['-m', 'minimal_server'],
+                env: {}
+              }
+            }
+          },
           tools: [{ name: 'minimal-tool', description: 'A minimal tool' }]
         }
       };
@@ -886,7 +911,12 @@ describe('MCP Servers - Create Global', () => {
           description: 'A minimal server',
           language: 'python',
           runtime: 'python',
-          installation_methods: [{ type: 'pip' }],
+          installation_methods: [{
+            client: 'claude-desktop',
+            command: 'python',
+            args: ['-m', 'minimal_server'],
+            env: {}
+          }],
           tools: [{ name: 'minimal-tool', description: 'A minimal tool' }],
           visibility: 'global'
         })

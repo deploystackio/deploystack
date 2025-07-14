@@ -93,9 +93,6 @@ const handleToggleFeatured = async (serverId: string, featured: boolean) => {
     successMessage.value = featured
       ? t('mcpCatalog.messages.featureSuccess')
       : t('mcpCatalog.messages.unfeatureSuccess')
-    setTimeout(() => {
-      successMessage.value = null
-    }, 3000)
 
     // Emit global event
     eventBus.emit('mcp-catalog-updated')
@@ -145,9 +142,6 @@ const handlePageSizeChange = async (newPageSize: number) => {
 const handleServerCreated = () => {
   fetchServers()
   successMessage.value = t('mcpCatalog.messages.createSuccess')
-  setTimeout(() => {
-    successMessage.value = null
-  }, 5000)
 }
 
 // Load data on component mount
@@ -158,11 +152,17 @@ onMounted(async () => {
   const deletedServerName = route.query.deleted as string
   if (deletedServerName) {
     successMessage.value = t('mcpCatalog.messages.deleteSuccess')
-    setTimeout(() => {
-      successMessage.value = null
-    }, 5000)
 
     // Clean up the query parameter
+    router.replace({ query: {} })
+  }
+
+  // Check for create success message from query parameters
+  const createdServer = route.query.created as string
+  if (createdServer === 'true') {
+    successMessage.value = t('mcpCatalog.messages.createSuccess')
+
+    // Clean up the query parameters
     router.replace({ query: {} })
   }
 

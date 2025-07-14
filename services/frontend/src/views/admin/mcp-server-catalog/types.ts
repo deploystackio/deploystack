@@ -79,11 +79,11 @@ export interface CreateMcpServerRequest {
   github_url?: string
   git_branch?: string
   homepage_url?: string
-  language: string
-  runtime: string
+  language?: string
+  runtime?: string
   runtime_min_version?: string
-  installation_methods: InstallationMethod[]
-  tools: McpTool[]
+  installation_methods?: InstallationMethod[]
+  tools?: McpTool[]
   resources?: McpResource[]
   prompts?: McpPrompt[]
   visibility: 'global' | 'team'
@@ -97,6 +97,8 @@ export interface CreateMcpServerRequest {
   category_id?: string
   tags?: string[]
   featured?: boolean
+  // NEW: Claude Desktop configuration for automatic extraction
+  claude_desktop_config?: Record<string, any>
 }
 
 export interface UpdateMcpServerRequest {

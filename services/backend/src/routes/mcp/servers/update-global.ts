@@ -172,8 +172,23 @@ export default async function updateGlobalServer(server: FastifyInstance) {
       const db = getDb();
       const mcpService = new McpCatalogService(db, request.log);
       
+      request.log.info({
+        operation: 'update_global_mcp_server',
+        step: 'start',
+        serverId,
+        updateData
+      }, 'Starting update process');
+      
       // First check if server exists and is global
       const existingServer = await mcpService.getServerById(serverId);
+      request.log.info({
+        operation: 'update_global_mcp_server',
+        step: 'get_server',
+        serverId,
+        found: !!existingServer,
+        visibility: existingServer?.visibility
+      }, 'Retrieved existing server');
+      
       if (!existingServer) {
         request.log.warn({
           operation: 'update_global_mcp_server',
@@ -201,12 +216,26 @@ export default async function updateGlobalServer(server: FastifyInstance) {
         });
       }
 
+      request.log.info({
+        operation: 'update_global_mcp_server',
+        step: 'calling_service',
+        serverId,
+        userId: request.user!.id
+      }, 'Calling updateServer service method');
+
       const updatedServer = await mcpService.updateServer(
         serverId,
         request.user!.id,
         'global_admin', // We know user is global admin due to middleware
         updateData
       );
+      
+      request.log.info({
+        operation: 'update_global_mcp_server',
+        step: 'service_complete',
+        serverId,
+        success: !!updatedServer
+      }, 'Service method completed');
 
       if (!updatedServer) {
         return reply.status(404).send({
@@ -223,7 +252,49 @@ export default async function updateGlobalServer(server: FastifyInstance) {
         updatedFields: Object.keys(updateData)
       }, 'Global MCP server updated successfully');
 
-      // Parse JSON fields for response with proper null checks and explicit field mapping
+      // Safe JSON parsing helper function
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const safeJsonParse = (fieldValue: any, defaultValue: any) => {
+        if (!fieldValue || fieldValue === '' || (typeof fieldValue === 'string' && fieldValue.trim() === '')) {
+          return defaultValue;
+        }
+        if (typeof fieldValue !== 'string') {
+          return fieldValue; // Already parsed or not a string
+        }
+        try {
+          return JSON.parse(fieldValue);
+        } catch (e) {
+          request.log.warn({ 
+            fieldValue, 
+            error: e,
+            serverId: updatedServer.id 
+          }, 'Failed to parse JSON field in response, using default value');
+          return defaultValue;
+        }
+      };
+
+      // Format dates safely
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const formatDate = (date: any) => {
+        if (!date) return null;
+        try {
+          if (typeof date === 'number') {
+            return new Date(date).toISOString();
+          }
+          if (date instanceof Date) {
+            return date.toISOString();
+          }
+          return new Date(date).toISOString();
+        } catch (error) {
+          request.log.warn({
+            dateValue: date,
+            error
+          }, 'Failed to format date field, using null');
+          return null;
+        }
+      };
+
+      // Parse JSON fields for response with safe parsing
       const responseData = {
         id: updatedServer.id,
         name: updatedServer.name,
@@ -236,10 +307,10 @@ export default async function updateGlobalServer(server: FastifyInstance) {
         language: updatedServer.language,
         runtime: updatedServer.runtime,
         runtime_min_version: updatedServer.runtime_min_version || null,
-        installation_methods: updatedServer.installation_methods ? JSON.parse(updatedServer.installation_methods) : [],
-        tools: updatedServer.tools ? JSON.parse(updatedServer.tools) : [],
-        resources: updatedServer.resources ? JSON.parse(updatedServer.resources) : null,
-        prompts: updatedServer.prompts ? JSON.parse(updatedServer.prompts) : null,
+        installation_methods: safeJsonParse(updatedServer.installation_methods, []),
+        tools: safeJsonParse(updatedServer.tools, []),
+        resources: safeJsonParse(updatedServer.resources, null),
+        prompts: safeJsonParse(updatedServer.prompts, null),
         visibility: updatedServer.visibility,
         owner_team_id: updatedServer.owner_team_id || null,
         created_by: updatedServer.created_by,
@@ -247,16 +318,16 @@ export default async function updateGlobalServer(server: FastifyInstance) {
         author_contact: updatedServer.author_contact || null,
         organization: updatedServer.organization || null,
         license: updatedServer.license || null,
-        default_config: updatedServer.default_config ? JSON.parse(updatedServer.default_config) : null,
-        environment_variables: updatedServer.environment_variables ? JSON.parse(updatedServer.environment_variables) : null,
-        dependencies: updatedServer.dependencies ? JSON.parse(updatedServer.dependencies) : null,
+        default_config: safeJsonParse(updatedServer.default_config, null),
+        environment_variables: safeJsonParse(updatedServer.environment_variables, null),
+        dependencies: safeJsonParse(updatedServer.dependencies, null),
         category_id: updatedServer.category_id || null,
-        tags: updatedServer.tags ? JSON.parse(updatedServer.tags) : null,
+        tags: safeJsonParse(updatedServer.tags, null),
         status: updatedServer.status,
         featured: updatedServer.featured,
-        created_at: updatedServer.created_at.toISOString(),
-        updated_at: updatedServer.updated_at.toISOString(),
-        last_sync_at: updatedServer.last_sync_at?.toISOString() || null
+        created_at: formatDate(updatedServer.created_at),
+        updated_at: formatDate(updatedServer.updated_at),
+        last_sync_at: formatDate(updatedServer.last_sync_at)
       };
 
       return reply.status(200).send({

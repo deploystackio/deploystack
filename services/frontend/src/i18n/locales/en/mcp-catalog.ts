@@ -46,6 +46,7 @@ export default {
 
     steps: {
       github: 'GitHub Repository',
+      claudeConfig: 'Claude Desktop Config',
       basic: 'Basic Info',
       repository: 'Repository',
       technical: 'Technical',
@@ -77,6 +78,48 @@ export default {
       success: 'Repository information has been automatically populated in the form fields below.'
     },
 
+    claudeConfig: {
+      title: 'Claude Desktop Configuration',
+      description: 'Paste your Claude Desktop configuration JSON. This should contain exactly one MCP server configuration.',
+      label: 'Claude Desktop Configuration',
+      placeholder: 'Paste your Claude Desktop configuration JSON here...',
+      formatButton: 'Format JSON',
+      validConfiguration: 'Valid Configuration',
+      invalidConfiguration: 'Invalid Configuration',
+      preview: {
+        title: 'Configuration Preview',
+        serverName: 'Server Name',
+        command: 'Command',
+        environmentVariables: 'Environment Variables'
+      },
+      examples: {
+        title: 'Example Configurations',
+        brightData: {
+          title: 'Bright Data MCP Server',
+          description: 'Web scraping and data collection'
+        },
+        filesystem: {
+          title: 'Filesystem Server',
+          description: 'File system access and management'
+        },
+        postgres: {
+          title: 'PostgreSQL Server',
+          description: 'Database connectivity and queries'
+        },
+        copyExample: 'Copy example'
+      },
+      validation: {
+        required: 'Configuration is required',
+        invalidJson: 'Invalid JSON format',
+        missingMcpServers: 'Configuration must contain "mcpServers" object',
+        noServers: 'At least one MCP server must be defined in "mcpServers"',
+        multipleServers: 'Only one MCP server is allowed per configuration',
+        missingCommand: 'Server must have a "command" field',
+        missingArgs: 'Server must have an "args" array',
+        invalidEnv: 'Server "env" must be an object if provided'
+      }
+    },
+
     navigation: {
       next: 'Next',
       previous: 'Previous',
@@ -84,7 +127,8 @@ export default {
       update: 'Update Server',
       creating: 'Creating...',
       updating: 'Updating...',
-      cancel: 'Cancel'
+      cancel: 'Cancel',
+      fetching: 'Fetching...'
     },
 
     basic: {

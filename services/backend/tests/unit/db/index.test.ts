@@ -193,7 +193,7 @@ describe('Database Service (db/index.ts)', () => {
     
     // Default fs mocks
     mockMkdir.mockResolvedValue(undefined);
-    mockAccess.mockRejectedValue(new Error('ENOENT'));
+    mockAccess.mockRejectedValue(new Error('ENOENT')); // Migrations directory doesn't exist
     mockReaddir.mockResolvedValue([]);
     mockStat.mockResolvedValue({ isDirectory: () => true } as any);
     mockReadFile.mockResolvedValue('');
@@ -262,7 +262,6 @@ describe('Database Service (db/index.ts)', () => {
     it('should successfully initialize SQLite database', async () => {
       mockedGetDatabaseConfig.mockReturnValue(sqliteConfig);
       mockedValidateDatabaseConfig.mockReturnValue(true);
-      mockAccess.mockResolvedValue(undefined);
 
       const result = await initializeDatabase(mockLogger);
       
@@ -280,7 +279,6 @@ describe('Database Service (db/index.ts)', () => {
     it('should successfully initialize Turso database', async () => {
       mockedGetDatabaseConfig.mockReturnValue(tursoConfig);
       mockedValidateDatabaseConfig.mockReturnValue(true);
-      mockAccess.mockResolvedValue(undefined);
 
       const result = await initializeDatabase(mockLogger);
       
@@ -289,8 +287,7 @@ describe('Database Service (db/index.ts)', () => {
         url: tursoConfig.url,
         authToken: tursoConfig.authToken,
       });
-      // The drizzleLibSQL is called with the client and schema options
-      // Based on the actual call, it's being called with undefined first, then schema object
+      // The drizzleLibSQL is called with undefined and schema options (this is how the actual implementation works)
       expect(mockedDrizzleLibSQL).toHaveBeenCalledWith(undefined, { schema: expect.any(Object) });
     });
 
@@ -314,12 +311,11 @@ describe('Database Service (db/index.ts)', () => {
       // First initialization
       mockedGetDatabaseConfig.mockReturnValue(sqliteConfig);
       mockedValidateDatabaseConfig.mockReturnValue(true);
-      mockAccess.mockResolvedValue(undefined);
 
       await initializeDatabase(mockLogger);
       vi.clearAllMocks();
 
-      // Second initialization
+      // Second initialization - should return true since already initialized
       const result = await initializeDatabase(mockLogger);
       
       expect(result).toBe(true);

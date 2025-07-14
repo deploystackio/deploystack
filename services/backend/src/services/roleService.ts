@@ -263,6 +263,7 @@ export class RoleService {
         'mcp.categories.create',
         'mcp.categories.edit',
         'mcp.categories.delete',
+        'mcp.servers.read',
         'mcp.servers.global.view',
         'mcp.servers.global.create',
         'mcp.servers.global.edit',
@@ -278,6 +279,7 @@ export class RoleService {
         'teams.edit',
         'teams.delete',
         'team.members.view',
+        'mcp.servers.read',
       ],
       team_admin: [
         'teams.view',
@@ -289,12 +291,12 @@ export class RoleService {
         'cloud_credentials.view',
         'cloud_credentials.create',
         'cloud_credentials.edit',
-        'cloud_credentials.delete',
+        'cloud_credentials.delete'
       ],
       team_user: [
         'teams.view',
         'team.members.view',
-        'cloud_credentials.view',
+        'cloud_credentials.view'
       ],
     };
   }

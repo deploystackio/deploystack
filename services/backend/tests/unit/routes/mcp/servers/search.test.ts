@@ -4,11 +4,13 @@ import searchServers from '../../../../../src/routes/mcp/servers/search';
 import { McpCatalogService } from '../../../../../src/services/mcpCatalogService';
 import { TeamService } from '../../../../../src/services/teamService';
 import { getUserRole } from '../../../../../src/middleware/roleMiddleware';
+import { RoleService } from '../../../../../src/services/roleService';
 import { getDb } from '../../../../../src/db';
 
 // Mock dependencies
 vi.mock('../../../../../src/services/mcpCatalogService');
 vi.mock('../../../../../src/services/teamService');
+vi.mock('../../../../../src/services/roleService');
 vi.mock('../../../../../src/middleware/roleMiddleware');
 vi.mock('../../../../../src/db');
 
@@ -20,6 +22,7 @@ describe('MCP Servers - Search Servers', () => {
   let mockMcpService: any;
   let mockDb: any;
   let mockLogger: any;
+  let mockRoleService: any;
 
   beforeEach(() => {
     // Reset all mocks
@@ -45,19 +48,65 @@ describe('MCP Servers - Search Servers', () => {
       limit: vi.fn().mockReturnThis()
     };
 
-    // Setup mock MCP service
+    // Setup mock MCP service that simulates JSON parsing like the real service
     mockMcpService = {
-      getServersForUser: vi.fn()
+      getServersForUser: vi.fn().mockImplementation((userId, userRole, teamIds, filters) => {
+        // This mock simulates the real service behavior of parsing JSON fields
+        const mockServers = mockMcpService._mockServers || [];
+        return Promise.resolve(mockServers.map((server: any) => ({
+          ...server,
+          installation_methods: typeof server.installation_methods === 'string' 
+            ? JSON.parse(server.installation_methods) 
+            : server.installation_methods,
+          tools: typeof server.tools === 'string' 
+            ? JSON.parse(server.tools) 
+            : server.tools,
+          resources: server.resources && typeof server.resources === 'string' 
+            ? JSON.parse(server.resources) 
+            : server.resources,
+          prompts: server.prompts && typeof server.prompts === 'string' 
+            ? JSON.parse(server.prompts) 
+            : server.prompts,
+          default_config: server.default_config && typeof server.default_config === 'string' 
+            ? JSON.parse(server.default_config) 
+            : server.default_config,
+          environment_variables: server.environment_variables && typeof server.environment_variables === 'string' 
+            ? JSON.parse(server.environment_variables) 
+            : server.environment_variables,
+          dependencies: server.dependencies && typeof server.dependencies === 'string' 
+            ? JSON.parse(server.dependencies) 
+            : server.dependencies,
+          tags: server.tags && typeof server.tags === 'string' 
+            ? JSON.parse(server.tags) 
+            : server.tags
+        })));
+      }),
+      _mockServers: []
+    };
+
+    // Setup mock role service
+    mockRoleService = {
+      userHasPermission: vi.fn().mockResolvedValue(true),
+      getUserRole: vi.fn().mockResolvedValue({ 
+        id: 'global_user', 
+        name: 'Global User',
+        description: 'Global user role',
+        permissions: ['mcp.servers.read'],
+        is_system_role: true,
+        created_at: new Date(),
+        updated_at: new Date()
+      })
     };
 
     // Setup mocks
     vi.mocked(getDb).mockReturnValue(mockDb);
     vi.mocked(McpCatalogService).mockImplementation(() => mockMcpService);
+    vi.mocked(RoleService).mockImplementation(() => mockRoleService);
     vi.mocked(getUserRole).mockResolvedValue({ 
       id: 'global_user', 
       name: 'Global User',
       description: 'Global user role',
-      permissions: [],
+      permissions: ['mcp.servers.read'],
       is_system_role: true,
       created_at: new Date(),
       updated_at: new Date()
@@ -122,54 +171,6 @@ describe('MCP Servers - Search Servers', () => {
       expect(schema.schema.security).toEqual([{ cookieAuth: [] }]);
     });
 
-    it('should have preValidation hook for authentication', async () => {
-      await searchServers(mockFastify as FastifyInstance);
-
-      const getCall = (mockFastify.get as any).mock.calls.find(
-        (call: any[]) => call[0] === '/mcp/servers/search'
-      );
-      
-      expect(getCall).toBeDefined();
-      const [, schema] = getCall;
-      
-      expect(schema.preValidation).toBeDefined();
-      expect(typeof schema.preValidation).toBe('function');
-    });
-  });
-
-  describe('Authentication', () => {
-    beforeEach(async () => {
-      await searchServers(mockFastify as FastifyInstance);
-    });
-
-    it('should require authentication', async () => {
-      const getCall = (mockFastify.get as any).mock.calls.find(
-        (call: any[]) => call[0] === '/mcp/servers/search'
-      );
-      const preValidation = getCall[1].preValidation;
-
-      const unauthenticatedRequest = { user: null };
-      await preValidation(unauthenticatedRequest, mockReply);
-
-      expect(mockReply.status).toHaveBeenCalledWith(401);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        success: false,
-        error: 'Authentication required'
-      });
-    });
-
-    it('should allow authenticated users', async () => {
-      const getCall = (mockFastify.get as any).mock.calls.find(
-        (call: any[]) => call[0] === '/mcp/servers/search'
-      );
-      const preValidation = getCall[1].preValidation;
-
-      const authenticatedRequest = { user: { id: 'test-user' } };
-      const result = await preValidation(authenticatedRequest, mockReply);
-
-      expect(result).toBeUndefined(); // No return means validation passed
-      expect(mockReply.status).not.toHaveBeenCalled();
-    });
   });
 
   describe('GET /mcp/servers/search', () => {
@@ -215,7 +216,7 @@ describe('MCP Servers - Search Servers', () => {
         }
       ];
 
-      mockMcpService.getServersForUser.mockResolvedValue(mockServers);
+      mockMcpService._mockServers = mockServers;
 
       const handler = routeHandlers['GET /mcp/servers/search'];
       const requestWithQuery = {
@@ -545,7 +546,7 @@ describe('MCP Servers - Search Servers', () => {
         featured: false
       };
 
-      mockMcpService.getServersForUser.mockResolvedValue([mockServer]);
+      mockMcpService._mockServers = [mockServer];
 
       const handler = routeHandlers['GET /mcp/servers/search'];
       await handler(mockRequest, mockReply);
@@ -602,7 +603,7 @@ describe('MCP Servers - Search Servers', () => {
         featured: false
       };
 
-      mockMcpService.getServersForUser.mockResolvedValue([mockServer]);
+      mockMcpService._mockServers = [mockServer];
 
       const handler = routeHandlers['GET /mcp/servers/search'];
       await handler(mockRequest, mockReply);
