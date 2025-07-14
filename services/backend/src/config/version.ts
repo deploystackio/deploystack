@@ -9,8 +9,8 @@ export interface VersionInfo {
 
 // This will be replaced by the build script
 let versionData: VersionInfo = {
-  version: '0.23.0',
-  buildTime: '2025-07-09T18:00:55.176Z',
+  version: '0.24.0',
+  buildTime: '2025-07-14T20:28:04.774Z',
   source: 'release'
 };
 
