@@ -565,15 +565,15 @@ const goBack = () => {
                 <div v-if="displayEnvironmentVariables && Object.keys(displayEnvironmentVariables).length > 0">
                   <ul role="list" class="divide-y divide-gray-100 rounded-md border border-gray-200">
                     <li
-                      v-for="(variable, name) in displayEnvironmentVariables"
-                      :key="name"
+                      v-for="(variable, index) in displayEnvironmentVariables"
+                      :key="index"
                       class="flex items-center justify-between py-4 pr-5 pl-4 text-sm/6"
                     >
                       <div class="flex w-0 flex-1 items-center">
                         <Settings class="size-5 shrink-0 text-gray-400" aria-hidden="true" />
                         <div class="ml-4 flex min-w-0 flex-1 gap-2">
                           <div class="flex flex-col">
-                            <span class="truncate font-medium font-mono">{{ name }}</span>
+                            <span class="truncate font-medium font-mono">{{ variable.name }}</span>
                             <span v-if="variable.description" class="truncate text-xs text-gray-500">{{ variable.description }}</span>
                             <div class="flex gap-2 mt-1">
                               <Badge v-if="variable.required" variant="destructive" class="text-xs">Required</Badge>
