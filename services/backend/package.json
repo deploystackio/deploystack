@@ -28,7 +28,7 @@
     "@octokit/auth-app": "^8.0.1",
     "@octokit/request": "^10.0.3",
     "arctic": "^3.7.0",
-    "argon2": "^0.43.0",
+    "argon2": "^0.43.1",
     "better-sqlite3": "^12.2.0",
     "drizzle-orm": "^0.44.2",
     "fastify": "^5.4.0",
