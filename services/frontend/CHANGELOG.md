@@ -1,5 +1,9 @@
 # Changelog
 
+## <small>0.16.1 (2025-07-14)</small>
+
+* release v0.16.0 ([2b75025](https://github.com/deploystackio/deploystack/commit/2b75025db9903098e9c7adb5fadd7362d254fc4a))* update team selection logic and storage integration ([0c23064](https://github.com/deploystackio/deploystack/commit/0c23064ac4e51e71ccb076c14d45ad5ef04b2d58))* centralize role permissions management and synchronize with database ([197dd8b](https://github.com/deploystackio/deploystack/commit/197dd8ba4702527329a08516f4f6fade519739c2))* Refactor MCP server catalog forms and add Claude Desktop configuration step ([83579a4](https://github.com/deploystackio/deploystack/commit/83579a45359b08164b68a14a213c52937a3b2032))* remove edit view and replace with view functionality for MCP server catalog ([f5565c1](https://github.com/deploystackio/deploystack/commit/f5565c1f9d06186be0189eaa5dc01da2d6e9c1e7))
+
 ## 0.16.0 (2025-07-14)
 
 * centralize role permissions management and synchronize with database ([197dd8b](https://github.com/deploystackio/deploystack/commit/197dd8ba4702527329a08516f4f6fade519739c2))* Refactor MCP server catalog forms and add Claude Desktop configuration step ([83579a4](https://github.com/deploystackio/deploystack/commit/83579a45359b08164b68a14a213c52937a3b2032))* remove edit view and replace with view functionality for MCP server catalog ([f5565c1](https://github.com/deploystackio/deploystack/commit/f5565c1f9d06186be0189eaa5dc01da2d6e9c1e7))* update team selection logic and storage integration ([0c23064](https://github.com/deploystackio/deploystack/commit/0c23064ac4e51e71ccb076c14d45ad5ef04b2d58))
