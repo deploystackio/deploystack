@@ -74,7 +74,19 @@ const routes = [
   {
     path: '/mcp-server',
     name: 'McpServer',
-    component: () => import('../views/McpServer.vue'),
+    component: () => import('../views/mcp-server/index.vue'),
+    meta: { requiresSetup: true },
+  },
+  {
+    path: '/mcp-server/add',
+    name: 'McpServerAdd',
+    component: () => import('../views/mcp-server/add.vue'),
+    meta: { requiresSetup: true },
+  },
+  {
+    path: '/mcp-server/view/:id',
+    name: 'McpServerView',
+    component: () => import('../views/mcp-server/view/[id].vue'),
     meta: { requiresSetup: true },
   },
   {

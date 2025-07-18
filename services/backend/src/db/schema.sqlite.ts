@@ -207,6 +207,32 @@ export const mcpServerVersions = sqliteTable('mcpServerVersions', {
   latestIdx: index('mcp_server_versions_latest_idx').on(table.is_latest),
 }));
 
+// MCP Server Installations - User installations of MCP servers within teams
+export const mcpServerInstallations = sqliteTable('mcpServerInstallations', {
+  id: text('id').primaryKey(),
+  
+  // References
+  team_id: text('team_id').notNull().references(() => teams.id, { onDelete: 'cascade' }),
+  server_id: text('server_id').notNull().references(() => mcpServers.id, { onDelete: 'cascade' }),
+  user_id: text('user_id').notNull().references(() => authUser.id),
+  
+  // Installation details
+  installation_name: text('installation_name').notNull(), // User-friendly name like "My Bright Data"
+  installation_type: text('installation_type').notNull().default('local'), // 'local' or 'cloud'
+  
+  // User's actual environment variables (encrypted JSON)
+  user_environment_variables: text('user_environment_variables'), // JSON: {"API_TOKEN": "actual-user-token"}
+  
+  // Metadata
+  created_at: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  updated_at: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  last_used_at: integer('last_used_at', { mode: 'timestamp' }),
+}, (table) => ({
+  teamInstallationNameIdx: index('mcp_installations_team_name_idx').on(table.team_id, table.installation_name),
+  teamServerIdx: index('mcp_installations_team_server_idx').on(table.team_id, table.server_id),
+  userIdx: index('mcp_installations_user_idx').on(table.user_id),
+}));
+
 // Plugin table definitions - populated dynamically by the plugin system
 // This object will hold definitions for plugin tables, to be populated dynamically.
 // Key: Table name (e.g., 'myPlugin_myTable')

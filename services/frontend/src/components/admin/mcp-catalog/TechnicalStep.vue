@@ -1,18 +1,13 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Input } from '@/components/ui/input'
+import { useEventBus } from '@/composables/useEventBus'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Info } from 'lucide-vue-next'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { AlertCircle, CheckCircle, Copy } from 'lucide-vue-next'
 import type {
   TechnicalFormData
 } from '@/views/admin/mcp-server-catalog/types'
@@ -30,245 +25,341 @@ interface Emits {
 const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 const { t } = useI18n()
+const eventBus = useEventBus()
 
-// Import options from types
-const languageOptions = [
-  { value: 'typescript', label: 'TypeScript' },
-  { value: 'javascript', label: 'JavaScript' },
-  { value: 'python', label: 'Python' },
-  { value: 'go', label: 'Go' },
-  { value: 'rust', label: 'Rust' },
-  { value: 'java', label: 'Java' },
-  { value: 'csharp', label: 'C#' },
-  { value: 'other', label: 'Other' }
-]
+// Local state for Claude Desktop config
+const jsonInput = ref('')
+const validationError = ref<string | null>(null)
+const isValid = ref(false)
+const extractedServerName = ref<string>('')
+const extractedCommand = ref<string>('')
+const extractedEnvVars = ref<string[]>([])
 
-const runtimeOptions = [
-  { value: 'node', label: 'Node.js' },
-  { value: 'python', label: 'Python' },
-  { value: 'docker', label: 'Docker' },
-  { value: 'go', label: 'Go' },
-  { value: 'rust', label: 'Rust' },
-  { value: 'java', label: 'Java' },
-  { value: 'dotnet', label: '.NET' },
-  { value: 'other', label: 'Other' }
-]
+// Storage key for persistence
+const STORAGE_KEY = 'edit_claude_config'
 
-// Computed model
-const localValue = computed({
-  get: () => props.modelValue,
-  set: (value) => emit('update:modelValue', value)
-})
+// Initialize from storage or convert from existing data
+onMounted(() => {
+  // Try to get from storage first
+  const storedConfig = eventBus.getState<string>(STORAGE_KEY)
 
-// Claude Desktop configuration as JSON string
-const claudeDesktopConfig = computed({
-  get: () => {
-    // Convert installation_methods array to Claude Desktop JSON format
-    if (localValue.value.installation_methods.length === 0) {
-      return JSON.stringify({
-        "mcpServers": {
-          "server-name": {
-            "command": "npx",
-            "args": ["@package/name"],
-            "env": {
-              "API_TOKEN": "<your-api-token>"
-            }
-          }
-        }
-      }, null, 2)
-    }
-
-    // Convert existing data to Claude Desktop format
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const mcpServers: Record<string, any> = {}
-    localValue.value.installation_methods.forEach((method, index) => {
-      const serverName = `server-${index + 1}`
-      mcpServers[serverName] = {
-        command: method.command,
-        args: method.args || [],
-        env: method.env || {}
-      }
-    })
-
-    return JSON.stringify({ mcpServers }, null, 2)
-  },
-  set: (jsonString: string) => {
-    // Don't try to parse empty or whitespace-only strings
-    if (!jsonString.trim()) {
-      return
-    }
-
-    try {
-      const parsed = JSON.parse(jsonString)
-
-      // Extract mcpServers from the JSON
-      const mcpServers = parsed.mcpServers || {}
-
-      // Convert to installation_methods array
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const installationMethods = Object.entries(mcpServers).map(([, config]: [string, any]) => ({
-        client: 'claude-desktop' as const,
-        command: config.command || 'npx',
-        args: config.args || [],
-        env: config.env || {}
-      }))
-
-      localValue.value = {
-        ...localValue.value,
-        installation_methods: installationMethods
-      }
-    } catch {
-      // Invalid JSON - silently ignore while user is typing
-      // No logging to avoid console spam
-    }
+  if (storedConfig) {
+    jsonInput.value = storedConfig
+  } else {
+    // Convert existing installation_methods to Claude Desktop format
+    convertExistingDataToJson()
   }
 })
 
-const exampleConfig = `{
+// Convert existing installation_methods to Claude Desktop JSON format
+const convertExistingDataToJson = () => {
+  if (props.modelValue.installation_methods && props.modelValue.installation_methods.length > 0) {
+    // Find the first valid installation method (skip git clone templates)
+    const validMethod = props.modelValue.installation_methods.find(method =>
+      method.command &&
+      method.command !== 'git clone <repository_url>' &&
+      !method.command.includes('<repository_url>')
+    )
+
+    if (validMethod) {
+      const serverName = extractServerNameFromMethod(validMethod) || 'mcp-server'
+
+      const claudeConfig = {
+        mcpServers: {
+          [serverName]: {
+            command: validMethod.command || 'npx',
+            args: validMethod.args || [],
+            env: validMethod.env || {}
+          }
+        }
+      }
+
+      jsonInput.value = JSON.stringify(claudeConfig, null, 2)
+    }
+  }
+}
+
+// Helper function to extract server name from installation method
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const extractServerNameFromMethod = (method: any): string => {
+  // Try to extract from package name in args
+  if (method.args && method.args.length > 0) {
+    for (const arg of method.args) {
+      // Handle npm packages like "@brightdata/mcp" or "playwright-mcp"
+      if (arg.includes('/')) {
+        const parts = arg.split('/')
+        return parts[parts.length - 1].replace('-mcp', '').replace('mcp-', '')
+      }
+      // Handle direct package names
+      if (arg.includes('mcp') || arg.includes('-')) {
+        return arg.replace('-mcp', '').replace('mcp-', '')
+      }
+    }
+  }
+
+  // Try to extract from form name
+  if (props.formData?.basic?.name) {
+    return props.formData.basic.name.toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .replace('-mcp', '')
+      .replace('mcp-', '')
+  }
+
+  return 'mcp-server'
+}
+
+// Example configurations
+const examples = computed(() => [
+  {
+    title: t('mcpCatalog.form.technical.claudeConfig.examples.brightData.title'),
+    description: t('mcpCatalog.form.technical.claudeConfig.examples.brightData.description'),
+    config: `{
   "mcpServers": {
-    "brightdata": {
+    "bright-data": {
       "command": "npx",
-      "args": ["-y", "@brightdata/mcp"],
+      "args": ["@brightdata/mcp"],
       "env": {
         "API_TOKEN": "<your-bright-data-api-token>"
       }
     }
   }
 }`
+  },
+  {
+    title: t('mcpCatalog.form.technical.claudeConfig.examples.filesystem.title'),
+    description: t('mcpCatalog.form.technical.claudeConfig.examples.filesystem.description'),
+    config: `{
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": ["@modelcontextprotocol/server-filesystem", "/path/to/directory"],
+      "env": {}
+    }
+  }
+}`
+  }
+])
+
+// Validation function (copied from ClaudeDesktopConfigStep)
+const validateJson = (jsonString: string) => {
+  try {
+    if (!jsonString.trim()) {
+      return { isValid: false, error: t('mcpCatalog.form.technical.claudeConfig.validation.required') }
+    }
+
+    const parsed = JSON.parse(jsonString)
+
+    // Check if it has mcpServers property
+    if (!parsed.mcpServers || typeof parsed.mcpServers !== 'object') {
+      return { isValid: false, error: t('mcpCatalog.form.technical.claudeConfig.validation.missingMcpServers') }
+    }
+
+    // Check if exactly one server is defined
+    const serverKeys = Object.keys(parsed.mcpServers)
+    if (serverKeys.length === 0) {
+      return { isValid: false, error: t('mcpCatalog.form.technical.claudeConfig.validation.noServers') }
+    }
+    if (serverKeys.length > 1) {
+      return { isValid: false, error: t('mcpCatalog.form.technical.claudeConfig.validation.multipleServers') }
+    }
+
+    const serverKey = serverKeys[0]
+    const serverConfig = parsed.mcpServers[serverKey]
+
+    // Validate server configuration structure
+    if (!serverConfig.command || typeof serverConfig.command !== 'string') {
+      return { isValid: false, error: t('mcpCatalog.form.technical.claudeConfig.validation.missingCommand') }
+    }
+
+    if (!serverConfig.args || !Array.isArray(serverConfig.args)) {
+      return { isValid: false, error: t('mcpCatalog.form.technical.claudeConfig.validation.missingArgs') }
+    }
+
+    // env is optional but if present must be an object
+    if (serverConfig.env && typeof serverConfig.env !== 'object') {
+      return { isValid: false, error: t('mcpCatalog.form.technical.claudeConfig.validation.invalidEnv') }
+    }
+
+    return {
+      isValid: true,
+      parsed,
+      serverName: serverKey,
+      command: serverConfig.command,
+      args: serverConfig.args,
+      envVars: serverConfig.env ? Object.keys(serverConfig.env) : []
+    }
+  } catch {
+    return { isValid: false, error: t('mcpCatalog.form.technical.claudeConfig.validation.invalidJson') }
+  }
+}
+
+// Watch for input changes and validate
+watch(jsonInput, (newValue) => {
+  // Store in event bus storage
+  eventBus.setState(STORAGE_KEY, newValue)
+
+  const validation = validateJson(newValue)
+
+  if (validation.isValid) {
+    validationError.value = null
+    isValid.value = true
+    extractedServerName.value = validation.serverName || ''
+    extractedCommand.value = validation.command || ''
+    extractedEnvVars.value = validation.envVars || []
+
+    // Convert back to installation_methods format for form compatibility
+    const serverName = validation.serverName!
+    const serverConfig = validation.parsed.mcpServers[serverName]
+
+    const installationMethods = [{
+      client: 'claude-desktop' as const,
+      command: serverConfig.command,
+      args: serverConfig.args,
+      env: serverConfig.env || {}
+    }]
+
+    // Update the form data
+    emit('update:modelValue', {
+      ...props.modelValue,
+      installation_methods: installationMethods
+    })
+  } else {
+    validationError.value = validation.error || t('mcpCatalog.form.technical.claudeConfig.validation.invalidJson')
+    isValid.value = false
+    extractedServerName.value = ''
+    extractedCommand.value = ''
+    extractedEnvVars.value = []
+  }
+}, { immediate: true })
+
+// Helper functions
+const copyExample = (config: string) => {
+  jsonInput.value = config
+  navigator.clipboard.writeText(config)
+}
+
+const formatJson = () => {
+  try {
+    const parsed = JSON.parse(jsonInput.value)
+    jsonInput.value = JSON.stringify(parsed, null, 2)
+  } catch {
+    // Ignore formatting errors
+  }
+}
+
+// Computed properties
+const statusIcon = computed(() => {
+  return isValid.value ? CheckCircle : AlertCircle
+})
+
+const statusColor = computed(() => {
+  return isValid.value ? 'text-green-600' : 'text-red-600'
+})
+
+// Clean up storage on unmount
+onUnmounted(() => {
+  eventBus.clearState(STORAGE_KEY)
+})
 </script>
 
 <template>
   <div class="space-y-6">
+    <!-- Header -->
     <div>
       <h3 class="text-lg font-medium">{{ t('mcpCatalog.form.technical.title') }}</h3>
-      <p class="text-sm text-muted-foreground">{{ t('mcpCatalog.form.technical.subtitle') }}</p>
-    </div>
-
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <!-- Programming Language -->
-      <div class="space-y-2">
-        <Label for="language">{{ t('mcpCatalog.form.technical.language.label') }}</Label>
-        <Select v-model="localValue.language">
-          <SelectTrigger>
-            <SelectValue :placeholder="t('mcpCatalog.form.technical.language.placeholder')" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem
-              v-for="option in languageOptions"
-              :key="option.value"
-              :value="option.value"
-            >
-              {{ option.label }}
-            </SelectItem>
-          </SelectContent>
-        </Select>
-        <p class="text-xs text-muted-foreground">
-          {{ t('mcpCatalog.form.technical.language.description') }}
-        </p>
-      </div>
-
-      <!-- Runtime Environment -->
-      <div class="space-y-2">
-        <Label for="runtime">{{ t('mcpCatalog.form.technical.runtime.label') }}</Label>
-        <Select v-model="localValue.runtime">
-          <SelectTrigger>
-            <SelectValue :placeholder="t('mcpCatalog.form.technical.runtime.placeholder')" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem
-              v-for="option in runtimeOptions"
-              :key="option.value"
-              :value="option.value"
-            >
-              {{ option.label }}
-            </SelectItem>
-          </SelectContent>
-        </Select>
-        <p class="text-xs text-muted-foreground">
-          {{ t('mcpCatalog.form.technical.runtime.description') }}
-        </p>
-      </div>
-    </div>
-
-    <!-- Minimum Runtime Version -->
-    <div class="space-y-2">
-      <Label for="runtime_min_version">{{ t('mcpCatalog.form.technical.minVersion.label') }}</Label>
-      <Input
-        id="runtime_min_version"
-        v-model="localValue.runtime_min_version"
-        :placeholder="t('mcpCatalog.form.technical.minVersion.placeholder')"
-      />
-      <p class="text-xs text-muted-foreground">
-        {{ t('mcpCatalog.form.technical.minVersion.description') }}
+      <p class="text-sm text-muted-foreground mt-1">
+        {{ t('mcpCatalog.form.technical.subtitle') }}
       </p>
     </div>
 
-    <!-- Claude Desktop Configuration -->
-    <div class="space-y-4">
-      <div>
-        <Label>Claude Desktop Configuration</Label>
-        <p class="text-xs text-muted-foreground">
-          Paste the complete Claude Desktop configuration JSON. You can copy this from GitHub repositories or documentation.
-        </p>
-      </div>
-
-      <!-- Client Type (Fixed to Claude Desktop) -->
-      <div class="space-y-2">
-        <Label>Client Type</Label>
-        <Select model-value="claude-desktop" disabled>
-          <SelectTrigger>
-            <SelectValue placeholder="Claude Desktop" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="claude-desktop">Claude Desktop</SelectItem>
-          </SelectContent>
-        </Select>
-        <p class="text-xs text-muted-foreground">
-          Currently only Claude Desktop is supported. More clients will be added in the future.
-        </p>
-      </div>
-
-      <!-- Configuration JSON Textarea -->
-      <div class="space-y-2">
-        <Label>Configuration JSON</Label>
-        <Textarea
-          v-model="claudeDesktopConfig"
-          placeholder="Paste Claude Desktop configuration JSON here..."
-          rows="12"
-          class="font-mono text-sm"
-        />
-        <p class="text-xs text-muted-foreground">
-          Paste the complete <code class="bg-muted px-1 rounded">claude_desktop_config.json</code> content here.
-        </p>
-      </div>
-
-      <!-- Example Configuration -->
-      <Alert>
-        <Info class="h-4 w-4" />
-        <AlertDescription>
-          <div class="space-y-2">
-            <p class="font-medium">Example Configuration:</p>
-            <pre class="text-xs bg-muted p-3 rounded mt-2 overflow-x-auto">{{ exampleConfig }}</pre>
-            <p class="text-xs">
-              You can copy configurations like this from GitHub repositories or the Claude Desktop documentation.
-            </p>
-          </div>
-        </AlertDescription>
-      </Alert>
-    </div>
-
-    <!-- Dependencies -->
+    <!-- Configuration Input -->
     <div class="space-y-2">
-      <Label for="dependencies">{{ t('mcpCatalog.form.technical.dependencies.label') }}</Label>
+      <div class="flex items-center justify-between">
+        <Label for="claude-config">{{ t('mcpCatalog.form.technical.claudeConfig.label') }}</Label>
+        <div class="flex items-center gap-2">
+          <component :is="statusIcon" :class="['h-4 w-4', statusColor]" />
+          <span :class="['text-sm', statusColor]">
+            {{ isValid ? t('mcpCatalog.form.technical.claudeConfig.validConfiguration') : t('mcpCatalog.form.technical.claudeConfig.invalidConfiguration') }}
+          </span>
+        </div>
+      </div>
+
       <Textarea
-        id="dependencies"
-        v-model="localValue.dependencies"
-        :placeholder="t('mcpCatalog.form.technical.dependencies.placeholder')"
-        rows="4"
+        id="claude-config"
+        v-model="jsonInput"
+        :placeholder="t('mcpCatalog.form.technical.claudeConfig.placeholder')"
+        class="min-h-[200px] font-mono text-sm"
+        :class="{ 'border-destructive': validationError }"
       />
-      <p class="text-xs text-muted-foreground">
-        {{ t('mcpCatalog.form.technical.dependencies.description') }}
-      </p>
+
+      <div class="flex justify-end">
+        <button
+          type="button"
+          @click="formatJson"
+          class="text-xs text-muted-foreground hover:text-foreground"
+        >
+          {{ t('mcpCatalog.form.technical.claudeConfig.formatButton') }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Validation Error -->
+    <Alert v-if="validationError" variant="destructive">
+      <AlertCircle class="h-4 w-4" />
+      <AlertDescription>
+        {{ validationError }}
+      </AlertDescription>
+    </Alert>
+
+    <!-- Configuration Preview -->
+    <Card v-if="isValid" class="border-green-200 bg-green-50">
+      <CardHeader>
+        <CardTitle class="text-sm text-green-800">{{ t('mcpCatalog.form.technical.claudeConfig.preview.title') }}</CardTitle>
+      </CardHeader>
+      <CardContent class="space-y-3">
+        <div>
+          <Label class="text-xs text-green-700">{{ t('mcpCatalog.form.technical.claudeConfig.preview.serverName') }}</Label>
+          <Badge variant="outline" class="ml-2">{{ extractedServerName }}</Badge>
+        </div>
+        <div>
+          <Label class="text-xs text-green-700">{{ t('mcpCatalog.form.technical.claudeConfig.preview.command') }}</Label>
+          <code class="ml-2 text-sm bg-green-100 px-2 py-1 rounded">{{ extractedCommand }}</code>
+        </div>
+        <div v-if="extractedEnvVars.length > 0">
+          <Label class="text-xs text-green-700">{{ t('mcpCatalog.form.technical.claudeConfig.preview.environmentVariables') }}</Label>
+          <div class="flex flex-wrap gap-1 mt-1">
+            <Badge v-for="envVar in extractedEnvVars" :key="envVar" variant="secondary" class="text-xs">
+              {{ envVar }}
+            </Badge>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+
+    <!-- Examples -->
+    <div class="space-y-4">
+      <h4 class="text-sm font-medium">{{ t('mcpCatalog.form.technical.claudeConfig.examples.title') }}</h4>
+      <div class="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
+        <Card v-for="example in examples" :key="example.title" class="cursor-pointer hover:bg-muted/50">
+          <CardHeader class="pb-2">
+            <div class="flex items-center justify-between">
+              <CardTitle class="text-sm">{{ example.title }}</CardTitle>
+              <button
+                @click="copyExample(example.config)"
+                class="p-1 hover:bg-background rounded"
+                :title="t('mcpCatalog.form.technical.claudeConfig.examples.copyExample')"
+              >
+                <Copy class="h-3 w-3" />
+              </button>
+            </div>
+            <CardDescription class="text-xs">{{ example.description }}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <pre class="text-xs bg-muted p-2 rounded overflow-x-auto">{{ example.config }}</pre>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   </div>
 </template>

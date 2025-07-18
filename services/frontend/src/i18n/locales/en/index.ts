@@ -14,6 +14,7 @@ import teamsMessages from './teams'
 import credentialsMessages from './credentials'
 import mcpCatalogMessages from './mcp-catalog'
 import mcpCategoriesMessages from './mcp-categories'
+import mcpInstallationsMessages from './mcp-installations'
 
 export default {
   ...commonMessages,
@@ -31,6 +32,7 @@ export default {
   ...credentialsMessages,
   ...mcpCategoriesMessages,
   mcpCatalog: mcpCatalogMessages,
+  mcpInstallations: mcpInstallationsMessages,
   // If there are any top-level keys directly under 'en', they can be added here.
   // For example, if you had a global 'appName': 'My Application'
   // appName: 'DeployStack Application',

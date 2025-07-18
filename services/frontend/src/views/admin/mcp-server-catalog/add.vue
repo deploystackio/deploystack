@@ -89,11 +89,7 @@ const handleSubmit = async (formData: McpServerAddFormData) => {
       installation_methods: installationMethods,
       environment_variables: environmentVariables,
 
-      // Default tools (required by current backend)
-      tools: [{
-        name: 'mcp_tool',
-        description: 'MCP server tool'
-      }],
+      tools: [],
 
       // Optional fields
       resources: [],

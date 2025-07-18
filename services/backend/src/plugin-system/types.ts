@@ -77,6 +77,7 @@ export interface DatabaseExtension {
    * Can be used for seeding or additional setup.
    * This is called only if the main database initializes successfully.
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onDatabaseInit?: (db: AnyDatabase, schema: any, logger: FastifyBaseLogger) => Promise<void>; // db here will be non-null
 }
 

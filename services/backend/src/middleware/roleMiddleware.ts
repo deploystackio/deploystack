@@ -1,5 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import { RoleService } from '../services/roleService';
+import { TeamService } from '../services/teamService';
+import { ROLE_DEFINITIONS } from '../permissions/index';
 
 // FastifyRequest already has user: User | null from authHook
 // We'll use the existing type
@@ -236,4 +239,172 @@ export async function checkUserPermission(userId: string, permission: string): P
 export async function getUserRole(userId: string) {
   const roleService = new RoleService();
   return roleService.getUserRole(userId);
+}
+
+/**
+ * Team-aware permission middleware
+ * Checks if user has permission within a specific team context
+ */
+export function requireTeamPermission(
+  permission: any, 
+  getTeamId?: (request: FastifyRequest) => string
+) {
+  return async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      // Check if user is authenticated
+      if (!request.user) {
+        return reply.status(401).send({ 
+          success: false,
+          error: 'Authentication required' 
+        });
+      }
+
+      // Extract team ID from request params or use provided function
+      let teamId: string;
+      if (getTeamId) {
+        teamId = getTeamId(request);
+      } else {
+        const params = request.params as { teamId?: string } | undefined;
+        teamId = params?.teamId || '';
+      }
+
+      if (!teamId) {
+        return reply.status(400).send({
+          success: false,
+          error: 'Team ID is required'
+        });
+      }
+
+      const userId = request.user.id;
+
+      request.log.debug({
+        operation: 'team_permission_check',
+        userId,
+        teamId,
+        permission
+      }, `🔐 Checking team permission: ${permission} for team ${teamId}`);
+
+      // Check if user is global admin (bypass team checks)
+      const roleService = new RoleService();
+      const userRole = await roleService.getUserRole(userId);
+      
+      if (userRole?.id === 'global_admin') {
+        // Global admin has access to all teams
+        const globalPermissions = ROLE_DEFINITIONS.global_admin;
+        if ((globalPermissions as unknown as any[]).includes(permission)) {
+          request.log.debug({
+            operation: 'team_permission_check',
+            userId,
+            teamId,
+            permission,
+            result: 'granted_global_admin'
+          }, `✅ Global admin granted permission: ${permission}`);
+          return;
+        }
+      }
+
+      // Check if user is a member of the team
+      const isMember = await TeamService.isTeamMember(teamId, userId);
+      if (!isMember) {
+        request.log.warn({
+          operation: 'team_permission_check',
+          userId,
+          teamId,
+          permission,
+          result: 'not_team_member'
+        }, `❌ User is not a member of team ${teamId}`);
+        
+        return reply.status(403).send({
+          success: false,
+          error: 'You are not a member of this team'
+        });
+      }
+
+      // Get user's role within the team
+      const teamMembership = await TeamService.getTeamMembership(teamId, userId);
+      if (!teamMembership) {
+        return reply.status(403).send({
+          success: false,
+          error: 'Team membership not found'
+        });
+      }
+
+      const teamRole = teamMembership.role; // 'team_admin' or 'team_user'
+
+      // Check if the team role has the required permission
+      const rolePermissions = ROLE_DEFINITIONS[teamRole as keyof typeof ROLE_DEFINITIONS];
+      if (!rolePermissions || !(rolePermissions as unknown as any[]).includes(permission)) {
+        request.log.warn({
+          operation: 'team_permission_check',
+          userId,
+          teamId,
+          permission,
+          teamRole,
+          result: 'insufficient_team_permissions'
+        }, `❌ Team role ${teamRole} does not have permission: ${permission}`);
+        
+        return reply.status(403).send({
+          success: false,
+          error: 'Insufficient permissions for this team operation',
+          required_permission: permission,
+          user_team_role: teamRole
+        });
+      }
+
+      request.log.debug({
+        operation: 'team_permission_check',
+        userId,
+        teamId,
+        permission,
+        teamRole,
+        result: 'granted'
+      }, `✅ Team permission granted: ${permission} (role: ${teamRole})`);
+
+    } catch (error) {
+      request.log.error({
+        operation: 'team_permission_check',
+        error,
+        permission
+      }, `❌ Error checking team permission: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      
+      return reply.status(500).send({ 
+        success: false,
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  };
+}
+
+/**
+ * Utility function to check team permissions without middleware (for use in route handlers)
+ */
+export async function checkUserTeamPermission(
+  userId: string, 
+  teamId: string, 
+  permission: string
+): Promise<boolean> {
+  try {
+    // Check if user is global admin
+    const roleService = new RoleService();
+    const userRole = await roleService.getUserRole(userId);
+    
+    if (userRole?.id === 'global_admin') {
+      const globalPermissions = ROLE_DEFINITIONS.global_admin;
+      return (globalPermissions as unknown as any[]).includes(permission);
+    }
+
+    // Check team membership and role
+    const teamMembership = await TeamService.getTeamMembership(teamId, userId);
+    if (!teamMembership) {
+      return false;
+    }
+
+    const teamRole = teamMembership.role;
+    const rolePermissions = ROLE_DEFINITIONS[teamRole as keyof typeof ROLE_DEFINITIONS];
+    
+    return rolePermissions ? (rolePermissions as unknown as any[]).includes(permission) : false;
+  } catch {
+    return false;
+  }
 }
