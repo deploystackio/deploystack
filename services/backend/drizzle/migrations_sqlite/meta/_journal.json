@@ -120,6 +120,13 @@
       "when": 1751965160824,
       "tag": "0016_wet_blacklash",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "6",
+      "when": 1752585883176,
+      "tag": "0017_cultured_ghost_rider",
+      "breakpoints": true
     }
   ]
 }

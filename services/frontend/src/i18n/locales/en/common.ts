@@ -11,4 +11,37 @@ export default {
     loading: 'Loading...',
     error: 'An error occurred.',
   },
+  buttons: {
+    cancel: 'Cancel',
+    save: 'Save',
+    delete: 'Delete',
+    edit: 'Edit',
+    create: 'Create',
+    install: 'Install',
+    installing: 'Installing...',
+    view: 'View',
+    configure: 'Configure',
+    remove: 'Remove'
+  },
+  actions: {
+    openMenu: 'Open menu',
+    retry: 'Retry',
+    clear: 'Clear'
+  },
+  messages: {
+    error: 'An error occurred',
+    loading: 'Loading, please wait...'
+  },
+  labels: {
+    required: 'Required',
+    optional: 'Optional',
+    recommended: 'Recommended',
+    comingSoon: 'Coming Soon'
+  },
+  navigation: {
+    back: 'Back',
+    next: 'Next',
+    previous: 'Previous',
+    cancel: 'Cancel'
+  }
 }

@@ -58,16 +58,118 @@ const loadServerData = async () => {
   }
 }
 
+// Helper function to parse JSON fields with proper error handling
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const parseJsonField = (fieldValue: any, defaultValue: any) => {
+  if (!fieldValue || fieldValue === '' || (typeof fieldValue === 'string' && fieldValue.trim() === '')) {
+    return defaultValue
+  }
+  if (typeof fieldValue !== 'string') {
+    return fieldValue // Already parsed or not a string
+  }
+  try {
+    return JSON.parse(fieldValue)
+  } catch (e) {
+    console.warn('Failed to parse JSON field:', fieldValue, e)
+    return defaultValue
+  }
+}
+
+// Helper function to parse environment variables with robust handling
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const parseEnvironmentVariables = (envVars: any): any[] => {
+  // Handle null/undefined (service returns null as fallback)
+  if (!envVars || envVars === null || envVars === undefined) return []
+
+  // Handle arrays (expected format from API)
+  if (Array.isArray(envVars)) {
+    return envVars
+  }
+
+  // Handle JSON strings (legacy format)
+  if (typeof envVars === 'string') {
+    try {
+      const parsed = JSON.parse(envVars)
+      return Array.isArray(parsed) ? parsed : []
+    } catch {
+      return []
+    }
+  }
+
+  // Handle objects (in case service parsing changes)
+  if (typeof envVars === 'object') {
+    // If it's an object with array-like properties, try to convert
+    if (Object.keys(envVars).every(key => !isNaN(Number(key)))) {
+      return Object.values(envVars)
+    }
+  }
+
+  return []
+}
+
 // Convert server data to form data format
 const convertServerToFormData = (server: McpServer): Partial<McpServerFormData> => {
   // Convert installation methods to new format
-  const convertedInstallationMethods = (server.installation_methods || []).map(method => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const convertedInstallationMethods = (server.installation_methods || []).map((method: any) => {
+    // Handle old format: {type, command, description}
+    if (method.type && method.command && !method.client) {
+      // Parse old format command like "npx @brightdata/mcp" into command and args
+      const commandParts = method.command.split(' ')
+      const command = commandParts[0] || 'npx'
+      const args = commandParts.slice(1)
+
+      return {
+        client: 'claude-desktop' as const,
+        command: command,
+        args: args,
+        env: {} // Old format doesn't have env, so empty object
+      }
+    }
+
+    // Handle new format: {client, command, args, env}
     return {
       client: 'claude-desktop' as const,
       command: method.command || 'npx',
       args: method.args || [],
       env: method.env || {}
     }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  }).filter((method: any) =>
+    // Filter out git clone template entries and any invalid entries
+    method.command &&
+    method.command !== 'git clone <repository_url>' &&
+    !method.command.includes('<repository_url>')
+  )
+
+  // Parse tags with proper handling
+  const parsedTags = parseJsonField(server.tags, [])
+
+  // Parse tools, resources, and prompts with proper handling
+  const parsedTools = parseJsonField(server.tools, [])
+  const parsedResources = parseJsonField(server.resources, [])
+  const parsedPrompts = parseJsonField(server.prompts, [])
+
+  // Parse environment variables with robust handling
+  const parsedEnvironmentVariables = parseEnvironmentVariables(server.environment_variables)
+
+  // Debug logging to help troubleshoot
+  console.log('Server data conversion:', {
+    serverId: server.id,
+    rawEnvironmentVariables: server.environment_variables,
+    parsedEnvironmentVariables,
+    environmentVariablesType: typeof server.environment_variables,
+    environmentVariablesLength: parsedEnvironmentVariables.length,
+    isArray: Array.isArray(server.environment_variables),
+    rawLength: server.environment_variables?.length
+  })
+
+  // Additional debug logging for capabilities
+  console.log('Capabilities data being set:', {
+    environment_variables: parsedEnvironmentVariables,
+    tools: parsedTools,
+    resources: parsedResources,
+    prompts: parsedPrompts
   })
 
   return {
@@ -80,7 +182,7 @@ const convertServerToFormData = (server: McpServer): Partial<McpServerFormData> 
       author_contact: server.author_contact || '',
       organization: server.organization || '',
       license: server.license || '',
-      tags: server.tags || []
+      tags: parsedTags
     },
     repository: {
       github_url: server.github_url || '',
@@ -95,10 +197,10 @@ const convertServerToFormData = (server: McpServer): Partial<McpServerFormData> 
       dependencies: server.dependencies ? JSON.stringify(server.dependencies, null, 2) : ''
     },
     capabilities: {
-      tools: server.tools || [],
-      resources: server.resources || [],
-      prompts: server.prompts || [],
-      environment_variables: server.environment_variables || [],
+      tools: parsedTools,
+      resources: parsedResources,
+      prompts: parsedPrompts,
+      environment_variables: parsedEnvironmentVariables,
       default_config: server.default_config ? JSON.stringify(server.default_config, null, 2) : ''
     },
     github: {
@@ -207,7 +309,7 @@ onMounted(() => {
 
       <!-- Form Wizard Component -->
       <McpServerFormWizard
-        v-else-if="initialFormData"
+        v-if="initialFormData"
         mode="edit"
         :initial-data="initialFormData"
         :submit-button-text="t('mcpCatalog.form.navigation.update')"

@@ -17,6 +17,12 @@ export type EventBusEvents = {
   'mcp-category-created': void
   'mcp-category-updated': { categoryId: string }
   'mcp-category-deleted': { categoryId: string }
+  'mcp-installations-updated': void
+  'mcp-server-installed': { serverId: string; installationId: string }
+  'mcp-installation-removed': { installationId: string }
+  'mcp-install-wizard-reset': void
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  'notification-show': { message: string; type: string; [key: string]: any }
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   'mcp-form-data-updated': { step: number; data: any }
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -27,6 +33,8 @@ export type EventBusEvents = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   'mcp-github-data-populated': any
   'mcp-form-step-changed': { from: number; to: number; stepKey: string }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  'mcp-capabilities-updated': any
   'icons-cache-loaded': { count: number }
   'icons-cache-error': { message: string }
   'icons-cache-cleared': void

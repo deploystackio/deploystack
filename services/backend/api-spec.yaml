@@ -9592,6 +9592,460 @@ paths:
                     default: false
                   error:
                     type: string
+  /api/teams/{teamId}/mcp/installations:
+    post:
+      summary: Install MCP server for team
+      tags:
+        - MCP Installations
+      description: "Creates a new MCP server installation for the specified team.
+        Requires Content-Type: application/json header when sending request
+        body."
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                server_id:
+                  type: string
+                  minLength: 1
+                installation_name:
+                  type: string
+                  minLength: 1
+                  maxLength: 100
+                installation_type:
+                  type: string
+                  enum:
+                    - local
+                    - cloud
+                  default: local
+                user_environment_variables:
+                  type: object
+                  additionalProperties:
+                    type: string
+              required:
+                - server_id
+                - installation_name
+              additionalProperties: false
+        required: true
+      parameters:
+        - schema:
+            type: string
+            minLength: 1
+          in: path
+          name: teamId
+          required: true
+      security:
+        - cookieAuth: []
+      responses:
+        "201":
+          description: Installation created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: true
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      team_id:
+                        type: string
+                      server_id:
+                        type: string
+                      user_id:
+                        type: string
+                      installation_name:
+                        type: string
+                      installation_type:
+                        type: string
+                        enum:
+                          - local
+                          - cloud
+                      user_environment_variables:
+                        type: object
+                        additionalProperties:
+                          type: string
+                      created_at:
+                        type: string
+                      updated_at:
+                        type: string
+                      last_used_at:
+                        type: string
+                        nullable: true
+                      server:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                          name:
+                            type: string
+                          description:
+                            type: string
+                          installation_methods:
+                            type: array
+                          environment_variables:
+                            type: array
+                          default_config:
+                            nullable: true
+                        required:
+                          - id
+                          - name
+                          - description
+                          - installation_methods
+                          - environment_variables
+                        additionalProperties: false
+                    required:
+                      - id
+                      - team_id
+                      - server_id
+                      - user_id
+                      - installation_name
+                      - installation_type
+                      - created_at
+                      - updated_at
+                      - last_used_at
+                    additionalProperties: false
+                required:
+                  - data
+                additionalProperties: false
+                description: Installation created successfully
+        "400":
+          description: Bad Request - Invalid input or validation error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - error
+                additionalProperties: false
+                description: Bad Request - Invalid input or validation error
+        "401":
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - error
+                additionalProperties: false
+                description: Unauthorized - Authentication required
+        "403":
+          description: Forbidden - Insufficient permissions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - error
+                additionalProperties: false
+                description: Forbidden - Insufficient permissions
+        "404":
+          description: Not Found - Team or server not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - error
+                additionalProperties: false
+                description: Not Found - Team or server not found
+        "409":
+          description: Conflict - Installation name already exists
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - error
+                additionalProperties: false
+                description: Conflict - Installation name already exists
+    get:
+      summary: List team MCP installations
+      tags:
+        - MCP Installations
+      description: Retrieves all MCP server installations for the specified team. No
+        Content-Type header required for this GET request.
+      parameters:
+        - schema:
+            type: string
+            minLength: 1
+          in: path
+          name: teamId
+          required: true
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: List of team installations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: true
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        team_id:
+                          type: string
+                        server_id:
+                          type: string
+                        user_id:
+                          type: string
+                        installation_name:
+                          type: string
+                        installation_type:
+                          type: string
+                          enum:
+                            - local
+                            - cloud
+                        user_environment_variables:
+                          type: object
+                          additionalProperties:
+                            type: string
+                        created_at:
+                          type: string
+                        updated_at:
+                          type: string
+                        last_used_at:
+                          type: string
+                          nullable: true
+                        server:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            name:
+                              type: string
+                            description:
+                              type: string
+                            installation_methods:
+                              type: array
+                            environment_variables:
+                              type: array
+                            default_config:
+                              nullable: true
+                          required:
+                            - id
+                            - name
+                            - description
+                            - installation_methods
+                            - environment_variables
+                          additionalProperties: false
+                      required:
+                        - id
+                        - team_id
+                        - server_id
+                        - user_id
+                        - installation_name
+                        - installation_type
+                        - created_at
+                        - updated_at
+                        - last_used_at
+                      additionalProperties: false
+                required:
+                  - data
+                additionalProperties: false
+                description: List of team installations
+        "401":
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - error
+                additionalProperties: false
+                description: Unauthorized - Authentication required
+        "403":
+          description: Forbidden - Insufficient permissions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - error
+                additionalProperties: false
+                description: Forbidden - Insufficient permissions
+        "404":
+          description: Not Found - Team not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - error
+                additionalProperties: false
+                description: Not Found - Team not found
+  /api/teams/{teamId}/mcp/installations/{installationId}/config/{clientType}:
+    get:
+      summary: Get client configuration for installation
+      tags:
+        - MCP Installations
+      description: Generates client-specific configuration for an MCP server
+        installation. Supports claude-desktop, vscode, and cursor clients. No
+        Content-Type header required for this GET request.
+      parameters:
+        - schema:
+            type: string
+            minLength: 1
+          in: path
+          name: teamId
+          required: true
+        - schema:
+            type: string
+            minLength: 1
+          in: path
+          name: installationId
+          required: true
+        - schema:
+            type: string
+            enum:
+              - claude-desktop
+              - vscode
+              - cursor
+          in: path
+          name: clientType
+          required: true
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Client configuration generated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: true
+                  data: {}
+                additionalProperties: false
+                description: Client configuration generated successfully
+        "400":
+          description: Bad Request - Invalid client type or installation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - error
+                additionalProperties: false
+                description: Bad Request - Invalid client type or installation
+        "401":
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - error
+                additionalProperties: false
+                description: Unauthorized - Authentication required
+        "403":
+          description: Forbidden - Insufficient permissions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - error
+                additionalProperties: false
+                description: Forbidden - Insufficient permissions
+        "404":
+          description: Not Found - Installation not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - error
+                additionalProperties: false
+                description: Not Found - Installation not found
   /api/auth/email/register:
     post:
       summary: User registration via email

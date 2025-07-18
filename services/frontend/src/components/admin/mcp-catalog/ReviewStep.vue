@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import { onMounted, ref } from 'vue'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { useI18n } from 'vue-i18n'
+import { useEventBus } from '@/composables/useEventBus'
 import type { ReviewFormData, McpServerFormData } from '@/views/admin/mcp-server-catalog/types'
 
 interface Props {
@@ -16,6 +18,28 @@ interface Emits {
 defineProps<Props>()
 defineEmits<Emits>()
 const { t } = useI18n()
+const eventBus = useEventBus()
+
+// Get Claude Desktop config from storage
+const claudeConfig = ref<string>('')
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const parsedConfig = ref<any>(null)
+
+onMounted(() => {
+  // Get the stored Claude Desktop config
+  const storedConfig = eventBus.getState<string>('edit_claude_config', '') || ''
+  claudeConfig.value = storedConfig
+
+  // Parse it for display
+  try {
+    if (storedConfig) {
+      parsedConfig.value = JSON.parse(storedConfig)
+    }
+  } catch {
+    // Invalid JSON, will show raw text
+  }
+})
+
 
 const formatJson = (jsonString: string) => {
   if (!jsonString) return 'None'

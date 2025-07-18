@@ -203,7 +203,8 @@ export default {
 
     technical: {
       title: 'Technical Specifications',
-      subtitle: 'Define runtime and installation requirements',
+      subtitle: 'Edit the Claude Desktop configuration for this MCP server.',
+      description: 'Define runtime and installation requirements',
       language: {
         label: 'Programming Language',
         placeholder: 'Select language',
@@ -236,6 +237,41 @@ export default {
         label: 'Dependencies',
         placeholder: 'List any external dependencies',
         description: 'External libraries or services required'
+      },
+      claudeConfig: {
+        label: 'Claude Desktop Configuration',
+        placeholder: 'Paste Claude Desktop configuration JSON here...',
+        formatButton: 'Format JSON',
+        validConfiguration: 'Valid Configuration',
+        invalidConfiguration: 'Invalid Configuration',
+        preview: {
+          title: 'Configuration Preview',
+          serverName: 'Server Name',
+          command: 'Command',
+          environmentVariables: 'Environment Variables'
+        },
+        examples: {
+          title: 'Example Configurations',
+          brightData: {
+            title: 'Bright Data MCP',
+            description: 'Web scraping and data extraction server'
+          },
+          filesystem: {
+            title: 'Filesystem MCP',
+            description: 'File system access server'
+          },
+          copyExample: 'Copy example'
+        },
+        validation: {
+          required: 'Configuration is required',
+          invalidJson: 'Invalid JSON format',
+          missingMcpServers: 'Configuration must have "mcpServers" property',
+          noServers: 'At least one server must be defined',
+          multipleServers: 'Only one server can be defined for editing',
+          missingCommand: 'Server must have a "command" property',
+          missingArgs: 'Server must have an "args" array',
+          invalidEnv: 'Server "env" must be an object'
+        }
       }
     },
 
@@ -285,6 +321,9 @@ export default {
         label: 'Environment Variables',
         description: 'Required or optional environment variables',
         addVariable: 'Add Variable',
+        editVariable: 'Edit Variable',
+        noVariables: 'No environment variables defined',
+        requiredBadge: 'Required',
         name: {
           label: 'Variable Name',
           placeholder: 'VARIABLE_NAME'

@@ -36,6 +36,11 @@ export const ROLE_DEFINITIONS = {
     'mcp.servers.global.delete',
     'mcp.servers.team.view_all',
     'mcp.versions.manage',
+    'mcp.installations.view_all',
+    'mcp.installations.view',
+    'mcp.installations.create',
+    'mcp.installations.edit',
+    'mcp.installations.delete',
   ],
   global_user: [
     'profile.view',
@@ -57,12 +62,22 @@ export const ROLE_DEFINITIONS = {
     'cloud_credentials.view',
     'cloud_credentials.create',
     'cloud_credentials.edit',
-    'cloud_credentials.delete'
+    'cloud_credentials.delete',
+    'mcp.servers.read',
+    'mcp.installations.view',
+    'mcp.installations.create',
+    'mcp.installations.edit',
+    'mcp.installations.delete',
   ],
   team_user: [
     'teams.view',
     'team.members.view',
-    'cloud_credentials.view'
+    'cloud_credentials.view',
+    'mcp.servers.read',
+    'mcp.installations.view',
+    'mcp.installations.create',
+    'mcp.installations.edit',
+    'mcp.installations.delete',
   ],
 } as const;
 

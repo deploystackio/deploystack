@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Button } from '@/components/ui/button'
 import {
@@ -129,13 +129,26 @@ const formData = ref<McpServerFormData>({
   review: {}
 })
 
-// Initialize form data with props if provided
-if (props.initialData) {
-  formData.value = {
-    ...formData.value,
-    ...props.initialData
-  }
-}
+// Watch for changes in initialData and update formData reactively
+watch(
+  () => props.initialData,
+  (newInitialData) => {
+    if (newInitialData) {
+      // In edit mode, use deep merge to ensure nested objects are properly merged
+      // For capabilities, we need to completely replace the default empty arrays with API data
+      formData.value = {
+        ...formData.value,
+        basic: { ...formData.value.basic, ...newInitialData.basic },
+        repository: { ...formData.value.repository, ...newInitialData.repository },
+        technical: { ...formData.value.technical, ...newInitialData.technical },
+        capabilities: newInitialData.capabilities ? newInitialData.capabilities : formData.value.capabilities,
+        github: { ...formData.value.github, ...newInitialData.github },
+        review: { ...formData.value.review, ...newInitialData.review }
+      }
+    }
+  },
+  { immediate: true, deep: true }
+)
 
 // Computed properties
 const currentStepData = computed(() => steps[currentStep.value])
@@ -218,6 +231,12 @@ const handleCancel = () => {
 // GitHub step navigation with auto-population
 const handleGitHubStepNext = async () => {
   if (currentStep.value !== 0) return
+
+  // In edit mode, skip GitHub auto-population and just go to next step
+  if (props.mode === 'edit') {
+    nextStep()
+    return
+  }
 
   try {
     isFetchingGitHub.value = true
@@ -414,10 +433,18 @@ onUnmounted(() => {
       </AlertDescription>
     </Alert>
 
+
     <!-- Step Content -->
     <div class="bg-white rounded-lg border p-6">
       <component
         :is="currentStepData.component"
+        v-if="currentStepData.key === 'capabilities'"
+        :form-data="formData"
+        @update:form-data="(newFormData) => formData = newFormData"
+      />
+      <component
+        :is="currentStepData.component"
+        v-else
         v-model="formData[currentStepData.key]"
         :form-data="formData"
       />
