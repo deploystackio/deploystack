@@ -5,10 +5,10 @@ import { requirePermission } from '../../../middleware/roleMiddleware';
 import { McpCategoriesService } from '../../../services/mcpCategoriesService';
 import { getDb } from '../../../db';
 
-// Path parameter schema
-const updateCategoryParamsSchema = z.object({
-  id: z.string().min(1, 'Category ID is required')
-});
+// Path parameter schema (type-only)
+type UpdateCategoryParams = {
+  id: string;
+};
 
 // Request schema
 const updateCategoryRequestSchema = z.object({
@@ -83,7 +83,7 @@ export default async function updateCategory(server: FastifyInstance) {
       }
     }
   }, async (request, reply) => {
-    const { id } = request.params as z.infer<typeof updateCategoryParamsSchema>;
+    const { id } = request.params as UpdateCategoryParams;
     const updateData = request.body as z.infer<typeof updateCategoryRequestSchema>;
     
     request.log.info({

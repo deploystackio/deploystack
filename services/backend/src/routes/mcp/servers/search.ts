@@ -7,17 +7,6 @@ import { getUserRole, requirePermission } from '../../../middleware/roleMiddlewa
 import { getDb } from '../../../db';
 
 
-// Query parameters schema for documentation (without transforms)
-const searchServersQuerySchemaDoc = z.object({
-  q: z.string().min(1, 'Search query is required').max(255, 'Search query must be 255 characters or less'),
-  category: z.string().optional(),
-  language: z.string().optional(),
-  runtime: z.string().optional(),
-  status: z.enum(['active', 'deprecated', 'maintenance']).optional(),
-  featured: z.enum(['true', 'false']).optional().describe('Filter by featured status'),
-  limit: z.string().regex(/^\d+$/).optional().describe('Limit must be a number between 1 and 100'),
-  offset: z.string().regex(/^\d+$/).optional().describe('Offset must be non-negative')
-});
 
 // Response schema for search results
 const searchServersResponseSchema = z.object({
