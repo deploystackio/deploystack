@@ -156,7 +156,7 @@ const saveTeam = async () => {
 
   } catch (err) {
     if (err instanceof z.ZodError) {
-      saveError.value = err.errors.map(e => e.message).join(', ')
+      saveError.value = err.issues.map(e => e.message).join(', ')
     } else {
       saveError.value = err instanceof Error ? err.message : 'Failed to save team'
     }
