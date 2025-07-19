@@ -12,7 +12,7 @@ import { useEventBus } from '@/composables/useEventBus'
 import TeamTableColumns from './TeamTableColumns.vue'
 import { useRouter, useRoute } from 'vue-router'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { CheckCircle } from 'lucide-vue-next'
+import { CheckCircle, AlertCircle } from 'lucide-vue-next'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -24,9 +24,10 @@ const teams = ref<TeamWithRole[]>([])
 const isLoading = ref(true)
 const error = ref<string | null>(null)
 const showAddModal = ref(false)
-const canCreateTeams = ref(false)
 const userPermissions = ref<string[]>([])
 const deleteSuccessMessage = ref<string | null>(null)
+const createSuccessMessage = ref<string | null>(null)
+const createErrorMessage = ref<string | null>(null)
 const searchQuery = ref('')
 
 // Team switching state
@@ -66,12 +67,10 @@ const checkPermissions = async () => {
   try {
     const user = await UserService.getCurrentUser()
     if (user?.role?.permissions) {
-      canCreateTeams.value = user.role.permissions.includes('teams.create')
       userPermissions.value = user.role.permissions
     }
   } catch (error) {
     console.error('Error checking permissions:', error)
-    canCreateTeams.value = false
     userPermissions.value = []
   }
 }
@@ -94,7 +93,7 @@ const initializeSelectedTeam = async () => {
     const userTeams = await TeamService.getUserTeams()
     if (userTeams.length > 0) {
       const storedTeamId = eventBus.getState<string>('selected_team_id')
-      
+
       if (storedTeamId) {
         // Try to find the stored team in available teams
         const storedTeam = userTeams.find(team => team.id === storedTeamId)
@@ -139,10 +138,33 @@ const fetchTeams = async (forceRefresh = false): Promise<void> => {
 }
 
 // Handle team creation success
-const handleTeamCreated = async () => {
-  await fetchTeams()
-  // Emit global event to update sidebar and other components
-  eventBus.emit('teams-updated')
+const handleTeamCreated = async (teamData?: { name: string }) => {
+  // Clear any previous messages
+  createSuccessMessage.value = null
+  createErrorMessage.value = null
+
+  try {
+    await fetchTeams()
+    // Emit global event to update sidebar and other components
+    eventBus.emit('teams-updated')
+
+    // Show success message
+    if (teamData?.name) {
+      createSuccessMessage.value = t('teams.addModal.messages.createSuccess', { teamName: teamData.name })
+    } else {
+      createSuccessMessage.value = t('teams.addModal.messages.createSuccessGeneric')
+    }
+  } catch (error) {
+    console.error('Error refreshing teams after creation:', error)
+    createErrorMessage.value = t('teams.addModal.errors.refreshFailed')
+  }
+}
+
+// Handle team creation error
+const handleTeamCreationError = (errorMessage: string) => {
+  // Clear any previous messages
+  createSuccessMessage.value = null
+  createErrorMessage.value = errorMessage
 }
 
 // Check for delete success message from query params
@@ -198,7 +220,6 @@ onUnmounted(() => {
           <p class="text-muted-foreground">{{ t('teams.description') }}</p>
         </div>
         <Button
-          v-if="canCreateTeams"
           @click="showAddModal = true"
           class="flex items-center gap-2"
         >
@@ -207,10 +228,21 @@ onUnmounted(() => {
         </Button>
       </div>
 
-      <!-- Delete Success Message -->
+      <!-- Success Messages -->
       <Alert v-if="deleteSuccessMessage" class="border-green-200 bg-green-50 text-green-800">
         <CheckCircle class="h-4 w-4" />
         <AlertDescription>{{ deleteSuccessMessage }}</AlertDescription>
+      </Alert>
+
+      <Alert v-if="createSuccessMessage" class="border-green-200 bg-green-50 text-green-800">
+        <CheckCircle class="h-4 w-4" />
+        <AlertDescription>{{ createSuccessMessage }}</AlertDescription>
+      </Alert>
+
+      <!-- Error Messages -->
+      <Alert v-if="createErrorMessage" class="border-red-200 bg-red-50 text-red-800">
+        <AlertCircle class="h-4 w-4" />
+        <AlertDescription>{{ createErrorMessage }}</AlertDescription>
       </Alert>
 
       <!-- Loading State -->
@@ -248,6 +280,7 @@ onUnmounted(() => {
       <AddTeamModal
         v-model:open="showAddModal"
         @team-created="handleTeamCreated"
+        @team-creation-error="handleTeamCreationError"
       />
     </div>
   </DashboardLayout>

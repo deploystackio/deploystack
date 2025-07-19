@@ -127,7 +127,6 @@ const getRoleDisplay = (role: string) => {
           <TableCell>
             <div class="flex justify-end">
               <Button
-                v-if="canManageTeam(team)"
                 variant="outline"
                 size="sm"
                 class="h-8 px-3"
@@ -136,12 +135,6 @@ const getRoleDisplay = (role: string) => {
                 <Settings class="h-4 w-4 mr-1" />
                 {{ t('teams.table.manage') }}
               </Button>
-              <span
-                v-else
-                class="text-muted-foreground text-sm"
-              >
-                {{ t('teams.table.noActions') }}
-              </span>
             </div>
           </TableCell>
         </TableRow>
