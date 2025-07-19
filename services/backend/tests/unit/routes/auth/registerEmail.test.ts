@@ -37,7 +37,7 @@ const mockEmailVerificationService = EmailVerificationService as any;
 describe('Register Email Route', () => {
   let mockFastify: Partial<FastifyInstance>;
   let mockRequest: Partial<FastifyRequest>;
-  let mockReply: Partial<FastifyReply>;
+  let mockReply: any;
   let mockDb: any;
   let mockSchema: any;
   let routeHandlers: Record<string, any>;
@@ -122,6 +122,7 @@ describe('Register Email Route', () => {
     // Setup mock reply
     mockReply = {
       status: vi.fn().mockReturnThis(),
+      type: vi.fn().mockReturnThis(),
       send: vi.fn().mockReturnThis(),
       setCookie: vi.fn().mockReturnThis(),
     };
@@ -181,18 +182,20 @@ describe('Register Email Route', () => {
       expect(mockTeamService.createDefaultTeamForUser).toHaveBeenCalledWith('user-id-123', 'testuser');
       expect(mockReply.setCookie).toHaveBeenCalled();
       expect(mockReply.status).toHaveBeenCalledWith(201);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        success: true,
-        message: 'User registered successfully. You are now logged in as the global administrator.',
-        user: {
-          id: 'user-id-123',
-          username: 'testuser',
-          email: 'test@example.com',
-          first_name: 'John',
-          last_name: 'Doe',
-          role_id: 'global_admin',
-        },
-      });
+      expect(mockReply.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          success: true,
+          message: 'User registered successfully. You are now logged in as the global administrator.',
+          user: {
+            id: 'user-id-123',
+            username: 'testuser',
+            email: 'test@example.com',
+            first_name: 'John',
+            last_name: 'Doe',
+            role_id: 'global_admin',
+          },
+        })
+      );
     });
 
     it('should register subsequent user as global_user', async () => {
@@ -237,13 +240,20 @@ describe('Register Email Route', () => {
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(201);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        success: true,
-        message: 'User registered successfully. You can now log in to your account.',
-        user: expect.objectContaining({
-          role_id: 'global_user',
-        }),
-      });
+      expect(mockReply.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          success: true,
+          message: 'User registered successfully. You can now log in to your account.',
+          user: {
+            id: 'user-id-123',
+            username: 'testuser',
+            email: 'test@example.com',
+            first_name: 'John',
+            last_name: 'Doe',
+            role_id: 'global_user',
+          },
+        })
+      );
     });
 
     it('should register user without optional fields', async () => {
@@ -287,14 +297,20 @@ describe('Register Email Route', () => {
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(201);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        success: true,
-        message: 'User registered successfully. You are now logged in as the global administrator.',
-        user: expect.objectContaining({
-          first_name: null,
-          last_name: null,
-        }),
-      });
+      expect(mockReply.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          success: true,
+          message: 'User registered successfully. You are now logged in as the global administrator.',
+          user: {
+            id: 'user-id-123',
+            username: 'testuser',
+            email: 'test@example.com',
+            first_name: null,
+            last_name: null,
+            role_id: 'global_admin',
+          },
+        })
+      );
     });
 
     it('should return 403 when email registration is disabled', async () => {
@@ -304,10 +320,12 @@ describe('Register Email Route', () => {
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(403);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        success: false,
-        error: 'Email registration is currently disabled by administrator.',
-      });
+      expect(mockReply.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          success: false,
+          error: 'Email registration is currently disabled by administrator.',
+        })
+      );
     });
 
     it('should return 500 when auth user table is missing', async () => {
@@ -321,9 +339,12 @@ describe('Register Email Route', () => {
 
       expect(mockFastify.log!.error).toHaveBeenCalledWith('AuthUser table not found in schema');
       expect(mockReply.status).toHaveBeenCalledWith(500);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        error: 'Internal server error: User table configuration missing.',
-      });
+      expect(mockReply.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          success: false,
+          error: 'Internal server error: User table configuration missing.',
+        })
+      );
     });
 
     it('should return 400 when username already exists', async () => {
@@ -349,10 +370,12 @@ describe('Register Email Route', () => {
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(400);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        success: false,
-        error: 'Username already taken.',
-      });
+      expect(mockReply.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          success: false,
+          error: 'Username already taken.',
+        })
+      );
     });
 
     it('should return 400 when email already exists', async () => {
@@ -386,10 +409,12 @@ describe('Register Email Route', () => {
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(400);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        success: false,
-        error: 'Email address already in use.',
-      });
+      expect(mockReply.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          success: false,
+          error: 'Email address already in use.',
+        })
+      );
     });
 
     it('should return 500 when user creation fails', async () => {
@@ -421,9 +446,12 @@ describe('Register Email Route', () => {
 
       expect(mockFastify.log!.error).toHaveBeenCalledWith('User creation failed - user not found after insert');
       expect(mockReply.status).toHaveBeenCalledWith(500);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        error: 'User creation failed.',
-      });
+      expect(mockReply.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          success: false,
+          error: 'User creation failed.',
+        })
+      );
     });
 
     it('should handle team creation failure gracefully', async () => {
@@ -483,10 +511,12 @@ describe('Register Email Route', () => {
 
       expect(mockFastify.log!.error).toHaveBeenCalledWith(expect.any(Error), 'Error during email registration:');
       expect(mockReply.status).toHaveBeenCalledWith(500);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        success: false,
-        error: 'An unexpected error occurred during registration.',
-      });
+      expect(mockReply.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          success: false,
+          error: 'An unexpected error occurred during registration.',
+        })
+      );
     });
 
     it('should handle unique constraint error for username', async () => {
@@ -506,10 +536,12 @@ describe('Register Email Route', () => {
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(400);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        success: false,
-        error: 'Username already taken.',
-      });
+      expect(mockReply.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          success: false,
+          error: 'Username already taken.',
+        })
+      );
     });
 
     it('should handle unique constraint error for email', async () => {
@@ -529,10 +561,12 @@ describe('Register Email Route', () => {
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(400);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        success: false,
-        error: 'Email address already in use.',
-      });
+      expect(mockReply.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          success: false,
+          error: 'Email address already in use.',
+        })
+      );
     });
 
     it('should handle password hashing errors', async () => {
@@ -551,10 +585,12 @@ describe('Register Email Route', () => {
 
       expect(mockFastify.log!.error).toHaveBeenCalledWith(expect.any(Error), 'Error during email registration:');
       expect(mockReply.status).toHaveBeenCalledWith(500);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        success: false,
-        error: 'An unexpected error occurred during registration.',
-      });
+      expect(mockReply.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          success: false,
+          error: 'An unexpected error occurred during registration.',
+        })
+      );
     });
   });
 });

@@ -25,7 +25,7 @@ const mockGlobalSettingsInitService = GlobalSettingsInitService as any;
 describe('Login Email Route', () => {
   let mockFastify: Partial<FastifyInstance>;
   let mockRequest: Partial<FastifyRequest>;
-  let mockReply: Partial<FastifyReply>;
+  let mockReply: any;
   let mockDb: any;
   let mockSchema: any;
   let mockLucia: any;
@@ -112,6 +112,7 @@ describe('Login Email Route', () => {
     // Setup mock reply
     mockReply = {
       status: vi.fn().mockReturnThis(),
+      type: vi.fn().mockReturnThis(),
       send: vi.fn().mockReturnThis(),
       setCookie: vi.fn().mockReturnThis(),
     };
@@ -169,18 +170,20 @@ describe('Login Email Route', () => {
       expect(mockLucia.createSessionCookie).toHaveBeenCalledWith('mock-session-id-123');
       expect(mockReply.setCookie).toHaveBeenCalledWith('session', 'session-cookie-value', expect.any(Object));
       expect(mockReply.status).toHaveBeenCalledWith(200);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        success: true,
-        message: 'Logged in successfully.',
-        user: {
-          id: 'user-123',
-          email: 'test@example.com',
-          username: 'testuser',
-          first_name: 'John',
-          last_name: 'Doe',
-          role_id: 'user-role',
-        },
-      });
+      expect(mockReply.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          success: true,
+          message: 'Logged in successfully.',
+          user: {
+            id: 'user-123',
+            email: 'test@example.com',
+            username: 'testuser',
+            first_name: 'John',
+            last_name: 'Doe',
+            role_id: 'user-role',
+          },
+        })
+      );
     });
 
     it('should login successfully with username', async () => {
@@ -216,14 +219,20 @@ describe('Login Email Route', () => {
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(200);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        success: true,
-        message: 'Logged in successfully.',
-        user: expect.objectContaining({
-          id: 'user-123',
-          username: 'testuser',
-        }),
-      });
+      expect(mockReply.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          success: true,
+          message: 'Logged in successfully.',
+          user: {
+            id: 'user-123',
+            email: 'test@example.com',
+            username: 'testuser',
+            first_name: 'John',
+            last_name: 'Doe',
+            role_id: 'user-role',
+          },
+        })
+      );
     });
 
     it('should return 403 when login is disabled', async () => {
@@ -233,10 +242,12 @@ describe('Login Email Route', () => {
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(403);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        success: false,
-        error: 'Login is currently disabled by administrator.',
-      });
+      expect(mockReply.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          success: false,
+          error: 'Login is currently disabled by administrator.',
+        })
+      );
     });
 
     it('should return 500 when auth user table is missing', async () => {
@@ -250,10 +261,12 @@ describe('Login Email Route', () => {
 
       expect(mockFastify.log!.error).toHaveBeenCalledWith('AuthUser table not found in schema');
       expect(mockReply.status).toHaveBeenCalledWith(500);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        success: false,
-        error: 'Internal server error: User table configuration missing.',
-      });
+      expect(mockReply.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          success: false,
+          error: 'Internal server error: User table configuration missing.',
+        })
+      );
     });
 
     it('should return 400 when user is not found', async () => {
@@ -269,10 +282,12 @@ describe('Login Email Route', () => {
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(400);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        success: false,
-        error: 'Invalid email/username or password.',
-      });
+      expect(mockReply.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          success: false,
+          error: 'Invalid email/username or password.',
+        })
+      );
     });
 
     it('should return 400 when user has no hashed password', async () => {
@@ -295,10 +310,12 @@ describe('Login Email Route', () => {
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(400);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        success: false,
-        error: 'Invalid email/username or password.',
-      });
+      expect(mockReply.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          success: false,
+          error: 'Invalid email/username or password.',
+        })
+      );
     });
 
     it('should return 400 when password verification fails', async () => {
@@ -325,10 +342,12 @@ describe('Login Email Route', () => {
 
       expect(mockVerify).toHaveBeenCalledWith('hashed-password', 'password123', expect.any(Object));
       expect(mockReply.status).toHaveBeenCalledWith(400);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        success: false,
-        error: 'Invalid email/username or password.',
-      });
+      expect(mockReply.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          success: false,
+          error: 'Invalid email/username or password.',
+        })
+      );
     });
 
     it('should return 500 when user ID is missing', async () => {
@@ -354,10 +373,12 @@ describe('Login Email Route', () => {
 
       expect(mockFastify.log!.error).toHaveBeenCalledWith('User ID is null or undefined:', null);
       expect(mockReply.status).toHaveBeenCalledWith(500);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        success: false,
-        error: 'User ID not found.',
-      });
+      expect(mockReply.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          success: false,
+          error: 'User ID not found.',
+        })
+      );
     });
 
     it('should handle database errors during user lookup', async () => {
@@ -375,10 +396,12 @@ describe('Login Email Route', () => {
 
       expect(mockFastify.log!.error).toHaveBeenCalledWith(error, 'Error during email login:');
       expect(mockReply.status).toHaveBeenCalledWith(500);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        success: false,
-        error: 'An unexpected error occurred during login.',
-      });
+      expect(mockReply.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          success: false,
+          error: 'An unexpected error occurred during login.',
+        })
+      );
     });
 
     it('should handle database errors during session creation', async () => {
@@ -410,10 +433,12 @@ describe('Login Email Route', () => {
 
       expect(mockFastify.log!.error).toHaveBeenCalledWith(expect.any(Error), 'Error during email login:');
       expect(mockReply.status).toHaveBeenCalledWith(500);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        success: false,
-        error: 'An unexpected error occurred during login.',
-      });
+      expect(mockReply.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          success: false,
+          error: 'An unexpected error occurred during login.',
+        })
+      );
     });
 
     it('should handle password verification errors', async () => {
@@ -440,10 +465,12 @@ describe('Login Email Route', () => {
 
       expect(mockFastify.log!.error).toHaveBeenCalledWith(expect.any(Error), 'Error during email login:');
       expect(mockReply.status).toHaveBeenCalledWith(500);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        success: false,
-        error: 'An unexpected error occurred during login.',
-      });
+      expect(mockReply.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          success: false,
+          error: 'An unexpected error occurred during login.',
+        })
+      );
     });
   });
 });

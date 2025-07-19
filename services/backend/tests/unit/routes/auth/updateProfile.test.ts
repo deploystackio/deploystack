@@ -91,6 +91,7 @@ describe('Update Profile Route', () => {
     // Setup mock reply
     mockReply = {
       status: vi.fn().mockReturnThis(),
+      type: vi.fn().mockReturnThis(),
       send: vi.fn().mockReturnThis(),
     };
 
@@ -161,19 +162,21 @@ describe('Update Profile Route', () => {
         await handler(mockRequest, mockReply);
 
         expect(mockReply.status).toHaveBeenCalledWith(200);
-        expect(mockReply.send).toHaveBeenCalledWith({
-          success: true,
-          message: 'Profile updated successfully.',
-          user: {
-            id: updatedUser.id,
-            username: updatedUser.username,
-            email: updatedUser.email,
-            first_name: updatedUser.first_name,
-            last_name: updatedUser.last_name,
-            auth_type: updatedUser.auth_type,
-            role_id: updatedUser.role_id,
-          },
-        });
+        expect(mockReply.send).toHaveBeenCalledWith(
+          JSON.stringify({
+            success: true,
+            message: 'Profile updated successfully.',
+            user: {
+              id: updatedUser.id,
+              username: updatedUser.username,
+              email: updatedUser.email,
+              first_name: updatedUser.first_name,
+              last_name: updatedUser.last_name,
+              auth_type: updatedUser.auth_type,
+              role_id: updatedUser.role_id,
+            },
+          })
+        );
         expect(mockFastify.log!.info).toHaveBeenCalledWith('Profile updated successfully for user: user-123');
       });
 
@@ -384,10 +387,12 @@ describe('Update Profile Route', () => {
         await handler(mockRequest, mockReply);
 
         expect(mockReply.status).toHaveBeenCalledWith(401);
-        expect(mockReply.send).toHaveBeenCalledWith({
-          success: false,
-          error: 'Unauthorized: Authentication required.',
-        });
+        expect(mockReply.send).toHaveBeenCalledWith(
+          JSON.stringify({
+            success: false,
+            error: 'Unauthorized: Authentication required.',
+          })
+        );
       });
 
       it('should return 401 when user ID is missing', async () => {
@@ -397,10 +402,12 @@ describe('Update Profile Route', () => {
         await handler(mockRequest, mockReply);
 
         expect(mockReply.status).toHaveBeenCalledWith(401);
-        expect(mockReply.send).toHaveBeenCalledWith({
-          success: false,
-          error: 'Unauthorized: Authentication required.',
-        });
+        expect(mockReply.send).toHaveBeenCalledWith(
+          JSON.stringify({
+            success: false,
+            error: 'Unauthorized: Authentication required.',
+          })
+        );
       });
 
       it('should return 401 when user is not found in database', async () => {
@@ -416,10 +423,12 @@ describe('Update Profile Route', () => {
         await handler(mockRequest, mockReply);
 
         expect(mockReply.status).toHaveBeenCalledWith(401);
-        expect(mockReply.send).toHaveBeenCalledWith({
-          success: false,
-          error: 'User not found.',
-        });
+        expect(mockReply.send).toHaveBeenCalledWith(
+          JSON.stringify({
+            success: false,
+            error: 'User not found.',
+          })
+        );
       });
     });
 
@@ -431,10 +440,12 @@ describe('Update Profile Route', () => {
         await handler(mockRequest, mockReply);
 
         expect(mockReply.status).toHaveBeenCalledWith(400);
-        expect(mockReply.send).toHaveBeenCalledWith({
-          success: false,
-          error: 'At least one field (username, first_name, or last_name) must be provided.',
-        });
+        expect(mockReply.send).toHaveBeenCalledWith(
+          JSON.stringify({
+            success: false,
+            error: 'At least one field (username, first_name, or last_name) must be provided.',
+          })
+        );
       });
 
       it('should return 400 when all fields are undefined', async () => {
@@ -448,10 +459,12 @@ describe('Update Profile Route', () => {
         await handler(mockRequest, mockReply);
 
         expect(mockReply.status).toHaveBeenCalledWith(400);
-        expect(mockReply.send).toHaveBeenCalledWith({
-          success: false,
-          error: 'At least one field (username, first_name, or last_name) must be provided.',
-        });
+        expect(mockReply.send).toHaveBeenCalledWith(
+          JSON.stringify({
+            success: false,
+            error: 'At least one field (username, first_name, or last_name) must be provided.',
+          })
+        );
       });
     });
 
@@ -490,10 +503,12 @@ describe('Update Profile Route', () => {
         await handler(mockRequest, mockReply);
 
         expect(mockReply.status).toHaveBeenCalledWith(400);
-        expect(mockReply.send).toHaveBeenCalledWith({
-          success: false,
-          error: 'Username is already taken.',
-        });
+        expect(mockReply.send).toHaveBeenCalledWith(
+          JSON.stringify({
+            success: false,
+            error: 'Username is already taken.',
+          })
+        );
       });
 
       it('should allow updating to the same username (no conflict)', async () => {
@@ -536,6 +551,147 @@ describe('Update Profile Route', () => {
           updated_at: expect.any(Date),
         });
       });
+
+      it('should return 403 when non-email user tries to change username', async () => {
+        const mockUser = {
+          id: 'user-123',
+          username: 'oldusername',
+          email: 'user@example.com',
+          first_name: 'John',
+          last_name: 'Doe',
+          auth_type: 'github_oauth', // Non-email auth type
+          role_id: 'role-1',
+        };
+
+        mockRequest.body = { username: 'newusername' };
+
+        const selectQuery = {
+          select: vi.fn().mockReturnThis(),
+          from: vi.fn().mockReturnThis(),
+          where: vi.fn().mockReturnThis(),
+          limit: vi.fn().mockResolvedValueOnce([mockUser]), // Current user lookup
+        };
+
+        mockDb.select.mockReturnValue(selectQuery);
+
+        const handler = routeHandlers['PUT /profile/update'];
+        await handler(mockRequest, mockReply);
+
+        expect(mockReply.status).toHaveBeenCalledWith(403);
+        expect(mockReply.send).toHaveBeenCalledWith(
+          JSON.stringify({
+            success: false,
+            error: 'Username change is only available for email-authenticated users.',
+          })
+        );
+      });
+
+      it('should allow non-email users to update first_name and last_name', async () => {
+        const mockUser = {
+          id: 'user-123',
+          username: 'githubuser',
+          email: 'user@example.com',
+          first_name: 'John',
+          last_name: 'Doe',
+          auth_type: 'github_oauth', // Non-email auth type
+          role_id: 'role-1',
+        };
+
+        const updatedUser = {
+          ...mockUser,
+          first_name: 'NewFirst',
+          last_name: 'NewLast',
+        };
+
+        mockRequest.body = {
+          first_name: 'NewFirst',
+          last_name: 'NewLast',
+        };
+
+        const selectQuery = {
+          select: vi.fn().mockReturnThis(),
+          from: vi.fn().mockReturnThis(),
+          where: vi.fn().mockReturnThis(),
+          limit: vi.fn()
+            .mockResolvedValueOnce([mockUser]) // Current user lookup
+            .mockResolvedValueOnce([updatedUser]), // Updated user lookup
+        };
+
+        const updateQuery = {
+          update: vi.fn().mockReturnThis(),
+          set: vi.fn().mockReturnThis(),
+          where: vi.fn().mockResolvedValue(undefined),
+        };
+
+        mockDb.select.mockReturnValue(selectQuery);
+        mockDb.update.mockReturnValue(updateQuery);
+
+        const handler = routeHandlers['PUT /profile/update'];
+        await handler(mockRequest, mockReply);
+
+        expect(updateQuery.set).toHaveBeenCalledWith({
+          first_name: 'NewFirst',
+          last_name: 'NewLast',
+          updated_at: expect.any(Date),
+        });
+        expect(mockReply.status).toHaveBeenCalledWith(200);
+        expect(mockReply.send).toHaveBeenCalledWith(
+          JSON.stringify({
+            success: true,
+            message: 'Profile updated successfully.',
+            user: {
+              id: updatedUser.id,
+              username: updatedUser.username,
+              email: updatedUser.email,
+              first_name: updatedUser.first_name,
+              last_name: updatedUser.last_name,
+              auth_type: updatedUser.auth_type,
+              role_id: updatedUser.role_id,
+            },
+          })
+        );
+      });
+
+      it('should allow non-email users to update to the same username', async () => {
+        const mockUser = {
+          id: 'user-123',
+          username: 'githubuser',
+          email: 'user@example.com',
+          first_name: 'John',
+          last_name: 'Doe',
+          auth_type: 'github_oauth', // Non-email auth type
+          role_id: 'role-1',
+        };
+
+        mockRequest.body = { username: 'githubuser' }; // Same username
+
+        const selectQuery = {
+          select: vi.fn().mockReturnThis(),
+          from: vi.fn().mockReturnThis(),
+          where: vi.fn().mockReturnThis(),
+          limit: vi.fn()
+            .mockResolvedValueOnce([mockUser]) // Current user lookup
+            .mockResolvedValueOnce([mockUser]), // Updated user lookup
+        };
+
+        const updateQuery = {
+          update: vi.fn().mockReturnThis(),
+          set: vi.fn().mockReturnThis(),
+          where: vi.fn().mockResolvedValue(undefined),
+        };
+
+        mockDb.select.mockReturnValue(selectQuery);
+        mockDb.update.mockReturnValue(updateQuery);
+
+        const handler = routeHandlers['PUT /profile/update'];
+        await handler(mockRequest, mockReply);
+
+        expect(updateQuery.set).toHaveBeenCalledWith({
+          username: 'githubuser',
+          updated_at: expect.any(Date),
+        });
+        expect(mockReply.status).toHaveBeenCalledWith(200);
+      });
     });
 
     describe('Error Handling Tests', () => {
@@ -549,10 +705,12 @@ describe('Update Profile Route', () => {
 
         expect(mockFastify.log!.error).toHaveBeenCalledWith('AuthUser table not found in schema');
         expect(mockReply.status).toHaveBeenCalledWith(500);
-        expect(mockReply.send).toHaveBeenCalledWith({
-          success: false,
-          error: 'Internal server error: User table configuration missing.',
-        });
+        expect(mockReply.send).toHaveBeenCalledWith(
+          JSON.stringify({
+            success: false,
+            error: 'Internal server error: User table configuration missing.',
+          })
+        );
       });
 
       it('should handle database errors during user lookup', async () => {
@@ -570,10 +728,12 @@ describe('Update Profile Route', () => {
 
         expect(mockFastify.log!.error).toHaveBeenCalledWith(error, 'Error during profile update:');
         expect(mockReply.status).toHaveBeenCalledWith(500);
-        expect(mockReply.send).toHaveBeenCalledWith({
-          success: false,
-          error: 'An unexpected error occurred during profile update.',
-        });
+        expect(mockReply.send).toHaveBeenCalledWith(
+          JSON.stringify({
+            success: false,
+            error: 'An unexpected error occurred during profile update.',
+          })
+        );
       });
 
       it('should handle database errors during profile update', async () => {
@@ -610,10 +770,12 @@ describe('Update Profile Route', () => {
 
         expect(mockFastify.log!.error).toHaveBeenCalledWith(expect.any(Error), 'Error during profile update:');
         expect(mockReply.status).toHaveBeenCalledWith(500);
-        expect(mockReply.send).toHaveBeenCalledWith({
-          success: false,
-          error: 'An unexpected error occurred during profile update.',
-        });
+        expect(mockReply.send).toHaveBeenCalledWith(
+          JSON.stringify({
+            success: false,
+            error: 'An unexpected error occurred during profile update.',
+          })
+        );
       });
 
       it('should handle general exceptions', async () => {
@@ -627,10 +789,12 @@ describe('Update Profile Route', () => {
 
         expect(mockFastify.log!.error).toHaveBeenCalledWith(expect.any(Error), 'Error during profile update:');
         expect(mockReply.status).toHaveBeenCalledWith(500);
-        expect(mockReply.send).toHaveBeenCalledWith({
-          success: false,
-          error: 'An unexpected error occurred during profile update.',
-        });
+        expect(mockReply.send).toHaveBeenCalledWith(
+          JSON.stringify({
+            success: false,
+            error: 'An unexpected error occurred during profile update.',
+          })
+        );
       });
     });
 
@@ -676,19 +840,21 @@ describe('Update Profile Route', () => {
 
         // Verify successful response
         expect(mockReply.status).toHaveBeenCalledWith(200);
-        expect(mockReply.send).toHaveBeenCalledWith({
-          success: true,
-          message: 'Profile updated successfully.',
-          user: {
-            id: updatedUser.id,
-            username: updatedUser.username,
-            email: updatedUser.email,
-            first_name: updatedUser.first_name,
-            last_name: updatedUser.last_name,
-            auth_type: updatedUser.auth_type,
-            role_id: updatedUser.role_id,
-          },
-        });
+        expect(mockReply.send).toHaveBeenCalledWith(
+          JSON.stringify({
+            success: true,
+            message: 'Profile updated successfully.',
+            user: {
+              id: updatedUser.id,
+              username: updatedUser.username,
+              email: updatedUser.email,
+              first_name: updatedUser.first_name,
+              last_name: updatedUser.last_name,
+              auth_type: updatedUser.auth_type,
+              role_id: updatedUser.role_id,
+            },
+          })
+        );
       });
 
       it('should only include provided fields in update data', async () => {

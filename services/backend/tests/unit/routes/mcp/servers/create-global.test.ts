@@ -95,6 +95,7 @@ describe('MCP Servers - Create Global', () => {
     // Setup mock reply
     mockReply = {
       status: vi.fn().mockReturnThis(),
+      type: vi.fn().mockReturnThis(),
       send: vi.fn().mockReturnThis(),
     };
   });
@@ -250,7 +251,13 @@ describe('MCP Servers - Create Global', () => {
       );
 
       expect(mockReply.status).toHaveBeenCalledWith(201);
-      expect(mockReply.send).toHaveBeenCalledWith({
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      
+      // Parse the JSON string response
+      const sentData = (mockReply.send as any).mock.calls[0][0];
+      const response = JSON.parse(sentData);
+      
+      expect(response).toEqual({
         success: true,
         data: expect.objectContaining({
           id: 'server-123',
@@ -361,7 +368,13 @@ describe('MCP Servers - Create Global', () => {
       await handler(complexRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(201);
-      expect(mockReply.send).toHaveBeenCalledWith({
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      
+      // Parse the JSON string response
+      const sentData = (mockReply.send as any).mock.calls[0][0];
+      const response = JSON.parse(sentData);
+      
+      expect(response).toEqual({
         success: true,
         data: expect.objectContaining({
           id: 'server-456',
@@ -433,7 +446,9 @@ describe('MCP Servers - Create Global', () => {
       const handler = routeHandlers['POST /mcp/servers/global'];
       await handler(mockRequest, mockReply);
 
-      const response = (mockReply.send as any).mock.calls[0][0];
+      // Parse the JSON string response
+      const sentData = (mockReply.send as any).mock.calls[0][0];
+      const response = JSON.parse(sentData);
       const server = response.data;
 
       expect(server.installation_methods).toEqual(['npm', 'yarn']);
@@ -490,7 +505,9 @@ describe('MCP Servers - Create Global', () => {
       const handler = routeHandlers['POST /mcp/servers/global'];
       await handler(mockRequest, mockReply);
 
-      const response = (mockReply.send as any).mock.calls[0][0];
+      // Parse the JSON string response
+      const sentData = (mockReply.send as any).mock.calls[0][0];
+      const response = JSON.parse(sentData);
       const server = response.data;
 
       expect(server.installation_methods).toEqual([]);
@@ -562,7 +579,9 @@ describe('MCP Servers - Create Global', () => {
         })
       );
 
-      const response = (mockReply.send as any).mock.calls[0][0];
+      // Parse the JSON string response
+      const sentData = (mockReply.send as any).mock.calls[0][0];
+      const response = JSON.parse(sentData);
       expect(response.data.visibility).toBe('global');
       expect(response.data.owner_team_id).toBeNull();
     });
@@ -580,7 +599,13 @@ describe('MCP Servers - Create Global', () => {
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(409);
-      expect(mockReply.send).toHaveBeenCalledWith({
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      
+      // Parse the JSON string response
+      const sentData = (mockReply.send as any).mock.calls[0][0];
+      const response = JSON.parse(sentData);
+      
+      expect(response).toEqual({
         success: false,
         error: 'Server name already exists'
       });
@@ -593,7 +618,13 @@ describe('MCP Servers - Create Global', () => {
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(409);
-      expect(mockReply.send).toHaveBeenCalledWith({
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      
+      // Parse the JSON string response
+      const sentData = (mockReply.send as any).mock.calls[0][0];
+      const response = JSON.parse(sentData);
+      
+      expect(response).toEqual({
         success: false,
         error: 'Server name already exists'
       });
@@ -606,7 +637,13 @@ describe('MCP Servers - Create Global', () => {
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(409);
-      expect(mockReply.send).toHaveBeenCalledWith({
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      
+      // Parse the JSON string response
+      const sentData = (mockReply.send as any).mock.calls[0][0];
+      const response = JSON.parse(sentData);
+      
+      expect(response).toEqual({
         success: false,
         error: 'Server name already exists'
       });
@@ -619,7 +656,13 @@ describe('MCP Servers - Create Global', () => {
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(403);
-      expect(mockReply.send).toHaveBeenCalledWith({
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      
+      // Parse the JSON string response
+      const sentData = (mockReply.send as any).mock.calls[0][0];
+      const response = JSON.parse(sentData);
+      
+      expect(response).toEqual({
         success: false,
         error: 'Global admin permissions required'
       });
@@ -632,7 +675,13 @@ describe('MCP Servers - Create Global', () => {
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(500);
-      expect(mockReply.send).toHaveBeenCalledWith({
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      
+      // Parse the JSON string response
+      const sentData = (mockReply.send as any).mock.calls[0][0];
+      const response = JSON.parse(sentData);
+      
+      expect(response).toEqual({
         success: false,
         error: 'Failed to create global MCP server'
       });
@@ -680,7 +729,13 @@ describe('MCP Servers - Create Global', () => {
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(500);
-      expect(mockReply.send).toHaveBeenCalledWith({
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      
+      // Parse the JSON string response
+      const sentData = (mockReply.send as any).mock.calls[0][0];
+      const response = JSON.parse(sentData);
+      
+      expect(response).toEqual({
         success: false,
         error: 'Failed to format server response'
       });
@@ -1048,8 +1103,9 @@ describe('MCP Servers - Create Global', () => {
       const handler = routeHandlers['POST /mcp/servers/global'];
       await handler(mockRequest, mockReply);
 
-      const sendCall = (mockReply.send as any).mock.calls[0];
-      const response = sendCall[0];
+      // Parse the JSON string response
+      const sentData = (mockReply.send as any).mock.calls[0][0];
+      const response = JSON.parse(sentData);
 
       expect(response).toHaveProperty('success');
       expect(response).toHaveProperty('data');
@@ -1068,8 +1124,9 @@ describe('MCP Servers - Create Global', () => {
       const handler = routeHandlers['POST /mcp/servers/global'];
       await handler(mockRequest, mockReply);
 
-      const sendCall = (mockReply.send as any).mock.calls[0];
-      const response = sendCall[0];
+      // Parse the JSON string response
+      const sentData = (mockReply.send as any).mock.calls[0][0];
+      const response = JSON.parse(sentData);
 
       expect(response).toHaveProperty('success');
       expect(response).toHaveProperty('error');

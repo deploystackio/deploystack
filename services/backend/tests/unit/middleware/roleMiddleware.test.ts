@@ -55,6 +55,7 @@ describe('Role Middleware', () => {
 
     mockReply = {
       status: vi.fn().mockReturnThis(),
+      type: vi.fn().mockReturnThis(),
       send: vi.fn().mockReturnThis(),
     };
 
@@ -91,10 +92,11 @@ describe('Role Middleware', () => {
       await middleware(mockRequest as FastifyRequest, mockReply as FastifyReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(401);
-      expect(mockReply.send).toHaveBeenCalledWith({
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      expect(mockReply.send).toHaveBeenCalledWith(JSON.stringify({
         success: false,
-        error: 'Authentication required',
-      });
+        error: 'Authentication required'
+      }));
       expect(mockRoleServiceInstance.userHasPermission).not.toHaveBeenCalled();
     });
 
@@ -106,11 +108,12 @@ describe('Role Middleware', () => {
 
       expect(mockRoleServiceInstance.userHasPermission).toHaveBeenCalledWith('user-123', 'users.delete');
       expect(mockReply.status).toHaveBeenCalledWith(403);
-      expect(mockReply.send).toHaveBeenCalledWith({
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      expect(mockReply.send).toHaveBeenCalledWith(JSON.stringify({
         success: false,
         error: 'Insufficient permissions',
-        required_permission: 'users.delete',
-      });
+        required_permission: 'users.delete'
+      }));
     });
 
     it('should return 500 when permission check fails', async () => {
@@ -125,11 +128,12 @@ describe('Role Middleware', () => {
         'Error checking user permissions for permission: users.view'
       );
       expect(mockReply.status).toHaveBeenCalledWith(500);
-      expect(mockReply.send).toHaveBeenCalledWith({
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      expect(mockReply.send).toHaveBeenCalledWith(JSON.stringify({
         success: false,
         error: 'Internal server error',
-        details: 'Database connection failed',
-      });
+        details: 'Database connection failed'
+      }));
     });
 
     it('should handle non-Error objects in catch block', async () => {
@@ -139,11 +143,12 @@ describe('Role Middleware', () => {
       await middleware(mockRequest as FastifyRequest, mockReply as FastifyReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(500);
-      expect(mockReply.send).toHaveBeenCalledWith({
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      expect(mockReply.send).toHaveBeenCalledWith(JSON.stringify({
         success: false,
         error: 'Internal server error',
-        details: 'Unknown error',
-      });
+        details: 'Unknown error'
+      }));
     });
   });
 
@@ -181,9 +186,11 @@ describe('Role Middleware', () => {
       await middleware(mockRequest as FastifyRequest, mockReply as FastifyReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(401);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        error: 'Authentication required',
-      });
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      expect(mockReply.send).toHaveBeenCalledWith(JSON.stringify({
+        success: false,
+        error: 'Authentication required'
+      }));
       expect(mockRoleServiceInstance.userHasPermission).not.toHaveBeenCalled();
     });
 
@@ -196,10 +203,12 @@ describe('Role Middleware', () => {
       expect(mockRoleServiceInstance.userHasPermission).toHaveBeenCalledWith('user-123', 'users.delete');
       expect(mockRoleServiceInstance.userHasPermission).toHaveBeenCalledWith('user-123', 'users.create');
       expect(mockReply.status).toHaveBeenCalledWith(403);
-      expect(mockReply.send).toHaveBeenCalledWith({
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      expect(mockReply.send).toHaveBeenCalledWith(JSON.stringify({
+        success: false,
         error: 'Insufficient permissions',
-        required_permissions: ['users.delete', 'users.create'],
-      });
+        required_permissions: ['users.delete', 'users.create']
+      }));
     });
 
     it('should return 500 when permission check fails', async () => {
@@ -211,9 +220,11 @@ describe('Role Middleware', () => {
 
       expect(mockRequest.log?.error).toHaveBeenCalledWith(error, 'Error checking user permissions');
       expect(mockReply.status).toHaveBeenCalledWith(500);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        error: 'Internal server error',
-      });
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      expect(mockReply.send).toHaveBeenCalledWith(JSON.stringify({
+        success: false,
+        error: 'Internal server error'
+      }));
     });
 
     it('should handle empty permissions array', async () => {
@@ -221,10 +232,12 @@ describe('Role Middleware', () => {
       await middleware(mockRequest as FastifyRequest, mockReply as FastifyReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(403);
-      expect(mockReply.send).toHaveBeenCalledWith({
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      expect(mockReply.send).toHaveBeenCalledWith(JSON.stringify({
+        success: false,
         error: 'Insufficient permissions',
-        required_permissions: [],
-      });
+        required_permissions: []
+      }));
       expect(mockRoleServiceInstance.userHasPermission).not.toHaveBeenCalled();
     });
   });
@@ -253,10 +266,11 @@ describe('Role Middleware', () => {
       await middleware(mockRequest as FastifyRequest, mockReply as FastifyReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(401);
-      expect(mockReply.send).toHaveBeenCalledWith({
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      expect(mockReply.send).toHaveBeenCalledWith(JSON.stringify({
         success: false,
-        error: 'Authentication required',
-      });
+        error: 'Authentication required'
+      }));
       expect(mockRoleServiceInstance.getUserRole).not.toHaveBeenCalled();
     });
 
@@ -268,12 +282,13 @@ describe('Role Middleware', () => {
 
       expect(mockRoleServiceInstance.getUserRole).toHaveBeenCalledWith('user-123');
       expect(mockReply.status).toHaveBeenCalledWith(403);
-      expect(mockReply.send).toHaveBeenCalledWith({
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      expect(mockReply.send).toHaveBeenCalledWith(JSON.stringify({
         success: false,
         error: 'Insufficient permissions',
         required_role: 'admin',
-        user_role: null,
-      });
+        user_role: null
+      }));
     });
 
     it('should return 403 when user has different role', async () => {
@@ -289,12 +304,13 @@ describe('Role Middleware', () => {
 
       expect(mockRoleServiceInstance.getUserRole).toHaveBeenCalledWith('user-123');
       expect(mockReply.status).toHaveBeenCalledWith(403);
-      expect(mockReply.send).toHaveBeenCalledWith({
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      expect(mockReply.send).toHaveBeenCalledWith(JSON.stringify({
         success: false,
         error: 'Insufficient permissions',
         required_role: 'admin',
-        user_role: 'user',
-      });
+        user_role: 'user'
+      }));
     });
 
     it('should return 500 when role check fails', async () => {
@@ -312,11 +328,12 @@ describe('Role Middleware', () => {
         error
       }, '❌ Error checking user role: Database error');
       expect(mockReply.status).toHaveBeenCalledWith(500);
-      expect(mockReply.send).toHaveBeenCalledWith({
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      expect(mockReply.send).toHaveBeenCalledWith(JSON.stringify({
         success: false,
         error: 'Internal server error',
-        details: 'Database error',
-      });
+        details: 'Database error'
+      }));
     });
   });
 
@@ -349,12 +366,13 @@ describe('Role Middleware', () => {
       await middleware(mockRequest as FastifyRequest, mockReply as FastifyReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(403);
-      expect(mockReply.send).toHaveBeenCalledWith({
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      expect(mockReply.send).toHaveBeenCalledWith(JSON.stringify({
         success: false,
         error: 'Insufficient permissions',
         required_role: 'global_admin',
-        user_role: 'user',
-      });
+        user_role: 'user'
+      }));
     });
   });
 
@@ -394,9 +412,11 @@ describe('Role Middleware', () => {
       await middleware(mockRequest as FastifyRequest, mockReply as FastifyReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(401);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        error: 'Authentication required',
-      });
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      expect(mockReply.send).toHaveBeenCalledWith(JSON.stringify({
+        success: false,
+        error: 'Authentication required'
+      }));
     });
 
     it('should return 403 when user is not owner and not admin', async () => {
@@ -408,9 +428,11 @@ describe('Role Middleware', () => {
 
       expect(mockRoleServiceInstance.userHasPermission).toHaveBeenCalledWith('user-123', 'system.admin');
       expect(mockReply.status).toHaveBeenCalledWith(403);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        error: 'Can only access your own resources or requires admin permissions',
-      });
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      expect(mockReply.send).toHaveBeenCalledWith(JSON.stringify({
+        success: false,
+        error: 'Can only access your own resources or requires admin permissions'
+      }));
     });
 
     it('should return 500 when admin permission check fails', async () => {
@@ -423,9 +445,11 @@ describe('Role Middleware', () => {
 
       expect(mockRequest.log?.error).toHaveBeenCalledWith(error, 'Error checking user permissions');
       expect(mockReply.status).toHaveBeenCalledWith(500);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        error: 'Internal server error',
-      });
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      expect(mockReply.send).toHaveBeenCalledWith(JSON.stringify({
+        success: false,
+        error: 'Internal server error'
+      }));
     });
   });
 
