@@ -14,6 +14,7 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Server, Settings, Cloud, Loader2 } from 'lucide-vue-next'
 import { McpInstallationService } from '@/services/mcpInstallationService'
+import { TeamService } from '@/services/teamService'
 import { useEventBus } from '@/composables/useEventBus'
 import McpServerSelectionStep from './McpServerSelectionStep.vue'
 import EnvironmentVariablesStep from './EnvironmentVariablesStep.vue'
@@ -31,14 +32,14 @@ const eventBus = useEventBus()
 // Form data interface
 interface InstallationFormData {
   server: {
-    mcp_server_id: string
+    server_id: string
     server_data?: any
   }
   environment: {
-    environment_variables: Record<string, string>
+    user_environment_variables: Record<string, string>
   }
   platform: {
-    platform: string
+    installation_type: string
     platform_config?: any
   }
 }
@@ -74,17 +75,18 @@ const environmentValidation = ref({
   missingFields: [] as string[]
 })
 const environmentStepTouched = ref(false)
+const currentTeamId = ref<string | null>(null)
 
 // Form data with proper initialization
 const formData = ref<InstallationFormData>({
   server: {
-    mcp_server_id: ''
+    server_id: ''
   },
   environment: {
-    environment_variables: {}
+    user_environment_variables: {}
   },
   platform: {
-    platform: 'local'
+    installation_type: 'local'
   }
 })
 
@@ -95,7 +97,7 @@ const canGoNext = computed(() => !isLastStep.value)
 const canGoPrevious = computed(() => !isFirstStep.value)
 
 const canProceedFromServer = computed(() => {
-  return formData.value.server.mcp_server_id !== ''
+  return formData.value.server.server_id !== ''
 })
 
 const canProceedFromEnvironment = computed(() => {
@@ -104,8 +106,8 @@ const canProceedFromEnvironment = computed(() => {
 })
 
 const canSubmit = computed(() => {
-  return formData.value.server.mcp_server_id &&
-         formData.value.platform.platform &&
+  return formData.value.server.server_id &&
+         formData.value.platform.installation_type &&
          canProceedFromEnvironment.value
 })
 
@@ -137,23 +139,58 @@ const handleCancel = () => {
   emit('cancel')
 }
 
+// Initialize team context from event bus storage
+const initializeTeamContext = async () => {
+  try {
+    const userTeams = await TeamService.getUserTeams()
+    if (userTeams.length > 0) {
+      const storedTeamId = eventBus.getState<string>('selected_team_id')
+
+      if (storedTeamId) {
+        // Try to find the stored team in available teams
+        const storedTeam = userTeams.find(team => team.id === storedTeamId)
+        if (storedTeam) {
+          currentTeamId.value = storedTeam.id
+        } else {
+          // Stored team not found, fallback to default team
+          const defaultTeam = userTeams.find(team => team.is_default) || userTeams[0]
+          currentTeamId.value = defaultTeam.id
+          eventBus.setState('selected_team_id', defaultTeam.id)
+        }
+      } else {
+        // No stored team, use default team
+        const defaultTeam = userTeams.find(team => team.is_default) || userTeams[0]
+        currentTeamId.value = defaultTeam.id
+        eventBus.setState('selected_team_id', defaultTeam.id)
+      }
+    }
+  } catch (error) {
+    console.error('Error initializing team context:', error)
+    submitError.value = 'Failed to initialize team context. Please refresh the page.'
+  }
+}
+
 // Form submission
 const submitInstallation = async () => {
   try {
     isSubmitting.value = true
     submitError.value = null
 
-    // Prepare installation data
+    // Ensure we have a team ID
+    if (!currentTeamId.value) {
+      throw new Error('No team selected. Please refresh the page and try again.')
+    }
+
+    // Prepare installation data aligned with backend API
     const installationData = {
-      mcp_server_id: formData.value.server.mcp_server_id,
-      platform: formData.value.platform.platform,
-      environment_variables: formData.value.environment.environment_variables,
-      status: 'pending',
+      server_id: formData.value.server.server_id,
+      installation_type: formData.value.platform.installation_type,
+      user_environment_variables: formData.value.environment.user_environment_variables,
       installation_name: formData.value.server.server_data?.name || 'Unknown Server'
     }
 
-    // Call backend API to create installation
-    const response = await McpInstallationService.createInstallation(installationData)
+    // Call backend API to create installation with real team ID
+    const response = await McpInstallationService.createInstallation(currentTeamId.value, installationData)
 
     if (response.success) {
       emit('complete', {
@@ -176,7 +213,7 @@ const handleServerSelected = (serverData: any) => {
   formData.value.server.server_data = serverData
 
   // Reset environment variables when server changes
-  formData.value.environment.environment_variables = {}
+  formData.value.environment.user_environment_variables = {}
 
   // Reset touched state when server changes
   environmentStepTouched.value = false
@@ -185,9 +222,9 @@ const handleServerSelected = (serverData: any) => {
   if (serverData.environment_variables) {
     serverData.environment_variables.forEach((env: any) => {
       if (env.placeholder && env.placeholder !== `<insert-your-${env.name.toLowerCase()}-here>`) {
-        formData.value.environment.environment_variables[env.name] = env.placeholder
+        formData.value.environment.user_environment_variables[env.name] = env.placeholder
       } else {
-        formData.value.environment.environment_variables[env.name] = ''
+        formData.value.environment.user_environment_variables[env.name] = ''
       }
     })
   }
@@ -201,14 +238,17 @@ const handleValidationChange = (isValid: boolean, missingFields: string[]) => {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
+  // Initialize team context
+  await initializeTeamContext()
+
   // Listen for wizard reset events
   eventBus.on('mcp-install-wizard-reset', () => {
     currentStep.value = 0
     formData.value = {
-      server: { mcp_server_id: '' },
-      environment: { environment_variables: {} },
-      platform: { platform: 'local' }
+      server: { server_id: '' },
+      environment: { user_environment_variables: {} },
+      platform: { installation_type: 'local' }
     }
     submitError.value = null
   })
@@ -270,14 +310,14 @@ onMounted(() => {
       <!-- Server Selection Step -->
       <McpServerSelectionStep
         v-if="currentStep === 0"
-        v-model="formData.server.mcp_server_id"
+        v-model="formData.server.server_id"
         @server-selected="handleServerSelected"
       />
 
       <!-- Environment Variables Step -->
       <EnvironmentVariablesStep
         v-else-if="currentStep === 1"
-        v-model="formData.environment.environment_variables"
+        v-model="formData.environment.user_environment_variables"
         :server-data="formData.server.server_data"
         @validation-change="handleValidationChange"
       />
@@ -285,7 +325,7 @@ onMounted(() => {
       <!-- Platform Selection Step -->
       <PlatformSelectionStep
         v-else-if="currentStep === 2"
-        v-model="formData.platform.platform"
+        v-model="formData.platform.installation_type"
       />
     </div>
 
