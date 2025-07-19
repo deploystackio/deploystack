@@ -28,7 +28,7 @@ const createGlobalServerRequestSchema = z.object({
   tools: z.array(z.object({
     name: z.string().min(1, 'Tool name is required'),
     description: z.string().min(1, 'Tool description is required')
-  })).min(1, 'At least one tool is required'),
+  })).optional(),
   
   // Optional fields
   long_description: z.string().optional(),
@@ -174,7 +174,6 @@ export default async function createGlobalServer(server: FastifyInstance) {
           },
           tools: {
             type: 'array',
-            minItems: 1,
             items: {
               type: 'object',
               properties: {
@@ -223,7 +222,7 @@ export default async function createGlobalServer(server: FastifyInstance) {
           tags: { type: 'array', items: { type: 'string' } },
           featured: { type: 'boolean' }
         },
-        required: ['name', 'description', 'language', 'runtime', 'claude_desktop_config', 'tools'],
+        required: ['name', 'description', 'language', 'runtime', 'claude_desktop_config'],
         additionalProperties: false
       },
       // createSchema() for OpenAPI documentation
@@ -291,7 +290,7 @@ export default async function createGlobalServer(server: FastifyInstance) {
         runtime: requestData.runtime,
         runtime_min_version: requestData.runtime_min_version,
         installation_methods,
-        tools: requestData.tools,
+        tools: requestData.tools || [],
         resources: requestData.resources,
         prompts: requestData.prompts,
         visibility: 'global' as const,

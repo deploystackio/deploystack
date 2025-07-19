@@ -46,7 +46,7 @@ export default async function bulkGlobalSettingsRoute(fastify: FastifyInstance) 
               type: 'object',
               properties: {
                 key: { type: 'string', minLength: 1, maxLength: 255, pattern: '^[a-zA-Z0-9._-]+$' },
-                value: { oneOf: [{ type: 'string' }, { type: 'number' }, { type: 'boolean' }] },
+                value: { type: ['string', 'number', 'boolean'] }, // Allow multiple types without oneOf
                 type: { type: 'string', enum: ['string', 'number', 'boolean'] },
                 description: { type: 'string' },
                 encrypted: { type: 'boolean', default: false },
