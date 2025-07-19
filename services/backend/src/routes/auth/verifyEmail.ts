@@ -2,7 +2,7 @@ import type { FastifyInstance, FastifyReply } from 'fastify';
 import { EmailVerificationSchema, type EmailVerificationInput } from './schemas';
 import { EmailVerificationService } from '../../services/emailVerificationService';
 import { z } from 'zod';
-import { zodToJsonSchema } from 'zod-to-json-schema';
+import { createSchema } from 'zod-openapi';
 
 // Response schemas
 const verifySuccessResponseSchema = z.object({
@@ -21,23 +21,11 @@ const verifyEmailRouteSchema = {
   tags: ['Authentication'],
   summary: 'Verify email address',
   description: 'Verifies a user\'s email address using a verification token sent via email. This endpoint is public and does not require authentication. Once verified, the user\'s email_verified status is set to true.',
-  querystring: zodToJsonSchema(EmailVerificationSchema, { 
-    $refStrategy: 'none', 
-    target: 'openApi3' 
-  }),
+  querystring: createSchema(EmailVerificationSchema),
   response: {
-    200: zodToJsonSchema(verifySuccessResponseSchema.describe('Email verified successfully'), {
-      $refStrategy: 'none',
-      target: 'openApi3'
-    }),
-    400: zodToJsonSchema(verifyErrorResponseSchema.describe('Bad Request - Invalid or expired token'), {
-      $refStrategy: 'none',
-      target: 'openApi3'
-    }),
-    500: zodToJsonSchema(verifyErrorResponseSchema.describe('Internal Server Error - Verification failed'), {
-      $refStrategy: 'none',
-      target: 'openApi3'
-    })
+    200: createSchema(verifySuccessResponseSchema.describe('Email verified successfully')),
+    400: createSchema(verifyErrorResponseSchema.describe('Bad Request - Invalid or expired token')),
+    500: createSchema(verifyErrorResponseSchema.describe('Internal Server Error - Verification failed'))
   }
 };
 

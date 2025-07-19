@@ -1,6 +1,6 @@
 import { type FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { zodToJsonSchema } from 'zod-to-json-schema';
+import { createSchema } from 'zod-openapi';
 import { McpCatalogService } from '../../../services/mcpCatalogService';
 import { TeamService } from '../../../services/teamService';
 import { getUserRole } from '../../../middleware/roleMiddleware';
@@ -64,27 +64,12 @@ export default async function getServer(server: FastifyInstance) {
       summary: 'Get MCP server by ID',
       description: 'Retrieve a specific MCP server by its ID. Access is controlled based on user role and team membership - users can access global servers and their team servers, while global admins can access all servers.',
       security: [{ cookieAuth: [] }],
-      params: zodToJsonSchema(getServerParamsSchema, {
-        $refStrategy: 'none',
-        target: 'openApi3'
-      }),
+      params: createSchema(getServerParamsSchema),
       response: {
-        200: zodToJsonSchema(getServerResponseSchema, {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        401: zodToJsonSchema(errorResponseSchema.describe('Unauthorized - Authentication required'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        404: zodToJsonSchema(errorResponseSchema.describe('Not Found - Server not found or access denied'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        500: zodToJsonSchema(errorResponseSchema.describe('Internal Server Error'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        })
+        200: createSchema(getServerResponseSchema),
+        401: createSchema(errorResponseSchema.describe('Unauthorized - Authentication required')),
+        404: createSchema(errorResponseSchema.describe('Not Found - Server not found or access denied')),
+        500: createSchema(errorResponseSchema.describe('Internal Server Error'))
       }
     },
     preValidation: async (request, reply) => {

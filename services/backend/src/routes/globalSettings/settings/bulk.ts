@@ -1,10 +1,9 @@
 import type { FastifyInstance  } from 'fastify';
 import { ZodError } from 'zod';
-import { zodToJsonSchema } from 'zod-to-json-schema';
+import { createSchema } from 'zod-openapi';
 import { GlobalSettingsService } from '../../../services/globalSettingsService';
 import { requireGlobalAdmin } from '../../../middleware/roleMiddleware';
 import {
-  BulkGlobalSettingsSchema,
   GlobalSettingSchema,
   type BulkGlobalSettingsInput,
 } from '../schemas';
@@ -37,35 +36,37 @@ export default async function bulkGlobalSettingsRoute(fastify: FastifyInstance) 
       summary: 'Bulk create/update settings',
       description: 'Creates or updates multiple global settings in a single operation. Requires settings edit permissions.',
       security: [{ cookieAuth: [] }],
-      body: zodToJsonSchema(BulkGlobalSettingsSchema, {
-        $refStrategy: 'none',
-        target: 'openApi3'
-      }),
+      body: {
+        type: 'object',
+        properties: {
+          settings: {
+            type: 'array',
+            minItems: 1,
+            items: {
+              type: 'object',
+              properties: {
+                key: { type: 'string', minLength: 1, maxLength: 255, pattern: '^[a-zA-Z0-9._-]+$' },
+                value: { oneOf: [{ type: 'string' }, { type: 'number' }, { type: 'boolean' }] },
+                type: { type: 'string', enum: ['string', 'number', 'boolean'] },
+                description: { type: 'string' },
+                encrypted: { type: 'boolean', default: false },
+                group_id: { type: 'string' }
+              },
+              required: ['key', 'value', 'type'],
+              additionalProperties: false
+            }
+          }
+        },
+        required: ['settings'],
+        additionalProperties: false
+      },
       response: {
-        200: zodToJsonSchema(bulkResponseSchema.describe('All settings processed successfully'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        207: zodToJsonSchema(bulkResponseSchema.describe('Partial success - Some settings processed, some failed'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        400: zodToJsonSchema(errorResponseSchema.describe('Bad Request - Validation error or all settings failed'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        401: zodToJsonSchema(errorResponseSchema.describe('Unauthorized - Authentication required'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        403: zodToJsonSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        500: zodToJsonSchema(errorResponseSchema.describe('Internal Server Error'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        })
+        200: createSchema(bulkResponseSchema.describe('All settings processed successfully')),
+        207: createSchema(bulkResponseSchema.describe('Partial success - Some settings processed, some failed')),
+        400: createSchema(errorResponseSchema.describe('Bad Request - Validation error or all settings failed')),
+        401: createSchema(errorResponseSchema.describe('Unauthorized - Authentication required')),
+        403: createSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions')),
+        500: createSchema(errorResponseSchema.describe('Internal Server Error'))
       }
     },
     preValidation: requireGlobalAdmin(),
@@ -110,28 +111,49 @@ export default async function bulkGlobalSettingsRoute(fastify: FastifyInstance) 
       const hasErrors = errors.length > 0;
       const status = hasErrors ? (results.length > 0 ? 207 : 400) : 200; // 207 = Multi-Status
 
-      return reply.status(status).send({
+      // Create clean response with primitive types only
+      const cleanResponse = {
         success: !hasErrors || results.length > 0,
-        data: results,
-        errors: hasErrors ? errors : undefined,
+        data: results.map(setting => ({
+          key: String(setting.key),
+          value: setting.value,
+          type: setting.type ? String(setting.type) : null,
+          description: setting.description ? String(setting.description) : null,
+          is_encrypted: Boolean(setting.is_encrypted),
+          group_id: setting.group_id ? String(setting.group_id) : null,
+          created_at: setting.created_at ? String(setting.created_at) : null,
+          updated_at: setting.updated_at ? String(setting.updated_at) : null
+        })),
+        errors: hasErrors ? errors.map(error => ({
+          key: String(error.key),
+          error: String(error.error)
+        })) : undefined,
         message: hasErrors 
           ? `Processed ${results.length} settings successfully, ${errors.length} failed`
-          : `Successfully processed ${results.length} settings`,
-      });
+          : `Successfully processed ${results.length} settings`
+      };
+      
+      // Manual JSON serialization
+      const jsonString = JSON.stringify(cleanResponse);
+      return reply.status(status).type('application/json').send(jsonString);
     } catch (error) {
       if (error instanceof ZodError) {
-        return reply.status(400).send({
+        const errorResponse = {
           success: false,
           error: 'Validation error',
-          details: error.issues,
-        });
+          details: error.issues  // Fixed: error.errors → error.issues for Zod v4
+        };
+        const jsonString = JSON.stringify(errorResponse);
+        return reply.status(400).type('application/json').send(jsonString);
       }
       
       fastify.log.error(error, 'Error in bulk settings operation');
-      return reply.status(500).send({
+      const errorResponse = {
         success: false,
-        error: 'Failed to process bulk settings operation',
-      });
+        error: 'Failed to process bulk settings operation'
+      };
+      const jsonString = JSON.stringify(errorResponse);
+      return reply.status(500).type('application/json').send(jsonString);
     }
   });
 }

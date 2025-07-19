@@ -1,21 +1,22 @@
 import { type FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { zodToJsonSchema } from 'zod-to-json-schema';
+import { createSchema } from 'zod-openapi';
 import { McpCatalogService } from '../../../services/mcpCatalogService';
 import { TeamService } from '../../../services/teamService';
 import { getUserRole, requirePermission } from '../../../middleware/roleMiddleware';
 import { getDb } from '../../../db';
 
-// Query parameters schema
-const searchServersQuerySchema = z.object({
+
+// Query parameters schema for documentation (without transforms)
+const searchServersQuerySchemaDoc = z.object({
   q: z.string().min(1, 'Search query is required').max(255, 'Search query must be 255 characters or less'),
   category: z.string().optional(),
   language: z.string().optional(),
   runtime: z.string().optional(),
   status: z.enum(['active', 'deprecated', 'maintenance']).optional(),
-  featured: z.enum(['true', 'false']).optional().transform((val) => val === 'true'),
-  limit: z.string().regex(/^\d+$/, 'Limit must be a number').transform(Number).refine(n => n > 0 && n <= 100, 'Limit must be between 1 and 100').optional().default(20),
-  offset: z.string().regex(/^\d+$/, 'Offset must be a number').transform(Number).refine(n => n >= 0, 'Offset must be non-negative').optional().default(0)
+  featured: z.enum(['true', 'false']).optional().describe('Filter by featured status'),
+  limit: z.string().regex(/^\d+$/).optional().describe('Limit must be a number between 1 and 100'),
+  offset: z.string().regex(/^\d+$/).optional().describe('Offset must be non-negative')
 });
 
 // Response schema for search results
@@ -87,32 +88,41 @@ export default async function searchServers(server: FastifyInstance) {
       summary: 'Search MCP servers',
       description: 'Search MCP servers by query string with optional filters. Authentication is required. Results are filtered based on user permissions - users see global servers plus their team servers, while global admins see all servers.',
       security: [{ cookieAuth: [] }],
-      querystring: zodToJsonSchema(searchServersQuerySchema, {
-        $refStrategy: 'none',
-        target: 'openApi3'
-      }),
+      // Plain JSON Schema for Fastify validation
+      querystring: {
+        type: 'object',
+        properties: {
+          q: { type: 'string', minLength: 1, maxLength: 255 },
+          category: { type: 'string' },
+          language: { type: 'string' },
+          runtime: { type: 'string' },
+          status: { type: 'string', enum: ['active', 'deprecated', 'maintenance'] },
+          featured: { type: 'string', enum: ['true', 'false'] },
+          limit: { type: 'string', pattern: '^\\d+$' },
+          offset: { type: 'string', pattern: '^\\d+$' }
+        },
+        required: ['q'],
+        additionalProperties: false
+      },
       response: {
-        200: zodToJsonSchema(searchServersResponseSchema, {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        400: zodToJsonSchema(errorResponseSchema.describe('Bad Request - Invalid query parameters'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        401: zodToJsonSchema(errorResponseSchema.describe('Unauthorized - Authentication required'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        500: zodToJsonSchema(errorResponseSchema.describe('Internal Server Error'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        })
+        200: createSchema(searchServersResponseSchema),
+        400: createSchema(errorResponseSchema.describe('Bad Request - Invalid query parameters')),
+        401: createSchema(errorResponseSchema.describe('Unauthorized - Authentication required')),
+        500: createSchema(errorResponseSchema.describe('Internal Server Error'))
       }
     },
     preValidation: requirePermission('mcp.servers.read')
   }, async (request, reply) => {
-    const queryParams = request.query as z.infer<typeof searchServersQuerySchema>;
+    const queryParams = request.query as {
+      q?: string;
+      category?: string;
+      language?: string;
+      runtime?: string;
+      status?: string;
+      featured?: string;
+      limit?: string;
+      offset?: string;
+    };
     
     request.log.info({
       operation: 'search_mcp_servers',
@@ -154,14 +164,20 @@ export default async function searchServers(server: FastifyInstance) {
         teamIds = [];
       }
 
+      // Parse and validate parameters
+      const limit = parseInt(queryParams.limit || '20') || 20;
+      const offset = parseInt(queryParams.offset || '0') || 0;
+      const featured = queryParams.featured === 'true' ? true : queryParams.featured === 'false' ? false : undefined;
+      const status = queryParams.status as 'active' | 'deprecated' | 'maintenance' | undefined;
+
       // Build filters object
       const filters = {
         search: queryParams.q,
         category_id: queryParams.category,
         language: queryParams.language,
         runtime: queryParams.runtime,
-        status: queryParams.status,
-        featured: queryParams.featured
+        status: status,
+        featured: featured
       };
 
       // Get servers using the service (which handles permission filtering)
@@ -174,7 +190,7 @@ export default async function searchServers(server: FastifyInstance) {
 
       // Apply pagination
       const total = allServers.length;
-      const paginatedServers = allServers.slice(queryParams.offset, queryParams.offset + queryParams.limit);
+      const paginatedServers = allServers.slice(offset, offset + limit);
 
       request.log.info({
         operation: 'search_mcp_servers',
@@ -220,15 +236,16 @@ export default async function searchServers(server: FastifyInstance) {
         };
       });
 
-      return reply.status(200).send({
+      // Manual JSON serialization to avoid serialization issues
+      const successResponse = {
         success: true,
         data: {
           servers: responseServers,
           pagination: {
             total,
-            limit: queryParams.limit,
-            offset: queryParams.offset,
-            has_more: queryParams.offset + queryParams.limit < total
+            limit,
+            offset,
+            has_more: offset + limit < total
           },
           filters: {
             query: queryParams.q,
@@ -236,10 +253,12 @@ export default async function searchServers(server: FastifyInstance) {
             language: queryParams.language || null,
             runtime: queryParams.runtime || null,
             status: queryParams.status || null,
-            featured: queryParams.featured || null
+            featured: featured || null
           }
         }
-      });
+      };
+      const jsonString = JSON.stringify(successResponse);
+      return reply.status(200).type('application/json').send(jsonString);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       request.log.error({
@@ -249,10 +268,12 @@ export default async function searchServers(server: FastifyInstance) {
         error
       }, 'Failed to search MCP servers');
 
-      return reply.status(500).send({
+      const errorResponse = {
         success: false,
         error: 'Failed to search MCP servers'
-      });
+      };
+      const jsonString = JSON.stringify(errorResponse);
+      return reply.status(500).type('application/json').send(jsonString);
     }
   });
 }

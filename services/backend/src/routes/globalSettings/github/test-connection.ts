@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { zodToJsonSchema } from 'zod-to-json-schema';
+import { createSchema } from 'zod-openapi';
 import { requireGlobalAdmin } from '../../../middleware/roleMiddleware';
 import { GitHubService } from '../../../services/githubService';
 import { GlobalSettings } from '../../../global-settings';
@@ -47,29 +47,14 @@ export default async function githubTestConnectionRoute(fastify: FastifyInstance
         additionalProperties: true
       },
       response: {
-        200: zodToJsonSchema(githubAppTestResponseSchema.describe('GitHub App connection test successful'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        400: zodToJsonSchema(errorResponseSchema.describe('Bad Request - Connection test failed'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        401: zodToJsonSchema(errorResponseSchema.describe('Unauthorized - Authentication required'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        403: zodToJsonSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions or GitHub App disabled'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        500: zodToJsonSchema(errorResponseSchema.describe('Internal Server Error'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        })
+        200: createSchema(githubAppTestResponseSchema.describe('GitHub App connection test successful')),
+        400: createSchema(errorResponseSchema.describe('Bad Request - Connection test failed')),
+        401: createSchema(errorResponseSchema.describe('Unauthorized - Authentication required')),
+        403: createSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions or GitHub App disabled')),
+        500: createSchema(errorResponseSchema.describe('Internal Server Error'))
       }
     },
-    preValidation: requireGlobalAdmin(),
+    preValidation: requireGlobalAdmin()
   }, async (request, reply) => {
     fastify.log.info({
       operation: 'github_app_test_connection',
@@ -110,7 +95,7 @@ export default async function githubTestConnectionRoute(fastify: FastifyInstance
 
         return reply.status(403).send({
           success: false,
-          error: 'GitHub App integration is disabled. Please enable it first.',
+          error: 'GitHub App integration is disabled. Please enable it first.'
         });
       }
 
@@ -274,7 +259,7 @@ export default async function githubTestConnectionRoute(fastify: FastifyInstance
           
           return reply.status(403).send({
             success: false,
-            error: 'GitHub App integration is not enabled',
+            error: 'GitHub App integration is not enabled'
           });
         }
         

@@ -1,6 +1,6 @@
 import { type FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { zodToJsonSchema } from 'zod-to-json-schema';
+import { createSchema } from 'zod-openapi';
 import { requirePermission } from '../../../middleware/roleMiddleware';
 import { McpCategoriesService } from '../../../services/mcpCategoriesService';
 import { getDb } from '../../../db';
@@ -30,31 +30,20 @@ export default async function deleteCategory(server: FastifyInstance) {
       summary: 'Delete MCP category (Admin only)',
       description: 'Delete an MCP server category - requires global admin permissions. No Content-Type header required for this DELETE request.',
       security: [{ cookieAuth: [] }],
-      params: zodToJsonSchema(deleteCategoryParamsSchema, {
-        $refStrategy: 'none',
-        target: 'openApi3'
-      }),
+      // Plain JSON Schema for Fastify validation
+      params: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', minLength: 1 }
+        },
+        required: ['id']
+      },
       response: {
-        200: zodToJsonSchema(deleteCategoryResponseSchema, {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        401: zodToJsonSchema(errorResponseSchema.describe('Unauthorized - Authentication required'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        403: zodToJsonSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        404: zodToJsonSchema(errorResponseSchema.describe('Not Found - Category does not exist'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        500: zodToJsonSchema(errorResponseSchema.describe('Internal Server Error'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        })
+        200: createSchema(deleteCategoryResponseSchema),
+        401: createSchema(errorResponseSchema.describe('Unauthorized - Authentication required')),
+        403: createSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions')),
+        404: createSchema(errorResponseSchema.describe('Not Found - Category does not exist')),
+        500: createSchema(errorResponseSchema.describe('Internal Server Error'))
       }
     }
   }, async (request, reply) => {
@@ -79,10 +68,12 @@ export default async function deleteCategory(server: FastifyInstance) {
           categoryId: id
         }, 'MCP category not found');
 
-        return reply.status(404).send({
+        const notFoundResponse = {
           success: false,
           error: 'Category not found'
-        });
+        };
+        const jsonString = JSON.stringify(notFoundResponse);
+        return reply.status(404).type('application/json').send(jsonString);
       }
 
       request.log.info({
@@ -91,10 +82,13 @@ export default async function deleteCategory(server: FastifyInstance) {
         categoryId: id
       }, 'MCP category deleted successfully');
 
-      return reply.status(200).send({
+      // Manual JSON serialization to avoid serialization issues
+      const successResponse = {
         success: true,
         message: 'Category deleted successfully'
-      });
+      };
+      const jsonString = JSON.stringify(successResponse);
+      return reply.status(200).type('application/json').send(jsonString);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       request.log.error({
@@ -104,10 +98,12 @@ export default async function deleteCategory(server: FastifyInstance) {
         error
       }, 'Failed to delete MCP category');
 
-      return reply.status(500).send({
+      const errorResponse = {
         success: false,
         error: 'Failed to delete category'
-      });
+      };
+      const jsonString = JSON.stringify(errorResponse);
+      return reply.status(500).type('application/json').send(jsonString);
     }
   });
 }

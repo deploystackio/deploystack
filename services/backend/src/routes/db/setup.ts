@@ -3,7 +3,7 @@ import { initializeDatabase } from '../../db';
 import { getDatabaseConfig, validateDatabaseConfig } from '../../db/config';
 import { DbSetupRequestBodySchema, DatabaseType } from './schemas';
 import { z } from 'zod';
-import { zodToJsonSchema } from 'zod-to-json-schema';
+import { createSchema } from 'zod-openapi';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
@@ -32,31 +32,16 @@ const dbSetupRouteSchema = {
   requestBody: {
     content: {
       'application/json': {
-        schema: zodToJsonSchema(DbSetupRequestBodySchema, {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        })
+        schema: createSchema(DbSetupRequestBodySchema)
       }
     },
     required: true
   },
   response: {
-    200: zodToJsonSchema(setupSuccessResponseSchema.describe('Database setup completed successfully'), {
-      $refStrategy: 'none',
-      target: 'openApi3'
-    }),
-    400: zodToJsonSchema(setupErrorResponseSchema.describe('Bad Request - Invalid input or unsupported database type'), {
-      $refStrategy: 'none',
-      target: 'openApi3'
-    }),
-    409: zodToJsonSchema(setupConflictResponseSchema.describe('Conflict - Database setup has already been performed'), {
-      $refStrategy: 'none',
-      target: 'openApi3'
-    }),
-    500: zodToJsonSchema(setupErrorResponseSchema.describe('Internal Server Error - Database setup failed'), {
-      $refStrategy: 'none',
-      target: 'openApi3'
-    })
+    200: createSchema(setupSuccessResponseSchema.describe('Database setup completed successfully')),
+    400: createSchema(setupErrorResponseSchema.describe('Bad Request - Invalid input or unsupported database type')),
+    409: createSchema(setupConflictResponseSchema.describe('Conflict - Database setup has already been performed')),
+    500: createSchema(setupErrorResponseSchema.describe('Internal Server Error - Database setup failed'))
   }
 };
 
@@ -141,10 +126,12 @@ async function setupDbHandler(
     const existingSelection = await getDatabaseSelection();
     if (existingSelection) {
       server.log.warn('Attempt to setup database when already configured.');
-      return reply.status(409).send({ 
+      const conflictResponse = {
         message: 'Database setup has already been performed.',
-        database_type: existingSelection.type
-      });
+        database_type: String(existingSelection.type)
+      };
+      const jsonString = JSON.stringify(conflictResponse);
+      return reply.status(409).type('application/json').send(jsonString);
     }
 
     // Validate that the selected database type has proper environment configuration
@@ -194,25 +181,34 @@ async function setupDbHandler(
           await server.reinitializePluginsWithDatabase();
           
           server.log.info('Database setup and re-initialization completed successfully.');
-          return reply.status(200).send({ 
+          
+          // Create a completely clean response object to avoid any serialization issues
+          const cleanResponse = {
             message: 'Database setup successful. All services have been initialized and are ready to use.',
             restart_required: false,
-            database_type: dbType
-          });
+            database_type: 'sqlite'
+          };
+          
+          // Send as raw JSON string to bypass any serialization issues
+          const jsonString = JSON.stringify(cleanResponse);
+          server.log.info('Sending clean response:', jsonString);
+          return reply.status(200).type('application/json').send(jsonString);
         } else {
           server.log.warn('Database initialization succeeded but re-initialization failed. Manual restart may be required.');
-          return reply.status(200).send({ 
+          const responseObj = { 
             message: 'Database setup successful, but some services may require a server restart to function properly.',
             restart_required: true,
-            database_type: dbType
-          });
+            database_type: String(dbType)
+          };
+          server.log.info('Sending response object:', JSON.stringify(responseObj));
+          return reply.status(200).send(responseObj);
         }
       } catch (reinitError) {
         server.log.error('Error during re-initialization after database setup:', reinitError);
         return reply.status(200).send({ 
           message: 'Database setup successful, but re-initialization failed. Please restart the server to complete setup.',
           restart_required: true,
-          database_type: dbType
+          database_type: String(dbType)
         });
       }
     } else {

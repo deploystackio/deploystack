@@ -1,6 +1,6 @@
 import { type FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { zodToJsonSchema } from 'zod-to-json-schema';
+import { createSchema } from 'zod-openapi';
 import { requireTeamPermission } from '../../../middleware/roleMiddleware';
 import { McpInstallationService } from '../../../services/mcpInstallationService';
 import { getDb } from '../../../db';
@@ -46,29 +46,15 @@ export default async function listInstallationsRoute(fastify: FastifyInstance) {
       summary: 'List team MCP installations',
       description: 'Retrieves all MCP server installations for the specified team. No Content-Type header required for this GET request.',
       security: [{ cookieAuth: [] }],
-      params: zodToJsonSchema(z.object({
+      params: createSchema(z.object({
         teamId: z.string().min(1, 'Team ID is required')
       }), {
-        $refStrategy: 'none',
-        target: 'openApi3'
-      }),
+        }),
       response: {
-        200: zodToJsonSchema(successResponseSchema.describe('List of team installations'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        401: zodToJsonSchema(errorResponseSchema.describe('Unauthorized - Authentication required'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        403: zodToJsonSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        404: zodToJsonSchema(errorResponseSchema.describe('Not Found - Team not found'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        })
+        200: createSchema(successResponseSchema.describe('List of team installations')),
+        401: createSchema(errorResponseSchema.describe('Unauthorized - Authentication required')),
+        403: createSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions')),
+        404: createSchema(errorResponseSchema.describe('Not Found - Team not found'))
       }
     },
     preValidation: requireTeamPermission('mcp.installations.view')

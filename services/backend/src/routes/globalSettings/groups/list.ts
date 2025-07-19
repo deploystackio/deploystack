@@ -1,5 +1,5 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { zodToJsonSchema } from 'zod-to-json-schema';
+import { createSchema } from 'zod-openapi';
 import { GlobalSettingsService } from '../../../services/globalSettingsService';
 import { requireGlobalAdmin } from '../../../middleware/roleMiddleware';
 import { GlobalSettingGroupSchema } from '../schemas';
@@ -26,37 +26,25 @@ export default async function listGroupsRoute(fastify: FastifyInstance) {
       description: 'Retrieves all setting groups with their associated settings. Requires settings view permissions.',
       security: [{ cookieAuth: [] }],
       response: {
-        200: zodToJsonSchema(settingGroupsListResponseSchema.describe('Successfully retrieved setting groups'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        401: zodToJsonSchema(errorResponseSchema.describe('Unauthorized - Authentication required'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        403: zodToJsonSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        500: zodToJsonSchema(errorResponseSchema.describe('Internal Server Error'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        })
+        200: createSchema(settingGroupsListResponseSchema.describe('Successfully retrieved setting groups')),
+        401: createSchema(errorResponseSchema.describe('Unauthorized - Authentication required')),
+        403: createSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions')),
+        500: createSchema(errorResponseSchema.describe('Internal Server Error'))
       }
     },
-    preValidation: requireGlobalAdmin(),
+    preValidation: requireGlobalAdmin()
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const groupsWithSettings = await GlobalSettingsService.getAllGroupsWithSettings();
       return reply.status(200).send({
         success: true,
-        data: groupsWithSettings,
+        data: groupsWithSettings
       });
     } catch (error) {
       fastify.log.error(error, 'Error fetching all global setting groups with settings');
       return reply.status(500).send({
         success: false,
-        error: 'Failed to fetch all global setting groups with settings',
+        error: 'Failed to fetch all global setting groups with settings'
       });
     }
   });

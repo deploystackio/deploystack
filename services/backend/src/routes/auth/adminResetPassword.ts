@@ -3,7 +3,7 @@ import { AdminResetPasswordSchema, type AdminResetPasswordInput } from './schema
 import { PasswordResetService } from '../../services/passwordResetService';
 import { requireGlobalAdmin } from '../../middleware/roleMiddleware';
 import { z } from 'zod';
-import { zodToJsonSchema } from 'zod-to-json-schema';
+import { createSchema } from 'zod-openapi';
 
 // Response schemas
 const adminResetPasswordSuccessResponseSchema = z.object({
@@ -22,35 +22,14 @@ const adminResetPasswordRouteSchema = {
   summary: 'Admin-initiated password reset',
   description: 'Allows global administrators to initiate password reset for users with email authentication. The admin cannot reset their own password. Requires global_send_mail setting to be enabled. The user will receive an email with a reset link that works the same as self-initiated password resets.',
   security: [{ cookieAuth: [] }],
-  body: zodToJsonSchema(AdminResetPasswordSchema, { 
-    $refStrategy: 'none', 
-    target: 'openApi3' 
-  }),
+  body: createSchema(AdminResetPasswordSchema),
   response: {
-    200: zodToJsonSchema(adminResetPasswordSuccessResponseSchema.describe('Password reset email sent successfully'), {
-      $refStrategy: 'none',
-      target: 'openApi3'
-    }),
-    400: zodToJsonSchema(adminResetPasswordErrorResponseSchema.describe('Bad Request - Invalid email, user not found, or user not eligible'), {
-      $refStrategy: 'none',
-      target: 'openApi3'
-    }),
-    401: zodToJsonSchema(adminResetPasswordErrorResponseSchema.describe('Unauthorized - Authentication required'), {
-      $refStrategy: 'none',
-      target: 'openApi3'
-    }),
-    403: zodToJsonSchema(adminResetPasswordErrorResponseSchema.describe('Forbidden - Insufficient permissions or self-reset attempt'), {
-      $refStrategy: 'none',
-      target: 'openApi3'
-    }),
-    503: zodToJsonSchema(adminResetPasswordErrorResponseSchema.describe('Service Unavailable - Email functionality disabled'), {
-      $refStrategy: 'none',
-      target: 'openApi3'
-    }),
-    500: zodToJsonSchema(adminResetPasswordErrorResponseSchema.describe('Internal Server Error - Password reset failed'), {
-      $refStrategy: 'none',
-      target: 'openApi3'
-    })
+    200: createSchema(adminResetPasswordSuccessResponseSchema.describe('Password reset email sent successfully')),
+    400: createSchema(adminResetPasswordErrorResponseSchema.describe('Bad Request - Invalid email, user not found, or user not eligible')),
+    401: createSchema(adminResetPasswordErrorResponseSchema.describe('Unauthorized - Authentication required')),
+    403: createSchema(adminResetPasswordErrorResponseSchema.describe('Forbidden - Insufficient permissions or self-reset attempt')),
+    503: createSchema(adminResetPasswordErrorResponseSchema.describe('Service Unavailable - Email functionality disabled')),
+    500: createSchema(adminResetPasswordErrorResponseSchema.describe('Internal Server Error - Password reset failed'))
   }
 };
 

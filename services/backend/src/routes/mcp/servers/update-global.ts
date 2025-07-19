@@ -1,6 +1,6 @@
 import { type FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { zodToJsonSchema } from 'zod-to-json-schema';
+import { createSchema } from 'zod-openapi';
 import { requireGlobalAdmin } from '../../../middleware/roleMiddleware';
 import { McpCatalogService } from '../../../services/mcpCatalogService';
 import { getDb } from '../../../db';
@@ -111,50 +111,23 @@ export default async function updateGlobalServer(server: FastifyInstance) {
       summary: 'Update global MCP server (Global Admin only)',
       description: 'Update an existing global MCP server - requires global admin permissions. Only global servers can be updated through this endpoint. Requires Content-Type: application/json header when sending request body.',
       security: [{ cookieAuth: [] }],
-      params: zodToJsonSchema(updateGlobalServerParamsSchema, {
-        $refStrategy: 'none',
-        target: 'openApi3'
-      }),
+      params: createSchema(updateGlobalServerParamsSchema),
       requestBody: {
         required: true,
         content: {
           'application/json': {
-            schema: zodToJsonSchema(updateGlobalServerRequestSchema, {
-              $refStrategy: 'none',
-              target: 'openApi3'
-            })
+            schema: createSchema(updateGlobalServerRequestSchema)
           }
         }
       },
       response: {
-        200: zodToJsonSchema(updateGlobalServerResponseSchema, {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        400: zodToJsonSchema(errorResponseSchema.describe('Bad Request - Invalid input or missing Content-Type header'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        401: zodToJsonSchema(errorResponseSchema.describe('Unauthorized - Authentication required'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        403: zodToJsonSchema(errorResponseSchema.describe('Forbidden - Global admin permissions required'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        404: zodToJsonSchema(errorResponseSchema.describe('Not Found - Server not found or not a global server'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        409: zodToJsonSchema(errorResponseSchema.describe('Conflict - Server name already exists'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        500: zodToJsonSchema(errorResponseSchema.describe('Internal Server Error'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        })
+        200: createSchema(updateGlobalServerResponseSchema),
+        400: createSchema(errorResponseSchema.describe('Bad Request - Invalid input or missing Content-Type header')),
+        401: createSchema(errorResponseSchema.describe('Unauthorized - Authentication required')),
+        403: createSchema(errorResponseSchema.describe('Forbidden - Global admin permissions required')),
+        404: createSchema(errorResponseSchema.describe('Not Found - Server not found or not a global server')),
+        409: createSchema(errorResponseSchema.describe('Conflict - Server name already exists')),
+        500: createSchema(errorResponseSchema.describe('Internal Server Error'))
       }
     }
   }, async (request, reply) => {

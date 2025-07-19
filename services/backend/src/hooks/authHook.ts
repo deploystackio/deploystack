@@ -131,7 +131,12 @@ export async function requireAuthHook(
 ) {
   // This hook assumes authHook has already run and populated request.user/session
   if (!request.user || !request.session) {
-    return reply.status(401).send({ error: 'Unauthorized: Authentication required.' });
+    const errorResponse = {
+      success: false,
+      error: 'Unauthorized: Authentication required.'
+    };
+    const jsonString = JSON.stringify(errorResponse);
+    return reply.status(401).type('application/json').send(jsonString);
   }
   // No need to call done() in modern Fastify async hooks
 }

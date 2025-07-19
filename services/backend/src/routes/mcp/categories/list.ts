@@ -1,6 +1,6 @@
 import { type FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { zodToJsonSchema } from 'zod-to-json-schema';
+import { createSchema } from 'zod-openapi';
 import { McpCategoriesService } from '../../../services/mcpCategoriesService';
 import { getDb } from '../../../db';
 
@@ -31,14 +31,8 @@ export default async function listCategories(server: FastifyInstance) {
       summary: 'List all MCP server categories',
       description: 'Retrieve all available MCP server categories for organization. No Content-Type header required for this GET request.',
       response: {
-        200: zodToJsonSchema(listCategoriesResponseSchema, {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        500: zodToJsonSchema(errorResponseSchema, {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        })
+        200: createSchema(listCategoriesResponseSchema),
+        500: createSchema(errorResponseSchema)
       }
     }
   }, async (request, reply) => {
@@ -47,23 +41,32 @@ export default async function listCategories(server: FastifyInstance) {
       const categoriesService = new McpCategoriesService(db, server.log);
       const categories = await categoriesService.getAllCategories();
 
-      return reply.send({
+      // Manual JSON serialization to avoid serialization issues
+      const successResponse = {
         success: true,
         data: categories.map(cat => ({
-          ...cat,
+          id: String(cat.id),
+          name: String(cat.name),
+          description: cat.description ? String(cat.description) : null,
+          icon: cat.icon ? String(cat.icon) : null,
+          sort_order: Number(cat.sort_order),
           created_at: cat.created_at.toISOString()
         }))
-      });
+      };
+      const jsonString = JSON.stringify(successResponse);
+      return reply.status(200).type('application/json').send(jsonString);
     } catch (error) {
       server.log.error({
         operation: 'list_categories',
         error
       }, 'Failed to list MCP categories');
       
-      return reply.status(500).send({
+      const errorResponse = {
         success: false,
         error: 'Failed to retrieve categories'
-      });
+      };
+      const jsonString = JSON.stringify(errorResponse);
+      return reply.status(500).type('application/json').send(jsonString);
     }
   });
 }

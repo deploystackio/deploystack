@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { zodToJsonSchema } from 'zod-to-json-schema';
+import { createSchema } from 'zod-openapi';
 import { GlobalSettingsInitService } from '../../global-settings';
 
 // Response schema for GitHub OAuth status
@@ -20,14 +20,8 @@ export default async function githubStatusRoute(fastify: FastifyInstance) {
       summary: 'Check GitHub OAuth status',
       description: 'Returns whether GitHub OAuth is enabled and configured. This endpoint can be used by the frontend to determine whether to show the "Login with GitHub" button.',
       response: {
-        200: zodToJsonSchema(githubStatusResponseSchema.describe('GitHub OAuth status information'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        500: zodToJsonSchema(errorResponseSchema.describe('Internal Server Error'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        })
+        200: createSchema(githubStatusResponseSchema.describe('GitHub OAuth status information')),
+        500: createSchema(errorResponseSchema.describe('Internal Server Error'))
       }
     }
   }, async (_request, reply) => {

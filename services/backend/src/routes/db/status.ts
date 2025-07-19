@@ -1,12 +1,10 @@
 import { type FastifyInstance, type FastifyRequest, type FastifyReply } from 'fastify';
 import { getDbStatus } from '../../db';
 import { 
-  DatabaseType,
-  type DbStatusResponse,
   DbStatusResponseSchema
 } from './schemas';
 import { z } from 'zod';
-import { zodToJsonSchema } from 'zod-to-json-schema';
+import { createSchema } from 'zod-openapi';
 
 // Error response schema
 const errorResponseSchema = z.object({
@@ -19,14 +17,8 @@ const dbStatusRouteSchema = {
   summary: 'Get database status',
   description: 'Returns the current status of the database configuration and initialization. This endpoint checks whether the database has been configured and properly initialized.',
   response: {
-    200: zodToJsonSchema(DbStatusResponseSchema.describe('Database status information'), {
-      $refStrategy: 'none',
-      target: 'openApi3'
-    }),
-    500: zodToJsonSchema(errorResponseSchema.describe('Internal Server Error - Failed to fetch database status'), {
-      $refStrategy: 'none',
-      target: 'openApi3'
-    })
+    200: createSchema(DbStatusResponseSchema.describe('Database status information')),
+    500: createSchema(errorResponseSchema.describe('Internal Server Error - Failed to fetch database status'))
   }
 };
 
@@ -38,12 +30,18 @@ async function getDbStatusHandler(
 ) {
   try {
     const statusFromService = getDbStatus();
-    const responseStatus: DbStatusResponse = {
-      configured: statusFromService.configured,
-      initialized: statusFromService.initialized,
-      dialect: statusFromService.dialect as DatabaseType | null,
+    
+    // Create a clean response object to avoid serialization issues
+    const cleanResponse = {
+      configured: Boolean(statusFromService.configured),
+      initialized: Boolean(statusFromService.initialized),
+      dialect: statusFromService.dialect ? String(statusFromService.dialect) : null
     };
-    return reply.send(responseStatus);
+    
+    // Send as raw JSON string to bypass any serialization issues
+    const jsonString = JSON.stringify(cleanResponse);
+    server.log.info('Sending status response:', jsonString);
+    return reply.type('application/json').send(jsonString);
   } catch (error) {
     server.log.error(error, 'Error fetching database status'); // Use server.log
     return reply.status(500).send({ error: 'Failed to fetch database status' });

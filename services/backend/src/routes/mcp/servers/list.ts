@@ -1,13 +1,14 @@
 import { type FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { zodToJsonSchema } from 'zod-to-json-schema';
+import { createSchema } from 'zod-openapi';
 import { McpCatalogService } from '../../../services/mcpCatalogService';
 import { TeamService } from '../../../services/teamService';
 import { getUserRole, requirePermission } from '../../../middleware/roleMiddleware';
 import { getDb } from '../../../db';
 
-// Query parameters schema
-const querySchema = z.object({
+
+// Query parameters schema for documentation (without transforms)
+const querySchemaDoc = z.object({
   category_id: z.string().optional(),
   language: z.string().optional(),
   runtime: z.string().optional(),
@@ -15,8 +16,8 @@ const querySchema = z.object({
   featured: z.boolean().optional(),
   search: z.string().optional(),
   // Pagination parameters
-  limit: z.string().regex(/^\d+$/, 'Limit must be a number').transform(Number).refine(n => n > 0 && n <= 100, 'Limit must be between 1 and 100').optional().default(20),
-  offset: z.string().regex(/^\d+$/, 'Offset must be a number').transform(Number).refine(n => n >= 0, 'Offset must be non-negative').optional().default(0)
+  limit: z.string().regex(/^\d+$/).optional().describe('Limit must be a number between 1 and 100'),
+  offset: z.string().regex(/^\d+$/).optional().describe('Offset must be non-negative')
 });
 
 // Response schema
@@ -76,23 +77,11 @@ export default async function listServers(server: FastifyInstance) {
       summary: 'List MCP servers',
       description: 'Retrieve MCP servers visible to the current user based on their permissions with pagination support. Authentication is required. Supports filtering by category, language, runtime, status, featured flag, and search query. Results are paginated with configurable limit (1-100, default: 20) and offset (default: 0).',
       security: [{ cookieAuth: [] }],
-      querystring: zodToJsonSchema(querySchema, {
-        $refStrategy: 'none',
-        target: 'openApi3'
-      }),
+      querystring: createSchema(querySchemaDoc),
       response: {
-        200: zodToJsonSchema(listServersResponseSchema, {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        401: zodToJsonSchema(errorResponseSchema.describe('Unauthorized - Authentication required'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        500: zodToJsonSchema(errorResponseSchema, {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        })
+        200: createSchema(listServersResponseSchema),
+        401: createSchema(errorResponseSchema.describe('Unauthorized - Authentication required')),
+        500: createSchema(errorResponseSchema)
       }
     },
     validatorCompiler: () => () => true, // Disable validation but keep schema for docs
@@ -182,8 +171,9 @@ export default async function listServers(server: FastifyInstance) {
         };
       });
 
-      // Return the format your frontend expects
-      return reply.send({
+      // Manual JSON serialization to avoid serialization issues
+      const successResponse = {
+        success: true,
         data: {
           servers: responseServers,
           pagination: {
@@ -193,7 +183,9 @@ export default async function listServers(server: FastifyInstance) {
             has_more: offset + limit < total
           }
         }
-      });
+      };
+      const jsonString = JSON.stringify(successResponse);
+      return reply.status(200).type('application/json').send(jsonString);
     /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
     } catch (error: any) {
       request.log.error({
@@ -203,10 +195,12 @@ export default async function listServers(server: FastifyInstance) {
         stack: error.stack
       }, 'Failed to list MCP servers');
       
-      return reply.status(500).send({
+      const errorResponse = {
         success: false,
         error: error.message || 'Failed to retrieve servers'
-      });
+      };
+      const jsonString = JSON.stringify(errorResponse);
+      return reply.status(500).type('application/json').send(jsonString);
     }
   });
 }

@@ -1,6 +1,6 @@
 import { type FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { zodToJsonSchema } from 'zod-to-json-schema';
+import { createSchema } from 'zod-openapi';
 import { requireGlobalAdmin } from '../../../middleware/roleMiddleware';
 import { McpCatalogService } from '../../../services/mcpCatalogService';
 import { getDb } from '../../../db';
@@ -36,31 +36,13 @@ export default async function deleteGlobalServer(server: FastifyInstance) {
       summary: 'Delete global MCP server (Global Admin only)',
       description: 'Delete an existing global MCP server - requires global admin permissions. Only global servers can be deleted through this endpoint. This action is irreversible.',
       security: [{ cookieAuth: [] }],
-      params: zodToJsonSchema(deleteGlobalServerParamsSchema, {
-        $refStrategy: 'none',
-        target: 'openApi3'
-      }),
+      params: createSchema(deleteGlobalServerParamsSchema),
       response: {
-        200: zodToJsonSchema(deleteGlobalServerResponseSchema, {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        401: zodToJsonSchema(errorResponseSchema.describe('Unauthorized - Authentication required'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        403: zodToJsonSchema(errorResponseSchema.describe('Forbidden - Global admin permissions required'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        404: zodToJsonSchema(errorResponseSchema.describe('Not Found - Server not found or not a global server'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        500: zodToJsonSchema(errorResponseSchema.describe('Internal Server Error'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        })
+        200: createSchema(deleteGlobalServerResponseSchema),
+        401: createSchema(errorResponseSchema.describe('Unauthorized - Authentication required')),
+        403: createSchema(errorResponseSchema.describe('Forbidden - Global admin permissions required')),
+        404: createSchema(errorResponseSchema.describe('Not Found - Server not found or not a global server')),
+        500: createSchema(errorResponseSchema.describe('Internal Server Error'))
       }
     }
   }, async (request, reply) => {
