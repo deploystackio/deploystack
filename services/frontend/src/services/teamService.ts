@@ -12,7 +12,9 @@ export const TeamSchema = z.object({
   created_at: z.date(),
   updated_at: z.date(),
   role: z.enum(['team_admin', 'team_user']).optional(),
-  is_admin: z.boolean().optional()
+  is_admin: z.boolean().optional(),
+  is_owner: z.boolean().optional(),
+  member_count: z.number().optional()
 })
 
 export const TeamWithRoleSchema = TeamSchema.extend({

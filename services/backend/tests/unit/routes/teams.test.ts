@@ -79,6 +79,7 @@ describe('Teams Route', () => {
     mockReply = {
       status: vi.fn().mockReturnThis(),
       send: vi.fn().mockReturnThis(),
+      type: vi.fn().mockReturnThis(),
     };
 
     // Mock requirePermission middleware
@@ -96,6 +97,7 @@ describe('Teams Route', () => {
     mockTeamService.isTeamAdmin = vi.fn();
     mockTeamService.updateTeam = vi.fn();
     mockTeamService.deleteTeam = vi.fn();
+    mockTeamService.getTeamMemberCount = vi.fn();
   });
 
   afterEach(() => {
@@ -582,6 +584,8 @@ describe('Teams Route', () => {
 
       mockTeamService.getTeamById.mockResolvedValue(team);
       mockTeamService.isTeamMember.mockResolvedValue(true);
+      mockTeamService.getTeamMembership.mockResolvedValue({ role: 'team_user' });
+      mockTeamService.getTeamMemberCount.mockResolvedValue(1);
 
       const handler = routeHandlers['GET /teams/:id'];
       await handler(mockRequest, mockReply);
@@ -589,10 +593,19 @@ describe('Teams Route', () => {
       expect(mockTeamService.getTeamById).toHaveBeenCalledWith('team-123');
       expect(mockTeamService.isTeamMember).toHaveBeenCalledWith('team-123', 'user-123');
       expect(mockReply.status).toHaveBeenCalledWith(200);
-      expect(mockReply.send).toHaveBeenCalledWith({
+      // The route now sends JSON string, so we need to check for the string format
+      const expectedTeamWithRole = {
+        ...team,
+        role: 'team_user',
+        is_admin: false,
+        is_owner: false,
+        member_count: 1
+      };
+      const expectedJsonString = JSON.stringify({
         success: true,
-        data: team,
+        data: expectedTeamWithRole
       });
+      expect(mockReply.send).toHaveBeenCalledWith(expectedJsonString);
     });
 
     it('should return 401 when user is not authenticated', async () => {
@@ -602,10 +615,11 @@ describe('Teams Route', () => {
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(401);
-      expect(mockReply.send).toHaveBeenCalledWith({
+      const expectedJsonString = JSON.stringify({
         success: false,
-        error: 'Authentication required',
+        error: 'Authentication required'
       });
+      expect(mockReply.send).toHaveBeenCalledWith(expectedJsonString);
     });
 
     it('should return 404 when team is not found', async () => {
@@ -616,10 +630,11 @@ describe('Teams Route', () => {
 
       expect(mockTeamService.getTeamById).toHaveBeenCalledWith('team-123');
       expect(mockReply.status).toHaveBeenCalledWith(404);
-      expect(mockReply.send).toHaveBeenCalledWith({
+      const expectedJsonString = JSON.stringify({
         success: false,
-        error: 'Team not found',
+        error: 'Team not found'
       });
+      expect(mockReply.send).toHaveBeenCalledWith(expectedJsonString);
     });
 
     it('should return 403 when user is not a team member', async () => {
@@ -643,10 +658,11 @@ describe('Teams Route', () => {
       expect(mockTeamService.getTeamById).toHaveBeenCalledWith('team-123');
       expect(mockTeamService.isTeamMember).toHaveBeenCalledWith('team-123', 'user-123');
       expect(mockReply.status).toHaveBeenCalledWith(403);
-      expect(mockReply.send).toHaveBeenCalledWith({
+      const expectedJsonString = JSON.stringify({
         success: false,
-        error: 'You do not have access to this team',
+        error: 'You do not have access to this team'
       });
+      expect(mockReply.send).toHaveBeenCalledWith(expectedJsonString);
     });
 
     it('should handle internal server errors', async () => {
@@ -657,10 +673,11 @@ describe('Teams Route', () => {
 
       expect(mockFastify.log?.error).toHaveBeenCalled();
       expect(mockReply.status).toHaveBeenCalledWith(500);
-      expect(mockReply.send).toHaveBeenCalledWith({
+      const expectedJsonString = JSON.stringify({
         success: false,
-        error: 'Failed to fetch team',
+        error: 'Failed to fetch team'
       });
+      expect(mockReply.send).toHaveBeenCalledWith(expectedJsonString);
     });
   });
 
