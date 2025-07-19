@@ -7,10 +7,10 @@ import { getDb } from '../../../db';
 
 // Claude Desktop configuration schema
 const claudeDesktopConfigSchema = z.object({
-  mcpServers: z.record(z.object({
+  mcpServers: z.record(z.string(), z.object({
     command: z.string().min(1, 'Command is required'),
     args: z.array(z.string()),
-    env: z.record(z.string()).optional()
+    env: z.record(z.string(), z.string()).optional()
   }))
 }).refine(
   (config) => Object.keys(config.mcpServers).length === 1,
@@ -48,7 +48,7 @@ const createGlobalServerRequestSchema = z.object({
   author_contact: z.string().optional(),
   organization: z.string().optional(),
   license: z.string().optional(),
-  dependencies: z.record(z.any()).optional(),
+  dependencies: z.record(z.string(), z.any()).optional(),
   category_id: z.string().optional(),
   tags: z.array(z.string()).optional(),
   featured: z.boolean().default(false)
@@ -116,9 +116,9 @@ const createGlobalServerResponseSchema = z.object({
     author_contact: z.string().nullable(),
     organization: z.string().nullable(),
     license: z.string().nullable(),
-    default_config: z.record(z.any()).nullable(),
+    default_config: z.record(z.string(), z.any()).nullable(),
     environment_variables: z.array(z.any()).nullable(),
-    dependencies: z.record(z.any()).nullable(),
+    dependencies: z.record(z.string(), z.any()).nullable(),
     category_id: z.string().nullable(),
     tags: z.array(z.string()).nullable(),
     status: z.enum(['active', 'deprecated', 'maintenance']),

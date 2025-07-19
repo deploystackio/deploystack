@@ -250,7 +250,7 @@ export default async function usersRoute(fastify: FastifyInstance) {
         return reply.status(400).send({
           success: false,
           error: 'Validation error',
-          details: error.errors,
+          details: error.issues,
         });
       }
       
@@ -432,7 +432,7 @@ export default async function usersRoute(fastify: FastifyInstance) {
         return reply.status(400).send({
           success: false,
           error: 'Validation error',
-          details: error.errors,
+          details: error.issues,
         });
       }
       

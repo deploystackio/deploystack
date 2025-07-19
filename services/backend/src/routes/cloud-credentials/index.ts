@@ -198,7 +198,7 @@ export default async function cloudCredentialsRoutes(fastify: FastifyInstance) {
         return reply.status(400).send({
           success: false,
           error: 'Validation failed',
-          details: validationResult.error.errors.map(err => err.message)
+          details: validationResult.error.issues.map(err => err.message)
         });
       }
 
@@ -337,7 +337,7 @@ export default async function cloudCredentialsRoutes(fastify: FastifyInstance) {
         return reply.status(400).send({
           success: false,
           error: 'Validation failed',
-          details: validationResult.error.errors.map(err => err.message)
+          details: validationResult.error.issues.map(err => err.message)
         });
       }
 
@@ -567,7 +567,7 @@ export default async function cloudCredentialsRoutes(fastify: FastifyInstance) {
         return reply.status(400).send({
           success: false,
           error: 'Validation failed',
-          details: validationResult.error.errors.map(err => err.message)
+          details: validationResult.error.issues.map(err => err.message)
         });
       }
 

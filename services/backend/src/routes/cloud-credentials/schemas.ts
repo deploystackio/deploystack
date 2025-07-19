@@ -47,7 +47,7 @@ export const CloudCredentialResponseSchema = z.object({
     name: z.string(),
     description: z.string(),
   }),
-  fields: z.record(CredentialFieldResponseSchema),
+  fields: z.record(z.string(), CredentialFieldResponseSchema),
   createdBy: z.union([UserInfoSchema, z.string()]).describe('User object when available, fallback to user ID'),
   createdAt: z.string(),
   updatedAt: z.string(),
@@ -73,7 +73,7 @@ export const CreateCloudCredentialSchema = z.object({
   providerId: z.string().min(1, 'Provider ID is required'),
   name: z.string().min(1, 'Name is required').max(100, 'Name must be 100 characters or less'),
   comment: z.string().max(500, 'Comment must be 500 characters or less').optional(),
-  credentials: z.record(z.string()).refine(
+  credentials: z.record(z.string(), z.string()).refine(
     (data) => Object.keys(data).length > 0,
     'At least one credential field is required'
   ),
@@ -82,7 +82,7 @@ export const CreateCloudCredentialSchema = z.object({
 export const UpdateCloudCredentialSchema = z.object({
   name: z.string().min(1, 'Name is required').max(100, 'Name must be 100 characters or less').optional(),
   comment: z.string().max(500, 'Comment must be 500 characters or less').optional(),
-  credentials: z.record(z.string()).optional(),
+  credentials: z.record(z.string(), z.string()).optional(),
 });
 
 export const SearchCredentialsQuerySchema = z.object({

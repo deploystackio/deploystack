@@ -10,7 +10,7 @@ const createInstallationSchema = z.object({
   server_id: z.string().min(1, 'Server ID is required'),
   installation_name: z.string().min(1, 'Installation name is required').max(100, 'Installation name too long'),
   installation_type: z.enum(['local', 'cloud']).optional().default('local'),
-  user_environment_variables: z.record(z.string()).optional()
+  user_environment_variables: z.record(z.string(), z.string()).optional()
 });
 
 // Response schemas
@@ -23,7 +23,7 @@ const successResponseSchema = z.object({
     user_id: z.string(),
     installation_name: z.string(),
     installation_type: z.enum(['local', 'cloud']),
-    user_environment_variables: z.record(z.string()).optional(),
+    user_environment_variables: z.record(z.string(), z.string()).optional(),
     created_at: z.string(),
     updated_at: z.string(),
     last_used_at: z.string().nullable(),
