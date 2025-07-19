@@ -329,7 +329,7 @@ describe('Roles Route', () => {
       expect(mockReply.send).toHaveBeenCalledWith({
         success: false,
         error: 'Validation error',
-        details: zodError.errors,
+        details: zodError.issues,
       });
     });
 
@@ -495,7 +495,7 @@ describe('Roles Route', () => {
       expect(mockReply.send).toHaveBeenCalledWith({
         success: false,
         error: 'Validation error',
-        details: zodError.errors,
+        details: zodError.issues,
       });
     });
 
