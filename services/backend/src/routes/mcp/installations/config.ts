@@ -29,7 +29,7 @@ export default async function getClientConfigRoute(fastify: FastifyInstance) {
         teamId: z.string().min(1, 'Team ID is required'),
         installationId: z.string().min(1, 'Installation ID is required'),
         clientType: z.enum(['claude-desktop', 'vscode', 'cursor'], {
-          errorMap: () => ({ message: 'Client type must be one of: claude-desktop, vscode, cursor' })
+          error: () => ({ message: 'Client type must be one of: claude-desktop, vscode, cursor' })
         })
       }), {
         $refStrategy: 'none',

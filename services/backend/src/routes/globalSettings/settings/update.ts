@@ -96,7 +96,7 @@ export default async function updateGlobalSettingRoute(fastify: FastifyInstance)
         return reply.status(400).send({
           success: false,
           error: 'Validation error',
-          details: error.errors,
+          details: error.issues,
         });
       }
       

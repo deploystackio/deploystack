@@ -14,8 +14,8 @@ const searchServersQuerySchema = z.object({
   runtime: z.string().optional(),
   status: z.enum(['active', 'deprecated', 'maintenance']).optional(),
   featured: z.enum(['true', 'false']).optional().transform((val) => val === 'true'),
-  limit: z.string().regex(/^\d+$/, 'Limit must be a number').transform(Number).refine(n => n > 0 && n <= 100, 'Limit must be between 1 and 100').optional().default('20'),
-  offset: z.string().regex(/^\d+$/, 'Offset must be a number').transform(Number).refine(n => n >= 0, 'Offset must be non-negative').optional().default('0')
+  limit: z.string().regex(/^\d+$/, 'Limit must be a number').transform(Number).refine(n => n > 0 && n <= 100, 'Limit must be between 1 and 100').optional().default(20),
+  offset: z.string().regex(/^\d+$/, 'Offset must be a number').transform(Number).refine(n => n >= 0, 'Offset must be non-negative').optional().default(0)
 });
 
 // Response schema for search results
@@ -45,9 +45,9 @@ const searchServersResponseSchema = z.object({
       author_contact: z.string().nullable(),
       organization: z.string().nullable(),
       license: z.string().nullable(),
-      default_config: z.record(z.any()).nullable(),
+      default_config: z.record(z.string(), z.any()).nullable(),
       environment_variables: z.array(z.any()).nullable(),
-      dependencies: z.record(z.any()).nullable(),
+      dependencies: z.record(z.string(), z.any()).nullable(),
       category_id: z.string().nullable(),
       tags: z.array(z.string()).nullable(),
       status: z.enum(['active', 'deprecated', 'maintenance']),

@@ -13,7 +13,7 @@ const installationSchema = z.object({
   user_id: z.string(),
   installation_name: z.string(),
   installation_type: z.enum(['local', 'cloud']),
-  user_environment_variables: z.record(z.string()).optional(),
+  user_environment_variables: z.record(z.string(), z.string()).optional(),
   created_at: z.string(),
   updated_at: z.string(),
   last_used_at: z.string().nullable(),
