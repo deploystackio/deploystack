@@ -95,6 +95,7 @@ describe('MCP Servers - List Servers', () => {
     // Setup mock reply
     mockReply = {
       status: vi.fn().mockReturnThis(),
+      type: vi.fn().mockReturnThis(),
       send: vi.fn().mockReturnThis(),
     };
   });
@@ -177,7 +178,14 @@ describe('MCP Servers - List Servers', () => {
       const handler = routeHandlers['GET /mcp/servers'];
       await handler(mockRequest, mockReply);
 
-      expect(mockReply.send).toHaveBeenCalledWith({
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      
+      // Parse the JSON string response
+      const sentData = (mockReply.send as any).mock.calls[0][0];
+      const response = JSON.parse(sentData);
+      
+      expect(response).toEqual({
+        success: true,
         data: {
           servers: expect.arrayContaining([
             expect.objectContaining({
@@ -219,7 +227,13 @@ describe('MCP Servers - List Servers', () => {
       );
 
       expect(mockReply.status).toHaveBeenCalledWith(500);
-      expect(mockReply.send).toHaveBeenCalledWith({
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      
+      // Parse the JSON string response
+      const sentData = (mockReply.send as any).mock.calls[0][0];
+      const response = JSON.parse(sentData);
+      
+      expect(response).toEqual({
         success: false,
         error: 'Database connection failed'
       });
@@ -234,7 +248,14 @@ describe('MCP Servers - List Servers', () => {
       const handler = routeHandlers['GET /mcp/servers'];
       await handler(mockRequest, mockReply);
 
-      expect(mockReply.send).toHaveBeenCalledWith({
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      
+      // Parse the JSON string response
+      const sentData = (mockReply.send as any).mock.calls[0][0];
+      const response = JSON.parse(sentData);
+      
+      expect(response).toEqual({
+        success: true,
         data: {
           servers: [],
           pagination: {

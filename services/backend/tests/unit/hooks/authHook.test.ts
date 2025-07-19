@@ -49,7 +49,7 @@ describe('authHook', () => {
     // Setup mock reply
     mockReply = {
       setCookie: vi.fn(),
-    };
+    } as any;
 
     // Setup mock Lucia
     mockLucia = {
@@ -106,6 +106,7 @@ describe('authHook', () => {
         configured: false,
         initialized: false,
         dialect: null,
+        type: null,
       });
 
       await authHook(mockRequest as FastifyRequest, mockReply as FastifyReply);
@@ -122,6 +123,7 @@ describe('authHook', () => {
         configured: true,
         initialized: false,
         dialect: null,
+        type: null,
       });
 
       await authHook(mockRequest as FastifyRequest, mockReply as FastifyReply);
@@ -138,6 +140,7 @@ describe('authHook', () => {
         configured: true,
         initialized: true,
         dialect: 'sqlite',
+        type: 'sqlite',
       });
     });
 
@@ -325,6 +328,7 @@ describe('requireAuthHook', () => {
 
     mockReply = {
       status: vi.fn().mockReturnThis(),
+      type: vi.fn().mockReturnThis(),
       send: vi.fn(),
     };
   });
@@ -339,9 +343,12 @@ describe('requireAuthHook', () => {
     );
 
     expect(mockReply.status).toHaveBeenCalledWith(401);
-    expect(mockReply.send).toHaveBeenCalledWith({
-      error: 'Unauthorized: Authentication required.',
-    });
+    expect(mockReply.send).toHaveBeenCalledWith(
+      JSON.stringify({
+        success: false,
+        error: 'Unauthorized: Authentication required.'
+      })
+    );
   });
 
   it('should return 401 when user exists but session is null', async () => {
@@ -354,9 +361,12 @@ describe('requireAuthHook', () => {
     );
 
     expect(mockReply.status).toHaveBeenCalledWith(401);
-    expect(mockReply.send).toHaveBeenCalledWith({
-      error: 'Unauthorized: Authentication required.',
-    });
+    expect(mockReply.send).toHaveBeenCalledWith(
+      JSON.stringify({
+        success: false,
+        error: 'Unauthorized: Authentication required.'
+      })
+    );
   });
 
   it('should return 401 when session exists but user is null', async () => {
@@ -369,9 +379,12 @@ describe('requireAuthHook', () => {
     );
 
     expect(mockReply.status).toHaveBeenCalledWith(401);
-    expect(mockReply.send).toHaveBeenCalledWith({
-      error: 'Unauthorized: Authentication required.',
-    });
+    expect(mockReply.send).toHaveBeenCalledWith(
+      JSON.stringify({
+        success: false,
+        error: 'Unauthorized: Authentication required.'
+      })
+    );
   });
 
   it('should complete successfully when user and session are both present', async () => {

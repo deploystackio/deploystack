@@ -45,6 +45,7 @@ describe('Database Status Route', () => {
     // Setup mock reply
     mockReply = {
       status: vi.fn().mockReturnThis(),
+      type: vi.fn().mockReturnThis(),
       send: vi.fn().mockReturnThis(),
     };
   });
@@ -89,11 +90,13 @@ describe('Database Status Route', () => {
       await handler(mockRequest, mockReply);
 
       expect(mockGetDbStatus).toHaveBeenCalledTimes(1);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        configured: true,
-        initialized: true,
-        dialect: DatabaseType.SQLite,
-      });
+      expect(mockReply.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          configured: true,
+          initialized: true,
+          dialect: DatabaseType.SQLite,
+        })
+      );
       expect(mockReply.status).not.toHaveBeenCalled();
     });
 
@@ -110,11 +113,13 @@ describe('Database Status Route', () => {
       await handler(mockRequest, mockReply);
 
       expect(mockGetDbStatus).toHaveBeenCalledTimes(1);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        configured: false,
-        initialized: false,
-        dialect: null,
-      });
+      expect(mockReply.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          configured: false,
+          initialized: false,
+          dialect: null,
+        })
+      );
     });
 
     it('should return database status when configured but not initialized', async () => {
@@ -130,11 +135,13 @@ describe('Database Status Route', () => {
       await handler(mockRequest, mockReply);
 
       expect(mockGetDbStatus).toHaveBeenCalledTimes(1);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        configured: true,
-        initialized: false,
-        dialect: DatabaseType.SQLite,
-      });
+      expect(mockReply.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          configured: true,
+          initialized: false,
+          dialect: DatabaseType.SQLite,
+        })
+      );
     });
 
     it('should handle null dialect correctly', async () => {
@@ -149,11 +156,13 @@ describe('Database Status Route', () => {
       const handler = routeHandlers['GET /db/status'];
       await handler(mockRequest, mockReply);
 
-      expect(mockReply.send).toHaveBeenCalledWith({
-        configured: false,
-        initialized: false,
-        dialect: null,
-      });
+      expect(mockReply.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          configured: false,
+          initialized: false,
+          dialect: null,
+        })
+      );
     });
 
     it('should handle undefined dialect as null', async () => {
@@ -168,11 +177,13 @@ describe('Database Status Route', () => {
       const handler = routeHandlers['GET /db/status'];
       await handler(mockRequest, mockReply);
 
-      expect(mockReply.send).toHaveBeenCalledWith({
-        configured: false,
-        initialized: false,
-        dialect: undefined,
-      });
+      expect(mockReply.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          configured: false,
+          initialized: false,
+          dialect: null,
+        })
+      );
     });
 
     it('should handle getDbStatus throwing an error', async () => {
@@ -204,11 +215,13 @@ describe('Database Status Route', () => {
       await handler(mockRequest, mockReply);
 
       // Should still process the data as received from getDbStatus
-      expect(mockReply.send).toHaveBeenCalledWith({
-        configured: 'true',
-        initialized: 1,
-        dialect: 'postgres',
-      });
+      expect(mockReply.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          configured: true,
+          initialized: true,
+          dialect: 'postgres',
+        })
+      );
     });
 
     it('should handle getDbStatus returning partial data', async () => {
@@ -221,11 +234,13 @@ describe('Database Status Route', () => {
       const handler = routeHandlers['GET /db/status'];
       await handler(mockRequest, mockReply);
 
-      expect(mockReply.send).toHaveBeenCalledWith({
-        configured: true,
-        initialized: undefined,
-        dialect: undefined,
-      });
+      expect(mockReply.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          configured: true,
+          initialized: false,
+          dialect: null,
+        })
+      );
     });
 
     it('should handle getDbStatus returning empty object', async () => {
@@ -234,11 +249,13 @@ describe('Database Status Route', () => {
       const handler = routeHandlers['GET /db/status'];
       await handler(mockRequest, mockReply);
 
-      expect(mockReply.send).toHaveBeenCalledWith({
-        configured: undefined,
-        initialized: undefined,
-        dialect: undefined,
-      });
+      expect(mockReply.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          configured: false,
+          initialized: false,
+          dialect: null,
+        })
+      );
     });
 
     it('should handle different error types', async () => {
@@ -279,11 +296,13 @@ describe('Database Status Route', () => {
       });
 
       // Verify the response was sent with correct typing
-      expect(mockReply.send).toHaveBeenCalledWith({
-        configured: true,
-        initialized: true,
-        dialect: DatabaseType.SQLite,
-      });
+      expect(mockReply.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          configured: true,
+          initialized: true,
+          dialect: DatabaseType.SQLite,
+        })
+      );
     });
 
     it('should handle multiple consecutive calls', async () => {
@@ -306,11 +325,13 @@ describe('Database Status Route', () => {
       
       // First call
       await handler(mockRequest, mockReply);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        configured: false,
-        initialized: false,
-        dialect: null,
-      });
+      expect(mockReply.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          configured: false,
+          initialized: false,
+          dialect: null,
+        })
+      );
 
       // Reset reply mock
       vi.clearAllMocks();
@@ -318,11 +339,13 @@ describe('Database Status Route', () => {
 
       // Second call
       await handler(mockRequest, mockReply);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        configured: true,
-        initialized: true,
-        dialect: DatabaseType.SQLite,
-      });
+      expect(mockReply.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          configured: true,
+          initialized: true,
+          dialect: DatabaseType.SQLite,
+        })
+      );
     });
   });
 

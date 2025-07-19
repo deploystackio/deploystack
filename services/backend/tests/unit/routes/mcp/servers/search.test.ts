@@ -135,6 +135,7 @@ describe('MCP Servers - Search Servers', () => {
     // Setup mock reply
     mockReply = {
       status: vi.fn().mockReturnThis(),
+      type: vi.fn().mockReturnThis(),
       send: vi.fn().mockReturnThis(),
     };
   });
@@ -236,7 +237,13 @@ describe('MCP Servers - Search Servers', () => {
       );
 
       expect(mockReply.status).toHaveBeenCalledWith(200);
-      expect(mockReply.send).toHaveBeenCalledWith({
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      
+      // Parse the JSON string response
+      const sentData = (mockReply.send as any).mock.calls[0][0];
+      const response = JSON.parse(sentData);
+      
+      expect(response).toEqual({
         success: true,
         data: {
           servers: [
@@ -305,9 +312,9 @@ describe('MCP Servers - Search Servers', () => {
           language: 'javascript',
           runtime: 'node',
           status: 'active',
-          featured: true, // Simulate Zod transformation to boolean
-          limit: 20, // Simulate Zod transformation to number
-          offset: 10 // Simulate Zod transformation to number
+          featured: 'true', // Keep as string since that's what the implementation expects
+          limit: '20', // Keep as string since that's what the implementation expects
+          offset: '10' // Keep as string since that's what the implementation expects
         }
       };
 
@@ -328,7 +335,13 @@ describe('MCP Servers - Search Servers', () => {
       );
 
       expect(mockReply.status).toHaveBeenCalledWith(200);
-      expect(mockReply.send).toHaveBeenCalledWith({
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      
+      // Parse the JSON string response
+      const sentData = (mockReply.send as any).mock.calls[0][0];
+      const response = JSON.parse(sentData);
+      
+      expect(response).toEqual({
         success: true,
         data: {
           servers: [],
@@ -396,7 +409,9 @@ describe('MCP Servers - Search Servers', () => {
 
       await handler(requestWithPagination, mockReply);
 
-      const response = (mockReply.send as any).mock.calls[0][0];
+      // Parse the JSON string response
+      const sentData = (mockReply.send as any).mock.calls[0][0];
+      const response = JSON.parse(sentData);
       expect(response.data.servers).toHaveLength(10); // slice(5, 15) = 10 items
       expect(response.data.pagination).toEqual({
         total: 25,
@@ -495,7 +510,13 @@ describe('MCP Servers - Search Servers', () => {
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(500);
-      expect(mockReply.send).toHaveBeenCalledWith({
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      
+      // Parse the JSON string response
+      const sentData = (mockReply.send as any).mock.calls[0][0];
+      const response = JSON.parse(sentData);
+      
+      expect(response).toEqual({
         success: false,
         error: 'Failed to search MCP servers'
       });
@@ -551,7 +572,9 @@ describe('MCP Servers - Search Servers', () => {
       const handler = routeHandlers['GET /mcp/servers/search'];
       await handler(mockRequest, mockReply);
 
-      const response = (mockReply.send as any).mock.calls[0][0];
+      // Parse the JSON string response
+      const sentData = (mockReply.send as any).mock.calls[0][0];
+      const response = JSON.parse(sentData);
       const server = response.data.servers[0];
 
       expect(server.installation_methods).toEqual(['npm', 'yarn']);
@@ -608,7 +631,9 @@ describe('MCP Servers - Search Servers', () => {
       const handler = routeHandlers['GET /mcp/servers/search'];
       await handler(mockRequest, mockReply);
 
-      const response = (mockReply.send as any).mock.calls[0][0];
+      // Parse the JSON string response
+      const sentData = (mockReply.send as any).mock.calls[0][0];
+      const response = JSON.parse(sentData);
       const server = response.data.servers[0];
 
       expect(server.installation_methods).toEqual([]);
@@ -639,7 +664,9 @@ describe('MCP Servers - Search Servers', () => {
 
       await handler(requestMinimal, mockReply);
 
-      const response = (mockReply.send as any).mock.calls[0][0];
+      // Parse the JSON string response
+      const sentData = (mockReply.send as any).mock.calls[0][0];
+      const response = JSON.parse(sentData);
       expect(response.data.pagination.limit).toBe(20);
       expect(response.data.pagination.offset).toBe(0);
     });
@@ -649,10 +676,10 @@ describe('MCP Servers - Search Servers', () => {
 
       const handler = routeHandlers['GET /mcp/servers/search'];
       
-      // Test featured: true (after Zod transformation)
+      // Test featured: 'true' (as string, which gets converted to boolean)
       await handler({
         ...mockRequest,
-        query: { q: 'test', featured: true, limit: 20, offset: 0 }
+        query: { q: 'test', featured: 'true', limit: '20', offset: '0' }
       }, mockReply);
 
       expect(mockMcpService.getServersForUser).toHaveBeenCalledWith(
@@ -662,10 +689,10 @@ describe('MCP Servers - Search Servers', () => {
         expect.objectContaining({ featured: true })
       );
 
-      // Test featured: false (after Zod transformation)
+      // Test featured: 'false' (as string, which gets converted to boolean)
       await handler({
         ...mockRequest,
-        query: { q: 'test', featured: false, limit: 20, offset: 0 }
+        query: { q: 'test', featured: 'false', limit: '20', offset: '0' }
       }, mockReply);
 
       expect(mockMcpService.getServersForUser).toHaveBeenCalledWith(

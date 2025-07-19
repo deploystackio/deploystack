@@ -4,6 +4,8 @@ import changePasswordRoute from '../../../../src/routes/auth/changePassword';
 import { verify, hash } from '@node-rs/argon2';
 import { getDb, getSchema } from '../../../../src/db';
 import { requireAuthHook } from '../../../../src/hooks/authHook';
+import { EmailService } from '../../../../src/email';
+import { GlobalSettingsService } from '../../../../src/services/globalSettingsService';
 // Import auth hook to get the FastifyRequest augmentation
 import '../../../../src/hooks/authHook';
 
@@ -11,6 +13,8 @@ import '../../../../src/hooks/authHook';
 vi.mock('@node-rs/argon2');
 vi.mock('../../../../src/db');
 vi.mock('../../../../src/hooks/authHook');
+vi.mock('../../../../src/email');
+vi.mock('../../../../src/services/globalSettingsService');
 
 // Type the mocked functions
 const mockVerify = verify as MockedFunction<typeof verify>;
@@ -18,11 +22,13 @@ const mockHash = hash as MockedFunction<typeof hash>;
 const mockGetDb = getDb as MockedFunction<typeof getDb>;
 const mockGetSchema = getSchema as MockedFunction<typeof getSchema>;
 const mockRequireAuthHook = requireAuthHook as MockedFunction<typeof requireAuthHook>;
+const mockEmailService = EmailService as any;
+const mockGlobalSettingsService = GlobalSettingsService as any;
 
 describe('Change Password Route', () => {
   let mockFastify: Partial<FastifyInstance>;
   let mockRequest: Partial<FastifyRequest>;
-  let mockReply: Partial<FastifyReply>;
+  let mockReply: any;
   let mockDb: any;
   let mockSchema: any;
   let routeHandlers: Record<string, any>;
@@ -90,11 +96,23 @@ describe('Change Password Route', () => {
     // Setup mock reply
     mockReply = {
       status: vi.fn().mockReturnThis(),
+      type: vi.fn().mockReturnThis(),
       send: vi.fn().mockReturnThis(),
     };
 
     // Mock requireAuthHook to do nothing (successful auth)
     mockRequireAuthHook.mockImplementation(() => Promise.resolve(undefined));
+
+    // Mock EmailService
+    mockEmailService.sendPasswordChangedEmail = vi.fn().mockResolvedValue({
+      success: true,
+    });
+
+    // Mock GlobalSettingsService
+    mockGlobalSettingsService.getByGroup = vi.fn().mockResolvedValue([
+      { key: 'global.send_mail', value: 'false' },
+      { key: 'global.frontend_url', value: 'https://app.deploystack.com' },
+    ]);
   });
 
   describe('Route Registration', () => {
@@ -120,6 +138,10 @@ describe('Change Password Route', () => {
     it('should change password successfully', async () => {
       const mockUser = {
         id: 'user-123',
+        email: 'test@example.com',
+        first_name: 'John',
+        last_name: 'Doe',
+        username: 'testuser',
         hashed_password: 'current-hashed-password',
         auth_type: 'email_signup',
       };
@@ -158,10 +180,11 @@ describe('Change Password Route', () => {
       expect(mockHash).toHaveBeenCalledWith('newPassword123', expect.any(Object));
       expect(mockDb.update).toHaveBeenCalled();
       expect(mockReply.status).toHaveBeenCalledWith(200);
-      expect(mockReply.send).toHaveBeenCalledWith({
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      expect(mockReply.send).toHaveBeenCalledWith(JSON.stringify({
         success: true,
         message: 'Password changed successfully.',
-      });
+      }));
       expect(mockFastify.log!.info).toHaveBeenCalledWith('Password changed successfully for user: user-123');
     });
 
@@ -172,10 +195,11 @@ describe('Change Password Route', () => {
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(401);
-      expect(mockReply.send).toHaveBeenCalledWith({
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      expect(mockReply.send).toHaveBeenCalledWith(JSON.stringify({
         success: false,
         error: 'Unauthorized: Authentication required.',
-      });
+      }));
     });
 
     it('should return 401 when user ID is missing', async () => {
@@ -185,10 +209,11 @@ describe('Change Password Route', () => {
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(401);
-      expect(mockReply.send).toHaveBeenCalledWith({
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      expect(mockReply.send).toHaveBeenCalledWith(JSON.stringify({
         success: false,
         error: 'Unauthorized: Authentication required.',
-      });
+      }));
     });
 
     it('should return 500 when auth user table is missing', async () => {
@@ -201,10 +226,11 @@ describe('Change Password Route', () => {
 
       expect(mockFastify.log!.error).toHaveBeenCalledWith('AuthUser table not found in schema');
       expect(mockReply.status).toHaveBeenCalledWith(500);
-      expect(mockReply.send).toHaveBeenCalledWith({
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      expect(mockReply.send).toHaveBeenCalledWith(JSON.stringify({
         success: false,
         error: 'Internal server error: User table configuration missing.',
-      });
+      }));
     });
 
     it('should return 401 when user is not found in database', async () => {
@@ -220,10 +246,11 @@ describe('Change Password Route', () => {
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(401);
-      expect(mockReply.send).toHaveBeenCalledWith({
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      expect(mockReply.send).toHaveBeenCalledWith(JSON.stringify({
         success: false,
         error: 'User not found.',
-      });
+      }));
     });
 
     it('should return 403 when user has no hashed password', async () => {
@@ -245,10 +272,11 @@ describe('Change Password Route', () => {
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(403);
-      expect(mockReply.send).toHaveBeenCalledWith({
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      expect(mockReply.send).toHaveBeenCalledWith(JSON.stringify({
         success: false,
         error: 'Password change is only available for email-authenticated users.',
-      });
+      }));
     });
 
     it('should return 403 when user is not email authenticated', async () => {
@@ -270,10 +298,11 @@ describe('Change Password Route', () => {
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(403);
-      expect(mockReply.send).toHaveBeenCalledWith({
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      expect(mockReply.send).toHaveBeenCalledWith(JSON.stringify({
         success: false,
         error: 'Password change is only available for email-authenticated users.',
-      });
+      }));
     });
 
     it('should return 400 when current password is incorrect', async () => {
@@ -299,10 +328,11 @@ describe('Change Password Route', () => {
 
       expect(mockVerify).toHaveBeenCalledWith('current-hashed-password', 'currentPassword123', expect.any(Object));
       expect(mockReply.status).toHaveBeenCalledWith(400);
-      expect(mockReply.send).toHaveBeenCalledWith({
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      expect(mockReply.send).toHaveBeenCalledWith(JSON.stringify({
         success: false,
         error: 'Current password is incorrect.',
-      });
+      }));
     });
 
     it('should return 400 when new password is same as current password', async () => {
@@ -330,10 +360,11 @@ describe('Change Password Route', () => {
 
       expect(mockVerify).toHaveBeenCalledTimes(2);
       expect(mockReply.status).toHaveBeenCalledWith(400);
-      expect(mockReply.send).toHaveBeenCalledWith({
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      expect(mockReply.send).toHaveBeenCalledWith(JSON.stringify({
         success: false,
         error: 'New password must be different from current password.',
-      });
+      }));
     });
 
     it('should handle database errors during user lookup', async () => {
@@ -351,10 +382,11 @@ describe('Change Password Route', () => {
 
       expect(mockFastify.log!.error).toHaveBeenCalledWith(error, 'Error during password change:');
       expect(mockReply.status).toHaveBeenCalledWith(500);
-      expect(mockReply.send).toHaveBeenCalledWith({
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      expect(mockReply.send).toHaveBeenCalledWith(JSON.stringify({
         success: false,
         error: 'An unexpected error occurred during password change.',
-      });
+      }));
     });
 
     it('should handle password verification errors', async () => {
@@ -380,10 +412,11 @@ describe('Change Password Route', () => {
 
       expect(mockFastify.log!.error).toHaveBeenCalledWith(expect.any(Error), 'Error during password change:');
       expect(mockReply.status).toHaveBeenCalledWith(500);
-      expect(mockReply.send).toHaveBeenCalledWith({
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      expect(mockReply.send).toHaveBeenCalledWith(JSON.stringify({
         success: false,
         error: 'An unexpected error occurred during password change.',
-      });
+      }));
     });
 
     it('should handle password hashing errors', async () => {
@@ -414,10 +447,11 @@ describe('Change Password Route', () => {
 
       expect(mockFastify.log!.error).toHaveBeenCalledWith(expect.any(Error), 'Error during password change:');
       expect(mockReply.status).toHaveBeenCalledWith(500);
-      expect(mockReply.send).toHaveBeenCalledWith({
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      expect(mockReply.send).toHaveBeenCalledWith(JSON.stringify({
         success: false,
         error: 'An unexpected error occurred during password change.',
-      });
+      }));
     });
 
     it('should handle database errors during password update', async () => {
@@ -454,10 +488,11 @@ describe('Change Password Route', () => {
 
       expect(mockFastify.log!.error).toHaveBeenCalledWith(expect.any(Error), 'Error during password change:');
       expect(mockReply.status).toHaveBeenCalledWith(500);
-      expect(mockReply.send).toHaveBeenCalledWith({
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      expect(mockReply.send).toHaveBeenCalledWith(JSON.stringify({
         success: false,
         error: 'An unexpected error occurred during password change.',
-      });
+      }));
     });
 
     it('should use correct argon2 configuration for password operations', async () => {

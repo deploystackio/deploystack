@@ -17,7 +17,7 @@ const mockGetDbStatus = getDbStatus as MockedFunction<typeof getDbStatus>;
 describe('Logout Route', () => {
   let mockFastify: Partial<FastifyInstance>;
   let mockRequest: Partial<FastifyRequest>;
-  let mockReply: Partial<FastifyReply>;
+  let mockReply: any;
   let mockLucia: any;
   let mockDb: any;
   let mockSchema: any;
@@ -60,7 +60,7 @@ describe('Logout Route', () => {
     mockGetLucia.mockReturnValue(mockLucia);
     mockGetDb.mockReturnValue(mockDb);
     mockGetSchema.mockReturnValue(mockSchema);
-    mockGetDbStatus.mockReturnValue({ configured: true, initialized: true, dialect: 'sqlite' });
+    mockGetDbStatus.mockReturnValue({ configured: true, initialized: true, dialect: 'sqlite', type: 'sqlite' });
 
     // Setup route handlers storage
     routeHandlers = {};
@@ -95,6 +95,7 @@ describe('Logout Route', () => {
     // Setup mock reply
     mockReply = {
       status: vi.fn().mockReturnThis(),
+      type: vi.fn().mockReturnThis(),
       send: vi.fn().mockReturnThis(),
       setCookie: vi.fn().mockReturnThis(),
     };
@@ -126,10 +127,12 @@ describe('Logout Route', () => {
       expect(mockLucia.createBlankSessionCookie).toHaveBeenCalled();
       expect(mockReply.setCookie).toHaveBeenCalledWith('session', '', expect.any(Object));
       expect(mockReply.status).toHaveBeenCalledWith(200);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        success: true,
-        message: 'Logged out successfully.',
-      });
+      expect(mockReply.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          success: true,
+          message: 'Logged out successfully.',
+        })
+      );
     });
 
     it('should handle logout when no session exists', async () => {
@@ -144,10 +147,12 @@ describe('Logout Route', () => {
       expect(mockLucia.createBlankSessionCookie).toHaveBeenCalled();
       expect(mockReply.setCookie).toHaveBeenCalledWith('session', '', expect.any(Object));
       expect(mockReply.status).toHaveBeenCalledWith(200);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        success: true,
-        message: 'No active session to logout or already logged out.',
-      });
+      expect(mockReply.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          success: true,
+          message: 'No active session to logout or already logged out.',
+        })
+      );
     });
 
     it('should handle logout when no session exists but cookie is present', async () => {
@@ -167,10 +172,12 @@ describe('Logout Route', () => {
       expect(mockDb.delete).toHaveBeenCalledWith(mockSchema.authSession);
       expect(mockFastify.log!.info).toHaveBeenCalledWith('Manually deleted session invalid-session-123 from database');
       expect(mockReply.status).toHaveBeenCalledWith(200);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        success: true,
-        message: 'No active session to logout or already logged out.',
-      });
+      expect(mockReply.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          success: true,
+          message: 'No active session to logout or already logged out.',
+        })
+      );
     });
 
     it('should handle manual cleanup when authSession table is missing', async () => {
@@ -223,10 +230,12 @@ describe('Logout Route', () => {
       expect(mockLucia.createBlankSessionCookie).toHaveBeenCalled();
       expect(mockReply.setCookie).toHaveBeenCalledWith('session', '', expect.any(Object));
       expect(mockReply.status).toHaveBeenCalledWith(200);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        success: true,
-        message: 'Logged out successfully (with fallback cleanup).',
-      });
+      expect(mockReply.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          success: true,
+          message: 'Logged out successfully (with fallback cleanup).',
+        })
+      );
     });
 
     it('should handle both Lucia and database errors gracefully', async () => {
@@ -249,10 +258,12 @@ describe('Logout Route', () => {
       expect(mockLucia.createBlankSessionCookie).toHaveBeenCalled();
       expect(mockReply.setCookie).toHaveBeenCalledWith('session', '', expect.any(Object));
       expect(mockReply.status).toHaveBeenCalledWith(200);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        success: true,
-        message: 'Logged out successfully (with fallback cleanup).',
-      });
+      expect(mockReply.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          success: true,
+          message: 'Logged out successfully (with fallback cleanup).',
+        })
+      );
     });
 
     it('should handle fallback cleanup when authSession table is missing', async () => {
@@ -268,16 +279,18 @@ describe('Logout Route', () => {
       expect(mockFastify.log!.error).toHaveBeenCalledWith(luciaError, 'Error during logout (invalidating session from authHook):');
       expect(mockFastify.log!.warn).toHaveBeenCalledWith('authSession table or id column not found in schema');
       expect(mockReply.status).toHaveBeenCalledWith(200);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        success: true,
-        message: 'Logged out successfully (with fallback cleanup).',
-      });
+      expect(mockReply.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          success: true,
+          message: 'Logged out successfully (with fallback cleanup).',
+        })
+      );
     });
 
     it('should handle non-sqlite database dialect', async () => {
       mockRequest.session = null;
       mockLucia.readSessionCookie.mockReturnValue('invalid-session-123');
-      mockGetDbStatus.mockReturnValue({ configured: true, initialized: true, dialect: null });
+      mockGetDbStatus.mockReturnValue({ configured: true, initialized: true, dialect: null, type: null });
 
       const handler = routeHandlers['POST /logout'];
       await handler(mockRequest, mockReply);
@@ -297,10 +310,12 @@ describe('Logout Route', () => {
 
       expect(mockLucia.readSessionCookie).toHaveBeenCalledWith('');
       expect(mockReply.status).toHaveBeenCalledWith(200);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        success: true,
-        message: 'No active session to logout or already logged out.',
-      });
+      expect(mockReply.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          success: true,
+          message: 'No active session to logout or already logged out.',
+        })
+      );
     });
   });
 });

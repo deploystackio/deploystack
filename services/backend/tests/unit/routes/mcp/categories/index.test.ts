@@ -111,6 +111,7 @@ describe('MCP Categories Routes', () => {
     // Setup mock reply
     mockReply = {
       status: vi.fn().mockReturnThis(),
+      type: vi.fn().mockReturnThis(),
       send: vi.fn().mockReturnThis(),
     };
   });
@@ -154,27 +155,29 @@ describe('MCP Categories Routes', () => {
       await handler(mockRequest, mockReply);
 
       expect(mockService.getAllCategories).toHaveBeenCalled();
-      expect(mockReply.send).toHaveBeenCalledWith({
-        success: true,
-        data: [
-          {
-            id: 'cat-1',
-            name: 'Development Tools',
-            description: 'Tools for software development',
-            icon: 'code',
-            sort_order: 1,
-            created_at: '2024-01-01T00:00:00.000Z',
-          },
-          {
-            id: 'cat-2',
-            name: 'Data Analysis',
-            description: 'Tools for data analysis and visualization',
-            icon: 'chart',
-            sort_order: 2,
-            created_at: '2024-01-02T00:00:00.000Z',
-          },
-        ],
-      });
+      expect(mockReply.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          success: true,
+          data: [
+            {
+              id: 'cat-1',
+              name: 'Development Tools',
+              description: 'Tools for software development',
+              icon: 'code',
+              sort_order: 1,
+              created_at: '2024-01-01T00:00:00.000Z',
+            },
+            {
+              id: 'cat-2',
+              name: 'Data Analysis',
+              description: 'Tools for data analysis and visualization',
+              icon: 'chart',
+              sort_order: 2,
+              created_at: '2024-01-02T00:00:00.000Z',
+            },
+          ],
+        })
+      );
     });
 
     it('should return empty array when no categories exist', async () => {
@@ -184,10 +187,12 @@ describe('MCP Categories Routes', () => {
       await handler(mockRequest, mockReply);
 
       expect(mockService.getAllCategories).toHaveBeenCalled();
-      expect(mockReply.send).toHaveBeenCalledWith({
-        success: true,
-        data: [],
-      });
+      expect(mockReply.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          success: true,
+          data: [],
+        })
+      );
     });
 
     it('should handle service errors gracefully', async () => {
@@ -202,10 +207,12 @@ describe('MCP Categories Routes', () => {
         error,
       }, 'Failed to list MCP categories');
       expect(mockReply.status).toHaveBeenCalledWith(500);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        success: false,
-        error: 'Failed to retrieve categories',
-      });
+      expect(mockReply.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          success: false,
+          error: 'Failed to retrieve categories',
+        })
+      );
     });
 
     it('should handle categories with null values correctly', async () => {
@@ -225,19 +232,21 @@ describe('MCP Categories Routes', () => {
       const handler = routeHandlers['GET /mcp/categories'];
       await handler(mockRequest, mockReply);
 
-      expect(mockReply.send).toHaveBeenCalledWith({
-        success: true,
-        data: [
-          {
-            id: 'cat-1',
-            name: 'Development Tools',
-            description: null,
-            icon: null,
-            sort_order: 1,
-            created_at: '2024-01-01T00:00:00.000Z',
-          },
-        ],
-      });
+      expect(mockReply.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          success: true,
+          data: [
+            {
+              id: 'cat-1',
+              name: 'Development Tools',
+              description: null,
+              icon: null,
+              sort_order: 1,
+              created_at: '2024-01-01T00:00:00.000Z',
+            },
+          ],
+        })
+      );
     });
   });
 
@@ -288,13 +297,15 @@ describe('MCP Categories Routes', () => {
         sort_order: 1
       });
       expect(mockReply.status).toHaveBeenCalledWith(201);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        success: true,
-        data: {
-          ...newCategory,
-          created_at: '2024-01-01T00:00:00.000Z',
-        }
-      });
+      expect(mockReply.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          success: true,
+          data: {
+            ...newCategory,
+            created_at: '2024-01-01T00:00:00.000Z',
+          }
+        })
+      );
     });
 
     it('should handle duplicate category name error', async () => {
@@ -312,10 +323,12 @@ describe('MCP Categories Routes', () => {
       await handler(mockRequestWithBody, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(409);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        success: false,
-        error: 'Category name already exists',
-      });
+      expect(mockReply.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          success: false,
+          error: 'Category name already exists',
+        })
+      );
     });
 
     it('should handle general errors', async () => {
@@ -333,10 +346,12 @@ describe('MCP Categories Routes', () => {
       await handler(mockRequestWithBody, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(500);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        success: false,
-        error: 'Failed to create category',
-      });
+      expect(mockReply.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          success: false,
+          error: 'Failed to create category',
+        })
+      );
     });
 
     it('should have correct route schema', async () => {
@@ -402,13 +417,15 @@ describe('MCP Categories Routes', () => {
         sort_order: 2
       });
       expect(mockReply.status).toHaveBeenCalledWith(200);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        success: true,
-        data: {
-          ...updatedCategory,
-          created_at: '2024-01-01T00:00:00.000Z',
-        }
-      });
+      expect(mockReply.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          success: true,
+          data: {
+            ...updatedCategory,
+            created_at: '2024-01-01T00:00:00.000Z',
+          }
+        })
+      );
     });
 
     it('should handle category not found', async () => {
@@ -426,10 +443,12 @@ describe('MCP Categories Routes', () => {
       await handler(mockRequestWithParams, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(404);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        success: false,
-        error: 'Category not found',
-      });
+      expect(mockReply.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          success: false,
+          error: 'Category not found',
+        })
+      );
     });
 
     it('should handle duplicate name error', async () => {
@@ -448,10 +467,12 @@ describe('MCP Categories Routes', () => {
       await handler(mockRequestWithParams, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(409);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        success: false,
-        error: 'Category name already exists',
-      });
+      expect(mockReply.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          success: false,
+          error: 'Category name already exists',
+        })
+      );
     });
 
     it('should have correct route schema', async () => {
@@ -497,10 +518,12 @@ describe('MCP Categories Routes', () => {
 
       expect(mockService.deleteCategory).toHaveBeenCalledWith('cat-1');
       expect(mockReply.status).toHaveBeenCalledWith(200);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        success: true,
-        message: 'Category deleted successfully',
-      });
+      expect(mockReply.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          success: true,
+          message: 'Category deleted successfully',
+        })
+      );
     });
 
     it('should handle category not found', async () => {
@@ -517,10 +540,12 @@ describe('MCP Categories Routes', () => {
       await handler(mockRequestWithParams, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(404);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        success: false,
-        error: 'Category not found',
-      });
+      expect(mockReply.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          success: false,
+          error: 'Category not found',
+        })
+      );
     });
 
     it('should handle general errors', async () => {
@@ -538,10 +563,12 @@ describe('MCP Categories Routes', () => {
       await handler(mockRequestWithParams, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(500);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        success: false,
-        error: 'Failed to delete category',
-      });
+      expect(mockReply.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          success: false,
+          error: 'Failed to delete category',
+        })
+      );
     });
 
     it('should have correct route schema', async () => {

@@ -110,6 +110,7 @@ describe('Users Route', () => {
     // Setup mock reply
     mockReply = {
       status: vi.fn().mockReturnThis(),
+      type: vi.fn().mockReturnThis(),
       send: vi.fn().mockReturnThis(),
     };
   });
@@ -194,7 +195,18 @@ describe('Users Route', () => {
 
       expect(mockUserService.getUserById).toHaveBeenCalledWith('user-123');
       expect(mockReply.status).toHaveBeenCalledWith(200);
-      expect(mockReply.send).toHaveBeenCalledWith(mockUser);
+      expect(mockReply.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          id: 'user-123',
+          username: 'testuser',
+          email: 'test@example.com',
+          first_name: null,
+          last_name: null,
+          role_id: null,
+          auth_type: null,
+          github_id: null,
+        })
+      );
     });
 
     it('should return 404 when user not found', async () => {
@@ -205,10 +217,12 @@ describe('Users Route', () => {
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(404);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        success: false,
-        error: 'User not found',
-      });
+      expect(mockReply.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          success: false,
+          error: 'User not found',
+        })
+      );
     });
 
     it('should handle service errors', async () => {
@@ -221,10 +235,12 @@ describe('Users Route', () => {
 
       expect(mockFastify.log!.error).toHaveBeenCalledWith(error, 'Error fetching user');
       expect(mockReply.status).toHaveBeenCalledWith(500);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        success: false,
-        error: 'Failed to fetch user',
-      });
+      expect(mockReply.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          success: false,
+          error: 'Failed to fetch user',
+        })
+      );
     });
   });
 });
