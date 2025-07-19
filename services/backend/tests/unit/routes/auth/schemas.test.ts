@@ -41,7 +41,7 @@ describe('Auth Schemas', () => {
       const result = RegisterEmailSchema.safeParse(invalidRegistration);
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.errors[0].message).toBe('Username must be at least 3 characters long');
+        expect(result.error.issues[0].message).toBe('Username must be at least 3 characters long');
       }
     });
 
@@ -55,7 +55,7 @@ describe('Auth Schemas', () => {
       const result = RegisterEmailSchema.safeParse(invalidRegistration);
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.errors[0].message).toBe('Username cannot be longer than 30 characters');
+        expect(result.error.issues[0].message).toBe('Username cannot be longer than 30 characters');
       }
     });
 
@@ -69,7 +69,7 @@ describe('Auth Schemas', () => {
       const result = RegisterEmailSchema.safeParse(invalidRegistration);
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.errors[0].message).toBe('Username can only contain alphanumeric characters and underscores');
+        expect(result.error.issues[0].message).toBe('Username can only contain alphanumeric characters and underscores');
       }
     });
 
@@ -94,7 +94,7 @@ describe('Auth Schemas', () => {
       const result = RegisterEmailSchema.safeParse(invalidRegistration);
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.errors[0].message).toBe('Invalid email address');
+        expect(result.error.issues[0].message).toBe('Invalid email address');
       }
     });
 
@@ -108,7 +108,7 @@ describe('Auth Schemas', () => {
       const result = RegisterEmailSchema.safeParse(invalidRegistration);
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.errors[0].message).toBe('Password must be at least 8 characters long');
+        expect(result.error.issues[0].message).toBe('Password must be at least 8 characters long');
       }
     });
 
@@ -122,7 +122,7 @@ describe('Auth Schemas', () => {
       const result = RegisterEmailSchema.safeParse(invalidRegistration);
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.errors[0].message).toBe('Password cannot be longer than 100 characters long');
+        expect(result.error.issues[0].message).toBe('Password cannot be longer than 100 characters long');
       }
     });
 
@@ -181,7 +181,7 @@ describe('Auth Schemas', () => {
       const result = LoginEmailSchema.safeParse(invalidLogin);
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.errors[0].message).toBe('Email or username is required');
+        expect(result.error.issues[0].message).toBe('Email or username is required');
       }
     });
 
@@ -194,7 +194,7 @@ describe('Auth Schemas', () => {
       const result = LoginEmailSchema.safeParse(invalidLogin);
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.errors[0].message).toBe('Password is required');
+        expect(result.error.issues[0].message).toBe('Password is required');
       }
     });
 

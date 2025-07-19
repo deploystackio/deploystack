@@ -134,7 +134,7 @@ describe('Global Settings Schemas', () => {
       const result = CreateGlobalSettingSchema.safeParse(invalidCreate);
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.errors[0].message).toBe('Value must match the specified type');
+        expect(result.error.issues[0].message).toBe('Value must match the specified type');
       }
     });
 
@@ -148,7 +148,7 @@ describe('Global Settings Schemas', () => {
       const result = CreateGlobalSettingSchema.safeParse(invalidCreate);
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.errors[0].message).toBe('Value must match the specified type');
+        expect(result.error.issues[0].message).toBe('Value must match the specified type');
       }
     });
 
@@ -162,7 +162,7 @@ describe('Global Settings Schemas', () => {
       const result = CreateGlobalSettingSchema.safeParse(invalidCreate);
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.errors[0].message).toBe('Value must match the specified type');
+        expect(result.error.issues[0].message).toBe('Value must match the specified type');
       }
     });
 
@@ -240,7 +240,7 @@ describe('Global Settings Schemas', () => {
       const result = UpdateGlobalSettingSchema.safeParse(invalidUpdate);
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.errors[0].message).toBe('At least one field must be provided for update');
+        expect(result.error.issues[0].message).toBe('At least one field must be provided for update');
       }
     });
 
@@ -283,7 +283,7 @@ describe('Global Settings Schemas', () => {
       const result = BulkGlobalSettingsSchema.safeParse(invalidBulk);
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.errors[0].message).toBe('At least one setting is required');
+        expect(result.error.issues[0].message).toBe('At least one setting is required');
       }
     });
 
@@ -326,7 +326,7 @@ describe('Global Settings Schemas', () => {
       const result = SearchGlobalSettingsSchema.safeParse(invalidSearch);
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.errors[0].message).toBe('Search pattern is required');
+        expect(result.error.issues[0].message).toBe('Search pattern is required');
       }
     });
 
@@ -356,7 +356,7 @@ describe('Global Settings Schemas', () => {
       const result = CategoryFilterSchema.safeParse(invalidFilter);
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.errors[0].message).toBe('Category is required');
+        expect(result.error.issues[0].message).toBe('Category is required');
       }
     });
   });

@@ -48,7 +48,7 @@ describe('Database Schemas', () => {
       const result = SQLiteInternalConfigSchema.safeParse(invalidConfig);
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].code).toBe('invalid_literal');
+        expect(result.error.issues[0].code).toBe('invalid_value');
         expect(result.error.issues[0].path).toEqual(['type']);
       }
     });
@@ -158,7 +158,7 @@ describe('Database Schemas', () => {
       const result = DbSetupRequestBodySchema.safeParse(invalidRequest);
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].code).toBe('invalid_enum_value');
+        expect(result.error.issues[0].code).toBe('invalid_value');
         expect(result.error.issues[0].path).toEqual(['type']);
       }
     });
@@ -169,7 +169,7 @@ describe('Database Schemas', () => {
       const result = DbSetupRequestBodySchema.safeParse(invalidRequest);
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].code).toBe('invalid_type');
+        expect(result.error.issues[0].code).toBe('invalid_value');
         expect(result.error.issues[0].path).toEqual(['type']);
       }
     });
@@ -198,7 +198,7 @@ describe('Database Schemas', () => {
       const result = DbSetupRequestBodySchema.safeParse(invalidRequest);
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].code).toBe('invalid_enum_value');
+        expect(result.error.issues[0].code).toBe('invalid_value');
         expect(result.error.issues[0].path).toEqual(['type']);
       }
     });
@@ -273,7 +273,7 @@ describe('Database Schemas', () => {
       const result = DbStatusResponseSchema.safeParse(invalidResponse);
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].code).toBe('invalid_enum_value');
+        expect(result.error.issues[0].code).toBe('invalid_value');
         expect(result.error.issues[0].path).toEqual(['dialect']);
       }
     });
