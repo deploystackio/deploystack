@@ -22,7 +22,7 @@ interface Props {
 
 interface Emits {
   (e: 'update:open', value: boolean): void
-  (e: 'teamCreated'): void
+  (e: 'teamCreated', teamData: { name: string }): void
 }
 
 const props = defineProps<Props>()
@@ -77,18 +77,19 @@ const handleSubmit = async () => {
   isSubmitting.value = true
 
   try {
+    const teamName = formData.value.name
     await TeamService.createTeam(formData.value)
 
     // Emit global event for immediate UI updates across components
     eventBus.emit('teams-updated')
 
-    // Reset form
+    // Close modal and emit success with team data
+    isOpen.value = false
+    emit('teamCreated', { name: teamName })
+
+    // Reset form after successful creation
     formData.value = { name: '', description: '' }
     errors.value = {}
-
-    // Close modal and emit success
-    isOpen.value = false
-    emit('teamCreated')
   } catch (error) {
     console.error('Error creating team:', error)
 

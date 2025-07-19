@@ -50,10 +50,15 @@ export default {
         create: 'Create Team',
         creating: 'Creating...'
       },
+      messages: {
+        createSuccess: 'Team "{teamName}" has been created successfully!',
+        createSuccessGeneric: 'Team has been created successfully!'
+      },
       errors: {
         limitReached: 'You have reached the maximum limit of 3 teams.',
         noPermission: 'You do not have permission to create teams.',
-        unknown: 'An error occurred while creating the team.'
+        unknown: 'An error occurred while creating the team.',
+        refreshFailed: 'Team was created but failed to refresh the teams list. Please refresh the page.'
       }
     },
     manage: {
