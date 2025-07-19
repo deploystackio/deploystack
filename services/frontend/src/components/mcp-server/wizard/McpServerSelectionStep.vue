@@ -152,7 +152,7 @@ onMounted(() => {
     <!-- Loading State -->
     <div v-if="isLoading" class="flex items-center justify-center py-8">
       <Loader2 class="h-6 w-6 animate-spin mr-2 text-gray-400" />
-      <span class="text-gray-600">{{ t('common.messages.loading') }}</span>
+      <span class="text-gray-600">{{ t('messages.loading') }}</span>
     </div>
 
     <!-- Server List (only show when there's a search query) -->

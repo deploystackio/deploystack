@@ -48,14 +48,12 @@ export class McpInstallationService {
   }
 
   /**
-   * Create MCP server installation (alias for installServer)
+   * Create MCP server installation with proper team context
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  static async createInstallation(installData: any): Promise<{ success: boolean; data: any; message?: string }> {
+  static async createInstallation(teamId: string, installData: any): Promise<{ success: boolean; data: any; message?: string }> {
     try {
-      // For now, we'll use a mock team ID - this should be replaced with actual team context
-      const mockTeamId = 'team-123'
-      const result = await this.installServer(mockTeamId, installData)
+      const result = await this.installServer(teamId, installData)
       return {
         success: true,
         data: result
