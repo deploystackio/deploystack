@@ -1,6 +1,6 @@
 import { type FastifyInstance } from 'fastify'
 import { z } from 'zod'
-import { zodToJsonSchema } from 'zod-to-json-schema'
+import { createSchema } from 'zod-openapi'
 import { getVersionString } from '../config/version'
 import { GlobalSettings } from '../global-settings/helpers'
 // Import the individual database setup routes
@@ -62,10 +62,7 @@ export const registerRoutes = (server: FastifyInstance): void => {
       summary: 'API health check',
       description: 'Returns the health status of the DeployStack Backend API, including database connection status and basic service information. This endpoint can be used for monitoring and health checks.',
       response: {
-        200: zodToJsonSchema(healthCheckResponseSchema.describe('API health check information'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        })
+        200: createSchema(healthCheckResponseSchema.describe('API health check information'))
       }
     }
   }, async (request) => {

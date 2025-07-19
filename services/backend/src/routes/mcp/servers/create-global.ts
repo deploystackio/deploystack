@@ -1,6 +1,6 @@
 import { type FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { zodToJsonSchema } from 'zod-to-json-schema';
+import { createSchema } from 'zod-openapi';
 import { requireGlobalAdmin } from '../../../middleware/roleMiddleware';
 import { McpCatalogService } from '../../../services/mcpCatalogService';
 import { getDb } from '../../../db';
@@ -144,42 +144,104 @@ export default async function createGlobalServer(server: FastifyInstance) {
       summary: 'Create global MCP server (Global Admin only)',
       description: 'Create a new global MCP server - requires global admin permissions. Global servers are visible to all users. Requires Content-Type: application/json header when sending request body.',
       security: [{ cookieAuth: [] }],
+      // Plain JSON Schema for Fastify validation
+      body: {
+        type: 'object',
+        properties: {
+          name: { type: 'string', minLength: 1, maxLength: 255 },
+          description: { type: 'string', minLength: 1 },
+          language: { type: 'string', minLength: 1 },
+          runtime: { type: 'string', minLength: 1 },
+          claude_desktop_config: {
+            type: 'object',
+            properties: {
+              mcpServers: {
+                type: 'object',
+                additionalProperties: {
+                  type: 'object',
+                  properties: {
+                    command: { type: 'string', minLength: 1 },
+                    args: { type: 'array', items: { type: 'string' } },
+                    env: { type: 'object', additionalProperties: { type: 'string' } }
+                  },
+                  required: ['command', 'args'],
+                  additionalProperties: false
+                }
+              }
+            },
+            required: ['mcpServers'],
+            additionalProperties: false
+          },
+          tools: {
+            type: 'array',
+            minItems: 1,
+            items: {
+              type: 'object',
+              properties: {
+                name: { type: 'string', minLength: 1 },
+                description: { type: 'string', minLength: 1 }
+              },
+              required: ['name', 'description'],
+              additionalProperties: false
+            }
+          },
+          long_description: { type: 'string' },
+          github_url: { type: 'string', format: 'uri' },
+          git_branch: { type: 'string' },
+          homepage_url: { type: 'string', format: 'uri' },
+          runtime_min_version: { type: 'string' },
+          resources: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                type: { type: 'string', minLength: 1 },
+                description: { type: 'string', minLength: 1 }
+              },
+              required: ['type', 'description'],
+              additionalProperties: false
+            }
+          },
+          prompts: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                name: { type: 'string', minLength: 1 },
+                description: { type: 'string', minLength: 1 }
+              },
+              required: ['name', 'description'],
+              additionalProperties: false
+            }
+          },
+          author_name: { type: 'string' },
+          author_contact: { type: 'string' },
+          organization: { type: 'string' },
+          license: { type: 'string' },
+          dependencies: { type: 'object' },
+          category_id: { type: 'string' },
+          tags: { type: 'array', items: { type: 'string' } },
+          featured: { type: 'boolean' }
+        },
+        required: ['name', 'description', 'language', 'runtime', 'claude_desktop_config', 'tools'],
+        additionalProperties: false
+      },
+      // createSchema() for OpenAPI documentation
       requestBody: {
         required: true,
         content: {
           'application/json': {
-            schema: zodToJsonSchema(createGlobalServerRequestSchema, {
-              $refStrategy: 'none',
-              target: 'openApi3'
-            })
+            schema: createSchema(createGlobalServerRequestSchema)
           }
         }
       },
       response: {
-        201: zodToJsonSchema(createGlobalServerResponseSchema, {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        400: zodToJsonSchema(errorResponseSchema.describe('Bad Request - Invalid input or missing Content-Type header'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        401: zodToJsonSchema(errorResponseSchema.describe('Unauthorized - Authentication required'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        403: zodToJsonSchema(errorResponseSchema.describe('Forbidden - Global admin permissions required'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        409: zodToJsonSchema(errorResponseSchema.describe('Conflict - Server name already exists'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        500: zodToJsonSchema(errorResponseSchema.describe('Internal Server Error'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        })
+        201: createSchema(createGlobalServerResponseSchema),
+        400: createSchema(errorResponseSchema.describe('Bad Request - Invalid input or missing Content-Type header')),
+        401: createSchema(errorResponseSchema.describe('Unauthorized - Authentication required')),
+        403: createSchema(errorResponseSchema.describe('Forbidden - Global admin permissions required')),
+        409: createSchema(errorResponseSchema.describe('Conflict - Server name already exists')),
+        500: createSchema(errorResponseSchema.describe('Internal Server Error'))
       }
     }
   }, async (request, reply) => {
@@ -331,7 +393,9 @@ export default async function createGlobalServer(server: FastifyInstance) {
           serverId: newServer.id
         }, 'Sending 201 response');
 
-        return reply.status(201).send(response);
+        // Manual JSON serialization to avoid serialization issues
+        const jsonString = JSON.stringify(response);
+        return reply.status(201).type('application/json').send(jsonString);
       } catch (jsonError) {
         request.log.error({
           operation: 'create_global_mcp_server',
@@ -350,10 +414,12 @@ export default async function createGlobalServer(server: FastifyInstance) {
           }
         }, 'Failed to parse JSON fields in response');
 
-        return reply.status(500).send({
+        const errorResponse = {
           success: false,
           error: 'Failed to format server response'
-        });
+        };
+        const jsonString = JSON.stringify(errorResponse);
+        return reply.status(500).type('application/json').send(jsonString);
       }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
@@ -368,23 +434,29 @@ export default async function createGlobalServer(server: FastifyInstance) {
       if (error.message?.includes('UNIQUE constraint failed') || 
           error.message?.includes('already exists') ||
           error.message?.includes('duplicate')) {
-        return reply.status(409).send({
+        const conflictResponse = {
           success: false,
           error: 'Server name already exists'
-        });
+        };
+        const jsonString = JSON.stringify(conflictResponse);
+        return reply.status(409).type('application/json').send(jsonString);
       }
 
       if (error.message?.includes('Only global administrators')) {
-        return reply.status(403).send({
+        const forbiddenResponse = {
           success: false,
           error: 'Global admin permissions required'
-        });
+        };
+        const jsonString = JSON.stringify(forbiddenResponse);
+        return reply.status(403).type('application/json').send(jsonString);
       }
 
-      return reply.status(500).send({
+      const errorResponse = {
         success: false,
         error: 'Failed to create global MCP server'
-      });
+      };
+      const jsonString = JSON.stringify(errorResponse);
+      return reply.status(500).type('application/json').send(jsonString);
     }
   });
 }

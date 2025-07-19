@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { ZodError, z } from 'zod';
-import { zodToJsonSchema } from 'zod-to-json-schema';
+import { createSchema } from 'zod-openapi';
 import { UserService } from '../../services/userService';
 import { TeamService } from '../../services/teamService';
 import { requirePermission, requireOwnershipOrAdmin, getUserIdFromParams } from '../../middleware/roleMiddleware';
@@ -76,22 +76,10 @@ export default async function usersRoute(fastify: FastifyInstance) {
       description: 'Retrieves a list of all users in the system. Requires admin permissions.',
       security: [{ cookieAuth: [] }],
       response: {
-        200: zodToJsonSchema(usersListResponseSchema.describe('Successfully retrieved users list'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        401: zodToJsonSchema(errorResponseSchema.describe('Unauthorized - Authentication required'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        403: zodToJsonSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        500: zodToJsonSchema(errorResponseSchema.describe('Internal Server Error'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        })
+        200: createSchema(usersListResponseSchema.describe('Successfully retrieved users list')),
+        401: createSchema(errorResponseSchema.describe('Unauthorized - Authentication required')),
+        403: createSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions')),
+        500: createSchema(errorResponseSchema.describe('Internal Server Error'))
       }
     },
     preValidation: requirePermission('users.list'),
@@ -118,31 +106,19 @@ export default async function usersRoute(fastify: FastifyInstance) {
       summary: 'Get user by ID',
       description: 'Retrieves a specific user by their ID. Users can access their own profile, admins can access any user.',
       security: [{ cookieAuth: [] }],
-      params: zodToJsonSchema(paramsWithIdSchema, {
-        $refStrategy: 'none',
-        target: 'openApi3'
-      }),
+      params: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', description: 'User ID' }
+        },
+        required: ['id']
+      },
       response: {
-        200: zodToJsonSchema(UserSchema.describe('User data'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        401: zodToJsonSchema(errorResponseSchema.describe('Unauthorized - Authentication required'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        403: zodToJsonSchema(errorResponseSchema.describe('Forbidden - Cannot access this user'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        404: zodToJsonSchema(errorResponseSchema.describe('Not Found - User not found'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        500: zodToJsonSchema(errorResponseSchema.describe('Internal Server Error'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        })
+        200: createSchema(UserSchema.describe('User data')),
+        401: createSchema(errorResponseSchema.describe('Unauthorized - Authentication required')),
+        403: createSchema(errorResponseSchema.describe('Forbidden - Cannot access this user')),
+        404: createSchema(errorResponseSchema.describe('Not Found - User not found')),
+        500: createSchema(errorResponseSchema.describe('Internal Server Error'))
       }
     },
     preValidation: requireOwnershipOrAdmin(getUserIdFromParams),
@@ -152,19 +128,36 @@ export default async function usersRoute(fastify: FastifyInstance) {
       const user = await userService.getUserById(id);
       
       if (!user) {
-        return reply.status(404).send({
+        const errorResponse = {
           success: false,
-          error: 'User not found',
-        });
+          error: 'User not found'
+        };
+        const jsonString = JSON.stringify(errorResponse);
+        return reply.status(404).type('application/json').send(jsonString);
       }
 
-      return reply.status(200).send(user);
+      // Create clean response object to avoid serialization issues
+      const cleanResponse = {
+        id: String(user.id),
+        username: String(user.username),
+        email: String(user.email),
+        first_name: user.first_name ? String(user.first_name) : null,
+        last_name: user.last_name ? String(user.last_name) : null,
+        role_id: user.role_id ? String(user.role_id) : null,
+        auth_type: user.auth_type ? String(user.auth_type) : null,
+        github_id: user.github_id ? String(user.github_id) : null
+      };
+
+      const jsonString = JSON.stringify(cleanResponse);
+      return reply.status(200).type('application/json').send(jsonString);
     } catch (error) {
       fastify.log.error(error, 'Error fetching user');
-      return reply.status(500).send({
+      const errorResponse = {
         success: false,
-        error: 'Failed to fetch user',
-      });
+        error: 'Failed to fetch user'
+      };
+      const jsonString = JSON.stringify(errorResponse);
+      return reply.status(500).type('application/json').send(jsonString);
     }
   });
 
@@ -175,43 +168,33 @@ export default async function usersRoute(fastify: FastifyInstance) {
       summary: 'Update user',
       description: 'Updates user information. Users can update their own profile, admins can update any user.',
       security: [{ cookieAuth: [] }],
-      params: zodToJsonSchema(paramsWithIdSchema, {
-        $refStrategy: 'none',
-        target: 'openApi3'
-      }),
-      body: zodToJsonSchema(UpdateUserSchema, {
-        $refStrategy: 'none',
-        target: 'openApi3'
-      }),
+      params: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', description: 'User ID' }
+        },
+        required: ['id']
+      },
+      body: {
+        type: 'object',
+        properties: {
+          username: { type: 'string', minLength: 1 },
+          email: { type: 'string', format: 'email' },
+          first_name: { type: 'string' },
+          last_name: { type: 'string' },
+          role_id: { type: 'string' }
+        },
+        additionalProperties: false,
+        minProperties: 1
+      },
       response: {
-        200: zodToJsonSchema(userResponseSchema.describe('User updated successfully'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        400: zodToJsonSchema(errorResponseSchema.describe('Bad Request - Validation error or invalid role ID'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        401: zodToJsonSchema(errorResponseSchema.describe('Unauthorized - Authentication required'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        403: zodToJsonSchema(errorResponseSchema.describe('Forbidden - Cannot update this user or change own role'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        404: zodToJsonSchema(errorResponseSchema.describe('Not Found - User not found'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        409: zodToJsonSchema(errorResponseSchema.describe('Conflict - Username or email already exists'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        500: zodToJsonSchema(errorResponseSchema.describe('Internal Server Error'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        })
+        200: createSchema(userResponseSchema.describe('User updated successfully')),
+        400: createSchema(errorResponseSchema.describe('Bad Request - Validation error or invalid role ID')),
+        401: createSchema(errorResponseSchema.describe('Unauthorized - Authentication required')),
+        403: createSchema(errorResponseSchema.describe('Forbidden - Cannot update this user or change own role')),
+        404: createSchema(errorResponseSchema.describe('Not Found - User not found')),
+        409: createSchema(errorResponseSchema.describe('Conflict - Username or email already exists')),
+        500: createSchema(errorResponseSchema.describe('Internal Server Error'))
       }
     },
     preValidation: requireOwnershipOrAdmin(getUserIdFromParams),
@@ -220,61 +203,115 @@ export default async function usersRoute(fastify: FastifyInstance) {
       const { id } = request.params;
       const validatedData = UpdateUserSchema.parse(request.body);
       
+      // Check if user is authenticated
+      if (!request.user) {
+        const errorResponse = {
+          success: false,
+          error: 'Unauthorized: Authentication required.'
+        };
+        const jsonString = JSON.stringify(errorResponse);
+        return reply.status(401).type('application/json').send(jsonString);
+      }
+
       // Check if user is trying to change their own role (only admins can do this)
-      if (validatedData.role_id !== undefined && request.user?.id === id) {
+      if (validatedData.role_id !== undefined && request.user.id === id) {
         const hasAdminPermission = await userService.userHasPermission(request.user.id, 'system.admin');
         if (!hasAdminPermission) {
-          return reply.status(403).send({
+          const errorResponse = {
             success: false,
-            error: 'Cannot change your own role',
-          });
+            error: 'Cannot change your own role'
+          };
+          const jsonString = JSON.stringify(errorResponse);
+          return reply.status(403).type('application/json').send(jsonString);
         }
       }
 
       const user = await userService.updateUser(id, validatedData);
       
       if (!user) {
-        return reply.status(404).send({
+        const errorResponse = {
           success: false,
-          error: 'User not found',
-        });
+          error: 'User not found'
+        };
+        const jsonString = JSON.stringify(errorResponse);
+        return reply.status(404).type('application/json').send(jsonString);
       }
 
-      return reply.status(200).send({
+      // Create clean response with primitive types only
+      const cleanResponse = {
         success: true,
-        data: user,
-        message: 'User updated successfully',
-      });
+        user: {
+          id: String(user.id),
+          username: String(user.username),
+          email: String(user.email),
+          first_name: user.first_name ? String(user.first_name) : null,
+          last_name: user.last_name ? String(user.last_name) : null,
+          role_id: user.role_id ? String(user.role_id) : null,
+          auth_type: user.auth_type ? String(user.auth_type) : null,
+          github_id: user.github_id ? String(user.github_id) : null
+        },
+        message: 'Profile updated successfully.'
+      };
+      
+      // Manual JSON serialization
+      const jsonString = JSON.stringify(cleanResponse);
+      return reply.status(200).type('application/json').send(jsonString);
     } catch (error) {
       if (error instanceof ZodError) {
-        return reply.status(400).send({
+        const errorResponse = {
           success: false,
           error: 'Validation error',
-          details: error.issues,
-        });
+          details: error.issues  // Fixed: error.errors → error.issues for Zod v4
+        };
+        const jsonString = JSON.stringify(errorResponse);
+        return reply.status(400).type('application/json').send(jsonString);
       }
       
       if (error instanceof Error) {
         if (error.message === 'Invalid role ID') {
-          return reply.status(400).send({
+          const errorResponse = {
             success: false,
-            error: 'Invalid role ID',
-          });
+            error: 'Invalid role ID'
+          };
+          const jsonString = JSON.stringify(errorResponse);
+          return reply.status(400).type('application/json').send(jsonString);
         }
         
         if (error.message === 'Username or email already exists') {
-          return reply.status(409).send({
+          const errorResponse = {
             success: false,
-            error: 'Username or email already exists',
-          });
+            error: 'Username or email already exists'
+          };
+          const jsonString = JSON.stringify(errorResponse);
+          return reply.status(409).type('application/json').send(jsonString);
+        }
+        
+        if (error.message === 'At least one field (username, first_name, or last_name) must be provided.') {
+          const errorResponse = {
+            success: false,
+            error: 'At least one field (username, first_name, or last_name) must be provided.'
+          };
+          const jsonString = JSON.stringify(errorResponse);
+          return reply.status(400).type('application/json').send(jsonString);
+        }
+        
+        if (error.message === 'Username is already taken.') {
+          const errorResponse = {
+            success: false,
+            error: 'Username is already taken.'
+          };
+          const jsonString = JSON.stringify(errorResponse);
+          return reply.status(400).type('application/json').send(jsonString);
         }
       }
       
       fastify.log.error(error, 'Error updating user');
-      return reply.status(500).send({
+      const errorResponse = {
         success: false,
-        error: 'Failed to update user',
-      });
+        error: 'Failed to update user'
+      };
+      const jsonString = JSON.stringify(errorResponse);
+      return reply.status(500).type('application/json').send(jsonString);
     }
   });
 
@@ -285,31 +322,13 @@ export default async function usersRoute(fastify: FastifyInstance) {
       summary: 'Delete user',
       description: 'Deletes a user from the system. Requires admin permissions. Users cannot delete themselves.',
       security: [{ cookieAuth: [] }],
-      params: zodToJsonSchema(paramsWithIdSchema, {
-        $refStrategy: 'none',
-        target: 'openApi3'
-      }),
+      params: createSchema(paramsWithIdSchema),
       response: {
-        200: zodToJsonSchema(successMessageResponseSchema.describe('User deleted successfully'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        401: zodToJsonSchema(errorResponseSchema.describe('Unauthorized - Authentication required'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        403: zodToJsonSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions or cannot delete own account'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        404: zodToJsonSchema(errorResponseSchema.describe('Not Found - User not found'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        500: zodToJsonSchema(errorResponseSchema.describe('Internal Server Error'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        })
+        200: createSchema(successMessageResponseSchema.describe('User deleted successfully')),
+        401: createSchema(errorResponseSchema.describe('Unauthorized - Authentication required')),
+        403: createSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions or cannot delete own account')),
+        404: createSchema(errorResponseSchema.describe('Not Found - User not found')),
+        500: createSchema(errorResponseSchema.describe('Internal Server Error'))
       }
     },
     preValidation: requirePermission('users.delete'),
@@ -361,39 +380,15 @@ export default async function usersRoute(fastify: FastifyInstance) {
       summary: 'Assign role to user',
       description: 'Assigns a role to a specific user. Requires admin permissions. Users cannot change their own role.',
       security: [{ cookieAuth: [] }],
-      params: zodToJsonSchema(paramsWithIdSchema, {
-        $refStrategy: 'none',
-        target: 'openApi3'
-      }),
-      body: zodToJsonSchema(AssignRoleSchema, {
-        $refStrategy: 'none',
-        target: 'openApi3'
-      }),
+      params: createSchema(paramsWithIdSchema),
+      body: createSchema(AssignRoleSchema),
       response: {
-        200: zodToJsonSchema(userResponseSchema.describe('Role assigned successfully'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        400: zodToJsonSchema(errorResponseSchema.describe('Bad Request - Validation error'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        401: zodToJsonSchema(errorResponseSchema.describe('Unauthorized - Authentication required'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        403: zodToJsonSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions or cannot change own role'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        404: zodToJsonSchema(errorResponseSchema.describe('Not Found - User or role not found'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        500: zodToJsonSchema(errorResponseSchema.describe('Internal Server Error'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        })
+        200: createSchema(userResponseSchema.describe('Role assigned successfully')),
+        400: createSchema(errorResponseSchema.describe('Bad Request - Validation error')),
+        401: createSchema(errorResponseSchema.describe('Unauthorized - Authentication required')),
+        403: createSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions or cannot change own role')),
+        404: createSchema(errorResponseSchema.describe('Not Found - User or role not found')),
+        500: createSchema(errorResponseSchema.describe('Internal Server Error'))
       }
     },
     preValidation: requirePermission('users.edit'),
@@ -452,22 +447,10 @@ export default async function usersRoute(fastify: FastifyInstance) {
       description: 'Retrieves user statistics including count by role. Requires admin permissions.',
       security: [{ cookieAuth: [] }],
       response: {
-        200: zodToJsonSchema(userStatsResponseSchema.describe('User statistics retrieved successfully'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        401: zodToJsonSchema(errorResponseSchema.describe('Unauthorized - Authentication required'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        403: zodToJsonSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        500: zodToJsonSchema(errorResponseSchema.describe('Internal Server Error'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        })
+        200: createSchema(userStatsResponseSchema.describe('User statistics retrieved successfully')),
+        401: createSchema(errorResponseSchema.describe('Unauthorized - Authentication required')),
+        403: createSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions')),
+        500: createSchema(errorResponseSchema.describe('Internal Server Error'))
       }
     },
     preValidation: requirePermission('users.list'),
@@ -497,27 +480,12 @@ export default async function usersRoute(fastify: FastifyInstance) {
       summary: 'Get users by role',
       description: 'Retrieves all users with a specific role. Requires admin permissions.',
       security: [{ cookieAuth: [] }],
-      params: zodToJsonSchema(roleParamsSchema, {
-        $refStrategy: 'none',
-        target: 'openApi3'
-      }),
+      params: createSchema(roleParamsSchema),
       response: {
-        200: zodToJsonSchema(usersListResponseSchema.describe('Users with specified role retrieved successfully'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        401: zodToJsonSchema(errorResponseSchema.describe('Unauthorized - Authentication required'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        403: zodToJsonSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        500: zodToJsonSchema(errorResponseSchema.describe('Internal Server Error'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        })
+        200: createSchema(usersListResponseSchema.describe('Users with specified role retrieved successfully')),
+        401: createSchema(errorResponseSchema.describe('Unauthorized - Authentication required')),
+        403: createSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions')),
+        500: createSchema(errorResponseSchema.describe('Internal Server Error'))
       }
     },
     preValidation: requirePermission('users.list'),
@@ -547,49 +515,56 @@ export default async function usersRoute(fastify: FastifyInstance) {
       description: 'Retrieves the profile of the currently authenticated user.',
       security: [{ cookieAuth: [] }],
       response: {
-        200: zodToJsonSchema(UserSchema.describe('Current user profile data'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        401: zodToJsonSchema(errorResponseSchema.describe('Unauthorized - Authentication required'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        404: zodToJsonSchema(errorResponseSchema.describe('Not Found - User not found'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        500: zodToJsonSchema(errorResponseSchema.describe('Internal Server Error'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        })
+        200: createSchema(UserSchema.describe('Current user profile data')),
+        401: createSchema(errorResponseSchema.describe('Unauthorized - Authentication required')),
+        404: createSchema(errorResponseSchema.describe('Not Found - User not found')),
+        500: createSchema(errorResponseSchema.describe('Internal Server Error'))
       }
     }
   }, async (request, reply) => {
     try {
       if (!request.user) {
-        return reply.status(401).send({
+        const errorResponse = {
           success: false,
-          error: 'Authentication required',
-        });
+          error: 'Authentication required'
+        };
+        const jsonString = JSON.stringify(errorResponse);
+        return reply.status(401).type('application/json').send(jsonString);
       }
 
       const user = await userService.getUserById(request.user.id);
       
       if (!user) {
-        return reply.status(404).send({
+        const errorResponse = {
           success: false,
-          error: 'User not found',
-        });
+          error: 'User not found'
+        };
+        const jsonString = JSON.stringify(errorResponse);
+        return reply.status(404).type('application/json').send(jsonString);
       }
 
-      return reply.status(200).send(user);
+      // Create clean response object to avoid serialization issues
+      const cleanResponse = {
+        id: String(user.id),
+        username: String(user.username),
+        email: String(user.email),
+        first_name: user.first_name ? String(user.first_name) : null,
+        last_name: user.last_name ? String(user.last_name) : null,
+        role_id: user.role_id ? String(user.role_id) : null,
+        auth_type: user.auth_type ? String(user.auth_type) : null,
+        github_id: user.github_id ? String(user.github_id) : null
+      };
+
+      const jsonString = JSON.stringify(cleanResponse);
+      return reply.status(200).type('application/json').send(jsonString);
     } catch (error) {
       fastify.log.error(error, 'Error fetching current user');
-      return reply.status(500).send({
+      const errorResponse = {
         success: false,
-        error: 'Failed to fetch user profile',
-      });
+        error: 'Failed to fetch user profile'
+      };
+      const jsonString = JSON.stringify(errorResponse);
+      return reply.status(500).type('application/json').send(jsonString);
     }
   });
 
@@ -601,18 +576,9 @@ export default async function usersRoute(fastify: FastifyInstance) {
       description: 'Retrieves all teams that the currently authenticated user belongs to.',
       security: [{ cookieAuth: [] }],
       response: {
-        200: zodToJsonSchema(userTeamsResponseSchema.describe('User teams retrieved successfully'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        401: zodToJsonSchema(errorResponseSchema.describe('Unauthorized - Authentication required'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        500: zodToJsonSchema(errorResponseSchema.describe('Internal Server Error'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        })
+        200: createSchema(userTeamsResponseSchema.describe('User teams retrieved successfully')),
+        401: createSchema(errorResponseSchema.describe('Unauthorized - Authentication required')),
+        500: createSchema(errorResponseSchema.describe('Internal Server Error'))
       }
     }
   }, async (request, reply) => {
@@ -638,16 +604,34 @@ export default async function usersRoute(fastify: FastifyInstance) {
         })
       );
       
-      return reply.status(200).send({
+      // Create clean response object to avoid serialization issues
+      const cleanTeams = teamsWithRoles.map(team => ({
+        id: String(team.id),
+        name: String(team.name),
+        slug: String(team.slug),
+        description: team.description ? String(team.description) : null,
+        owner_id: String(team.owner_id),
+        created_at: team.created_at ? team.created_at.toISOString() : null,
+        updated_at: team.updated_at ? team.updated_at.toISOString() : null,
+        role: String(team.role),
+        is_owner: Boolean(team.is_owner)
+      }));
+
+      const cleanResponse = {
         success: true,
-        teams: teamsWithRoles,
-      });
+        teams: cleanTeams
+      };
+
+      const jsonString = JSON.stringify(cleanResponse);
+      return reply.status(200).type('application/json').send(jsonString);
     } catch (error) {
       fastify.log.error(error, 'Error fetching user teams');
-      return reply.status(500).send({
+      const errorResponse = {
         success: false,
-        error: 'Failed to fetch user teams',
-      });
+        error: 'Failed to fetch user teams'
+      };
+      const jsonString = JSON.stringify(errorResponse);
+      return reply.status(500).type('application/json').send(jsonString);
     }
   });
 
@@ -658,31 +642,13 @@ export default async function usersRoute(fastify: FastifyInstance) {
       summary: 'Get user teams by ID',
       description: 'Retrieves all teams for a specific user. Requires admin permissions to view other users\' teams.',
       security: [{ cookieAuth: [] }],
-      params: zodToJsonSchema(paramsWithIdSchema, {
-        $refStrategy: 'none',
-        target: 'openApi3'
-      }),
+      params: createSchema(paramsWithIdSchema),
       response: {
-        200: zodToJsonSchema(userTeamsResponseSchema.describe('User teams retrieved successfully'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        401: zodToJsonSchema(errorResponseSchema.describe('Unauthorized - Authentication required'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        403: zodToJsonSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        404: zodToJsonSchema(errorResponseSchema.describe('Not Found - User not found'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        500: zodToJsonSchema(errorResponseSchema.describe('Internal Server Error'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        })
+        200: createSchema(userTeamsResponseSchema.describe('User teams retrieved successfully')),
+        401: createSchema(errorResponseSchema.describe('Unauthorized - Authentication required')),
+        403: createSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions')),
+        404: createSchema(errorResponseSchema.describe('Not Found - User not found')),
+        500: createSchema(errorResponseSchema.describe('Internal Server Error'))
       }
     },
     preValidation: requireOwnershipOrAdmin(getUserIdFromParams),

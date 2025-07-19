@@ -2,7 +2,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { ResetPasswordSchema, type ResetPasswordInput } from './schemas';
 import { PasswordResetService } from '../../services/passwordResetService';
 import { z } from 'zod';
-import { zodToJsonSchema } from 'zod-to-json-schema';
+import { createSchema } from 'zod-openapi';
 
 // Response schemas
 const resetPasswordSuccessResponseSchema = z.object({
@@ -24,34 +24,16 @@ const resetPasswordRouteSchema = {
     required: true,
     content: {
       'application/json': {
-        schema: zodToJsonSchema(ResetPasswordSchema, { 
-          $refStrategy: 'none', 
-          target: 'openApi3' 
-        })
+        schema: createSchema(ResetPasswordSchema)
       }
     }
   },
   response: {
-    200: zodToJsonSchema(resetPasswordSuccessResponseSchema.describe('Password reset successfully'), {
-      $refStrategy: 'none',
-      target: 'openApi3'
-    }),
-    400: zodToJsonSchema(resetPasswordErrorResponseSchema.describe('Bad Request - Invalid token, expired token, invalid password, or missing Content-Type header'), {
-      $refStrategy: 'none',
-      target: 'openApi3'
-    }),
-    403: zodToJsonSchema(resetPasswordErrorResponseSchema.describe('Forbidden - User not eligible for password reset'), {
-      $refStrategy: 'none',
-      target: 'openApi3'
-    }),
-    503: zodToJsonSchema(resetPasswordErrorResponseSchema.describe('Service Unavailable - Email functionality disabled'), {
-      $refStrategy: 'none',
-      target: 'openApi3'
-    }),
-    500: zodToJsonSchema(resetPasswordErrorResponseSchema.describe('Internal Server Error - Password reset failed'), {
-      $refStrategy: 'none',
-      target: 'openApi3'
-    })
+    200: createSchema(resetPasswordSuccessResponseSchema.describe('Password reset successfully')),
+    400: createSchema(resetPasswordErrorResponseSchema.describe('Bad Request - Invalid token, expired token, invalid password, or missing Content-Type header')),
+    403: createSchema(resetPasswordErrorResponseSchema.describe('Forbidden - User not eligible for password reset')),
+    503: createSchema(resetPasswordErrorResponseSchema.describe('Service Unavailable - Email functionality disabled')),
+    500: createSchema(resetPasswordErrorResponseSchema.describe('Internal Server Error - Password reset failed'))
   }
 };
 

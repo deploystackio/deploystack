@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { ZodError } from 'zod';
-import { zodToJsonSchema } from 'zod-to-json-schema';
+import { createSchema } from 'zod-openapi';
 import { TeamService } from '../../services/teamService';
 import { requirePermission, checkUserPermission } from '../../middleware/roleMiddleware';
 import {
@@ -31,22 +31,10 @@ export default async function teamsRoute(fastify: FastifyInstance) {
       description: 'Retrieves the default team for the currently authenticated user.',
       security: [{ cookieAuth: [] }],
       response: {
-        200: zodToJsonSchema(TeamResponseSchema.describe('Default team retrieved successfully'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        401: zodToJsonSchema(ErrorResponseSchema.describe('Unauthorized - Authentication required'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        404: zodToJsonSchema(ErrorResponseSchema.describe('Not Found - No default team found'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        500: zodToJsonSchema(ErrorResponseSchema.describe('Internal Server Error'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        })
+        200: createSchema(TeamResponseSchema.describe('Default team retrieved successfully')),
+        401: createSchema(ErrorResponseSchema.describe('Unauthorized - Authentication required')),
+        404: createSchema(ErrorResponseSchema.describe('Not Found - No default team found')),
+        500: createSchema(ErrorResponseSchema.describe('Internal Server Error'))
       }
     }
   }, async (request: FastifyRequest, reply: FastifyReply) => {
@@ -89,18 +77,9 @@ export default async function teamsRoute(fastify: FastifyInstance) {
       description: 'Retrieves all teams that the currently authenticated user belongs to, including their role, admin status, ownership status, and member count.',
       security: [{ cookieAuth: [] }],
       response: {
-        200: zodToJsonSchema(TeamsListWithRoleInfoResponseSchema.describe('User teams retrieved successfully'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        401: zodToJsonSchema(ErrorResponseSchema.describe('Unauthorized - Authentication required'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        500: zodToJsonSchema(ErrorResponseSchema.describe('Internal Server Error'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        })
+        200: createSchema(TeamsListWithRoleInfoResponseSchema.describe('User teams retrieved successfully')),
+        401: createSchema(ErrorResponseSchema.describe('Unauthorized - Authentication required')),
+        500: createSchema(ErrorResponseSchema.describe('Internal Server Error'))
       }
     }
   }, async (request: FastifyRequest, reply: FastifyReply) => {
@@ -142,26 +121,11 @@ export default async function teamsRoute(fastify: FastifyInstance) {
         required: ['id']
       },
       response: {
-        200: zodToJsonSchema(TeamResponseSchema.describe('Team retrieved successfully'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        401: zodToJsonSchema(ErrorResponseSchema.describe('Unauthorized - Authentication required'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        403: zodToJsonSchema(ErrorResponseSchema.describe('Forbidden - Insufficient permissions'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        404: zodToJsonSchema(ErrorResponseSchema.describe('Not Found - Team not found'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        500: zodToJsonSchema(ErrorResponseSchema.describe('Internal Server Error'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        })
+        200: createSchema(TeamResponseSchema.describe('Team retrieved successfully')),
+        401: createSchema(ErrorResponseSchema.describe('Unauthorized - Authentication required')),
+        403: createSchema(ErrorResponseSchema.describe('Forbidden - Insufficient permissions')),
+        404: createSchema(ErrorResponseSchema.describe('Not Found - Team not found')),
+        500: createSchema(ErrorResponseSchema.describe('Internal Server Error'))
       }
     }
   }, async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
@@ -213,31 +177,13 @@ export default async function teamsRoute(fastify: FastifyInstance) {
       summary: 'Create new team',
       description: 'Creates a new team with the specified name and description. Users can create up to 3 teams maximum. The slug is automatically generated from the team name and made unique.',
       security: [{ cookieAuth: [] }],
-      body: zodToJsonSchema(CreateTeamSchema, {
-        $refStrategy: 'none',
-        target: 'openApi3'
-      }),
+      body: createSchema(CreateTeamSchema),
       response: {
-        201: zodToJsonSchema(TeamResponseSchema.describe('Team created successfully'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        400: zodToJsonSchema(ErrorResponseSchema.describe('Bad Request - Validation error or team limit reached'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        401: zodToJsonSchema(ErrorResponseSchema.describe('Unauthorized - Authentication required'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        403: zodToJsonSchema(ErrorResponseSchema.describe('Forbidden - Insufficient permissions'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        500: zodToJsonSchema(ErrorResponseSchema.describe('Internal Server Error'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        })
+        201: createSchema(TeamResponseSchema.describe('Team created successfully')),
+        400: createSchema(ErrorResponseSchema.describe('Bad Request - Validation error or team limit reached')),
+        401: createSchema(ErrorResponseSchema.describe('Unauthorized - Authentication required')),
+        403: createSchema(ErrorResponseSchema.describe('Forbidden - Insufficient permissions')),
+        500: createSchema(ErrorResponseSchema.describe('Internal Server Error'))
       }
     },
     preValidation: requirePermission('teams.create'),
@@ -315,35 +261,14 @@ export default async function teamsRoute(fastify: FastifyInstance) {
         },
         required: ['id']
       },
-      body: zodToJsonSchema(UpdateTeamSchema, {
-        $refStrategy: 'none',
-        target: 'openApi3'
-      }),
+      body: createSchema(UpdateTeamSchema),
       response: {
-        200: zodToJsonSchema(TeamResponseSchema.describe('Team updated successfully'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        400: zodToJsonSchema(ErrorResponseSchema.describe('Bad Request - Validation error or cannot update default team name'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        401: zodToJsonSchema(ErrorResponseSchema.describe('Unauthorized - Authentication required'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        403: zodToJsonSchema(ErrorResponseSchema.describe('Forbidden - Insufficient permissions'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        404: zodToJsonSchema(ErrorResponseSchema.describe('Not Found - Team not found'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        500: zodToJsonSchema(ErrorResponseSchema.describe('Internal Server Error'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        })
+        200: createSchema(TeamResponseSchema.describe('Team updated successfully')),
+        400: createSchema(ErrorResponseSchema.describe('Bad Request - Validation error or cannot update default team name')),
+        401: createSchema(ErrorResponseSchema.describe('Unauthorized - Authentication required')),
+        403: createSchema(ErrorResponseSchema.describe('Forbidden - Insufficient permissions')),
+        404: createSchema(ErrorResponseSchema.describe('Not Found - Team not found')),
+        500: createSchema(ErrorResponseSchema.describe('Internal Server Error'))
       }
     },
     preValidation: requirePermission('teams.edit'),
@@ -433,26 +358,11 @@ export default async function teamsRoute(fastify: FastifyInstance) {
           },
           required: ['success', 'message']
         },
-        400: zodToJsonSchema(ErrorResponseSchema.describe('Bad Request - Cannot delete default team or team has active resources'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        401: zodToJsonSchema(ErrorResponseSchema.describe('Unauthorized - Authentication required'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        403: zodToJsonSchema(ErrorResponseSchema.describe('Forbidden - Insufficient permissions'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        404: zodToJsonSchema(ErrorResponseSchema.describe('Not Found - Team not found'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        500: zodToJsonSchema(ErrorResponseSchema.describe('Internal Server Error'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        })
+        400: createSchema(ErrorResponseSchema.describe('Bad Request - Cannot delete default team or team has active resources')),
+        401: createSchema(ErrorResponseSchema.describe('Unauthorized - Authentication required')),
+        403: createSchema(ErrorResponseSchema.describe('Forbidden - Insufficient permissions')),
+        404: createSchema(ErrorResponseSchema.describe('Not Found - Team not found')),
+        500: createSchema(ErrorResponseSchema.describe('Internal Server Error'))
       }
     },
     preValidation: requirePermission('teams.delete'),
@@ -533,26 +443,11 @@ export default async function teamsRoute(fastify: FastifyInstance) {
         required: ['id']
       },
       response: {
-        200: zodToJsonSchema(TeamMembersListResponseSchema.describe('Team members retrieved successfully'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        401: zodToJsonSchema(ErrorResponseSchema.describe('Unauthorized - Authentication required'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        403: zodToJsonSchema(ErrorResponseSchema.describe('Forbidden - Insufficient permissions'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        404: zodToJsonSchema(ErrorResponseSchema.describe('Not Found - Team not found'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        500: zodToJsonSchema(ErrorResponseSchema.describe('Internal Server Error'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        })
+        200: createSchema(TeamMembersListResponseSchema.describe('Team members retrieved successfully')),
+        401: createSchema(ErrorResponseSchema.describe('Unauthorized - Authentication required')),
+        403: createSchema(ErrorResponseSchema.describe('Forbidden - Insufficient permissions')),
+        404: createSchema(ErrorResponseSchema.describe('Not Found - Team not found')),
+        500: createSchema(ErrorResponseSchema.describe('Internal Server Error'))
       }
     }
   }, async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
@@ -615,35 +510,14 @@ export default async function teamsRoute(fastify: FastifyInstance) {
         },
         required: ['id']
       },
-      body: zodToJsonSchema(AddTeamMemberSchema, {
-        $refStrategy: 'none',
-        target: 'openApi3'
-      }),
+      body: createSchema(AddTeamMemberSchema),
       response: {
-        201: zodToJsonSchema(TeamMemberResponseSchema.describe('Team member added successfully'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        400: zodToJsonSchema(ErrorResponseSchema.describe('Bad Request - Validation error, team limit reached, or cannot add to default team'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        401: zodToJsonSchema(ErrorResponseSchema.describe('Unauthorized - Authentication required'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        403: zodToJsonSchema(ErrorResponseSchema.describe('Forbidden - Insufficient permissions'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        404: zodToJsonSchema(ErrorResponseSchema.describe('Not Found - Team or user not found'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        500: zodToJsonSchema(ErrorResponseSchema.describe('Internal Server Error'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        })
+        201: createSchema(TeamMemberResponseSchema.describe('Team member added successfully')),
+        400: createSchema(ErrorResponseSchema.describe('Bad Request - Validation error, team limit reached, or cannot add to default team')),
+        401: createSchema(ErrorResponseSchema.describe('Unauthorized - Authentication required')),
+        403: createSchema(ErrorResponseSchema.describe('Forbidden - Insufficient permissions')),
+        404: createSchema(ErrorResponseSchema.describe('Not Found - Team or user not found')),
+        500: createSchema(ErrorResponseSchema.describe('Internal Server Error'))
       }
     }
   }, async (request: FastifyRequest<{ Params: { id: string }; Body: AddTeamMemberInput }>, reply: FastifyReply) => {
@@ -738,35 +612,14 @@ export default async function teamsRoute(fastify: FastifyInstance) {
         },
         required: ['id', 'userId']
       },
-      body: zodToJsonSchema(UpdateMemberRoleSchema, {
-        $refStrategy: 'none',
-        target: 'openApi3'
-      }),
+      body: createSchema(UpdateMemberRoleSchema),
       response: {
-        200: zodToJsonSchema(TeamMemberResponseSchema.describe('Team member role updated successfully'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        400: zodToJsonSchema(ErrorResponseSchema.describe('Bad Request - Validation error, cannot change roles in default team, or would leave no admins'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        401: zodToJsonSchema(ErrorResponseSchema.describe('Unauthorized - Authentication required'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        403: zodToJsonSchema(ErrorResponseSchema.describe('Forbidden - Insufficient permissions'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        404: zodToJsonSchema(ErrorResponseSchema.describe('Not Found - Team or user not found'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        500: zodToJsonSchema(ErrorResponseSchema.describe('Internal Server Error'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        })
+        200: createSchema(TeamMemberResponseSchema.describe('Team member role updated successfully')),
+        400: createSchema(ErrorResponseSchema.describe('Bad Request - Validation error, cannot change roles in default team, or would leave no admins')),
+        401: createSchema(ErrorResponseSchema.describe('Unauthorized - Authentication required')),
+        403: createSchema(ErrorResponseSchema.describe('Forbidden - Insufficient permissions')),
+        404: createSchema(ErrorResponseSchema.describe('Not Found - Team or user not found')),
+        500: createSchema(ErrorResponseSchema.describe('Internal Server Error'))
       }
     }
   }, async (request: FastifyRequest<{ Params: { id: string; userId: string }; Body: UpdateMemberRoleInput }>, reply: FastifyReply) => {
@@ -855,30 +708,12 @@ export default async function teamsRoute(fastify: FastifyInstance) {
         required: ['id', 'userId']
       },
       response: {
-        200: zodToJsonSchema(SuccessResponseSchema.describe('Team member removed successfully'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        400: zodToJsonSchema(ErrorResponseSchema.describe('Bad Request - Cannot remove from default team, cannot remove owner, or would leave team empty'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        401: zodToJsonSchema(ErrorResponseSchema.describe('Unauthorized - Authentication required'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        403: zodToJsonSchema(ErrorResponseSchema.describe('Forbidden - Insufficient permissions'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        404: zodToJsonSchema(ErrorResponseSchema.describe('Not Found - Team or user not found'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        500: zodToJsonSchema(ErrorResponseSchema.describe('Internal Server Error'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        })
+        200: createSchema(SuccessResponseSchema.describe('Team member removed successfully')),
+        400: createSchema(ErrorResponseSchema.describe('Bad Request - Cannot remove from default team, cannot remove owner, or would leave team empty')),
+        401: createSchema(ErrorResponseSchema.describe('Unauthorized - Authentication required')),
+        403: createSchema(ErrorResponseSchema.describe('Forbidden - Insufficient permissions')),
+        404: createSchema(ErrorResponseSchema.describe('Not Found - Team or user not found')),
+        500: createSchema(ErrorResponseSchema.describe('Internal Server Error'))
       }
     }
   }, async (request: FastifyRequest<{ Params: { id: string; userId: string } }>, reply: FastifyReply) => {
@@ -951,35 +786,14 @@ export default async function teamsRoute(fastify: FastifyInstance) {
         },
         required: ['id']
       },
-      body: zodToJsonSchema(TransferOwnershipSchema, {
-        $refStrategy: 'none',
-        target: 'openApi3'
-      }),
+      body: createSchema(TransferOwnershipSchema),
       response: {
-        200: zodToJsonSchema(SuccessResponseSchema.describe('Team ownership transferred successfully'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        400: zodToJsonSchema(ErrorResponseSchema.describe('Bad Request - Validation error, cannot transfer default team ownership, or new owner not a member'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        401: zodToJsonSchema(ErrorResponseSchema.describe('Unauthorized - Authentication required'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        403: zodToJsonSchema(ErrorResponseSchema.describe('Forbidden - Insufficient permissions'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        404: zodToJsonSchema(ErrorResponseSchema.describe('Not Found - Team not found'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        500: zodToJsonSchema(ErrorResponseSchema.describe('Internal Server Error'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        })
+        200: createSchema(SuccessResponseSchema.describe('Team ownership transferred successfully')),
+        400: createSchema(ErrorResponseSchema.describe('Bad Request - Validation error, cannot transfer default team ownership, or new owner not a member')),
+        401: createSchema(ErrorResponseSchema.describe('Unauthorized - Authentication required')),
+        403: createSchema(ErrorResponseSchema.describe('Forbidden - Insufficient permissions')),
+        404: createSchema(ErrorResponseSchema.describe('Not Found - Team not found')),
+        500: createSchema(ErrorResponseSchema.describe('Internal Server Error'))
       }
     }
   }, async (request: FastifyRequest<{ Params: { id: string }; Body: TransferOwnershipInput }>, reply: FastifyReply) => {

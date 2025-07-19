@@ -4,7 +4,7 @@ import { eq, and, ne } from 'drizzle-orm';
 import { UpdateProfileSchema, type UpdateProfileInput } from './schemas';
 import { requireAuthHook } from '../../hooks/authHook';
 import { z } from 'zod';
-import { zodToJsonSchema } from 'zod-to-json-schema';
+import { createSchema } from 'zod-openapi';
 
 // Response schemas
 const updateProfileSuccessResponseSchema = z.object({
@@ -31,43 +31,41 @@ const updateProfileRouteSchema = {
   tags: ['Authentication'],
   summary: 'Update user profile',
   description: 'Allows authenticated users to update their profile information including username, first name, and last name. Requires an active session. At least one field must be provided. Requires Content-Type: application/json header when sending request body.',
-  body: zodToJsonSchema(UpdateProfileSchema, {
-    $refStrategy: 'none',
-    target: 'openApi3'
-  }),
+  body: {
+    type: 'object',
+    properties: {
+      username: { 
+        type: 'string', 
+        minLength: 3, 
+        maxLength: 30,
+        pattern: '^[a-zA-Z0-9_]+$'
+      },
+      first_name: { 
+        type: 'string', 
+        maxLength: 50 
+      },
+      last_name: { 
+        type: 'string', 
+        maxLength: 50 
+      }
+    },
+    additionalProperties: false
+  },
   requestBody: {
     required: true,
     content: {
       'application/json': {
-        schema: zodToJsonSchema(UpdateProfileSchema, { 
-          $refStrategy: 'none', 
-          target: 'openApi3' 
-        })
+        schema: createSchema(UpdateProfileSchema)
       }
     }
   },
   security: [{ cookieAuth: [] }],
   response: {
-    200: zodToJsonSchema(updateProfileSuccessResponseSchema.describe('Profile updated successfully'), {
-      $refStrategy: 'none',
-      target: 'openApi3'
-    }),
-    400: zodToJsonSchema(updateProfileErrorResponseSchema.describe('Bad Request - Invalid input, no fields provided, username already taken, or missing Content-Type header'), {
-      $refStrategy: 'none',
-      target: 'openApi3'
-    }),
-    401: zodToJsonSchema(updateProfileErrorResponseSchema.describe('Unauthorized - Authentication required'), {
-      $refStrategy: 'none',
-      target: 'openApi3'
-    }),
-    403: zodToJsonSchema(updateProfileErrorResponseSchema.describe('Forbidden - Cannot change username for non-email users'), {
-      $refStrategy: 'none',
-      target: 'openApi3'
-    }),
-    500: zodToJsonSchema(updateProfileErrorResponseSchema.describe('Internal Server Error - Profile update failed'), {
-      $refStrategy: 'none',
-      target: 'openApi3'
-    })
+    200: createSchema(updateProfileSuccessResponseSchema.describe('Profile updated successfully')),
+    400: createSchema(updateProfileErrorResponseSchema.describe('Bad Request - Invalid input, no fields provided, username already taken, or missing Content-Type header')),
+    401: createSchema(updateProfileErrorResponseSchema.describe('Unauthorized - Authentication required')),
+    403: createSchema(updateProfileErrorResponseSchema.describe('Forbidden - Cannot change username for non-email users')),
+    500: createSchema(updateProfileErrorResponseSchema.describe('Internal Server Error - Profile update failed'))
   }
 };
 
@@ -82,10 +80,12 @@ export default async function updateProfileRoute(fastify: FastifyInstance) {
       try {
         // Check if user is authenticated (requireAuthHook ensures this)
         if (!request.user || !request.user.id) {
-          return reply.status(401).send({ 
-            success: false, 
-            error: 'Unauthorized: Authentication required.' 
-          });
+          const errorResponse = {
+            success: false,
+            error: 'Unauthorized: Authentication required.'
+          };
+          const jsonString = JSON.stringify(errorResponse);
+          return reply.status(401).type('application/json').send(jsonString);
         }
 
         const body = request.body as UpdateProfileInput;
@@ -94,10 +94,12 @@ export default async function updateProfileRoute(fastify: FastifyInstance) {
 
         // Check if at least one field is provided
         if (!username && first_name === undefined && last_name === undefined) {
-          return reply.status(400).send({ 
-            success: false, 
-            error: 'At least one field (username, first_name, or last_name) must be provided.' 
-          });
+          const errorResponse = {
+            success: false,
+            error: 'At least one field (username, first_name, or last_name) must be provided.'
+          };
+          const jsonString = JSON.stringify(errorResponse);
+          return reply.status(400).type('application/json').send(jsonString);
         }
 
         const db = getDb();
@@ -106,10 +108,12 @@ export default async function updateProfileRoute(fastify: FastifyInstance) {
 
         if (!authUserTable) {
           fastify.log.error('AuthUser table not found in schema');
-          return reply.status(500).send({ 
-            success: false, 
-            error: 'Internal server error: User table configuration missing.' 
-          });
+          const errorResponse = {
+            success: false,
+            error: 'Internal server error: User table configuration missing.'
+          };
+          const jsonString = JSON.stringify(errorResponse);
+          return reply.status(500).type('application/json').send(jsonString);
         }
 
         // Get current user from database
@@ -121,20 +125,24 @@ export default async function updateProfileRoute(fastify: FastifyInstance) {
           .limit(1);
 
         if (users.length === 0) {
-          return reply.status(401).send({ 
-            success: false, 
-            error: 'User not found.' 
-          });
+          const errorResponse = {
+            success: false,
+            error: 'User not found.'
+          };
+          const jsonString = JSON.stringify(errorResponse);
+          return reply.status(401).type('application/json').send(jsonString);
         }
 
         const currentUser = users[0];
 
         // Check if username change is allowed for this auth type
         if (username && username !== currentUser.username && currentUser.auth_type !== 'email_signup') {
-          return reply.status(403).send({ 
-            success: false, 
-            error: 'Username change is only available for email-authenticated users.' 
-          });
+          const errorResponse = {
+            success: false,
+            error: 'Username change is only available for email-authenticated users.'
+          };
+          const jsonString = JSON.stringify(errorResponse);
+          return reply.status(403).type('application/json').send(jsonString);
         }
 
         // If username is being updated, check if it's already taken by another user
@@ -150,10 +158,12 @@ export default async function updateProfileRoute(fastify: FastifyInstance) {
             .limit(1);
 
           if (existingUsers.length > 0) {
-            return reply.status(400).send({ 
-              success: false, 
-              error: 'Username is already taken.' 
-            });
+            const errorResponse = {
+              success: false,
+              error: 'Username is already taken.'
+            };
+            const jsonString = JSON.stringify(errorResponse);
+            return reply.status(400).type('application/json').send(jsonString);
           }
         }
 
@@ -193,26 +203,30 @@ export default async function updateProfileRoute(fastify: FastifyInstance) {
         fastify.log.info(`Profile updated successfully for user: ${userId}`);
 
         // Send success response with updated user data
-        return reply.status(200).send({
+        const successResponse = {
           success: true,
           message: 'Profile updated successfully.',
           user: {
-            id: updatedUser.id,
-            username: updatedUser.username,
-            email: updatedUser.email,
-            first_name: updatedUser.first_name,
-            last_name: updatedUser.last_name,
-            auth_type: updatedUser.auth_type,
-            role_id: updatedUser.role_id
+            id: String(updatedUser.id),
+            username: String(updatedUser.username),
+            email: String(updatedUser.email),
+            first_name: updatedUser.first_name ? String(updatedUser.first_name) : null,
+            last_name: updatedUser.last_name ? String(updatedUser.last_name) : null,
+            auth_type: String(updatedUser.auth_type),
+            role_id: updatedUser.role_id ? String(updatedUser.role_id) : null
           }
-        });
+        };
+        const jsonString = JSON.stringify(successResponse);
+        return reply.status(200).type('application/json').send(jsonString);
 
       } catch (error) {
         fastify.log.error(error, 'Error during profile update:');
-        return reply.status(500).send({ 
-          success: false, 
-          error: 'An unexpected error occurred during profile update.' 
-        });
+        const errorResponse = {
+          success: false,
+          error: 'An unexpected error occurred during profile update.'
+        };
+        const jsonString = JSON.stringify(errorResponse);
+        return reply.status(500).type('application/json').send(jsonString);
       }
     }
   );

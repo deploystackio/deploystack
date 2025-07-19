@@ -4,7 +4,7 @@ import { EmailVerificationService } from '../../services/emailVerificationServic
 import { getDb, getSchema } from '../../db';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
-import { zodToJsonSchema } from 'zod-to-json-schema';
+import { createSchema } from 'zod-openapi';
 
 // Response schemas
 const resendSuccessResponseSchema = z.object({
@@ -22,27 +22,12 @@ const resendVerificationRouteSchema = {
   tags: ['Authentication'],
   summary: 'Resend email verification',
   description: 'Resends a verification email to the specified email address. This endpoint is public and does not require authentication. Only works if the email address exists and is not already verified.',
-  body: zodToJsonSchema(ResendVerificationSchema, { 
-    $refStrategy: 'none', 
-    target: 'openApi3' 
-  }),
+  body: createSchema(ResendVerificationSchema),
   response: {
-    200: zodToJsonSchema(resendSuccessResponseSchema.describe('Verification email sent successfully'), {
-      $refStrategy: 'none',
-      target: 'openApi3'
-    }),
-    400: zodToJsonSchema(resendErrorResponseSchema.describe('Bad Request - Email not found or already verified'), {
-      $refStrategy: 'none',
-      target: 'openApi3'
-    }),
-    403: zodToJsonSchema(resendErrorResponseSchema.describe('Forbidden - Email sending is disabled'), {
-      $refStrategy: 'none',
-      target: 'openApi3'
-    }),
-    500: zodToJsonSchema(resendErrorResponseSchema.describe('Internal Server Error - Failed to send email'), {
-      $refStrategy: 'none',
-      target: 'openApi3'
-    })
+    200: createSchema(resendSuccessResponseSchema.describe('Verification email sent successfully')),
+    400: createSchema(resendErrorResponseSchema.describe('Bad Request - Email not found or already verified')),
+    403: createSchema(resendErrorResponseSchema.describe('Forbidden - Email sending is disabled')),
+    500: createSchema(resendErrorResponseSchema.describe('Internal Server Error - Failed to send email'))
   }
 };
 

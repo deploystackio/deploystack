@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { ZodError, z } from 'zod';
-import { zodToJsonSchema } from 'zod-to-json-schema';
+import { createSchema } from 'zod-openapi';
 import { RoleService } from '../../services/roleService';
 import { requirePermission } from '../../middleware/roleMiddleware';
 import {
@@ -9,7 +9,7 @@ import {
   RoleSchema,
   AVAILABLE_PERMISSIONS,
   type CreateRoleInput,
-  type UpdateRoleInput,
+  type UpdateRoleInput
 } from './schemas';
 
 // Response schemas for roles API
@@ -58,37 +58,25 @@ export default async function rolesRoute(fastify: FastifyInstance) {
       description: 'Retrieves a list of all roles in the system. Requires role management permissions.',
       security: [{ cookieAuth: [] }],
       response: {
-        200: zodToJsonSchema(rolesListResponseSchema.describe('Successfully retrieved roles list'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        401: zodToJsonSchema(errorResponseSchema.describe('Unauthorized - Authentication required'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        403: zodToJsonSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        500: zodToJsonSchema(errorResponseSchema.describe('Internal Server Error'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        })
+        200: createSchema(rolesListResponseSchema.describe('Successfully retrieved roles list')),
+        401: createSchema(errorResponseSchema.describe('Unauthorized - Authentication required')),
+        403: createSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions')),
+        500: createSchema(errorResponseSchema.describe('Internal Server Error'))
       }
     },
-    preValidation: requirePermission('roles.manage'),
+    preValidation: requirePermission('roles.manage')
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const roles = await roleService.getAllRoles();
       return reply.status(200).send({
         success: true,
-        data: roles,
+        data: roles
       });
     } catch (error) {
       fastify.log.error(error, 'Error fetching roles');
       return reply.status(500).send({
         success: false,
-        error: 'Failed to fetch roles',
+        error: 'Failed to fetch roles'
       });
     }
   });
@@ -100,34 +88,16 @@ export default async function rolesRoute(fastify: FastifyInstance) {
       summary: 'Get role by ID',
       description: 'Retrieves a specific role by its ID. Requires role management permissions.',
       security: [{ cookieAuth: [] }],
-      params: zodToJsonSchema(paramsWithIdSchema, {
-        $refStrategy: 'none',
-        target: 'openApi3'
-      }),
+      params: createSchema(paramsWithIdSchema),
       response: {
-        200: zodToJsonSchema(roleResponseSchema.describe('Role data retrieved successfully'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        401: zodToJsonSchema(errorResponseSchema.describe('Unauthorized - Authentication required'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        403: zodToJsonSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        404: zodToJsonSchema(errorResponseSchema.describe('Not Found - Role not found'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        500: zodToJsonSchema(errorResponseSchema.describe('Internal Server Error'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        })
+        200: createSchema(roleResponseSchema.describe('Role data retrieved successfully')),
+        401: createSchema(errorResponseSchema.describe('Unauthorized - Authentication required')),
+        403: createSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions')),
+        404: createSchema(errorResponseSchema.describe('Not Found - Role not found')),
+        500: createSchema(errorResponseSchema.describe('Internal Server Error'))
       }
     },
-    preValidation: requirePermission('roles.manage'),
+    preValidation: requirePermission('roles.manage')
   }, async (request, reply) => {
     try {
       const { id } = request.params;
@@ -136,19 +106,19 @@ export default async function rolesRoute(fastify: FastifyInstance) {
       if (!role) {
         return reply.status(404).send({
           success: false,
-          error: 'Role not found',
+          error: 'Role not found'
         });
       }
 
       return reply.status(200).send({
         success: true,
-        data: role,
+        data: role
       });
     } catch (error) {
       fastify.log.error(error, 'Error fetching role');
       return reply.status(500).send({
         success: false,
-        error: 'Failed to fetch role',
+        error: 'Failed to fetch role'
       });
     }
   });
@@ -160,38 +130,17 @@ export default async function rolesRoute(fastify: FastifyInstance) {
       summary: 'Create new role',
       description: 'Creates a new role with specified permissions. Requires role management permissions.',
       security: [{ cookieAuth: [] }],
-      body: zodToJsonSchema(CreateRoleSchema, {
-        $refStrategy: 'none',
-        target: 'openApi3'
-      }),
+      body: createSchema(CreateRoleSchema),
       response: {
-        201: zodToJsonSchema(roleResponseSchema.describe('Role created successfully'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        400: zodToJsonSchema(errorResponseSchema.describe('Bad Request - Validation error or invalid permissions'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        401: zodToJsonSchema(errorResponseSchema.describe('Unauthorized - Authentication required'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        403: zodToJsonSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        409: zodToJsonSchema(errorResponseSchema.describe('Conflict - Role ID or name already exists'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        500: zodToJsonSchema(errorResponseSchema.describe('Internal Server Error'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        })
+        201: createSchema(roleResponseSchema.describe('Role created successfully')),
+        400: createSchema(errorResponseSchema.describe('Bad Request - Validation error or invalid permissions')),
+        401: createSchema(errorResponseSchema.describe('Unauthorized - Authentication required')),
+        403: createSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions')),
+        409: createSchema(errorResponseSchema.describe('Conflict - Role ID or name already exists')),
+        500: createSchema(errorResponseSchema.describe('Internal Server Error'))
       }
     },
-    preValidation: requirePermission('roles.manage'),
+    preValidation: requirePermission('roles.manage')
   }, async (request, reply) => {
     try {
       // Fastify has already validated request.body using CreateRoleSchema
@@ -207,7 +156,7 @@ export default async function rolesRoute(fastify: FastifyInstance) {
         return reply.status(400).send({
           success: false,
           error: 'Invalid permissions',
-          details: { invalid_permissions: invalidPermissions },
+          details: { invalid_permissions: invalidPermissions }
         });
       }
 
@@ -216,14 +165,14 @@ export default async function rolesRoute(fastify: FastifyInstance) {
       return reply.status(201).send({
         success: true,
         data: role,
-        message: 'Role created successfully',
+        message: 'Role created successfully'
       });
     } catch (error) {
       if (error instanceof ZodError) {
         return reply.status(400).send({
           success: false,
           error: 'Validation error',
-          details: error.issues,
+          details: error.issues
         });
       }
       
@@ -232,13 +181,13 @@ export default async function rolesRoute(fastify: FastifyInstance) {
       if (error instanceof Error && error.message.includes('UNIQUE constraint')) {
         return reply.status(409).send({
           success: false,
-          error: 'Role ID or name already exists',
+          error: 'Role ID or name already exists'
         });
       }
       
       return reply.status(500).send({
         success: false,
-        error: 'Failed to create role',
+        error: 'Failed to create role'
       });
     }
   });
@@ -250,42 +199,18 @@ export default async function rolesRoute(fastify: FastifyInstance) {
       summary: 'Update role',
       description: 'Updates an existing role. System roles cannot be updated. Requires role management permissions.',
       security: [{ cookieAuth: [] }],
-      params: zodToJsonSchema(paramsWithIdSchema, {
-        $refStrategy: 'none',
-        target: 'openApi3'
-      }),
-      body: zodToJsonSchema(UpdateRoleSchema, {
-        $refStrategy: 'none',
-        target: 'openApi3'
-      }),
+      params: createSchema(paramsWithIdSchema),
+      body: createSchema(UpdateRoleSchema),
       response: {
-        200: zodToJsonSchema(roleResponseSchema.describe('Role updated successfully'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        400: zodToJsonSchema(errorResponseSchema.describe('Bad Request - Validation error or invalid permissions'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        401: zodToJsonSchema(errorResponseSchema.describe('Unauthorized - Authentication required'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        403: zodToJsonSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions or cannot update system roles'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        404: zodToJsonSchema(errorResponseSchema.describe('Not Found - Role not found'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        500: zodToJsonSchema(errorResponseSchema.describe('Internal Server Error'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        })
+        200: createSchema(roleResponseSchema.describe('Role updated successfully')),
+        400: createSchema(errorResponseSchema.describe('Bad Request - Validation error or invalid permissions')),
+        401: createSchema(errorResponseSchema.describe('Unauthorized - Authentication required')),
+        403: createSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions or cannot update system roles')),
+        404: createSchema(errorResponseSchema.describe('Not Found - Role not found')),
+        500: createSchema(errorResponseSchema.describe('Internal Server Error'))
       }
     },
-    preValidation: requirePermission('roles.manage'),
+    preValidation: requirePermission('roles.manage')
   }, async (request, reply) => {
     try {
       const { id } = request.params;
@@ -303,7 +228,7 @@ export default async function rolesRoute(fastify: FastifyInstance) {
           return reply.status(400).send({
             success: false,
             error: 'Invalid permissions',
-            details: { invalid_permissions: invalidPermissions },
+            details: { invalid_permissions: invalidPermissions }
           });
         }
       }
@@ -313,35 +238,35 @@ export default async function rolesRoute(fastify: FastifyInstance) {
       if (!role) {
         return reply.status(404).send({
           success: false,
-          error: 'Role not found',
+          error: 'Role not found'
         });
       }
 
       return reply.status(200).send({
         success: true,
         data: role,
-        message: 'Role updated successfully',
+        message: 'Role updated successfully'
       });
     } catch (error) {
       if (error instanceof ZodError) {
         return reply.status(400).send({
           success: false,
           error: 'Validation error',
-          details: error.issues,
+          details: error.issues
         });
       }
       
       if (error instanceof Error && error.message === 'Cannot update system roles') {
         return reply.status(403).send({
           success: false,
-          error: 'Cannot update system roles',
+          error: 'Cannot update system roles'
         });
       }
       
       fastify.log.error(error, 'Error updating role');
       return reply.status(500).send({
         success: false,
-        error: 'Failed to update role',
+        error: 'Failed to update role'
       });
     }
   });
@@ -353,38 +278,17 @@ export default async function rolesRoute(fastify: FastifyInstance) {
       summary: 'Delete role',
       description: 'Deletes a role from the system. System roles and roles assigned to users cannot be deleted. Requires role management permissions.',
       security: [{ cookieAuth: [] }],
-      params: zodToJsonSchema(paramsWithIdSchema, {
-        $refStrategy: 'none',
-        target: 'openApi3'
-      }),
+      params: createSchema(paramsWithIdSchema),
       response: {
-        200: zodToJsonSchema(successMessageResponseSchema.describe('Role deleted successfully'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        401: zodToJsonSchema(errorResponseSchema.describe('Unauthorized - Authentication required'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        403: zodToJsonSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions or cannot delete system roles'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        404: zodToJsonSchema(errorResponseSchema.describe('Not Found - Role not found'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        409: zodToJsonSchema(errorResponseSchema.describe('Conflict - Cannot delete role that is assigned to users'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        500: zodToJsonSchema(errorResponseSchema.describe('Internal Server Error'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        })
+        200: createSchema(successMessageResponseSchema.describe('Role deleted successfully')),
+        401: createSchema(errorResponseSchema.describe('Unauthorized - Authentication required')),
+        403: createSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions or cannot delete system roles')),
+        404: createSchema(errorResponseSchema.describe('Not Found - Role not found')),
+        409: createSchema(errorResponseSchema.describe('Conflict - Cannot delete role that is assigned to users')),
+        500: createSchema(errorResponseSchema.describe('Internal Server Error'))
       }
     },
-    preValidation: requirePermission('roles.manage'),
+    preValidation: requirePermission('roles.manage')
   }, async (request, reply) => {
     try {
       const { id } = request.params;
@@ -393,27 +297,27 @@ export default async function rolesRoute(fastify: FastifyInstance) {
       if (!success) {
         return reply.status(404).send({
           success: false,
-          error: 'Role not found',
+          error: 'Role not found'
         });
       }
 
       return reply.status(200).send({
         success: true,
-        message: 'Role deleted successfully',
+        message: 'Role deleted successfully'
       });
     } catch (error) {
       if (error instanceof Error) {
         if (error.message === 'Cannot delete system roles') {
           return reply.status(403).send({
             success: false,
-            error: 'Cannot delete system roles',
+            error: 'Cannot delete system roles'
           });
         }
         
         if (error.message === 'Cannot delete role that is assigned to users') {
           return reply.status(409).send({
             success: false,
-            error: 'Cannot delete role that is assigned to users',
+            error: 'Cannot delete role that is assigned to users'
           });
         }
       }
@@ -421,7 +325,7 @@ export default async function rolesRoute(fastify: FastifyInstance) {
       fastify.log.error(error, 'Error deleting role');
       return reply.status(500).send({
         success: false,
-        error: 'Failed to delete role',
+        error: 'Failed to delete role'
       });
     }
   });
@@ -434,32 +338,20 @@ export default async function rolesRoute(fastify: FastifyInstance) {
       description: 'Retrieves all available permissions and default role configurations. Requires role management permissions.',
       security: [{ cookieAuth: [] }],
       response: {
-        200: zodToJsonSchema(permissionsResponseSchema.describe('Available permissions and default roles retrieved successfully'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        401: zodToJsonSchema(errorResponseSchema.describe('Unauthorized - Authentication required'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        403: zodToJsonSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        500: zodToJsonSchema(errorResponseSchema.describe('Internal Server Error'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        })
+        200: createSchema(permissionsResponseSchema.describe('Available permissions and default roles retrieved successfully')),
+        401: createSchema(errorResponseSchema.describe('Unauthorized - Authentication required')),
+        403: createSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions')),
+        500: createSchema(errorResponseSchema.describe('Internal Server Error'))
       }
     },
-    preValidation: requirePermission('roles.manage'),
+    preValidation: requirePermission('roles.manage')
   }, async (request, reply) => {
     return reply.status(200).send({
       success: true,
       data: {
         permissions: AVAILABLE_PERMISSIONS,
-        default_roles: RoleService.getDefaultPermissions(),
-      },
+        default_roles: RoleService.getDefaultPermissions()
+      }
     });
   });
 }

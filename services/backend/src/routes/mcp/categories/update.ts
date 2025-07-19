@@ -1,6 +1,6 @@
 import { type FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { zodToJsonSchema } from 'zod-to-json-schema';
+import { createSchema } from 'zod-openapi';
 import { requirePermission } from '../../../middleware/roleMiddleware';
 import { McpCategoriesService } from '../../../services/mcpCategoriesService';
 import { getDb } from '../../../db';
@@ -45,50 +45,41 @@ export default async function updateCategory(server: FastifyInstance) {
       summary: 'Update MCP category (Admin only)',
       description: 'Update an existing MCP server category - requires global admin permissions. Requires Content-Type: application/json header when sending request body.',
       security: [{ cookieAuth: [] }],
-      params: zodToJsonSchema(updateCategoryParamsSchema, {
-        $refStrategy: 'none',
-        target: 'openApi3'
-      }),
+      // Plain JSON Schema for Fastify validation
+      params: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', minLength: 1 }
+        },
+        required: ['id']
+      },
+      body: {
+        type: 'object',
+        properties: {
+          name: { type: 'string', minLength: 1, maxLength: 100 },
+          description: { type: 'string' },
+          icon: { type: 'string' },
+          sort_order: { type: 'number', minimum: 0 }
+        },
+        additionalProperties: false
+      },
+      // createSchema() for OpenAPI documentation
       requestBody: {
         required: true,
         content: {
           'application/json': {
-            schema: zodToJsonSchema(updateCategoryRequestSchema, {
-              $refStrategy: 'none',
-              target: 'openApi3'
-            })
+            schema: createSchema(updateCategoryRequestSchema)
           }
         }
       },
       response: {
-        200: zodToJsonSchema(updateCategoryResponseSchema, {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        400: zodToJsonSchema(errorResponseSchema.describe('Bad Request - Invalid input or missing Content-Type header'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        401: zodToJsonSchema(errorResponseSchema.describe('Unauthorized - Authentication required'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        403: zodToJsonSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        404: zodToJsonSchema(errorResponseSchema.describe('Not Found - Category does not exist'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        409: zodToJsonSchema(errorResponseSchema.describe('Conflict - Category name already exists'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        500: zodToJsonSchema(errorResponseSchema.describe('Internal Server Error'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        })
+        200: createSchema(updateCategoryResponseSchema),
+        400: createSchema(errorResponseSchema.describe('Bad Request - Invalid input or missing Content-Type header')),
+        401: createSchema(errorResponseSchema.describe('Unauthorized - Authentication required')),
+        403: createSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions')),
+        404: createSchema(errorResponseSchema.describe('Not Found - Category does not exist')),
+        409: createSchema(errorResponseSchema.describe('Conflict - Category name already exists')),
+        500: createSchema(errorResponseSchema.describe('Internal Server Error'))
       }
     }
   }, async (request, reply) => {
@@ -115,10 +106,12 @@ export default async function updateCategory(server: FastifyInstance) {
           categoryId: id
         }, 'MCP category not found');
 
-        return reply.status(404).send({
+        const notFoundResponse = {
           success: false,
           error: 'Category not found'
-        });
+        };
+        const jsonString = JSON.stringify(notFoundResponse);
+        return reply.status(404).type('application/json').send(jsonString);
       }
 
       request.log.info({
@@ -128,13 +121,20 @@ export default async function updateCategory(server: FastifyInstance) {
         categoryName: updatedCategory.name
       }, 'MCP category updated successfully');
 
-      return reply.status(200).send({
+      // Manual JSON serialization to avoid serialization issues
+      const successResponse = {
         success: true,
         data: {
-          ...updatedCategory,
+          id: String(updatedCategory.id),
+          name: String(updatedCategory.name),
+          description: updatedCategory.description ? String(updatedCategory.description) : null,
+          icon: updatedCategory.icon ? String(updatedCategory.icon) : null,
+          sort_order: Number(updatedCategory.sort_order),
           created_at: updatedCategory.created_at.toISOString()
         }
-      });
+      };
+      const jsonString = JSON.stringify(successResponse);
+      return reply.status(200).type('application/json').send(jsonString);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       request.log.error({
@@ -146,23 +146,29 @@ export default async function updateCategory(server: FastifyInstance) {
 
       // Handle specific error cases
       if (error.message?.includes('Category not found')) {
-        return reply.status(404).send({
+        const notFoundResponse = {
           success: false,
           error: 'Category not found'
-        });
+        };
+        const jsonString = JSON.stringify(notFoundResponse);
+        return reply.status(404).type('application/json').send(jsonString);
       }
 
       if (error.message?.includes('UNIQUE constraint failed') || error.message?.includes('already exists')) {
-        return reply.status(409).send({
+        const conflictResponse = {
           success: false,
           error: 'Category name already exists'
-        });
+        };
+        const jsonString = JSON.stringify(conflictResponse);
+        return reply.status(409).type('application/json').send(jsonString);
       }
 
-      return reply.status(500).send({
+      const errorResponse = {
         success: false,
         error: 'Failed to update category'
-      });
+      };
+      const jsonString = JSON.stringify(errorResponse);
+      return reply.status(500).type('application/json').send(jsonString);
     }
   });
 }

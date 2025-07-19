@@ -1,6 +1,6 @@
 import { type FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { zodToJsonSchema } from 'zod-to-json-schema';
+import { createSchema } from 'zod-openapi';
 import { requirePermission } from '../../../middleware/roleMiddleware';
 import { McpCategoriesService } from '../../../services/mcpCategoriesService';
 import { getDb } from '../../../db';
@@ -40,42 +40,34 @@ export default async function createCategory(server: FastifyInstance) {
       summary: 'Create MCP category (Admin only)',
       description: 'Create a new MCP server category - requires global admin permissions. Requires Content-Type: application/json header when sending request body.',
       security: [{ cookieAuth: [] }],
+      // Plain JSON Schema for Fastify validation
+      body: {
+        type: 'object',
+        properties: {
+          name: { type: 'string', minLength: 1, maxLength: 100 },
+          description: { type: 'string' },
+          icon: { type: 'string' },
+          sort_order: { type: 'number', minimum: 0 }
+        },
+        required: ['name'],
+        additionalProperties: false
+      },
+      // createSchema() for OpenAPI documentation
       requestBody: {
         required: true,
         content: {
           'application/json': {
-            schema: zodToJsonSchema(createCategoryRequestSchema, {
-              $refStrategy: 'none',
-              target: 'openApi3'
-            })
+            schema: createSchema(createCategoryRequestSchema)
           }
         }
       },
       response: {
-        201: zodToJsonSchema(createCategoryResponseSchema, {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        400: zodToJsonSchema(errorResponseSchema.describe('Bad Request - Invalid input or missing Content-Type header'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        401: zodToJsonSchema(errorResponseSchema.describe('Unauthorized - Authentication required'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        403: zodToJsonSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        409: zodToJsonSchema(errorResponseSchema.describe('Conflict - Category name already exists'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        500: zodToJsonSchema(errorResponseSchema.describe('Internal Server Error'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        })
+        201: createSchema(createCategoryResponseSchema),
+        400: createSchema(errorResponseSchema.describe('Bad Request - Invalid input or missing Content-Type header')),
+        401: createSchema(errorResponseSchema.describe('Unauthorized - Authentication required')),
+        403: createSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions')),
+        409: createSchema(errorResponseSchema.describe('Conflict - Category name already exists')),
+        500: createSchema(errorResponseSchema.describe('Internal Server Error'))
       }
     }
   }, async (request, reply) => {
@@ -106,13 +98,20 @@ export default async function createCategory(server: FastifyInstance) {
         categoryName: newCategory.name
       }, 'MCP category created successfully');
 
-      return reply.status(201).send({
+      // Manual JSON serialization to avoid serialization issues
+      const successResponse = {
         success: true,
         data: {
-          ...newCategory,
+          id: String(newCategory.id),
+          name: String(newCategory.name),
+          description: newCategory.description ? String(newCategory.description) : null,
+          icon: newCategory.icon ? String(newCategory.icon) : null,
+          sort_order: Number(newCategory.sort_order),
           created_at: newCategory.created_at.toISOString()
         }
-      });
+      };
+      const jsonString = JSON.stringify(successResponse);
+      return reply.status(201).type('application/json').send(jsonString);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       request.log.error({
@@ -124,16 +123,20 @@ export default async function createCategory(server: FastifyInstance) {
 
       // Handle specific error cases
       if (error.message?.includes('UNIQUE constraint failed') || error.message?.includes('already exists')) {
-        return reply.status(409).send({
+        const conflictResponse = {
           success: false,
           error: 'Category name already exists'
-        });
+        };
+        const jsonString = JSON.stringify(conflictResponse);
+        return reply.status(409).type('application/json').send(jsonString);
       }
 
-      return reply.status(500).send({
+      const errorResponse = {
         success: false,
         error: 'Failed to create category'
-      });
+      };
+      const jsonString = JSON.stringify(errorResponse);
+      return reply.status(500).type('application/json').send(jsonString);
     }
   });
 }

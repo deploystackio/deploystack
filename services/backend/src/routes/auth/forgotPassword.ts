@@ -2,7 +2,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { ForgotPasswordSchema, type ForgotPasswordInput } from './schemas';
 import { PasswordResetService } from '../../services/passwordResetService';
 import { z } from 'zod';
-import { zodToJsonSchema } from 'zod-to-json-schema';
+import { createSchema } from 'zod-openapi';
 
 // Response schemas
 const forgotPasswordSuccessResponseSchema = z.object({
@@ -24,30 +24,15 @@ const forgotPasswordRouteSchema = {
     required: true,
     content: {
       'application/json': {
-        schema: zodToJsonSchema(ForgotPasswordSchema, { 
-          $refStrategy: 'none', 
-          target: 'openApi3' 
-        })
+        schema: createSchema(ForgotPasswordSchema)
       }
     }
   },
   response: {
-    200: zodToJsonSchema(forgotPasswordSuccessResponseSchema.describe('Request processed successfully'), {
-      $refStrategy: 'none',
-      target: 'openApi3'
-    }),
-    400: zodToJsonSchema(forgotPasswordErrorResponseSchema.describe('Bad Request - Invalid email format or missing Content-Type header'), {
-      $refStrategy: 'none',
-      target: 'openApi3'
-    }),
-    503: zodToJsonSchema(forgotPasswordErrorResponseSchema.describe('Service Unavailable - Email functionality disabled'), {
-      $refStrategy: 'none',
-      target: 'openApi3'
-    }),
-    500: zodToJsonSchema(forgotPasswordErrorResponseSchema.describe('Internal Server Error - Password reset failed'), {
-      $refStrategy: 'none',
-      target: 'openApi3'
-    })
+    200: createSchema(forgotPasswordSuccessResponseSchema.describe('Request processed successfully')),
+    400: createSchema(forgotPasswordErrorResponseSchema.describe('Bad Request - Invalid email format or missing Content-Type header')),
+    503: createSchema(forgotPasswordErrorResponseSchema.describe('Service Unavailable - Email functionality disabled')),
+    500: createSchema(forgotPasswordErrorResponseSchema.describe('Internal Server Error - Password reset failed'))
   }
 };
 

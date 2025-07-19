@@ -250,8 +250,38 @@ export async function reinitializePluginsWithDatabase(
 export const createServer = async () => {
   const server = fastify({
     logger: loggerConfig,
-    disableRequestLogging: true 
+    disableRequestLogging: true,
+    ajv: {
+      customOptions: {
+        strict: false,
+        strictTypes: false,
+        strictTuples: false
+      }
+    }
   })
+
+  // Add global error handler for validation errors
+  server.setErrorHandler(async (error, request, reply) => {
+    // Handle Fastify validation errors
+    if (error.validation) {
+      const errorResponse = {
+        success: false,
+        error: 'Validation error',
+        details: error.validation
+      };
+      const jsonString = JSON.stringify(errorResponse);
+      return reply.status(400).type('application/json').send(jsonString);
+    }
+
+    // Handle other errors
+    request.log.error(error, 'Unhandled error');
+    const errorResponse = {
+      success: false,
+      error: 'Internal server error'
+    };
+    const jsonString = JSON.stringify(errorResponse);
+    return reply.status(500).type('application/json').send(jsonString);
+  });
 
   registerRequestLoggerHooks(server)
   

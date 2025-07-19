@@ -9,7 +9,7 @@ import { hash } from '@node-rs/argon2';
 import { TeamService } from '../../services/teamService';
 import { GlobalSettingsInitService } from '../../global-settings';
 import { z } from 'zod';
-import { zodToJsonSchema } from 'zod-to-json-schema';
+import { createSchema } from 'zod-openapi';
 
 // Response schemas
 const userResponseSchema = z.object({
@@ -41,30 +41,15 @@ const registerEmailRouteSchema = {
     required: true,
     content: {
       'application/json': {
-        schema: zodToJsonSchema(RegisterEmailSchema, { 
-          $refStrategy: 'none', 
-          target: 'openApi3' 
-        })
+        schema: createSchema(RegisterEmailSchema)
       }
     }
   },
   response: {
-    201: zodToJsonSchema(registerSuccessResponseSchema.describe('User registered successfully'), {
-      $refStrategy: 'none',
-      target: 'openApi3'
-    }),
-    400: zodToJsonSchema(registerErrorResponseSchema.describe('Bad Request - Invalid input, username taken, email already in use, or missing Content-Type header'), {
-      $refStrategy: 'none',
-      target: 'openApi3'
-    }),
-    403: zodToJsonSchema(registerErrorResponseSchema.describe('Forbidden - Email registration is disabled by administrator'), {
-      $refStrategy: 'none',
-      target: 'openApi3'
-    }),
-    500: zodToJsonSchema(registerErrorResponseSchema.describe('Internal Server Error - Registration failed'), {
-      $refStrategy: 'none',
-      target: 'openApi3'
-    })
+    201: createSchema(registerSuccessResponseSchema.describe('User registered successfully')),
+    400: createSchema(registerErrorResponseSchema.describe('Bad Request - Invalid input, username taken, email already in use, or missing Content-Type header')),
+    403: createSchema(registerErrorResponseSchema.describe('Forbidden - Email registration is disabled by administrator')),
+    500: createSchema(registerErrorResponseSchema.describe('Internal Server Error - Registration failed'))
   }
 };
 
@@ -73,14 +58,16 @@ export default async function registerEmailRoute(fastify: FastifyInstance) {
     '/register',
     { schema: registerEmailRouteSchema },
     async (request, reply: FastifyReply) => { // request type will be inferred by Fastify
-      // Check if email registration is enabled
-      const isEmailRegistrationEnabled = await GlobalSettingsInitService.isEmailRegistrationEnabled();
-      if (!isEmailRegistrationEnabled) {
-        return reply.status(403).send({ 
-          success: false, 
-          error: 'Email registration is currently disabled by administrator.' 
-        });
-      }
+        // Check if email registration is enabled
+        const isEmailRegistrationEnabled = await GlobalSettingsInitService.isEmailRegistrationEnabled();
+        if (!isEmailRegistrationEnabled) {
+          const errorResponse = {
+            success: false,
+            error: 'Email registration is currently disabled by administrator.'
+          };
+          const jsonString = JSON.stringify(errorResponse);
+          return reply.status(403).type('application/json').send(jsonString);
+        }
 
       const { username, email, password, first_name, last_name } = request.body; // request.body should now be typed as RegisterEmailInput
 
@@ -88,10 +75,15 @@ export default async function registerEmailRoute(fastify: FastifyInstance) {
       const schema = getSchema();
       const authUserTable = schema.authUser; // Get the Drizzle table object
 
-      if (!authUserTable) {
-        fastify.log.error('AuthUser table not found in schema');
-        return reply.status(500).send({ error: 'Internal server error: User table configuration missing.' });
-      }
+        if (!authUserTable) {
+          fastify.log.error('AuthUser table not found in schema');
+          const errorResponse = {
+            success: false,
+            error: 'Internal server error: User table configuration missing.'
+          };
+          const jsonString = JSON.stringify(errorResponse);
+          return reply.status(500).type('application/json').send(jsonString);
+        }
 
       try {
         // Check if username or email already exists
@@ -105,11 +97,21 @@ export default async function registerEmailRoute(fastify: FastifyInstance) {
           // Determine if username or email caused the conflict for a more specific message
           const existingUserByUsername = await (db as any).select().from(authUserTable).where(eq(authUserTable.username, username)).limit(1);
           if (existingUserByUsername.length > 0) {
-            return reply.status(400).send({ success: false, error: 'Username already taken.' });
+            const errorResponse = {
+              success: false,
+              error: 'Username already taken.'
+            };
+            const jsonString = JSON.stringify(errorResponse);
+            return reply.status(400).type('application/json').send(jsonString);
           }
           const existingUserByEmail = await (db as any).select().from(authUserTable).where(eq(authUserTable.email, email)).limit(1);
           if (existingUserByEmail.length > 0) {
-            return reply.status(400).send({ success: false, error: 'Email address already in use.' });
+            const errorResponse = {
+              success: false,
+              error: 'Email address already in use.'
+            };
+            const jsonString = JSON.stringify(errorResponse);
+            return reply.status(400).type('application/json').send(jsonString);
           }
         }
 
@@ -153,7 +155,12 @@ export default async function registerEmailRoute(fastify: FastifyInstance) {
 
         if (createdUser.length === 0) {
           fastify.log.error('User creation failed - user not found after insert');
-          return reply.status(500).send({ error: 'User creation failed.' });
+          const errorResponse = {
+            success: false,
+            error: 'User creation failed.'
+          };
+          const jsonString = JSON.stringify(errorResponse);
+          return reply.status(500).type('application/json').send(jsonString);
         }
 
         fastify.log.info(`User created successfully: ${userId} with role: ${defaultRole}`);
@@ -234,29 +241,50 @@ export default async function registerEmailRoute(fastify: FastifyInstance) {
           }
         }
 
-        return reply.status(201).send({
+        // Create clean response object to avoid serialization issues
+        const cleanResponse = {
           success: true,
-          message,
+          message: String(message),
           user: {
-            id: user.id,
-            username: user.username,
-            email: user.email,
-            first_name: user.first_name,
-            last_name: user.last_name,
-            role_id: user.role_id
+            id: String(user.id),
+            username: String(user.username),
+            email: String(user.email),
+            first_name: user.first_name ? String(user.first_name) : null,
+            last_name: user.last_name ? String(user.last_name) : null,
+            role_id: String(user.role_id)
           }
-        });
+        };
+        
+        // Send as raw JSON string to bypass any serialization issues
+        const jsonString = JSON.stringify(cleanResponse);
+        fastify.log.info('Sending registration response:', jsonString);
+        return reply.status(201).type('application/json').send(jsonString);
 
       } catch (error) {
         fastify.log.error(error, 'Error during email registration:');
         // Drizzle unique constraint errors might need specific handling if not caught above
         if (error instanceof Error && (error.message.includes('UNIQUE constraint failed: authUser.username') || error.message.includes('Key (username)'))) {
-            return reply.status(400).send({ success: false, error: 'Username already taken.' });
+          const errorResponse = {
+            success: false,
+            error: 'Username already taken.'
+          };
+          const jsonString = JSON.stringify(errorResponse);
+          return reply.status(400).type('application/json').send(jsonString);
         }
         if (error instanceof Error && (error.message.includes('UNIQUE constraint failed: authUser.email') || error.message.includes('Key (email)'))) {
-            return reply.status(400).send({ success: false, error: 'Email address already in use.' });
+          const errorResponse = {
+            success: false,
+            error: 'Email address already in use.'
+          };
+          const jsonString = JSON.stringify(errorResponse);
+          return reply.status(400).type('application/json').send(jsonString);
         }
-        return reply.status(500).send({ success: false, error: 'An unexpected error occurred during registration.' });
+        const errorResponse = {
+          success: false,
+          error: 'An unexpected error occurred during registration.'
+        };
+        const jsonString = JSON.stringify(errorResponse);
+        return reply.status(500).type('application/json').send(jsonString);
       }
     }
   );

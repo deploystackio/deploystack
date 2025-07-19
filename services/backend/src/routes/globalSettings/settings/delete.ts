@@ -1,5 +1,5 @@
 import type { FastifyInstance  } from 'fastify';
-import { zodToJsonSchema } from 'zod-to-json-schema';
+import { createSchema } from 'zod-openapi';
 import { GlobalSettingsService } from '../../../services/globalSettingsService';
 import { requireGlobalAdmin } from '../../../middleware/roleMiddleware';
 import { z } from 'zod';
@@ -16,9 +16,6 @@ const errorResponseSchema = z.object({
   details: z.any().optional().describe('Additional error details (validation errors)')
 });
 
-const paramsWithKeySchema = z.object({
-  key: z.string().describe('Global setting key')
-});
 
 export default async function deleteGlobalSettingRoute(fastify: FastifyInstance) {
   // DELETE /settings/:key - Delete global setting (admin only)
@@ -28,34 +25,22 @@ export default async function deleteGlobalSettingRoute(fastify: FastifyInstance)
       summary: 'Delete global setting',
       description: 'Deletes a global setting from the system. Requires settings delete permissions.',
       security: [{ cookieAuth: [] }],
-      params: zodToJsonSchema(paramsWithKeySchema, {
-        $refStrategy: 'none',
-        target: 'openApi3'
-      }),
+      params: {
+        type: 'object',
+        properties: {
+          key: { type: 'string', description: 'Global setting key' }
+        },
+        required: ['key']
+      },
       response: {
-        200: zodToJsonSchema(successMessageResponseSchema.describe('Global setting deleted successfully'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        401: zodToJsonSchema(errorResponseSchema.describe('Unauthorized - Authentication required'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        403: zodToJsonSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        404: zodToJsonSchema(errorResponseSchema.describe('Not Found - Setting not found'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        500: zodToJsonSchema(errorResponseSchema.describe('Internal Server Error'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        })
+        200: createSchema(successMessageResponseSchema.describe('Global setting deleted successfully')),
+        401: createSchema(errorResponseSchema.describe('Unauthorized - Authentication required')),
+        403: createSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions')),
+        404: createSchema(errorResponseSchema.describe('Not Found - Setting not found')),
+        500: createSchema(errorResponseSchema.describe('Internal Server Error'))
       }
     },
-    preValidation: requireGlobalAdmin(),
+    preValidation: requireGlobalAdmin()
   }, async (request, reply) => {
     try {
       const { key } = request.params;
@@ -63,22 +48,32 @@ export default async function deleteGlobalSettingRoute(fastify: FastifyInstance)
       const success = await GlobalSettingsService.delete(key);
       
       if (!success) {
-        return reply.status(404).send({
+        const notFoundResponse = {
           success: false,
-          error: 'Setting not found',
-        });
+          error: 'Setting not found'
+        };
+        const jsonString = JSON.stringify(notFoundResponse);
+        return reply.status(404).type('application/json').send(jsonString);
       }
 
-      return reply.status(200).send({
+      // Create clean response with primitive types only
+      const cleanResponse = {
         success: true,
-        message: 'Global setting deleted successfully',
-      });
+        message: 'Global setting deleted successfully'
+      };
+      
+      // Manual JSON serialization
+      const jsonString = JSON.stringify(cleanResponse);
+      return reply.status(200).type('application/json').send(jsonString);
     } catch (error) {
       fastify.log.error(error, 'Error deleting global setting');
-      return reply.status(500).send({
+      
+      const errorResponse = {
         success: false,
-        error: 'Failed to delete global setting',
-      });
+        error: 'Failed to delete global setting'
+      };
+      const jsonString = JSON.stringify(errorResponse);
+      return reply.status(500).type('application/json').send(jsonString);
     }
   });
 }

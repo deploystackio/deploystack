@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { zodToJsonSchema } from 'zod-to-json-schema';
+import { createSchema } from 'zod-openapi';
 import { GlobalSettingsService } from '../../../services/globalSettingsService';
 import { requireGlobalAdmin } from '../../../middleware/roleMiddleware';
 import { GlobalSettingSchema } from '../schemas';
@@ -17,9 +17,6 @@ const errorResponseSchema = z.object({
   details: z.any().optional().describe('Additional error details')
 });
 
-const paramsWithGroupIdSchema = z.object({
-  groupId: z.string().describe('Group ID')
-});
 
 export default async function getGroupSettingsRoute(fastify: FastifyInstance) {
   // GET /settings/group/:groupId - Get settings by group (admin only)
@@ -29,45 +26,53 @@ export default async function getGroupSettingsRoute(fastify: FastifyInstance) {
       summary: 'Get settings by group',
       description: 'Retrieves all global settings belonging to a specific group. Requires settings view permissions.',
       security: [{ cookieAuth: [] }],
-      params: zodToJsonSchema(paramsWithGroupIdSchema, {
-        $refStrategy: 'none',
-        target: 'openApi3'
-      }),
+      params: {
+        type: 'object',
+        properties: {
+          groupId: { type: 'string', description: 'Group ID' }
+        },
+        required: ['groupId']
+      },
       response: {
-        200: zodToJsonSchema(globalSettingsListResponseSchema.describe('Settings retrieved successfully'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        401: zodToJsonSchema(errorResponseSchema.describe('Unauthorized - Authentication required'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        403: zodToJsonSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        500: zodToJsonSchema(errorResponseSchema.describe('Internal Server Error'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        })
+        200: createSchema(globalSettingsListResponseSchema.describe('Settings retrieved successfully')),
+        401: createSchema(errorResponseSchema.describe('Unauthorized - Authentication required')),
+        403: createSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions')),
+        500: createSchema(errorResponseSchema.describe('Internal Server Error'))
       }
     },
-    preValidation: requireGlobalAdmin(),
+    preValidation: requireGlobalAdmin()
   }, async (request, reply) => {
     try {
       const { groupId } = request.params;
       const settings = await GlobalSettingsService.getByGroup(groupId);
       
-      return reply.status(200).send({
+      // Create clean response with primitive types only
+      const cleanResponse = {
         success: true,
-        data: settings,
-      });
+        data: settings.map(setting => ({
+          key: String(setting.key),
+          value: setting.value,
+          type: setting.type ? String(setting.type) : null,
+          description: setting.description ? String(setting.description) : null,
+          is_encrypted: Boolean(setting.is_encrypted),
+          group_id: setting.group_id ? String(setting.group_id) : null,
+          created_at: setting.created_at ? String(setting.created_at) : null,
+          updated_at: setting.updated_at ? String(setting.updated_at) : null
+        }))
+      };
+      
+      // Manual JSON serialization
+      const jsonString = JSON.stringify(cleanResponse);
+      return reply.status(200).type('application/json').send(jsonString);
     } catch (error) {
       fastify.log.error(error, 'Error fetching settings by group');
-      return reply.status(500).send({
+      
+      const errorResponse = {
         success: false,
-        error: 'Failed to fetch settings by group',
-      });
+        error: 'Failed to fetch settings by group'
+      };
+      const jsonString = JSON.stringify(errorResponse);
+      return reply.status(500).type('application/json').send(jsonString);
     }
   });
 }

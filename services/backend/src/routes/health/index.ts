@@ -1,6 +1,6 @@
 import { type FastifyInstance } from 'fastify'
 import { z } from 'zod'
-import { zodToJsonSchema } from 'zod-to-json-schema'
+import { createSchema } from 'zod-openapi'
 
 // Response schema for the simple health check endpoint
 const healthResponseSchema = z.object({
@@ -15,10 +15,7 @@ export default async function healthRoute(server: FastifyInstance) {
       summary: 'Simple API health check',
       description: 'Returns basic API health status for monitoring, load balancers, and uptime checks. No Content-Type header required for this GET request.',
       response: {
-        200: zodToJsonSchema(healthResponseSchema.describe('Simple health check response'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        })
+        200: createSchema(healthResponseSchema.describe('Simple health check response'))
       }
     }
   }, async () => {

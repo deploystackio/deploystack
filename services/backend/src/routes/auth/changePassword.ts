@@ -5,7 +5,7 @@ import { eq } from 'drizzle-orm';
 import { ChangePasswordSchema, type ChangePasswordInput } from './schemas';
 import { requireAuthHook } from '../../hooks/authHook';
 import { z } from 'zod';
-import { zodToJsonSchema } from 'zod-to-json-schema';
+import { createSchema } from 'zod-openapi';
 import { EmailService } from '../../email';
 import { GlobalSettingsService } from '../../services/globalSettingsService';
 
@@ -25,43 +25,30 @@ const changePasswordRouteSchema = {
   tags: ['Authentication'],
   summary: 'Change user password',
   description: 'Allows authenticated users to change their password by providing their current password and a new password. Requires an active session. Requires Content-Type: application/json header when sending request body.',
-  body: zodToJsonSchema(ChangePasswordSchema, {
-    $refStrategy: 'none',
-    target: 'openApi3'
-  }),
+  body: {
+    type: 'object',
+    properties: {
+      current_password: { type: 'string', minLength: 1 },
+      new_password: { type: 'string', minLength: 8, maxLength: 100 }
+    },
+    required: ['current_password', 'new_password'],
+    additionalProperties: false
+  },
   requestBody: {
     required: true,
     content: {
       'application/json': {
-        schema: zodToJsonSchema(ChangePasswordSchema, { 
-          $refStrategy: 'none', 
-          target: 'openApi3' 
-        })
+        schema: createSchema(ChangePasswordSchema)
       }
     }
   },
   security: [{ cookieAuth: [] }],
   response: {
-    200: zodToJsonSchema(changePasswordSuccessResponseSchema.describe('Password changed successfully'), {
-      $refStrategy: 'none',
-      target: 'openApi3'
-    }),
-    400: zodToJsonSchema(changePasswordErrorResponseSchema.describe('Bad Request - Invalid input, incorrect current password, or missing Content-Type header'), {
-      $refStrategy: 'none',
-      target: 'openApi3'
-    }),
-    401: zodToJsonSchema(changePasswordErrorResponseSchema.describe('Unauthorized - Authentication required'), {
-      $refStrategy: 'none',
-      target: 'openApi3'
-    }),
-    403: zodToJsonSchema(changePasswordErrorResponseSchema.describe('Forbidden - Cannot change password for non-email users'), {
-      $refStrategy: 'none',
-      target: 'openApi3'
-    }),
-    500: zodToJsonSchema(changePasswordErrorResponseSchema.describe('Internal Server Error - Password change failed'), {
-      $refStrategy: 'none',
-      target: 'openApi3'
-    })
+    200: createSchema(changePasswordSuccessResponseSchema.describe('Password changed successfully')),
+    400: createSchema(changePasswordErrorResponseSchema.describe('Bad Request - Invalid input, incorrect current password, or missing Content-Type header')),
+    401: createSchema(changePasswordErrorResponseSchema.describe('Unauthorized - Authentication required')),
+    403: createSchema(changePasswordErrorResponseSchema.describe('Forbidden - Cannot change password for non-email users')),
+    500: createSchema(changePasswordErrorResponseSchema.describe('Internal Server Error - Password change failed'))
   }
 };
 
@@ -76,10 +63,12 @@ export default async function changePasswordRoute(fastify: FastifyInstance) {
       try {
         // Check if user is authenticated (requireAuthHook ensures this)
         if (!request.user || !request.user.id) {
-          return reply.status(401).send({ 
-            success: false, 
-            error: 'Unauthorized: Authentication required.' 
-          });
+          const errorResponse = {
+            success: false,
+            error: 'Unauthorized: Authentication required.'
+          };
+          const jsonString = JSON.stringify(errorResponse);
+          return reply.status(401).type('application/json').send(jsonString);
         }
 
         const body = request.body as ChangePasswordInput;
@@ -92,10 +81,12 @@ export default async function changePasswordRoute(fastify: FastifyInstance) {
 
         if (!authUserTable) {
           fastify.log.error('AuthUser table not found in schema');
-          return reply.status(500).send({ 
-            success: false, 
-            error: 'Internal server error: User table configuration missing.' 
-          });
+          const errorResponse = {
+            success: false,
+            error: 'Internal server error: User table configuration missing.'
+          };
+          const jsonString = JSON.stringify(errorResponse);
+          return reply.status(500).type('application/json').send(jsonString);
         }
 
         // Get user from database
@@ -107,20 +98,24 @@ export default async function changePasswordRoute(fastify: FastifyInstance) {
           .limit(1);
 
         if (users.length === 0) {
-          return reply.status(401).send({ 
-            success: false, 
-            error: 'User not found.' 
-          });
+          const errorResponse = {
+            success: false,
+            error: 'User not found.'
+          };
+          const jsonString = JSON.stringify(errorResponse);
+          return reply.status(401).type('application/json').send(jsonString);
         }
 
         const user = users[0];
 
         // Check if user has email authentication (has a password)
         if (!user.hashed_password || user.auth_type !== 'email_signup') {
-          return reply.status(403).send({ 
-            success: false, 
-            error: 'Password change is only available for email-authenticated users.' 
-          });
+          const errorResponse = {
+            success: false,
+            error: 'Password change is only available for email-authenticated users.'
+          };
+          const jsonString = JSON.stringify(errorResponse);
+          return reply.status(403).type('application/json').send(jsonString);
         }
 
         // Verify current password
@@ -132,10 +127,12 @@ export default async function changePasswordRoute(fastify: FastifyInstance) {
         });
 
         if (!validCurrentPassword) {
-          return reply.status(400).send({ 
-            success: false, 
-            error: 'Current password is incorrect.' 
-          });
+          const errorResponse = {
+            success: false,
+            error: 'Current password is incorrect.'
+          };
+          const jsonString = JSON.stringify(errorResponse);
+          return reply.status(400).type('application/json').send(jsonString);
         }
 
         // Check if new password is different from current password
@@ -147,10 +144,12 @@ export default async function changePasswordRoute(fastify: FastifyInstance) {
         });
 
         if (samePassword) {
-          return reply.status(400).send({ 
-            success: false, 
-            error: 'New password must be different from current password.' 
-          });
+          const errorResponse = {
+            success: false,
+            error: 'New password must be different from current password.'
+          };
+          const jsonString = JSON.stringify(errorResponse);
+          return reply.status(400).type('application/json').send(jsonString);
         }
 
         // Hash new password
@@ -229,17 +228,21 @@ export default async function changePasswordRoute(fastify: FastifyInstance) {
         fastify.log.info(`Consider invalidating other sessions for user: ${userId} after password change`);
 
         // Send success response
-        return reply.status(200).send({
+        const successResponse = {
           success: true,
           message: 'Password changed successfully.'
-        });
+        };
+        const jsonString = JSON.stringify(successResponse);
+        return reply.status(200).type('application/json').send(jsonString);
 
       } catch (error) {
         fastify.log.error(error, 'Error during password change:');
-        return reply.status(500).send({ 
-          success: false, 
-          error: 'An unexpected error occurred during password change.' 
-        });
+        const errorResponse = {
+          success: false,
+          error: 'An unexpected error occurred during password change.'
+        };
+        const jsonString = JSON.stringify(errorResponse);
+        return reply.status(500).type('application/json').send(jsonString);
       }
     }
   );

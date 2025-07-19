@@ -1,5 +1,5 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { zodToJsonSchema } from 'zod-to-json-schema';
+import { createSchema } from 'zod-openapi';
 import { GlobalSettingsService } from '../../../services/globalSettingsService';
 import { requireGlobalAdmin } from '../../../middleware/roleMiddleware';
 import { GlobalSettingSchema } from '../schemas';
@@ -26,38 +26,44 @@ export default async function listGlobalSettingsRoute(fastify: FastifyInstance) 
       description: 'Retrieves all global settings in the system. Requires settings view permissions.',
       security: [{ cookieAuth: [] }],
       response: {
-        200: zodToJsonSchema(globalSettingsListResponseSchema.describe('Successfully retrieved global settings'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        401: zodToJsonSchema(errorResponseSchema.describe('Unauthorized - Authentication required'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        403: zodToJsonSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        500: zodToJsonSchema(errorResponseSchema.describe('Internal Server Error'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        })
+        200: createSchema(globalSettingsListResponseSchema.describe('Successfully retrieved global settings')),
+        401: createSchema(errorResponseSchema.describe('Unauthorized - Authentication required')),
+        403: createSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions')),
+        500: createSchema(errorResponseSchema.describe('Internal Server Error'))
       }
     },
-    preValidation: requireGlobalAdmin(),
+    preValidation: requireGlobalAdmin()
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const settings = await GlobalSettingsService.getAll();
-      return reply.status(200).send({
+      
+      // Create clean response with primitive types only
+      const cleanResponse = {
         success: true,
-        data: settings,
-      });
+        data: settings.map(setting => ({
+          key: String(setting.key),
+          value: setting.value,
+          type: setting.type ? String(setting.type) : null,
+          description: setting.description ? String(setting.description) : null,
+          is_encrypted: Boolean(setting.is_encrypted),
+          group_id: setting.group_id ? String(setting.group_id) : null,
+          created_at: setting.created_at ? String(setting.created_at) : null,
+          updated_at: setting.updated_at ? String(setting.updated_at) : null
+        }))
+      };
+      
+      // Manual JSON serialization
+      const jsonString = JSON.stringify(cleanResponse);
+      return reply.status(200).type('application/json').send(jsonString);
     } catch (error) {
       fastify.log.error(error, 'Error fetching global settings');
-      return reply.status(500).send({
+      
+      const errorResponse = {
         success: false,
-        error: 'Failed to fetch global settings',
-      });
+        error: 'Failed to fetch global settings'
+      };
+      const jsonString = JSON.stringify(errorResponse);
+      return reply.status(500).type('application/json').send(jsonString);
     }
   });
 }

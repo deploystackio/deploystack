@@ -8,8 +8,8 @@ export const RoleSchema = z.object({
   description: z.string().nullable(),
   permissions: z.array(z.string()),
   is_system_role: z.boolean(),
-  created_at: z.date(),
-  updated_at: z.date(),
+  created_at: z.string(),
+  updated_at: z.string(),
 });
 
 export const CreateRoleSchema = z.object({

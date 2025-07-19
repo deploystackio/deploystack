@@ -4,7 +4,7 @@ import { getDb, getSchema, getDbStatus } from '../../db';
 import { eq } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { z } from 'zod';
-import { zodToJsonSchema, jsonDescription } from 'zod-to-json-schema';
+import { createSchema } from 'zod-openapi';
 
 // Zod schema for the logout response
 const logoutResponseSchema = z.object({
@@ -25,11 +25,7 @@ export default async function logoutRoute(fastify: FastifyInstance) {
     description: 'Invalidates the current user session and clears authentication cookies. This endpoint can be called even without an active session.',
     security: [{ cookieAuth: [] }],
     response: {
-      200: zodToJsonSchema(logoutResponseSchema, { // Removed .describe() here as it's on the Zod schema now
-        $refStrategy: 'none', 
-        target: 'openApi3',
-        postProcess: jsonDescription // Use the helper to parse examples from description
-      })
+      200: createSchema(logoutResponseSchema)
     }
   };
 
@@ -79,7 +75,10 @@ export default async function logoutRoute(fastify: FastifyInstance) {
         const blankCookie = lucia.createBlankSessionCookie();
         reply.setCookie(blankCookie.name, blankCookie.value, blankCookie.attributes);
         fastify.log.info('No active session to logout - sending blank cookie');
-        return reply.status(200).send({ success: true, message: 'No active session to logout or already logged out.' });
+        
+        const response = { success: true, message: 'No active session to logout or already logged out.' };
+        const jsonString = JSON.stringify(response);
+        return reply.status(200).type('application/json').send(jsonString);
       }
 
       try {
@@ -95,7 +94,9 @@ export default async function logoutRoute(fastify: FastifyInstance) {
         reply.setCookie(blankCookie.name, blankCookie.value, blankCookie.attributes);
         fastify.log.info('Blank cookie sent to clear client session');
         
-        return reply.status(200).send({ success: true, message: 'Logged out successfully.' });
+        const response = { success: true, message: 'Logged out successfully.' };
+        const jsonString = JSON.stringify(response);
+        return reply.status(200).type('application/json').send(jsonString);
 
       } catch (error) {
         fastify.log.error(error, 'Error during logout (invalidating session from authHook):');
@@ -126,7 +127,10 @@ export default async function logoutRoute(fastify: FastifyInstance) {
         // Even if there's an error, try to clear the cookie.
         const blankCookie = lucia.createBlankSessionCookie();
         reply.setCookie(blankCookie.name, blankCookie.value, blankCookie.attributes);
-        return reply.status(200).send({ success: true, message: 'Logged out successfully (with fallback cleanup).' });
+        
+        const response = { success: true, message: 'Logged out successfully (with fallback cleanup).' };
+        const jsonString = JSON.stringify(response);
+        return reply.status(200).type('application/json').send(jsonString);
       }
     }
   );

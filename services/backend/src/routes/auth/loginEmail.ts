@@ -6,7 +6,7 @@ import { getDb, getSchema } from '../../db';
 import { eq, or } from 'drizzle-orm';
 import { GlobalSettingsInitService } from '../../global-settings';
 import { z } from 'zod';
-import { zodToJsonSchema } from 'zod-to-json-schema';
+import { createSchema } from 'zod-openapi';
 
 // Zod Schemas
 const loginEmailBodySchema = z.object({
@@ -38,37 +38,37 @@ const loginEmailRouteSchema = {
   tags: ['Authentication'],
   summary: 'User login via email/password',
   description: "Authenticates a user using their registered identifier (email or username) and password. This endpoint is accessed via the /api/auth/email/login path due to server-level prefixing. Establishes a session by setting an authentication cookie. Requires Content-Type: application/json header when sending request body.",
+  body: {
+    type: 'object',
+    properties: {
+      login: { type: 'string', minLength: 1 },
+      password: { type: 'string', minLength: 1 }
+    },
+    required: ['login', 'password'],
+    additionalProperties: false
+  },
   requestBody: {
     required: true,
     content: {
       'application/json': {
-        schema: zodToJsonSchema(loginEmailBodySchema, { $refStrategy: 'none', target: 'openApi3' })
+        schema: createSchema(loginEmailBodySchema)
       }
     }
   },
   response: {
-    200: zodToJsonSchema(successResponseSchema.describe('Login successful. Session cookie is set.'), {
-      $refStrategy: 'none',
-      target: 'openApi3'
-    }),
-    400: zodToJsonSchema(errorResponseSchema.describe('Bad Request - Invalid input, invalid credentials, or missing Content-Type header.'), {
-      $refStrategy: 'none',
-      target: 'openApi3',
+    200: createSchema(successResponseSchema.describe('Login successful. Session cookie is set.')),
+    400: createSchema(errorResponseSchema.describe('Bad Request - Invalid input, invalid credentials, or missing Content-Type header.'), {
       // examples: [
       //   { success: false, error: "Email/username and password are required." },
       //   { success: false, error: "Invalid email/username or password." }
       // ]
     }),
-    403: zodToJsonSchema(errorResponseSchema.describe('Forbidden - Login is disabled by administrator.'), {
-      $refStrategy: 'none',
-      target: 'openApi3',
+    403: createSchema(errorResponseSchema.describe('Forbidden - Login is disabled by administrator.'), {
       // examples: [
       //   { success: false, error: "Login is currently disabled by administrator." }
       // ]
     }),
-    500: zodToJsonSchema(errorResponseSchema.describe('Internal Server Error - An unexpected error occurred on the server.'), {
-      $refStrategy: 'none',
-      target: 'openApi3',
+    500: createSchema(errorResponseSchema.describe('Internal Server Error - An unexpected error occurred on the server.'), {
       // examples: [
       //   { success: false, error: "An unexpected error occurred during login." },
       //   { success: false, error: "Internal server error: User table configuration missing." },
@@ -87,10 +87,12 @@ export default async function loginEmailRoute(fastify: FastifyInstance) {
       // Check if login is enabled
       const isLoginEnabled = await GlobalSettingsInitService.isLoginEnabled();
       if (!isLoginEnabled) {
-        return reply.status(403).send({ 
-          success: false, 
-          error: 'Login is currently disabled by administrator.' 
-        });
+        const errorResponse = {
+          success: false,
+          error: 'Login is currently disabled by administrator.'
+        };
+        const jsonString = JSON.stringify(errorResponse);
+        return reply.status(403).type('application/json').send(jsonString);
       }
 
       // Fastify has already validated the request body using our Zod schema
@@ -104,7 +106,12 @@ export default async function loginEmailRoute(fastify: FastifyInstance) {
 
         if (!authUserTable) {
           fastify.log.error('AuthUser table not found in schema');
-          return reply.status(500).send({ success: false, error: 'Internal server error: User table configuration missing.' });
+          const errorResponse = {
+            success: false,
+            error: 'Internal server error: User table configuration missing.'
+          };
+          const jsonString = JSON.stringify(errorResponse);
+          return reply.status(500).type('application/json').send(jsonString);
         }
 
         // Find user by email or username
@@ -116,25 +123,40 @@ export default async function loginEmailRoute(fastify: FastifyInstance) {
           .limit(1);
 
         if (users.length === 0) {
-          return reply.status(400).send({ success: false, error: 'Invalid email/username or password.' });
+          const errorResponse = {
+            success: false,
+            error: 'Invalid email/username or password.'
+          };
+          const jsonString = JSON.stringify(errorResponse);
+          return reply.status(400).type('application/json').send(jsonString);
         }
 
         const user = users[0];
         
         // Verify password
         if (!user.hashed_password) {
-          return reply.status(400).send({ success: false, error: 'Invalid email/username or password.' });
+          const errorResponse = {
+            success: false,
+            error: 'Invalid email/username or password.'
+          };
+          const jsonString = JSON.stringify(errorResponse);
+          return reply.status(400).type('application/json').send(jsonString);
         }
 
         const validPassword = await verify(user.hashed_password, password, {
           memoryCost: 19456,
           timeCost: 2,
           outputLen: 32,
-          parallelism: 1,
+          parallelism: 1
         });
 
         if (!validPassword) {
-          return reply.status(400).send({ success: false, error: 'Invalid email/username or password.' });
+          const errorResponse = {
+            success: false,
+            error: 'Invalid email/username or password.'
+          };
+          const jsonString = JSON.stringify(errorResponse);
+          return reply.status(400).type('application/json').send(jsonString);
         }
 
         // Check email verification status for email users when verification is required
@@ -144,10 +166,12 @@ export default async function loginEmailRoute(fastify: FastifyInstance) {
             const isVerificationRequired = await EmailVerificationService.isVerificationRequired();
             
             if (isVerificationRequired && !user.email_verified) {
-              return reply.status(400).send({ 
-                success: false, 
-                error: 'Please verify your email address before logging in. Check your inbox for a verification email.' 
-              });
+              const errorResponse = {
+                success: false,
+                error: 'Please verify your email address before logging in. Check your inbox for a verification email.'
+              };
+              const jsonString = JSON.stringify(errorResponse);
+              return reply.status(400).type('application/json').send(jsonString);
             }
           } catch (verificationError) {
             fastify.log.error(verificationError, 'Error checking email verification status:');
@@ -158,7 +182,12 @@ export default async function loginEmailRoute(fastify: FastifyInstance) {
         // Check if user ID exists
         if (!user.id) {
           fastify.log.error('User ID is null or undefined:', user.id);
-          return reply.status(500).send({ success: false, error: 'User ID not found.' });
+          const errorResponse = {
+            success: false,
+            error: 'User ID not found.'
+          };
+          const jsonString = JSON.stringify(errorResponse);
+          return reply.status(500).type('application/json').send(jsonString);
         }
         
         // Use manual session creation like in registration to avoid Lucia adapter issues
@@ -181,22 +210,34 @@ export default async function loginEmailRoute(fastify: FastifyInstance) {
         const sessionCookie = getLucia().createSessionCookie(sessionId);
 
         reply.setCookie(sessionCookie.name, sessionCookie.value, sessionCookie.attributes);
-        return reply.status(200).send({
+        
+        // Create clean response object to avoid serialization issues
+        const cleanResponse = {
           success: true,
           message: 'Logged in successfully.',
           user: {
-            id: user.id,
-            email: user.email,
-            username: user.username,
-            first_name: user.first_name,
-            last_name: user.last_name,
-            role_id: user.role_id
+            id: String(user.id),
+            email: String(user.email),
+            username: user.username ? String(user.username) : null,
+            first_name: user.first_name ? String(user.first_name) : null,
+            last_name: user.last_name ? String(user.last_name) : null,
+            role_id: String(user.role_id)
           }
-        });
+        };
+        
+        // Send as raw JSON string to bypass any serialization issues
+        const jsonString = JSON.stringify(cleanResponse);
+        fastify.log.info('Sending login response:', jsonString);
+        return reply.status(200).type('application/json').send(jsonString);
 
       } catch (error) {
         fastify.log.error(error, 'Error during email login:');
-        return reply.status(500).send({ success: false, error: 'An unexpected error occurred during login.' });
+        const errorResponse = {
+          success: false,
+          error: 'An unexpected error occurred during login.'
+        };
+        const jsonString = JSON.stringify(errorResponse);
+        return reply.status(500).type('application/json').send(jsonString);
       }
     }
   );

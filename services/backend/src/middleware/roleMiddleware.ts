@@ -15,10 +15,12 @@ export function requirePermission(permission: string) {
     try {
       // Check if user is authenticated
       if (!request.user) {
-        return reply.status(401).send({ 
+        const errorResponse = {
           success: false,
-          error: 'Authentication required' 
-        });
+          error: 'Authentication required'
+        };
+        const jsonString = JSON.stringify(errorResponse);
+        return reply.status(401).type('application/json').send(jsonString);
       }
 
       const roleService = new RoleService();
@@ -26,19 +28,23 @@ export function requirePermission(permission: string) {
       const hasPermission = await roleService.userHasPermission(request.user.id, permission);
       
       if (!hasPermission) {
-        return reply.status(403).send({ 
+        const errorResponse = {
           success: false,
           error: 'Insufficient permissions',
-          required_permission: permission 
-        });
+          required_permission: permission
+        };
+        const jsonString = JSON.stringify(errorResponse);
+        return reply.status(403).type('application/json').send(jsonString);
       }
     } catch (error) {
       request.log.error(error, `Error checking user permissions for permission: ${permission}`);
-      return reply.status(500).send({ 
+      const errorResponse = {
         success: false,
         error: 'Internal server error',
         details: error instanceof Error ? error.message : 'Unknown error'
-      });
+      };
+      const jsonString = JSON.stringify(errorResponse);
+      return reply.status(500).type('application/json').send(jsonString);
     }
   };
 }
@@ -50,7 +56,12 @@ export function requireAnyPermission(permissions: string[]) {
   return async (request: FastifyRequest, reply: FastifyReply) => {
     // Check if user is authenticated
     if (!request.user) {
-      return reply.status(401).send({ error: 'Authentication required' });
+      const errorResponse = {
+        success: false,
+        error: 'Authentication required'
+      };
+      const jsonString = JSON.stringify(errorResponse);
+      return reply.status(401).type('application/json').send(jsonString);
     }
 
     const roleService = new RoleService();
@@ -63,13 +74,21 @@ export function requireAnyPermission(permissions: string[]) {
         }
       }
       
-      return reply.status(403).send({ 
+      const errorResponse = {
+        success: false,
         error: 'Insufficient permissions',
-        required_permissions: permissions 
-      });
+        required_permissions: permissions
+      };
+      const jsonString = JSON.stringify(errorResponse);
+      return reply.status(403).type('application/json').send(jsonString);
     } catch (error) {
       request.log.error(error, 'Error checking user permissions');
-      return reply.status(500).send({ error: 'Internal server error' });
+      const errorResponse = {
+        success: false,
+        error: 'Internal server error'
+      };
+      const jsonString = JSON.stringify(errorResponse);
+      return reply.status(500).type('application/json').send(jsonString);
     }
   };
 }
@@ -95,10 +114,12 @@ export function requireRole(roleId: string) {
         authenticated: false
       }, '❌ User not authenticated');
       
-      return reply.status(401).send({ 
+      const errorResponse = {
         success: false,
-        error: 'Authentication required' 
-      });
+        error: 'Authentication required'
+      };
+      const jsonString = JSON.stringify(errorResponse);
+      return reply.status(401).type('application/json').send(jsonString);
     }
 
     request.log.debug({
@@ -140,12 +161,14 @@ export function requireRole(roleId: string) {
           hasRequiredRole: false
         }, `❌ User does not have required role. Required: ${roleId}, User has: ${userRole ? userRole.id : 'none'}`);
         
-        return reply.status(403).send({ 
+        const errorResponse = {
           success: false,
           error: 'Insufficient permissions',
           required_role: roleId,
           user_role: userRole ? userRole.id : null
-        });
+        };
+        const jsonString = JSON.stringify(errorResponse);
+        return reply.status(403).type('application/json').send(jsonString);
       }
 
       request.log.debug({
@@ -166,11 +189,13 @@ export function requireRole(roleId: string) {
         error
       }, `❌ Error checking user role: ${error instanceof Error ? error.message : 'Unknown error'}`);
       
-      return reply.status(500).send({ 
+      const errorResponse = {
         success: false,
         error: 'Internal server error',
         details: error instanceof Error ? error.message : 'Unknown error'
-      });
+      };
+      const jsonString = JSON.stringify(errorResponse);
+      return reply.status(500).type('application/json').send(jsonString);
     }
   };
 }
@@ -189,7 +214,12 @@ export function requireOwnershipOrAdmin(getUserIdFromRequest: (request: FastifyR
   return async (request: FastifyRequest, reply: FastifyReply) => {
     // Check if user is authenticated
     if (!request.user) {
-      return reply.status(401).send({ error: 'Authentication required' });
+      const errorResponse = {
+        success: false,
+        error: 'Authentication required'
+      };
+      const jsonString = JSON.stringify(errorResponse);
+      return reply.status(401).type('application/json').send(jsonString);
     }
 
     const targetUserId = getUserIdFromRequest(request);
@@ -206,13 +236,21 @@ export function requireOwnershipOrAdmin(getUserIdFromRequest: (request: FastifyR
       const hasAdminPermission = await roleService.userHasPermission(request.user.id, 'system.admin');
       
       if (!hasAdminPermission) {
-        return reply.status(403).send({ 
-          error: 'Can only access your own resources or requires admin permissions' 
-        });
+        const errorResponse = {
+          success: false,
+          error: 'Can only access your own resources or requires admin permissions'
+        };
+        const jsonString = JSON.stringify(errorResponse);
+        return reply.status(403).type('application/json').send(jsonString);
       }
     } catch (error) {
       request.log.error(error, 'Error checking user permissions');
-      return reply.status(500).send({ error: 'Internal server error' });
+      const errorResponse = {
+        success: false,
+        error: 'Internal server error'
+      };
+      const jsonString = JSON.stringify(errorResponse);
+      return reply.status(500).type('application/json').send(jsonString);
     }
   };
 }
@@ -253,10 +291,12 @@ export function requireTeamPermission(
     try {
       // Check if user is authenticated
       if (!request.user) {
-        return reply.status(401).send({ 
+        const errorResponse = {
           success: false,
-          error: 'Authentication required' 
-        });
+          error: 'Authentication required'
+        };
+        const jsonString = JSON.stringify(errorResponse);
+        return reply.status(401).type('application/json').send(jsonString);
       }
 
       // Extract team ID from request params or use provided function
@@ -269,10 +309,12 @@ export function requireTeamPermission(
       }
 
       if (!teamId) {
-        return reply.status(400).send({
+        const errorResponse = {
           success: false,
           error: 'Team ID is required'
-        });
+        };
+        const jsonString = JSON.stringify(errorResponse);
+        return reply.status(400).type('application/json').send(jsonString);
       }
 
       const userId = request.user.id;
@@ -314,19 +356,23 @@ export function requireTeamPermission(
           result: 'not_team_member'
         }, `❌ User is not a member of team ${teamId}`);
         
-        return reply.status(403).send({
+        const errorResponse = {
           success: false,
           error: 'You are not a member of this team'
-        });
+        };
+        const jsonString = JSON.stringify(errorResponse);
+        return reply.status(403).type('application/json').send(jsonString);
       }
 
       // Get user's role within the team
       const teamMembership = await TeamService.getTeamMembership(teamId, userId);
       if (!teamMembership) {
-        return reply.status(403).send({
+        const errorResponse = {
           success: false,
           error: 'Team membership not found'
-        });
+        };
+        const jsonString = JSON.stringify(errorResponse);
+        return reply.status(403).type('application/json').send(jsonString);
       }
 
       const teamRole = teamMembership.role; // 'team_admin' or 'team_user'
@@ -343,12 +389,14 @@ export function requireTeamPermission(
           result: 'insufficient_team_permissions'
         }, `❌ Team role ${teamRole} does not have permission: ${permission}`);
         
-        return reply.status(403).send({
+        const errorResponse = {
           success: false,
           error: 'Insufficient permissions for this team operation',
           required_permission: permission,
           user_team_role: teamRole
-        });
+        };
+        const jsonString = JSON.stringify(errorResponse);
+        return reply.status(403).type('application/json').send(jsonString);
       }
 
       request.log.debug({
@@ -367,11 +415,13 @@ export function requireTeamPermission(
         permission
       }, `❌ Error checking team permission: ${error instanceof Error ? error.message : 'Unknown error'}`);
       
-      return reply.status(500).send({ 
+      const errorResponse = {
         success: false,
         error: 'Internal server error',
         details: error instanceof Error ? error.message : 'Unknown error'
-      });
+      };
+      const jsonString = JSON.stringify(errorResponse);
+      return reply.status(500).type('application/json').send(jsonString);
     }
   };
 }

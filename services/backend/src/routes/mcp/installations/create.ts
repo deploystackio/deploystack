@@ -1,6 +1,6 @@
 import { type FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { zodToJsonSchema } from 'zod-to-json-schema';
+import { createSchema } from 'zod-openapi';
 import { requireTeamPermission } from '../../../middleware/roleMiddleware';
 import { McpInstallationService } from '../../../services/mcpInstallationService';
 import { getDb } from '../../../db';
@@ -53,41 +53,37 @@ export default async function createInstallationRoute(fastify: FastifyInstance) 
       summary: 'Install MCP server for team',
       description: 'Creates a new MCP server installation for the specified team. Requires Content-Type: application/json header when sending request body.',
       security: [{ cookieAuth: [] }],
-      params: zodToJsonSchema(z.object({
-        teamId: z.string().min(1, 'Team ID is required')
-      }), {
-        $refStrategy: 'none',
-        target: 'openApi3'
-      }),
-      body: zodToJsonSchema(createInstallationSchema, {
-        $refStrategy: 'none',
-        target: 'openApi3'
-      }),
+      // Plain JSON Schema for Fastify validation
+      params: {
+        type: 'object',
+        properties: {
+          teamId: { type: 'string', minLength: 1 }
+        },
+        required: ['teamId'],
+        additionalProperties: false
+      },
+      body: {
+        type: 'object',
+        properties: {
+          server_id: { type: 'string', minLength: 1 },
+          installation_name: { type: 'string', minLength: 1, maxLength: 100 },
+          installation_type: { type: 'string', enum: ['local', 'cloud'] },
+          user_environment_variables: { 
+            type: 'object',
+            additionalProperties: { type: 'string' }
+          }
+        },
+        required: ['server_id', 'installation_name'],
+        additionalProperties: false
+      },
+      // createSchema() for OpenAPI documentation
       response: {
-        201: zodToJsonSchema(successResponseSchema.describe('Installation created successfully'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        400: zodToJsonSchema(errorResponseSchema.describe('Bad Request - Invalid input or validation error'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        401: zodToJsonSchema(errorResponseSchema.describe('Unauthorized - Authentication required'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        403: zodToJsonSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        404: zodToJsonSchema(errorResponseSchema.describe('Not Found - Team or server not found'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        409: zodToJsonSchema(errorResponseSchema.describe('Conflict - Installation name already exists'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        })
+        201: createSchema(successResponseSchema.describe('Installation created successfully')),
+        400: createSchema(errorResponseSchema.describe('Bad Request - Invalid input or validation error')),
+        401: createSchema(errorResponseSchema.describe('Unauthorized - Authentication required')),
+        403: createSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions')),
+        404: createSchema(errorResponseSchema.describe('Not Found - Team or server not found')),
+        409: createSchema(errorResponseSchema.describe('Conflict - Installation name already exists'))
       }
     },
     preValidation: requireTeamPermission('mcp.installations.create')
@@ -121,7 +117,7 @@ export default async function createInstallationRoute(fastify: FastifyInstance) 
         serverId: installationData.server_id
       }, 'MCP server installation created successfully');
 
-      return reply.status(201).send({
+      const response = {
         success: true,
         data: {
           ...installation,
@@ -129,7 +125,9 @@ export default async function createInstallationRoute(fastify: FastifyInstance) 
           updated_at: installation.updated_at.toISOString(),
           last_used_at: installation.last_used_at?.toISOString() || null
         }
-      });
+      };
+      const jsonString = JSON.stringify(response);
+      return reply.status(201).type('application/json').send(jsonString);
 
     } catch (error) {
       request.log.error({
@@ -142,23 +140,29 @@ export default async function createInstallationRoute(fastify: FastifyInstance) 
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       
       if (errorMessage.includes('already exists')) {
-        return reply.status(409).send({
+        const conflictResponse = {
           success: false,
           error: errorMessage
-        });
+        };
+        const jsonString = JSON.stringify(conflictResponse);
+        return reply.status(409).type('application/json').send(jsonString);
       }
 
       if (errorMessage.includes('not found')) {
-        return reply.status(404).send({
+        const notFoundResponse = {
           success: false,
           error: errorMessage
-        });
+        };
+        const jsonString = JSON.stringify(notFoundResponse);
+        return reply.status(404).type('application/json').send(jsonString);
       }
 
-      return reply.status(400).send({
+      const badRequestResponse = {
         success: false,
         error: errorMessage
-      });
+      };
+      const jsonString = JSON.stringify(badRequestResponse);
+      return reply.status(400).type('application/json').send(jsonString);
     }
   });
 }

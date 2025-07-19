@@ -1,6 +1,6 @@
 import { type FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { zodToJsonSchema } from 'zod-to-json-schema';
+import { createSchema } from 'zod-openapi';
 import { requireTeamPermission } from '../../../middleware/roleMiddleware';
 import { McpInstallationService } from '../../../services/mcpInstallationService';
 import { getDb } from '../../../db';
@@ -25,37 +25,24 @@ export default async function getClientConfigRoute(fastify: FastifyInstance) {
       summary: 'Get client configuration for installation',
       description: 'Generates client-specific configuration for an MCP server installation. Supports claude-desktop, vscode, and cursor clients. No Content-Type header required for this GET request.',
       security: [{ cookieAuth: [] }],
-      params: zodToJsonSchema(z.object({
-        teamId: z.string().min(1, 'Team ID is required'),
-        installationId: z.string().min(1, 'Installation ID is required'),
-        clientType: z.enum(['claude-desktop', 'vscode', 'cursor'], {
-          error: () => ({ message: 'Client type must be one of: claude-desktop, vscode, cursor' })
-        })
-      }), {
-        $refStrategy: 'none',
-        target: 'openApi3'
-      }),
+      // Plain JSON Schema for Fastify validation
+      params: {
+        type: 'object',
+        properties: {
+          teamId: { type: 'string', minLength: 1 },
+          installationId: { type: 'string', minLength: 1 },
+          clientType: { type: 'string', enum: ['claude-desktop', 'vscode', 'cursor'] }
+        },
+        required: ['teamId', 'installationId', 'clientType'],
+        additionalProperties: false
+      },
+      // createSchema() for OpenAPI documentation
       response: {
-        200: zodToJsonSchema(successResponseSchema.describe('Client configuration generated successfully'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        400: zodToJsonSchema(errorResponseSchema.describe('Bad Request - Invalid client type or installation'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        401: zodToJsonSchema(errorResponseSchema.describe('Unauthorized - Authentication required'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        403: zodToJsonSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        }),
-        404: zodToJsonSchema(errorResponseSchema.describe('Not Found - Installation not found'), {
-          $refStrategy: 'none',
-          target: 'openApi3'
-        })
+        200: createSchema(successResponseSchema.describe('Client configuration generated successfully')),
+        400: createSchema(errorResponseSchema.describe('Bad Request - Invalid client type or installation')),
+        401: createSchema(errorResponseSchema.describe('Unauthorized - Authentication required')),
+        403: createSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions')),
+        404: createSchema(errorResponseSchema.describe('Not Found - Installation not found'))
       }
     },
     preValidation: requireTeamPermission('mcp.installations.view')
@@ -89,10 +76,12 @@ export default async function getClientConfigRoute(fastify: FastifyInstance) {
         userId
       }, 'Client configuration generated successfully');
 
-      return reply.status(200).send({
+      const response = {
         success: true,
         data: config
-      });
+      };
+      const jsonString = JSON.stringify(response);
+      return reply.status(200).type('application/json').send(jsonString);
 
     } catch (error) {
       request.log.error({
@@ -107,24 +96,30 @@ export default async function getClientConfigRoute(fastify: FastifyInstance) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       
       if (errorMessage.includes('not found')) {
-        return reply.status(404).send({
+        const notFoundResponse = {
           success: false,
           error: errorMessage
-        });
+        };
+        const jsonString = JSON.stringify(notFoundResponse);
+        return reply.status(404).type('application/json').send(jsonString);
       }
 
       if (errorMessage.includes('Unsupported client type') || 
           errorMessage.includes('does not support')) {
-        return reply.status(400).send({
+        const badRequestResponse = {
           success: false,
           error: errorMessage
-        });
+        };
+        const jsonString = JSON.stringify(badRequestResponse);
+        return reply.status(400).type('application/json').send(jsonString);
       }
 
-      return reply.status(500).send({
+      const errorResponse = {
         success: false,
         error: errorMessage
-      });
+      };
+      const jsonString = JSON.stringify(errorResponse);
+      return reply.status(500).type('application/json').send(jsonString);
     }
   });
 }
