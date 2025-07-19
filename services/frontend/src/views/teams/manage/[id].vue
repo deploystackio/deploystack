@@ -11,7 +11,6 @@ import { Badge } from '@/components/ui/badge'
 import { ArrowLeft, Save, Trash2, AlertTriangle, Lock } from 'lucide-vue-next'
 import DashboardLayout from '@/components/DashboardLayout.vue'
 import { TeamService, type Team } from '@/services/teamService'
-import { UserService } from '@/services/userService'
 import { z } from 'zod'
 import {
   AlertDialog,
@@ -37,9 +36,6 @@ const error = ref<string | null>(null)
 const saveError = ref<string | null>(null)
 const saveSuccess = ref(false)
 const showDeleteDialog = ref(false)
-const userPermissions = ref<string[]>([])
-/* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-const currentUser = ref<any>(null)
 
 // Form data
 const formData = ref({
@@ -57,30 +53,25 @@ const TeamUpdateSchema = z.object({
 const teamId = computed(() => route.params.id as string)
 
 const isDefaultTeam = computed(() => {
-  if (!team.value || !currentUser.value) return false
-  // Check if team name matches username pattern (indicating default team)
-  return team.value.name === currentUser.value.username ||
-         team.value.slug === currentUser.value.username
+  return team.value?.is_default === true
 })
 
 const canEditName = computed(() => {
-  return userPermissions.value.includes('teams.edit') &&
-         !isDefaultTeam.value &&
-         isTeamOwner.value
+  return team.value?.is_admin === true &&
+         !team.value?.is_default
 })
 
 const canEditDescription = computed(() => {
-  return userPermissions.value.includes('teams.edit') && isTeamOwner.value
+  return team.value?.is_admin === true
 })
 
 const canDeleteTeam = computed(() => {
-  return userPermissions.value.includes('teams.delete') &&
-         isTeamOwner.value &&
-         !isDefaultTeam.value
+  return team.value?.is_owner === true &&
+         !team.value?.is_default
 })
 
 const isTeamOwner = computed(() => {
-  return team.value && currentUser.value && team.value.owner_id === currentUser.value.id
+  return team.value?.is_owner === true
 })
 
 const hasChanges = computed(() => {
@@ -95,17 +86,8 @@ const loadTeam = async () => {
     isLoading.value = true
     error.value = null
 
-    const [teamData, userData] = await Promise.all([
-      TeamService.getTeamById(teamId.value),
-      UserService.getCurrentUser()
-    ])
-
+    const teamData = await TeamService.getTeamById(teamId.value)
     team.value = teamData
-    currentUser.value = userData
-
-    if (userData?.role?.permissions) {
-      userPermissions.value = userData.role.permissions
-    }
 
     // Initialize form data
     formData.value = {
