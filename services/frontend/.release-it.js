@@ -46,7 +46,7 @@ module.exports = {
 
           return newCommit;
         },
-        "commitPartial": "* {{subject}} ([{{shortHash}}](https://github.com/deploystackio/deploystack/commit/{{hash}}))"
+        "commitPartial": "* {{subject}} ([{{shortHash}}](https://github.com/deploystackio/deploystack/commit/{{hash}}))\n"
       }
     }
   }
