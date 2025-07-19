@@ -1,5 +1,50 @@
 # Changelog
 
+## <small>0.17.1 (2025-07-19)</small>
+
+* bump @octokit/auth-app from 8.0.1 to 8.0.2 ([72640ef](https://github.com/deploystackio/deploystack/commit/72640efe94a7b1f1d74cbc76c70345edf478d8c7))
+* bump @types/node from 24.0.10 to 24.0.13 ([bff998e](https://github.com/deploystackio/deploystack/commit/bff998efeead965b6a5277e182e12e3c2106f746))
+* bump argon2 from 0.43.0 to 0.43.1 ([ad4f8d3](https://github.com/deploystackio/deploystack/commit/ad4f8d324acefc9f613e9e3bd9e67be1dd95a7f7))
+* bump drizzle-orm from 0.44.2 to 0.44.3 ([f20663e](https://github.com/deploystackio/deploystack/commit/f20663e3a26864874bdb7bf0268a437a3787a0d2))
+* bump eslint from 9.30.1 to 9.31.0 ([396aa87](https://github.com/deploystackio/deploystack/commit/396aa87edf3828f17de8662e7ca79ef3ce597348))
+* bump supertest from 7.1.2 to 7.1.3 ([3db95a9](https://github.com/deploystackio/deploystack/commit/3db95a9824f1d3cde11018f8268cefc14da345b6))
+* bump typescript-eslint from 8.36.0 to 8.37.0 ([f2d5957](https://github.com/deploystackio/deploystack/commit/f2d5957dd9858cdf9d7fef37ebf6f715aa619881))
+* bump vite from 7.0.2 to 7.0.4 ([6356b7f](https://github.com/deploystackio/deploystack/commit/6356b7f124a1bc04bea21dc7979f88939dfe5cf5))
+* bump zod from 3.25.76 to 4.0.5 ([bb08d44](https://github.com/deploystackio/deploystack/commit/bb08d4493a04fb83948303ffa413d9bcdea3dfd6))
+* bump zod from 3.25.76 to 4.0.5 in /services/frontend ([896196e](https://github.com/deploystackio/deploystack/commit/896196e70bc04bbdce883c6c7f3cad1ba05dab35))
+* release v0.17.0 ([02cfbe8](https://github.com/deploystackio/deploystack/commit/02cfbe8805e8ebba959f2ee041a67a6f542b0ab7))
+* add newline to commitPartial format for better readability ([68bdbc8](https://github.com/deploystackio/deploystack/commit/68bdbc85564c1d8ce9731c22446261ca45924e44))
+* update environment variable display to use variable name instead of index ([df6e47c](https://github.com/deploystackio/deploystack/commit/df6e47ce6d7954254c6c145a1f5a0a7c415ac696))
+* migrate from zod-to-json-schema to zod-openapi for OpenAPI schema generation ([9d54576](https://github.com/deploystackio/deploystack/commit/9d54576d8d50e25771aca4f6e302cdd38a2a0b0c))
+* update error handling to use 'issues' instead of 'errors' in validation responses ([d738027](https://github.com/deploystackio/deploystack/commit/d73802718eeaa9e7dea99aa6ad0eb3754ff58b28))
+* update error handling to use 'issues' instead of 'errors' in validation responses across multiple test files ([59d467c](https://github.com/deploystackio/deploystack/commit/59d467c9a7033e3676704f7394dad23cf261ea34))
+* update parameter schemas to use type-only definitions for consistency ([5f0f381](https://github.com/deploystackio/deploystack/commit/5f0f38167a59367a8c312fc5c40c7dca1ed271f8))
+*  ([6d6543d](https://github.com/deploystackio/deploystack/commit/6d6543de61d1d32aaeb5765d3b73f4fdc8fabdcf))
+*  ([f71892e](https://github.com/deploystackio/deploystack/commit/f71892e61ccedbbb22f739fb9434dcf0ba3b06b3))
+* Implement MCP Installation Service and related components ([c88481f](https://github.com/deploystackio/deploystack/commit/c88481fd7e01a005169e0052e49ee60ba54c641e))
+
+## 0.17.0 (2025-07-19)
+
+* add newline to commitPartial format for better readability ([68bdbc8](https://github.com/deploystackio/deploystack/commit/68bdbc85564c1d8ce9731c22446261ca45924e44))
+* update environment variable display to use variable name instead of index ([df6e47c](https://github.com/deploystackio/deploystack/commit/df6e47ce6d7954254c6c145a1f5a0a7c415ac696))
+* migrate from zod-to-json-schema to zod-openapi for OpenAPI schema generation ([9d54576](https://github.com/deploystackio/deploystack/commit/9d54576d8d50e25771aca4f6e302cdd38a2a0b0c))
+* update error handling to use 'issues' instead of 'errors' in validation responses ([d738027](https://github.com/deploystackio/deploystack/commit/d73802718eeaa9e7dea99aa6ad0eb3754ff58b28))
+* update error handling to use 'issues' instead of 'errors' in validation responses across multiple test files ([59d467c](https://github.com/deploystackio/deploystack/commit/59d467c9a7033e3676704f7394dad23cf261ea34))
+* update parameter schemas to use type-only definitions for consistency ([5f0f381](https://github.com/deploystackio/deploystack/commit/5f0f38167a59367a8c312fc5c40c7dca1ed271f8))
+*  ([6d6543d](https://github.com/deploystackio/deploystack/commit/6d6543de61d1d32aaeb5765d3b73f4fdc8fabdcf))
+*  ([f71892e](https://github.com/deploystackio/deploystack/commit/f71892e61ccedbbb22f739fb9434dcf0ba3b06b3))
+* Implement MCP Installation Service and related components ([c88481f](https://github.com/deploystackio/deploystack/commit/c88481fd7e01a005169e0052e49ee60ba54c641e))
+* bump @octokit/auth-app from 8.0.1 to 8.0.2 ([72640ef](https://github.com/deploystackio/deploystack/commit/72640efe94a7b1f1d74cbc76c70345edf478d8c7))
+* bump @types/node from 24.0.10 to 24.0.13 ([bff998e](https://github.com/deploystackio/deploystack/commit/bff998efeead965b6a5277e182e12e3c2106f746))
+* bump argon2 from 0.43.0 to 0.43.1 ([ad4f8d3](https://github.com/deploystackio/deploystack/commit/ad4f8d324acefc9f613e9e3bd9e67be1dd95a7f7))
+* bump drizzle-orm from 0.44.2 to 0.44.3 ([f20663e](https://github.com/deploystackio/deploystack/commit/f20663e3a26864874bdb7bf0268a437a3787a0d2))
+* bump eslint from 9.30.1 to 9.31.0 ([396aa87](https://github.com/deploystackio/deploystack/commit/396aa87edf3828f17de8662e7ca79ef3ce597348))
+* bump supertest from 7.1.2 to 7.1.3 ([3db95a9](https://github.com/deploystackio/deploystack/commit/3db95a9824f1d3cde11018f8268cefc14da345b6))
+* bump typescript-eslint from 8.36.0 to 8.37.0 ([f2d5957](https://github.com/deploystackio/deploystack/commit/f2d5957dd9858cdf9d7fef37ebf6f715aa619881))
+* bump vite from 7.0.2 to 7.0.4 ([6356b7f](https://github.com/deploystackio/deploystack/commit/6356b7f124a1bc04bea21dc7979f88939dfe5cf5))
+* bump zod from 3.25.76 to 4.0.5 ([bb08d44](https://github.com/deploystackio/deploystack/commit/bb08d4493a04fb83948303ffa413d9bcdea3dfd6))
+* bump zod from 3.25.76 to 4.0.5 in /services/frontend ([896196e](https://github.com/deploystackio/deploystack/commit/896196e70bc04bbdce883c6c7f3cad1ba05dab35))
+
 ## <small>0.16.1 (2025-07-14)</small>
 
 * release v0.16.0 ([2b75025](https://github.com/deploystackio/deploystack/commit/2b75025db9903098e9c7adb5fadd7362d254fc4a))* update team selection logic and storage integration ([0c23064](https://github.com/deploystackio/deploystack/commit/0c23064ac4e51e71ccb076c14d45ad5ef04b2d58))* centralize role permissions management and synchronize with database ([197dd8b](https://github.com/deploystackio/deploystack/commit/197dd8ba4702527329a08516f4f6fade519739c2))* Refactor MCP server catalog forms and add Claude Desktop configuration step ([83579a4](https://github.com/deploystackio/deploystack/commit/83579a45359b08164b68a14a213c52937a3b2032))* remove edit view and replace with view functionality for MCP server catalog ([f5565c1](https://github.com/deploystackio/deploystack/commit/f5565c1f9d06186be0189eaa5dc01da2d6e9c1e7))
