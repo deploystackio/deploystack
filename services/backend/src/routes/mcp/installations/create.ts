@@ -5,13 +5,13 @@ import { requireTeamPermission } from '../../../middleware/roleMiddleware';
 import { McpInstallationService } from '../../../services/mcpInstallationService';
 import { getDb } from '../../../db';
 
-// Request schema
-const createInstallationSchema = z.object({
-  server_id: z.string().min(1, 'Server ID is required'),
-  installation_name: z.string().min(1, 'Installation name is required').max(100, 'Installation name too long'),
-  installation_type: z.enum(['local', 'cloud']).optional().default('local'),
-  user_environment_variables: z.record(z.string(), z.string()).optional()
-});
+// Request schema (type-only)
+type CreateInstallationRequest = {
+  server_id: string;
+  installation_name: string;
+  installation_type?: 'local' | 'cloud';
+  user_environment_variables?: Record<string, string>;
+};
 
 // Response schemas
 const successResponseSchema = z.object({
@@ -46,7 +46,7 @@ const errorResponseSchema = z.object({
 export default async function createInstallationRoute(fastify: FastifyInstance) {
   fastify.post<{
     Params: { teamId: string };
-    Body: z.infer<typeof createInstallationSchema>;
+    Body: CreateInstallationRequest;
   }>('/teams/:teamId/mcp/installations', {
     schema: {
       tags: ['MCP Installations'],

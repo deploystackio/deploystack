@@ -5,10 +5,10 @@ import { requirePermission } from '../../../middleware/roleMiddleware';
 import { McpCategoriesService } from '../../../services/mcpCategoriesService';
 import { getDb } from '../../../db';
 
-// Path parameter schema
-const deleteCategoryParamsSchema = z.object({
-  id: z.string().min(1, 'Category ID is required')
-});
+// Path parameter schema (type-only)
+type DeleteCategoryParams = {
+  id: string;
+};
 
 // Response schemas
 const deleteCategoryResponseSchema = z.object({
@@ -47,7 +47,7 @@ export default async function deleteCategory(server: FastifyInstance) {
       }
     }
   }, async (request, reply) => {
-    const { id } = request.params as z.infer<typeof deleteCategoryParamsSchema>;
+    const { id } = request.params as DeleteCategoryParams;
     
     request.log.info({
       operation: 'delete_mcp_category',
