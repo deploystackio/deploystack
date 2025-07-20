@@ -26,12 +26,13 @@ export interface McpInstallation {
   installation_name: string
   server_id: string
   server: McpServer
-  status: 'active' | 'error' | 'installing' | 'stopped'
+  installation_type: 'local' | 'cloud'
   user_environment_variables: Record<string, string>
   team_id: string
-  created_by: string
+  user_id: string
   created_at: string
   updated_at: string
+  last_used_at: string | null
 }
 
 export interface InstallServerRequest {

@@ -30,11 +30,6 @@ const sortedTeams = computed(() => {
   return [...props.teams].sort((a, b) => a.name.localeCompare(b.name))
 })
 
-// Helper function to check if user can manage a specific team
-const canManageTeam = (team: TeamWithRole): boolean => {
-  return props.userPermissions.includes('teams.edit') && team.role === 'team_admin'
-}
-
 // Helper function to format date
 const formatDate = (date: Date | string): string => {
   const dateObj = typeof date === 'string' ? new Date(date) : date

@@ -13,7 +13,10 @@ export default {
     installing: 'Installing',
     stopped: 'Stopped',
     deprecated: 'Deprecated',
-    maintenance: 'Maintenance'
+    maintenance: 'Maintenance',
+    ready: 'Ready',
+    cloud: 'Cloud',
+    unknown: 'Unknown'
   },
 
   table: {

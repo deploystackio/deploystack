@@ -70,10 +70,6 @@ const canDeleteTeam = computed(() => {
          !team.value?.is_default
 })
 
-const isTeamOwner = computed(() => {
-  return team.value?.is_owner === true
-})
-
 const hasChanges = computed(() => {
   if (!team.value) return false
   return formData.value.name !== team.value.name ||
