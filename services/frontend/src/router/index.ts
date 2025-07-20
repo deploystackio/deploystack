@@ -49,12 +49,13 @@ const routes = [
     component: () => import('../views/Logout.vue'),
     meta: { requiresSetup: true }, // Or false, depending on whether logout should be accessible if setup isn't complete
   },
-  {
-    path: '/dashboard',
-    name: 'Dashboard',
-    component: () => import('../views/Dashboard.vue'),
-    meta: { requiresSetup: true },
-  },
+  // Dashboard temporarily disabled - redirect users to MCP Server instead
+  // {
+  //   path: '/dashboard',
+  //   name: 'Dashboard',
+  //   component: () => import('../views/Dashboard.vue'),
+  //   meta: { requiresSetup: true },
+  // },
   {
     path: '/plugin-demo',
     name: 'PluginDemo',
@@ -209,9 +210,9 @@ router.beforeEach(async (to, from, next) => {
     // currentUser remains null, proceed as unauthenticated for safety
   }
 
-  // If user is logged in and trying to access Login or Register, redirect to Dashboard
+  // If user is logged in and trying to access Login or Register, redirect to MCP Server
   if (currentUser && (to.name === 'Login' || to.name === 'Register')) {
-    next('/dashboard');
+    next('/mcp-server');
     return;
   }
 

@@ -107,8 +107,8 @@ const onSubmit = form.handleSubmit(async (values) => {
     const data = await UserService.login(values.login, values.password)
     console.log('Login successful!', data)
 
-    // Handle successful login - redirect to dashboard or home
-    router.push('/dashboard')
+    // Handle successful login - redirect to MCP server page
+    router.push('/mcp-server')
 
   } catch (e) {
     console.error('Login error:', e);
