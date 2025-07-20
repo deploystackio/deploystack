@@ -167,15 +167,16 @@ export class McpCatalogService {
       filters
     }, 'Getting MCP servers for user');
     
-    let query = this.db.select().from(mcpServers);
+    // Build all WHERE conditions in an array
+    const whereConditions: any[] = [];
     
     // Apply visibility filters based on user role
     if (userRole === 'global_admin') {
-      // Global admin sees ALL servers
+      // Global admin sees ALL servers - no visibility restrictions
       this.logger.debug('Global admin - showing all servers');
     } else {
       // Regular users see global servers + their team servers
-      query = query.where(
+      whereConditions.push(
         or(
           eq(mcpServers.visibility, 'global'),
           and(
@@ -189,23 +190,23 @@ export class McpCatalogService {
     // Apply additional filters
     if (filters) {
       if (filters.category_id) {
-        query = query.where(eq(mcpServers.category_id, filters.category_id));
+        whereConditions.push(eq(mcpServers.category_id, filters.category_id));
       }
       if (filters.language) {
-        query = query.where(eq(mcpServers.language, filters.language));
+        whereConditions.push(eq(mcpServers.language, filters.language));
       }
       if (filters.runtime) {
-        query = query.where(eq(mcpServers.runtime, filters.runtime));
+        whereConditions.push(eq(mcpServers.runtime, filters.runtime));
       }
       if (filters.status) {
-        query = query.where(eq(mcpServers.status, filters.status));
+        whereConditions.push(eq(mcpServers.status, filters.status));
       }
       if (filters.featured !== undefined) {
-        query = query.where(eq(mcpServers.featured, filters.featured));
+        whereConditions.push(eq(mcpServers.featured, filters.featured));
       }
       if (filters.search) {
         const searchTerm = `%${filters.search}%`;
-        query = query.where(
+        whereConditions.push(
           or(
             like(mcpServers.name, searchTerm),
             like(mcpServers.description, searchTerm),
@@ -213,6 +214,12 @@ export class McpCatalogService {
           )
         );
       }
+    }
+    
+    // Build the query with all conditions combined
+    let query = this.db.select().from(mcpServers);
+    if (whereConditions.length > 0) {
+      query = query.where(and(...whereConditions));
     }
     
     // Order by featured first, then by name
@@ -224,7 +231,9 @@ export class McpCatalogService {
       operation: 'get_servers_for_user',
       userId,
       userRole,
-      serversFound: servers.length
+      serversFound: servers.length,
+      appliedFilters: filters,
+      whereConditionsCount: whereConditions.length
     }, 'Retrieved MCP servers for user');
     
     // Parse JSON fields for all servers

@@ -308,7 +308,7 @@ describe('MCP Servers - Search Servers', () => {
         ...mockRequest,
         query: {
           q: 'test',
-          category: 'web',
+          category_id: 'web', // Changed from 'category' to 'category_id' to match the route schema
           language: 'javascript',
           runtime: 'node',
           status: 'active',

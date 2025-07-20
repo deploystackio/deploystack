@@ -3,11 +3,12 @@
 import { getEnv } from '@/utils/env'
 import type {
   McpServer,
-  McpCategory,
   CreateMcpServerRequest,
   UpdateMcpServerRequest,
   McpServerFilters
 } from '@/views/admin/mcp-server-catalog/types'
+import type { McpCategory } from '@/services/mcpCategoriesService'
+import type { McpServerSearchParams, McpServerSearchResponse } from '@/types/mcp-catalog'
 
 export interface PaginationParams {
   limit?: number
@@ -272,10 +273,24 @@ export class McpCatalogService {
   }
 
   /**
-   * Search MCP servers
+   * Search MCP servers with advanced filters
    */
-  static async searchServers(query: string): Promise<McpServer[]> {
-    const response = await fetch(`${this.baseUrl}/api/mcp/servers/search?q=${encodeURIComponent(query)}`, {
+  static async searchServers(params: McpServerSearchParams): Promise<McpServerSearchResponse> {
+    const url = new URL(`${this.baseUrl}/api/mcp/servers/search`)
+    
+    // Required parameter
+    url.searchParams.append('q', params.q)
+    
+    // Optional parameters
+    if (params.category) url.searchParams.append('category_id', params.category)
+    if (params.language) url.searchParams.append('language', params.language)
+    if (params.runtime) url.searchParams.append('runtime', params.runtime)
+    if (params.status) url.searchParams.append('status', params.status)
+    if (params.featured !== undefined) url.searchParams.append('featured', params.featured.toString())
+    if (params.limit) url.searchParams.append('limit', params.limit.toString())
+    if (params.offset) url.searchParams.append('offset', params.offset.toString())
+
+    const response = await fetch(url.toString(), {
       method: 'GET',
       credentials: 'include',
       headers: {
@@ -289,8 +304,24 @@ export class McpCatalogService {
     }
 
     const data = await response.json()
-    const servers = data.data || data
-    return Array.isArray(servers) ? servers.map(this.parseServerData) : []
+    
+    return {
+      servers: (data.data?.servers || []).map(this.parseServerData),
+      pagination: data.data?.pagination || {
+        total: 0,
+        limit: params.limit || 50,
+        offset: params.offset || 0,
+        has_more: false
+      },
+      filters: data.data?.filters || {
+        query: params.q,
+        category: params.category || null,
+        language: params.language || null,
+        runtime: params.runtime || null,
+        status: params.status || null,
+        featured: params.featured || null
+      }
+    }
   }
 
   /**
@@ -353,35 +384,19 @@ export class McpCatalogService {
   }
 }
 
-// Cache for categories to avoid repeated API calls
-let categoriesCache: McpCategory[] | null = null
-let categoriesCacheTime: number = 0
-const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
-
+// Export McpCategoriesCache for backward compatibility
+// This delegates to the dedicated McpCategoriesService
 export class McpCategoriesCache {
   static async getCategories(forceRefresh = false): Promise<McpCategory[]> {
-    const now = Date.now()
-
-    if (!forceRefresh && categoriesCache && (now - categoriesCacheTime) < CACHE_DURATION) {
-      return categoriesCache
-    }
-
-    try {
-      categoriesCache = await McpCatalogService.getCategories()
-      categoriesCacheTime = now
-      return categoriesCache
-    } catch (error) {
-      // If cache exists and API fails, return cached data
-      if (categoriesCache) {
-        console.warn('Failed to refresh categories, using cached data:', error)
-        return categoriesCache
-      }
-      throw error
-    }
+    // Import here to avoid circular dependencies
+    const { McpCategoriesService } = await import('@/services/mcpCategoriesService')
+    return McpCategoriesService.getCategories(forceRefresh)
   }
 
   static clearCache(): void {
-    categoriesCache = null
-    categoriesCacheTime = 0
+    // Import here to avoid circular dependencies
+    import('@/services/mcpCategoriesService').then(({ McpCategoriesService }) => {
+      McpCategoriesService.clearCache()
+    })
   }
 }

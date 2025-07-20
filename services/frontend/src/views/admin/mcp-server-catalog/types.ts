@@ -38,8 +38,8 @@ export interface McpServer {
 export interface McpCategory {
   id: string
   name: string
-  description?: string
-  icon?: string
+  description?: string | null
+  icon?: string | null
   sort_order: number
   created_at: string
 }
