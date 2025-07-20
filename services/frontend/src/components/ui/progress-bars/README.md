@@ -143,6 +143,30 @@ interface ProgressStep {
 
 ## Design Variants
 
+### Progress Percentage Calculation
+
+When implementing multi-step processes, the progress percentage should match the visual step positions:
+
+- **Step 1 (index 0)**: 0% progress (leftmost position)
+- **Step 2 (index 1)**: 50% progress (middle position)
+- **Step 3 (index 2)**: 100% progress (rightmost position)
+
+For more than 3 steps, calculate positions proportionally:
+- **4 steps**: 0%, 33%, 67%, 100%
+- **5 steps**: 0%, 25%, 50%, 75%, 100%
+
+**Important**: Progress percentage represents visual positioning, not completion state. Use the `variant` prop to indicate actual completion status.
+
+```html
+<!-- Example: 3-step wizard on step 2 -->
+<ProgressBars
+  :steps="steps"
+  :progress="50"  <!-- 50% because step 2 is visually in the middle -->
+  variant="default"  <!-- Still default until process actually completes -->
+  title="Configuration in progress..."
+/>
+```
+
 ### Default Theme
 - **Background**: Uses `bg-secondary` for track, `bg-primary` for fill
 - **Text**: Uses `text-foreground` for title, `text-primary` for active steps
