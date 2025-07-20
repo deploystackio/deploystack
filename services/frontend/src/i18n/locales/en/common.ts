@@ -26,7 +26,8 @@ export default {
   actions: {
     openMenu: 'Open menu',
     retry: 'Retry',
-    clear: 'Clear'
+    clear: 'Clear',
+    clearSearch: 'Clear Search'
   },
   messages: {
     error: 'An error occurred',

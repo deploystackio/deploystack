@@ -79,19 +79,19 @@ export default async function searchServers(server: FastifyInstance) {
       security: [{ cookieAuth: [] }],
       // Plain JSON Schema for Fastify validation
       querystring: {
-        type: 'object',
-        properties: {
-          q: { type: 'string', minLength: 1, maxLength: 255 },
-          category: { type: 'string' },
-          language: { type: 'string' },
-          runtime: { type: 'string' },
-          status: { type: 'string', enum: ['active', 'deprecated', 'maintenance'] },
-          featured: { type: 'string', enum: ['true', 'false'] },
-          limit: { type: 'string', pattern: '^\\d+$' },
-          offset: { type: 'string', pattern: '^\\d+$' }
-        },
-        required: ['q'],
-        additionalProperties: false
+      type: 'object',
+      properties: {
+      q: { type: 'string', minLength: 1, maxLength: 255 },
+      category_id: { type: 'string' },
+      language: { type: 'string' },
+      runtime: { type: 'string' },
+      status: { type: 'string', enum: ['active', 'deprecated', 'maintenance'] },
+      featured: { type: 'string', enum: ['true', 'false'] },
+      limit: { type: 'string', pattern: '^\\d+$' },
+      offset: { type: 'string', pattern: '^\\d+$' }
+      },
+      required: ['q'],
+      additionalProperties: false
       },
       response: {
         200: createSchema(searchServersResponseSchema),
@@ -104,7 +104,7 @@ export default async function searchServers(server: FastifyInstance) {
   }, async (request, reply) => {
     const queryParams = request.query as {
       q?: string;
-      category?: string;
+      category_id?: string;
       language?: string;
       runtime?: string;
       status?: string;
@@ -118,7 +118,7 @@ export default async function searchServers(server: FastifyInstance) {
       userId: request.user?.id,
       query: queryParams.q,
       filters: {
-        category: queryParams.category,
+        category_id: queryParams.category_id,
         language: queryParams.language,
         runtime: queryParams.runtime,
         status: queryParams.status,
@@ -162,7 +162,7 @@ export default async function searchServers(server: FastifyInstance) {
       // Build filters object
       const filters = {
         search: queryParams.q,
-        category_id: queryParams.category,
+        category_id: queryParams.category_id,
         language: queryParams.language,
         runtime: queryParams.runtime,
         status: status,
@@ -238,7 +238,7 @@ export default async function searchServers(server: FastifyInstance) {
           },
           filters: {
             query: queryParams.q,
-            category: queryParams.category || null,
+            category: queryParams.category_id || null,
             language: queryParams.language || null,
             runtime: queryParams.runtime || null,
             status: queryParams.status || null,

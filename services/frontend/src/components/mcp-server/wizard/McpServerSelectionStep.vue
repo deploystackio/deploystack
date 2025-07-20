@@ -2,9 +2,12 @@
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { Loader2, Info, Download, ChevronDown, PackagePlus } from 'lucide-vue-next'
+import { Loader2, Info, Download, ChevronDown, PackagePlus, AlertTriangle } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { McpCatalogService } from '@/services/mcpCatalogService'
+import { McpCategoriesService } from '@/services/mcpCategoriesService'
+import type { McpServerSearchParams, McpServerSearchResponse } from '@/types/mcp-catalog'
 
 // Props and emits
 const modelValue = defineModel<string>({ required: true })
@@ -20,60 +23,52 @@ const router = useRouter()
 
 // State
 const isLoading = ref(false)
+const isLoadingCategories = ref(false)
 const error = ref<string | null>(null)
+const categoriesError = ref<string | null>(null)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const servers = ref<any[]>([])
+const categories = ref<any[]>([])
 const searchTerm = ref('')
 const searchQuery = ref('')
 const selectedServerId = ref<string | null>(null)
 const selectedCategory = ref('all')
+const searchResults = ref<McpServerSearchResponse | null>(null)
 
-// Available categories (you can expand this based on your data)
-const categories = [
-  { value: 'all', label: 'All Categories' },
-  { value: 'productivity', label: 'Productivity' },
-  { value: 'development', label: 'Development' },
-  { value: 'ai', label: 'AI & Machine Learning' },
-  { value: 'database', label: 'Database' },
-  { value: 'api', label: 'API & Integration' }
-]
+// Constants
+const MAX_RESULTS_TO_SHOW = 50
 
 // Computed
 const filteredServers = computed(() => {
-  if (!searchQuery.value.trim()) return []
-
-  const term = searchQuery.value.toLowerCase()
-  let filtered = servers.value.filter(server =>
-    server.name.toLowerCase().includes(term) ||
-    server.description.toLowerCase().includes(term) ||
-    server.author_name?.toLowerCase().includes(term) ||
-    server.category_name?.toLowerCase().includes(term)
-  )
-
-  // Filter by category if not 'all'
-  if (selectedCategory.value !== 'all') {
-    filtered = filtered.filter(server => 
-      server.category_name?.toLowerCase() === selectedCategory.value.toLowerCase()
-    )
-  }
-
-  return filtered
+  return searchResults.value?.servers || []
 })
 
+const showTooManyResultsWarning = computed(() => {
+  const pagination = searchResults.value?.pagination
+  return pagination && pagination.total > MAX_RESULTS_TO_SHOW
+})
+
+const shouldShowResults = computed(() => {
+  const pagination = searchResults.value?.pagination
+  return pagination && pagination.total <= MAX_RESULTS_TO_SHOW && filteredServers.value.length > 0
+})
+
+const hasSearched = computed(() => {
+  return searchQuery.value.trim().length > 0
+})
 
 // Methods
-const loadServers = async () => {
+const loadCategories = async () => {
   try {
-    isLoading.value = true
-    error.value = null
+    isLoadingCategories.value = true
+    categoriesError.value = null
 
-    const serverList = await McpCatalogService.getGlobalServers()
-    servers.value = serverList
+    const categoryList = await McpCategoriesService.getCategories()
+    categories.value = categoryList
   } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Failed to load servers'
-    servers.value = []
+    categoriesError.value = err instanceof Error ? err.message : t('mcpInstallations.wizard.server.categoriesError')
+    categories.value = []
   } finally {
-    isLoading.value = false
+    isLoadingCategories.value = false
   }
 }
 
@@ -84,7 +79,7 @@ const handleInstallClick = (server: any) => {
 
   // Emit server data to parent
   emit('serverSelected', server)
-  
+
   // Automatically advance to next step
   emit('nextStep')
 }
@@ -94,16 +89,59 @@ const handleDetailsClick = (server: any) => {
   router.push(`/mcp-server/view/${server.id}`)
 }
 
-const performSearch = () => {
-  searchQuery.value = searchTerm.value
+const performSearch = async () => {
+  if (!searchTerm.value.trim()) {
+    return
+  }
+
+  try {
+    isLoading.value = true
+    error.value = null
+    searchQuery.value = searchTerm.value
+
+    const searchParams: McpServerSearchParams = {
+      q: searchTerm.value.trim(),
+      limit: MAX_RESULTS_TO_SHOW + 1, // Get one extra to detect if there are more
+      offset: 0
+    }
+
+    // Add category filter if selected
+    if (selectedCategory.value !== 'all') {
+      searchParams.category = selectedCategory.value
+    }
+
+    const response = await McpCatalogService.searchServers(searchParams)
+
+    // Check if we got too many results
+    if (response.pagination.total > MAX_RESULTS_TO_SHOW) {
+      searchResults.value = {
+        servers: [],
+        pagination: response.pagination,
+        filters: response.filters
+      }
+    } else {
+      searchResults.value = response
+    }
+
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : 'Failed to search servers'
+    searchResults.value = null
+  } finally {
+    isLoading.value = false
+  }
 }
 
+const clearSearch = () => {
+  searchTerm.value = ''
+  searchQuery.value = ''
+  searchResults.value = null
+  error.value = null
+}
 
-
-// Lifecycle
 onMounted(() => {
-  loadServers()
+  loadCategories()
 })
+
 </script>
 
 <template>
@@ -124,44 +162,57 @@ onMounted(() => {
       <!-- Search Form -->
       <form class="mt-6 sm:flex sm:items-center" @submit.prevent="performSearch">
         <div class="flex grow items-center rounded-md bg-white pl-3 outline-1 -outline-offset-1 outline-gray-300 has-[input:focus-within]:outline-2 has-[input:focus-within]:-outline-offset-2 has-[input:focus-within]:outline-primary">
-          <input 
+          <input
             v-model="searchTerm"
-            type="text" 
-            name="search" 
-            :aria-label="t('mcpInstallations.wizard.server.searchLabel')" 
-            class="block min-w-0 grow py-1.5 pr-3 text-base text-gray-900 placeholder:text-gray-400 focus:outline-none sm:text-sm/6" 
-            :placeholder="t('mcpInstallations.wizard.server.searchPlaceholder')" 
+            type="text"
+            name="search"
+            :aria-label="t('mcpInstallations.wizard.server.searchLabel')"
+            class="block min-w-0 grow py-1.5 pr-3 text-base text-gray-900 placeholder:text-gray-400 focus:outline-none sm:text-sm/6"
+            :placeholder="t('mcpInstallations.wizard.server.searchPlaceholder')"
             @keyup.enter="performSearch"
           />
           <div class="grid shrink-0 grid-cols-1 focus-within:relative">
-            <select 
+            <select
               v-model="selectedCategory"
-              name="category" 
-              :aria-label="t('mcpInstallations.wizard.server.categoryLabel')" 
+              name="category"
+              :aria-label="t('mcpInstallations.wizard.server.categoryLabel')"
               class="col-start-1 row-start-1 w-full appearance-none rounded-md py-1.5 pr-7 pl-3 text-base text-gray-500 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-primary sm:text-sm/6"
+              :disabled="isLoadingCategories"
             >
-              <option 
-                v-for="category in categories" 
-                :key="category.value" 
-                :value="category.value"
+              <option value="all">
+                {{ t('mcpInstallations.wizard.server.allCategories') }}
+              </option>
+              <option
+                v-for="category in categories"
+                :key="category.id"
+                :value="category.id"
               >
-                {{ category.label }}
+                {{ category.name }}
               </option>
             </select>
             <ChevronDown class="pointer-events-none col-start-1 row-start-1 mr-2 size-5 self-center justify-self-end text-gray-500 sm:size-4" aria-hidden="true" />
           </div>
         </div>
         <div class="mt-3 sm:mt-0 sm:ml-4 sm:shrink-0">
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             class="block w-full rounded-md bg-primary px-3 py-2 text-center text-sm font-semibold text-primary-foreground shadow-xs hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-            :disabled="isLoading"
+            :disabled="isLoading || !searchTerm.trim()"
           >
             {{ isLoading ? t('mcpInstallations.wizard.server.searching') : t('mcpInstallations.wizard.server.searchButton') }}
           </button>
         </div>
       </form>
     </div>
+
+    <div v-if="isLoadingCategories" class="mt-4 text-center text-sm text-gray-500">
+      {{ t('mcpInstallations.wizard.server.loadingCategories') }}
+    </div>
+
+    <Alert v-if="categoriesError" class="mt-4 border-yellow-200 bg-yellow-50 text-yellow-800">
+      <AlertTriangle class="h-4 w-4" />
+      <AlertDescription>{{ categoriesError }}</AlertDescription>
+    </Alert>
 
     <!-- Error Alert -->
     <div v-if="error" class="mt-14 rounded-md bg-red-50 p-4">
@@ -177,10 +228,17 @@ onMounted(() => {
             <div class="-mx-2 -my-1.5 flex">
               <button
                 type="button"
-                @click="loadServers"
+                @click="performSearch"
                 class="rounded-md bg-red-50 px-2 py-1.5 text-sm font-medium text-red-800 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-2 focus:ring-offset-red-50"
               >
                 {{ t('actions.retry') }}
+              </button>
+              <button
+                type="button"
+                @click="clearSearch"
+                class="ml-3 rounded-md bg-red-50 px-2 py-1.5 text-sm font-medium text-red-800 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-2 focus:ring-offset-red-50"
+              >
+                {{ t('actions.clear') }}
               </button>
             </div>
           </div>
@@ -194,8 +252,31 @@ onMounted(() => {
       <span class="text-gray-600">{{ t('messages.loading') }}</span>
     </div>
 
-    <!-- Server List (only show when there's a search query) -->
-    <div v-else-if="searchQuery.trim() && filteredServers.length > 0" class="mt-14 space-y-4">
+    <!-- Too Many Results Warning -->
+    <div v-else-if="showTooManyResultsWarning" class="mt-14">
+      <Alert class="border-orange-200 bg-orange-50 text-orange-800">
+        <AlertTriangle class="h-4 w-4" />
+        <AlertDescription>
+          {{ t('mcpInstallations.wizard.server.tooManyResults', { total: searchResults?.pagination.total }) }}
+        </AlertDescription>
+      </Alert>
+      <div class="mt-4 text-center">
+        <Button variant="outline" @click="clearSearch">
+          {{ t('actions.clearSearch') }}
+        </Button>
+      </div>
+    </div>
+
+    <!-- Server List (only show when there's a search query and results fit criteria) -->
+    <div v-else-if="shouldShowResults" class="mt-14 space-y-4">
+      <!-- Results info -->
+      <div v-if="searchResults?.pagination" class="text-sm text-gray-600 text-center">
+        {{ t('mcpInstallations.wizard.server.maxResultsReached', {
+          shown: filteredServers.length,
+          total: searchResults.pagination.total
+        }) }}
+      </div>
+
       <div
         v-for="server in filteredServers"
         :key="server.id"
@@ -215,12 +296,12 @@ onMounted(() => {
             <dd class="md:mt-1">{{ server.language || t('mcpInstallations.wizard.server.unknownLanguage') }}</dd>
           </div>
         </dl>
-        
+
         <!-- Description -->
         <div v-if="server.description" class="mt-4 md:mt-0 md:ml-6 lg:w-1/2">
           <p class="text-sm text-gray-600">{{ server.description }}</p>
         </div>
-        
+
         <!-- Action Buttons -->
         <div class="mt-6 space-y-4 sm:flex sm:space-y-0 sm:space-x-4 md:mt-0">
           <Button
@@ -251,12 +332,17 @@ onMounted(() => {
     </div>
 
     <!-- No Results -->
-    <div v-else-if="searchQuery.trim() && filteredServers.length === 0" class="mt-14 text-center py-8">
+    <div v-else-if="hasSearched && filteredServers.length === 0 && !showTooManyResultsWarning && !isLoading" class="mt-14 text-center py-8">
       <p class="text-gray-500">{{ t('mcpInstallations.wizard.server.noServersFound') }}</p>
+      <div class="mt-4">
+        <Button variant="outline" @click="clearSearch">
+          {{ t('actions.clearSearch') }}
+        </Button>
+      </div>
     </div>
 
     <!-- Empty State (when no search performed) -->
-    <div v-else-if="!searchQuery.trim() && !isLoading" class="mt-14 text-center py-8">
+    <div v-else-if="!hasSearched && !isLoading" class="mt-14 text-center py-8">
       <p class="text-gray-500">{{ t('mcpInstallations.wizard.server.emptyStateMessage') }}</p>
     </div>
   </div>
