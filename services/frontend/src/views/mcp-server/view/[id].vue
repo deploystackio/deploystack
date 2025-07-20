@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { ArrowLeft, Github, ExternalLink, Star, Package, Code, Settings, Calendar, Tag, Download } from 'lucide-vue-next'
 import DashboardLayout from '@/components/DashboardLayout.vue'
 import EnvironmentVariablesDisplay from '@/components/admin/mcp-catalog/EnvironmentVariablesDisplay.vue'
+import CategoryDisplay from '@/components/mcp-server/CategoryDisplay.vue'
 import { McpCatalogService } from '@/services/mcpCatalogService'
 import type { McpServer } from '@/views/admin/mcp-server-catalog/types'
 
@@ -269,6 +270,18 @@ const installServer = () => {
               <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpInstallations.view.fields.longDescription') }}</dt>
               <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
                 <div class="whitespace-pre-wrap">{{ server.long_description }}</div>
+              </dd>
+            </div>
+
+            <!-- Category -->
+            <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+              <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpInstallations.view.fields.category') }}</dt>
+              <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
+                <CategoryDisplay
+                  :category-id="server.category_id"
+                  :show-not-provided="true"
+                  text-class="text-sm/6"
+                />
               </dd>
             </div>
 

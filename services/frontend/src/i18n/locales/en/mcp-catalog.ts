@@ -435,6 +435,7 @@ export default {
       name: 'Server Name',
       description: 'Description',
       longDescription: 'Detailed Description',
+      category: 'Category',
       author: 'Author Information',
       technical: 'Technical Specifications',
       links: 'Repository Links',

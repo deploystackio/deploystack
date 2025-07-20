@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { DsAlert } from '@/components/ui/ds-alert'
+import CategoryDisplay from '@/components/mcp-server/CategoryDisplay.vue'
 import { ArrowLeft, Github, ExternalLink, Star, Package, Code, Settings, Calendar, Tag, Trash2, AlertTriangle, Edit } from 'lucide-vue-next'
 import DashboardLayout from '@/components/DashboardLayout.vue'
 import EnvironmentVariablesDisplay from '@/components/admin/mcp-catalog/EnvironmentVariablesDisplay.vue'
@@ -338,6 +339,14 @@ const closeSuccessAlert = () => {
               <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.edit.fields.longDescription') }}</dt>
               <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
                 <div class="whitespace-pre-wrap">{{ server.long_description }}</div>
+              </dd>
+            </div>
+
+            <!-- Category -->
+            <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+              <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.edit.fields.category') }}</dt>
+              <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
+                <CategoryDisplay :category-id="server.category_id" />
               </dd>
             </div>
 
