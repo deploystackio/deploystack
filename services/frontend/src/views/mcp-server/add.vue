@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ArrowLeft } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
@@ -10,6 +10,7 @@ import McpServerInstallWizard from '@/components/mcp-server/wizard/McpServerInst
 
 const { t } = useI18n()
 const router = useRouter()
+const route = useRoute()
 const eventBus = useEventBus()
 
 
@@ -65,6 +66,8 @@ onMounted(() => {
 
       <!-- Wizard Component -->
       <McpServerInstallWizard
+        :initial-server-id="route.query.serverId as string"
+        :initial-step="route.query.step ? parseInt(route.query.step as string) - 1 : 0"
         @complete="handleWizardComplete"
         @cancel="handleWizardCancel"
       />

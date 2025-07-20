@@ -167,6 +167,7 @@ export default {
     title: 'MCP Server: {name}',
     titleLoading: 'Loading MCP Server...',
     backToServers: 'Back to MCP Servers',
+    installServer: 'Install MCP Server',
     loading: 'Loading server details...',
     errorLoading: 'Error loading server: {error}',
     serverInformation: 'Server Information',
