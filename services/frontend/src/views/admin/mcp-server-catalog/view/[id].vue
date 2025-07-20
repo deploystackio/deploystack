@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { DsAlert } from '@/components/ui/ds-alert'
 import { ArrowLeft, Github, ExternalLink, Star, Package, Code, Settings, Calendar, Tag, Trash2, AlertTriangle, Edit } from 'lucide-vue-next'
 import DashboardLayout from '@/components/DashboardLayout.vue'
 import EnvironmentVariablesDisplay from '@/components/admin/mcp-catalog/EnvironmentVariablesDisplay.vue'
@@ -36,6 +37,7 @@ const isLoading = ref(true)
 const isDeleting = ref(false)
 const error = ref<string | null>(null)
 const showDeleteDialog = ref(false)
+const showSuccessAlert = ref(false)
 
 const serverId = route.params.id as string
 
@@ -50,6 +52,13 @@ onMounted(async () => {
     isLoading.value = true
     server.value = await fetchServer(serverId)
     error.value = null
+
+    // Check for success query parameter
+    if (route.query.updated === 'true') {
+      showSuccessAlert.value = true
+      // Remove the query parameter from URL without triggering navigation
+      router.replace({ query: {} })
+    }
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'An unknown error occurred'
     server.value = null
@@ -233,6 +242,11 @@ const handleEditServer = () => {
 const goBack = () => {
   router.push('/admin/mcp-server-catalog')
 }
+
+// Close success alert
+const closeSuccessAlert = () => {
+  showSuccessAlert.value = false
+}
 </script>
 
 <template>
@@ -269,6 +283,15 @@ const goBack = () => {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
+      <DsAlert
+        v-if="showSuccessAlert"
+        variant="success"
+        title="Success!"
+        :description="t('mcpCatalog.messages.updateSuccess')"
+        dismissible
+        @dismiss="closeSuccessAlert"
+      />
 
       <!-- Loading State -->
       <div v-if="isLoading" class="text-muted-foreground">

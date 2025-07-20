@@ -254,8 +254,11 @@ const handleSubmit = async (formData: McpServerFormData) => {
     // Emit success event
     eventBus.emit('mcp-server-updated', { serverId })
 
-    // Navigate back to view page
-    router.push(`/admin/mcp-server-catalog/view/${serverId}`)
+    // Navigate back to view page with success parameter
+    router.push({
+      path: `/admin/mcp-server-catalog/view/${serverId}`,
+      query: { updated: 'true' }
+    })
 
   } catch (error) {
     // Re-throw error to let the wizard handle it
