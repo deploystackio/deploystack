@@ -1,5 +1,34 @@
 # Changelog
 
+## <small>0.26.1 (2025-07-20)</small>
+
+* add category display component and update relevant views for category handling ([5ab49b8](https://github.com/deploystackio/deploystack/commit/5ab49b8a80e79de451a6aa74b0fc49b39a59b0f8))
+* add DsAlert component with success alert functionality and update navigation to include success parameter ([903cc05](https://github.com/deploystackio/deploystack/commit/903cc058fefbbf2e4fa6c45446c22fd892313442))
+* enhance MCP categories API with security and error handling ([0aefaa8](https://github.com/deploystackio/deploystack/commit/0aefaa834fb5456145847309643b04fb7eb9e789))
+* enhance server selection step with automatic progression and improve localization for server details ([47dc048](https://github.com/deploystackio/deploystack/commit/47dc048e9e5fdefd04c8192d248a0ec97f0955df))
+* enhance team API and frontend to include user role information and member count ([9ad9930](https://github.com/deploystackio/deploystack/commit/9ad993022c62bb9d102386372ade143b68511781))
+* enhance team context management and improve UI feedback for team selection ([416695c](https://github.com/deploystackio/deploystack/commit/416695ccc35ec6e5470ef53503e194a05f2062ad))
+* enhance team creation flow with detailed success and error messages ([9015e3b](https://github.com/deploystackio/deploystack/commit/9015e3b53be1505c20712dd52049117fdba42b14))
+* implement ProgressBars component for multi-step progress visualization ([a12903e](https://github.com/deploystackio/deploystack/commit/a12903e623425a81e3e77c1eadd0d9d615a19e82))
+* implement server pre-selection in installation wizard and enhance UI with install button ([8649f03](https://github.com/deploystackio/deploystack/commit/8649f03c52fcbb8bf0066124895f54af679dbf6d))
+* integrate ProgressBars component for enhanced multi-step navigation and update localization for progress states ([ab76d13](https://github.com/deploystackio/deploystack/commit/ab76d13b376b4869c5210b923adc8d512b025902))
+* optimize step position calculations and remove debug logging in MCP server data conversion ([233e190](https://github.com/deploystackio/deploystack/commit/233e190b3a507aef00809c3b9caa97bcea4b5372))
+* remove dashboard navigation and enhance MCP server selection UI with category filter ([c981448](https://github.com/deploystackio/deploystack/commit/c981448f4c6d680f3d8ee453cbcf7ca20fb64494))
+* replace Breadcrumb navigation with ProgressBars component for improved step visualization and interaction ([97ccf03](https://github.com/deploystackio/deploystack/commit/97ccf039075fbc4d2e9eed943fe5dfa756ef7755))
+* reset form data when navigating to previous steps in installation wizard ([da94e71](https://github.com/deploystackio/deploystack/commit/da94e71e7e2ab7dbca2f1004a80458a1d2214fd7))
+* simplify platform selection component and enhance UI for better user experience ([a51b772](https://github.com/deploystackio/deploystack/commit/a51b7729c6cbb7b7b2eeb56b24bfa4a4deeaf985))
+* streamline installation card layout and enhance empty state UI ([1b649e5](https://github.com/deploystackio/deploystack/commit/1b649e56ba6b0a1683bf001925a5b01395ddfd25))
+* update installation form data structure and integrate team context initialization ([d17d9c2](https://github.com/deploystackio/deploystack/commit/d17d9c243b5b92de01e7eb3ec2e656843383201f))
+* update installation handling and status representation in MCP components ([d3ceff2](https://github.com/deploystackio/deploystack/commit/d3ceff28aad6a3943ae51a936423340bbedc5baf))
+* update markdown linting script to exclude specific frontend UI components ([cbaaa7e](https://github.com/deploystackio/deploystack/commit/cbaaa7eb434278e10e457c9bc32bd54d5b5bfee5))
+* update MCP server search functionality with advanced filters and category handling ([d8026fb](https://github.com/deploystackio/deploystack/commit/d8026fbb42ce57de06aa03ef3dc73d2e66c38643))
+* update routing to redirect users to MCP server instead of dashboard ([1a4b2bb](https://github.com/deploystackio/deploystack/commit/1a4b2bb1db6deb4a23ca97f964b87050a14acbd1))
+* update Switch component styles for improved appearance and consistency ([b24c75f](https://github.com/deploystackio/deploystack/commit/b24c75f3b988facdc977b77ab28d0b1d058f1154))
+* update value type definition to allow multiple types and make tools optional in global server schema ([50165f3](https://github.com/deploystackio/deploystack/commit/50165f3a66d57a54226e7147f4a3c9a0c9a45847))
+* release v0.26.0 ([96539e7](https://github.com/deploystackio/deploystack/commit/96539e73aa1db999e85ab71d55bbb661b8873c0d))
+*  ([a2e1523](https://github.com/deploystackio/deploystack/commit/a2e1523b20da5cea4655dc766cb3bc5a4a745703))
+* add newline to commitPartial format for better readability ([68bdbc8](https://github.com/deploystackio/deploystack/commit/68bdbc85564c1d8ce9731c22446261ca45924e44))
+
 ## 0.26.0 (2025-07-20)
 
 * add category display component and update relevant views for category handling ([5ab49b8](https://github.com/deploystackio/deploystack/commit/5ab49b8a80e79de451a6aa74b0fc49b39a59b0f8))
