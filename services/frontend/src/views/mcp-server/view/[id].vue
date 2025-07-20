@@ -4,7 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, Github, ExternalLink, Star, Package, Code, Settings, Calendar, Tag } from 'lucide-vue-next'
+import { ArrowLeft, Github, ExternalLink, Star, Package, Code, Settings, Calendar, Tag, Download } from 'lucide-vue-next'
 import DashboardLayout from '@/components/DashboardLayout.vue'
 import EnvironmentVariablesDisplay from '@/components/admin/mcp-catalog/EnvironmentVariablesDisplay.vue'
 import { McpCatalogService } from '@/services/mcpCatalogService'
@@ -188,12 +188,23 @@ const formatDate = (dateString: string) => {
 const goBack = () => {
   router.push('/mcp-server')
 }
+
+const installServer = () => {
+  // Navigate to installation wizard with server pre-selected
+  router.push({
+    path: '/mcp-server/add',
+    query: {
+      serverId: serverId,
+      step: '2'
+    }
+  })
+}
 </script>
 
 <template>
   <DashboardLayout :title="server ? t('mcpInstallations.view.title', { name: server.name }) : t('mcpInstallations.view.titleLoading')">
     <div class="space-y-6">
-      <!-- Header with Back Button -->
+      <!-- Header with Back Button and Install Button -->
       <div class="flex items-center justify-between">
         <Button
           variant="outline"
@@ -201,6 +212,15 @@ const goBack = () => {
         >
           <ArrowLeft class="h-4 w-4 mr-2" />
           {{ t('mcpInstallations.view.backToServers') }}
+        </Button>
+        
+        <Button
+          v-if="server"
+          @click="installServer"
+          class="flex items-center gap-2"
+        >
+          <Download class="h-4 w-4" />
+          {{ t('mcpInstallations.view.installServer') }}
         </Button>
       </div>
 

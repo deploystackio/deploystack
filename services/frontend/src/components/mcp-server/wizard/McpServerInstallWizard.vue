@@ -2,16 +2,29 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRoute } from 'vue-router'
 import { Button } from '@/components/ui/button'
 import { ProgressBars } from '@/components/ui/progress-bars'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Server, Settings, Cloud, Loader2 } from 'lucide-vue-next'
 import { McpInstallationService } from '@/services/mcpInstallationService'
 import { TeamService } from '@/services/teamService'
+import { McpCatalogService } from '@/services/mcpCatalogService'
 import { useEventBus } from '@/composables/useEventBus'
 import McpServerSelectionStep from './McpServerSelectionStep.vue'
 import EnvironmentVariablesStep from './EnvironmentVariablesStep.vue'
 import PlatformSelectionStep from './PlatformSelectionStep.vue'
+
+// Props
+interface Props {
+  initialServerId?: string
+  initialStep?: number
+}
+
+withDefaults(defineProps<Props>(), {
+  initialServerId: '',
+  initialStep: 0
+})
 
 // Emits
 const emit = defineEmits<{
@@ -20,6 +33,7 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
+const route = useRoute()
 const eventBus = useEventBus()
 
 // Form data interface
@@ -63,13 +77,13 @@ const steps = [
 const progressSteps = computed(() => {
   return steps.map((step, index) => {
     let status: 'completed' | 'current' | 'pending' = 'pending'
-    
+
     if (index < currentStep.value) {
       status = 'completed'
     } else if (index === currentStep.value) {
       status = 'current'
     }
-    
+
     return {
       id: step.key,
       label: step.label,
@@ -157,7 +171,7 @@ const nextStep = () => {
 const previousStep = () => {
   if (canGoPrevious.value) {
     currentStep.value--
-    
+
     // Reset form data when going back to previous steps
     if (currentStep.value === 0) {
       // Going back to server selection - clear server data
@@ -276,9 +290,50 @@ const handleValidationChange = (isValid: boolean, missingFields: string[]) => {
   }
 }
 
+// Handle query parameters for pre-selection
+const handleQueryParameters = async () => {
+  const serverId = route.query.serverId as string
+  const step = route.query.step as string
+
+  if (serverId) {
+    try {
+      // Fetch server data from API
+      const serverData = await McpCatalogService.getServerById(serverId)
+
+      if (serverData) {
+        // Pre-populate form data
+        formData.value.server.server_id = serverId
+        formData.value.server.server_data = serverData
+
+        // Pre-populate environment variables with default values
+        if (serverData.environment_variables) {
+          serverData.environment_variables.forEach((env: any) => {
+            if (env.placeholder && env.placeholder !== `<insert-your-${env.name.toLowerCase()}-here>`) {
+              formData.value.environment.user_environment_variables[env.name] = env.placeholder
+            } else {
+              formData.value.environment.user_environment_variables[env.name] = ''
+            }
+          })
+        }
+
+        // Set initial step if specified
+        if (step === '2') {
+          currentStep.value = 1 // Step 2 = index 1
+        }
+      }
+    } catch (error) {
+      console.error('Error loading server from query parameters:', error)
+      submitError.value = 'Failed to load the selected server. Please try again.'
+    }
+  }
+}
+
 onMounted(async () => {
   // Initialize team context
   await initializeTeamContext()
+
+  // Handle query parameters for pre-selection
+  await handleQueryParameters()
 
   // Listen for wizard reset events
   eventBus.on('mcp-install-wizard-reset', () => {
