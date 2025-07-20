@@ -1,0 +1,267 @@
+<!--
+@component ProgressBars
+@description A multi-step progress indicator component that shows current progress through a series of steps with labels and completion states.
+
+@example
+<ProgressBars
+  :steps="[
+    { id: 'copy', label: 'Copying files', status: 'completed' },
+    { id: 'migrate', label: 'Migrating database', status: 'current' },
+    { id: 'compile', label: 'Compiling assets', status: 'pending' },
+    { id: 'deploy', label: 'Deployed', status: 'pending' }
+  ]"
+  :progress="37.5"
+  title="Migrating MySQL database..."
+  variant="default"
+/>
+
+@props
+- steps: Array of step objects with id, label, and status
+- progress: Current progress percentage (0-100)
+- title: Main title/description of the process
+- variant: Visual style variant ('default' | 'success' | 'warning' | 'destructive')
+- size: Size variant ('sm' | 'md' | 'lg')
+- showSteps: Whether to show step labels below progress bar
+- hideTitle: Whether to hide the title (for screen readers only)
+
+@emits
+- stepClick: Emitted when a step is clicked (if interactive)
+
+@accessibility
+- Uses proper ARIA attributes for progress indication
+- Screen reader friendly with sr-only labels
+- Supports keyboard navigation for interactive steps
+-->
+
+<script setup lang="ts">
+import { computed } from 'vue'
+import { cva, type VariantProps } from 'class-variance-authority'
+import { cn } from '@/lib/utils'
+
+export interface ProgressStep {
+  id: string
+  label: string
+  status: 'completed' | 'current' | 'pending' | 'error'
+  clickable?: boolean
+}
+
+const progressBarsVariants = cva(
+  'w-full',
+  {
+    variants: {
+      variant: {
+        default: '',
+        success: '',
+        warning: '',
+        destructive: ''
+      },
+      size: {
+        sm: '',
+        md: '',
+        lg: ''
+      }
+    },
+    defaultVariants: {
+      variant: 'default',
+      size: 'md'
+    }
+  }
+)
+
+const progressBarVariants = cva(
+  'overflow-hidden rounded-full transition-all duration-300 ease-in-out',
+  {
+    variants: {
+      variant: {
+        default: 'bg-gray-200',
+        success: 'bg-green-100',
+        warning: 'bg-yellow-100',
+        destructive: 'bg-red-100'
+      },
+      size: {
+        sm: 'h-1',
+        md: 'h-2',
+        lg: 'h-3'
+      }
+    },
+    defaultVariants: {
+      variant: 'default',
+      size: 'md'
+    }
+  }
+)
+
+const progressFillVariants = cva(
+  'h-full rounded-full transition-all duration-500 ease-out',
+  {
+    variants: {
+      variant: {
+        default: 'bg-primary',
+        success: 'bg-green-600',
+        warning: 'bg-yellow-600',
+        destructive: 'bg-destructive'
+      }
+    },
+    defaultVariants: {
+      variant: 'default'
+    }
+  }
+)
+
+interface Props {
+  steps: ProgressStep[]
+  progress: number
+  title?: string
+  variant?: VariantProps<typeof progressBarsVariants>['variant']
+  size?: VariantProps<typeof progressBarsVariants>['size']
+  showSteps?: boolean
+  hideTitle?: boolean
+  interactive?: boolean
+  styled?: boolean  // New prop for styled container
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  title: '',
+  variant: 'default',
+  size: 'md',
+  showSteps: true,
+  hideTitle: false,
+  interactive: false,
+  styled: false
+})
+
+const emit = defineEmits<{
+  stepClick: [step: ProgressStep, index: number]
+}>()
+
+const stepVariants = cva(
+  'text-sm font-medium transition-colors duration-200',
+  {
+    variants: {
+      status: {
+        completed: 'text-primary',
+        current: 'text-primary',
+        pending: 'text-gray-600',
+        error: 'text-destructive'
+      },
+      clickable: {
+        true: 'cursor-pointer hover:text-primary/80',
+        false: ''
+      }
+    },
+    defaultVariants: {
+      status: 'pending',
+      clickable: false
+    }
+  }
+)
+
+const clampedProgress = computed(() => Math.max(0, Math.min(100, props.progress)))
+
+const gridCols = computed(() => {
+  const stepCount = props.steps.length
+  if (stepCount <= 2) return 'grid-cols-2'
+  if (stepCount <= 3) return 'grid-cols-3'
+  if (stepCount <= 4) return 'grid-cols-4'
+  if (stepCount <= 5) return 'grid-cols-5'
+  if (stepCount <= 6) return 'grid-cols-6'
+  return 'grid-cols-6' // Max 6 columns for readability
+})
+
+function handleStepClick(step: ProgressStep, index: number) {
+  if (props.interactive && step.clickable) {
+    emit('stepClick', step, index)
+  }
+}
+
+function getStepAlignment(index: number) {
+  const totalSteps = props.steps.length
+  if (totalSteps <= 1) return 'text-center'
+  if (index === 0) return 'text-left'
+  if (index === totalSteps - 1) return 'text-right'
+  return 'text-center'
+}
+</script>
+
+<template>
+  <div
+    :class="[
+      cn(progressBarsVariants({ variant, size })),
+      styled ? 'rounded-lg bg-muted/50 px-4 py-6 sm:px-6' : ''
+    ]"
+  >
+    <!-- Title -->
+    <div v-if="title" :class="styled ? 'mb-6' : 'mb-4'">
+      <h4 v-if="hideTitle" class="sr-only">{{ title }}</h4>
+      <p v-else class="text-sm font-medium text-foreground">{{ title }}</p>
+    </div>
+
+    <!-- Progress Bar -->
+    <div class="space-y-4">
+      <div
+        role="progressbar"
+        :aria-valuenow="clampedProgress"
+        aria-valuemin="0"
+        aria-valuemax="100"
+        :aria-label="title || 'Progress'"
+        :class="cn(progressBarVariants({ variant, size }))"
+      >
+        <div
+          :class="cn(progressFillVariants({ variant }))"
+          :style="{ width: `${clampedProgress}%` }"
+        />
+      </div>
+
+      <!-- Steps -->
+      <div
+        v-if="showSteps && steps.length > 0"
+        :class="[
+          'hidden sm:grid gap-2 text-sm font-medium',
+          gridCols
+        ]"
+      >
+        <button
+          v-for="(step, index) in steps"
+          :key="step.id"
+          :type="interactive && step.clickable ? 'button' : undefined"
+          :disabled="!interactive || !step.clickable"
+          :class="[
+            cn(stepVariants({
+              status: step.status,
+              clickable: interactive && step.clickable
+            })),
+            getStepAlignment(index)
+          ]"
+          @click="handleStepClick(step, index)"
+        >
+          {{ step.label }}
+        </button>
+      </div>
+
+      <!-- Mobile Steps (Vertical List) -->
+      <div v-if="showSteps && steps.length > 0" class="sm:hidden space-y-2">
+        <div
+          v-for="(step, index) in steps"
+          :key="`mobile-${step.id}`"
+          class="flex items-center justify-between"
+        >
+          <span :class="cn(stepVariants({ status: step.status }))">
+            {{ step.label }}
+          </span>
+          <div class="flex items-center gap-2">
+            <!-- Status Icon -->
+            <div
+              :class="[
+                'w-2 h-2 rounded-full',
+                step.status === 'completed' ? 'bg-primary' : '',
+                step.status === 'current' ? 'bg-primary animate-pulse' : '',
+                step.status === 'pending' ? 'bg-red-500' : '',
+                step.status === 'error' ? 'bg-destructive' : ''
+              ]"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
