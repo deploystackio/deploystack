@@ -33,7 +33,7 @@ import { UserService, type User } from '@/services/userService'
 import { useEventBus } from '@/composables/useEventBus'
 import {
   Server,
-  LayoutDashboard,
+  // LayoutDashboard,
   Key,
   ChevronDown,
   User as UserIcon,
@@ -86,11 +86,11 @@ const teamItems = [
 ]
 
 const navigationItems = [
-  {
-    title: t('sidebar.navigation.dashboard'),
-    icon: LayoutDashboard,
-    url: '/dashboard',
-  },
+  // {
+  //   title: t('sidebar.navigation.dashboard'),
+  //   icon: LayoutDashboard,
+  //   url: '/dashboard',
+  // },
   {
     title: t('sidebar.navigation.mcpServer'),
     icon: Server,
@@ -128,11 +128,11 @@ const fetchTeams = async (forceRefresh = false) => {
   try {
     teamsLoading.value = true; teamsError.value = '';
     const userTeams = await TeamService.getUserTeams(forceRefresh); teams.value = userTeams;
-    
+
     // Initialize selected team from storage or fallback to default
     if (userTeams.length > 0) {
       const storedTeamId = eventBus.getState<string>('selected_team_id')
-      
+
       if (storedTeamId) {
         // Try to find the stored team in available teams
         const storedTeam = userTeams.find(team => team.id === storedTeamId)
