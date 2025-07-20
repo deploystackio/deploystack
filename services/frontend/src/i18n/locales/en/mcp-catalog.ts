@@ -8,6 +8,7 @@ export default {
     error: 'Error loading MCP servers: {error}',
     noData: 'No MCP servers available',
     noDescription: 'No description provided',
+    noCategory: 'No category assigned',
     openMenu: 'Open menu',
     search: {
       placeholder: 'Search servers by name, description, or tags...'

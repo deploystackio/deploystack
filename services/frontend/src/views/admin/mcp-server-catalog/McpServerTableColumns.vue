@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
   Table,
@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { DynamicIcon } from '@/components/ui/dynamic-icon'
 import {
   Edit,
   Star,
@@ -19,6 +20,7 @@ import {
   ExternalLink
 } from 'lucide-vue-next'
 import type { McpServer } from './types'
+import { McpCategoriesService, type McpCategory } from '@/services/mcpCategoriesService'
 
 interface Props {
   servers: McpServer[]
@@ -28,6 +30,22 @@ interface Props {
 
 const props = defineProps<Props>()
 const { t } = useI18n()
+
+// Categories state
+const categories = ref<McpCategory[]>([])
+const categoriesLoading = ref(false)
+
+// Fetch categories on mount
+onMounted(async () => {
+  try {
+    categoriesLoading.value = true
+    categories.value = await McpCategoriesService.getCategories()
+  } catch (error) {
+    console.error('Failed to fetch categories:', error)
+  } finally {
+    categoriesLoading.value = false
+  }
+})
 
 // Format date for display
 const formatDate = (dateString: string) => {
@@ -48,18 +66,10 @@ const getStatusVariant = (status: string) => {
   }
 }
 
-// Get language badge color
-const getLanguageBadgeClass = (language: string) => {
-  const colors: Record<string, string> = {
-    typescript: 'bg-blue-100 text-blue-800',
-    javascript: 'bg-yellow-100 text-yellow-800',
-    python: 'bg-green-100 text-green-800',
-    go: 'bg-cyan-100 text-cyan-800',
-    rust: 'bg-orange-100 text-orange-800',
-    java: 'bg-red-100 text-red-800',
-    csharp: 'bg-purple-100 text-purple-800',
-  }
-  return colors[language.toLowerCase()] || 'bg-gray-100 text-gray-800'
+// Get category by ID
+const getCategoryById = (categoryId?: string): McpCategory | null => {
+  if (!categoryId) return null
+  return categories.value.find(cat => cat.id === categoryId) || null
 }
 
 // Sort servers by name for consistency
@@ -75,7 +85,7 @@ const sortedServers = computed(() => {
         <TableRow>
           <TableHead>{{ t('mcpCatalog.table.columns.name') }}</TableHead>
           <TableHead>{{ t('mcpCatalog.table.columns.description') }}</TableHead>
-          <TableHead>{{ t('mcpCatalog.table.columns.language') }}</TableHead>
+          <TableHead>{{ t('mcpCatalog.table.columns.category') }}</TableHead>
           <TableHead>{{ t('mcpCatalog.table.columns.runtime') }}</TableHead>
           <TableHead>{{ t('mcpCatalog.table.columns.status') }}</TableHead>
           <TableHead>{{ t('mcpCatalog.table.columns.featured') }}</TableHead>
@@ -140,14 +150,18 @@ const sortedServers = computed(() => {
             </div>
           </TableCell>
 
-          <!-- Language -->
+          <!-- Category -->
           <TableCell>
-            <Badge
-              variant="outline"
-              :class="getLanguageBadgeClass(server.language)"
-            >
-              {{ server.language }}
-            </Badge>
+            <div v-if="getCategoryById(server.category_id)" class="flex items-center gap-2">
+              <DynamicIcon
+                :name="getCategoryById(server.category_id)?.icon || ''"
+                class="h-4 w-4 text-muted-foreground"
+              />
+              <span class="text-sm">{{ getCategoryById(server.category_id)?.name }}</span>
+            </div>
+            <span v-else class="text-sm text-muted-foreground italic">
+              {{ t('mcpCatalog.table.noCategory') }}
+            </span>
           </TableCell>
 
           <!-- Runtime -->
