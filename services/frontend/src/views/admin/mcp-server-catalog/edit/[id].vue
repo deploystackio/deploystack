@@ -150,27 +150,7 @@ const convertServerToFormData = (server: McpServer): Partial<McpServerFormData> 
   const parsedResources = parseJsonField(server.resources, [])
   const parsedPrompts = parseJsonField(server.prompts, [])
 
-  // Parse environment variables with robust handling
   const parsedEnvironmentVariables = parseEnvironmentVariables(server.environment_variables)
-
-  // Debug logging to help troubleshoot
-  console.log('Server data conversion:', {
-    serverId: server.id,
-    rawEnvironmentVariables: server.environment_variables,
-    parsedEnvironmentVariables,
-    environmentVariablesType: typeof server.environment_variables,
-    environmentVariablesLength: parsedEnvironmentVariables.length,
-    isArray: Array.isArray(server.environment_variables),
-    rawLength: server.environment_variables?.length
-  })
-
-  // Additional debug logging for capabilities
-  console.log('Capabilities data being set:', {
-    environment_variables: parsedEnvironmentVariables,
-    tools: parsedTools,
-    resources: parsedResources,
-    prompts: parsedPrompts
-  })
 
   return {
     basic: {
