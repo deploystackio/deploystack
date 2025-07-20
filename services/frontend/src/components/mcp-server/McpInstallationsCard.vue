@@ -102,23 +102,26 @@ const sortedInstallations = computed(() => {
 })
 
 // Methods
-const getStatusVariant = (status: McpInstallation['status']) => {
-  switch (status) {
-    case 'active':
-      return 'default'
-    case 'error':
-      return 'destructive'
-    case 'installing':
-      return 'secondary'
-    case 'stopped':
-      return 'outline'
+const getStatusVariant = (installationType: string) => {
+  switch (installationType) {
+    case 'local':
+      return 'default' // Green/success for local (ready)
+    case 'cloud':
+      return 'secondary' // Gray for cloud
     default:
       return 'secondary'
   }
 }
 
-const getStatusText = (status: McpInstallation['status']) => {
-  return t(`mcpInstallations.status.${status}`)
+const getStatusText = (installationType: string) => {
+  switch (installationType) {
+    case 'local':
+      return t('mcpInstallations.status.ready')
+    case 'cloud':
+      return t('mcpInstallations.status.cloud')
+    default:
+      return t('mcpInstallations.status.unknown')
+  }
 }
 
 const formatDate = (dateString: string) => {
@@ -252,8 +255,8 @@ const handleInstallServer = () => {
                   <p class="text-sm font-medium leading-none truncate">
                     {{ installation.installation_name }}
                   </p>
-                  <Badge :variant="getStatusVariant(installation.status)" class="text-xs">
-                    {{ getStatusText(installation.status) }}
+                  <Badge :variant="getStatusVariant(installation.installation_type)" class="text-xs">
+                    {{ getStatusText(installation.installation_type) }}
                   </Badge>
                 </div>
                 <p class="text-sm text-muted-foreground truncate mb-1">
