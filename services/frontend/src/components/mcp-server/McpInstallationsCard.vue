@@ -1,13 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -34,7 +27,8 @@ import {
   Trash2,
   Server,
   Eye,
-  AlertTriangle
+  AlertTriangle,
+  PackagePlus
 } from 'lucide-vue-next'
 import type { McpInstallation } from '@/types/mcp-installations'
 import { McpInstallationService } from '@/services/mcpInstallationService'
@@ -209,101 +203,100 @@ const handleInstallServer = () => {
 </script>
 
 <template>
-  <Card>
-    <CardHeader>
-      <CardTitle>{{ t('mcpInstallations.title') }}</CardTitle>
-      <CardDescription>
-        {{ t('mcpInstallations.description') }}
-      </CardDescription>
-    </CardHeader>
-    <CardContent>
-      <!-- Empty State -->
-      <div v-if="!hasInstallations" class="text-center py-8">
-        <Server class="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-        <h3 class="text-lg font-medium mb-2">
-          {{ t('mcpInstallations.emptyState.title') }}
-        </h3>
-        <p class="text-muted-foreground mb-4">
-          {{ t('mcpInstallations.emptyState.description') }}
-        </p>
-        <Button @click="handleInstallServer" class="flex items-center gap-2">
-          <Plus class="h-4 w-4" />
-          {{ t('mcpInstallations.actions.install') }}
-        </Button>
+  <!-- Empty State -->
+  <div v-if="!hasInstallations" class="pt-20">
+    <button
+      type="button"
+      @click="handleInstallServer"
+      class="relative block w-full max-w-2xl mx-auto rounded-lg border-2 border-dashed border-muted-foreground/25 p-12 text-center hover:border-muted-foreground/40 hover:bg-muted/20 focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:outline-hidden transition-all duration-200 group"
+    >
+      <div class="mx-auto size-16 text-muted-foreground/60 group-hover:text-muted-foreground/80 transition-colors duration-200">
+        <PackagePlus class="w-full h-full" stroke-width="1.25" />
       </div>
+      <div class="mt-4 space-y-2">
+        <span class="block text-sm font-semibold text-foreground group-hover:text-foreground/90 transition-colors duration-200">
+          {{ t('mcpInstallations.emptyState.title') }}
+        </span>
+        <span class="block text-sm text-muted-foreground group-hover:text-muted-foreground/80 transition-colors duration-200">
+          {{ t('mcpInstallations.emptyState.description') }}
+        </span>
+        <div class="mt-4 inline-flex items-center gap-1.5 text-xs text-primary font-medium group-hover:text-primary/80 transition-colors duration-200">
+          <Plus class="h-3.5 w-3.5" />
+          {{ t('mcpInstallations.actions.install') }}
+        </div>
+      </div>
+    </button>
+  </div>
 
-      <!-- Installations List -->
-      <div v-else class="space-y-4">
-        <div class="grid gap-4">
-          <div
-            v-for="installation in sortedInstallations"
-            :key="installation.id"
-            class="flex items-center justify-between space-x-4 p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-          >
-            <!-- Left side: Server info -->
-            <div class="flex items-center space-x-4 flex-1 min-w-0">
-              <!-- Server Icon -->
-              <div class="flex-shrink-0">
-                <div class="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                  <Server class="h-5 w-5 text-primary" />
-                </div>
-              </div>
-
-              <!-- Server Details -->
-              <div class="flex-1 min-w-0">
-                <div class="flex items-center gap-2 mb-1">
-                  <p class="text-sm font-medium leading-none truncate">
-                    {{ installation.installation_name }}
-                  </p>
-                  <Badge :variant="getStatusVariant(installation.installation_type)" class="text-xs">
-                    {{ getStatusText(installation.installation_type) }}
-                  </Badge>
-                </div>
-                <p class="text-sm text-muted-foreground truncate mb-1">
-                  {{ installation.server.description }}
-                </p>
-                <div class="flex items-center gap-4 text-xs text-muted-foreground">
-                  <span>{{ installation.server.language }} • {{ installation.server.runtime }}</span>
-                  <span>{{ getEnvironmentVariablesCount(installation.user_environment_variables) }} env vars</span>
-                  <span>{{ formatDate(installation.created_at) }}</span>
-                </div>
-              </div>
+  <!-- Installations List -->
+  <div v-else class="space-y-4">
+    <div class="grid gap-4">
+      <div
+        v-for="installation in sortedInstallations"
+        :key="installation.id"
+        class="flex items-center justify-between space-x-4 p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+      >
+        <!-- Left side: Server info -->
+        <div class="flex items-center space-x-4 flex-1 min-w-0">
+          <!-- Server Icon -->
+          <div class="flex-shrink-0">
+            <div class="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+              <Server class="h-5 w-5 text-primary" />
             </div>
+          </div>
 
-            <!-- Right side: Actions -->
-            <div class="flex-shrink-0">
-              <DropdownMenu>
-                <DropdownMenuTrigger as-child>
-                  <Button variant="ghost" class="h-8 w-8 p-0">
-                    <span class="sr-only">{{ t('mcpInstallations.actions.openMenu') }}</span>
-                    <MoreHorizontal class="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem @click="handleView(installation.server.id)">
-                    <Eye class="h-4 w-4 mr-2" />
-                    {{ t('mcpInstallations.actions.view') }}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem @click="handleManage(installation.id)">
-                    <Settings class="h-4 w-4 mr-2" />
-                    {{ t('mcpInstallations.actions.configure') }}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    @click="handleRemove(installation.id)"
-                    class="text-destructive focus:text-destructive"
-                  >
-                    <Trash2 class="h-4 w-4 mr-2" />
-                    {{ t('mcpInstallations.actions.remove') }}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+          <!-- Server Details -->
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2 mb-1">
+              <p class="text-sm font-medium leading-none truncate">
+                {{ installation.installation_name }}
+              </p>
+              <Badge :variant="getStatusVariant(installation.installation_type)" class="text-xs">
+                {{ getStatusText(installation.installation_type) }}
+              </Badge>
+            </div>
+            <p class="text-sm text-muted-foreground truncate mb-1">
+              {{ installation.server.description }}
+            </p>
+            <div class="flex items-center gap-4 text-xs text-muted-foreground">
+              <span>{{ installation.server.language }} • {{ installation.server.runtime }}</span>
+              <span>{{ getEnvironmentVariablesCount(installation.user_environment_variables) }} env vars</span>
+              <span>{{ formatDate(installation.created_at) }}</span>
             </div>
           </div>
         </div>
 
+        <!-- Right side: Actions -->
+        <div class="flex-shrink-0">
+          <DropdownMenu>
+            <DropdownMenuTrigger as-child>
+              <Button variant="ghost" class="h-8 w-8 p-0">
+                <span class="sr-only">{{ t('mcpInstallations.actions.openMenu') }}</span>
+                <MoreHorizontal class="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem @click="handleView(installation.server.id)">
+                <Eye class="h-4 w-4 mr-2" />
+                {{ t('mcpInstallations.actions.view') }}
+              </DropdownMenuItem>
+              <DropdownMenuItem @click="handleManage(installation.id)">
+                <Settings class="h-4 w-4 mr-2" />
+                {{ t('mcpInstallations.actions.configure') }}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                @click="handleRemove(installation.id)"
+                class="text-destructive focus:text-destructive"
+              >
+                <Trash2 class="h-4 w-4 mr-2" />
+                {{ t('mcpInstallations.actions.remove') }}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
-    </CardContent>
-  </Card>
+    </div>
+  </div>
 
   <!-- Delete Confirmation Modal -->
   <AlertDialog v-model:open="showDeleteModal">
