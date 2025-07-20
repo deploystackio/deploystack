@@ -2,6 +2,11 @@ export default {
   title: 'MCP Server Installations',
   description: 'Manage your team\'s MCP server installations',
 
+  teamContext: {
+    noTeamSelected: 'Please select a team from the sidebar to view MCP server installations.',
+    switchingTeams: 'Switching teams...'
+  },
+
   emptyState: {
     title: 'No MCP servers installed',
     description: 'Get started by installing your first MCP server from our catalog'

@@ -11,7 +11,7 @@ import { useEventBus } from '@/composables/useEventBus'
 import McpInstallationsCard from '@/components/mcp-server/McpInstallationsCard.vue'
 import type { McpInstallation } from '@/types/mcp-installations'
 import { McpInstallationService } from '@/services/mcpInstallationService'
-import { TeamService } from '@/services/teamService'
+import { TeamService, type Team } from '@/services/teamService'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -23,32 +23,71 @@ const isLoading = ref(true)
 const error = ref<string | null>(null)
 const successMessage = ref<string | null>(null)
 
+// Team context using event bus storage
+const selectedTeam = ref<Team | null>(null)
+
 // Computed
 const hasInstallations = computed(() => installations.value.length > 0)
 
+// Initialize selected team from storage
+const initializeSelectedTeam = async () => {
+  try {
+    const userTeams = await TeamService.getUserTeams()
+    if (userTeams.length > 0) {
+      const storedTeamId = eventBus.getState<string>('selected_team_id')
+
+      if (storedTeamId) {
+        // Try to find the stored team in available teams
+        const storedTeam = userTeams.find(team => team.id === storedTeamId)
+        if (storedTeam) {
+          selectedTeam.value = storedTeam
+        } else {
+          // Stored team not found, fallback to default team
+          const defaultTeam = userTeams.find(team => team.is_default) || userTeams[0]
+          selectedTeam.value = defaultTeam
+          eventBus.setState('selected_team_id', defaultTeam.id)
+        }
+      } else {
+        // No stored team, use default team
+        const defaultTeam = userTeams.find(team => team.is_default) || userTeams[0]
+        selectedTeam.value = defaultTeam
+        eventBus.setState('selected_team_id', defaultTeam.id)
+      }
+    }
+  } catch (error) {
+    console.error('Error initializing selected team:', error)
+  }
+}
+
+// Handle team selection from sidebar
+const handleTeamSelected = async (data: { teamId: string; teamName: string }) => {
+  // Find the full team object with role information
+  try {
+    const userTeams = await TeamService.getUserTeams()
+    const fullTeam = userTeams.find(t => t.id === data.teamId)
+    if (fullTeam) {
+      selectedTeam.value = fullTeam
+    } else {
+      selectedTeam.value = { id: data.teamId, name: data.teamName } as Team
+    }
+
+    fetchInstallations() // Reload installations for new team
+  } catch (error) {
+    console.error('Error handling team selection:', error)
+    selectedTeam.value = { id: data.teamId, name: data.teamName } as Team
+    fetchInstallations()
+  }
+}
+
 // Methods
 const fetchInstallations = async (): Promise<void> => {
+  if (!selectedTeam.value) return
+
   try {
     isLoading.value = true
     error.value = null
 
-    // Get user's teams
-    const userTeams = await TeamService.getUserTeams()
-
-    // Fetch installations from all teams
-    const allInstallations: McpInstallation[] = []
-
-    for (const team of userTeams) {
-      try {
-        const teamInstallations = await McpInstallationService.getTeamInstallations(team.id)
-        allInstallations.push(...teamInstallations)
-      } catch {
-        // Continue with other teams if one fails
-        continue
-      }
-    }
-
-    installations.value = allInstallations
+    installations.value = await McpInstallationService.getTeamInstallations(selectedTeam.value.id)
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'An unknown error occurred'
     installations.value = []
@@ -95,14 +134,24 @@ const handleInstallationsUpdate = () => {
 
 // Lifecycle
 onMounted(async () => {
-  await fetchInstallations()
+  // Initialize team context first
+  await initializeSelectedTeam()
+
+  // Initial fetch after team is set
+  if (selectedTeam.value) {
+    await fetchInstallations()
+  }
+
+  // Listen for team selection events from sidebar
+  eventBus.on('team-selected', handleTeamSelected)
 
   // Listen for installation updates
   eventBus.on('mcp-installations-updated', handleInstallationsUpdate)
 })
 
 onUnmounted(() => {
-  // Clean up event listeners
+  // Clean up event listeners to prevent memory leaks
+  eventBus.off('team-selected', handleTeamSelected)
   eventBus.off('mcp-installations-updated', handleInstallationsUpdate)
 })
 </script>
@@ -116,6 +165,7 @@ onUnmounted(() => {
           <p class="text-muted-foreground">{{ t('mcpInstallations.description') }}</p>
         </div>
         <Button
+          v-if="selectedTeam"
           @click="handleInstallServer"
           class="flex items-center gap-2"
         >
@@ -130,8 +180,13 @@ onUnmounted(() => {
         <AlertDescription>{{ successMessage }}</AlertDescription>
       </Alert>
 
+      <!-- No team selected state -->
+      <div v-if="!selectedTeam" class="text-center py-12">
+        <p class="text-muted-foreground">{{ t('mcpInstallations.teamContext.noTeamSelected') }}</p>
+      </div>
+
       <!-- Loading State -->
-      <div v-if="isLoading" class="text-muted-foreground">
+      <div v-else-if="isLoading" class="text-muted-foreground">
         {{ t('mcpInstallations.table.loading') }}
       </div>
 
