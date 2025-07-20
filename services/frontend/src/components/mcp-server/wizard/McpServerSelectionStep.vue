@@ -13,6 +13,7 @@ const modelValue = defineModel<string>({ required: true })
 const emit = defineEmits<{
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   serverSelected: [serverData: any]
+  nextStep: []
 }>()
 
 const { t } = useI18n()
@@ -64,6 +65,9 @@ const handleInstallClick = (server: any) => {
 
   // Emit server data to parent
   emit('serverSelected', server)
+  
+  // Automatically advance to next step
+  emit('nextStep')
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -75,18 +79,7 @@ const performSearch = () => {
   searchQuery.value = searchTerm.value
 }
 
-const getStatusClasses = (status: string) => {
-  switch (status?.toLowerCase()) {
-    case 'active':
-      return 'text-green-700 bg-green-50 ring-green-600/20'
-    case 'deprecated':
-      return 'text-red-700 bg-red-50 ring-red-600/20'
-    case 'beta':
-      return 'text-yellow-800 bg-yellow-50 ring-yellow-600/20'
-    default:
-      return 'text-gray-600 bg-gray-50 ring-gray-500/10'
-  }
-}
+
 
 // Lifecycle
 onMounted(() => {
@@ -156,61 +149,59 @@ onMounted(() => {
     </div>
 
     <!-- Server List (only show when there's a search query) -->
-    <div v-else-if="searchQuery.trim() && filteredServers.length > 0">
-      <ul role="list" class="divide-y divide-gray-100">
-        <li
-          v-for="server in filteredServers"
-          :key="server.id"
-          class="flex items-center justify-between gap-x-6 py-5"
-        >
-          <div class="min-w-0">
-            <div class="flex items-start gap-x-3">
-              <p class="text-sm/6 font-semibold text-gray-900">{{ server.name }}</p>
-              <p :class="[getStatusClasses(server.status || 'Active'), 'mt-0.5 rounded-md px-1.5 py-0.5 text-xs font-medium whitespace-nowrap ring-1 ring-inset']">
-                {{ server.status || 'Active' }}
-              </p>
-            </div>
-            <div class="mt-1 flex items-center gap-x-2 text-xs/5 text-gray-500">
-              <p class="truncate">{{ server.description }}</p>
-              <svg v-if="server.author_name" viewBox="0 0 2 2" class="size-0.5 fill-current">
-                <circle cx="1" cy="1" r="1" />
-              </svg>
-              <p v-if="server.author_name" class="whitespace-nowrap">{{ server.author_name }}</p>
-              <svg v-if="server.language" viewBox="0 0 2 2" class="size-0.5 fill-current">
-                <circle cx="1" cy="1" r="1" />
-              </svg>
-              <p v-if="server.language" class="whitespace-nowrap">{{ server.language }}</p>
-            </div>
+    <div v-else-if="searchQuery.trim() && filteredServers.length > 0" class="space-y-4">
+      <div
+        v-for="server in filteredServers"
+        :key="server.id"
+        class="bg-gray-50 px-4 py-6 sm:rounded-lg sm:p-6 md:flex md:items-center md:justify-between md:space-x-6 lg:space-x-8"
+      >
+        <dl class="flex-auto divide-y divide-gray-200 text-sm text-gray-600 md:grid md:grid-cols-3 md:gap-x-6 md:divide-y-0 lg:w-1/2 lg:flex-none lg:gap-x-8">
+          <div class="max-md:flex max-md:justify-between max-md:py-4 max-md:first:pt-0 max-md:last:pb-0">
+            <dt class="font-medium text-gray-900">{{ t('mcpInstallations.wizard.server.name') }}</dt>
+            <dd class="md:mt-1">{{ server.name }}</dd>
           </div>
-
-          <!-- Button Group -->
-          <div class="flex flex-none items-center gap-x-4">
-            <span class="isolate inline-flex rounded-md shadow-xs">
-              <button
-                type="button"
-                @click="handleDetailsClick(server)"
-                class="relative inline-flex items-center gap-x-1.5 rounded-l-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 ring-1 ring-gray-300 ring-inset hover:bg-gray-50 focus:z-10"
-              >
-                <Info class="-ml-0.5 size-4 text-gray-400" aria-hidden="true" />
-                {{ t('mcpInstallations.wizard.server.details') }}
-              </button>
-              <button
-                type="button"
-                @click="handleInstallClick(server)"
-                :class="[
-                  'relative -ml-px inline-flex items-center gap-x-1.5 rounded-r-md px-3 py-2 text-sm font-semibold ring-1 ring-inset focus:z-10',
-                  selectedServerId === server.id
-                    ? 'bg-blue-600 text-white ring-blue-600 hover:bg-blue-700'
-                    : 'bg-white text-gray-900 ring-gray-300 hover:bg-gray-50'
-                ]"
-              >
-                <Download class="-ml-0.5 size-4" :class="selectedServerId === server.id ? 'text-white' : 'text-gray-400'" aria-hidden="true" />
-                {{ t('mcpInstallations.wizard.server.install') }}
-              </button>
-            </span>
+          <div class="max-md:flex max-md:justify-between max-md:py-4 max-md:first:pt-0 max-md:last:pb-0">
+            <dt class="font-medium text-gray-900">{{ t('mcpInstallations.wizard.server.author') }}</dt>
+            <dd class="md:mt-1">{{ server.author_name || t('mcpInstallations.wizard.server.unknownAuthor') }}</dd>
           </div>
-        </li>
-      </ul>
+          <div class="max-md:flex max-md:justify-between max-md:py-4 max-md:first:pt-0 max-md:last:pb-0">
+            <dt class="font-medium text-gray-900">{{ t('mcpInstallations.wizard.server.language') }}</dt>
+            <dd class="md:mt-1">{{ server.language || t('mcpInstallations.wizard.server.unknownLanguage') }}</dd>
+          </div>
+        </dl>
+        
+        <!-- Description -->
+        <div v-if="server.description" class="mt-4 md:mt-0 md:ml-6 lg:w-1/2">
+          <p class="text-sm text-gray-600">{{ server.description }}</p>
+        </div>
+        
+        <!-- Action Buttons -->
+        <div class="mt-6 space-y-4 sm:flex sm:space-y-0 sm:space-x-4 md:mt-0">
+          <Button
+            variant="outline"
+            @click="handleDetailsClick(server)"
+            class="flex w-full items-center justify-center border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-xs hover:bg-gray-50 md:w-auto"
+          >
+            <Info class="h-4 w-4 mr-2" />
+            {{ t('mcpInstallations.wizard.server.details') }}
+            <span class="sr-only">{{ server.name }}</span>
+          </Button>
+          <Button
+            @click="handleInstallClick(server)"
+            :variant="selectedServerId === server.id ? 'default' : 'outline'"
+            :class="[
+              'flex w-full items-center justify-center px-4 py-2 text-sm font-medium shadow-xs md:w-auto',
+              selectedServerId === server.id
+                ? 'border border-indigo-600 bg-indigo-600 text-white hover:bg-indigo-700'
+                : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+            ]"
+          >
+            <Download class="h-4 w-4 mr-2" />
+            {{ t('mcpInstallations.wizard.server.install') }}
+            <span class="sr-only">{{ server.name }}</span>
+          </Button>
+        </div>
+      </div>
     </div>
 
     <!-- No Results -->

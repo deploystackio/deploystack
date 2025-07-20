@@ -313,6 +313,7 @@ onMounted(async () => {
         v-if="currentStep === 0"
         v-model="formData.server.server_id"
         @server-selected="handleServerSelected"
+        @next-step="nextStep"
       />
 
       <!-- Environment Variables Step -->

@@ -74,7 +74,12 @@ export default {
       noServersAvailable: 'No MCP servers are currently available',
       requiredEnvVars: 'Required Environment Variables',
       details: 'Details',
-      install: 'Install'
+      install: 'Install',
+      name: 'Server Name',
+      author: 'Author',
+      language: 'Language',
+      unknownAuthor: 'Unknown Author',
+      unknownLanguage: 'Not Specified'
     },
 
     environment: {
