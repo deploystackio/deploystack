@@ -2,15 +2,8 @@
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Button } from '@/components/ui/button'
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from '@/components/ui/breadcrumb'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { ProgressBars } from '@/components/ui/progress-bars'
 import { FileText, Github, Settings, Loader2 } from 'lucide-vue-next'
 import { McpCatalogService } from '@/services/mcpCatalogService'
 import { useEventBus } from '@/composables/useEventBus'
@@ -88,6 +81,67 @@ const steps = [
     component: BasicInfoStep
   }
 ]
+
+// Progress steps for ProgressBars component
+const progressSteps = computed(() => {
+  return steps.map((step, index) => {
+    let status: 'completed' | 'current' | 'pending' | 'error' = 'pending'
+    
+    if (index < currentStep.value) {
+      status = 'completed'
+    } else if (index === currentStep.value) {
+      status = 'current'
+    }
+    
+    // Check for errors
+    if (index === 0 && githubFetchError.value) {
+      status = 'error'
+    }
+    
+    return {
+      id: step.key,
+      label: step.label,
+      status,
+      clickable: index < currentStep.value // Only completed steps are clickable
+    }
+  })
+})
+
+// Calculate progress percentage
+const progressPercentage = computed(() => {
+  // Progress should match visual step positions:
+  // Step 1 (index 0): 0% progress
+  // Step 2 (index 1): 50% progress (middle)
+  // Step 3 (index 2): 100% progress (right)
+  if (currentStep.value === 0) return 0
+  if (currentStep.value === 1) return 50
+  if (currentStep.value === 2) return 100
+  return 0
+})
+
+// Progress title based on current step
+const progressTitle = computed(() => {
+  if (isSubmitting.value) {
+    return t('mcpCatalog.form.navigation.creating')
+  }
+  if (isFetchingGitHub.value) {
+    return t('mcpCatalog.form.navigation.fetching')
+  }
+  if (githubFetchError.value) {
+    return t('mcpCatalog.form.errors.githubFetch')
+  }
+  
+  const currentStepData = steps[currentStep.value]
+  return `${currentStepData.label} - ${t('mcpCatalog.form.steps.configuring')}`
+})
+
+// Progress variant based on state
+const progressVariant = computed(() => {
+  if (githubFetchError.value || submitError.value) return 'destructive'
+  if (isSubmitting.value) return 'default' // Keep default while submitting
+  // Only show success after actual completion (would need to be handled by parent component)
+  return 'default'
+})
 
 // State
 const currentStep = ref(0)
@@ -198,6 +252,13 @@ const goToStep = (stepIndex: number) => {
       to: stepIndex,
       stepKey: steps[stepIndex].key
     })
+  }
+}
+
+// Handle step click from ProgressBars
+const handleStepClick = (step: any, index: number) => {
+  if (step.clickable) {
+    goToStep(index)
   }
 }
 
@@ -335,39 +396,17 @@ onUnmounted(() => {
 
 <template>
   <div class="space-y-6">
-    <!-- Breadcrumb Navigation -->
-    <Breadcrumb>
-      <BreadcrumbList>
-        <template v-for="(step, index) in steps" :key="index">
-          <BreadcrumbItem>
-            <!-- Current Step -->
-            <BreadcrumbPage v-if="index === currentStep" class="flex items-center gap-2">
-              <component :is="step.icon" class="h-4 w-4" />
-              <span>{{ step.label }}</span>
-            </BreadcrumbPage>
-
-            <!-- Completed Steps (clickable) -->
-            <BreadcrumbLink
-              v-else-if="index < currentStep"
-              @click="goToStep(index)"
-              class="flex items-center gap-2 cursor-pointer hover:text-foreground"
-            >
-              <component :is="step.icon" class="h-4 w-4" />
-              <span>{{ step.label }}</span>
-            </BreadcrumbLink>
-
-            <!-- Future Steps (disabled) -->
-            <span v-else class="flex items-center gap-2 text-muted-foreground">
-              <component :is="step.icon" class="h-4 w-4" />
-              <span>{{ step.label }}</span>
-            </span>
-          </BreadcrumbItem>
-
-          <!-- Separator -->
-          <BreadcrumbSeparator v-if="index < steps.length - 1" />
-        </template>
-      </BreadcrumbList>
-    </Breadcrumb>
+    <!-- Progress Bar Navigation -->
+    <ProgressBars
+      :steps="progressSteps"
+      :progress="progressPercentage"
+      :title="progressTitle"
+      :variant="progressVariant"
+      size="md"
+      interactive
+      styled
+      @step-click="handleStepClick"
+    />
 
     <!-- Error Message -->
     <Alert v-if="submitError" variant="destructive">

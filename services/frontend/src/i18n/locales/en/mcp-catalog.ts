@@ -48,10 +48,15 @@ export default {
       github: 'GitHub Repository',
       claudeConfig: 'Claude Desktop Config',
       basic: 'Basic Info',
+      configuring: 'Step in progress',
       repository: 'Repository',
       technical: 'Technical',
       capabilities: 'Capabilities',
       review: 'Review'
+    },
+
+    errors: {
+      githubFetch: 'Failed to fetch repository information'
     },
 
     github: {
