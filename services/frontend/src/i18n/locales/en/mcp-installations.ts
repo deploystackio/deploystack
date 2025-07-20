@@ -92,6 +92,7 @@ export default {
       install: 'Install',
       name: 'Server Name',
       author: 'Author',
+      category: 'Category',
       language: 'Language',
       unknownAuthor: 'Unknown Author',
       unknownLanguage: 'Not Specified'
@@ -192,6 +193,7 @@ export default {
       name: 'Name',
       description: 'Description',
       longDescription: 'Long Description',
+      category: 'Category',
       author: 'Author Information',
       technical: 'Technical Specifications',
       links: 'Repository Links',

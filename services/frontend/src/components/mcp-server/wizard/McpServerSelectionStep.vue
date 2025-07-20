@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router'
 import { Loader2, Info, Download, ChevronDown, PackagePlus, AlertTriangle } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import CategoryDisplay from '@/components/mcp-server/CategoryDisplay.vue'
 import { McpCatalogService } from '@/services/mcpCatalogService'
 import { McpCategoriesService } from '@/services/mcpCategoriesService'
 import type { McpServerSearchParams, McpServerSearchResponse } from '@/types/mcp-catalog'
@@ -292,8 +293,15 @@ onMounted(() => {
             <dd class="md:mt-1">{{ server.author_name || t('mcpInstallations.wizard.server.unknownAuthor') }}</dd>
           </div>
           <div class="max-md:flex max-md:justify-between max-md:py-4 max-md:first:pt-0 max-md:last:pb-0">
-            <dt class="font-medium text-gray-900">{{ t('mcpInstallations.wizard.server.language') }}</dt>
-            <dd class="md:mt-1">{{ server.language || t('mcpInstallations.wizard.server.unknownLanguage') }}</dd>
+            <dt class="font-medium text-gray-900">{{ t('mcpInstallations.wizard.server.category') }}</dt>
+            <dd class="md:mt-1">
+              <CategoryDisplay
+                :category-id="server.category_id"
+                :show-not-provided="true"
+                text-class="text-sm"
+                icon-class="h-4 w-4 text-gray-600"
+              />
+            </dd>
           </div>
         </dl>
 
