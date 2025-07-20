@@ -157,6 +157,19 @@ const nextStep = () => {
 const previousStep = () => {
   if (canGoPrevious.value) {
     currentStep.value--
+    
+    // Reset form data when going back to previous steps
+    if (currentStep.value === 0) {
+      // Going back to server selection - clear server data
+      formData.value.server.server_id = ''
+      formData.value.server.server_data = undefined
+      formData.value.environment.user_environment_variables = {}
+      environmentStepTouched.value = false
+    } else if (currentStep.value === 1) {
+      // Going back to environment step - clear platform data
+      formData.value.platform.installation_type = 'local'
+      formData.value.platform.platform_config = undefined
+    }
   }
 }
 
