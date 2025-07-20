@@ -3,14 +3,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Button } from '@/components/ui/button'
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from '@/components/ui/breadcrumb'
+import { ProgressBars } from '@/components/ui/progress-bars'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Server, Settings, Cloud, Loader2 } from 'lucide-vue-next'
 import { McpInstallationService } from '@/services/mcpInstallationService'
@@ -65,6 +58,38 @@ const steps = [
     component: PlatformSelectionStep
   }
 ]
+
+// Progress bar steps - convert steps to ProgressBars format
+const progressSteps = computed(() => {
+  return steps.map((step, index) => {
+    let status: 'completed' | 'current' | 'pending' = 'pending'
+    
+    if (index < currentStep.value) {
+      status = 'completed'
+    } else if (index === currentStep.value) {
+      status = 'current'
+    }
+    
+    return {
+      id: step.key,
+      label: step.label,
+      status,
+      clickable: index < currentStep.value // Only allow clicking on completed steps
+    }
+  })
+})
+
+// Calculate progress percentage
+const progressPercentage = computed(() => {
+  return (currentStep.value / (steps.length - 1)) * 100
+})
+
+// Handle step click from progress bar
+const handleStepClick = (step: any, index: number) => {
+  if (index < currentStep.value) {
+    goToStep(index)
+  }
+}
 
 // State
 const currentStep = ref(0)
@@ -257,39 +282,15 @@ onMounted(async () => {
 
 <template>
   <div class="space-y-6">
-    <!-- Breadcrumb Navigation -->
-    <Breadcrumb>
-      <BreadcrumbList>
-        <template v-for="(step, index) in steps" :key="index">
-          <BreadcrumbItem>
-            <!-- Current Step -->
-            <BreadcrumbPage v-if="index === currentStep" class="flex items-center gap-2">
-              <component :is="step.icon" class="h-4 w-4" />
-              <span>{{ step.label }}</span>
-            </BreadcrumbPage>
-
-            <!-- Completed Steps (clickable) -->
-            <BreadcrumbLink
-              v-else-if="index < currentStep"
-              @click="goToStep(index)"
-              class="flex items-center gap-2 cursor-pointer hover:text-foreground"
-            >
-              <component :is="step.icon" class="h-4 w-4" />
-              <span>{{ step.label }}</span>
-            </BreadcrumbLink>
-
-            <!-- Future Steps (disabled) -->
-            <span v-else class="flex items-center gap-2 text-muted-foreground">
-              <component :is="step.icon" class="h-4 w-4" />
-              <span>{{ step.label }}</span>
-            </span>
-          </BreadcrumbItem>
-
-          <!-- Separator -->
-          <BreadcrumbSeparator v-if="index < steps.length - 1" />
-        </template>
-      </BreadcrumbList>
-    </Breadcrumb>
+    <!-- Progress Navigation -->
+    <ProgressBars
+      :steps="progressSteps"
+      :progress="progressPercentage"
+      :title="t('mcpInstallations.wizard.title')"
+      interactive
+      styled
+      @step-click="handleStepClick"
+    />
 
     <!-- Error Message -->
     <Alert v-if="submitError" variant="destructive">
