@@ -12170,6 +12170,11 @@
           "MCP Categories"
         ],
         "description": "Retrieve all available MCP server categories for organization. No Content-Type header required for this GET request.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
         "responses": {
           "200": {
             "description": "Default Response",
@@ -12235,6 +12240,62 @@
                     "required": [
                       "success",
                       "data"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "components": {}
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "schema": {
+                    "description": "Unauthorized - Authentication required",
+                    "type": "object",
+                    "properties": {
+                      "success": {
+                        "default": false,
+                        "type": "boolean"
+                      },
+                      "error": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "success",
+                      "error"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "components": {}
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "schema": {
+                    "description": "Forbidden - Insufficient permissions",
+                    "type": "object",
+                    "properties": {
+                      "success": {
+                        "default": false,
+                        "type": "boolean"
+                      },
+                      "error": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "success",
+                      "error"
                     ],
                     "additionalProperties": false
                   },

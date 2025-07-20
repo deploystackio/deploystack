@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { createSchema } from 'zod-openapi';
 import { McpCategoriesService } from '../../../services/mcpCategoriesService';
 import { getDb } from '../../../db';
+import { requirePermission } from '../../../middleware/roleMiddleware';
 
 // Response schema
 const categorySchema = z.object({
@@ -30,11 +31,15 @@ export default async function listCategories(server: FastifyInstance) {
       tags: ['MCP Categories'],
       summary: 'List all MCP server categories',
       description: 'Retrieve all available MCP server categories for organization. No Content-Type header required for this GET request.',
+      security: [{ cookieAuth: [] }],
       response: {
         200: createSchema(listCategoriesResponseSchema),
+        401: createSchema(errorResponseSchema.describe('Unauthorized - Authentication required')),
+        403: createSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions')),
         500: createSchema(errorResponseSchema)
       }
-    }
+    },
+    preValidation: requirePermission('mcp.categories.view')
   }, async (request, reply) => {
     try {
       const db = getDb();
