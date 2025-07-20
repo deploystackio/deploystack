@@ -51,6 +51,7 @@ export const ROLE_DEFINITIONS = {
     'teams.delete',
     'team.members.view',
     'mcp.servers.read',
+    'mcp.categories.view',
   ],
   team_admin: [
     'teams.view',
