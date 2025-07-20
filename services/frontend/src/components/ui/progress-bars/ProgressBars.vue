@@ -158,15 +158,14 @@ const stepVariants = cva(
 
 const clampedProgress = computed(() => Math.max(0, Math.min(100, props.progress)))
 
-const gridCols = computed(() => {
-  const stepCount = props.steps.length
-  if (stepCount <= 2) return 'grid-cols-2'
-  if (stepCount <= 3) return 'grid-cols-3'
-  if (stepCount <= 4) return 'grid-cols-4'
-  if (stepCount <= 5) return 'grid-cols-5'
-  if (stepCount <= 6) return 'grid-cols-6'
-  return 'grid-cols-6' // Max 6 columns for readability
-})
+// Calculate the exact position percentage for each step
+function getStepPosition(index: number) {
+  const totalSteps = props.steps.length
+  if (totalSteps <= 1) return 50 // Center if only one step
+  
+  // Calculate position as percentage (0% to 100%)
+  return (index / (totalSteps - 1)) * 100
+}
 
 function handleStepClick(step: ProgressStep, index: number) {
   if (props.interactive && step.clickable) {
@@ -174,12 +173,14 @@ function handleStepClick(step: ProgressStep, index: number) {
   }
 }
 
-function getStepAlignment(index: number) {
-  const totalSteps = props.steps.length
-  if (totalSteps <= 1) return 'text-center'
-  if (index === 0) return 'text-left'
-  if (index === totalSteps - 1) return 'text-right'
-  return 'text-center'
+// Get transform style to center text on the exact position
+function getStepTransform(index: number) {
+  const position = getStepPosition(index)
+  
+  // Adjust transform to center the text on the position
+  if (position === 0) return 'translateX(0%)' // First step: no adjustment needed
+  if (position === 100) return 'translateX(-100%)' // Last step: move completely left
+  return 'translateX(-50%)' // Middle steps: center on position
 }
 </script>
 
@@ -215,10 +216,7 @@ function getStepAlignment(index: number) {
       <!-- Steps -->
       <div
         v-if="showSteps && steps.length > 0"
-        :class="[
-          'hidden sm:grid gap-2 text-sm font-medium',
-          gridCols
-        ]"
+        class="hidden sm:block relative w-full pt-2"
       >
         <button
           v-for="(step, index) in steps"
@@ -230,8 +228,12 @@ function getStepAlignment(index: number) {
               status: step.status,
               clickable: interactive && step.clickable
             })),
-            getStepAlignment(index)
+            'absolute text-sm font-medium whitespace-nowrap'
           ]"
+          :style="{
+            left: `${getStepPosition(index)}%`,
+            transform: getStepTransform(index)
+          }"
           @click="handleStepClick(step, index)"
         >
           {{ step.label }}

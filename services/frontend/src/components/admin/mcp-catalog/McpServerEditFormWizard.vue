@@ -79,18 +79,18 @@ const steps = [
 const progressSteps = computed(() => {
   return steps.map((step, index) => {
     let status: 'completed' | 'current' | 'pending' | 'error' = 'pending'
-    
+
     if (index < currentStep.value) {
       status = 'completed'
     } else if (index === currentStep.value) {
       status = 'current'
     }
-    
+
     // Check for errors
     if (index === 0 && githubFetchError.value) {
       status = 'error'
     }
-    
+
     return {
       id: step.key,
       label: step.label,
@@ -106,7 +106,7 @@ const progressPercentage = computed(() => {
   // For 5 steps: 0%, 25%, 50%, 75%, 100%
   const totalSteps = steps.length
   if (totalSteps <= 1) return 0
-  
+
   const progressIncrement = 100 / (totalSteps - 1)
   return currentStep.value * progressIncrement
 })
@@ -114,7 +114,7 @@ const progressPercentage = computed(() => {
 // Progress title based on current step
 const progressTitle = computed(() => {
   if (isSubmitting.value) {
-    return props.mode === 'edit' 
+    return props.mode === 'edit'
       ? t('mcpCatalog.form.navigation.updating')
       : t('mcpCatalog.form.navigation.creating')
   }
@@ -124,7 +124,7 @@ const progressTitle = computed(() => {
   if (githubFetchError.value) {
     return t('mcpCatalog.form.errors.githubFetch')
   }
-  
+
   const currentStepData = steps[currentStep.value]
   return `${currentStepData.label} - ${t('mcpCatalog.form.steps.configuring')}`
 })
@@ -250,6 +250,7 @@ const goToStep = (stepIndex: number) => {
 }
 
 // Handle step click from ProgressBars
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const handleStepClick = (step: any, index: number) => {
   if (step.clickable) {
     goToStep(index)

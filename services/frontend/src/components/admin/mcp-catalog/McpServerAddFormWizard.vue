@@ -86,18 +86,18 @@ const steps = [
 const progressSteps = computed(() => {
   return steps.map((step, index) => {
     let status: 'completed' | 'current' | 'pending' | 'error' = 'pending'
-    
+
     if (index < currentStep.value) {
       status = 'completed'
     } else if (index === currentStep.value) {
       status = 'current'
     }
-    
+
     // Check for errors
     if (index === 0 && githubFetchError.value) {
       status = 'error'
     }
-    
+
     return {
       id: step.key,
       label: step.label,
@@ -130,7 +130,7 @@ const progressTitle = computed(() => {
   if (githubFetchError.value) {
     return t('mcpCatalog.form.errors.githubFetch')
   }
-  
+
   const currentStepData = steps[currentStep.value]
   return `${currentStepData.label} - ${t('mcpCatalog.form.steps.configuring')}`
 })
@@ -256,6 +256,7 @@ const goToStep = (stepIndex: number) => {
 }
 
 // Handle step click from ProgressBars
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const handleStepClick = (step: any, index: number) => {
   if (step.clickable) {
     goToStep(index)
