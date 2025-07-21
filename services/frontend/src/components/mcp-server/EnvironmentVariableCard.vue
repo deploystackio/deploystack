@@ -169,154 +169,168 @@ watch(() => environmentVariables.value, (newVariables) => {
 </script>
 
 <template>
-  <div class="space-y-6">
-    <!-- No Environment Variables -->
-    <div v-if="!environmentVariables.length" class="text-center py-8">
-      <Settings class="h-12 w-12 text-gray-400 mx-auto mb-4" />
-      <h3 class="text-lg font-medium text-gray-900 mb-2">
-        {{ t('mcpInstallations.wizard.environment.noVariables') }}
-      </h3>
-      <p class="text-gray-600">
-        {{ t('mcpInstallations.wizard.environment.noVariablesDescription') }}
-      </p>
-    </div>
-
-    <!-- Environment Variables Form -->
-    <div v-else class="space-y-6">
-      <!-- Server Info -->
-      <Card v-if="serverData">
-        <CardHeader>
-          <CardTitle class="flex items-center gap-2">
-            <Settings class="h-5 w-5" />
-            {{ serverData.name }}
-          </CardTitle>
-          <CardDescription>
-            {{ t('mcpInstallations.wizard.environment.configureFor', { name: serverData.name }) }}
-          </CardDescription>
-        </CardHeader>
-      </Card>
-
-
-      <!-- Required Variables -->
-      <div v-if="hasRequiredVariables" class="space-y-4">
-        <h3 class="text-lg font-medium text-gray-900">
-          {{ t('mcpInstallations.wizard.environment.requiredVariables') }}
-        </h3>
-
-        <div class="space-y-4">
-          <div
-            v-for="env in requiredVariables"
-            :key="env.name"
-            class="space-y-2"
-          >
-            <Label :for="env.name" class="text-sm font-medium">
-              {{ env.name }}
-            </Label>
-
-            <!-- Textarea for long values -->
-            <div v-if="isTextarea(env)" class="relative">
-              <Textarea
-                :id="env.name"
-                :value="modelValue[env.name] || ''"
-                @input="updateValue(env.name, ($event.target as HTMLTextAreaElement).value)"
-                :placeholder="env.placeholder || `Enter ${env.name}`"
-                class="min-h-[100px]"
-                :class="{ 'border-red-500': env.required && isPlaceholderValue(modelValue[env.name] || '', env) }"
-              />
-            </div>
-
-            <!-- Regular input -->
-            <div v-else class="relative">
-              <Input
-                :id="env.name"
-                :type="getInputType(env)"
-                :value="modelValue[env.name] || ''"
-                @input="updateValue(env.name, ($event.target as HTMLInputElement).value)"
-                :placeholder="env.placeholder || `Enter ${env.name}`"
-                :class="{ 'border-red-500': env.required && isPlaceholderValue(modelValue[env.name] || '', env) }"
-              />
-
-              <!-- Password toggle -->
-              <Button
-                v-if="env.type === 'password'"
-                type="button"
-                variant="ghost"
-                size="sm"
-                class="absolute right-2 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
-                @click="togglePasswordVisibility(env.name)"
-              >
-                <Eye v-if="!showPasswords[env.name]" class="h-4 w-4" />
-                <EyeOff v-else class="h-4 w-4" />
-              </Button>
-            </div>
-
-            <!-- Validation message -->
-            <p v-if="env.validation" class="text-xs text-gray-600">
-              {{ env.validation }}
+  <div class="bg-muted/50 sm:rounded-lg">
+    <div class="py-16 sm:py-24">
+      <div class="mx-auto max-w-7xl sm:px-2 lg:px-8">
+        <div class="mx-auto max-w-2xl px-4 lg:max-w-4xl lg:px-0">
+          <!-- No Environment Variables -->
+          <div v-if="!environmentVariables.length" class="text-center py-8">
+            <Settings class="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h3 class="text-lg font-medium text-gray-900 mb-2">
+              {{ t('mcpInstallations.wizard.environment.noVariables') }}
+            </h3>
+            <p class="text-gray-600">
+              {{ t('mcpInstallations.wizard.environment.noVariablesDescription') }}
             </p>
           </div>
         </div>
       </div>
 
-      <!-- Optional Variables -->
-      <div v-if="hasOptionalVariables" class="space-y-4">
-        <h3 class="text-lg font-medium text-gray-900">
-          {{ t('mcpInstallations.wizard.environment.optionalVariables') }}
-        </h3>
+      <!-- Environment Variables Form -->
+      <div v-if="environmentVariables.length">
+        <div class="mx-auto max-w-7xl sm:px-2 lg:px-8">
+          <div class="mx-auto max-w-2xl space-y-8 sm:px-4 lg:max-w-4xl lg:px-0">
+            <!-- Server Info -->
+            <Card v-if="serverData" class="border-t border-b border-gray-200 bg-white shadow-xs sm:rounded-lg sm:border">
+              <CardHeader>
+                <CardTitle class="flex items-center gap-2">
+                  <Settings class="h-5 w-5" />
+                  {{ serverData.name }}
+                </CardTitle>
+                <CardDescription>
+                  {{ t('mcpInstallations.wizard.environment.configureFor', { name: serverData.name }) }}
+                </CardDescription>
+              </CardHeader>
+            </Card>
 
-        <div class="space-y-4">
-          <div
-            v-for="env in optionalVariables"
-            :key="env.name"
-            class="space-y-2"
-          >
-            <Label :for="env.name" class="text-sm font-medium">
-              {{ env.name }}
-            </Label>
+            <!-- Required Variables -->
+            <div v-if="hasRequiredVariables" class="border-t border-b border-gray-200 bg-white shadow-xs sm:rounded-lg sm:border">
+              <div class="p-4 sm:p-6">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">
+                  {{ t('mcpInstallations.wizard.environment.requiredVariables') }}
+                </h3>
 
-            <!-- Textarea for long values -->
-            <div v-if="isTextarea(env)" class="relative">
-              <Textarea
-                :id="env.name"
-                :value="modelValue[env.name] || ''"
-                @input="updateValue(env.name, ($event.target as HTMLTextAreaElement).value)"
-                :placeholder="env.placeholder || `Enter ${env.name} (optional)`"
-                class="min-h-[100px]"
-              />
+                <div class="space-y-4">
+                  <div
+                    v-for="env in requiredVariables"
+                    :key="env.name"
+                    class="space-y-2"
+                  >
+                    <Label :for="env.name" class="text-sm font-medium">
+                      {{ env.name }}
+                    </Label>
+
+                    <!-- Textarea for long values -->
+                    <div v-if="isTextarea(env)" class="relative">
+                      <Textarea
+                        :id="env.name"
+                        :value="modelValue[env.name] || ''"
+                        @input="updateValue(env.name, ($event.target as HTMLTextAreaElement).value)"
+                        :placeholder="env.placeholder || `Enter ${env.name}`"
+                        class="min-h-[100px] bg-white"
+                        :class="{ 'border-red-500': env.required && isPlaceholderValue(modelValue[env.name] || '', env) }"
+                      />
+                    </div>
+
+                    <!-- Regular input -->
+                    <div v-else class="relative">
+                      <Input
+                        :id="env.name"
+                        :type="getInputType(env)"
+                        :value="modelValue[env.name] || ''"
+                        @input="updateValue(env.name, ($event.target as HTMLInputElement).value)"
+                        :placeholder="env.placeholder || `Enter ${env.name}`"
+                        class="bg-white"
+                        :class="{ 'border-red-500': env.required && isPlaceholderValue(modelValue[env.name] || '', env) }"
+                      />
+
+                      <!-- Password toggle -->
+                      <Button
+                        v-if="env.type === 'password'"
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        class="absolute right-2 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
+                        @click="togglePasswordVisibility(env.name)"
+                      >
+                        <Eye v-if="!showPasswords[env.name]" class="h-4 w-4" />
+                        <EyeOff v-else class="h-4 w-4" />
+                      </Button>
+                    </div>
+
+                    <!-- Validation message -->
+                    <p v-if="env.validation" class="text-xs text-gray-600">
+                      {{ env.validation }}
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <!-- Regular input -->
-            <div v-else class="relative">
-              <Input
-                :id="env.name"
-                :type="getInputType(env)"
-                :value="modelValue[env.name] || ''"
-                @input="updateValue(env.name, ($event.target as HTMLInputElement).value)"
-                :placeholder="env.placeholder || `Enter ${env.name} (optional)`"
-              />
+            <!-- Optional Variables -->
+            <div v-if="hasOptionalVariables" class="border-t border-b border-gray-200 bg-white shadow-xs sm:rounded-lg sm:border">
+              <div class="p-4 sm:p-6">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">
+                  {{ t('mcpInstallations.wizard.environment.optionalVariables') }}
+                </h3>
 
-              <!-- Password toggle -->
-              <Button
-                v-if="env.type === 'password'"
-                type="button"
-                variant="ghost"
-                size="sm"
-                class="absolute right-2 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
-                @click="togglePasswordVisibility(env.name)"
-              >
-                <Eye v-if="!showPasswords[env.name]" class="h-4 w-4" />
-                <EyeOff v-else class="h-4 w-4" />
-              </Button>
+                <div class="space-y-4">
+                  <div
+                    v-for="env in optionalVariables"
+                    :key="env.name"
+                    class="space-y-2"
+                  >
+                    <Label :for="env.name" class="text-sm font-medium">
+                      {{ env.name }}
+                    </Label>
+
+                    <!-- Textarea for long values -->
+                    <div v-if="isTextarea(env)" class="relative">
+                      <Textarea
+                        :id="env.name"
+                        :value="modelValue[env.name] || ''"
+                        @input="updateValue(env.name, ($event.target as HTMLTextAreaElement).value)"
+                        :placeholder="env.placeholder || `Enter ${env.name} (optional)`"
+                        class="min-h-[100px] bg-white"
+                      />
+                    </div>
+
+                    <!-- Regular input -->
+                    <div v-else class="relative">
+                      <Input
+                        :id="env.name"
+                        :type="getInputType(env)"
+                        :value="modelValue[env.name] || ''"
+                        @input="updateValue(env.name, ($event.target as HTMLInputElement).value)"
+                        :placeholder="env.placeholder || `Enter ${env.name} (optional)`"
+                        class="bg-white"
+                      />
+
+                      <!-- Password toggle -->
+                      <Button
+                        v-if="env.type === 'password'"
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        class="absolute right-2 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
+                        @click="togglePasswordVisibility(env.name)"
+                      >
+                        <Eye v-if="!showPasswords[env.name]" class="h-4 w-4" />
+                        <EyeOff v-else class="h-4 w-4" />
+                      </Button>
+                    </div>
+
+                    <!-- Validation message -->
+                    <p v-if="env.validation" class="text-xs text-gray-600">
+                      {{ env.validation }}
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
-
-            <!-- Validation message -->
-            <p v-if="env.validation" class="text-xs text-gray-600">
-              {{ env.validation }}
-            </p>
           </div>
         </div>
       </div>
-
     </div>
   </div>
 </template>
