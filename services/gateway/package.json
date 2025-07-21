@@ -1,0 +1,24 @@
+{
+  "name": "@deploystack/gateway",
+  "version": "0.1.0",
+  "description": "The local DeployStack Gateway for secure MCP server management.",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node-dev --respawn src/index.ts"
+  },
+  "keywords": [
+    "mcp",
+    "gateway",
+    "deploystack"
+  ],
+  "author": "DeployStack",
+  "license": "SEE LICENSE IN ../../LICENSE",
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^20.11.24",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.3.3"
+  }
+}

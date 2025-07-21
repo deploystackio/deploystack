@@ -29,7 +29,7 @@ const examplePluginTableDefinitions = {
     id: (b: any) => b('id').primaryKey(),
     name: (b: any) => b('name').notNull(),
     description: (b: any) => b('description'),
-    createdAt: (b: any) => b('created_at', { mode: 'timestamp' }).notNull().defaultNow(), // Use defaultNow for portability
+    created_at: (b: any) => b('created_at', { mode: 'timestamp' }).notNull().defaultNow(), // Use defaultNow for portability
   }
 };
 
