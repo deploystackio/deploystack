@@ -1,1 +1,0 @@
-CREATE UNIQUE INDEX `mcpCategories_name_unique` ON `mcpCategories` (`name`);

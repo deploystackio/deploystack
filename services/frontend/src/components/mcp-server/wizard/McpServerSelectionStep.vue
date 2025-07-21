@@ -2,10 +2,10 @@
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { Loader2, Info, Download, ChevronDown, PackagePlus, AlertTriangle } from 'lucide-vue-next'
+import { Loader2, ChevronDown, PackagePlus, AlertTriangle } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import CategoryDisplay from '@/components/mcp-server/CategoryDisplay.vue'
+import McpServerCard from '@/components/mcp-server/McpServerCard.vue'
 import { McpCatalogService } from '@/services/mcpCatalogService'
 import { McpCategoriesService } from '@/services/mcpCategoriesService'
 import type { McpServerSearchParams, McpServerSearchResponse } from '@/types/mcp-catalog'
@@ -278,65 +278,14 @@ onMounted(() => {
         }) }}
       </div>
 
-      <div
+      <McpServerCard
         v-for="server in filteredServers"
         :key="server.id"
-        class="bg-gray-50 px-4 py-6 sm:rounded-lg sm:p-6 md:flex md:items-center md:justify-between md:space-x-6 lg:space-x-8"
-      >
-        <dl class="flex-auto divide-y divide-gray-200 text-sm text-gray-600 md:grid md:grid-cols-3 md:gap-x-6 md:divide-y-0 lg:w-1/2 lg:flex-none lg:gap-x-8">
-          <div class="max-md:flex max-md:justify-between max-md:py-4 max-md:first:pt-0 max-md:last:pb-0">
-            <dt class="font-medium text-gray-900">{{ t('mcpInstallations.wizard.server.name') }}</dt>
-            <dd class="md:mt-1">{{ server.name }}</dd>
-          </div>
-          <div class="max-md:flex max-md:justify-between max-md:py-4 max-md:first:pt-0 max-md:last:pb-0">
-            <dt class="font-medium text-gray-900">{{ t('mcpInstallations.wizard.server.author') }}</dt>
-            <dd class="md:mt-1">{{ server.author_name || t('mcpInstallations.wizard.server.unknownAuthor') }}</dd>
-          </div>
-          <div class="max-md:flex max-md:justify-between max-md:py-4 max-md:first:pt-0 max-md:last:pb-0">
-            <dt class="font-medium text-gray-900">{{ t('mcpInstallations.wizard.server.category') }}</dt>
-            <dd class="md:mt-1">
-              <CategoryDisplay
-                :category-id="server.category_id"
-                :show-not-provided="true"
-                text-class="text-sm"
-                icon-class="h-4 w-4 text-gray-600"
-              />
-            </dd>
-          </div>
-        </dl>
-
-        <!-- Description -->
-        <div v-if="server.description" class="mt-4 md:mt-0 md:ml-6 lg:w-1/2">
-          <p class="text-sm text-gray-600">{{ server.description }}</p>
-        </div>
-
-        <!-- Action Buttons -->
-        <div class="mt-6 space-y-4 sm:flex sm:space-y-0 sm:space-x-4 md:mt-0">
-          <Button
-            variant="outline"
-            @click="handleDetailsClick(server)"
-            class="flex w-full items-center justify-center border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-xs hover:bg-gray-50 md:w-auto"
-          >
-            <Info class="h-4 w-4 mr-2" />
-            {{ t('mcpInstallations.wizard.server.details') }}
-            <span class="sr-only">{{ server.name }}</span>
-          </Button>
-          <Button
-            @click="handleInstallClick(server)"
-            :variant="selectedServerId === server.id ? 'default' : 'outline'"
-            :class="[
-              'flex w-full items-center justify-center px-4 py-2 text-sm font-medium shadow-xs md:w-auto',
-              selectedServerId === server.id
-                ? 'border border-indigo-600 bg-indigo-600 text-white hover:bg-indigo-700'
-                : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
-            ]"
-          >
-            <Download class="h-4 w-4 mr-2" />
-            {{ t('mcpInstallations.wizard.server.install') }}
-            <span class="sr-only">{{ server.name }}</span>
-          </Button>
-        </div>
-      </div>
+        :server="server"
+        :selected-server-id="selectedServerId"
+        @install="handleInstallClick"
+        @details="handleDetailsClick"
+      />
     </div>
 
     <!-- No Results -->
