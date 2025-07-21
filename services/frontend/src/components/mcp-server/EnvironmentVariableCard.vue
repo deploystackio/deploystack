@@ -84,13 +84,12 @@ const missingRequiredFields = computed(() => {
 
 // Helper function to check if a value is a placeholder
 const isPlaceholderValue = (value: string, env: any) => {
-  if (!value) return true
+  if (!value || value.trim().length === 0) return true
 
   const trimmedValue = value.trim()
 
-  // Check against common placeholder patterns
+  // Check against common placeholder patterns that users might manually enter
   const placeholderPatterns = [
-    env.placeholder,
     `<insert-your-${env.name.toLowerCase()}-here>`,
     `<your-${env.name.toLowerCase()}>`,
     `<${env.name.toLowerCase()}>`,
