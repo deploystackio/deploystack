@@ -2,26 +2,19 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Settings, Eye, EyeOff, Info } from 'lucide-vue-next'
+import { Settings, Eye, EyeOff } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip'
 
 // Props and model
 const modelValue = defineModel<Record<string, string>>({ required: true })
 
 interface Props {
   serverData?: any
+  variables?: any[]
 }
 
 const props = defineProps<Props>()
@@ -38,9 +31,15 @@ const showPasswords = ref<Record<string, boolean>>({})
 
 // Computed
 const environmentVariables = computed(() => {
+  // First try the variables prop (passed from EnvironmentVariablesStep)
+  if (props.variables && props.variables.length > 0) {
+    return props.variables
+  }
+  // Fallback to serverData.environment_variables
   if (!props.serverData?.environment_variables) return []
   return props.serverData.environment_variables
 })
+
 
 const hasRequiredVariables = computed(() => {
   return environmentVariables.value.some((env: any) => env.required)
@@ -147,11 +146,11 @@ watch(modelValue, () => {
   // Validation will be triggered by the validationState watcher
 }, { deep: true })
 
-// Watch for server data changes to reset form
-watch(() => props.serverData, (newData) => {
-  if (newData?.environment_variables) {
+// Watch for environment variables changes to initialize form values
+watch(() => environmentVariables.value, (newVariables) => {
+  if (newVariables && newVariables.length > 0) {
     const newValues: Record<string, string> = {}
-    newData.environment_variables.forEach((env: any) => {
+    newVariables.forEach((env: any) => {
       // Keep existing values if they exist
       if (modelValue.value[env.name] !== undefined) {
         newValues[env.name] = modelValue.value[env.name]
@@ -171,16 +170,6 @@ watch(() => props.serverData, (newData) => {
 
 <template>
   <div class="space-y-6">
-    <!-- Step Header -->
-    <div>
-      <h2 class="text-xl font-semibold text-gray-900 mb-2">
-        {{ t('mcpInstallations.wizard.environment.title') }}
-      </h2>
-      <p class="text-gray-600">
-        {{ t('mcpInstallations.wizard.environment.description') }}
-      </p>
-    </div>
-
     <!-- No Environment Variables -->
     <div v-if="!environmentVariables.length" class="text-center py-8">
       <Settings class="h-12 w-12 text-gray-400 mx-auto mb-4" />
@@ -210,14 +199,9 @@ watch(() => props.serverData, (newData) => {
 
       <!-- Required Variables -->
       <div v-if="hasRequiredVariables" class="space-y-4">
-        <div class="flex items-center gap-2">
-          <h3 class="text-lg font-medium text-gray-900">
-            {{ t('mcpInstallations.wizard.environment.requiredVariables') }}
-          </h3>
-          <Badge variant="destructive" class="text-xs">
-            {{ t('labels.required') }}
-          </Badge>
-        </div>
+        <h3 class="text-lg font-medium text-gray-900">
+          {{ t('mcpInstallations.wizard.environment.requiredVariables') }}
+        </h3>
 
         <div class="space-y-4">
           <div
@@ -225,28 +209,9 @@ watch(() => props.serverData, (newData) => {
             :key="env.name"
             class="space-y-2"
           >
-            <div class="flex items-center gap-2">
-              <Label :for="env.name" class="text-sm font-medium">
-                {{ env.name }}
-              </Label>
-              <Badge variant="destructive" class="text-xs">
-                {{ t('labels.required') }}
-              </Badge>
-
-              <!-- Info tooltip -->
-              <TooltipProvider v-if="env.description">
-                <Tooltip>
-                  <TooltipTrigger as-child>
-                    <Button variant="ghost" size="sm" class="h-4 w-4 p-0">
-                      <Info class="h-3 w-3" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p class="max-w-xs">{{ env.description }}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
+            <Label :for="env.name" class="text-sm font-medium">
+              {{ env.name }}
+            </Label>
 
             <!-- Textarea for long values -->
             <div v-if="isTextarea(env)" class="relative">
@@ -295,14 +260,9 @@ watch(() => props.serverData, (newData) => {
 
       <!-- Optional Variables -->
       <div v-if="hasOptionalVariables" class="space-y-4">
-        <div class="flex items-center gap-2">
-          <h3 class="text-lg font-medium text-gray-900">
-            {{ t('mcpInstallations.wizard.environment.optionalVariables') }}
-          </h3>
-          <Badge variant="secondary" class="text-xs">
-            {{ t('labels.optional') }}
-          </Badge>
-        </div>
+        <h3 class="text-lg font-medium text-gray-900">
+          {{ t('mcpInstallations.wizard.environment.optionalVariables') }}
+        </h3>
 
         <div class="space-y-4">
           <div
@@ -310,28 +270,9 @@ watch(() => props.serverData, (newData) => {
             :key="env.name"
             class="space-y-2"
           >
-            <div class="flex items-center gap-2">
-              <Label :for="env.name" class="text-sm font-medium">
-                {{ env.name }}
-              </Label>
-              <Badge variant="secondary" class="text-xs">
-                {{ t('labels.optional') }}
-              </Badge>
-
-              <!-- Info tooltip -->
-              <TooltipProvider v-if="env.description">
-                <Tooltip>
-                  <TooltipTrigger as-child>
-                    <Button variant="ghost" size="sm" class="h-4 w-4 p-0">
-                      <Info class="h-3 w-3" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p class="max-w-xs">{{ env.description }}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
+            <Label :for="env.name" class="text-sm font-medium">
+              {{ env.name }}
+            </Label>
 
             <!-- Textarea for long values -->
             <div v-if="isTextarea(env)" class="relative">
@@ -376,13 +317,6 @@ watch(() => props.serverData, (newData) => {
         </div>
       </div>
 
-      <!-- Help Text -->
-      <Alert>
-        <Info class="h-4 w-4" />
-        <AlertDescription>
-          {{ t('mcpInstallations.wizard.environment.helpText') }}
-        </AlertDescription>
-      </Alert>
     </div>
   </div>
 </template>

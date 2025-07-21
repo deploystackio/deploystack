@@ -27,6 +27,7 @@ const environmentVariables = computed(() => {
   return props.serverData.environment_variables
 })
 
+
 // Handle validation changes from the card component
 const handleValidationChange = (isValid: boolean, missingFields: string[]) => {
   emit('validation-change', isValid, missingFields)
