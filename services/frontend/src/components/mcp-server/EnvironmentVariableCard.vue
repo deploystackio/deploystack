@@ -62,6 +62,10 @@ const optionalVariables = computed(() => {
 })
 
 const allRequiredFilled = computed(() => {
+  if (requiredVariables.value.length === 0) {
+    return true // No required variables, so validation passes
+  }
+  
   return requiredVariables.value.every((env: any) => {
     const value = modelValue.value[env.name]
     // Check if value exists, is not empty, and is not a placeholder
@@ -86,7 +90,7 @@ const missingRequiredFields = computed(() => {
 const isPlaceholderValue = (value: string, env: any) => {
   if (!value || value.trim().length === 0) return true
 
-  const trimmedValue = value.trim()
+  const trimmedValue = value.trim().toLowerCase()
 
   // Check against common placeholder patterns that users might manually enter
   const placeholderPatterns = [
@@ -95,11 +99,17 @@ const isPlaceholderValue = (value: string, env: any) => {
     `<${env.name.toLowerCase()}>`,
     'your-api-key-here',
     'your-token-here',
-    'your-secret-here'
+    'your-secret-here',
+    'enter-your-key',
+    'api-key-here',
+    'token-here',
+    'secret-here',
+    // Also check against the actual placeholder if it exists
+    ...(env.placeholder ? [env.placeholder.toLowerCase().trim()] : [])
   ]
 
   return placeholderPatterns.some(pattern =>
-    pattern && trimmedValue === pattern.trim()
+    pattern && (trimmedValue === pattern.trim().toLowerCase() || trimmedValue.includes(pattern.trim().toLowerCase()))
   )
 }
 
@@ -142,12 +152,12 @@ const updateValue = (envName: string, value: string) => {
 // Watch for validation state changes and emit to parent
 watch(validationState, (newState) => {
   emit('validation-change', newState.isValid, newState.missingFields)
-}, { immediate: true })
+}, { immediate: true, deep: true })
 
 // Watch for model value changes to trigger validation
 watch(modelValue, () => {
   // Validation will be triggered by the validationState watcher
-}, { deep: true })
+}, { deep: true, immediate: true })
 
 // Watch for environment variables changes to initialize form values
 watch(() => environmentVariables.value, (newVariables) => {
