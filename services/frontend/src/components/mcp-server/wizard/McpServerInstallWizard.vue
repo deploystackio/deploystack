@@ -140,6 +140,11 @@ const canProceedFromServer = computed(() => {
 })
 
 const canProceedFromEnvironment = computed(() => {
+  // If no server is selected, can't proceed
+  if (!formData.value.server.server_id) {
+    return false
+  }
+  
   // Use the validation state from the EnvironmentVariablesStep component
   return environmentValidation.value.isValid
 })
@@ -269,6 +274,12 @@ const handleServerSelected = (serverData: any) => {
 
   // Reset touched state when server changes
   environmentStepTouched.value = false
+
+  // Reset validation state when server changes
+  environmentValidation.value = {
+    isValid: true, // Will be updated by the component
+    missingFields: []
+  }
 
   // Pre-populate environment variables with default values
   if (serverData.environment_variables) {
