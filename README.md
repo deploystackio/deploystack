@@ -23,13 +23,15 @@ DeployStack was built to solve these problems head-on.
 
 DeployStack introduces a powerful Control Plane / Data Plane architecture to bring order to the chaos.
 
-1.  **`cloud.deploystack.io` (The Control Plane)**: A centralized web UI where administrators and team leads define the entire AI tooling landscape.
+1. **`cloud.deploystack.io` (The Control Plane)**: A centralized web UI where administrators and team leads define the entire AI tooling landscape.
+
     - **Centralized Credential Vault**: Securely store all your MCP server credentials (API keys, tokens) in one encrypted location.
     - **Access Control Policies**: Define which teams and users have permission to access which MCP Server.
     - **MCP Catalog**: Manage a central catalog of all approved MCP servers (local, remote (coming soon), or third-party (coming soon)).
     - **Audit & Analytics**: Gain visibility into which tools are being used, by whom, and how often.
 
-2.  **The `DeployStack Gateway` (The Local Data Plane)**: A lightweight, secure agent that runs on each developer's machine.
+2. **The `DeployStack Gateway` (The Local Data Plane)**: A lightweight, secure agent that runs on each developer's machine.
+
     - **One-Time Login**: Developers log in once. The Gateway securely fetches the configurations they are authorized to use.
     - **Single Local Endpoint**: The Gateway exposes a single, stable MCP endpoint on `localhost`. Developers point all their tools (VS Code, Cursor, etc.) to this one address.
     - **On-Demand Process Spawning**: The Gateway automatically starts and stops local MCP servers (`stdio`-based) as needed, injecting credentials securely at runtime. It manages the processes so the developer doesn't have to.
@@ -39,11 +41,11 @@ This architecture means developers never handle sensitive credentials, and the o
 
 ## 🚀 How It Works: A Quick Tour
 
-1.  **Admin**: Logs into `cloud.deploystack.io`, creates a team, and registers an MCP server (e.g., the `github` mcp server), storing its API token securely in the DeployStack vault. They grant the "Dev Team" access to this server.
-2.  **Developer**: Installs the `DeployStack Gateway` and runs `deploystack-gateway login`. They are now authenticated.
-3.  **Configuration Sync**: The Gateway securely downloads the configuration for the "Dev Team", including the definition for the `github` mcp server (but not the raw token).
-4.  **Local Development**: The developer, in VS Code, makes a call to a `github` mcp via the Gateway's local endpoint (`http://localhost:9090/mcp`).
-5.  **The Magic**:
+1. **Admin**: Logs into `cloud.deploystack.io`, creates a team, and registers an MCP server (e.g., the `github` mcp server), storing its API token securely in the DeployStack vault. They grant the "Dev Team" access to this server.
+2. **Developer**: Installs the `DeployStack Gateway` and runs `deploystack-gateway login`. They are now authenticated.
+3. **Configuration Sync**: The Gateway securely downloads the configuration for the "Dev Team", including the definition for the `github` mcp server (but not the raw token).
+4. **Local Development**: The developer, in VS Code, makes a call to a `github` mcp via the Gateway's local endpoint (`http://localhost:9090/mcp`).
+5. **The Magic**:
     - The Gateway receives the request.
     - It sees it's for `github` mcp and checks if the process is running.
     - If not, it spawns the `npx @github/mcp` process, securely injecting the API token from the cloud into the process environment.
@@ -54,48 +56,56 @@ This architecture means developers never handle sensitive credentials, and the o
 
 ### For Administrators & Team Leads
 
-1.  **Sign up for free**: [cloud.deploystack.io](https://cloud.deploystack.io)
-2.  **Create a Team**: Organize your developers and resources.
-3.  **Register MCP Servers**: Add your company's MCP Server to the catalog and store their credentials securely.
-4.  **Invite Your Team**: Have your developers install the `DeployStack Gateway`.
+1. **Sign up for free**: [cloud.deploystack.io](https://cloud.deploystack.io)
+2. **Create a Team**: Organize your developers and resources.
+3. **Register MCP Servers**: Add your company's MCP Server to the catalog and store their credentials securely.
+4. **Invite Your Team**: Have your developers install the `DeployStack Gateway`.
 
 ### For Developers
 
-1.  **Install the Gateway**:
+1. **Install the Gateway**:
+
     ```bash
     # Installation command coming soon
     npm install -g @deploystack/gateway
     ```
-2.  **Login**:
+
+2. **Login**:
+
     ```bash
     deploystack login
     ```
-3.  **Configure Your Tools**: In VS Code, Cursor, or any other MCP client, set your MCP endpoint to the local Gateway address (e.g., `http://localhost:9095/mcp`).
-4.  **Start Building!** All the tools your team has access to are now available automatically.
+
+3. **Configure Your Tools**: In VS Code, Cursor, or any other MCP client, set your MCP endpoint to the local Gateway address (e.g., `http://localhost:9095/mcp`).
+4. **Start Building!** All the tools your team has access to are now available automatically.
 
 ## Roadmap
 
 Our roadmap is designed to build the essential infrastructure for using MCP securely at scale, focusing on the critical pillars of security, governance, and developer experience.
 
-**Phase 1: Foundation (Completed)**
+### Phase 1: Foundation (Completed)
+
 - **[Done]** Deployed `cloud.deploystack.io` hosted version with a robust backend and frontend.
 - **[Done]** Implemented a secure user and team management system with roles and permissions.
 - **[Done]** Integrated OAuth for secure logins (e.g., GitHub).
 - **[Done]** Created the initial MCP Server Catalog for tool discovery.
 - **[Done]** Established documentation and self-hosted Docker support.
 
-**Phase 2: The Secure Gateway (Current Focus)**
+### Phase 2: The Secure Gateway (Current Focus)
+
 - **[In Progress]** Develop the `DeployStack Gateway` local application.
 - **[In Progress]** Implement secure authentication and configuration synchronization between the Gateway and the cloud.
 - **[To Do]** Build the on-demand `stdio` process spawning and management logic.
 - **[To Do]** Add support for proxying to remote, HTTP-based MCP servers.
 
-**Phase 3: Enterprise Governance**
+### Phase 3: Enterprise Governance
+
 - **[To Do]** Build out Audit Logging features in the cloud UI.
 - **[To Do]** Develop Analytics dashboards for tool usage and performance.
 - **[To Do]** Implement advanced policy controls (e.g., rate limiting, request validation).
 
-**Phase 4: Ecosystem & Integration**
+### Phase 4: Ecosystem & Integration
+
 - **[To Do]** Introduce OAuth2 support for delegated authentication to backend services.
 - **[To Do]** Enhance the searchable MCP Server Catalog within the cloud UI.
 - **[To Do]** Deeper integration with IDEs and AI agent frameworks.
@@ -118,11 +128,11 @@ deploystack/
 
 We are excited about this new direction and welcome contributions. The most immediate need is help building the `DeployStack Gateway`.
 
-1.  Fork this repository.
-2.  Create your feature branch (`git checkout -b feature/gateway-stdio-spawner`).
-3.  Commit your changes following our [commit guidelines](CONTRIBUTING.md#commit-message-guidelines).
-4.  Push to the branch (`git push origin feature/gateway-stdio-spawner`).
-5.  Open a Pull Request.
+1. Fork this repository.
+2. Create your feature branch (`git checkout -b feature/gateway-stdio-spawner`).
+3. Commit your changes following our [commit guidelines](CONTRIBUTING.md#commit-message-guidelines).
+4. Push to the branch (`git push origin feature/gateway-stdio-spawner`).
+5. Open a Pull Request.
 
 For detailed contribution guidelines, see [CONTRIBUTING.md](CONTRIBUTING.md).
 

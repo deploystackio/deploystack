@@ -50,8 +50,9 @@ deploystack-gateway status
 After logging in, the gateway automatically downloads and synchronizes your team's configuration. No manual configuration required!
 
 Your development tools (VS Code, Cursor, etc.) should be configured to use:
-```
-MCP Endpoint: http://localhost:8080/mcp
+
+```text
+MCP Endpoint: http://localhost:9095/mcp
 ```
 
 ## 🤝 Contributing
