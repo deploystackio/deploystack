@@ -22,58 +22,36 @@ export interface CloudProvider {
 }
 
 export const CLOUD_PROVIDERS: Record<string, CloudProvider> = {
-  aws: {
-    id: 'aws',
-    name: 'Amazon Web Services',
-    description: 'Deploy applications and services on AWS',
+  gcp: {
+    id: 'gcp',
+    name: 'Google Cloud Platform',
+    description: 'Deploy applications and services on Google Cloud',
     enabled: true,
     fields: [
       {
-        key: 'access_key_id',
-        label: 'Access Key ID',
-        type: 'text',
+        key: 'service_account_key',
+        label: 'Service Account Key (JSON)',
+        type: 'textarea',
         required: true,
-        secret: false,
-        placeholder: 'AKIAIOSFODNN7EXAMPLE',
-        description: 'Your AWS Access Key ID',
+        secret: true,
+        placeholder: '{\n  "type": "service_account",\n  "project_id": "your-project-id",\n  "private_key_id": "...",\n  "private_key": "...",\n  "client_email": "...",\n  "client_id": "...",\n  "auth_uri": "...",\n  "token_uri": "...",\n  "auth_provider_x509_cert_url": "...",\n  "client_x509_cert_url": "..."\n}',
+        description: 'Your Google Cloud Service Account JSON key file contents',
         validation: {
-          minLength: 16,
-          maxLength: 128,
-          pattern: '^AKIA[0-9A-Z]{12,}$'
+          minLength: 100
         }
       },
       {
-        key: 'secret_access_key',
-        label: 'Secret Access Key',
-        type: 'password',
+        key: 'project_id',
+        label: 'Project ID',
+        type: 'text',
         required: true,
-        secret: true,
-        placeholder: 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY',
-        description: 'Your AWS Secret Access Key',
+        secret: false,
+        placeholder: 'my-gcp-project-123',
+        description: 'Your Google Cloud Project ID',
         validation: {
-          minLength: 40,
-          maxLength: 128
-        }
-      }
-    ]
-  },
-  render: {
-    id: 'render',
-    name: 'Render.com',
-    description: 'Deploy applications and services on Render',
-    enabled: true,
-    fields: [
-      {
-        key: 'api_key',
-        label: 'API Key',
-        type: 'password',
-        required: true,
-        secret: true,
-        placeholder: 'rnd_xxxxxxxxxxxxxxxxxx',
-        description: 'Your Render API key from Account Settings',
-        validation: {
-          minLength: 20,
-          pattern: '^rnd_[a-zA-Z0-9]+$'
+          minLength: 6,
+          maxLength: 63,
+          pattern: '^[a-z][a-z0-9-]{4,61}[a-z0-9]$'
         }
       }
     ]
