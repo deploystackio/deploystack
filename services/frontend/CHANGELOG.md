@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.19.0 (2025-07-21)
+
+* update MCP endpoint in gateway README to reflect new default port ([8938a50](https://github.com/deploystackio/deploystack/commit/8938a501f1c16b55754fe93fdd4bdae56e400a9c))
+* enhance layout and styling for environment variables in EnvironmentVariableCard component ([e4a68f0](https://github.com/deploystackio/deploystack/commit/e4a68f0c023b3bbbf681569fbb2997024ca2eaa5))
+* enhance placeholder value check in isPlaceholderValue function ([1cb9634](https://github.com/deploystackio/deploystack/commit/1cb96341b41d78b1a084bba379023b4e9c64e40e))
+* enhance validation logic for required environment variables and improve server selection handling ([37affd3](https://github.com/deploystackio/deploystack/commit/37affd369586711fa350ef4efa663faf1d3cf301))
+* improve structure and styling of environment variable cards in EnvironmentVariableCard component ([61d8d34](https://github.com/deploystackio/deploystack/commit/61d8d340c0ad9398c6aa318ed4fffe75914e092b))
+* streamline environment variable handling in EnvironmentVariableCard and EnvironmentVariablesStep components ([d3a005a](https://github.com/deploystackio/deploystack/commit/d3a005a310a64745bccbc2876d82b5fea4226897))
+* update package-lock.json with new dependencies and links for gateway service ([ee4d2cb](https://github.com/deploystackio/deploystack/commit/ee4d2cb1185a5e03fb6c1cbdb07e771f94cc2b73))
+* Refactor MCP server selection step to use McpServerCard component for better modularity ([75fa5c2](https://github.com/deploystackio/deploystack/commit/75fa5c2de15663f1d698665fb15e3ffd850ab3cf))
+
 ## <small>0.18.1 (2025-07-20)</small>
 
 * release v0.18.0 ([c42afe3](https://github.com/deploystackio/deploystack/commit/c42afe35a8eb790a7d656766b01327da0991291d))
