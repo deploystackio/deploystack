@@ -4,240 +4,134 @@
 
 <br />
 
-DeployStack is an open-source CI/CD platform specifically built for MCP (Model Context Protocol) servers. Think of us as the infrastructure layer that makes MCP server deployment as simple as using n8n for automations - you select your MCP server, configure credentials, choose your target platform, and we handle all the complex deployment work behind the scenes.
+DeployStack is the **Enterprise Control Plane for the Model Context Protocol (MCP) ecosystem**. It provides a secure, centralized platform to manage your company's entire AI tool landscape, eliminating credential sprawl and enabling developers to move faster and more securely.
 
-## 🚀 Quick Start
+Think of us as the **Identity and Access Management (IAM) layer for your AI agents and tools**. We solve the critical security, governance, and developer experience challenges that arise when using MCP at scale.
 
-Get DeployStack running locally in 2 commands:
+## The Problem: MCP in the Enterprise is a Security Blind Spot
 
-```bash
-curl -o docker-compose.yml https://raw.githubusercontent.com/deploystackio/deploystack/main/docker-compose.yml
-DEPLOYSTACK_ENCRYPTION_SECRET=$(openssl rand -hex 16) docker-compose up -d
-```
+MCP is revolutionizing how AI agents use tools, but it has created a massive challenge for organizations:
 
-Access DeployStack at [http://localhost:8080](http://localhost:8080)
+- **Credential Sprawl**: Developers copy and paste sensitive API keys and tokens into insecure local configuration files, creating a huge security risk.
+- **No Governance**: Who is using which tools? Which agent is accessing sensitive customer data? Without a central control plane, companies are blind.
+- **Developer Friction**: Developers spend hours managing complex configurations for dozens of tools, a process that is both tedious and error-prone. Onboarding a new developer is a nightmare of configuration management.
+- **Inconsistent Environments**: Every developer has a slightly different local setup, leading to "it works on my machine" problems and configuration drift.
 
-> **Note**: You'll need Docker and Docker Compose installed. For detailed setup instructions, see our [Self-Hosted Documentation](https://deploystack.io/docs/deploystack/self-hosted).
+DeployStack was built to solve these problems head-on.
 
-## What Makes DeployStack Different
+## The Solution: A Central Control Plane with a Local Secure Gateway
 
-- **MCP-Native CI/CD**: Purpose-built for MCP server lifecycle management, not adapted from general deployment tools
-- **Multi-Cloud Excellence**: Deploy MCP servers to AWS, Render.com, Fly.io, DigitalOcean, and more with one click
-- **Enterprise-Ready**: Team collaboration, private catalogs, and security features for organizations
-- **Community-Driven**: Open-source foundation with curated MCP server catalog
-- **Developer Experience Focus**: Eliminates the technical complexity that currently limits MCP adoption
+DeployStack introduces a powerful Control Plane / Data Plane architecture to bring order to the chaos.
 
-## The MCP Server Deployment Problem
+1.  **`cloud.deploystack.io` (The Control Plane)**: A centralized web UI where administrators and team leads define the entire AI tooling landscape.
+    - **Centralized Credential Vault**: Securely store all your MCP server credentials (API keys, tokens) in one encrypted location.
+    - **Access Control Policies**: Define which teams and users have permission to access which MCP Server.
+    - **MCP Catalog**: Manage a central catalog of all approved MCP servers (local, remote (coming soon), or third-party (coming soon)).
+    - **Audit & Analytics**: Gain visibility into which tools are being used, by whom, and how often.
 
-MCP servers are experiencing explosive adoption, with Claude Desktop leading the way as the primary integration point for AI agents. However, deploying MCP servers presents significant challenges that DeployStack addresses:
+2.  **The `DeployStack Gateway` (The Local Data Plane)**: A lightweight, secure agent that runs on each developer's machine.
+    - **One-Time Login**: Developers log in once. The Gateway securely fetches the configurations they are authorized to use.
+    - **Single Local Endpoint**: The Gateway exposes a single, stable MCP endpoint on `localhost`. Developers point all their tools (VS Code, Cursor, etc.) to this one address.
+    - **On-Demand Process Spawning**: The Gateway automatically starts and stops local MCP servers (`stdio`-based) as needed, injecting credentials securely at runtime. It manages the processes so the developer doesn't have to.
+    - **Zero-Trust Proxy**: All requests, whether to a local process or a remote server, are proxied through the Gateway, enforcing security policies on every call.
 
-### Current Pain Points We Solve
+This architecture means developers never handle sensitive credentials, and the organization gains complete visibility and control.
 
-**1. Technical Complexity Barriers**
-Getting up and running with MCP servers is a headache for developers, with basic examples requiring hundreds of lines of code and complex dependency management
+## 🚀 How It Works: A Quick Tour
 
-**2. Security and Credential Management**
-Users are asked to configure sensitive data in plaintext JSON files, and MCP currently lacks standardized authentication mechanisms for client-server interactions
-
-**3. Production Deployment Gaps**
-Most MCP servers are designed for local development, with transport protocols like stdio that won't work in production environments
-
-**4. Multi-Tenant Architecture Challenges**
-Current MCP servers are often single-user, and multi-tenancy (one MCP server serving multiple independent agents or users) is not much explored yet
-
-**5. Fragmented Discovery**
-As more MCP servers are developed, mechanisms for discovering trusted and maintained servers are needed, with broader solutions for standardization still required
-
-## Core Features
-
-- **One-Click MCP Deployment**: Deploy any MCP server to production instantly across multiple cloud providers
-- **Secure Credential Management**: Encrypted storage and injection of API keys, OAuth tokens, and secrets
-- **Team Collaboration**: Role-based access control, shared configurations, and organizational management
-- **Internal MCP Catalogs**: Private, company-specific MCP server catalogs for enterprise deployments
-- **Multi-Tenant MCP Servers**: Deploy scalable MCP servers that serve multiple users and agents
-- **Authentication Proxy**: Built-in OAuth handling and security gateway for MCP server access
-- **Community Catalog Integration**: Seamless connection to our curated MCP server ecosystem
-
-## MCP Server Ecosystem
-
-DeployStack integrates with the broader MCP ecosystem to provide comprehensive infrastructure:
-
-- **[awesome-mcp-server](https://github.com/deploystackio/awesome-mcp-server)**: Community-curated catalog of production-ready MCP servers
-- **[deploystack.io/mcp](https://deploystack.io/mcp)**: Public discovery portal for MCP servers with one-click deployment
-- **[MCP Specification](https://modelcontextprotocol.io)**: Official protocol documentation and standards
+1.  **Admin**: Logs into `cloud.deploystack.io`, creates a team, and registers an MCP server (e.g., the `github` mcp server), storing its API token securely in the DeployStack vault. They grant the "Dev Team" access to this server.
+2.  **Developer**: Installs the `DeployStack Gateway` and runs `deploystack-gateway login`. They are now authenticated.
+3.  **Configuration Sync**: The Gateway securely downloads the configuration for the "Dev Team", including the definition for the `github` mcp server (but not the raw token).
+4.  **Local Development**: The developer, in VS Code, makes a call to a `github` mcp via the Gateway's local endpoint (`http://localhost:9090/mcp`).
+5.  **The Magic**:
+    - The Gateway receives the request.
+    - It sees it's for `github` mcp and checks if the process is running.
+    - If not, it spawns the `npx @github/mcp` process, securely injecting the API token from the cloud into the process environment.
+    - It proxies the request to the newly spawned process via `stdio` and returns the result.
+    - After a period of inactivity, it automatically shuts down the process to save resources.
 
 ## Getting Started
 
-### 🚀 Quick Start with DeployStack Cloud
+### For Administrators & Team Leads
 
-The fastest way to deploy MCP servers and solve the current deployment challenges:
+1.  **Sign up for free**: [cloud.deploystack.io](https://cloud.deploystack.io)
+2.  **Create a Team**: Organize your developers and resources.
+3.  **Register MCP Servers**: Add your company's MCP Server to the catalog and store their credentials securely.
+4.  **Invite Your Team**: Have your developers install the `DeployStack Gateway`.
 
-1. **Sign up for free**: [cloud.deploystack.io](https://cloud.deploystack.io)
-2. **Browse MCP servers**: Choose from our curated catalog of production-ready servers
-3. **Configure securely**: Add your credentials through our encrypted management system
-4. **One-click deploy**: Select your cloud provider and deploy with enterprise-grade security (security = still in progress)
-5. **Connect to MCP Server**: Use generated connection details in Claude Desktop, VS Code, or other MCP-compatible tools
+### For Developers
 
-### 🛠️ Self-Hosted Installation
-
-You can also run DeployStack on your own infrastructure for maximum control:
-
-#### Prerequisites
-
-- Node.js 18 or higher
-- npm 8 or higher
-- Docker
-
-#### Installation
-
-1. Clone the repository:
-
-   ```bash
-   git clone https://github.com/deploystackio/deploystack.git
-   cd deploystack
-   ```
-
-2. Install dependencies:
-
-   ```bash
-   npm install
-   ```
-
-3. Start development servers:
-
-  Create a `services/backend/.env` file in the root directory with the following content:
-
-   ```env
-   DEPLOYSTACK_FRONTEND_URL=http://localhost:5173
-   DEPLOYSTACK_ENCRYPTION_SECRET=your-very-secure-32-character-secret-key-here
-   LOG_LEVEL=debug
-   ```
-
-   ```bash
-   # Start frontend development server
-   npm run dev:frontend
-   
-   # In another terminal, start backend server
-   npm run dev:backend
-   ```
-
-#### Deploying with Docker
-
-Alternatively, you can deploy the pre-built Docker images for the frontend and backend services.
-
-1. **Pull the latest images from Docker Hub:**
-
+1.  **Install the Gateway**:
     ```bash
-    docker pull deploystack/frontend:latest
-    docker pull deploystack/backend:latest
+    # Installation command coming soon
+    npm install -g @deploystack/gateway
     ```
-
-2. **Run the Backend Service:**
-
-    The backend requires a persistent volume for its data (like database configuration and SQLite files). The following command maps a local directory (`./services/backend/persistent_data`) to the container's data directory. It's recommended to run this command from the root of the cloned DeployStack project directory.
-
+2.  **Login**:
     ```bash
-    docker run -d \
-      -p 3000:3000 \
-      -e DEPLOYSTACK_FRONTEND_URL="http://localhost:8080" \
-      -e DEPLOYSTACK_ENCRYPTION_SECRET="your-very-secure-32-character-secret-key-here" \
-      -v $(pwd)/services/backend/persistent_data:/app/persistent_data \
-      deploystack/backend:latest
+    deploystack login
     ```
+3.  **Configure Your Tools**: In VS Code, Cursor, or any other MCP client, set your MCP endpoint to the local Gateway address (e.g., `http://localhost:9095/mcp`).
+4.  **Start Building!** All the tools your team has access to are now available automatically.
 
-3. **Run the Frontend Service:**
+## Roadmap
 
-    The frontend requires environment variables to connect to the backend and for other configurations.
+Our roadmap is designed to build the essential infrastructure for using MCP securely at scale, focusing on the critical pillars of security, governance, and developer experience.
 
-    ```bash
-    docker run -d -p 8080:80 \
-      -e VITE_DEPLOYSTACK_BACKEND_URL="http://localhost:3000" \
-      -e VITE_APP_TITLE="DeployStack Instance" \
-      deploystack/frontend:latest
-    ```
+**Phase 1: Foundation (Completed)**
+- **[Done]** Deployed `cloud.deploystack.io` hosted version with a robust backend and frontend.
+- **[Done]** Implemented a secure user and team management system with roles and permissions.
+- **[Done]** Integrated OAuth for secure logins (e.g., GitHub).
+- **[Done]** Created the initial MCP Server Catalog for tool discovery.
+- **[Done]** Established documentation and self-hosted Docker support.
 
-    **Note:**
-    - Ensure the `VITE_DEPLOYSTACK_BACKEND_URL` points to where your backend service is accessible. If running both containers on the same Docker host, `http://localhost:3000` (or the host's IP/hostname if `localhost` doesn't resolve correctly from within the frontend container's network to the backend's exposed port) should work.
-    - The `$(pwd)` in the backend command assumes you are in the root of the `deploystack` project directory. Adjust the path to `services/backend/persistent_data` if running from elsewhere, or use an absolute path or a Docker named volume.
+**Phase 2: The Secure Gateway (Current Focus)**
+- **[In Progress]** Develop the `DeployStack Gateway` local application.
+- **[In Progress]** Implement secure authentication and configuration synchronization between the Gateway and the cloud.
+- **[To Do]** Build the on-demand `stdio` process spawning and management logic.
+- **[To Do]** Add support for proxying to remote, HTTP-based MCP servers.
 
-#### Production Deployment
+**Phase 3: Enterprise Governance**
+- **[To Do]** Build out Audit Logging features in the cloud UI.
+- **[To Do]** Develop Analytics dashboards for tool usage and performance.
+- **[To Do]** Implement advanced policy controls (e.g., rate limiting, request validation).
 
-For production deployments on a VPS or remote server, update the environment variables to use your server's IP address:
-
-**Backend:**
-
-```bash
-docker run -d \
-  -p 3000:3000 \
-  -e DEPLOYSTACK_FRONTEND_URL="http://YOUR_SERVER_IP:8080" \
-  -e DEPLOYSTACK_ENCRYPTION_SECRET="your-very-secure-32-character-secret-key-here" \
-  -v $(pwd)/services/backend/persistent_data:/app/persistent_data \
-  deploystack/backend:latest
-```
-
-**Frontend:**
-
-```bash
-docker run -d -p 8080:80 \
-  -e VITE_DEPLOYSTACK_BACKEND_URL="http://YOUR_SERVER_IP:3000" \
-  -e VITE_APP_TITLE="DeployStack Instance" \
-  deploystack/frontend:latest
-```
+**Phase 4: Ecosystem & Integration**
+- **[To Do]** Introduce OAuth2 support for delegated authentication to backend services.
+- **[To Do]** Enhance the searchable MCP Server Catalog within the cloud UI.
+- **[To Do]** Deeper integration with IDEs and AI agent frameworks.
 
 ## Project Structure
 
-This repository uses a monorepo structure optimized for MCP server deployment:
+This repository uses a monorepo structure. The new `gateway` service will be added here:
 
 ```bash
 deploystack/
 ├── services/
-│   ├── frontend/        # Vue.js frontend application
-│   ├── backend/         # Fastify backend API
-│   └── shared/          # Shared MCP utilities and types
-├── scripts/             # MCP deployment automation scripts
-├── templates/           # Cloud provider templates for MCP servers
+│   ├── frontend/        # Vue.js frontend application for cloud.deploystack.io
+│   ├── backend/         # Fastify backend API for the cloud control plane
+│   ├── gateway/         # The local DeployStack Gateway
+│   └── shared/          # Shared utilities and types
 └── ...
 ```
 
-## Contributing to the MCP Ecosystem
+## Contributing
 
-We welcome contributions to both the platform and the MCP server catalog:
+We are excited about this new direction and welcome contributions. The most immediate need is help building the `DeployStack Gateway`.
 
-### Contributing MCP Servers
-
-Add your MCP server to our community catalog:
-
-1. Fork [awesome-mcp-server](https://github.com/deploystackio/awesome-mcp-server)
-2. Add your server following the [contribution guidelines](https://github.com/deploystackio/awesome-mcp-server/blob/main/CONTRIBUTING.md)
-3. Submit a pull request
-
-Your MCP server will automatically appear in the DeployStack catalog once merged, with full deployment automation.
-
-### Contributing to the Platform
-
-1. Fork this repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes following our [commit guidelines](CONTRIBUTING.md#commit-message-guidelines)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+1.  Fork this repository.
+2.  Create your feature branch (`git checkout -b feature/gateway-stdio-spawner`).
+3.  Commit your changes following our [commit guidelines](CONTRIBUTING.md#commit-message-guidelines).
+4.  Push to the branch (`git push origin feature/gateway-stdio-spawner`).
+5.  Open a Pull Request.
 
 For detailed contribution guidelines, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Community and Support
 
-- **Discord**: Join our community at [discord.gg](https://discord.gg/42Ce3S7b3b)
-- **GitHub Discussions**: Ask questions and share ideas about MCP server deployment
-- **Documentation**: Visit [deploystack.io/docs](https://deploystack.io/docs) for comprehensive guides
-- **Twitter**: Follow [@deploystack](https://twitter.com/deploystack) for MCP ecosystem updates
-
-## Roadmap
-
-View our detailed roadmap at [deploystack.io/roadmap](https://deploystack.io/roadmap).
+- **Discord**: Join our community at [discord.gg/42Ce3S7b3b](https://discord.gg/42Ce3S7b3b) to discuss the new roadmap.
+- **GitHub Discussions**: Ask questions and share ideas about the Enterprise Control Plane.
+- **Twitter**: Follow [@deploystack](https://twitter.com/deploystack) for updates on our progress.
 
 ## License
 
 This project is licensed under the DeployStack License (DSL), a permissive license that allows for almost all uses except offering the software as a cloud service that competes with DeployStack's offerings. See the [LICENSE](LICENSE) file for details.
-
----
-
-**Ready to solve MCP server deployment challenges?** [Get started for free →](https://cloud.deploystack.io)

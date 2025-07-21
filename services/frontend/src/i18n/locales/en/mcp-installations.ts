@@ -150,9 +150,9 @@ export default {
       }
     },
 
-    success: {
-      installed: 'Successfully installed {name}'
-    }
+  success: {
+    installed: 'Successfully installed {name}'
+  }
   },
 
   notifications: {
