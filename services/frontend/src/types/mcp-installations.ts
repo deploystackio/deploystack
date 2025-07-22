@@ -10,6 +10,7 @@ export interface McpServer {
   github_url?: string
   tags?: string[]
   environment_variables?: EnvironmentVariable[]
+  category_id?: string
 }
 
 export interface EnvironmentVariable {
