@@ -110,11 +110,17 @@ const validateForm = () => {
     errors.name = 'Name must be uppercase letters, numbers, and underscores only'
   } else {
     // Check for duplicates (excluding current item when editing)
-    const isDuplicate = environmentVariables.value.some((variable: EnvironmentVariable, index: number) =>
-      variable.name === formDataLocal.value.name && index !== editingIndex.value
-    )
-    if (isDuplicate) {
-      errors.name = 'Environment variable with this name already exists'
+    // Only check for duplicates if the name has actually changed
+    const currentItem = modalMode.value === 'edit' ? environmentVariables.value[editingIndex.value] : null
+    const nameChanged = !currentItem || currentItem.name !== formDataLocal.value.name
+    
+    if (nameChanged) {
+      const isDuplicate = environmentVariables.value.some((variable: EnvironmentVariable, index: number) =>
+        variable.name === formDataLocal.value.name && index !== editingIndex.value
+      )
+      if (isDuplicate) {
+        errors.name = 'Environment variable with this name already exists'
+      }
     }
   }
 
@@ -124,10 +130,15 @@ const validateForm = () => {
 
 // CRUD operations
 const handleSubmit = () => {
-  // Transform name to uppercase before validation and saving
+  // Only transform name to uppercase if it's not already uppercase (avoid unnecessary changes)
+  const originalName = formDataLocal.value.name
   formDataLocal.value.name = formDataLocal.value.name.toUpperCase()
 
-  if (!validateForm()) return
+  if (!validateForm()) {
+    // Restore original name if validation fails to prevent side effects
+    formDataLocal.value.name = originalName
+    return
+  }
 
   const updatedVariables = [...environmentVariables.value]
 
@@ -312,8 +323,8 @@ const modalTitle = computed(() => {
           <div class="flex items-center space-x-2">
             <Switch
               id="var-required"
-              :checked="formDataLocal.required"
-              @update:checked="(value: boolean) => formDataLocal.required = value"
+              :model-value="formDataLocal.required"
+              @update:model-value="(value: boolean) => formDataLocal.required = value"
             />
             <Label for="var-required">{{ t('mcpCatalog.form.capabilities.environmentVariables.required.description') }}</Label>
           </div>

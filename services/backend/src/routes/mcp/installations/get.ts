@@ -22,16 +22,20 @@ const installationSchema = z.object({
     name: z.string(),
     description: z.string(),
     github_url: z.string().nullable(),
+    homepage_url: z.string().nullable(),
+    author_name: z.string().nullable(),
+    language: z.string(),
     runtime: z.string(),
-    installation_methods: z.array(z.any()),
-    environment_variables: z.array(z.any()),
-    default_config: z.any().nullable()
+    status: z.enum(['active', 'deprecated', 'maintenance']),
+    tags: z.array(z.string()).nullable(),
+    environment_variables: z.array(z.any()).nullable(),
+    category_id: z.string().nullable()
   }).optional()
 });
 
 const successResponseSchema = z.object({
   success: z.boolean().default(true),
-  data: z.array(installationSchema)
+  data: installationSchema
 });
 
 const errorResponseSchema = z.object({
@@ -39,67 +43,84 @@ const errorResponseSchema = z.object({
   error: z.string()
 });
 
-export default async function listInstallationsRoute(fastify: FastifyInstance) {
+export default async function getInstallationRoute(fastify: FastifyInstance) {
   fastify.get<{
-    Params: { teamId: string };
-  }>('/teams/:teamId/mcp/installations', {
+    Params: { teamId: string; installationId: string };
+  }>('/teams/:teamId/mcp/installations/:installationId', {
     schema: {
       tags: ['MCP Installations'],
-      summary: 'List team MCP installations',
-      description: 'Retrieves all MCP server installations for the specified team. No Content-Type header required for this GET request.',
+      summary: 'Get MCP installation by ID',
+      description: 'Retrieves a specific MCP server installation by ID for the specified team.',
       security: [{ cookieAuth: [] }],
       params: createSchema(z.object({
-        teamId: z.string().min(1, 'Team ID is required')
+        teamId: z.string().min(1, 'Team ID is required'),
+        installationId: z.string().min(1, 'Installation ID is required')
       }), {
         }),
       response: {
-        200: createSchema(successResponseSchema.describe('List of team installations')),
+        200: createSchema(successResponseSchema.describe('Installation details')),
         401: createSchema(errorResponseSchema.describe('Unauthorized - Authentication required')),
         403: createSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions')),
-        404: createSchema(errorResponseSchema.describe('Not Found - Team not found'))
+        404: createSchema(errorResponseSchema.describe('Not Found - Installation not found'))
       }
     },
     preValidation: requireTeamPermission('mcp.installations.view')
   }, async (request, reply) => {
-    const { teamId } = request.params;
+    const { teamId, installationId } = request.params;
     const userId = request.user!.id;
 
     request.log.info({
-      operation: 'list_mcp_installations',
+      operation: 'get_mcp_installation',
       teamId,
+      installationId,
       userId
-    }, 'Listing MCP installations for team');
+    }, 'Getting MCP installation by ID');
 
     try {
       const db = getDb();
       const installationService = new McpInstallationService(db, request.log);
       
-      const installations = await installationService.getTeamInstallations(teamId, userId);
+      const installation = await installationService.getInstallationById(installationId, teamId);
+
+      if (!installation) {
+        request.log.warn({
+          operation: 'get_mcp_installation',
+          teamId,
+          installationId,
+          userId
+        }, 'MCP installation not found');
+
+        return reply.status(404).send({
+          success: false,
+          error: 'Installation not found'
+        });
+      }
 
       request.log.info({
-        operation: 'list_mcp_installations',
+        operation: 'get_mcp_installation',
         teamId,
-        userId,
-        installationsCount: installations.length
-      }, 'Retrieved MCP installations for team');
+        installationId,
+        userId
+      }, 'Retrieved MCP installation');
 
       return reply.status(200).send({
         success: true,
-        data: installations.map(installation => ({
+        data: {
           ...installation,
           created_at: installation.created_at.toISOString(),
           updated_at: installation.updated_at.toISOString(),
           last_used_at: installation.last_used_at?.toISOString() || null
-        }))
+        }
       });
 
     } catch (error) {
       request.log.error({
-        operation: 'list_mcp_installations',
+        operation: 'get_mcp_installation',
         error,
         teamId,
+        installationId,
         userId
-      }, 'Failed to list MCP installations');
+      }, 'Failed to get MCP installation');
 
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       

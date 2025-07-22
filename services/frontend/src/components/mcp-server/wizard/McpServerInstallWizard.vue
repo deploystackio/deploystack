@@ -281,14 +281,10 @@ const handleServerSelected = (serverData: any) => {
     missingFields: []
   }
 
-  // Pre-populate environment variables with default values
+  // Pre-populate environment variables with empty values
   if (serverData.environment_variables) {
     serverData.environment_variables.forEach((env: any) => {
-      if (env.placeholder && env.placeholder !== `<insert-your-${env.name.toLowerCase()}-here>`) {
-        formData.value.environment.user_environment_variables[env.name] = env.placeholder
-      } else {
-        formData.value.environment.user_environment_variables[env.name] = ''
-      }
+      formData.value.environment.user_environment_variables[env.name] = ''
     })
   }
 }
@@ -316,14 +312,10 @@ const handleQueryParameters = async () => {
         formData.value.server.server_id = serverId
         formData.value.server.server_data = serverData
 
-        // Pre-populate environment variables with default values
+        // Pre-populate environment variables with empty values
         if (serverData.environment_variables) {
           serverData.environment_variables.forEach((env: any) => {
-            if (env.placeholder && env.placeholder !== `<insert-your-${env.name.toLowerCase()}-here>`) {
-              formData.value.environment.user_environment_variables[env.name] = env.placeholder
-            } else {
-              formData.value.environment.user_environment_variables[env.name] = ''
-            }
+            formData.value.environment.user_environment_variables[env.name] = ''
           })
         }
 

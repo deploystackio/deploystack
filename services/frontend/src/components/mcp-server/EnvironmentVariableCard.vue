@@ -162,13 +162,10 @@ watch(modelValue, () => {
 // Watch for environment variables changes to initialize form values
 watch(() => environmentVariables.value, (newVariables) => {
   if (newVariables && newVariables.length > 0) {
-    const newValues: Record<string, string> = {}
+    const newValues: Record<string, string> = { ...modelValue.value }
     newVariables.forEach((env: any) => {
-      // Keep existing values if they exist
-      if (modelValue.value[env.name] !== undefined) {
-        newValues[env.name] = modelValue.value[env.name]
-      } else {
-        // Initialize with empty string - let placeholder show naturally
+      // Only initialize if the key doesn't exist at all
+      if (!(env.name in newValues)) {
         newValues[env.name] = ''
       }
     })
