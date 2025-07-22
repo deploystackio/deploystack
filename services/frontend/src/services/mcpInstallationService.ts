@@ -26,6 +26,27 @@ export class McpInstallationService {
   }
 
   /**
+   * Get a specific MCP installation by ID
+   */
+  static async getInstallationById(teamId: string, installationId: string): Promise<McpInstallation> {
+    const response = await fetch(`${this.baseUrl}/api/teams/${teamId}/mcp/installations/${installationId}`, {
+      method: 'GET',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.message || `Failed to fetch MCP installation: ${response.status}`)
+    }
+
+    const data = await response.json()
+    return data.data || data
+  }
+
+  /**
    * Install MCP server for team
    */
   static async installServer(teamId: string, installData: InstallServerRequest): Promise<McpInstallation> {

@@ -23,6 +23,8 @@ export interface McpInstallation {
     id: string;
     name: string;
     description: string;
+    github_url: string | null;
+    runtime: string;
     installation_methods: any[];
     environment_variables: any[];
     default_config: any;
@@ -85,9 +87,15 @@ export class McpInstallationService {
         id: row.server.id,
         name: row.server.name,
         description: row.server.description,
-        installation_methods: this.parseJsonField(row.server.installation_methods, []),
+        github_url: row.server.github_url,
+        homepage_url: row.server.homepage_url,
+        author_name: row.server.author_name,
+        language: row.server.language,
+        runtime: row.server.runtime,
+        status: row.server.status,
+        tags: this.parseJsonField(row.server.tags, []),
         environment_variables: this.parseJsonField(row.server.environment_variables, []),
-        default_config: this.parseJsonField(row.server.default_config, null)
+        category_id: row.server.category_id
       } : undefined
     }));
   }
@@ -134,9 +142,15 @@ export class McpInstallationService {
         id: server.id,
         name: server.name,
         description: server.description,
-        installation_methods: this.parseJsonField(server.installation_methods, []),
+        github_url: server.github_url,
+        homepage_url: server.homepage_url,
+        author_name: server.author_name,
+        language: server.language,
+        runtime: server.runtime,
+        status: server.status,
+        tags: this.parseJsonField(server.tags, []),
         environment_variables: this.parseJsonField(server.environment_variables, []),
-        default_config: this.parseJsonField(server.default_config, null)
+        category_id: server.category_id
       } : undefined
     };
   }

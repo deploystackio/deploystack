@@ -6,6 +6,7 @@ import DashboardLayout from '@/components/DashboardLayout.vue'
 import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-vue-next'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { DsAlert } from '@/components/ui/ds-alert'
 import { CheckCircle } from 'lucide-vue-next'
 import { useEventBus } from '@/composables/useEventBus'
 import McpInstallationsCard from '@/components/mcp-server/McpInstallationsCard.vue'
@@ -22,6 +23,7 @@ const installations = ref<McpInstallation[]>([])
 const isLoading = ref(true)
 const error = ref<string | null>(null)
 const successMessage = ref<string | null>(null)
+const notificationMessage = ref<{ message: string; type: string } | null>(null)
 
 // Team context using event bus storage
 const selectedTeam = ref<Team | null>(null)
@@ -132,6 +134,50 @@ const handleInstallationsUpdate = () => {
   fetchInstallations()
 }
 
+const handleNotificationShow = (data: { message: string; type: string }) => {
+  notificationMessage.value = data
+}
+
+/* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+const handleStorageChange = (data: { key: string; oldValue: any; newValue: any }) => {
+  // Check if it's a pending notification
+  if (data.key === 'pending_notification' && data.newValue) {
+    // Display the notification
+    notificationMessage.value = {
+      message: data.newValue.message,
+      type: data.newValue.type
+    }
+
+    // Clear the pending notification from storage
+    eventBus.setState('pending_notification', null)
+  }
+}
+
+const checkForPendingNotification = () => {
+  const pendingNotification = eventBus.getState<{ message: string; type: string; timestamp: number }>('pending_notification')
+
+  if (pendingNotification && pendingNotification.message && pendingNotification.type) {
+    // Display the notification
+    notificationMessage.value = {
+      message: pendingNotification.message,
+      type: pendingNotification.type
+    }
+
+    // Clear the pending notification from storage
+    eventBus.setState('pending_notification', null)
+  }
+}
+
+const dismissNotification = () => {
+  notificationMessage.value = null
+}
+
+// Computed property for notification variant to avoid ESLint false positive
+const notificationVariant = computed(() => {
+  if (!notificationMessage.value) return 'default'
+  return notificationMessage.value.type as 'success' | 'error' | 'warning' | 'info' | 'default'
+})
+
 // Lifecycle
 onMounted(async () => {
   // Initialize team context first
@@ -142,17 +188,28 @@ onMounted(async () => {
     await fetchInstallations()
   }
 
+  // Check for pending notifications from storage
+  checkForPendingNotification()
+
   // Listen for team selection events from sidebar
   eventBus.on('team-selected', handleTeamSelected)
 
   // Listen for installation updates
   eventBus.on('mcp-installations-updated', handleInstallationsUpdate)
+
+  // Listen for notification events (for backward compatibility)
+  eventBus.on('notification-show', handleNotificationShow)
+
+  // Listen for storage changes (for persistent notifications)
+  eventBus.on('storage-changed', handleStorageChange)
 })
 
 onUnmounted(() => {
   // Clean up event listeners to prevent memory leaks
   eventBus.off('team-selected', handleTeamSelected)
   eventBus.off('mcp-installations-updated', handleInstallationsUpdate)
+  eventBus.off('notification-show', handleNotificationShow)
+  eventBus.off('storage-changed', handleStorageChange)
 })
 </script>
 
@@ -174,11 +231,20 @@ onUnmounted(() => {
         </Button>
       </div>
 
-      <!-- Success Message -->
+      <!-- Success Message (old alert style, keeping for compatibility) -->
       <Alert v-if="successMessage" class="border-green-200 bg-green-50 text-green-800">
         <CheckCircle class="h-4 w-4" />
         <AlertDescription>{{ successMessage }}</AlertDescription>
       </Alert>
+
+      <!-- Notification Alert (using DsAlert component) -->
+      <DsAlert
+        v-if="notificationMessage"
+        :variant="notificationVariant"
+        :description="notificationMessage.message"
+        dismissible
+        @dismiss="dismissNotification"
+      />
 
       <!-- No team selected state -->
       <div v-if="!selectedTeam" class="text-center py-12">

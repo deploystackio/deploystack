@@ -1,3 +1,0 @@
--- MCP permissions are now managed by RoleSyncService on server startup
--- This migration is kept for historical purposes but no longer performs any operations
--- All role permissions are automatically synced from roleService.ts getDefaultPermissions()
