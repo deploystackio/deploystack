@@ -91,6 +91,12 @@ const routes = [
     meta: { requiresSetup: true },
   },
   {
+    path: '/mcp-server/installation/:id',
+    name: 'McpServerInstallation',
+    component: () => import('../views/mcp-server/installation/[id].vue'),
+    meta: { requiresSetup: true },
+  },
+  {
     path: '/provider',
     name: 'Provider',
     component: () => import('../views/Provider.vue'),
