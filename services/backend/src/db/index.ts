@@ -543,6 +543,12 @@ export function registerPluginTables(plugins: Plugin[], logger?: FastifyBaseLogg
 }
 
 export async function createPluginTables(plugins: Plugin[], logger: FastifyBaseLogger) {
+  // Plugin tables are now handled by migrations
+  logger.info({
+    operation: 'create_plugin_tables'
+  }, 'Plugin tables are handled by migrations.');
+  return;
+
   if (!dbInstance || !isDbInitialized) {
     logger.warn({
       operation: 'create_plugin_tables'
@@ -570,7 +576,7 @@ export async function createPluginTables(plugins: Plugin[], logger: FastifyBaseL
     const ext = plugin.databaseExtension as DatabaseExtensionWithTables;
     if (!ext.tableDefinitions) continue;
 
-    for (const [tableName, columnDefs] of Object.entries(ext.tableDefinitions)) {
+    for (const [tableName, columnDefs] of Object.entries(ext.tableDefinitions || {})) {
       const fullTableName = `${plugin.meta.id}_${tableName}`;
       
       try {

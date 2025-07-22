@@ -26,7 +26,20 @@ export default {
 
   table: {
     loading: 'Loading installations...',
-    noData: 'No MCP servers installed yet'
+    noData: 'No MCP servers installed yet',
+    columns: {
+      installationMethod: 'Installation Method',
+      category: 'Category',
+      runtime: 'Runtime',
+      installed: 'Installed',
+      repository: 'Repository'
+    },
+    values: {
+      github: 'GitHub',
+      noRepository: 'No repository',
+      lastUsed: 'Last used',
+      available: 'Available'
+    }
   },
 
   actions: {
@@ -159,7 +172,8 @@ export default {
     installSuccess: 'MCP server installed successfully',
     installError: 'Failed to install MCP server: {error}',
     removeSuccess: 'Installation removed successfully',
-    removeError: 'Failed to remove installation'
+    removeError: 'Failed to remove installation',
+    uninstallSuccess: 'MCP server uninstalled successfully'
   },
 
   removal: {
@@ -229,6 +243,66 @@ export default {
       lastSync: 'Last Sync:',
       serverId: 'Server ID:',
       slug: 'Slug:'
+    }
+  },
+
+  details: {
+    installationDetails: {
+      title: 'Installation Details',
+      description: 'Information about your MCP server installation',
+      fields: {
+        installationName: 'Installation Name',
+        server: 'Server',
+        description: 'Description',
+        installationType: 'Installation Type',
+        technicalDetails: 'Technical Details',
+        links: 'Links',
+        author: 'Author',
+        tags: 'Tags',
+        installationInfo: 'Installation Info',
+        language: 'Language:',
+        runtime: 'Runtime:',
+        status: 'Status:',
+        repository: 'Repository',
+        homepage: 'Homepage',
+        installed: 'Installed:',
+        updated: 'Updated:',
+        lastUsed: 'Last Used:',
+        installationId: 'Installation ID:'
+      },
+      values: {
+        noDescription: 'No description provided',
+        local: 'local',
+        cloud: 'cloud'
+      }
+    },
+    
+    environmentVariables: {
+      title: 'Environment Variables',
+      description: 'Configuration variables for this installation',
+      noVariables: {
+        title: 'No Environment Variables',
+        description: 'This installation doesn\'t have any custom environment variables configured.'
+      },
+      info: 'These environment variables were configured during installation and are used by your MCP server.'
+    },
+
+    dangerZone: {
+      title: 'Danger Zone',
+      description: 'Irreversible and destructive actions for this installation',
+      uninstall: {
+        label: 'Uninstall MCP Server',
+        description: 'Permanently remove this MCP server installation from your team. This action cannot be undone.',
+        button: 'Uninstall Server',
+        modal: {
+          title: 'Uninstall MCP Server',
+          description: 'Are you sure you want to uninstall "{name}"? This will permanently remove the installation and all its configuration from your team.',
+          warning: 'This action cannot be undone. All configuration and environment variables will be lost.',
+          confirm: 'Uninstall Server',
+          cancel: 'Cancel',
+          uninstalling: 'Uninstalling...'
+        }
+      }
     }
   }
 }

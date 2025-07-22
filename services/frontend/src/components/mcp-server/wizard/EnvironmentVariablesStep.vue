@@ -38,17 +38,8 @@ watch(() => props.serverData, (newData) => {
   if (newData?.environment_variables) {
     const newValues: Record<string, string> = {}
     newData.environment_variables.forEach((env: any) => {
-      // Keep existing values if they exist
-      if (modelValue.value[env.name] !== undefined) {
-        newValues[env.name] = modelValue.value[env.name]
-      } else {
-        // Set default/placeholder values
-        if (env.placeholder && env.placeholder !== `<insert-your-${env.name.toLowerCase()}-here>`) {
-          newValues[env.name] = env.placeholder
-        } else {
-          newValues[env.name] = ''
-        }
-      }
+      // Keep existing values if they exist, otherwise initialize with empty string
+      newValues[env.name] = modelValue.value[env.name] || ''
     })
     modelValue.value = newValues
   }
