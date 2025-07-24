@@ -52,7 +52,7 @@
     "release-it": "^19.0.2",
     "tailwindcss": "^4.1.11",
     "typescript": "~5.8.3",
-    "vite": "^7.0.4",
+    "vite": "^7.0.6",
     "vite-plugin-vue-devtools": "^7.7.7",
     "vue-tsc": "^3.0.1"
   }
