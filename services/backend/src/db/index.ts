@@ -516,6 +516,9 @@ export function executeDbOperation<T>(
   return operation(db, schema);
 }
 
+// Import plugin migration functionality
+import { createPluginTables as createPluginTablesImpl } from './plugin-migrations';
+
 // Plugin system functions
 interface DatabaseExtensionWithTables extends DatabaseExtension {
    
@@ -543,240 +546,15 @@ export function registerPluginTables(plugins: Plugin[], logger?: FastifyBaseLogg
 }
 
 export async function createPluginTables(plugins: Plugin[], logger: FastifyBaseLogger) {
-  // Plugin tables are now handled by migrations
-  logger.info({
-    operation: 'create_plugin_tables'
-  }, 'Plugin tables are handled by migrations.');
-  return;
-
-  if (!dbInstance || !isDbInitialized) {
+  if (!dbInstance || !isDbInitialized || !dbConfig) {
     logger.warn({
       operation: 'create_plugin_tables'
     }, 'Database not initialized, skipping plugin table creation.');
     return;
   }
 
-  const pluginsWithTables = plugins.filter(plugin => 
-    plugin.databaseExtension && plugin.databaseExtension.tableDefinitions
-  );
-
-  if (pluginsWithTables.length === 0) {
-    logger.info({
-      operation: 'create_plugin_tables'
-    }, 'No plugins with table definitions found.');
-    return;
-  }
-
-  logger.info({
-    operation: 'create_plugin_tables',
-    pluginCount: pluginsWithTables.length
-  }, `Creating tables for ${pluginsWithTables.length} plugins...`);
-
-  for (const plugin of pluginsWithTables) {
-    const ext = plugin.databaseExtension as DatabaseExtensionWithTables;
-    if (!ext.tableDefinitions) continue;
-
-    for (const [tableName, columnDefs] of Object.entries(ext.tableDefinitions || {})) {
-      const fullTableName = `${plugin.meta.id}_${tableName}`;
-      
-      try {
-        // Generate CREATE TABLE SQL dynamically
-        const createTableSQL = generateCreateTableSQL(fullTableName, columnDefs);
-        
-        logger.debug({
-          operation: 'create_plugin_tables',
-          pluginId: plugin.meta.id,
-          tableName: fullTableName,
-          sql: createTableSQL
-        }, `Creating plugin table: ${fullTableName}`);
-
-        // Drop the table first to ensure clean recreation (for development)
-        const dropTableSQL = `DROP TABLE IF EXISTS "${fullTableName}"`;
-        
-        logger.debug({
-          operation: 'create_plugin_tables',
-          pluginId: plugin.meta.id,
-          tableName: fullTableName,
-          sql: dropTableSQL
-        }, `Dropping existing plugin table: ${fullTableName}`);
-
-        // Execute the DROP TABLE statement
-        if (dbConfig?.type === 'sqlite') {
-          (dbInstance as any).$client.exec(dropTableSQL);
-        } else if (dbConfig?.type === 'turso') {
-          if ((dbInstance as any).$client && typeof (dbInstance as any).$client.execute === 'function') {
-            await (dbInstance as any).$client.execute(dropTableSQL);
-          } else {
-            await dbInstance.run(dropTableSQL);
-          }
-        }
-
-        // Execute the CREATE TABLE statement
-        if (dbConfig?.type === 'sqlite') {
-          (dbInstance as any).$client.exec(createTableSQL);
-        } else if (dbConfig?.type === 'turso') {
-          if ((dbInstance as any).$client && typeof (dbInstance as any).$client.execute === 'function') {
-            await (dbInstance as any).$client.execute(createTableSQL);
-          } else {
-            await dbInstance.run(createTableSQL);
-          }
-        }
-
-        logger.info({
-          operation: 'create_plugin_tables',
-          pluginId: plugin.meta.id,
-          tableName: fullTableName
-        }, `✅ Created plugin table: ${fullTableName}`);
-
-      } catch (error) {
-        const typedError = error as Error;
-        // Check if table already exists (not an error)
-        if (typedError.message.includes('already exists') || typedError.message.includes('table') && typedError.message.includes('already')) {
-          logger.debug({
-            operation: 'create_plugin_tables',
-            pluginId: plugin.meta.id,
-            tableName: fullTableName
-          }, `Table ${fullTableName} already exists, skipping.`);
-        } else {
-          logger.error({
-            operation: 'create_plugin_tables',
-            pluginId: plugin.meta.id,
-            tableName: fullTableName,
-            error: typedError,
-            message: typedError.message
-          }, `❌ Failed to create plugin table: ${fullTableName}`);
-          throw error;
-        }
-      }
-    }
-  }
-
-  logger.info({
-    operation: 'create_plugin_tables'
-  }, '✅ Plugin table creation completed.');
-}
-
-/**
- * Generate CREATE TABLE SQL from plugin table definitions
- */
-function generateCreateTableSQL(tableName: string, columnDefs: Record<string, (columnBuilder: any) => any>): string {
-  const columns: string[] = [];
-  
-  for (const [columnName, columnDefFunc] of Object.entries(columnDefs)) {
-    // Create a mock column builder to extract column definition
-    const mockBuilder = createMockColumnBuilder();
-    const columnDef = columnDefFunc(mockBuilder);
-    
-    // Convert the column definition to SQL
-    const sqlColumn = convertColumnDefToSQL(columnName, columnDef);
-    columns.push(sqlColumn);
-  }
-  
-  return `CREATE TABLE IF NOT EXISTS "${tableName}" (\n  ${columns.join(',\n  ')}\n)`;
-}
-
-/**
- * Create a mock column builder that captures column definition details
- */
-function createMockColumnBuilder() {
-  const createColumn = (type: string) => {
-    const column = {
-      type,
-      isPrimaryKey: false,
-      isNotNull: false,
-      isUnique: false,
-      defaultValue: undefined as any,
-      references: undefined as any,
-    };
-
-    return {
-      ...column,
-      primaryKey() {
-        column.isPrimaryKey = true;
-        return this;
-      },
-      
-      notNull() {
-        column.isNotNull = true;
-        return this;
-      },
-      
-      unique() {
-        column.isUnique = true;
-        return this;
-      },
-      
-      default(value: any) {
-        column.defaultValue = value;
-        return this;
-      },
-      
-      defaultNow() {
-        column.defaultValue = "strftime('%s', 'now')";
-        return this;
-      },
-      
-      references(ref: any) {
-        column.references = ref;
-        return this;
-      }
-    };
-  };
-
-  return (columnName: string, options?: any) => {
-    // Determine column type based on name patterns and options
-    let type = 'TEXT';
-    
-    if (options?.mode === 'timestamp' || columnName.toLowerCase().includes('at') || columnName.toLowerCase().includes('date')) {
-      type = 'INTEGER'; // SQLite uses INTEGER for timestamps
-    } else if (columnName.toLowerCase().includes('id') || columnName.toLowerCase().includes('count') || 
-               columnName.toLowerCase().includes('age') || columnName.toLowerCase().includes('quantity') ||
-               columnName.toLowerCase().includes('order') || columnName.toLowerCase().includes('number')) {
-      type = 'INTEGER';
-    }
-    
-    const column = createColumn(type);
-    
-    // For timestamp columns with mode, automatically set default if not already set
-    if (options?.mode === 'timestamp' && !column.defaultValue) {
-      column.defaultValue = "strftime('%s', 'now')";
-    }
-    
-    return column;
-  };
-}
-
-/**
- * Convert column definition object to SQL string
- */
-function convertColumnDefToSQL(columnName: string, columnDef: any): string {
-  let sql = `"${columnName}" ${columnDef.type}`;
-  
-  if (columnDef.isPrimaryKey) {
-    sql += ' PRIMARY KEY';
-  }
-  
-  if (columnDef.isNotNull) {
-    sql += ' NOT NULL';
-  }
-  
-  if (columnDef.isUnique) {
-    sql += ' UNIQUE';
-  }
-  
-  if (columnDef.defaultValue !== undefined) {
-    if (typeof columnDef.defaultValue === 'string' && columnDef.defaultValue.includes('strftime')) {
-      sql += ` DEFAULT (${columnDef.defaultValue})`;
-    } else if (typeof columnDef.defaultValue === 'string') {
-      sql += ` DEFAULT '${columnDef.defaultValue}'`;
-    } else if (typeof columnDef.defaultValue === 'boolean') {
-      sql += ` DEFAULT ${columnDef.defaultValue ? 1 : 0}`;
-    } else {
-      sql += ` DEFAULT ${columnDef.defaultValue}`;
-    }
-  }
-  
-  return sql;
+  // Use the extracted plugin migration functionality
+  await createPluginTablesImpl(plugins, dbInstance, dbConfig, logger);
 }
 
 export async function initializePluginDatabases(db: AnyDatabase, plugins: Plugin[], logger: FastifyBaseLogger) {
