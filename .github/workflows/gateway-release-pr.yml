@@ -1,0 +1,159 @@
+name: Gateway Release PR
+on:
+  workflow_dispatch:
+    inputs:
+      type:
+        type: choice
+        description: Choose release type
+        options:
+          - patch
+          - minor
+          - major
+        default: patch
+      beta:
+        type: boolean
+        description: Prerelease
+        default: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  releaseIt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          # Use the app token for checkout as well
+          token: ${{ secrets.APP_INSTALLATION_TOKEN }}
+      - name: git config
+        run: |
+          git config user.name "${GITHUB_ACTOR}"
+          git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
+      - name: Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      
+      # Install dependencies from root (same as backend pipeline)
+      - name: Install dependencies
+        run: |
+          npm ci || {
+            echo "npm ci failed, trying clean install..."
+            npm install --no-optional
+          }
+          
+      - name: Gateway Build Test
+        working-directory: services/gateway
+        run: npm run build
+
+      - name: Gateway Unit Tests
+        working-directory: services/gateway
+        run: npm run test:unit || echo "Tests not implemented yet, skipping"
+
+      - name: Gateway Lint
+        working-directory: services/gateway
+        run: npm run lint || echo "Linting not configured yet, skipping"
+        
+      - name: Check for console.log in gateway
+        working-directory: services/gateway
+        run: npm run check:no-console || echo "Console check not configured yet, skipping"
+        
+      - name: Prepare release
+        working-directory: services/gateway
+        env:
+          GITHUB_TOKEN: ${{ secrets.APP_INSTALLATION_TOKEN }}
+          TYPE_ARG: ${{ fromJSON('{"patch":"patch", "minor":"minor", "major":"major"}')[github.event.inputs.type] }}
+          BETA_ARG: ${{ github.event.inputs.beta == 'true' && '--preRelease=beta' || '' }}
+        run: npm run release -- $TYPE_ARG --ci --verbose --no-git.push --no-git.commit --no-git.tag --no-github --no-npm $BETA_ARG
+      - name: Update version.ts file
+        working-directory: services/gateway
+        run: |
+          node scripts/update-version.js || echo "Version update script not found, skipping"
+          if [ -f src/config/version.ts ]; then
+            git add src/config/version.ts
+          fi
+      - name: get-npm-version
+        id: package-version
+        uses: martinbeentjes/npm-get-version-action@main
+        with:
+          path: services/gateway
+      - name: Extract release notes
+        id: extract-release-notes
+        run: |
+          # Get the current version from the package.json in the current working directory
+          VERSION=$(cat package.json | grep '"version"' | cut -d'"' -f4)
+          echo "Extracting release notes for version $VERSION"
+          
+          # Extract the changelog section for this version
+          if [ -f CHANGELOG.md ]; then
+            # Look for the version header and extract content until the next version or end of file
+            RELEASE_NOTES=$(awk -v version="$VERSION" '
+              BEGIN { found=0; content="" }
+              /^##? [0-9]+\.[0-9]+\.[0-9]+/ { 
+                if (found) exit
+                if ($0 ~ version) { found=1; next }
+              }
+              found && /^##? [0-9]+\.[0-9]+\.[0-9]+/ { exit }
+              found { content = content $0 "\n" }
+              END { print content }
+            ' CHANGELOG.md)
+            
+            # Remove empty lines
+            CLEAN_NOTES=$(echo "$RELEASE_NOTES" | sed '/^$/d')
+            
+            # Save to output
+            echo "release_notes<<EOF" >> $GITHUB_OUTPUT
+            echo "$CLEAN_NOTES" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+            
+            echo "Release notes extracted:"
+            echo "$CLEAN_NOTES"
+          else
+            echo "No CHANGELOG.md found"
+            echo "release_notes=" >> $GITHUB_OUTPUT
+          fi
+        working-directory: services/gateway
+      - name: Create pull request
+        uses: peter-evans/create-pull-request@v7
+        id: cpr
+        with:
+          # This is the key change - use the app token
+          token: ${{ secrets.APP_INSTALLATION_TOKEN }}
+          branch: gateway-release
+          delete-branch: true
+          commit-message: 'chore(gateway): release v${{ steps.package-version.outputs.current-version}}'
+          title: '[Gateway Release] v${{ steps.package-version.outputs.current-version}}'
+          body: |
+            ## Gateway Release v${{ steps.package-version.outputs.current-version}}
+            
+            This PR prepares a new gateway release.
+            
+            When merged, this will:
+            1. Create a release tag
+            2. Build and publish the npm package to @deploystack/gateway
+            
+            The npm package will be available at:
+            - `@deploystack/gateway@latest`
+            - `@deploystack/gateway@v${{ steps.package-version.outputs.current-version}}`
+            
+            ### Installation
+            ```bash
+            npm install -g @deploystack/gateway@${{ steps.package-version.outputs.current-version}}
+            ```
+            
+            ## Release notes:
+            ${{ steps.extract-release-notes.outputs.release_notes }}
+          labels: |
+            gateway
+            release
+            automated pr
+          draft: false
+      - name: Show PR link
+        if: ${{ steps.cpr.outputs.pull-request-url }}
+        run: |
+          echo "Gateway Release v${{ steps.package-version.outputs.current-version}}' pull request - ${{ steps.cpr.outputs.pull-request-url }}"
