@@ -1,5 +1,27 @@
 # Changelog
 
+## <small>0.27.1 (2025-07-26)</small>
+
+* bump @libsql/client from 0.15.9 to 0.15.10 ([908efef](https://github.com/deploystackio/deploystack/commit/908efefe920ad03cd859e17c9df9a2e52493e99b))
+* bump @types/node from 24.0.13 to 24.0.15 ([8fef45c](https://github.com/deploystackio/deploystack/commit/8fef45c2a932ea2b6842e0b78d72ef5cb2f814e0))
+* bump @typescript-eslint/parser from 8.37.0 to 8.38.0 ([8033039](https://github.com/deploystackio/deploystack/commit/80330391f88f488b09b9a64ceb02cfa8950a5c94))
+* bump release-it from 19.0.3 to 19.0.4 ([d787cb6](https://github.com/deploystackio/deploystack/commit/d787cb65afb1c10141476a0b1e87243b3dc1aea3))
+* bump typescript-eslint from 8.37.0 to 8.38.0 ([7ed34d0](https://github.com/deploystackio/deploystack/commit/7ed34d06c1ffe7764b22ed5e05ebc34deb107a5d))
+* bump vite from 7.0.4 to 7.0.5 ([a2bfb72](https://github.com/deploystackio/deploystack/commit/a2bfb72ec0d09d46e100d2145fc6bd3e9e0dc362))
+* bump vue-i18n from 11.1.9 to 11.1.10 ([f751909](https://github.com/deploystackio/deploystack/commit/f751909763e10afb9e932655d8757f7881398477))
+* bump vue-tsc from 3.0.1 to 3.0.3 ([37052d3](https://github.com/deploystackio/deploystack/commit/37052d3b144ad2ade7b3f1bf4bcdb5fe144af058))
+* release v0.27.0 ([948ed10](https://github.com/deploystackio/deploystack/commit/948ed10b3bda94cc28951d623b3904b68f2621b2))
+* add installation details and environment variables components ([55c8d53](https://github.com/deploystackio/deploystack/commit/55c8d53aad43e0355182c8a0469b68a36765a872))
+* implement plugin migration functionality and update createPluginTables logic ([99ec957](https://github.com/deploystackio/deploystack/commit/99ec9575b865f0e005764097b6d06ae8c043d6ef))
+* Refactor MCP server selection step to use McpServerCard component for better modularity ([75fa5c2](https://github.com/deploystackio/deploystack/commit/75fa5c2de15663f1d698665fb15e3ffd850ab3cf))
+* update MCP endpoint in gateway README to reflect new default port ([8938a50](https://github.com/deploystackio/deploystack/commit/8938a501f1c16b55754fe93fdd4bdae56e400a9c))
+* enhance layout and styling for environment variables in EnvironmentVariableCard component ([e4a68f0](https://github.com/deploystackio/deploystack/commit/e4a68f0c023b3bbbf681569fbb2997024ca2eaa5))
+* enhance placeholder value check in isPlaceholderValue function ([1cb9634](https://github.com/deploystackio/deploystack/commit/1cb96341b41d78b1a084bba379023b4e9c64e40e))
+* enhance validation logic for required environment variables and improve server selection handling ([37affd3](https://github.com/deploystackio/deploystack/commit/37affd369586711fa350ef4efa663faf1d3cf301))
+* improve structure and styling of environment variable cards in EnvironmentVariableCard component ([61d8d34](https://github.com/deploystackio/deploystack/commit/61d8d340c0ad9398c6aa318ed4fffe75914e092b))
+* streamline environment variable handling in EnvironmentVariableCard and EnvironmentVariablesStep components ([d3a005a](https://github.com/deploystackio/deploystack/commit/d3a005a310a64745bccbc2876d82b5fea4226897))
+* update package-lock.json with new dependencies and links for gateway service ([ee4d2cb](https://github.com/deploystackio/deploystack/commit/ee4d2cb1185a5e03fb6c1cbdb07e771f94cc2b73))
+
 ## 0.27.0 (2025-07-26)
 
 * bump @libsql/client from 0.15.9 to 0.15.10 ([908efef](https://github.com/deploystackio/deploystack/commit/908efefe920ad03cd859e17c9df9a2e52493e99b))
