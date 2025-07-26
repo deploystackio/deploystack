@@ -22,13 +22,13 @@ npm install -g @deploystack/gateway
 
 ```bash
 # Login to your DeployStack account
-deploystack-gateway login
+deploystack login
 
 # Start the gateway (runs on localhost:9095 by default)
-deploystack-gateway start
+deploystack start
 
 # Check status
-deploystack-gateway status
+deploystack status
 ```
 
 ## 🧱 How It Works
