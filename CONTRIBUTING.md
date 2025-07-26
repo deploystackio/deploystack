@@ -35,6 +35,7 @@ deploystack/
 ├── services/
 │   ├── frontend/        # Vue.js frontend application
 │   ├── backend/         # Fastify backend API
+│   ├── gateway/         # DeployStack Gateway application
 │   └── shared/          # Shared code and utilities
 ├── scripts/             # Build and deployment scripts
 └── ...
@@ -76,38 +77,56 @@ Always create a new branch for your changes based on the latest `main`.
 
 ### Commit Message Guidelines
 
-We follow the Angular commit convention with scoped messages. This helps with automatic versioning and changelog generation.
+**🚨 IMPORTANT: Scopes are MANDATORY in our monorepo!**
 
-Format: `type(scope): subject`
+We follow the Angular commit convention with **mandatory scoped messages**. This is crucial for automatic versioning and changelog generation per service.
 
-Types:
+**Format:** `type(scope): subject`
 
+**Mandatory Scopes:**
+- `frontend`: Changes to the Vue.js frontend application
+- `backend`: Changes to the Fastify backend API  
+- `gateway`: Changes to the DeployStack Gateway application
+- `shared`: Changes affecting shared code and utilities
+- `all`: Changes affecting multiple services or project-wide changes
+- `ci`: CI/CD pipeline changes
+- `deps`: Dependency updates
+
+**Types:**
 - `feat`: A new feature (minor version bump)
-- `fix`: A bug fix (patch version bump)
+- `fix`: A bug fix (patch version bump) 
 - `docs`: Documentation changes
 - `style`: Changes that don't affect the code's meaning
 - `refactor`: Code changes that neither fix bugs nor add features
 - `perf`: Performance improvements
 - `test`: Adding or correcting tests
+- `build`: Changes affecting the build system
 - `chore`: Changes to the build process or tools
 
-Scopes:
-
-- `frontend`: Changes to the Vue.js frontend
-- `backend`: Changes to the Fastify backend
-- `shared`: Changes affecting shared code
-- `all`: Changes affecting multiple parts of the application
-- `deps`: Dependency updates
-- `ci`: CI/CD changes
-
-Examples:
-
+**Examples:**
 - `feat(frontend): add dark mode support`
-- `fix(backend): correct database query issue`
-- `docs(all): update README with new instructions`
-- `chore(deps): update dependencies`
+- `fix(backend): resolve database connection timeout`
+- `feat(gateway): implement MCP server auto-discovery`
+- `refactor(shared): extract common validation utilities`
+- `docs(all): update installation instructions`
+- `chore(deps): update all dependencies to latest`
+- `ci(all): add automated security scanning`
 
-**Important**: Using the correct scope ensures that changes appear in the appropriate changelogs.
+**Why Scopes Matter:**
+- **Automatic Changelog Generation**: Each service gets its own changelog with only relevant commits
+- **Independent Releases**: Frontend, backend, and gateway can be released independently
+- **Clear Impact**: Instantly see which part of the system is affected
+
+**VS Code Integration:**
+We've configured GitHub Copilot to automatically suggest scoped commit messages. Just click the sparkle ✨ button in the commit message box!
+
+**Rules:**
+1. ✅ **ALWAYS include a scope** - commits without scopes will not appear in service-specific changelogs
+2. ✅ **Use lowercase** for scopes and types
+3. ✅ **Keep subject under 72 characters**
+4. ✅ **Use imperative mood** ("add feature" not "added feature")
+5. ✅ **No period at the end** of the subject line
+6. ✅ **Use `all` scope sparingly** - only for true cross-cutting changes
 
 ### Pull Request Process
 
@@ -143,6 +162,14 @@ Examples:
 - Properly handle errors and return appropriate status codes
 - Document API endpoints
 - Write unit tests for business logic
+
+### Gateway Guidelines
+
+- Follow Node.js and TypeScript best practices
+- Implement secure credential handling
+- Write comprehensive error handling for MCP server interactions
+- Document CLI commands and configuration options
+- Test process management and lifecycle operations
 
 ## Testing
 

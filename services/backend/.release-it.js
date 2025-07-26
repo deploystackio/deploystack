@@ -28,10 +28,12 @@ module.exports = {
       "writerOpts": {
         "commitsFilter": ["feat", "fix", "perf", "revert"],
         "transform": function(commit, context) {
-          // Only include commits with backend scope or no scope
-          const scopes = commit.scope ? commit.scope.split(',') : [];
+          // Only include commits with backend scope, all scope, or no scope
+          const scopes = commit.scope ? commit.scope.split(',').map(s => s.trim().toLowerCase()) : [];
+          
+          // If commit has a scope, it must include 'backend' or 'all'
           if (commit.scope && !scopes.includes('backend') && !scopes.includes('all')) {
-            return;
+            return; // Filter out commits not related to backend
           }
           
           // Create a new commit object to avoid modifying immutable object

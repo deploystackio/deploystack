@@ -30,10 +30,12 @@ module.exports = {
       "writerOpts": {
         "commitsFilter": ["feat", "fix", "perf", "revert"],
         "transform": function(commit) {
-          // Only include commits with frontend scope or no scope
-          const scopes = commit.scope ? commit.scope.split(',') : [];
+          // Only include commits with frontend scope, all scope, or no scope
+          const scopes = commit.scope ? commit.scope.split(',').map(s => s.trim().toLowerCase()) : [];
+          
+          // If commit has a scope, it must include 'frontend' or 'all'
           if (commit.scope && !scopes.includes('frontend') && !scopes.includes('all')) {
-            return;
+            return; // Filter out commits not related to frontend
           }
 
           // Create a new commit object to avoid modifying immutable object

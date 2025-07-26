@@ -1,0 +1,8 @@
+{
+  "github.copilot.chat.commitMessageGeneration.instructions": [
+    {
+      "text": "Generate commit messages following the Conventional Commits specification with MANDATORY scope for monorepo. Use this structure:\n\n<type>(<scope>): <description>\n\nRules:\n1. **SCOPE IS MANDATORY** - Must be one of: frontend, backend, gateway, shared, all\n2. **Type must be one of**: feat, fix, docs, style, refactor, perf, test, build, ci, chore\n3. **Description**: Imperative mood, no period at end, max 72 characters\n4. **Examples**:\n   - feat(frontend): add dark mode toggle\n   - fix(backend): resolve database connection issue\n   - chore(gateway): update dependencies\n   - docs(all): update README installation guide\n   - refactor(shared): extract common utilities\n\nAlways include the scope to ensure proper changelog filtering per service. Use 'all' scope only for changes affecting multiple services or project-wide changes."
+    }
+  ],
+  "github.copilot.chat.codeGeneration.useInstructionFiles": true
+}
