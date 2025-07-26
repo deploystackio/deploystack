@@ -1,0 +1,86 @@
+name: Gateway Release
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - main
+    paths:
+      - 'services/gateway/**'
+  
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release:
+    if: github.event.pull_request.merged == true && contains(github.event.pull_request.labels.*.name, 'gateway') && contains(github.event.pull_request.labels.*.name, 'release')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          # Use the app token for checkout as well
+          token: ${{ secrets.APP_INSTALLATION_TOKEN }}
+          
+      - name: git config
+        run: |
+          git config user.name "${GITHUB_ACTOR}"
+          git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
+          
+      - name: Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          registry-url: 'https://registry.npmjs.org'
+          
+      # Install dependencies at root level for workspaces
+      - name: Install dependencies
+        run: npm ci
+      
+      # Now run release-it with the APP_INSTALLATION_TOKEN
+      - name: Prepare release
+        working-directory: services/gateway
+        env:
+          GITHUB_TOKEN: ${{ secrets.APP_INSTALLATION_TOKEN }}
+        run: npm run release -- --ci --verbose --no-git.requireCleanWorkingDir --no-npm
+        
+      # Get the version after release-it has run
+      - name: Get version
+        id: package-version
+        uses: martinbeentjes/npm-get-version-action@main
+        with:
+          path: services/gateway
+          
+      # Build the gateway
+      - name: Build gateway
+        working-directory: services/gateway
+        run: |
+          npm run build
+          
+      # Publish to npm
+      - name: Publish to npm
+        working-directory: services/gateway
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          # Publish the package to npm
+          npm publish --access public
+          
+      - name: Release summary
+        run: |
+          echo "# Gateway Release v${{ steps.package-version.outputs.current-version }} Published! 🚀" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "The gateway has been successfully released and published to npm." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Installation" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "npm install -g @deploystack/gateway@${{ steps.package-version.outputs.current-version }}" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Package Details" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Package**: [@deploystack/gateway](https://www.npmjs.com/package/@deploystack/gateway)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version**: v${{ steps.package-version.outputs.current-version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Release Tag**: [v${{ steps.package-version.outputs.current-version }}](https://github.com/${{ github.repository }}/releases/tag/v${{ steps.package-version.outputs.current-version }})" >> $GITHUB_STEP_SUMMARY
