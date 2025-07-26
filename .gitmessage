@@ -1,0 +1,26 @@
+# <type>(<scope>): <description>
+#
+# Types: feat, fix, docs, style, refactor, perf, test, build, ci, chore
+# 
+# Scopes (MANDATORY - choose one):
+#   frontend - Vue.js frontend application
+#   backend  - Fastify backend API
+#   gateway  - DeployStack Gateway application  
+#   shared   - Shared utilities and common code
+#   all      - Changes affecting multiple services
+#   ci       - CI/CD pipeline changes
+#   deps     - Dependency updates
+#
+# Examples:
+#   feat(frontend): add dark mode toggle
+#   fix(backend): resolve database timeout issue
+#   feat(gateway): implement auto MCP server discovery
+#   refactor(shared): extract common validation utils
+#   docs(all): update installation instructions
+#   chore(deps): update all dependencies
+#
+# Remember:
+# - Use imperative mood ("add" not "added")
+# - Keep subject line under 72 characters
+# - No period at end of subject line
+# - Scope is MANDATORY for proper changelog generation
