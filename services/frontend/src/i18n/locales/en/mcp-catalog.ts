@@ -329,7 +329,10 @@ export default {
         addVariable: 'Add Variable',
         editVariable: 'Edit Variable',
         noVariables: 'No environment variables defined',
+        noVariablesDescription: 'Click "Add Variable" to get started.',
         requiredBadge: 'Required',
+        addDescription: 'Add a new environment variable that this MCP server requires.',
+        editDescription: 'Edit the environment variable details.',
         name: {
           label: 'Variable Name',
           placeholder: 'VARIABLE_NAME'
@@ -338,10 +341,35 @@ export default {
           label: 'Description',
           placeholder: 'What this variable is used for'
         },
+        type: {
+          label: 'Type',
+          placeholder: 'Select variable type',
+          options: {
+            text: 'Text',
+            password: 'Password',
+            number: 'Number',
+            url: 'URL',
+            email: 'Email'
+          }
+        },
+        placeholder: {
+          label: 'Placeholder',
+          placeholder: 'Example value or hint for users'
+        },
         required: {
           label: 'Required',
           description: 'Is this variable required?'
-        }
+        },
+        validation: {
+          label: 'Validation Pattern (Optional)',
+          placeholder: 'Regular expression for validation',
+          description: 'Optional regex pattern to validate the environment variable value.',
+          nameRequired: 'Name is required',
+          nameFormat: 'Name must be uppercase letters, numbers, and underscores only',
+          nameDuplicate: 'Environment variable with this name already exists'
+        },
+        submitAdd: 'Add Variable',
+        submitEdit: 'Save Changes'
       },
       defaultConfig: {
         label: 'Default Configuration',

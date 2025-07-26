@@ -109,6 +109,44 @@ export class UserService {
   }
 
   /**
+   * Get user by email address with role information
+   */
+  async getUserByEmail(email: string): Promise<User | null> {
+    const { db, schema } = this.getDbAndSchema();
+    const authUserTable = schema.authUser;
+    const rolesTable = schema.roles;
+
+    const usersWithRoles = await (db as any)
+      .select({
+        user: authUserTable,
+        role: rolesTable,
+      })
+      .from(authUserTable)
+      .leftJoin(rolesTable, eq(authUserTable.role_id, rolesTable.id))
+      .where(eq(authUserTable.email, email.toLowerCase()))
+      .limit(1);
+
+    if (usersWithRoles.length === 0) return null;
+
+    const row = usersWithRoles[0];
+    return {
+      id: row.user.id,
+      username: row.user.username,
+      email: row.user.email,
+      auth_type: row.user.auth_type,
+      first_name: row.user.first_name,
+      last_name: row.user.last_name,
+      github_id: row.user.github_id,
+      role_id: row.user.role_id,
+      role: row.role ? {
+        id: row.role.id,
+        name: row.role.name,
+        permissions: JSON.parse(row.role.permissions),
+      } : undefined,
+    };
+  }
+
+  /**
    * Update user information
    */
   async updateUser(id: string, input: UpdateUserInput): Promise<User | null> {

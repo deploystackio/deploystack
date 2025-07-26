@@ -212,3 +212,6 @@ INSERT INTO `roles` (`id`, `name`, `description`, `permissions`, `is_system_role
 ('global_user', 'Global User', 'Standard user with basic profile access', '[]', 1, strftime('%s', 'now') * 1000, strftime('%s', 'now') * 1000),
 ('team_admin', 'Team Administrator', 'Team management with member and credential access', '[]', 1, strftime('%s', 'now') * 1000, strftime('%s', 'now') * 1000),
 ('team_user', 'Team User', 'Basic team member with view access', '[]', 1, strftime('%s', 'now') * 1000, strftime('%s', 'now') * 1000);
+
+INSERT INTO `mcpCategories` (`id`, `name`, `description`, `icon`, `sort_order`, `created_at`) 
+VALUES ('default-category-id', 'Default', 'Default category', 'Tags', 0, strftime('%s', 'now') * 1000);

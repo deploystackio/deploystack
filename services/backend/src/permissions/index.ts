@@ -76,9 +76,6 @@ export const ROLE_DEFINITIONS = {
     'cloud_credentials.view',
     'mcp.servers.read',
     'mcp.installations.view',
-    'mcp.installations.create',
-    'mcp.installations.edit',
-    'mcp.installations.delete',
   ],
 } as const;
 

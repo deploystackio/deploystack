@@ -9,31 +9,37 @@ import { DsTabs, DsTabsItem } from '@/components/ui/ds-tabs'
 import DashboardLayout from '@/components/DashboardLayout.vue'
 import { InstallationInfo, EnvironmentVariables, DangerZone } from '@/components/mcp-server/installation'
 import { McpInstallationService } from '@/services/mcpInstallationService'
-import { TeamService } from '@/services/teamService'
+import { TeamService, type Team } from '@/services/teamService'
+import { useEventBus } from '@/composables/useEventBus'
 import type { McpInstallation } from '@/types/mcp-installations'
 
 const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
+const eventBus = useEventBus()
 
 const installation = ref<McpInstallation | null>(null)
+const currentTeam = ref<Team | null>(null)
+const userTeamRole = ref<'team_admin' | 'team_user' | null>(null)
 const isLoading = ref(true)
 const error = ref<string | null>(null)
 const activeTab = ref('information')
 
 const installationId = route.params.id as string
 
-// Find which team owns the installation (similar to McpInstallationsList)
-async function findInstallationTeam(installationId: string): Promise<{ teamId: string; installation: McpInstallation } | null> {
+// Find which team owns the installation and get user's role in that team
+async function findInstallationTeam(installationId: string): Promise<{ team: Team; installation: McpInstallation; userRole: 'team_admin' | 'team_user' } | null> {
   try {
-    // Get user's teams
+    // Get user's teams with role information
     const userTeams = await TeamService.getUserTeams()
 
     for (const team of userTeams) {
       try {
         const installation = await McpInstallationService.getInstallationById(team.id, installationId)
         if (installation) {
-          return { teamId: team.id, installation }
+          // Get user's role in this specific team
+          const userRole = team.role || 'team_user' // Fallback to team_user if role not available
+          return { team, installation, userRole }
         }
       } catch {
         // Continue to next team if not found
@@ -55,14 +61,20 @@ onMounted(async () => {
 
     if (result) {
       installation.value = result.installation
+      currentTeam.value = result.team
+      userTeamRole.value = result.userRole
       error.value = null
     } else {
       error.value = 'Installation not found or you do not have access to it'
       installation.value = null
+      currentTeam.value = null
+      userTeamRole.value = null
     }
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'An unknown error occurred'
     installation.value = null
+    currentTeam.value = null
+    userTeamRole.value = null
   } finally {
     isLoading.value = false
   }
@@ -81,8 +93,24 @@ const environmentVariablesCount = computed(() => {
   return Object.keys(installation.value.user_environment_variables).length
 })
 
+// Check if user can edit installations in this team
+const canEditInstallation = computed(() => {
+  // Only team_admin can edit installations (team_user cannot)
+  // If role is null/undefined, default to false (no edit permissions)
+  return userTeamRole.value === 'team_admin'
+})
+
 const goBack = () => {
   router.push('/mcp-server')
+}
+
+// Handle installation updates
+const handleInstallationUpdated = (updatedInstallation: McpInstallation) => {
+  // Update the local installation data
+  installation.value = updatedInstallation
+  
+  // Emit general installations updated event for other components that might need to refresh
+  eventBus.emit('mcp-installations-updated')
 }
 </script>
 
@@ -112,7 +140,7 @@ const goBack = () => {
 
       <!-- Installation Details with Tabs -->
       <div v-else-if="installation">
-        <DsTabs v-model="activeTab" class="mb-6">
+        <DsTabs v-model="activeTab">
           <DsTabsItem value="information" label="Installation Info">
             <Info class="h-4 w-4" />
           </DsTabsItem>
@@ -132,7 +160,7 @@ const goBack = () => {
         <div>
           <!-- Content Wrapper with same styling as EnvironmentVariablesStep -->
           <div class="bg-muted/50 rounded-lg sm:rounded-lg">
-            <div class="py-16 sm:py-24">
+            <div class="py-16">
               <div class="mx-auto max-w-7xl sm:px-2 lg:px-8">
                 <div class="mx-auto max-w-2xl px-4 lg:max-w-4xl lg:px-0">
                   <!-- White Card inside the gray wrapper -->
@@ -145,10 +173,15 @@ const goBack = () => {
                       <EnvironmentVariables
                         v-if="activeTab === 'environment'"
                         :installation="installation"
+                        :can-edit="canEditInstallation"
+                        :user-role="userTeamRole"
+                        @installation-updated="handleInstallationUpdated"
                       />
                       <DangerZone
                         v-if="activeTab === 'danger-zone'"
                         :installation="installation"
+                        :can-edit="canEditInstallation"
+                        :user-role="userTeamRole"
                       />
                     </CardContent>
                   </Card>

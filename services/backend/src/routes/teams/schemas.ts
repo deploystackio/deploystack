@@ -67,7 +67,7 @@ export const TeamMemberSchema = z.object({
 
 // Request schemas for team member management
 export const AddTeamMemberSchema = z.object({
-  userId: z.string().min(1, 'User ID is required').describe('ID of user to add to team'),
+  email: z.string().email('Valid email address is required').describe('Email address of user to add to team'),
   role: z.enum(['team_admin', 'team_user']).describe('Role to assign to the user')
 });
 

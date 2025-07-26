@@ -10,6 +10,19 @@ import '../../../src/hooks/authHook';
 // Mock dependencies
 vi.mock('../../../src/services/teamService');
 vi.mock('../../../src/middleware/roleMiddleware');
+vi.mock('../../../src/routes/teams/members', () => ({
+  default: async (fastify: any) => {
+    // Mock team members routes - register some basic routes to satisfy the structure
+    if (fastify && typeof fastify.get === 'function') {
+      fastify.get('/teams/:id/members', {}, () => {});
+      fastify.post('/teams/:id/members', {}, () => {});
+      fastify.put('/teams/:id/members/:userId/role', {}, () => {});
+      fastify.delete('/teams/:id/members/:userId', {}, () => {});
+      fastify.put('/teams/:id/transfer-ownership', {}, () => {});
+    }
+    return;
+  }
+}));
 
 // Type the mocked modules
 const mockTeamService = TeamService as any;
@@ -58,6 +71,19 @@ describe('Teams Route', () => {
         const actualHandler = typeof options === 'function' ? options : handler;
         routeHandlers[`DELETE ${path}`] = actualHandler;
         preHandlers[`DELETE ${path}`] = options?.preHandler;
+        return mockFastify as FastifyInstance;
+      }),
+      register: vi.fn(async (plugin, options) => {
+        // Mock the register function to handle team member routes
+        // We'll just execute the plugin function if it's a function
+        if (typeof plugin === 'function') {
+          try {
+            await plugin(mockFastify, options);
+          } catch (error) {
+            // Silently handle plugin registration errors in tests
+            console.warn('Mock plugin registration warning:', error.message);
+          }
+        }
         return mockFastify as FastifyInstance;
       }),
       log: {

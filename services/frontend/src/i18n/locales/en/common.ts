@@ -27,7 +27,10 @@ export default {
     openMenu: 'Open menu',
     retry: 'Retry',
     clear: 'Clear',
-    clearSearch: 'Clear Search'
+    clearSearch: 'Clear Search',
+    cancel: 'Cancel',
+    save: 'Save',
+    saving: 'Saving...'
   },
   messages: {
     error: 'An error occurred',
@@ -37,7 +40,9 @@ export default {
     required: 'Required',
     optional: 'Optional',
     recommended: 'Recommended',
-    comingSoon: 'Coming Soon'
+    comingSoon: 'Coming Soon',
+    yes: 'Yes',
+    no: 'No'
   },
   navigation: {
     back: 'Back',

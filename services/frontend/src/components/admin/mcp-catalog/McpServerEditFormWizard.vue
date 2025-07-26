@@ -474,7 +474,7 @@ onUnmounted(() => {
     </Alert>
 
     <!-- Step Content -->
-    <div class="bg-white rounded-lg border p-6">
+    <div class="bg-muted/50 rounded-lg px-12 py-16">
       <component
         :is="currentStepData.component"
         v-if="currentStepData.key === 'capabilities'"

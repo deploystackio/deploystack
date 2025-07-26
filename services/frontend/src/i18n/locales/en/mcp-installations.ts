@@ -280,11 +280,41 @@ export default {
     environmentVariables: {
       title: 'Environment Variables',
       description: 'Configuration variables for this installation',
+      table: {
+        name: 'Variable Name',
+        properties: 'Properties', 
+        details: 'Details',
+        value: 'Current Value',
+        actions: 'Actions',
+        required: 'Required',
+        type: 'Type',
+        placeholder: 'Placeholder',
+        notSet: 'Not Set',
+        openMenu: 'Open menu for',
+        editValue: 'Edit Value',
+        editDisabled: 'Edit disabled',
+        editDisabledTooltip: 'Only team administrators can edit environment variables'
+      },
+      edit: {
+        title: 'Edit {name}',
+        description: 'Update the value for this environment variable',
+        variableName: 'Variable Name',
+        newValue: 'New Value',
+        valuePlaceholder: 'Enter new value...',
+        validation: 'Validation Rules',
+        showValue: 'Show value',
+        hideValue: 'Hide value',
+        validationRules: {
+          required: 'This field is required'
+        }
+      },
       noVariables: {
         title: 'No Environment Variables',
         description: 'This installation doesn\'t have any custom environment variables configured.'
       },
-      info: 'These environment variables were configured during installation and are used by your MCP server.'
+      info: 'These environment variables were configured during installation and are used by your MCP server.',
+      updated: 'Environment variable updated successfully',
+      updateSuccess: 'Environment variable "{name}" updated successfully'
     },
 
     dangerZone: {
@@ -294,6 +324,7 @@ export default {
         label: 'Uninstall MCP Server',
         description: 'Permanently remove this MCP server installation from your team. This action cannot be undone.',
         button: 'Uninstall Server',
+        disabledTooltip: 'Only team administrators can uninstall MCP servers',
         modal: {
           title: 'Uninstall MCP Server',
           description: 'Are you sure you want to uninstall "{name}"? This will permanently remove the installation and all its configuration from your team.',
