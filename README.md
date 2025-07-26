@@ -1,10 +1,24 @@
 # DeployStack
 
-![DeployStack](./.assets/deploystack-characteristics.webp)
+<p align="center">
+    <a href="https://deploystack.io">
+        <img src="./.assets/deploystack-characteristics.webp" alt="DeployStack Logo" />
+    </a>
+</p>
 
-<br />
+<p align="center">
+    <a href="https://deploystack.io">🌐 Website</a>
+     · 
+     <a href="https://docs.deploystack.io/">📚 Documentation</a>
+     · 
+     <a href="https://deploystack.io/roadmap"><img src="./.assets/planner-icon.svg" width="12" height="12"/> Roadmap </a>
+     · 
+     <a href="https://discord.gg/42Ce3S7b3b"><img src="./.assets/discord-icon.svg" width="12" height="12"/> Discord</a>
+</p> 
 
-DeployStack is the **Enterprise Control Plane for the Model Context Protocol (MCP) ecosystem**. It provides a secure, centralized platform to manage your company's entire AI tool landscape, eliminating credential sprawl and enabling developers to move faster and more securely.
+---
+
+DeployStack is the **Enterprise Control Plane for the Model Context Protocol (MCP) ecosystem**. It provides a secure, centralized platform to manage your company's entire MCP tool landscape, eliminating credential sprawl and enabling developers to move faster and more securely.
 
 Think of us as the **Identity and Access Management (IAM) layer for your AI agents and tools**. We solve the critical security, governance, and developer experience challenges that arise when using MCP at scale.
 
