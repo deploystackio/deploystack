@@ -13,7 +13,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { Trash2 } from 'lucide-vue-next'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
+import { Trash2, Lock } from 'lucide-vue-next'
 import { McpInstallationService } from '@/services/mcpInstallationService'
 import { TeamService } from '@/services/teamService'
 import { useEventBus } from '@/composables/useEventBus'
@@ -21,9 +27,14 @@ import type { McpInstallation } from '@/types/mcp-installations'
 
 interface Props {
   installation: McpInstallation
+  canEdit?: boolean
+  userRole?: 'team_admin' | 'team_user' | null
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  canEdit: true,
+  userRole: null
+})
 const { t } = useI18n()
 const router = useRouter()
 const eventBus = useEventBus()
@@ -90,6 +101,11 @@ async function handleUninstall() {
 }
 
 function openUninstallModal() {
+  // Check if user has permission to delete
+  if (!props.canEdit) {
+    return
+  }
+  
   error.value = null
   showUninstallModal.value = true
 }
@@ -121,10 +137,30 @@ function closeUninstallModal() {
       <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
         <div class="flex items-center justify-between">
           <div>
+            <TooltipProvider v-if="!canEdit">
+              <Tooltip>
+                <TooltipTrigger as-child>
+                  <Button
+                    variant="destructive"
+                    class="cursor-not-allowed opacity-50"
+                    disabled
+                  >
+                    <Lock class="h-4 w-4 mr-2" />
+                    {{ t('mcpInstallations.details.dangerZone.uninstall.button') }}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{{ t('mcpInstallations.details.dangerZone.uninstall.disabledTooltip') }}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            
             <Button
+              v-else
               variant="destructive"
               @click="openUninstallModal"
             >
+              <Trash2 class="h-4 w-4 mr-2" />
               {{ t('mcpInstallations.details.dangerZone.uninstall.button') }}
             </Button>
           </div>

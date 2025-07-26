@@ -1,59 +1,35 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, Save, Trash2, AlertTriangle, Lock } from 'lucide-vue-next'
+import { ArrowLeft, Info, Users, Shield, Loader2, AlertTriangle } from 'lucide-vue-next'
+import { DsTabs, DsTabsItem } from '@/components/ui/ds-tabs'
 import DashboardLayout from '@/components/DashboardLayout.vue'
+import { TeamInfo, TeamMembers, TeamDangerZone } from '@/components/teams/manage'
 import { TeamService, type Team } from '@/services/teamService'
-import { z } from 'zod'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { useEventBus } from '@/composables/useEventBus'
 
 const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
+const eventBus = useEventBus()
 
 // State
 const team = ref<Team | null>(null)
 const isLoading = ref(true)
-const isSaving = ref(false)
-const isDeleting = ref(false)
 const error = ref<string | null>(null)
-const saveError = ref<string | null>(null)
-const saveSuccess = ref(false)
-const showDeleteDialog = ref(false)
-
-// Form data
-const formData = ref({
-  name: '',
-  description: ''
-})
-
-// Validation schema
-const TeamUpdateSchema = z.object({
-  name: z.string().min(1, 'Team name is required').max(100, 'Team name must be 100 characters or less'),
-  description: z.string().max(500, 'Description must be 500 characters or less').optional()
-})
+const activeTab = ref('team-info')
 
 // Computed properties
 const teamId = computed(() => route.params.id as string)
 
-const isDefaultTeam = computed(() => {
-  return team.value?.is_default === true
+const pageTitle = computed(() => {
+  return team.value
+    ? `${t('teams.manage.title')}: ${team.value.name}`
+    : t('teams.manage.loading')
 })
 
 const canEditName = computed(() => {
@@ -65,15 +41,20 @@ const canEditDescription = computed(() => {
   return team.value?.is_admin === true
 })
 
+const canManageMembers = computed(() => {
+  return team.value?.is_admin === true
+})
+
 const canDeleteTeam = computed(() => {
   return team.value?.is_owner === true &&
          !team.value?.is_default
 })
 
-const hasChanges = computed(() => {
-  if (!team.value) return false
-  return formData.value.name !== team.value.name ||
-         formData.value.description !== (team.value.description || '')
+// Mock member count for badge (in real implementation, this would come from team data)
+const memberCount = computed(() => {
+  if (!team.value) return 0
+  // For now, return 1 (just the owner) - in real implementation, get from team.members.length
+  return 1
 })
 
 // Load team data
@@ -85,12 +66,6 @@ const loadTeam = async () => {
     const teamData = await TeamService.getTeamById(teamId.value)
     team.value = teamData
 
-    // Initialize form data
-    formData.value = {
-      name: teamData.name,
-      description: teamData.description || ''
-    }
-
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'Failed to load team'
     console.error('Error loading team:', err)
@@ -99,69 +74,21 @@ const loadTeam = async () => {
   }
 }
 
-// Save team changes
-const saveTeam = async () => {
-  try {
-    isSaving.value = true
-    saveError.value = null
-    saveSuccess.value = false
-
-    // Validate form data
-    const validatedData = TeamUpdateSchema.parse(formData.value)
-
-    // Prepare update data
-    const updateData: Partial<Team> = {}
-
-    if (canEditName.value && validatedData.name !== team.value?.name) {
-      updateData.name = validatedData.name
-    }
-
-    if (canEditDescription.value && validatedData.description !== team.value?.description) {
-      updateData.description = validatedData.description || null
-    }
-
-    // Only update if there are changes
-    if (Object.keys(updateData).length > 0) {
-      const updatedTeam = await TeamService.updateTeam(teamId.value, updateData)
-      team.value = updatedTeam
-      saveSuccess.value = true
-
-      // Clear success message after 3 seconds
-      setTimeout(() => {
-        saveSuccess.value = false
-      }, 3000)
-    }
-
-  } catch (err) {
-    if (err instanceof z.ZodError) {
-      saveError.value = err.issues.map(e => e.message).join(', ')
-    } else {
-      saveError.value = err instanceof Error ? err.message : 'Failed to save team'
-    }
-    console.error('Error saving team:', err)
-  } finally {
-    isSaving.value = false
-  }
+// Handle team updates
+const handleTeamUpdated = (updatedTeam: Team) => {
+  team.value = updatedTeam
 }
 
-// Delete team
-const deleteTeam = async () => {
-  try {
-    isDeleting.value = true
-    const teamName = team.value?.name || 'Unknown Team'
-    await TeamService.deleteTeam(teamId.value)
-
-    // Redirect to teams list with success message
+// Handle team selection from sidebar
+const handleTeamSelected = (data: { teamId: string; teamName: string }) => {
+  // If we're switching to a different team, navigate to that team's manage page
+  if (data.teamId !== teamId.value) {
+    // Preserve the current tab when switching teams
+    const currentTab = activeTab.value
     router.push({
-      path: '/teams',
-      query: { deleted: teamName }
+      path: `/teams/manage/${data.teamId}`,
+      query: currentTab !== 'team-info' ? { tab: currentTab } : undefined
     })
-  } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Failed to delete team'
-    console.error('Error deleting team:', err)
-  } finally {
-    isDeleting.value = false
-    showDeleteDialog.value = false
   }
 }
 
@@ -170,28 +97,60 @@ const goBack = () => {
   router.push('/teams')
 }
 
+// Initialize tab from query parameter
+const initializeTab = () => {
+  const tabFromQuery = route.query.tab as string
+  if (tabFromQuery && ['team-info', 'members', 'danger-zone'].includes(tabFromQuery)) {
+    activeTab.value = tabFromQuery
+  }
+}
+
+// Watch for route parameter changes to reload team data
+watch(
+  () => route.params.id,
+  (newTeamId, oldTeamId) => {
+    if (newTeamId && newTeamId !== oldTeamId) {
+      loadTeam()
+    }
+  },
+  { immediate: false } // Don't run immediately since onMounted handles the initial load
+)
+
 // Load data on mount
 onMounted(() => {
+  initializeTab()
   loadTeam()
+
+  // Listen for team selection events from sidebar
+  eventBus.on('team-selected', handleTeamSelected)
+})
+
+onUnmounted(() => {
+  // Clean up event listeners to prevent memory leaks
+  eventBus.off('team-selected', handleTeamSelected)
 })
 </script>
 
 <template>
-  <DashboardLayout :title="t('teams.manage.title')">
+  <DashboardLayout :title="pageTitle">
     <div class="space-y-6">
-      <!-- Header -->
+      <!-- Header with Back Button -->
       <div class="flex items-center justify-between">
-        <div class="flex items-center space-x-4">
-          <Button variant="ghost" size="sm" @click="goBack" class="flex items-center gap-2">
-            <ArrowLeft class="h-4 w-4" />
-            {{ t('teams.manage.backToTeams') }}
-          </Button>
-        </div>
+        <Button
+          variant="outline"
+          @click="goBack"
+        >
+          <ArrowLeft class="h-4 w-4 mr-2" />
+          {{ t('teams.manage.backToTeams') }}
+        </Button>
       </div>
 
       <!-- Loading State -->
-      <div v-if="isLoading" class="text-muted-foreground">
-        {{ t('teams.manage.loading') }}
+      <div v-if="isLoading" class="flex items-center justify-center py-12">
+        <div class="flex items-center gap-3 text-muted-foreground">
+          <Loader2 class="h-5 w-5 animate-spin" />
+          {{ t('teams.manage.loading') }}
+        </div>
       </div>
 
       <!-- Error State -->
@@ -200,159 +159,59 @@ onMounted(() => {
         <AlertDescription>{{ error }}</AlertDescription>
       </Alert>
 
-      <!-- Team Management Form -->
+      <!-- Team Management with Tabs -->
       <div v-else-if="team" class="space-y-6">
-        <!-- Team Info Card -->
-        <Card>
-          <CardHeader>
-            <div class="flex items-center justify-between">
-              <div>
-                <CardTitle class="flex items-center gap-2">
-                  {{ team.name }}
-                  <Badge v-if="isDefaultTeam" variant="secondary">
-                    {{ t('teams.manage.defaultTeam') }}
-                  </Badge>
-                </CardTitle>
-                <CardDescription>
-                  {{ t('teams.manage.teamId') }}: {{ team.id }}
-                </CardDescription>
+        <DsTabs v-model="activeTab">
+          <DsTabsItem value="team-info" label="Team Info">
+            <Info class="h-4 w-4" />
+          </DsTabsItem>
+          <DsTabsItem
+            value="members"
+            label="Members"
+            :badge="memberCount > 1 ? memberCount : undefined"
+          >
+            <Users class="h-4 w-4" />
+          </DsTabsItem>
+          <DsTabsItem value="danger-zone" label="Danger Zone">
+            <Shield class="h-4 w-4" />
+          </DsTabsItem>
+        </DsTabs>
+
+        <!-- Tab Content -->
+        <div>
+          <!-- Content Wrapper with same styling as MCP installation page -->
+          <div class="bg-muted/50 rounded-lg sm:rounded-lg">
+            <div class="py-16">
+              <div class="mx-auto max-w-7xl sm:px-2 lg:px-8">
+                <div class="mx-auto max-w-2xl px-4 lg:max-w-4xl lg:px-0">
+                  <!-- White Card inside the gray wrapper -->
+                  <Card class="bg-white shadow-sm">
+                    <CardContent class="p-6">
+                      <TeamInfo
+                        v-if="activeTab === 'team-info'"
+                        :team="team"
+                        :can-edit-name="canEditName"
+                        :can-edit-description="canEditDescription"
+                        @team-updated="handleTeamUpdated"
+                      />
+                      <TeamMembers
+                        v-if="activeTab === 'members'"
+                        :team="team"
+                        :can-manage-members="canManageMembers"
+                      />
+                      <TeamDangerZone
+                        v-if="activeTab === 'danger-zone'"
+                        :team="team"
+                        :can-delete-team="canDeleteTeam"
+                      />
+                    </CardContent>
+                  </Card>
+                </div>
               </div>
-              <div class="text-right text-sm text-muted-foreground">
-                <div>{{ t('teams.manage.created') }}: {{ new Date(team.created_at).toLocaleDateString() }}</div>
-                <div>{{ t('teams.manage.updated') }}: {{ new Date(team.updated_at).toLocaleDateString() }}</div>
-              </div>
             </div>
-          </CardHeader>
-        </Card>
-
-        <!-- Success Message -->
-        <Alert v-if="saveSuccess" class="border-green-200 bg-green-50 text-green-800">
-          <AlertDescription>{{ t('teams.manage.saveSuccess') }}</AlertDescription>
-        </Alert>
-
-        <!-- Save Error -->
-        <Alert v-if="saveError" variant="destructive">
-          <AlertTriangle class="h-4 w-4" />
-          <AlertDescription>{{ saveError }}</AlertDescription>
-        </Alert>
-
-        <!-- Edit Form -->
-        <Card>
-          <CardHeader>
-            <CardTitle>{{ t('teams.manage.editTeam') }}</CardTitle>
-            <CardDescription>{{ t('teams.manage.editDescription') }}</CardDescription>
-          </CardHeader>
-          <CardContent class="space-y-4">
-            <!-- Team Name -->
-            <div class="space-y-2">
-              <Label for="name" class="flex items-center gap-2">
-                {{ t('teams.manage.fields.name.label') }}
-                <Lock v-if="!canEditName" class="h-3 w-3 text-muted-foreground" />
-              </Label>
-              <Input
-                id="name"
-                v-model="formData.name"
-                :disabled="!canEditName"
-                :placeholder="t('teams.manage.fields.name.placeholder')"
-                class="max-w-md"
-              />
-              <p v-if="isDefaultTeam" class="text-xs text-muted-foreground">
-                {{ t('teams.manage.fields.name.defaultTeamNote') }}
-              </p>
-              <p v-else-if="!canEditName" class="text-xs text-muted-foreground">
-                {{ t('teams.manage.fields.name.noPermission') }}
-              </p>
-            </div>
-
-            <!-- Team Description -->
-            <div class="space-y-2">
-              <Label for="description" class="flex items-center gap-2">
-                {{ t('teams.manage.fields.description.label') }}
-                <Lock v-if="!canEditDescription" class="h-3 w-3 text-muted-foreground" />
-              </Label>
-              <textarea
-                id="description"
-                v-model="formData.description"
-                :disabled="!canEditDescription"
-                :placeholder="t('teams.manage.fields.description.placeholder')"
-                class="flex min-h-[80px] w-full max-w-md rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                rows="3"
-              />
-              <p v-if="!canEditDescription" class="text-xs text-muted-foreground">
-                {{ t('teams.manage.fields.description.noPermission') }}
-              </p>
-            </div>
-
-            <!-- Save Button -->
-            <div class="flex items-center gap-2 pt-4">
-              <Button
-                @click="saveTeam"
-                :disabled="!hasChanges || isSaving || (!canEditName && !canEditDescription)"
-                class="flex items-center gap-2"
-              >
-                <Save class="h-4 w-4" />
-                {{ isSaving ? t('teams.manage.saving') : t('teams.manage.save') }}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        <!-- Danger Zone -->
-        <Card v-if="canDeleteTeam" class="border-red-200">
-          <CardHeader>
-            <CardTitle class="text-red-600">{{ t('teams.manage.dangerZone.title') }}</CardTitle>
-            <CardDescription>{{ t('teams.manage.dangerZone.description') }}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button
-              variant="destructive"
-              @click="showDeleteDialog = true"
-              class="flex items-center gap-2"
-            >
-              <Trash2 class="h-4 w-4" />
-              {{ t('teams.manage.dangerZone.deleteButton') }}
-            </Button>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
-
-      <!-- Delete Confirmation Dialog -->
-      <AlertDialog :open="showDeleteDialog" @update:open="showDeleteDialog = $event">
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle class="flex items-center gap-2 text-red-600">
-              <AlertTriangle class="h-5 w-5" />
-              {{ t('teams.manage.deleteDialog.title') }}
-            </AlertDialogTitle>
-            <AlertDialogDescription class="space-y-2">
-              <p>{{ t('teams.manage.deleteDialog.warning') }}</p>
-              <p class="font-medium">{{ t('teams.manage.deleteDialog.teamName') }}: "{{ team?.name }}"</p>
-              <div class="bg-red-50 p-3 rounded-md">
-                <p class="text-sm text-red-800">{{ t('teams.manage.deleteDialog.consequences') }}</p>
-                <ul class="text-xs text-red-700 mt-2 space-y-1">
-                  <li>• {{ t('teams.manage.deleteDialog.consequencesList.servers') }}</li>
-                  <li>• {{ t('teams.manage.deleteDialog.consequencesList.credentials') }}</li>
-                  <li>• {{ t('teams.manage.deleteDialog.consequencesList.variables') }}</li>
-                  <li>• {{ t('teams.manage.deleteDialog.consequencesList.history') }}</li>
-                </ul>
-              </div>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel @click="showDeleteDialog = false">
-              {{ t('teams.manage.deleteDialog.cancel') }}
-            </AlertDialogCancel>
-            <AlertDialogAction
-              @click="deleteTeam"
-              :disabled="isDeleting"
-              class="bg-red-600 hover:bg-red-700 flex items-center gap-2"
-            >
-              <Trash2 class="h-4 w-4" />
-              {{ isDeleting ? t('teams.manage.deleteDialog.deleting') : t('teams.manage.deleteDialog.confirm') }}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   </DashboardLayout>
 </template>

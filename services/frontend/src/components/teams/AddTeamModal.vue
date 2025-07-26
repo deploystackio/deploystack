@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { toast } from 'vue-sonner'
 import { z } from 'zod'
 import {
   AlertDialog,
@@ -22,7 +23,7 @@ interface Props {
 
 interface Emits {
   (e: 'update:open', value: boolean): void
-  (e: 'teamCreated', teamData: { name: string }): void
+  (e: 'teamCreated'): void
 }
 
 const props = defineProps<Props>()
@@ -80,12 +81,17 @@ const handleSubmit = async () => {
     const teamName = formData.value.name
     await TeamService.createTeam(formData.value)
 
+    // Show success toast
+    toast.success(t('teams.addModal.messages.createSuccess', { teamName }), {
+      description: t('teams.addModal.messages.createSuccessDescription')
+    })
+
     // Emit global event for immediate UI updates across components
     eventBus.emit('teams-updated')
 
-    // Close modal and emit success with team data
+    // Close modal and emit success
     isOpen.value = false
-    emit('teamCreated', { name: teamName })
+    emit('teamCreated')
 
     // Reset form after successful creation
     formData.value = { name: '', description: '' }
@@ -93,18 +99,22 @@ const handleSubmit = async () => {
   } catch (error) {
     console.error('Error creating team:', error)
 
-    // Handle specific error messages
+    // Handle specific error messages and show error toast
+    let errorMessage = t('teams.addModal.errors.unknown')
+    
     if (error instanceof Error) {
       if (error.message.includes('limit')) {
-        errors.value.general = t('teams.addModal.errors.limitReached')
+        errorMessage = t('teams.addModal.errors.limitReached')
       } else if (error.message.includes('permission')) {
-        errors.value.general = t('teams.addModal.errors.noPermission')
+        errorMessage = t('teams.addModal.errors.noPermission')
       } else {
-        errors.value.general = error.message
+        errorMessage = error.message
       }
-    } else {
-      errors.value.general = t('teams.addModal.errors.unknown')
     }
+
+    toast.error(t('teams.addModal.errors.createFailed'), {
+      description: errorMessage
+    })
   } finally {
     isSubmitting.value = false
   }
@@ -142,11 +152,6 @@ const handleDescriptionChange = () => {
       </AlertDialogHeader>
 
       <form @submit.prevent="handleSubmit" class="space-y-4">
-        <!-- General Error -->
-        <div v-if="errors.general" class="text-sm text-destructive">
-          {{ errors.general }}
-        </div>
-
         <!-- Team Name -->
         <div class="space-y-2">
           <Label for="team-name">{{ t('teams.addModal.fields.name.label') }}</Label>

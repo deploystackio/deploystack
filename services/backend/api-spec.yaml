@@ -6027,7 +6027,7 @@ paths:
     get:
       summary: Get team members
       tags:
-        - Teams
+        - Team Members
       description: Retrieves all members of a specific team with their user
         information, roles, and status flags.
       parameters:
@@ -6214,10 +6214,10 @@ paths:
     post:
       summary: Add team member
       tags:
-        - Teams
-      description: Adds a new member to a team. Only team admins and owners can add
-        members. Cannot add members to default teams. Teams are limited to 3
-        members maximum.
+        - Team Members
+      description: Adds a new member to a team by email address. Only team admins and
+        owners can add members. Cannot add members to default teams. Teams are
+        limited to 3 members maximum.
       requestBody:
         content:
           application/json:
@@ -6225,10 +6225,11 @@ paths:
               schema:
                 type: object
                 properties:
-                  userId:
-                    description: ID of user to add to team
+                  email:
+                    description: Email address of user to add to team
                     type: string
-                    minLength: 1
+                    format: email
+                    pattern: ^(?!\.)(?!.*\.\.)([A-Za-z0-9_'+\-\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\-]*\.)+[A-Za-z]{2,}$
                   role:
                     description: Role to assign to the user
                     type: string
@@ -6236,7 +6237,7 @@ paths:
                       - team_admin
                       - team_user
                 required:
-                  - userId
+                  - email
                   - role
                 additionalProperties: false
               components: {}
@@ -6328,8 +6329,8 @@ paths:
             application/json:
               schema:
                 schema:
-                  description: Bad Request - Validation error, team limit reached, or cannot add
-                    to default team
+                  description: Bad Request - Validation error, team limit reached, user not found,
+                    or cannot add to default team
                   type: object
                   properties:
                     success:
@@ -6404,7 +6405,7 @@ paths:
             application/json:
               schema:
                 schema:
-                  description: Not Found - Team or user not found
+                  description: Not Found - Team not found
                   type: object
                   properties:
                     success:
@@ -6452,7 +6453,7 @@ paths:
     put:
       summary: Update team member role
       tags:
-        - Teams
+        - Team Members
       description: Updates a team member's role. Only team owners can change roles.
         Cannot change roles in default teams. Must maintain at least one team
         admin.
@@ -6690,7 +6691,7 @@ paths:
     delete:
       summary: Remove team member
       tags:
-        - Teams
+        - Team Members
       description: Removes a member from a team. Only team owners can remove members.
         Cannot remove members from default teams. Cannot remove team owner.
       parameters:
@@ -6857,7 +6858,7 @@ paths:
     put:
       summary: Transfer team ownership
       tags:
-        - Teams
+        - Team Members
       description: Transfers ownership of a team to another team member. Only current
         team owner can transfer ownership. Cannot transfer ownership of default
         teams.
@@ -9500,7 +9501,7 @@ paths:
         - schema:
             type: string
           in: query
-          name: category
+          name: category_id
           required: false
         - schema:
             type: string
@@ -11230,6 +11231,12 @@ paths:
                                 type: string
                               description:
                                 type: string
+                              github_url:
+                                anyOf:
+                                  - type: string
+                                  - type: "null"
+                              runtime:
+                                type: string
                               installation_methods:
                                 type: array
                                 items: {}
@@ -11244,6 +11251,8 @@ paths:
                               - id
                               - name
                               - description
+                              - github_url
+                              - runtime
                               - installation_methods
                               - environment_variables
                               - default_config
@@ -11309,6 +11318,837 @@ paths:
               schema:
                 schema:
                   description: Not Found - Team not found
+                  type: object
+                  properties:
+                    success:
+                      default: false
+                      type: boolean
+                    error:
+                      type: string
+                  required:
+                    - success
+                    - error
+                  additionalProperties: false
+                components: {}
+  /api/teams/{teamId}/mcp/installations/{installationId}:
+    get:
+      summary: Get MCP installation by ID
+      tags:
+        - MCP Installations
+      description: Retrieves a specific MCP server installation by ID for the
+        specified team.
+      parameters:
+        - schema:
+            type: object
+            properties:
+              teamId:
+                type: string
+                minLength: 1
+              installationId:
+                type: string
+                minLength: 1
+            additionalProperties: false
+          in: path
+          name: schema
+          required: true
+        - schema: {}
+          in: path
+          name: components
+          required: true
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                schema:
+                  description: Installation details
+                  type: object
+                  properties:
+                    success:
+                      default: true
+                      type: boolean
+                    data:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        team_id:
+                          type: string
+                        server_id:
+                          type: string
+                        user_id:
+                          type: string
+                        installation_name:
+                          type: string
+                        installation_type:
+                          type: string
+                          enum:
+                            - local
+                            - cloud
+                        user_environment_variables:
+                          type: object
+                          propertyNames:
+                            type: string
+                          additionalProperties:
+                            type: string
+                        created_at:
+                          type: string
+                        updated_at:
+                          type: string
+                        last_used_at:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                        server:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            name:
+                              type: string
+                            description:
+                              type: string
+                            github_url:
+                              anyOf:
+                                - type: string
+                                - type: "null"
+                            homepage_url:
+                              anyOf:
+                                - type: string
+                                - type: "null"
+                            author_name:
+                              anyOf:
+                                - type: string
+                                - type: "null"
+                            language:
+                              type: string
+                            runtime:
+                              type: string
+                            status:
+                              type: string
+                              enum:
+                                - active
+                                - deprecated
+                                - maintenance
+                            tags:
+                              anyOf:
+                                - type: array
+                                  items:
+                                    type: string
+                                - type: "null"
+                            environment_variables:
+                              anyOf:
+                                - type: array
+                                  items: {}
+                                - type: "null"
+                            category_id:
+                              anyOf:
+                                - type: string
+                                - type: "null"
+                          required:
+                            - id
+                            - name
+                            - description
+                            - github_url
+                            - homepage_url
+                            - author_name
+                            - language
+                            - runtime
+                            - status
+                            - tags
+                            - environment_variables
+                            - category_id
+                          additionalProperties: false
+                      required:
+                        - id
+                        - team_id
+                        - server_id
+                        - user_id
+                        - installation_name
+                        - installation_type
+                        - created_at
+                        - updated_at
+                        - last_used_at
+                      additionalProperties: false
+                  required:
+                    - success
+                    - data
+                  additionalProperties: false
+                components: {}
+        "401":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                schema:
+                  description: Unauthorized - Authentication required
+                  type: object
+                  properties:
+                    success:
+                      default: false
+                      type: boolean
+                    error:
+                      type: string
+                  required:
+                    - success
+                    - error
+                  additionalProperties: false
+                components: {}
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                schema:
+                  description: Forbidden - Insufficient permissions
+                  type: object
+                  properties:
+                    success:
+                      default: false
+                      type: boolean
+                    error:
+                      type: string
+                  required:
+                    - success
+                    - error
+                  additionalProperties: false
+                components: {}
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                schema:
+                  description: Not Found - Installation not found
+                  type: object
+                  properties:
+                    success:
+                      default: false
+                      type: boolean
+                    error:
+                      type: string
+                  required:
+                    - success
+                    - error
+                  additionalProperties: false
+                components: {}
+    put:
+      summary: Update MCP installation
+      tags:
+        - MCP Installations
+      description: "Updates an existing MCP server installation. Can update
+        installation name and environment variables. Requires Content-Type:
+        application/json header when sending request body."
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                installation_name:
+                  type: string
+                  minLength: 1
+                user_environment_variables:
+                  type: object
+                  additionalProperties:
+                    type: string
+              additionalProperties: false
+      parameters:
+        - schema:
+            type: string
+            minLength: 1
+          in: path
+          name: teamId
+          required: true
+        - schema:
+            type: string
+            minLength: 1
+          in: path
+          name: installationId
+          required: true
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                schema:
+                  description: Installation updated successfully
+                  type: object
+                  properties:
+                    success:
+                      default: true
+                      type: boolean
+                    data:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        team_id:
+                          type: string
+                        server_id:
+                          type: string
+                        user_id:
+                          type: string
+                        installation_name:
+                          type: string
+                        installation_type:
+                          type: string
+                          enum:
+                            - local
+                            - cloud
+                        user_environment_variables:
+                          type: object
+                          propertyNames:
+                            type: string
+                          additionalProperties:
+                            type: string
+                        created_at:
+                          type: string
+                        updated_at:
+                          type: string
+                        last_used_at:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                        server:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            name:
+                              type: string
+                            description:
+                              type: string
+                            github_url:
+                              anyOf:
+                                - type: string
+                                - type: "null"
+                            homepage_url:
+                              anyOf:
+                                - type: string
+                                - type: "null"
+                            author_name:
+                              anyOf:
+                                - type: string
+                                - type: "null"
+                            language:
+                              type: string
+                            runtime:
+                              type: string
+                            status:
+                              type: string
+                              enum:
+                                - active
+                                - deprecated
+                                - maintenance
+                            tags:
+                              anyOf:
+                                - type: array
+                                  items:
+                                    type: string
+                                - type: "null"
+                            environment_variables:
+                              anyOf:
+                                - type: array
+                                  items: {}
+                                - type: "null"
+                            category_id:
+                              anyOf:
+                                - type: string
+                                - type: "null"
+                          required:
+                            - id
+                            - name
+                            - description
+                            - github_url
+                            - homepage_url
+                            - author_name
+                            - language
+                            - runtime
+                            - status
+                            - tags
+                            - environment_variables
+                            - category_id
+                          additionalProperties: false
+                      required:
+                        - id
+                        - team_id
+                        - server_id
+                        - user_id
+                        - installation_name
+                        - installation_type
+                        - created_at
+                        - updated_at
+                        - last_used_at
+                      additionalProperties: false
+                    message:
+                      type: string
+                  required:
+                    - success
+                    - data
+                    - message
+                  additionalProperties: false
+                components: {}
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                schema:
+                  description: Bad Request - Validation error or installation name conflict
+                  type: object
+                  properties:
+                    success:
+                      default: false
+                      type: boolean
+                    error:
+                      type: string
+                  required:
+                    - success
+                    - error
+                  additionalProperties: false
+                components: {}
+        "401":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                schema:
+                  description: Unauthorized - Authentication required
+                  type: object
+                  properties:
+                    success:
+                      default: false
+                      type: boolean
+                    error:
+                      type: string
+                  required:
+                    - success
+                    - error
+                  additionalProperties: false
+                components: {}
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                schema:
+                  description: Forbidden - Insufficient permissions
+                  type: object
+                  properties:
+                    success:
+                      default: false
+                      type: boolean
+                    error:
+                      type: string
+                  required:
+                    - success
+                    - error
+                  additionalProperties: false
+                components: {}
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                schema:
+                  description: Not Found - Installation not found
+                  type: object
+                  properties:
+                    success:
+                      default: false
+                      type: boolean
+                    error:
+                      type: string
+                  required:
+                    - success
+                    - error
+                  additionalProperties: false
+                components: {}
+        "500":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                schema:
+                  description: Internal Server Error
+                  type: object
+                  properties:
+                    success:
+                      default: false
+                      type: boolean
+                    error:
+                      type: string
+                  required:
+                    - success
+                    - error
+                  additionalProperties: false
+                components: {}
+    delete:
+      summary: Delete MCP installation
+      tags:
+        - MCP Installations
+      description: Removes an MCP server installation from the specified team. No
+        Content-Type header required for this DELETE request.
+      parameters:
+        - schema:
+            type: object
+            properties:
+              teamId:
+                type: string
+                minLength: 1
+              installationId:
+                type: string
+                minLength: 1
+            additionalProperties: false
+          in: path
+          name: schema
+          required: true
+        - schema: {}
+          in: path
+          name: components
+          required: true
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                schema:
+                  description: Installation deleted successfully
+                  type: object
+                  properties:
+                    success:
+                      default: true
+                      type: boolean
+                    data:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        deleted:
+                          default: true
+                          type: boolean
+                      required:
+                        - id
+                        - deleted
+                      additionalProperties: false
+                  required:
+                    - success
+                    - data
+                  additionalProperties: false
+                components: {}
+        "401":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                schema:
+                  description: Unauthorized - Authentication required
+                  type: object
+                  properties:
+                    success:
+                      default: false
+                      type: boolean
+                    error:
+                      type: string
+                  required:
+                    - success
+                    - error
+                  additionalProperties: false
+                components: {}
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                schema:
+                  description: Forbidden - Insufficient permissions
+                  type: object
+                  properties:
+                    success:
+                      default: false
+                      type: boolean
+                    error:
+                      type: string
+                  required:
+                    - success
+                    - error
+                  additionalProperties: false
+                components: {}
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                schema:
+                  description: Not Found - Installation not found
+                  type: object
+                  properties:
+                    success:
+                      default: false
+                      type: boolean
+                    error:
+                      type: string
+                  required:
+                    - success
+                    - error
+                  additionalProperties: false
+                components: {}
+  /api/teams/{teamId}/mcp/installations/{installationId}/environment-variables:
+    patch:
+      summary: Update MCP installation environment variables
+      tags:
+        - MCP Installations
+      description: "Updates the environment variables for an existing MCP server
+        installation. This endpoint specifically handles environment variable
+        updates only. Requires Content-Type: application/json header when
+        sending request body."
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                environment_variables:
+                  type: object
+                  additionalProperties:
+                    type: string
+              required:
+                - environment_variables
+              additionalProperties: false
+        required: true
+      parameters:
+        - schema:
+            type: string
+            minLength: 1
+          in: path
+          name: teamId
+          required: true
+        - schema:
+            type: string
+            minLength: 1
+          in: path
+          name: installationId
+          required: true
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                schema:
+                  description: Environment variables updated successfully
+                  type: object
+                  properties:
+                    success:
+                      default: true
+                      type: boolean
+                    data:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        team_id:
+                          type: string
+                        server_id:
+                          type: string
+                        user_id:
+                          type: string
+                        installation_name:
+                          type: string
+                        installation_type:
+                          type: string
+                          enum:
+                            - local
+                            - cloud
+                        user_environment_variables:
+                          type: object
+                          propertyNames:
+                            type: string
+                          additionalProperties:
+                            type: string
+                        created_at:
+                          type: string
+                        updated_at:
+                          type: string
+                        last_used_at:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                        server:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            name:
+                              type: string
+                            description:
+                              type: string
+                            github_url:
+                              anyOf:
+                                - type: string
+                                - type: "null"
+                            homepage_url:
+                              anyOf:
+                                - type: string
+                                - type: "null"
+                            author_name:
+                              anyOf:
+                                - type: string
+                                - type: "null"
+                            language:
+                              type: string
+                            runtime:
+                              type: string
+                            status:
+                              type: string
+                              enum:
+                                - active
+                                - deprecated
+                                - maintenance
+                            tags:
+                              anyOf:
+                                - type: array
+                                  items:
+                                    type: string
+                                - type: "null"
+                            environment_variables:
+                              anyOf:
+                                - type: array
+                                  items: {}
+                                - type: "null"
+                            category_id:
+                              anyOf:
+                                - type: string
+                                - type: "null"
+                          required:
+                            - id
+                            - name
+                            - description
+                            - github_url
+                            - homepage_url
+                            - author_name
+                            - language
+                            - runtime
+                            - status
+                            - tags
+                            - environment_variables
+                            - category_id
+                          additionalProperties: false
+                      required:
+                        - id
+                        - team_id
+                        - server_id
+                        - user_id
+                        - installation_name
+                        - installation_type
+                        - created_at
+                        - updated_at
+                        - last_used_at
+                      additionalProperties: false
+                    message:
+                      type: string
+                  required:
+                    - success
+                    - data
+                    - message
+                  additionalProperties: false
+                components: {}
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                schema:
+                  description: Bad Request - Validation error or missing required environment
+                    variables
+                  type: object
+                  properties:
+                    success:
+                      default: false
+                      type: boolean
+                    error:
+                      type: string
+                  required:
+                    - success
+                    - error
+                  additionalProperties: false
+                components: {}
+        "401":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                schema:
+                  description: Unauthorized - Authentication required
+                  type: object
+                  properties:
+                    success:
+                      default: false
+                      type: boolean
+                    error:
+                      type: string
+                  required:
+                    - success
+                    - error
+                  additionalProperties: false
+                components: {}
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                schema:
+                  description: Forbidden - Insufficient permissions
+                  type: object
+                  properties:
+                    success:
+                      default: false
+                      type: boolean
+                    error:
+                      type: string
+                  required:
+                    - success
+                    - error
+                  additionalProperties: false
+                components: {}
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                schema:
+                  description: Not Found - Installation not found
+                  type: object
+                  properties:
+                    success:
+                      default: false
+                      type: boolean
+                    error:
+                      type: string
+                  required:
+                    - success
+                    - error
+                  additionalProperties: false
+                components: {}
+        "500":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                schema:
+                  description: Internal Server Error
                   type: object
                   properties:
                     success:
@@ -11389,120 +12229,6 @@ paths:
                   required:
                     - success
                     - error
-                  additionalProperties: false
-                components: {}
-        "401":
-          description: Default Response
-          content:
-            application/json:
-              schema:
-                schema:
-                  description: Unauthorized - Authentication required
-                  type: object
-                  properties:
-                    success:
-                      default: false
-                      type: boolean
-                    error:
-                      type: string
-                  required:
-                    - success
-                    - error
-                  additionalProperties: false
-                components: {}
-        "403":
-          description: Default Response
-          content:
-            application/json:
-              schema:
-                schema:
-                  description: Forbidden - Insufficient permissions
-                  type: object
-                  properties:
-                    success:
-                      default: false
-                      type: boolean
-                    error:
-                      type: string
-                  required:
-                    - success
-                    - error
-                  additionalProperties: false
-                components: {}
-        "404":
-          description: Default Response
-          content:
-            application/json:
-              schema:
-                schema:
-                  description: Not Found - Installation not found
-                  type: object
-                  properties:
-                    success:
-                      default: false
-                      type: boolean
-                    error:
-                      type: string
-                  required:
-                    - success
-                    - error
-                  additionalProperties: false
-                components: {}
-  /api/teams/{teamId}/mcp/installations/{installationId}:
-    delete:
-      summary: Delete MCP installation
-      tags:
-        - MCP Installations
-      description: Removes an MCP server installation from the specified team. No
-        Content-Type header required for this DELETE request.
-      parameters:
-        - schema:
-            type: object
-            properties:
-              teamId:
-                type: string
-                minLength: 1
-              installationId:
-                type: string
-                minLength: 1
-            additionalProperties: false
-          in: path
-          name: schema
-          required: true
-        - schema: {}
-          in: path
-          name: components
-          required: true
-      security:
-        - cookieAuth: []
-      responses:
-        "200":
-          description: Default Response
-          content:
-            application/json:
-              schema:
-                schema:
-                  description: Installation deleted successfully
-                  type: object
-                  properties:
-                    success:
-                      default: true
-                      type: boolean
-                    data:
-                      type: object
-                      properties:
-                        id:
-                          type: string
-                        deleted:
-                          default: true
-                          type: boolean
-                      required:
-                        - id
-                        - deleted
-                      additionalProperties: false
-                  required:
-                    - success
-                    - data
                   additionalProperties: false
                 components: {}
         "401":

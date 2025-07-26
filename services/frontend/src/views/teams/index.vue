@@ -10,13 +10,10 @@ import { TeamService, type TeamWithRole, type Team } from '@/services/teamServic
 import { UserService } from '@/services/userService'
 import { useEventBus } from '@/composables/useEventBus'
 import TeamTableColumns from './TeamTableColumns.vue'
-import { useRouter, useRoute } from 'vue-router'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { CheckCircle, AlertCircle } from 'lucide-vue-next'
+import { useRouter } from 'vue-router'
 
 const { t } = useI18n()
 const router = useRouter()
-const route = useRoute()
 const eventBus = useEventBus()
 
 // State
@@ -25,9 +22,6 @@ const isLoading = ref(true)
 const error = ref<string | null>(null)
 const showAddModal = ref(false)
 const userPermissions = ref<string[]>([])
-const deleteSuccessMessage = ref<string | null>(null)
-const createSuccessMessage = ref<string | null>(null)
-const createErrorMessage = ref<string | null>(null)
 const searchQuery = ref('')
 
 // Team switching state
@@ -138,56 +132,19 @@ const fetchTeams = async (forceRefresh = false): Promise<void> => {
 }
 
 // Handle team creation success
-const handleTeamCreated = async (teamData?: { name: string }) => {
-  // Clear any previous messages
-  createSuccessMessage.value = null
-  createErrorMessage.value = null
-
+const handleTeamCreated = async () => {
   try {
     await fetchTeams()
     // Emit global event to update sidebar and other components
     eventBus.emit('teams-updated')
-
-    // Show success message
-    if (teamData?.name) {
-      createSuccessMessage.value = t('teams.addModal.messages.createSuccess', { teamName: teamData.name })
-    } else {
-      createSuccessMessage.value = t('teams.addModal.messages.createSuccessGeneric')
-    }
   } catch (error) {
     console.error('Error refreshing teams after creation:', error)
-    createErrorMessage.value = t('teams.addModal.errors.refreshFailed')
-  }
-}
-
-// Handle team creation error
-const handleTeamCreationError = (errorMessage: string) => {
-  // Clear any previous messages
-  createSuccessMessage.value = null
-  createErrorMessage.value = errorMessage
-}
-
-// Check for delete success message from query params
-const checkDeleteSuccess = () => {
-  const deletedTeamName = route.query.deleted as string
-  if (deletedTeamName) {
-    deleteSuccessMessage.value = t('teams.messages.deleteSuccess', { teamName: deletedTeamName })
-
-    // Clear the query parameter from URL
-    router.replace({ path: '/teams' })
-
-    // Clear the message after 5 seconds
-    setTimeout(() => {
-      deleteSuccessMessage.value = null
-    }, 5000)
+    // The error will be shown via toast in the modal, no need for additional handling here
   }
 }
 
 // Load data on component mount
 onMounted(async () => {
-  // Check for delete success message first
-  checkDeleteSuccess()
-
   await Promise.all([
     checkPermissions(),
     fetchTeams(),
@@ -228,23 +185,6 @@ onUnmounted(() => {
         </Button>
       </div>
 
-      <!-- Success Messages -->
-      <Alert v-if="deleteSuccessMessage" class="border-green-200 bg-green-50 text-green-800">
-        <CheckCircle class="h-4 w-4" />
-        <AlertDescription>{{ deleteSuccessMessage }}</AlertDescription>
-      </Alert>
-
-      <Alert v-if="createSuccessMessage" class="border-green-200 bg-green-50 text-green-800">
-        <CheckCircle class="h-4 w-4" />
-        <AlertDescription>{{ createSuccessMessage }}</AlertDescription>
-      </Alert>
-
-      <!-- Error Messages -->
-      <Alert v-if="createErrorMessage" class="border-red-200 bg-red-50 text-red-800">
-        <AlertCircle class="h-4 w-4" />
-        <AlertDescription>{{ createErrorMessage }}</AlertDescription>
-      </Alert>
-
       <!-- Loading State -->
       <div v-if="isLoading" class="text-muted-foreground">
         {{ t('teams.table.loading') }}
@@ -280,7 +220,6 @@ onUnmounted(() => {
       <AddTeamModal
         v-model:open="showAddModal"
         @team-created="handleTeamCreated"
-        @team-creation-error="handleTeamCreationError"
       />
     </div>
   </DashboardLayout>

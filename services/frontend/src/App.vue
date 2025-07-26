@@ -1,6 +1,7 @@
 <template>
   <div class="min-h-screen bg-gray-50">
     <RouterView />
+    <Toaster class="pointer-events-auto" />
   </div>
 </template>
 
@@ -8,6 +9,8 @@
 import { onMounted } from 'vue'
 import { RouterView } from 'vue-router'
 import { useDatabaseStore } from '@/stores/database'
+import { Toaster } from '@/components/ui/sonner'
+import 'vue-sonner/style.css'
 
 const databaseStore = useDatabaseStore()
 
