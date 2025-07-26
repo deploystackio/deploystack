@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.20.0 (2025-07-26)
+
+* bump @libsql/client from 0.15.9 to 0.15.10 ([908efef](https://github.com/deploystackio/deploystack/commit/908efefe920ad03cd859e17c9df9a2e52493e99b))
+* bump @types/node from 24.0.13 to 24.0.15 ([8fef45c](https://github.com/deploystackio/deploystack/commit/8fef45c2a932ea2b6842e0b78d72ef5cb2f814e0))
+* bump @typescript-eslint/parser from 8.37.0 to 8.38.0 ([8033039](https://github.com/deploystackio/deploystack/commit/80330391f88f488b09b9a64ceb02cfa8950a5c94))
+* bump release-it from 19.0.3 to 19.0.4 ([d787cb6](https://github.com/deploystackio/deploystack/commit/d787cb65afb1c10141476a0b1e87243b3dc1aea3))
+* bump typescript-eslint from 8.37.0 to 8.38.0 ([7ed34d0](https://github.com/deploystackio/deploystack/commit/7ed34d06c1ffe7764b22ed5e05ebc34deb107a5d))
+* bump vite from 7.0.4 to 7.0.5 ([a2bfb72](https://github.com/deploystackio/deploystack/commit/a2bfb72ec0d09d46e100d2145fc6bd3e9e0dc362))
+* bump vue-i18n from 11.1.9 to 11.1.10 ([f751909](https://github.com/deploystackio/deploystack/commit/f751909763e10afb9e932655d8757f7881398477))
+* bump vue-tsc from 3.0.1 to 3.0.3 ([37052d3](https://github.com/deploystackio/deploystack/commit/37052d3b144ad2ade7b3f1bf4bcdb5fe144af058))
+* add installation details and environment variables components ([55c8d53](https://github.com/deploystackio/deploystack/commit/55c8d53aad43e0355182c8a0469b68a36765a872))
+* implement plugin migration functionality and update createPluginTables logic ([99ec957](https://github.com/deploystackio/deploystack/commit/99ec9575b865f0e005764097b6d06ae8c043d6ef))
+
 ## <small>0.19.1 (2025-07-21)</small>
 
 * release v0.19.0 ([54f99dd](https://github.com/deploystackio/deploystack/commit/54f99dd828f54ad97a5d5ba8706c5a74c6bfd433))
