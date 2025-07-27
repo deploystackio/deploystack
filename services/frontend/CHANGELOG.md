@@ -1,5 +1,14 @@
 # Changelog
 
+## <small>0.21.1 (2025-07-27)</small>
+
+* remove scoped commit implementation documentation ([8311fc8](https://github.com/deploystackio/deploystack/commit/8311fc89c5c7c6ca4944c0f7040275e00d5170b9))
+* release v0.21.0 ([0a01e3c](https://github.com/deploystackio/deploystack/commit/0a01e3c2e90ba7cc415211bb0f76ba4e0bd11087))
+* update README links for better formatting ([ba15434](https://github.com/deploystackio/deploystack/commit/ba15434bd65f371d9ad39576a56a923a9040f74e))
+* implement scoped commit message guidelines and templates ([a6839b8](https://github.com/deploystackio/deploystack/commit/a6839b880248a35a213cfb44f19ec29c0b9553cc))
+* update README with new links and SVG assets ([704799c](https://github.com/deploystackio/deploystack/commit/704799c34ef1d67824b5a1911d14ae148b0f4b15))
+* implement OAuth consent page and service integration ([1df0813](https://github.com/deploystackio/deploystack/commit/1df0813afb893d33690a02cf395f100edbe839cb))
+
 ## 0.21.0 (2025-07-27)
 
 * update README links for better formatting ([ba15434](https://github.com/deploystackio/deploystack/commit/ba15434bd65f371d9ad39576a56a923a9040f74e))
