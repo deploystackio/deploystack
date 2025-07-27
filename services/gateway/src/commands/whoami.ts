@@ -35,14 +35,22 @@ export function registerWhoamiCommand(program: Command) {
         
         const api = new DeployStackAPI(credentials, backendUrl);
 
-        // Get user info
+        // Get fresh user info from the API (real-time verification)
         const userInfo = await api.getUserInfo();
         const tokenInfo = await api.getTokenInfo();
         const accounts = api.getUserAccounts();
 
         // Display user information
-        const userEmail = userInfo.email || api.getUserEmail();
+        const userEmail = userInfo.email;
         console.log(chalk.blue(`👋 You are logged in with an OAuth Token, associated with ${userEmail}`));
+        console.log(chalk.gray(`🆔 User ID (sub): ${userInfo.sub}`));
+        if (userInfo.name) {
+          console.log(chalk.gray(`👤 Full Name: ${userInfo.name}`));
+        }
+        if (userInfo.preferred_username) {
+          console.log(chalk.gray(`🏷️  Username: ${userInfo.preferred_username}`));
+        }
+        console.log(chalk.gray(`✅ Email Verified: ${userInfo.email_verified ? 'Yes' : 'No'}`));
         console.log(chalk.gray(`🌐 Using backend: ${backendUrl}\n`));
 
         // Display account info in table format if accounts exist
