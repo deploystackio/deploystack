@@ -2,13 +2,15 @@
 
 import { Command } from 'commander';
 import chalk from 'chalk';
+import { getVersionString } from './config/version';
 import {
   registerLoginCommand,
   registerLogoutCommand,
   registerStartCommand,
   registerStopCommand,
   registerStatusCommand,
-  registerConfigCommand
+  registerConfigCommand,
+  registerVersionCommand
 } from './commands';
 
 const program = new Command();
@@ -16,7 +18,7 @@ const program = new Command();
 program
   .name('deploystack')
   .description('DeployStack Gateway - Local secure proxy for MCP servers')
-  .version('0.1.0');
+  .version(getVersionString());
 
 // Register all commands
 registerLoginCommand(program);
@@ -25,6 +27,7 @@ registerStartCommand(program);
 registerStopCommand(program);
 registerStatusCommand(program);
 registerConfigCommand(program);
+registerVersionCommand(program);
 
 // Show help if no command is provided
 if (process.argv.length <= 2) {
