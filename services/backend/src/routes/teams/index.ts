@@ -88,14 +88,22 @@ export default async function teamsRoute(fastify: FastifyInstance) {
     schema: {
       tags: ['Teams'],
       summary: 'Get current user teams',
-      description: 'Retrieves all teams that the currently authenticated user belongs to, including their role, admin status, ownership status, and member count.',
-      security: [{ cookieAuth: [] }],
+      description: 'Retrieves all teams that the currently authenticated user belongs to, including their role, admin status, ownership status, and member count. Supports both cookie-based authentication (for web users) and OAuth2 Bearer token authentication (for CLI users). Requires teams:read scope for OAuth2 access.',
+      security: [
+        { cookieAuth: [] },
+        { bearerAuth: [] }
+      ],
       response: {
         200: createSchema(TeamsListWithRoleInfoResponseSchema.describe('User teams retrieved successfully')),
-        401: createSchema(ErrorResponseSchema.describe('Unauthorized - Authentication required')),
+        401: createSchema(ErrorResponseSchema.describe('Unauthorized - Authentication required or invalid token')),
+        403: createSchema(ErrorResponseSchema.describe('Forbidden - Insufficient permissions or scope')),
         500: createSchema(ErrorResponseSchema.describe('Internal Server Error'))
       }
-    }
+    },
+    preValidation: [
+      requireAuthenticationAny(),
+      requireOAuthScope('teams:read')
+    ]
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       if (!request.user) {
@@ -104,6 +112,18 @@ export default async function teamsRoute(fastify: FastifyInstance) {
           error: 'Authentication required',
         });
       }
+
+      const authType = request.tokenPayload ? 'oauth2' : 'cookie';
+      const userId = request.user.id;
+
+      request.log.debug({
+        operation: 'get_user_teams',
+        userId,
+        authType,
+        clientId: request.tokenPayload?.clientId,
+        scope: request.tokenPayload?.scope,
+        endpoint: request.url
+      }, 'Authentication method determined for user teams retrieval');
 
       const teamsWithRoles = await TeamService.getUserTeamsWithRoles(request.user.id);
 
@@ -125,8 +145,11 @@ export default async function teamsRoute(fastify: FastifyInstance) {
     schema: {
       tags: ['Teams'],
       summary: 'Get team by ID with user role',
-      description: 'Retrieves a specific team by its ID with the current user\'s role and permissions within that team. User must be a member of the team.',
-      security: [{ cookieAuth: [] }],
+      description: 'Retrieves a specific team by its ID with the current user\'s role and permissions within that team. User must be a member of the team. Supports both cookie-based authentication (for web users) and OAuth2 Bearer token authentication (for CLI users). Requires teams:read scope for OAuth2 access.',
+      security: [
+        { cookieAuth: [] },
+        { bearerAuth: [] }
+      ],
       params: {
         type: 'object',
         properties: {
@@ -139,12 +162,16 @@ export default async function teamsRoute(fastify: FastifyInstance) {
           success: z.boolean().describe('Indicates if the operation was successful'),
           data: TeamWithRoleInfoSchema.describe('Team data with user role information')
         }).describe('Team retrieved successfully with user role info')),
-        401: createSchema(ErrorResponseSchema.describe('Unauthorized - Authentication required')),
-        403: createSchema(ErrorResponseSchema.describe('Forbidden - Insufficient permissions')),
+        401: createSchema(ErrorResponseSchema.describe('Unauthorized - Authentication required or invalid token')),
+        403: createSchema(ErrorResponseSchema.describe('Forbidden - Insufficient permissions or scope')),
         404: createSchema(ErrorResponseSchema.describe('Not Found - Team not found')),
         500: createSchema(ErrorResponseSchema.describe('Internal Server Error'))
       }
-    }
+    },
+    preValidation: [
+      requireAuthenticationAny(),
+      requireOAuthScope('teams:read')
+    ]
   }, async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
     try {
       if (!request.user) {
@@ -156,7 +183,20 @@ export default async function teamsRoute(fastify: FastifyInstance) {
         return reply.status(401).type('application/json').send(jsonString);
       }
 
+      const authType = request.tokenPayload ? 'oauth2' : 'cookie';
+      const userId = request.user.id;
       const teamId = request.params.id;
+
+      request.log.debug({
+        operation: 'get_team_by_id',
+        userId,
+        teamId,
+        authType,
+        clientId: request.tokenPayload?.clientId,
+        scope: request.tokenPayload?.scope,
+        endpoint: request.url
+      }, 'Authentication method determined for team retrieval');
+
       const team = await TeamService.getTeamById(teamId);
 
       if (!team) {
