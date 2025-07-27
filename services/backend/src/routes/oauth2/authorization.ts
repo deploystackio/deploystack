@@ -46,11 +46,24 @@ export default async function authorizationRoute(fastify: FastifyInstance) {
         code_challenge_method
       } = request.query as z.infer<typeof authorizationQuerySchema>;
 
+      // Validate response_type (additional validation beyond schema)
+      if (response_type !== 'code') {
+        request.log.warn({
+          operation: 'oauth2_authorization',
+          responseType: response_type,
+          error: 'unsupported_response_type',
+        }, 'Unsupported OAuth2 response type');
+
+        const errorUrl = `${redirect_uri}?error=unsupported_response_type&error_description=${encodeURIComponent('Only "code" response type is supported')}&state=${state}`;
+        return reply.redirect(errorUrl);
+      }
+
       request.log.debug({
         operation: 'oauth2_authorization',
         clientId: client_id,
         redirectUri: redirect_uri,
         scope,
+        responseType: response_type,
         codeChallengeMethod: code_challenge_method,
       }, 'OAuth2 authorization request received');
 

@@ -100,6 +100,12 @@ describe('Teams Route', () => {
       user: {
         id: 'user-123',
       } as any, // Use any to avoid complex Lucia User type issues in tests
+      log: {
+        debug: vi.fn(),
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+      },
     } as any;
 
     mockReply = {

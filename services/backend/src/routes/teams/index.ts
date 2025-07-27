@@ -40,17 +40,6 @@ export default async function teamsRoute(fastify: FastifyInstance) {
       requireOAuthScope('teams:read')
     ]
   }, async (request: FastifyRequest, reply: FastifyReply) => {
-    const authType = request.tokenPayload ? 'oauth2' : 'cookie';
-    const userId = request.user!.id;
-
-    request.log.debug({
-      operation: 'get_user_default_team',
-      userId,
-      authType,
-      clientId: request.tokenPayload?.clientId,
-      scope: request.tokenPayload?.scope,
-      endpoint: request.url
-    }, 'Authentication method determined for default team retrieval');
     try {
       if (!request.user) {
         return reply.status(401).send({
@@ -58,6 +47,18 @@ export default async function teamsRoute(fastify: FastifyInstance) {
           error: 'Authentication required',
         });
       }
+
+      const authType = request.tokenPayload ? 'oauth2' : 'cookie';
+      const userId = request.user.id;
+
+      request.log.debug({
+        operation: 'get_user_default_team',
+        userId,
+        authType,
+        clientId: request.tokenPayload?.clientId,
+        scope: request.tokenPayload?.scope,
+        endpoint: request.url
+      }, 'Authentication method determined for default team retrieval');
 
       const defaultTeam = await TeamService.getUserDefaultTeam(request.user.id);
       
