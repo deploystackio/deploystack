@@ -57,11 +57,7 @@ jobs:
 
       - name: Gateway Lint
         working-directory: services/gateway
-        run: npm run lint || echo "Linting not configured yet, skipping"
-        
-      - name: Check for console.log in gateway
-        working-directory: services/gateway
-        run: npm run check:no-console || echo "Console check not configured yet, skipping"
+        run: npm run lint
         
       - name: Prepare release
         working-directory: services/gateway
