@@ -9,9 +9,10 @@ export function registerTeamsCommand(program: Command) {
   program
     .command('teams')
     .description('List your teams and team information')
-    .option('--url <url>', 'DeployStack backend URL (for development)', 'https://cloud.deploystack.io')
+    .option('--url <url>', 'DeployStack backend URL (override stored URL)')
     .action(async (options) => {
       const storage = new CredentialStorage();
+      let backendUrl = 'https://cloud.deploystack.io'; // Default fallback
 
       try {
         // Check authentication
@@ -28,7 +29,9 @@ export function registerTeamsCommand(program: Command) {
           process.exit(1);
         }
 
-        const api = new DeployStackAPI(credentials, options.url);
+        // Use stored baseUrl or command line override
+        backendUrl = options.url || credentials.baseUrl || 'https://cloud.deploystack.io';
+        const api = new DeployStackAPI(credentials, backendUrl);
 
         // Get teams
         const teams = await api.getUserTeams();
@@ -83,8 +86,8 @@ export function registerTeamsCommand(program: Command) {
             console.log(chalk.gray(`💡 Run 'deploystack login' to refresh your authentication`));
           } else if (error.code === 'NETWORK_ERROR') {
             console.log(chalk.gray('💡 Check your internet connection and try again'));
-            if (options.url !== 'https://cloud.deploystack.io') {
-              console.log(chalk.gray(`💡 Make sure your development server is running at ${options.url}`));
+            if (backendUrl !== 'https://cloud.deploystack.io') {
+              console.log(chalk.gray(`💡 Make sure your development server is running at ${backendUrl}`));
             }
           } else if (error.code === 'INVALID_TOKEN') {
             console.log(chalk.gray('💡 Your token may not have permission to view teams'));

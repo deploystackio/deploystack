@@ -3,6 +3,7 @@ export interface StoredCredentials {
   refreshToken: string;
   expiresAt: number;
   userEmail: string;
+  baseUrl: string; // Store the backend URL used during login
   accounts: Array<{
     id: string;
     name: string;

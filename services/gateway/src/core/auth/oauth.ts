@@ -110,6 +110,7 @@ export class OAuth2Client {
         refreshToken: tokenResponse.refresh_token,
         expiresAt: Date.now() + (tokenResponse.expires_in * 1000),
         userEmail: userInfo.email,
+        baseUrl: this.config.baseUrl, // Store the backend URL used during login
         accounts: [] // Will be populated from user info if available
       };
 

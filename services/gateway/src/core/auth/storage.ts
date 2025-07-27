@@ -58,27 +58,27 @@ export class CredentialStorage {
    * @returns Stored credentials or null if not found
    */
   async getCredentials(): Promise<StoredCredentials | null> {
-    console.log('🔍 Attempting to retrieve stored credentials...');
+    // REMOVED: console.log('🔍 Attempting to retrieve stored credentials...');
     
     // First try encrypted file (more reliable for single-user scenario)
     try {
-      console.log('📁 Checking encrypted file:', this.fallbackFile);
+      // REMOVED: console.log('📁 Checking encrypted file:', this.fallbackFile);
       const encryptedCredentials = await this.retrieveEncrypted();
       if (encryptedCredentials) {
-        console.log('✓ Found credentials in encrypted file');
+        // REMOVED: console.log('✓ Found credentials in encrypted file');
         return encryptedCredentials;
       } else {
-        console.log('⚠ No credentials found in encrypted file');
+        // REMOVED: console.log('⚠ No credentials found in encrypted file');
       }
     } catch (error) {
-      console.log('❌ Error reading encrypted file:', (error as Error)?.message);
+      // REMOVED: console.log('❌ Error reading encrypted file:', (error as Error)?.message);
     }
 
     // Fallback to keychain
     try {
-      console.log('🔑 Checking OS keychain...');
+      // REMOVED: console.log('🔑 Checking OS keychain...');
       const accounts = await this.getStoredAccounts();
-      console.log('📋 Found accounts:', accounts);
+      // REMOVED: console.log('📋 Found accounts:', accounts);
       
       if (accounts.length > 0) {
         // Try each account until we find valid credentials
@@ -87,22 +87,22 @@ export class CredentialStorage {
             const stored = await keyring.getPassword(this.serviceName, account);
             if (stored) {
               const credentials = JSON.parse(stored);
-              console.log('✓ Found credentials in OS keychain for:', account);
+              // REMOVED: console.log('✓ Found credentials in OS keychain for:', account);
               return credentials;
             }
           } catch (error) {
-            console.log('⚠ Failed to retrieve credentials for account:', account);
+            // REMOVED: console.log('⚠ Failed to retrieve credentials for account:', account);
             continue;
           }
         }
       } else {
-        console.log('⚠ No accounts found in keychain');
+        // REMOVED: console.log('⚠ No accounts found in keychain');
       }
     } catch (error) {
-      console.log('❌ Error accessing keychain:', (error as Error)?.message);
+      // REMOVED: console.log('❌ Error accessing keychain:', (error as Error)?.message);
     }
 
-    console.log('❌ No credentials found in any storage method');
+    // REMOVED: console.log('❌ No credentials found in any storage method');
     return null;
   }
 
