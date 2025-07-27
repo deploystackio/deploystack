@@ -9,6 +9,7 @@ export class CredentialStorage {
   private readonly serviceName = 'deploystack-gateway';
   private readonly fallbackDir = join(homedir(), '.deploystack');
   private readonly fallbackFile = join(this.fallbackDir, 'credentials.enc');
+  private readonly accountsFile = join(this.fallbackDir, 'accounts.json');
   private readonly encryptionKey = 'deploystack-gateway-key';
 
   /**
@@ -16,6 +17,8 @@ export class CredentialStorage {
    * @param credentials Credentials to store
    */
   async storeCredentials(credentials: StoredCredentials): Promise<void> {
+    let keychainError: Error | null = null;
+    
     try {
       // Try OS keychain first
       await keyring.setPassword(
@@ -23,17 +26,30 @@ export class CredentialStorage {
         credentials.userEmail,
         JSON.stringify(credentials)
       );
+      
+      // Also maintain a list of accounts for retrieval
+      await this.addToAccountsList(credentials.userEmail);
+      
+      console.log('✓ Credentials stored in OS keychain');
+      return; // Success, no need for fallback
     } catch (error) {
-      // Fallback to encrypted file storage
-      try {
-        await this.storeEncrypted(credentials);
-      } catch (fallbackError) {
-        throw new AuthenticationError(
-          AuthError.STORAGE_ERROR,
-          'Failed to store credentials securely',
-          fallbackError as Error
-        );
-      }
+      keychainError = error as Error;
+      console.log('⚠ Keychain storage failed, trying encrypted file fallback...');
+    }
+
+    // Fallback to encrypted file storage
+    try {
+      await this.storeEncrypted(credentials);
+      console.log('✓ Credentials stored in encrypted file');
+    } catch (fallbackError) {
+      console.error('❌ Both keychain and file storage failed:');
+      console.error('Keychain error:', keychainError?.message);
+      console.error('File error:', (fallbackError as Error)?.message);
+      throw new AuthenticationError(
+        AuthError.STORAGE_ERROR,
+        'Failed to store credentials securely',
+        fallbackError as Error
+      );
     }
   }
 
@@ -42,21 +58,52 @@ export class CredentialStorage {
    * @returns Stored credentials or null if not found
    */
   async getCredentials(): Promise<StoredCredentials | null> {
+    console.log('🔍 Attempting to retrieve stored credentials...');
+    
+    // First try encrypted file (more reliable for single-user scenario)
     try {
-      // Try to get all stored credentials and find the most recent one
-      const accounts = await this.getStoredAccounts();
-      if (accounts.length === 0) {
-        return await this.retrieveEncrypted();
+      console.log('📁 Checking encrypted file:', this.fallbackFile);
+      const encryptedCredentials = await this.retrieveEncrypted();
+      if (encryptedCredentials) {
+        console.log('✓ Found credentials in encrypted file');
+        return encryptedCredentials;
+      } else {
+        console.log('⚠ No credentials found in encrypted file');
       }
-
-      // Get the most recently stored credentials
-      const mostRecent = accounts[0];
-      const stored = await keyring.getPassword(this.serviceName, mostRecent);
-      return stored ? JSON.parse(stored) : await this.retrieveEncrypted();
     } catch (error) {
-      // Fallback to encrypted file
-      return await this.retrieveEncrypted();
+      console.log('❌ Error reading encrypted file:', (error as Error)?.message);
     }
+
+    // Fallback to keychain
+    try {
+      console.log('🔑 Checking OS keychain...');
+      const accounts = await this.getStoredAccounts();
+      console.log('📋 Found accounts:', accounts);
+      
+      if (accounts.length > 0) {
+        // Try each account until we find valid credentials
+        for (const account of accounts) {
+          try {
+            const stored = await keyring.getPassword(this.serviceName, account);
+            if (stored) {
+              const credentials = JSON.parse(stored);
+              console.log('✓ Found credentials in OS keychain for:', account);
+              return credentials;
+            }
+          } catch (error) {
+            console.log('⚠ Failed to retrieve credentials for account:', account);
+            continue;
+          }
+        }
+      } else {
+        console.log('⚠ No accounts found in keychain');
+      }
+    } catch (error) {
+      console.log('❌ Error accessing keychain:', (error as Error)?.message);
+    }
+
+    console.log('❌ No credentials found in any storage method');
+    return null;
   }
 
   /**
@@ -67,6 +114,7 @@ export class CredentialStorage {
     try {
       if (userEmail) {
         await keyring.deletePassword(this.serviceName, userEmail);
+        await this.removeFromAccountsList(userEmail);
       } else {
         // Clear all stored accounts
         const accounts = await this.getStoredAccounts();
@@ -77,6 +125,7 @@ export class CredentialStorage {
             // Continue clearing other accounts even if one fails
           }
         }
+        await this.clearAccountsList();
       }
     } catch (error) {
       // Continue to clear encrypted file even if keychain fails
@@ -114,11 +163,68 @@ export class CredentialStorage {
    */
   private async getStoredAccounts(): Promise<string[]> {
     try {
-      // This is a simplified approach - in a real implementation,
-      // you might want to maintain a separate list of accounts
-      return [];
+      if (existsSync(this.accountsFile)) {
+        const data = readFileSync(this.accountsFile, 'utf8');
+        const accounts = JSON.parse(data);
+        return Array.isArray(accounts) ? accounts : [];
+      }
     } catch (error) {
-      return [];
+      // If we can't read the accounts file, return empty array
+    }
+    return [];
+  }
+
+  /**
+   * Add account to the accounts list
+   * @param email User email to add
+   */
+  private async addToAccountsList(email: string): Promise<void> {
+    try {
+      // Ensure directory exists
+      const { mkdirSync } = await import('fs');
+      try {
+        mkdirSync(this.fallbackDir, { recursive: true });
+      } catch (error) {
+        // Directory might already exist
+      }
+
+      const accounts = await this.getStoredAccounts();
+      if (!accounts.includes(email)) {
+        accounts.unshift(email); // Add to beginning (most recent first)
+        writeFileSync(this.accountsFile, JSON.stringify(accounts, null, 2));
+      }
+    } catch (error) {
+      // Non-critical error, don't throw
+      console.log('⚠ Failed to update accounts list:', (error as Error)?.message);
+    }
+  }
+
+  /**
+   * Remove account from the accounts list
+   * @param email User email to remove
+   */
+  private async removeFromAccountsList(email: string): Promise<void> {
+    try {
+      const accounts = await this.getStoredAccounts();
+      const filtered = accounts.filter(account => account !== email);
+      if (filtered.length !== accounts.length) {
+        writeFileSync(this.accountsFile, JSON.stringify(filtered, null, 2));
+      }
+    } catch (error) {
+      // Non-critical error, don't throw
+    }
+  }
+
+  /**
+   * Clear the accounts list
+   */
+  private async clearAccountsList(): Promise<void> {
+    try {
+      if (existsSync(this.accountsFile)) {
+        unlinkSync(this.accountsFile);
+      }
+    } catch (error) {
+      // Non-critical error, don't throw
     }
   }
 

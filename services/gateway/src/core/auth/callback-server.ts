@@ -115,6 +115,7 @@ export class CallbackServer {
 <!DOCTYPE html>
 <html>
 <head>
+    <meta charset="UTF-8">
     <title>DeployStack Gateway - Authentication Successful</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 40px; background: #f5f5f5; }
@@ -143,7 +144,7 @@ export class CallbackServer {
 </html>`;
 
     res.writeHead(200, {
-      'Content-Type': 'text/html',
+      'Content-Type': 'text/html; charset=utf-8',
       'Content-Length': Buffer.byteLength(html)
     });
     res.end(html);
@@ -157,6 +158,7 @@ export class CallbackServer {
 <!DOCTYPE html>
 <html>
 <head>
+    <meta charset="UTF-8">
     <title>DeployStack Gateway - Authentication Error</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 40px; background: #f5f5f5; }
@@ -183,7 +185,7 @@ export class CallbackServer {
 </html>`;
 
     res.writeHead(400, {
-      'Content-Type': 'text/html',
+      'Content-Type': 'text/html; charset=utf-8',
       'Content-Length': Buffer.byteLength(html)
     });
     res.end(html);
@@ -195,7 +197,7 @@ export class CallbackServer {
   private send404(res: ServerResponse): void {
     const html = '<h1>404 Not Found</h1><p>This is the DeployStack Gateway OAuth callback server.</p>';
     res.writeHead(404, {
-      'Content-Type': 'text/html',
+      'Content-Type': 'text/html; charset=utf-8',
       'Content-Length': Buffer.byteLength(html)
     });
     res.end(html);

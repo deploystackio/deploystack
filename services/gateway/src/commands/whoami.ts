@@ -37,7 +37,8 @@ export function registerWhoamiCommand(program: Command) {
         const accounts = api.getUserAccounts();
 
         // Display user information
-        console.log(chalk.blue(`👋 You are logged in with an OAuth Token, associated with ${userInfo.email}\n`));
+        const userEmail = userInfo.email || api.getUserEmail();
+        console.log(chalk.blue(`👋 You are logged in with an OAuth Token, associated with ${userEmail}\n`));
 
         // Display account info in table format if accounts exist
         if (accounts.length > 0) {
