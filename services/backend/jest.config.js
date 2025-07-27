@@ -2,6 +2,7 @@ module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
   testMatch: ['**/tests/e2e/**/*.test.ts'],
+  testPathIgnorePatterns: ['/node_modules/', '\\._.*'],
   moduleNameMapper: {
     '^@src/(.*)$': '<rootDir>/src/$1',
   },

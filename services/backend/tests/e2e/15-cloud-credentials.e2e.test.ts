@@ -134,36 +134,38 @@ describe('Cloud Credentials E2E Tests', () => {
     expect(response.body.data).toBeInstanceOf(Array);
     expect(response.body.data.length).toBeGreaterThan(0);
     
-    // Verify AWS provider exists
-    const awsProvider = response.body.data.find((provider: any) => provider.id === 'aws');
-    expect(awsProvider).toBeDefined();
-    expect(awsProvider.name).toBe('Amazon Web Services');
-    expect(awsProvider.enabled).toBe(true);
-    expect(awsProvider.fields).toBeInstanceOf(Array);
+    // Verify GCP provider exists
+    const gcpProvider = response.body.data.find((provider: any) => provider.id === 'gcp');
+    expect(gcpProvider).toBeDefined();
+    expect(gcpProvider.name).toBe('Google Cloud Platform');
+    expect(gcpProvider.enabled).toBe(true);
+    expect(gcpProvider.fields).toBeInstanceOf(Array);
     
     // Verify required fields exist
-    const accessKeyField = awsProvider.fields.find((field: any) => field.key === 'access_key_id');
-    const secretKeyField = awsProvider.fields.find((field: any) => field.key === 'secret_access_key');
+    const serviceAccountField = gcpProvider.fields.find((field: any) => field.key === 'service_account_key');
+    const projectIdField = gcpProvider.fields.find((field: any) => field.key === 'project_id');
     
-    expect(accessKeyField).toBeDefined();
-    expect(accessKeyField.required).toBe(true);
-    expect(accessKeyField.secret).toBe(false);
+    expect(serviceAccountField).toBeDefined();
+    expect(serviceAccountField.required).toBe(true);
+    expect(serviceAccountField.secret).toBe(true);
+    expect(serviceAccountField.type).toBe('textarea');
     
-    expect(secretKeyField).toBeDefined();
-    expect(secretKeyField.required).toBe(true);
-    expect(secretKeyField.secret).toBe(true);
+    expect(projectIdField).toBeDefined();
+    expect(projectIdField.required).toBe(true);
+    expect(projectIdField.secret).toBe(false);
+    expect(projectIdField.type).toBe('text');
   });
 
   it('should create first cloud credential as team admin', async () => {
     const context = getTestContext();
     
     const credentialData = {
-      providerId: 'aws',
-      name: 'Test AWS Credentials',
+      providerId: 'gcp',
+      name: 'Test GCP Credentials',
       comment: 'Test credentials for E2E testing',
       credentials: {
-        access_key_id: 'AKIATEST123456789',
-        secret_access_key: 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEYtest123'
+        service_account_key: '{\n  "type": "service_account",\n  "project_id": "test-project-123",\n  "private_key_id": "test-key-id-123456",\n  "private_key": "-----BEGIN PRIVATE KEY-----\\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC7VJT...TEST...\\n-----END PRIVATE KEY-----\\n",\n  "client_email": "test-service@test-project-123.iam.gserviceaccount.com",\n  "client_id": "123456789012345678901",\n  "auth_uri": "https://accounts.google.com/o/oauth2/auth",\n  "token_uri": "https://oauth2.googleapis.com/token",\n  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",\n  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/test-service%40test-project-123.iam.gserviceaccount.com"\n}',
+        project_id: 'test-project-123'
       }
     };
 
@@ -180,26 +182,26 @@ describe('Cloud Credentials E2E Tests', () => {
     const credential = response.body.data;
     expect(credential.id).toBeDefined();
     expect(credential.teamId).toBe(context.teamAdminTeamId);
-    expect(credential.providerId).toBe('aws');
+    expect(credential.providerId).toBe('gcp');
     expect(credential.name).toBe(credentialData.name);
     expect(credential.comment).toBe(credentialData.comment);
     expect(credential.createdBy).toBe(context.secondUserId);
     
     // Verify provider information
-    expect(credential.provider.id).toBe('aws');
-    expect(credential.provider.name).toBe('Amazon Web Services');
+    expect(credential.provider.id).toBe('gcp');
+    expect(credential.provider.name).toBe('Google Cloud Platform');
     
     // Verify fields structure - team admin should see non-secret values but no secret values
     expect(credential.fields).toBeDefined();
-    expect(credential.fields.access_key_id).toBeDefined();
-    expect(credential.fields.access_key_id.hasValue).toBe(true);
-    expect(credential.fields.access_key_id.secret).toBe(false);
-    expect(credential.fields.access_key_id.value).toBe('PLACEHOLDER_VALUE'); // Non-secret field shows placeholder
+    expect(credential.fields.project_id).toBeDefined();
+    expect(credential.fields.project_id.hasValue).toBe(true);
+    expect(credential.fields.project_id.secret).toBe(false);
+    expect(credential.fields.project_id.value).toBe('PLACEHOLDER_VALUE'); // Non-secret field shows placeholder
     
-    expect(credential.fields.secret_access_key).toBeDefined();
-    expect(credential.fields.secret_access_key.hasValue).toBe(true);
-    expect(credential.fields.secret_access_key.secret).toBe(true);
-    expect(credential.fields.secret_access_key.value).toBeUndefined(); // Secret field never shows value
+    expect(credential.fields.service_account_key).toBeDefined();
+    expect(credential.fields.service_account_key.hasValue).toBe(true);
+    expect(credential.fields.service_account_key.secret).toBe(true);
+    expect(credential.fields.service_account_key.value).toBeUndefined(); // Secret field never shows value
     
     // Store credential ID for later tests
     updateTestContext({
@@ -211,12 +213,12 @@ describe('Cloud Credentials E2E Tests', () => {
     const context = getTestContext();
     
     const credentialData = {
-      providerId: 'aws',
-      name: 'Edit Test AWS Credentials',
+      providerId: 'gcp',
+      name: 'Edit Test GCP Credentials',
       comment: 'Credentials for edit/delete testing',
       credentials: {
-        access_key_id: 'AKIAEDIT123456789',
-        secret_access_key: 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEYedit123'
+        service_account_key: '{\n  "type": "service_account",\n  "project_id": "edit-test-project-456",\n  "private_key_id": "edit-key-id-456789",\n  "private_key": "-----BEGIN PRIVATE KEY-----\\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC7VJT...EDIT...\\n-----END PRIVATE KEY-----\\n",\n  "client_email": "edit-service@edit-test-project-456.iam.gserviceaccount.com",\n  "client_id": "456789012345678901234",\n  "auth_uri": "https://accounts.google.com/o/oauth2/auth",\n  "token_uri": "https://oauth2.googleapis.com/token",\n  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",\n  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/edit-service%40edit-test-project-456.iam.gserviceaccount.com"\n}',
+        project_id: 'edit-test-project-456'
       }
     };
 
@@ -243,10 +245,10 @@ describe('Cloud Credentials E2E Tests', () => {
     expect(context.editTestCredentialId).not.toBe('undefined');
     
     const updateData = {
-      name: 'Updated Test AWS Credentials',
+      name: 'Updated Test GCP Credentials',
       comment: 'Updated comment for testing',
       credentials: {
-        access_key_id: 'AKIATEST987654321' // Update non-secret field
+        project_id: 'updated-test-project-789' // Update non-secret field
       }
     };
 
@@ -265,12 +267,12 @@ describe('Cloud Credentials E2E Tests', () => {
     expect(credential.comment).toBe(updateData.comment);
     
     // Verify updated field (team admin sees placeholder, not actual value)
-    expect(credential.fields.access_key_id.value).toBe('PLACEHOLDER_VALUE');
-    expect(credential.fields.access_key_id.hasValue).toBe(true);
+    expect(credential.fields.project_id.value).toBe('PLACEHOLDER_VALUE');
+    expect(credential.fields.project_id.hasValue).toBe(true);
     
     // Verify secret field remains unchanged (still has value but not shown)
-    expect(credential.fields.secret_access_key.hasValue).toBe(true);
-    expect(credential.fields.secret_access_key.value).toBeUndefined();
+    expect(credential.fields.service_account_key.hasValue).toBe(true);
+    expect(credential.fields.service_account_key.value).toBeUndefined();
   });
 
   it('should delete own credential as team admin', async () => {
@@ -297,12 +299,12 @@ describe('Cloud Credentials E2E Tests', () => {
     
     // Create first credential in team admin's team
     const credential1Data = {
-      providerId: 'aws',
-      name: 'Production AWS',
+      providerId: 'gcp',
+      name: 'Production GCP',
       comment: 'Production environment credentials',
       credentials: {
-        access_key_id: 'AKIAPROD123456789',
-        secret_access_key: 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEYprod123'
+        service_account_key: '{\n  "type": "service_account",\n  "project_id": "prod-project-123",\n  "private_key_id": "prod-key-id-123456",\n  "private_key": "-----BEGIN PRIVATE KEY-----\\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC7VJT...PROD...\\n-----END PRIVATE KEY-----\\n",\n  "client_email": "prod-service@prod-project-123.iam.gserviceaccount.com",\n  "client_id": "123456789012345678901",\n  "auth_uri": "https://accounts.google.com/o/oauth2/auth",\n  "token_uri": "https://oauth2.googleapis.com/token",\n  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",\n  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/prod-service%40prod-project-123.iam.gserviceaccount.com"\n}',
+        project_id: 'prod-project-123'
       }
     };
 
@@ -316,12 +318,12 @@ describe('Cloud Credentials E2E Tests', () => {
     
     // Create second credential in team admin's team
     const credential2Data = {
-      providerId: 'aws',
-      name: 'Staging AWS',
+      providerId: 'gcp',
+      name: 'Staging GCP',
       comment: 'Staging environment credentials',
       credentials: {
-        access_key_id: 'AKIASTAGING123456789',
-        secret_access_key: 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEYstag123'
+        service_account_key: '{\n  "type": "service_account",\n  "project_id": "staging-project-456",\n  "private_key_id": "staging-key-id-456789",\n  "private_key": "-----BEGIN PRIVATE KEY-----\\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC7VJT...STAGING...\\n-----END PRIVATE KEY-----\\n",\n  "client_email": "staging-service@staging-project-456.iam.gserviceaccount.com",\n  "client_id": "456789012345678901234",\n  "auth_uri": "https://accounts.google.com/o/oauth2/auth",\n  "token_uri": "https://oauth2.googleapis.com/token",\n  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",\n  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/staging-service%40staging-project-456.iam.gserviceaccount.com"\n}',
+        project_id: 'staging-project-456'
       }
     };
 
@@ -358,26 +360,26 @@ describe('Cloud Credentials E2E Tests', () => {
     for (const credential of credentials) {
       expect(credential.id).toBeDefined();
       expect(credential.name).toBeDefined();
-      expect(credential.providerId).toBe('aws');
+      expect(credential.providerId).toBe('gcp');
       expect(credential.teamId).toBe(context.teamAdminTeamId);
       expect(credential.createdBy).toBe(context.secondUserId);
       
       // Global admin should see field metadata but NO values (even for non-secret fields)
       expect(credential.fields).toBeDefined();
-      expect(credential.fields.access_key_id).toBeDefined();
-      expect(credential.fields.access_key_id.hasValue).toBe(true);
-      expect(credential.fields.access_key_id.secret).toBe(false);
-      expect(credential.fields.access_key_id.value).toBeUndefined(); // Global admin sees no values
+      expect(credential.fields.project_id).toBeDefined();
+      expect(credential.fields.project_id.hasValue).toBe(true);
+      expect(credential.fields.project_id.secret).toBe(false);
+      expect(credential.fields.project_id.value).toBeUndefined(); // Global admin sees no values
       
-      expect(credential.fields.secret_access_key).toBeDefined();
-      expect(credential.fields.secret_access_key.hasValue).toBe(true);
-      expect(credential.fields.secret_access_key.secret).toBe(true);
-      expect(credential.fields.secret_access_key.value).toBeUndefined(); // Global admin sees no values
+      expect(credential.fields.service_account_key).toBeDefined();
+      expect(credential.fields.service_account_key.hasValue).toBe(true);
+      expect(credential.fields.service_account_key.secret).toBe(true);
+      expect(credential.fields.service_account_key.value).toBeUndefined(); // Global admin sees no values
     }
     
     // Verify we can find both credentials
-    const prodCredential = credentials.find((c: any) => c.name === 'Production AWS');
-    const stagingCredential = credentials.find((c: any) => c.name === 'Staging AWS');
+    const prodCredential = credentials.find((c: any) => c.name === 'Production GCP');
+    const stagingCredential = credentials.find((c: any) => c.name === 'Staging GCP');
     
     expect(prodCredential).toBeDefined();
     expect(stagingCredential).toBeDefined();
@@ -408,17 +410,17 @@ describe('Cloud Credentials E2E Tests', () => {
     expect(response.body.data).toBeDefined();
     
     const credential = response.body.data;
-    expect(credential.name).toBe('Production AWS');
+    expect(credential.name).toBe('Production GCP');
     expect(credential.comment).toBe('Production environment credentials');
     
     // Verify global admin sees metadata but no actual values
-    expect(credential.fields.access_key_id.hasValue).toBe(true);
-    expect(credential.fields.access_key_id.secret).toBe(false);
-    expect(credential.fields.access_key_id.value).toBeUndefined(); // No value for global admin
+    expect(credential.fields.project_id.hasValue).toBe(true);
+    expect(credential.fields.project_id.secret).toBe(false);
+    expect(credential.fields.project_id.value).toBeUndefined(); // No value for global admin
     
-    expect(credential.fields.secret_access_key.hasValue).toBe(true);
-    expect(credential.fields.secret_access_key.secret).toBe(true);
-    expect(credential.fields.secret_access_key.value).toBeUndefined(); // No value for global admin
+    expect(credential.fields.service_account_key.hasValue).toBe(true);
+    expect(credential.fields.service_account_key.secret).toBe(true);
+    expect(credential.fields.service_account_key.value).toBeUndefined(); // No value for global admin
   });
 
   it('should verify no secret values are ever returned in any response', async () => {
@@ -433,14 +435,14 @@ describe('Cloud Credentials E2E Tests', () => {
     const globalAdminCredential = globalAdminResponse.body.data;
     
     // Global admin should see no values at all for other team's credentials
-    expect(globalAdminCredential.fields.secret_access_key.value).toBeUndefined();
-    expect(globalAdminCredential.fields.access_key_id.value).toBeUndefined();
-    expect(globalAdminCredential.fields.secret_access_key.hasValue).toBe(true);
-    expect(globalAdminCredential.fields.access_key_id.hasValue).toBe(true);
+    expect(globalAdminCredential.fields.service_account_key.value).toBeUndefined();
+    expect(globalAdminCredential.fields.project_id.value).toBeUndefined();
+    expect(globalAdminCredential.fields.service_account_key.hasValue).toBe(true);
+    expect(globalAdminCredential.fields.project_id.hasValue).toBe(true);
     
     // Verify secret fields are properly marked
-    expect(globalAdminCredential.fields.secret_access_key.secret).toBe(true);
-    expect(globalAdminCredential.fields.access_key_id.secret).toBe(false);
+    expect(globalAdminCredential.fields.service_account_key.secret).toBe(true);
+    expect(globalAdminCredential.fields.project_id.secret).toBe(false);
     
     // Test as team admin viewing own team's credentials
     const teamAdminResponse = await request(server.server)
@@ -451,10 +453,10 @@ describe('Cloud Credentials E2E Tests', () => {
     const teamAdminCredential = teamAdminResponse.body.data;
     
     // Team admin should see placeholder for non-secret fields but never secret values
-    expect(teamAdminCredential.fields.secret_access_key.value).toBeUndefined(); // Secret never shown
-    expect(teamAdminCredential.fields.access_key_id.value).toBe('PLACEHOLDER_VALUE'); // Non-secret shows placeholder
-    expect(teamAdminCredential.fields.secret_access_key.hasValue).toBe(true);
-    expect(teamAdminCredential.fields.access_key_id.hasValue).toBe(true);
+    expect(teamAdminCredential.fields.service_account_key.value).toBeUndefined(); // Secret never shown
+    expect(teamAdminCredential.fields.project_id.value).toBe('PLACEHOLDER_VALUE'); // Non-secret shows placeholder
+    expect(teamAdminCredential.fields.service_account_key.hasValue).toBe(true);
+    expect(teamAdminCredential.fields.project_id.hasValue).toBe(true);
   });
 
   it('should handle validation errors correctly', async () => {
@@ -479,11 +481,11 @@ describe('Cloud Credentials E2E Tests', () => {
       .post(`/api/teams/${context.teamAdminTeamId}/cloud-credentials`)
       .set('Cookie', context.teamAdminCredentialsCookie!)
       .send({
-        providerId: 'aws',
+        providerId: 'gcp',
         name: 'Test Credential',
         credentials: {
-          access_key_id: 'AKIATEST123456789'
-          // Missing secret_access_key
+          project_id: 'test-project-123'
+          // Missing service_account_key
         }
       });
 
@@ -496,15 +498,15 @@ describe('Cloud Credentials E2E Tests', () => {
       .post(`/api/teams/${context.teamAdminTeamId}/cloud-credentials`)
       .set('Cookie', context.teamAdminCredentialsCookie!)
       .send({
-        providerId: 'aws',
-        name: 'Production AWS', // Same name as existing credential
+        providerId: 'gcp',
+        name: 'Production GCP', // Same name as existing credential
         credentials: {
-          access_key_id: 'AKIATEST123456789',
-          secret_access_key: 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEYdupe123'
+          service_account_key: '{"type": "service_account", "project_id": "duplicate-test"}',
+          project_id: 'duplicate-test-project'
         }
       });
 
-    expect(duplicateNameResponse.status).toBe(409);
+    expect(duplicateNameResponse.status).toBe(400);
     expect(duplicateNameResponse.body.success).toBe(false);
     expect(duplicateNameResponse.body.error).toBeDefined();
   });

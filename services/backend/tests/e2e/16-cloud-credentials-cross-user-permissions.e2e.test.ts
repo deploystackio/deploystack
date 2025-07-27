@@ -131,12 +131,12 @@ describe('Cloud Credentials Cross-User Permissions E2E Tests', () => {
     const context = getTestContext();
     
     const credentialData = {
-      providerId: 'aws',
+      providerId: 'gcp',
       name: 'User1 Test Credentials',
       comment: 'Test credentials for cross-user permission testing',
       credentials: {
-        access_key_id: 'AKIAUSER1TEST123456',
-        secret_access_key: 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEYuser1'
+        service_account_key: '{\n  "type": "service_account",\n  "project_id": "user1-test-project-123",\n  "private_key_id": "user1-key-id-123456",\n  "private_key": "-----BEGIN PRIVATE KEY-----\\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC7VJT...USER1...\\n-----END PRIVATE KEY-----\\n",\n  "client_email": "user1-service@user1-test-project-123.iam.gserviceaccount.com",\n  "client_id": "123456789012345678901",\n  "auth_uri": "https://accounts.google.com/o/oauth2/auth",\n  "token_uri": "https://oauth2.googleapis.com/token",\n  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",\n  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/user1-service%40user1-test-project-123.iam.gserviceaccount.com"\n}',
+        project_id: 'user1-test-project-123'
       }
     };
 
@@ -153,7 +153,7 @@ describe('Cloud Credentials Cross-User Permissions E2E Tests', () => {
     const credential = response.body.data;
     expect(credential.id).toBeDefined();
     expect(credential.teamId).toBe(context.testCredentialsUser1TeamId);
-    expect(credential.providerId).toBe('aws');
+    expect(credential.providerId).toBe('gcp');
     expect(credential.name).toBe(credentialData.name);
     expect(credential.comment).toBe(credentialData.comment);
     // Handle both possible response formats for createdBy
@@ -161,20 +161,20 @@ describe('Cloud Credentials Cross-User Permissions E2E Tests', () => {
     expect(createdById).toBe(context.testCredentialsUser1Id);
     
     // Verify provider information
-    expect(credential.provider.id).toBe('aws');
-    expect(credential.provider.name).toBe('Amazon Web Services');
+    expect(credential.provider.id).toBe('gcp');
+    expect(credential.provider.name).toBe('Google Cloud Platform');
     
     // Verify fields structure - team admin should see placeholder for non-secret fields
     expect(credential.fields).toBeDefined();
-    expect(credential.fields.access_key_id).toBeDefined();
-    expect(credential.fields.access_key_id.hasValue).toBe(true);
-    expect(credential.fields.access_key_id.secret).toBe(false);
-    expect(credential.fields.access_key_id.value).toBe('PLACEHOLDER_VALUE');
+    expect(credential.fields.project_id).toBeDefined();
+    expect(credential.fields.project_id.hasValue).toBe(true);
+    expect(credential.fields.project_id.secret).toBe(false);
+    expect(credential.fields.project_id.value).toBe('PLACEHOLDER_VALUE');
     
-    expect(credential.fields.secret_access_key).toBeDefined();
-    expect(credential.fields.secret_access_key.hasValue).toBe(true);
-    expect(credential.fields.secret_access_key.secret).toBe(true);
-    expect(credential.fields.secret_access_key.value).toBeUndefined(); // Secret field never shows value
+    expect(credential.fields.service_account_key).toBeDefined();
+    expect(credential.fields.service_account_key.hasValue).toBe(true);
+    expect(credential.fields.service_account_key.secret).toBe(true);
+    expect(credential.fields.service_account_key.value).toBeUndefined(); // Secret field never shows value
     
     // Store credential ID for cross-user access tests
     updateTestContext({
@@ -217,7 +217,7 @@ describe('Cloud Credentials Cross-User Permissions E2E Tests', () => {
       name: 'Malicious Update Attempt',
       comment: 'This should not work',
       credentials: {
-        access_key_id: 'AKIAMALICIOUS123456'
+        project_id: 'malicious-project-999'
       }
     };
 
@@ -266,8 +266,8 @@ describe('Cloud Credentials Cross-User Permissions E2E Tests', () => {
     expect(credential.teamId).toBe(context.testCredentialsUser1TeamId);
     
     // Verify fields are still intact
-    expect(credential.fields.access_key_id.hasValue).toBe(true);
-    expect(credential.fields.secret_access_key.hasValue).toBe(true);
+    expect(credential.fields.project_id.hasValue).toBe(true);
+    expect(credential.fields.service_account_key.hasValue).toBe(true);
   });
 
   it('should allow test_credentials_user_2 to manage their own credentials', async () => {
@@ -275,12 +275,12 @@ describe('Cloud Credentials Cross-User Permissions E2E Tests', () => {
     
     // User 2 creates their own credentials in their own team
     const credentialData = {
-      providerId: 'aws',
+      providerId: 'gcp',
       name: 'User2 Test Credentials',
       comment: 'Test credentials for user 2 own team',
       credentials: {
-        access_key_id: 'AKIAUSER2TEST123456',
-        secret_access_key: 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEYuser2'
+        service_account_key: '{\n  "type": "service_account",\n  "project_id": "user2-test-project-456",\n  "private_key_id": "user2-key-id-789012",\n  "private_key": "-----BEGIN PRIVATE KEY-----\\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC7VJT...USER2...\\n-----END PRIVATE KEY-----\\n",\n  "client_email": "user2-service@user2-test-project-456.iam.gserviceaccount.com",\n  "client_id": "789012345678901234567",\n  "auth_uri": "https://accounts.google.com/o/oauth2/auth",\n  "token_uri": "https://oauth2.googleapis.com/token",\n  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",\n  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/user2-service%40user2-test-project-456.iam.gserviceaccount.com"\n}',
+        project_id: 'user2-test-project-456'
       }
     };
 
