@@ -1,6 +1,7 @@
 import { type FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { createSchema } from 'zod-openapi';
+import { requireAuthenticationAny, requireOAuthScope } from '../../../middleware/oauthMiddleware';
 import { requireTeamPermission } from '../../../middleware/roleMiddleware';
 import { McpInstallationService } from '../../../services/mcpInstallationService';
 import { getDb } from '../../../db';
@@ -46,28 +47,46 @@ export default async function listInstallationsRoute(fastify: FastifyInstance) {
     schema: {
       tags: ['MCP Installations'],
       summary: 'List team MCP installations',
-      description: 'Retrieves all MCP server installations for the specified team. No Content-Type header required for this GET request.',
-      security: [{ cookieAuth: [] }],
+      description: 'Retrieves all MCP server installations for the specified team. Supports both cookie-based authentication (for web users) and OAuth2 Bearer token authentication (for CLI users). Requires mcp:read scope for OAuth2 access.',
+      security: [
+        { cookieAuth: [] },
+        { bearerAuth: [] }
+      ],
       params: createSchema(z.object({
         teamId: z.string().min(1, 'Team ID is required')
-      }), {
-        }),
+      })),
       response: {
         200: createSchema(successResponseSchema.describe('List of team installations')),
-        401: createSchema(errorResponseSchema.describe('Unauthorized - Authentication required')),
-        403: createSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions')),
+        401: createSchema(errorResponseSchema.describe('Unauthorized - Authentication required or invalid token')),
+        403: createSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions or scope')),
         404: createSchema(errorResponseSchema.describe('Not Found - Team not found'))
       }
     },
-    preValidation: requireTeamPermission('mcp.installations.view')
+    preValidation: [
+      requireAuthenticationAny(),
+      requireOAuthScope('mcp:read'),
+      requireTeamPermission('mcp.installations.view')
+    ]
   }, async (request, reply) => {
     const { teamId } = request.params;
     const userId = request.user!.id;
+    const authType = request.tokenPayload ? 'oauth2' : 'cookie';
+
+    request.log.debug({
+      operation: 'list_mcp_installations',
+      teamId,
+      userId,
+      authType,
+      clientId: request.tokenPayload?.clientId,
+      scope: request.tokenPayload?.scope,
+      endpoint: request.url
+    }, 'Authentication method determined for MCP installations list');
 
     request.log.info({
       operation: 'list_mcp_installations',
       teamId,
-      userId
+      userId,
+      authType
     }, 'Listing MCP installations for team');
 
     try {

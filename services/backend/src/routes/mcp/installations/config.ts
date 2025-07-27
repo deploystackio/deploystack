@@ -1,6 +1,7 @@
 import { type FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { createSchema } from 'zod-openapi';
+import { requireAuthenticationAny, requireOAuthScope } from '../../../middleware/oauthMiddleware';
 import { requireTeamPermission } from '../../../middleware/roleMiddleware';
 import { McpInstallationService } from '../../../services/mcpInstallationService';
 import { getDb } from '../../../db';
@@ -23,8 +24,11 @@ export default async function getClientConfigRoute(fastify: FastifyInstance) {
     schema: {
       tags: ['MCP Installations'],
       summary: 'Get client configuration for installation',
-      description: 'Generates client-specific configuration for an MCP server installation. Supports claude-desktop, vscode, and cursor clients. No Content-Type header required for this GET request.',
-      security: [{ cookieAuth: [] }],
+      description: 'Generates client-specific configuration for an MCP server installation. Supports claude-desktop, vscode, and cursor clients. No Content-Type header required for this GET request. Supports both cookie-based authentication (for web users) and OAuth2 Bearer token authentication (for CLI users). Requires mcp:read scope for OAuth2 access.',
+      security: [
+        { cookieAuth: [] },
+        { bearerAuth: [] }
+      ],
       // Plain JSON Schema for Fastify validation
       params: {
         type: 'object',
@@ -40,22 +44,37 @@ export default async function getClientConfigRoute(fastify: FastifyInstance) {
       response: {
         200: createSchema(successResponseSchema.describe('Client configuration generated successfully')),
         400: createSchema(errorResponseSchema.describe('Bad Request - Invalid client type or installation')),
-        401: createSchema(errorResponseSchema.describe('Unauthorized - Authentication required')),
-        403: createSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions')),
+        401: createSchema(errorResponseSchema.describe('Unauthorized - Authentication required or invalid token')),
+        403: createSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions or scope')),
         404: createSchema(errorResponseSchema.describe('Not Found - Installation not found'))
       }
     },
-    preValidation: requireTeamPermission('mcp.installations.view')
+    preValidation: [
+      requireAuthenticationAny(),
+      requireOAuthScope('mcp:read'),
+      requireTeamPermission('mcp.installations.view')
+    ]
   }, async (request, reply) => {
     const { teamId, installationId, clientType } = request.params;
     const userId = request.user!.id;
+    const authType = request.tokenPayload ? 'oauth2' : 'cookie';
+
+    request.log.debug({
+      operation: 'mcp_installation_operation',
+      userId,
+      authType,
+      clientId: request.tokenPayload?.clientId,
+      scope: request.tokenPayload?.scope,
+      endpoint: request.url
+    }, 'Authentication method determined for MCP installation operation');
 
     request.log.info({
       operation: 'get_client_config',
       teamId,
       installationId,
       clientType,
-      userId
+      userId,
+      authType
     }, 'Generating client configuration for MCP installation');
 
     try {
@@ -73,7 +92,8 @@ export default async function getClientConfigRoute(fastify: FastifyInstance) {
         teamId,
         installationId,
         clientType,
-        userId
+        userId,
+      authType
       }, 'Client configuration generated successfully');
 
       const response = {

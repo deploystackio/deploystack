@@ -1,6 +1,7 @@
 import { type FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { createSchema } from 'zod-openapi';
+import { requireAuthenticationAny, requireOAuthScope } from '../../../middleware/oauthMiddleware';
 import { requireTeamPermission } from '../../../middleware/roleMiddleware';
 import { McpInstallationService } from '../../../services/mcpInstallationService';
 import { getDb } from '../../../db';
@@ -51,8 +52,11 @@ export default async function createInstallationRoute(fastify: FastifyInstance) 
     schema: {
       tags: ['MCP Installations'],
       summary: 'Install MCP server for team',
-      description: 'Creates a new MCP server installation for the specified team. Requires Content-Type: application/json header when sending request body.',
-      security: [{ cookieAuth: [] }],
+      description: 'Creates a new MCP server installation for the specified team. Supports both cookie-based authentication (for web users) and OAuth2 Bearer token authentication (for CLI users). Requires mcp:read scope for OAuth2 access.',
+      security: [
+        { cookieAuth: [] },
+        { bearerAuth: [] }
+      ],
       // Plain JSON Schema for Fastify validation
       params: {
         type: 'object',
@@ -80,22 +84,38 @@ export default async function createInstallationRoute(fastify: FastifyInstance) 
       response: {
         201: createSchema(successResponseSchema.describe('Installation created successfully')),
         400: createSchema(errorResponseSchema.describe('Bad Request - Invalid input or validation error')),
-        401: createSchema(errorResponseSchema.describe('Unauthorized - Authentication required')),
-        403: createSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions')),
+        401: createSchema(errorResponseSchema.describe('Unauthorized - Authentication required or invalid token')),
+        403: createSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions or scope')),
         404: createSchema(errorResponseSchema.describe('Not Found - Team or server not found')),
         409: createSchema(errorResponseSchema.describe('Conflict - Installation name already exists'))
       }
     },
-    preValidation: requireTeamPermission('mcp.installations.create')
+    preValidation: [
+      requireAuthenticationAny(),
+      requireOAuthScope('mcp:read'),
+      requireTeamPermission('mcp.installations.create')
+    ]
   }, async (request, reply) => {
     const { teamId } = request.params;
     const userId = request.user!.id;
     const installationData = request.body;
+    const authType = request.tokenPayload ? 'oauth2' : 'cookie';
+
+    request.log.debug({
+      operation: 'create_mcp_installation',
+      teamId,
+      userId,
+      authType,
+      clientId: request.tokenPayload?.clientId,
+      scope: request.tokenPayload?.scope,
+      endpoint: request.url
+    }, 'Authentication method determined for MCP installation creation');
 
     request.log.info({
       operation: 'create_mcp_installation',
       teamId,
       userId,
+      authType,
       serverId: installationData.server_id,
       installationName: installationData.installation_name
     }, 'Creating MCP server installation');

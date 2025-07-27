@@ -11,6 +11,12 @@
         "type": "apiKey",
         "in": "cookie",
         "name": "auth_session"
+      },
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "OAuth2 Bearer token authentication"
       }
     },
     "schemas": {}
@@ -7269,10 +7275,13 @@
         "tags": [
           "Teams"
         ],
-        "description": "Retrieves the default team for the currently authenticated user.",
+        "description": "Retrieves the default team for the currently authenticated user. Supports both cookie-based authentication (for web users) and OAuth2 Bearer token authentication (for CLI users). Requires teams:read scope for OAuth2 access.",
         "security": [
           {
             "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
           }
         ],
         "responses": {
@@ -7367,7 +7376,42 @@
               "application/json": {
                 "schema": {
                   "schema": {
-                    "description": "Unauthorized - Authentication required",
+                    "description": "Unauthorized - Authentication required or invalid token",
+                    "type": "object",
+                    "properties": {
+                      "success": {
+                        "default": false,
+                        "description": "Indicates if the operation was successful (false for errors)",
+                        "type": "boolean"
+                      },
+                      "error": {
+                        "description": "Error message",
+                        "type": "string"
+                      },
+                      "details": {
+                        "description": "Additional error details (validation errors)",
+                        "type": "array",
+                        "items": {}
+                      }
+                    },
+                    "required": [
+                      "success",
+                      "error"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "components": {}
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "schema": {
+                    "description": "Forbidden - Insufficient permissions or scope",
                     "type": "object",
                     "properties": {
                       "success": {
@@ -16219,7 +16263,7 @@
         "tags": [
           "MCP Installations"
         ],
-        "description": "Creates a new MCP server installation for the specified team. Requires Content-Type: application/json header when sending request body.",
+        "description": "Creates a new MCP server installation for the specified team. Supports both cookie-based authentication (for web users) and OAuth2 Bearer token authentication (for CLI users). Requires mcp:read scope for OAuth2 access.",
         "requestBody": {
           "content": {
             "application/json": {
@@ -16273,6 +16317,9 @@
         "security": [
           {
             "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
           }
         ],
         "responses": {
@@ -16438,7 +16485,7 @@
               "application/json": {
                 "schema": {
                   "schema": {
-                    "description": "Unauthorized - Authentication required",
+                    "description": "Unauthorized - Authentication required or invalid token",
                     "type": "object",
                     "properties": {
                       "success": {
@@ -16466,7 +16513,7 @@
               "application/json": {
                 "schema": {
                   "schema": {
-                    "description": "Forbidden - Insufficient permissions",
+                    "description": "Forbidden - Insufficient permissions or scope",
                     "type": "object",
                     "properties": {
                       "success": {
@@ -16551,7 +16598,7 @@
         "tags": [
           "MCP Installations"
         ],
-        "description": "Retrieves all MCP server installations for the specified team. No Content-Type header required for this GET request.",
+        "description": "Retrieves all MCP server installations for the specified team. Supports both cookie-based authentication (for web users) and OAuth2 Bearer token authentication (for CLI users). Requires mcp:read scope for OAuth2 access.",
         "parameters": [
           {
             "schema": {
@@ -16578,6 +16625,9 @@
         "security": [
           {
             "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
           }
         ],
         "responses": {
@@ -16733,7 +16783,7 @@
               "application/json": {
                 "schema": {
                   "schema": {
-                    "description": "Unauthorized - Authentication required",
+                    "description": "Unauthorized - Authentication required or invalid token",
                     "type": "object",
                     "properties": {
                       "success": {
@@ -16761,7 +16811,7 @@
               "application/json": {
                 "schema": {
                   "schema": {
-                    "description": "Forbidden - Insufficient permissions",
+                    "description": "Forbidden - Insufficient permissions or scope",
                     "type": "object",
                     "properties": {
                       "success": {
@@ -16820,7 +16870,7 @@
         "tags": [
           "MCP Installations"
         ],
-        "description": "Retrieves a specific MCP server installation by ID for the specified team.",
+        "description": "Retrieves a specific MCP server installation by ID for the specified team. Supports both cookie-based authentication (for web users) and OAuth2 Bearer token authentication (for CLI users). Requires mcp:read scope for OAuth2 access.",
         "parameters": [
           {
             "schema": {
@@ -16851,6 +16901,9 @@
         "security": [
           {
             "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
           }
         ],
         "responses": {
@@ -17056,7 +17109,7 @@
               "application/json": {
                 "schema": {
                   "schema": {
-                    "description": "Unauthorized - Authentication required",
+                    "description": "Unauthorized - Authentication required or invalid token",
                     "type": "object",
                     "properties": {
                       "success": {
@@ -17084,7 +17137,7 @@
               "application/json": {
                 "schema": {
                   "schema": {
-                    "description": "Forbidden - Insufficient permissions",
+                    "description": "Forbidden - Insufficient permissions or scope",
                     "type": "object",
                     "properties": {
                       "success": {
@@ -17141,7 +17194,7 @@
         "tags": [
           "MCP Installations"
         ],
-        "description": "Updates an existing MCP server installation. Can update installation name and environment variables. Requires Content-Type: application/json header when sending request body.",
+        "description": "Updates an existing MCP server installation. Can update installation name and environment variables. Requires Content-Type: application/json header when sending request body. Supports both cookie-based authentication (for web users) and OAuth2 Bearer token authentication (for CLI users). Requires mcp:read scope for OAuth2 access.",
         "requestBody": {
           "content": {
             "application/json": {
@@ -17187,6 +17240,9 @@
         "security": [
           {
             "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
           }
         ],
         "responses": {
@@ -17424,7 +17480,7 @@
               "application/json": {
                 "schema": {
                   "schema": {
-                    "description": "Unauthorized - Authentication required",
+                    "description": "Unauthorized - Authentication required or invalid token",
                     "type": "object",
                     "properties": {
                       "success": {
@@ -17452,7 +17508,7 @@
               "application/json": {
                 "schema": {
                   "schema": {
-                    "description": "Forbidden - Insufficient permissions",
+                    "description": "Forbidden - Insufficient permissions or scope",
                     "type": "object",
                     "properties": {
                       "success": {
@@ -17537,7 +17593,7 @@
         "tags": [
           "MCP Installations"
         ],
-        "description": "Removes an MCP server installation from the specified team. No Content-Type header required for this DELETE request.",
+        "description": "Removes an MCP server installation from the specified team. No Content-Type header required for this DELETE request. Supports both cookie-based authentication (for web users) and OAuth2 Bearer token authentication (for CLI users). Requires mcp:read scope for OAuth2 access.",
         "parameters": [
           {
             "schema": {
@@ -17568,6 +17624,9 @@
         "security": [
           {
             "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
           }
         ],
         "responses": {
@@ -17619,7 +17678,7 @@
               "application/json": {
                 "schema": {
                   "schema": {
-                    "description": "Unauthorized - Authentication required",
+                    "description": "Unauthorized - Authentication required or invalid token",
                     "type": "object",
                     "properties": {
                       "success": {
@@ -17647,7 +17706,7 @@
               "application/json": {
                 "schema": {
                   "schema": {
-                    "description": "Forbidden - Insufficient permissions",
+                    "description": "Forbidden - Insufficient permissions or scope",
                     "type": "object",
                     "properties": {
                       "success": {
@@ -17706,7 +17765,7 @@
         "tags": [
           "MCP Installations"
         ],
-        "description": "Updates the environment variables for an existing MCP server installation. This endpoint specifically handles environment variable updates only. Requires Content-Type: application/json header when sending request body.",
+        "description": "Updates the environment variables for an existing MCP server installation. This endpoint specifically handles environment variable updates only. Requires Content-Type: application/json header when sending request body. Supports both cookie-based authentication (for web users) and OAuth2 Bearer token authentication (for CLI users). Requires mcp:read scope for OAuth2 access.",
         "requestBody": {
           "content": {
             "application/json": {
@@ -17752,6 +17811,9 @@
         "security": [
           {
             "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
           }
         ],
         "responses": {
@@ -17989,7 +18051,7 @@
               "application/json": {
                 "schema": {
                   "schema": {
-                    "description": "Unauthorized - Authentication required",
+                    "description": "Unauthorized - Authentication required or invalid token",
                     "type": "object",
                     "properties": {
                       "success": {
@@ -18017,7 +18079,7 @@
               "application/json": {
                 "schema": {
                   "schema": {
-                    "description": "Forbidden - Insufficient permissions",
+                    "description": "Forbidden - Insufficient permissions or scope",
                     "type": "object",
                     "properties": {
                       "success": {
@@ -18104,7 +18166,7 @@
         "tags": [
           "MCP Installations"
         ],
-        "description": "Generates client-specific configuration for an MCP server installation. Supports claude-desktop, vscode, and cursor clients. No Content-Type header required for this GET request.",
+        "description": "Generates client-specific configuration for an MCP server installation. Supports claude-desktop, vscode, and cursor clients. No Content-Type header required for this GET request. Supports both cookie-based authentication (for web users) and OAuth2 Bearer token authentication (for CLI users). Requires mcp:read scope for OAuth2 access.",
         "parameters": [
           {
             "schema": {
@@ -18141,6 +18203,9 @@
         "security": [
           {
             "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
           }
         ],
         "responses": {
@@ -18204,7 +18269,7 @@
               "application/json": {
                 "schema": {
                   "schema": {
-                    "description": "Unauthorized - Authentication required",
+                    "description": "Unauthorized - Authentication required or invalid token",
                     "type": "object",
                     "properties": {
                       "success": {
@@ -18232,7 +18297,7 @@
               "application/json": {
                 "schema": {
                   "schema": {
-                    "description": "Forbidden - Insufficient permissions",
+                    "description": "Forbidden - Insufficient permissions or scope",
                     "type": "object",
                     "properties": {
                       "success": {
@@ -18274,6 +18339,533 @@
                     "required": [
                       "success",
                       "error"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "components": {}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/oauth2/auth": {
+      "get": {
+        "summary": "OAuth2 Authorization Endpoint",
+        "tags": [
+          "OAuth2"
+        ],
+        "description": "Initiates OAuth2 authorization flow with PKCE. Validates client credentials and redirects to consent page for user authorization.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "response_type": {
+                  "description": "OAuth2 response type, must be \"code\"",
+                  "type": "string",
+                  "enum": [
+                    "code"
+                  ]
+                },
+                "client_id": {
+                  "description": "OAuth2 client identifier",
+                  "type": "string",
+                  "minLength": 1
+                },
+                "redirect_uri": {
+                  "description": "OAuth2 redirect URI for callback",
+                  "type": "string",
+                  "format": "uri"
+                },
+                "scope": {
+                  "description": "Space-separated list of requested scopes",
+                  "type": "string"
+                },
+                "state": {
+                  "description": "CSRF protection state parameter",
+                  "type": "string",
+                  "minLength": 1
+                },
+                "code_challenge": {
+                  "description": "PKCE code challenge",
+                  "type": "string",
+                  "minLength": 1
+                },
+                "code_challenge_method": {
+                  "description": "PKCE code challenge method, must be \"S256\"",
+                  "type": "string",
+                  "enum": [
+                    "S256"
+                  ]
+                }
+              },
+              "additionalProperties": false
+            },
+            "in": "query",
+            "name": "schema",
+            "required": [
+              "response_type",
+              "client_id",
+              "redirect_uri",
+              "scope",
+              "state",
+              "code_challenge",
+              "code_challenge_method"
+            ]
+          },
+          {
+            "schema": {},
+            "in": "query",
+            "name": "components"
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Redirect to consent page or error redirect",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "description": "Redirect to consent page or error redirect"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "schema": {
+                    "description": "Bad Request - Invalid parameters",
+                    "type": "object",
+                    "properties": {
+                      "error": {
+                        "description": "OAuth2 error code",
+                        "type": "string"
+                      },
+                      "error_description": {
+                        "description": "Human-readable error description",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "error",
+                      "error_description"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "components": {}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/oauth2/token": {
+      "post": {
+        "summary": "OAuth2 Token Endpoint",
+        "tags": [
+          "OAuth2"
+        ],
+        "description": "Exchanges authorization code for access token using PKCE, or refreshes access token using refresh token.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "grant_type": {
+                          "description": "OAuth2 grant type, must be \"authorization_code\"",
+                          "type": "string",
+                          "enum": [
+                            "authorization_code"
+                          ]
+                        },
+                        "code": {
+                          "description": "Authorization code received from authorization endpoint",
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "redirect_uri": {
+                          "description": "OAuth2 redirect URI, must match the one used in authorization",
+                          "type": "string",
+                          "format": "uri"
+                        },
+                        "client_id": {
+                          "description": "OAuth2 client identifier",
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "code_verifier": {
+                          "description": "PKCE code verifier",
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      },
+                      "required": [
+                        "grant_type",
+                        "code",
+                        "redirect_uri",
+                        "client_id",
+                        "code_verifier"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "grant_type": {
+                          "description": "OAuth2 grant type, must be \"refresh_token\"",
+                          "type": "string",
+                          "enum": [
+                            "refresh_token"
+                          ]
+                        },
+                        "refresh_token": {
+                          "description": "Refresh token to exchange for new access token",
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "client_id": {
+                          "description": "OAuth2 client identifier",
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      },
+                      "required": [
+                        "grant_type",
+                        "refresh_token",
+                        "client_id"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                },
+                "components": {}
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "schema": {
+                    "description": "Successful token response",
+                    "type": "object",
+                    "properties": {
+                      "access_token": {
+                        "description": "OAuth2 access token",
+                        "type": "string"
+                      },
+                      "token_type": {
+                        "description": "Token type, always \"Bearer\"",
+                        "type": "string",
+                        "enum": [
+                          "Bearer"
+                        ]
+                      },
+                      "expires_in": {
+                        "description": "Access token lifetime in seconds",
+                        "type": "number"
+                      },
+                      "refresh_token": {
+                        "description": "Refresh token for obtaining new access tokens",
+                        "type": "string"
+                      },
+                      "scope": {
+                        "description": "Space-separated list of granted scopes",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "access_token",
+                      "token_type",
+                      "expires_in",
+                      "refresh_token",
+                      "scope"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "components": {}
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "schema": {
+                    "description": "Bad Request - Invalid parameters",
+                    "type": "object",
+                    "properties": {
+                      "error": {
+                        "description": "OAuth2 error code",
+                        "type": "string"
+                      },
+                      "error_description": {
+                        "description": "Human-readable error description",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "error",
+                      "error_description"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "components": {}
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "schema": {
+                    "description": "Unauthorized - Invalid client or credentials",
+                    "type": "object",
+                    "properties": {
+                      "error": {
+                        "description": "OAuth2 error code",
+                        "type": "string"
+                      },
+                      "error_description": {
+                        "description": "Human-readable error description",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "error",
+                      "error_description"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "components": {}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/oauth2/consent": {
+      "get": {
+        "summary": "OAuth2 Consent Page",
+        "tags": [
+          "OAuth2"
+        ],
+        "description": "Displays consent page for user to approve or deny OAuth2 authorization request.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "request_id": {
+                  "description": "Authorization request ID",
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "additionalProperties": false
+            },
+            "in": "query",
+            "name": "schema",
+            "required": [
+              "request_id"
+            ]
+          },
+          {
+            "schema": {},
+            "in": "query",
+            "name": "components"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "HTML consent page",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "description": "HTML consent page"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "schema": {
+                    "description": "Bad Request - Invalid request ID",
+                    "type": "object",
+                    "properties": {
+                      "error": {
+                        "description": "OAuth2 error code",
+                        "type": "string"
+                      },
+                      "error_description": {
+                        "description": "Human-readable error description",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "error",
+                      "error_description"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "components": {}
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "schema": {
+                    "description": "Not Found - Request not found or expired",
+                    "type": "object",
+                    "properties": {
+                      "error": {
+                        "description": "OAuth2 error code",
+                        "type": "string"
+                      },
+                      "error_description": {
+                        "description": "Human-readable error description",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "error",
+                      "error_description"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "components": {}
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Process OAuth2 Consent",
+        "tags": [
+          "OAuth2"
+        ],
+        "description": "Processes user consent decision and redirects with authorization code or error.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "request_id": {
+                      "description": "Authorization request ID",
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "action": {
+                      "description": "User consent decision",
+                      "type": "string",
+                      "enum": [
+                        "approve",
+                        "deny"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "request_id",
+                    "action"
+                  ],
+                  "additionalProperties": false
+                },
+                "components": {}
+              }
+            }
+          }
+        },
+        "responses": {
+          "302": {
+            "description": "Redirect to client callback URL",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "description": "Redirect to client callback URL"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "schema": {
+                    "description": "Bad Request - Invalid parameters",
+                    "type": "object",
+                    "properties": {
+                      "error": {
+                        "description": "OAuth2 error code",
+                        "type": "string"
+                      },
+                      "error_description": {
+                        "description": "Human-readable error description",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "error",
+                      "error_description"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "components": {}
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "schema": {
+                    "description": "Not Found - Request not found or expired",
+                    "type": "object",
+                    "properties": {
+                      "error": {
+                        "description": "OAuth2 error code",
+                        "type": "string"
+                      },
+                      "error_description": {
+                        "description": "Human-readable error description",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "error",
+                      "error_description"
                     ],
                     "additionalProperties": false
                   },
