@@ -85,7 +85,7 @@ export class TokenService {
       const tokenData = {
         ...payload,
         iat: Math.floor(Date.now() / 1000),
-        exp: Math.floor(Date.now() / 1000) + 3600, // 1 hour
+        exp: Math.floor(Date.now() / 1000) + (7 * 24 * 3600), // 1 week
       };
 
       const accessToken = `${rawToken}.${Buffer.from(JSON.stringify(tokenData)).toString('base64')}`;
@@ -99,7 +99,7 @@ export class TokenService {
       });
 
       // Store in database
-      const expiresAt = new Date(Date.now() + 3600 * 1000); // 1 hour
+      const expiresAt = new Date(Date.now() + 7 * 24 * 3600 * 1000); // 1 week
       await (db as any).insert(schema.oauthAccessTokens).values({
         id: tokenId,
         user_id: userId,
@@ -202,7 +202,7 @@ export class TokenService {
         return null;
       }
 
-      const [encodedPayload] = parts;
+      const [, encodedPayload] = parts;
       
       // Decode payload
       let payload: AccessTokenPayload & { iat: number; exp: number };
@@ -368,7 +368,7 @@ export class TokenService {
       return {
         access_token: accessToken,
         token_type: 'Bearer',
-        expires_in: 3600,
+        expires_in: 7 * 24 * 3600, // 1 week in seconds
         refresh_token: newRefreshToken,
         scope,
       };
