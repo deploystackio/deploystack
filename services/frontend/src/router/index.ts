@@ -49,6 +49,15 @@ const routes = [
     component: () => import('../views/Logout.vue'),
     meta: { requiresSetup: true }, // Or false, depending on whether logout should be accessible if setup isn't complete
   },
+  {
+    path: '/oauth/consent',
+    name: 'OAuthConsent',
+    component: () => import('../views/oauth/ConsentPage.vue'),
+    meta: {
+      requiresSetup: true,
+      title: 'Authorize Application'
+    },
+  },
   // Dashboard temporarily disabled - redirect users to MCP Server instead
   // {
   //   path: '/dashboard',
