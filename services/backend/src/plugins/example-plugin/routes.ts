@@ -28,7 +28,8 @@ function isSQLiteDB(db: AnyDatabase): db is BetterSQLite3Database<any> {
 export async function registerRoutes(routeManager: PluginRouteManager, db: AnyDatabase | null, logger: FastifyBaseLogger): Promise<void> {
   // Always register routes for API documentation, even without database
   // This ensures plugin routes appear in OpenAPI spec during setup phase
-  
+
+  /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
   let table: any = null;
   let databaseAvailable = false;
   
