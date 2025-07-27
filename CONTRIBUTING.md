@@ -84,6 +84,7 @@ We follow the Angular commit convention with **mandatory scoped messages**. This
 **Format:** `type(scope): subject`
 
 **Mandatory Scopes:**
+
 - `frontend`: Changes to the Vue.js frontend application
 - `backend`: Changes to the Fastify backend API  
 - `gateway`: Changes to the DeployStack Gateway application
@@ -93,8 +94,9 @@ We follow the Angular commit convention with **mandatory scoped messages**. This
 - `deps`: Dependency updates
 
 **Types:**
+
 - `feat`: A new feature (minor version bump)
-- `fix`: A bug fix (patch version bump) 
+- `fix`: A bug fix (patch version bump)
 - `docs`: Documentation changes
 - `style`: Changes that don't affect the code's meaning
 - `refactor`: Code changes that neither fix bugs nor add features
@@ -104,6 +106,7 @@ We follow the Angular commit convention with **mandatory scoped messages**. This
 - `chore`: Changes to the build process or tools
 
 **Examples:**
+
 - `feat(frontend): add dark mode support`
 - `fix(backend): resolve database connection timeout`
 - `feat(gateway): implement MCP server auto-discovery`
@@ -113,14 +116,17 @@ We follow the Angular commit convention with **mandatory scoped messages**. This
 - `ci(all): add automated security scanning`
 
 **Why Scopes Matter:**
+
 - **Automatic Changelog Generation**: Each service gets its own changelog with only relevant commits
 - **Independent Releases**: Frontend, backend, and gateway can be released independently
 - **Clear Impact**: Instantly see which part of the system is affected
 
 **VS Code Integration:**
+
 We've configured GitHub Copilot to automatically suggest scoped commit messages. Just click the sparkle ✨ button in the commit message box!
 
 **Rules:**
+
 1. ✅ **ALWAYS include a scope** - commits without scopes will not appear in service-specific changelogs
 2. ✅ **Use lowercase** for scopes and types
 3. ✅ **Keep subject under 72 characters**
