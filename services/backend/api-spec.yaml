@@ -12887,6 +12887,136 @@ paths:
                     - error_description
                   additionalProperties: false
                 components: {}
+  /api/oauth2/userinfo:
+    get:
+      summary: Get user information
+      tags:
+        - OAuth2
+      description: Returns user information for the authenticated user. This is the
+        standard OAuth2/OpenID Connect UserInfo endpoint. Requires a valid
+        OAuth2 access token with user:read scope.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                schema:
+                  description: User information retrieved successfully
+                  type: object
+                  properties:
+                    sub:
+                      description: Subject identifier - unique user ID
+                      type: string
+                    email:
+                      description: User email address
+                      type: string
+                      format: email
+                      pattern: ^(?!\.)(?!.*\.\.)([A-Za-z0-9_'+\-\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\-]*\.)+[A-Za-z]{2,}$
+                    name:
+                      description: Full name of the user
+                      type: string
+                    preferred_username:
+                      description: Preferred username
+                      type: string
+                    email_verified:
+                      description: Whether the email address has been verified
+                      type: boolean
+                    given_name:
+                      description: Given name (first name)
+                      type: string
+                    family_name:
+                      description: Family name (last name)
+                      type: string
+                  required:
+                    - sub
+                    - email
+                    - preferred_username
+                    - email_verified
+                  additionalProperties: false
+                components: {}
+        "401":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                schema:
+                  description: Unauthorized - Invalid or missing access token
+                  type: object
+                  properties:
+                    error:
+                      description: OAuth2 error code
+                      type: string
+                    error_description:
+                      description: Human-readable error description
+                      type: string
+                  required:
+                    - error
+                    - error_description
+                  additionalProperties: false
+                components: {}
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                schema:
+                  description: Forbidden - Insufficient scope
+                  type: object
+                  properties:
+                    error:
+                      description: OAuth2 error code
+                      type: string
+                    error_description:
+                      description: Human-readable error description
+                      type: string
+                  required:
+                    - error
+                    - error_description
+                  additionalProperties: false
+                components: {}
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                schema:
+                  description: Not Found - User not found
+                  type: object
+                  properties:
+                    error:
+                      description: OAuth2 error code
+                      type: string
+                    error_description:
+                      description: Human-readable error description
+                      type: string
+                  required:
+                    - error
+                    - error_description
+                  additionalProperties: false
+                components: {}
+        "500":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                schema:
+                  description: Internal Server Error
+                  type: object
+                  properties:
+                    error:
+                      description: OAuth2 error code
+                      type: string
+                    error_description:
+                      description: Human-readable error description
+                      type: string
+                  required:
+                    - error
+                    - error_description
+                  additionalProperties: false
+                components: {}
   /api/auth/email/register:
     post:
       summary: User registration via email
