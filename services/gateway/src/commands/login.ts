@@ -60,7 +60,7 @@ export function registerLoginCommand(program: Command) {
             spinner.succeed('Credentials stored securely');
             console.log(chalk.yellow('⚠️  No default team found - you may need to select a team manually'));
           }
-        } catch (teamError) {
+        } catch {
           spinner.succeed('Credentials stored securely');
           console.log(chalk.yellow('⚠️  Could not auto-select default team - you can select one later'));
         }

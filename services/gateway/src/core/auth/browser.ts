@@ -60,7 +60,7 @@ export class BrowserManager {
     try {
       await this.openBrowser(url);
       console.log(chalk.green('🌐 Opened browser to authorization page'));
-    } catch (error) {
+    } catch {
       this.displayUrlForManualOpening(url);
     }
   }

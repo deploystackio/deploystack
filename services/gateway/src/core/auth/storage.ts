@@ -1,4 +1,4 @@
-import { keyring } from '@zowe/secrets-for-zowe-sdk';
+ import { keyring } from '@zowe/secrets-for-zowe-sdk';
 import { writeFileSync, readFileSync, existsSync, unlinkSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
@@ -70,7 +70,7 @@ export class CredentialStorage {
       } else {
         // REMOVED: console.log('⚠ No credentials found in encrypted file');
       }
-    } catch (error) {
+    } catch {
       // REMOVED: console.log('❌ Error reading encrypted file:', (error as Error)?.message);
     }
 
@@ -90,7 +90,7 @@ export class CredentialStorage {
               // REMOVED: console.log('✓ Found credentials in OS keychain for:', account);
               return credentials;
             }
-          } catch (error) {
+          } catch {
             // REMOVED: console.log('⚠ Failed to retrieve credentials for account:', account);
             continue;
           }
@@ -98,7 +98,7 @@ export class CredentialStorage {
       } else {
         // REMOVED: console.log('⚠ No accounts found in keychain');
       }
-    } catch (error) {
+    } catch {
       // REMOVED: console.log('❌ Error accessing keychain:', (error as Error)?.message);
     }
 
@@ -152,13 +152,13 @@ export class CredentialStorage {
         for (const account of accounts) {
           try {
             await keyring.deletePassword(this.serviceName, account);
-          } catch (error) {
+          } catch {
             // Continue clearing other accounts even if one fails
           }
         }
         await this.clearAccountsList();
       }
-    } catch (error) {
+    } catch {
       // Continue to clear encrypted file even if keychain fails
     }
 
@@ -183,7 +183,7 @@ export class CredentialStorage {
       const buffer = 5 * 60 * 1000; // 5 minutes
 
       return expiresAt > (now + buffer);
-    } catch (error) {
+    } catch {
       return false;
     }
   }
@@ -199,7 +199,7 @@ export class CredentialStorage {
         const accounts = JSON.parse(data);
         return Array.isArray(accounts) ? accounts : [];
       }
-    } catch (error) {
+    } catch {
       // If we can't read the accounts file, return empty array
     }
     return [];
@@ -215,7 +215,7 @@ export class CredentialStorage {
       const { mkdirSync } = await import('fs');
       try {
         mkdirSync(this.fallbackDir, { recursive: true });
-      } catch (error) {
+      } catch {
         // Directory might already exist
       }
 
@@ -241,7 +241,7 @@ export class CredentialStorage {
       if (filtered.length !== accounts.length) {
         writeFileSync(this.accountsFile, JSON.stringify(filtered, null, 2));
       }
-    } catch (error) {
+    } catch {
       // Non-critical error, don't throw
     }
   }
@@ -254,7 +254,7 @@ export class CredentialStorage {
       if (existsSync(this.accountsFile)) {
         unlinkSync(this.accountsFile);
       }
-    } catch (error) {
+    } catch {
       // Non-critical error, don't throw
     }
   }
@@ -269,7 +269,7 @@ export class CredentialStorage {
       const { mkdirSync } = await import('fs');
       try {
         mkdirSync(this.fallbackDir, { recursive: true });
-      } catch (error) {
+      } catch {
         // Directory might already exist
       }
 
@@ -311,11 +311,11 @@ export class CredentialStorage {
       decrypted += decipher.final('utf8');
 
       return JSON.parse(decrypted);
-    } catch (error) {
+    } catch {
       // If we can't decrypt, the file might be corrupted
       try {
         unlinkSync(this.fallbackFile);
-      } catch (unlinkError) {
+      } catch {
         // Ignore unlink errors
       }
       return null;
@@ -330,7 +330,7 @@ export class CredentialStorage {
       if (existsSync(this.fallbackFile)) {
         unlinkSync(this.fallbackFile);
       }
-    } catch (error) {
+    } catch {
       // Ignore errors when clearing
     }
   }
