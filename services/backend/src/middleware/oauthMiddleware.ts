@@ -88,18 +88,22 @@ export function requireValidAccessToken() {
 }
 
 /**
- * Middleware to require specific OAuth2 scope
+ * Middleware to require specific OAuth2 scope (only for OAuth2 Bearer token requests)
+ * Skips validation for cookie-based authentication
  */
 export function requireOAuthScope(requiredScope: string) {
   return async (request: FastifyRequest, reply: FastifyReply) => {
-    // This middleware should run after requireValidAccessToken
+    // Skip scope check if user authenticated via cookie (not OAuth2)
     if (!request.tokenPayload) {
-      const errorResponse = {
-        error: 'invalid_request',
-        error_description: 'OAuth2 token validation required before scope check'
-      };
-      const jsonString = JSON.stringify(errorResponse);
-      return reply.status(500).type('application/json').send(jsonString);
+      // User authenticated via cookie session - skip OAuth scope validation
+      request.log.debug({
+        operation: 'oauth_scope_check',
+        userId: request.user?.id,
+        requiredScope,
+        authType: 'cookie',
+        result: 'skipped'
+      }, 'Skipping OAuth2 scope check for cookie-based authentication');
+      return; // Allow the request to continue
     }
 
     const userScopes = request.tokenPayload.scope;
@@ -131,18 +135,22 @@ export function requireOAuthScope(requiredScope: string) {
 }
 
 /**
- * Middleware to require any of the specified OAuth2 scopes
+ * Middleware to require any of the specified OAuth2 scopes (only for OAuth2 Bearer token requests)
+ * Skips validation for cookie-based authentication
  */
 export function requireAnyOAuthScope(requiredScopes: string[]) {
   return async (request: FastifyRequest, reply: FastifyReply) => {
-    // This middleware should run after requireValidAccessToken
+    // Skip scope check if user authenticated via cookie (not OAuth2)
     if (!request.tokenPayload) {
-      const errorResponse = {
-        error: 'invalid_request',
-        error_description: 'OAuth2 token validation required before scope check'
-      };
-      const jsonString = JSON.stringify(errorResponse);
-      return reply.status(500).type('application/json').send(jsonString);
+      // User authenticated via cookie session - skip OAuth scope validation
+      request.log.debug({
+        operation: 'oauth_scope_check',
+        userId: request.user?.id,
+        requiredScopes,
+        authType: 'cookie',
+        result: 'skipped'
+      }, 'Skipping OAuth2 scope check for cookie-based authentication');
+      return; // Allow the request to continue
     }
 
     const userScopes = request.tokenPayload.scope;
