@@ -26,39 +26,80 @@ function isSQLiteDB(db: AnyDatabase): db is BetterSQLite3Database<any> {
  * @param logger The logger instance for structured logging
  */
 export async function registerRoutes(routeManager: PluginRouteManager, db: AnyDatabase | null, logger: FastifyBaseLogger): Promise<void> {
-  if (!db) {
-    logger.warn({
+  // Always register routes for API documentation, even without database
+  // This ensures plugin routes appear in OpenAPI spec during setup phase
+  
+  let table: any = null;
+  let databaseAvailable = false;
+  
+  if (db) {
+    try {
+      const currentSchema = getSchema();
+      const tableNameInSchema = `${routeManager.getPluginId()}_example_entities`;
+      table = currentSchema[tableNameInSchema];
+      
+      if (table) {
+        databaseAvailable = true;
+        logger.info({
+          operation: 'plugin_routes_register',
+          pluginId: routeManager.getPluginId(),
+          tableNameInSchema
+        }, 'Database and table available for plugin routes.');
+      } else {
+        logger.warn({
+          operation: 'plugin_routes_register',
+          pluginId: routeManager.getPluginId(),
+          tableNameInSchema,
+          availableTables: Object.keys(currentSchema)
+        }, 'Table not found in schema, registering fallback routes.');
+      }
+    } catch (schemaError) {
+      logger.warn({
+        operation: 'plugin_routes_register',
+        pluginId: routeManager.getPluginId(),
+        error: schemaError
+      }, 'Error accessing schema, registering fallback routes.');
+    }
+  } else {
+    logger.info({
       operation: 'plugin_routes_register',
       pluginId: routeManager.getPluginId(),
       reason: 'database_not_available'
-    }, 'Database not available, skipping database-dependent routes.');
-    return;
+    }, 'Database not available, registering fallback routes for API documentation.');
   }
 
-  const currentSchema = getSchema();
-  const tableNameInSchema = `${routeManager.getPluginId()}_example_entities`;
-  const table = currentSchema[tableNameInSchema];
 
-  if (!table) {
-    logger.error({
-      operation: 'plugin_routes_register',
-      pluginId: routeManager.getPluginId(),
-      tableNameInSchema,
-      error: 'Table not found in global schema'
-    }, 'Critical: Table not found in global schema! Cannot register API routes.');
-    return;
-  }
 
   // Register GET /examples route
   // This becomes: GET /api/plugin/example-plugin/examples
-  routeManager.get('/examples', async () => {
-    if (isSQLiteDB(db)) {
-      const examples = await db.select().from(table as SQLiteTable).all();
-      return examples;
-    } else {
-      // Assume NodePgDatabase-like behavior
-      const examples = await (db as NodePgDatabase).select().from(table as PgTable);
-      return examples;
+  routeManager.get('/examples', async (request, reply) => {
+    if (!databaseAvailable || !db || !table) {
+      const fallbackResponse = {
+        success: false,
+        error: 'Database not configured',
+        message: 'Plugin requires database setup. Please configure your database first.',
+        examples: []
+      };
+      return reply.status(503).send(fallbackResponse);
+    }
+    
+    try {
+      if (isSQLiteDB(db)) {
+        const examples = await db.select().from(table as SQLiteTable).all();
+        return { success: true, examples };
+      } else {
+        // Assume NodePgDatabase-like behavior
+        const examples = await (db as NodePgDatabase).select().from(table as PgTable);
+        return { success: true, examples };
+      }
+    } catch (error) {
+      logger.error({ error, operation: 'get_examples' }, 'Database error getting examples');
+      const errorResponse = {
+        success: false,
+        error: 'Database error',
+        message: 'Failed to retrieve examples from database'
+      };
+      return reply.status(500).send(errorResponse);
     }
   });
 
@@ -66,32 +107,67 @@ export async function registerRoutes(routeManager: PluginRouteManager, db: AnyDa
   // This becomes: GET /api/plugin/example-plugin/examples/:id
   routeManager.get('/examples/:id', async (request, reply) => {
     const { id } = request.params as { id: string };
-    let example;
-
-    if (isSQLiteDB(db)) {
-      // Cast to SQLiteTable to access its 'id' column for the 'eq' condition
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const typedTable = table as SQLiteTable & { id: any }; 
-      example = await db
-        .select()
-        .from(typedTable)
-        .where(eq(typedTable.id, id))
-        .get();
-    } else {
-      // Cast to PgTable to access its 'id' column for the 'eq' condition
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const typedTable = table as PgTable & { id: any };
-      const rows = await (db as NodePgDatabase)
-        .select()
-        .from(typedTable)
-        .where(eq(typedTable.id, id));
-      example = rows[0] ?? null;
+    
+    if (!databaseAvailable || !db || !table) {
+      const fallbackResponse = {
+        success: false,
+        error: 'Database not configured',
+        message: 'Plugin requires database setup. Please configure your database first.'
+      };
+      return reply.status(503).send(fallbackResponse);
     }
     
-    if (!example) {
-      return reply.status(404).send({ error: 'Example entity not found' });
+    try {
+      let example;
+      
+      if (isSQLiteDB(db)) {
+        // Cast to SQLiteTable to access its 'id' column for the 'eq' condition
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const typedTable = table as SQLiteTable & { id: any }; 
+        example = await db
+          .select()
+          .from(typedTable)
+          .where(eq(typedTable.id, id))
+          .get();
+      } else {
+        // Cast to PgTable to access its 'id' column for the 'eq' condition
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const typedTable = table as PgTable & { id: any };
+        const rows = await (db as NodePgDatabase)
+          .select()
+          .from(typedTable)
+          .where(eq(typedTable.id, id));
+        example = rows[0] ?? null;
+      }
+      
+      if (!example) {
+        return reply.status(404).send({ 
+          success: false, 
+          error: 'Example entity not found',
+          message: `No example found with ID: ${id}`
+        });
+      }
+      
+      return { success: true, example };
+    } catch (error) {
+      logger.error({ error, operation: 'get_example_by_id', id }, 'Database error getting example by ID');
+      const errorResponse = {
+        success: false,
+        error: 'Database error',
+        message: 'Failed to retrieve example from database'
+      };
+      return reply.status(500).send(errorResponse);
     }
-    return example;
+  });
+  
+  // Register a simple health check route that doesn't require database
+  routeManager.get('/health', async () => {
+    return {
+      success: true,
+      plugin: routeManager.getPluginId(),
+      database_available: databaseAvailable,
+      timestamp: new Date().toISOString()
+    };
   });
 
   logger.info({
