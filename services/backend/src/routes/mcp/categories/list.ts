@@ -4,6 +4,7 @@ import { createSchema } from 'zod-openapi';
 import { McpCategoriesService } from '../../../services/mcpCategoriesService';
 import { getDb } from '../../../db';
 import { requirePermission } from '../../../middleware/roleMiddleware';
+import { requireAuthenticationAny, requireOAuthScope } from '../../../middleware/oauthMiddleware';
 
 // Response schema
 const categorySchema = z.object({
@@ -30,18 +31,46 @@ export default async function listCategories(server: FastifyInstance) {
     schema: {
       tags: ['MCP Categories'],
       summary: 'List all MCP server categories',
-      description: 'Retrieve all available MCP server categories for organization. No Content-Type header required for this GET request.',
-      security: [{ cookieAuth: [] }],
+      description: 'Retrieve all available MCP server categories for organization. Supports both cookie-based authentication (for web users) and OAuth2 Bearer token authentication (for CLI users). Requires mcp:categories:read scope for OAuth2 access. No Content-Type header required for this GET request.',
+      security: [
+        { cookieAuth: [] },
+        { bearerAuth: [] }
+      ],
       response: {
         200: createSchema(listCategoriesResponseSchema),
-        401: createSchema(errorResponseSchema.describe('Unauthorized - Authentication required')),
-        403: createSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions')),
+        401: createSchema(errorResponseSchema.describe('Unauthorized - Authentication required or invalid token')),
+        403: createSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions or scope')),
         500: createSchema(errorResponseSchema)
       }
     },
-    preValidation: requirePermission('mcp.categories.view')
+    preValidation: [
+      requireAuthenticationAny(),
+      requireOAuthScope('mcp:categories:read'),
+      requirePermission('mcp.categories.view')
+    ]
   }, async (request, reply) => {
     try {
+      if (!request.user) {
+        const errorResponse = {
+          success: false,
+          error: 'Authentication required'
+        };
+        const jsonString = JSON.stringify(errorResponse);
+        return reply.status(401).type('application/json').send(jsonString);
+      }
+
+      const authType = request.tokenPayload ? 'oauth2' : 'cookie';
+      const userId = request.user.id;
+
+      request.log.debug({
+        operation: 'list_mcp_categories',
+        userId,
+        authType,
+        clientId: request.tokenPayload?.clientId,
+        scope: request.tokenPayload?.scope,
+        endpoint: request.url
+      }, 'Authentication method determined for MCP categories listing');
+
       const db = getDb();
       const categoriesService = new McpCategoriesService(db, server.log);
       const categories = await categoriesService.getAllCategories();

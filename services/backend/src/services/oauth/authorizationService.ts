@@ -63,6 +63,7 @@ export class AuthorizationService {
     const requestedScopes = scope.split(' ');
     const allowedScopes = [
       'mcp:read',
+      'mcp:categories:read',
       'account:read',
       'user:read',
       'teams:read',

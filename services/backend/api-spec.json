@@ -7528,10 +7528,13 @@
         "tags": [
           "Teams"
         ],
-        "description": "Retrieves all teams that the currently authenticated user belongs to, including their role, admin status, ownership status, and member count.",
+        "description": "Retrieves all teams that the currently authenticated user belongs to, including their role, admin status, ownership status, and member count. Supports both cookie-based authentication (for web users) and OAuth2 Bearer token authentication (for CLI users). Requires teams:read scope for OAuth2 access.",
         "security": [
           {
             "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
           }
         ],
         "responses": {
@@ -7649,7 +7652,42 @@
               "application/json": {
                 "schema": {
                   "schema": {
-                    "description": "Unauthorized - Authentication required",
+                    "description": "Unauthorized - Authentication required or invalid token",
+                    "type": "object",
+                    "properties": {
+                      "success": {
+                        "default": false,
+                        "description": "Indicates if the operation was successful (false for errors)",
+                        "type": "boolean"
+                      },
+                      "error": {
+                        "description": "Error message",
+                        "type": "string"
+                      },
+                      "details": {
+                        "description": "Additional error details (validation errors)",
+                        "type": "array",
+                        "items": {}
+                      }
+                    },
+                    "required": [
+                      "success",
+                      "error"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "components": {}
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "schema": {
+                    "description": "Forbidden - Insufficient permissions or scope",
                     "type": "object",
                     "properties": {
                       "success": {
@@ -7722,7 +7760,7 @@
         "tags": [
           "Teams"
         ],
-        "description": "Retrieves a specific team by its ID with the current user's role and permissions within that team. User must be a member of the team.",
+        "description": "Retrieves a specific team by its ID with the current user's role and permissions within that team. User must be a member of the team. Supports both cookie-based authentication (for web users) and OAuth2 Bearer token authentication (for CLI users). Requires teams:read scope for OAuth2 access.",
         "parameters": [
           {
             "schema": {
@@ -7736,6 +7774,9 @@
         "security": [
           {
             "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
           }
         ],
         "responses": {
@@ -7850,7 +7891,7 @@
               "application/json": {
                 "schema": {
                   "schema": {
-                    "description": "Unauthorized - Authentication required",
+                    "description": "Unauthorized - Authentication required or invalid token",
                     "type": "object",
                     "properties": {
                       "success": {
@@ -7885,7 +7926,7 @@
               "application/json": {
                 "schema": {
                   "schema": {
-                    "description": "Forbidden - Insufficient permissions",
+                    "description": "Forbidden - Insufficient permissions or scope",
                     "type": "object",
                     "properties": {
                       "success": {
@@ -12223,10 +12264,13 @@
         "tags": [
           "MCP Categories"
         ],
-        "description": "Retrieve all available MCP server categories for organization. No Content-Type header required for this GET request.",
+        "description": "Retrieve all available MCP server categories for organization. Supports both cookie-based authentication (for web users) and OAuth2 Bearer token authentication (for CLI users). Requires mcp:categories:read scope for OAuth2 access. No Content-Type header required for this GET request.",
         "security": [
           {
             "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
           }
         ],
         "responses": {
@@ -12308,7 +12352,7 @@
               "application/json": {
                 "schema": {
                   "schema": {
-                    "description": "Unauthorized - Authentication required",
+                    "description": "Unauthorized - Authentication required or invalid token",
                     "type": "object",
                     "properties": {
                       "success": {
@@ -12336,7 +12380,7 @@
               "application/json": {
                 "schema": {
                   "schema": {
-                    "description": "Forbidden - Insufficient permissions",
+                    "description": "Forbidden - Insufficient permissions or scope",
                     "type": "object",
                     "properties": {
                       "success": {
