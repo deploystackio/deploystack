@@ -135,6 +135,7 @@ export default async function consentRoute(fastify: FastifyInstance) {
         request_id: request_id,
         client_id: authRequest.clientId,
         client_name: clientNames[authRequest.clientId] || authRequest.clientId,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         user_email: (request.user as any).email,
         scopes: scopesWithDescriptions,
         expires_at: authRequest.expiresAt.toISOString()

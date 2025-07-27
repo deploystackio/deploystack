@@ -2,7 +2,6 @@
 import { getDb, getSchema } from '../../db';
 import { eq, and, lt } from 'drizzle-orm';
 import { generateId } from 'lucia';
-import { hash, verify } from '@node-rs/argon2';
 import crypto from 'node:crypto';
 import type { FastifyBaseLogger } from 'fastify';
 

@@ -202,7 +202,7 @@ export class TokenService {
         return null;
       }
 
-      const [rawToken, encodedPayload] = parts;
+      const [encodedPayload] = parts;
       
       // Decode payload
       let payload: AccessTokenPayload & { iat: number; exp: number };

@@ -61,6 +61,7 @@ export function requireValidAccessToken() {
         lastName: tokenPayload.user.lastName,
         authType: 'oauth2',
         githubId: null
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any; // Cast to any to avoid type conflicts with Lucia User type
 
       request.log.debug({
@@ -207,6 +208,7 @@ export function requireAuthenticationAny() {
             lastName: tokenPayload.user.lastName,
             authType: 'oauth2',
             githubId: null
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
           } as any; // Cast to any to avoid type conflicts with Lucia User type
 
           request.log.debug({
