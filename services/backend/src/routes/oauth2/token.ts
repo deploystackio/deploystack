@@ -125,7 +125,7 @@ export default async function tokenRoute(fastify: FastifyInstance) {
         const tokenResponse = {
           access_token: accessToken,
           token_type: 'Bearer' as const,
-          expires_in: 3600, // 1 hour
+          expires_in: 7 * 24 * 3600, // 1 week
           refresh_token: refreshToken,
           scope: authCode.scope
         };
