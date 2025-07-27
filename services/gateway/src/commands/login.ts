@@ -3,6 +3,7 @@ import chalk from 'chalk';
 import ora from 'ora';
 import { OAuth2Client } from '../core/auth/oauth';
 import { CredentialStorage } from '../core/auth/storage';
+import { DeployStackAPI } from '../core/auth/api-client';
 import { AuthenticationError } from '../types/auth';
 
 export function registerLoginCommand(program: Command) {
@@ -45,7 +46,24 @@ export function registerLoginCommand(program: Command) {
         // Store credentials
         await storage.storeCredentials(authResult.credentials);
 
-        spinner.succeed('Credentials stored securely');
+        // Set default team as selected team
+        spinner.text = 'Setting up default team...';
+        try {
+          const api = new DeployStackAPI(authResult.credentials, options.url);
+          const teams = await api.getUserTeams();
+          const defaultTeam = teams.find(team => team.is_default);
+          
+          if (defaultTeam) {
+            await storage.updateSelectedTeam(defaultTeam.id, defaultTeam.name);
+            spinner.succeed('Credentials stored and default team selected');
+          } else {
+            spinner.succeed('Credentials stored securely');
+            console.log(chalk.yellow('⚠️  No default team found - you may need to select a team manually'));
+          }
+        } catch (teamError) {
+          spinner.succeed('Credentials stored securely');
+          console.log(chalk.yellow('⚠️  Could not auto-select default team - you can select one later'));
+        }
         spinner = null;
 
         console.log(chalk.green(`✅ Successfully authenticated as ${authResult.credentials.userEmail}`));

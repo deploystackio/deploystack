@@ -39,13 +39,27 @@ export class DeployStackAPI {
   }
 
   /**
-   * Get user's teams
-   * @returns Array of teams
+   * Get user's teams from the backend API
+   * Makes a real-time API call to /api/teams/me to fetch current team memberships
+   * @returns Array of teams with user's role and ownership status
    */
   async getUserTeams(): Promise<Team[]> {
     const config = buildAuthConfig(this.baseUrl);
-    const response = await this.makeRequest(config.teamsUrl) as TeamsResponse;
-    return response.teams;
+    const response = await this.makeRequest(config.teamsUrl);
+    
+    // Check if response has the expected structure
+    if (!response) {
+      return [];
+    }
+    
+    // The API returns teams in response.data, not response.teams
+    const teams = response.data || response.teams || [];
+    
+    if (!Array.isArray(teams)) {
+      return [];
+    }
+    
+    return teams;
   }
 
   /**

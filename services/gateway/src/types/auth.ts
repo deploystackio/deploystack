@@ -8,6 +8,11 @@ export interface StoredCredentials {
     id: string;
     name: string;
   }>;
+  // Selected team information
+  selectedTeam?: {
+    id: string;
+    name: string;
+  };
 }
 
 export interface UserInfo {
@@ -38,12 +43,16 @@ export interface Team {
   id: string;
   name: string;
   slug: string;
-  description?: string;
-  is_default: boolean;
-  role: 'team_admin' | 'team_user';
-  member_count: number;
+  description?: string | null;
+  owner_id: string;
   created_at: string;
   updated_at: string;
+  role: 'team_admin' | 'team_user';
+  is_owner: boolean;
+  is_admin: boolean;
+  // Legacy fields that might still be used
+  is_default?: boolean;
+  member_count?: number;
 }
 
 export interface TeamsResponse {

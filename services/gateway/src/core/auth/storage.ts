@@ -107,6 +107,37 @@ export class CredentialStorage {
   }
 
   /**
+   * Update the selected team in stored credentials
+   * @param teamId Team ID to select
+   * @param teamName Team name to select
+   */
+  async updateSelectedTeam(teamId: string, teamName: string): Promise<void> {
+    const credentials = await this.getCredentials();
+    if (!credentials) {
+      throw new AuthenticationError(
+        AuthError.STORAGE_ERROR,
+        'No stored credentials found to update'
+      );
+    }
+
+    credentials.selectedTeam = {
+      id: teamId,
+      name: teamName
+    };
+
+    await this.storeCredentials(credentials);
+  }
+
+  /**
+   * Get the currently selected team
+   * @returns Selected team info or null if none selected
+   */
+  async getSelectedTeam(): Promise<{ id: string; name: string } | null> {
+    const credentials = await this.getCredentials();
+    return credentials?.selectedTeam || null;
+  }
+
+  /**
    * Clear stored credentials
    * @param userEmail Optional specific user email to clear
    */
