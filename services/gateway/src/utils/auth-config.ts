@@ -1,5 +1,6 @@
 export interface AuthConfig {
   clientId: string;
+  baseUrl: string; // Store the base URL
   authUrl: string;
   tokenUrl: string;
   userInfoUrl: string;
@@ -14,6 +15,7 @@ export interface AuthConfig {
  */
 export const DEFAULT_AUTH_CONFIG: AuthConfig = {
   clientId: 'deploystack-gateway-cli',
+  baseUrl: 'https://cloud.deploystack.io',
   authUrl: 'https://cloud.deploystack.io/api/oauth2/auth',
   tokenUrl: 'https://cloud.deploystack.io/api/oauth2/token',
   userInfoUrl: 'https://cloud.deploystack.io/api/oauth2/userinfo',
@@ -37,6 +39,7 @@ export const DEFAULT_AUTH_CONFIG: AuthConfig = {
 export function buildAuthConfig(baseUrl: string): AuthConfig {
   return {
     ...DEFAULT_AUTH_CONFIG,
+    baseUrl: baseUrl, // Store the base URL
     authUrl: `${baseUrl}/api/oauth2/auth`,
     tokenUrl: `${baseUrl}/api/oauth2/token`,
     userInfoUrl: `${baseUrl}/api/oauth2/userinfo`,

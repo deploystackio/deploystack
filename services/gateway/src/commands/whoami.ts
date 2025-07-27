@@ -10,9 +10,10 @@ export function registerWhoamiCommand(program: Command) {
   program
     .command('whoami')
     .description('Display current user information')
-    .option('--url <url>', 'DeployStack backend URL (for development)', 'https://cloud.deploystack.io')
+    .option('--url <url>', 'DeployStack backend URL (override stored URL)')
     .action(async (options) => {
       const storage = new CredentialStorage();
+      let backendUrl = 'https://cloud.deploystack.io'; // Default fallback
 
       try {
         // Check authentication
@@ -29,7 +30,10 @@ export function registerWhoamiCommand(program: Command) {
           process.exit(1);
         }
 
-        const api = new DeployStackAPI(credentials, options.url);
+        // Use stored baseUrl or command line override
+        backendUrl = options.url || credentials.baseUrl || 'https://cloud.deploystack.io';
+        
+        const api = new DeployStackAPI(credentials, backendUrl);
 
         // Get user info
         const userInfo = await api.getUserInfo();
@@ -38,7 +42,8 @@ export function registerWhoamiCommand(program: Command) {
 
         // Display user information
         const userEmail = userInfo.email || api.getUserEmail();
-        console.log(chalk.blue(`👋 You are logged in with an OAuth Token, associated with ${userEmail}\n`));
+        console.log(chalk.blue(`👋 You are logged in with an OAuth Token, associated with ${userEmail}`));
+        console.log(chalk.gray(`🌐 Using backend: ${backendUrl}\n`));
 
         // Display account info in table format if accounts exist
         if (accounts.length > 0) {
@@ -108,8 +113,8 @@ export function registerWhoamiCommand(program: Command) {
             console.log(chalk.gray(`💡 Run 'deploystack login' to refresh your authentication`));
           } else if (error.code === 'NETWORK_ERROR') {
             console.log(chalk.gray('💡 Check your internet connection and try again'));
-            if (options.url !== 'https://cloud.deploystack.io') {
-              console.log(chalk.gray(`💡 Make sure your development server is running at ${options.url}`));
+            if (backendUrl !== 'https://cloud.deploystack.io') {
+              console.log(chalk.gray(`💡 Make sure your development server is running at ${backendUrl}`));
             }
           }
         } else {
