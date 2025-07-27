@@ -12,9 +12,8 @@
     "dev": "ts-node-dev --respawn src/index.ts",
     "link": "npm run build && npm link",
     "release": "release-it --config=.release-it.js",
-    "lint": "echo 'Linting not configured yet'",
-    "test:unit": "echo 'Tests not implemented yet'",
-    "check:no-console": "echo 'Console check not configured yet'"
+    "lint": "eslint --config eslint.config.ts 'src/**/*.ts' --fix",
+    "test:unit": "echo 'Tests not implemented yet'"
   },
   "keywords": [
     "mcp",
@@ -32,6 +31,10 @@
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.3.3",
     "@release-it/conventional-changelog": "^10.0.1",
-    "release-it": "^19.0.4"
+    "release-it": "^19.0.4",
+    "@typescript-eslint/eslint-plugin": "^8.36.0",
+    "@typescript-eslint/parser": "^8.38.0",
+    "eslint": "^9.31.0",
+    "typescript-eslint": "^8.38.0"
   }
 }

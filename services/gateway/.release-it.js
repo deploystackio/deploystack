@@ -13,7 +13,7 @@ module.exports = {
     "publish": false // We handle npm publishing separately in the workflow
   },
   "hooks": {
-    "before:init": ["echo 'Preparing gateway release...'"],
+    "before:init": ["npm run lint"],
     "after:bump": "npm run build",
     "after:release": "echo 'Gateway ${version} released!'"
   },
