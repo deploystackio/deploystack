@@ -10,7 +10,7 @@ export function registerTeamsCommand(program: Command) {
     .command('teams')
     .description('List your teams and team information')
     .option('--url <url>', 'DeployStack backend URL (override stored URL)')
-    .option('--switch <team-name>', 'Switch to a different team')
+    .option('--switch <team-number>', 'Switch to a different team by team number (#)')
     .action(async (options) => {
       const storage = new CredentialStorage();
       let backendUrl = 'https://cloud.deploystack.io'; // Default fallback
@@ -39,20 +39,19 @@ export function registerTeamsCommand(program: Command) {
         
         // Handle team switching
         if (options.switch) {
-          const teamToSwitch = teams.find(team => 
-            team.name.toLowerCase() === options.switch.toLowerCase() ||
-            team.slug.toLowerCase() === options.switch.toLowerCase()
-          );
+          const teamNumber = parseInt(options.switch, 10);
           
-          if (!teamToSwitch) {
-            console.log(chalk.red(`❌ Team "${options.switch}" not found`));
+          if (isNaN(teamNumber) || teamNumber < 1 || teamNumber > teams.length) {
+            console.log(chalk.red(`❌ Invalid team number "${options.switch}". Please use a number between 1 and ${teams.length}`));
             console.log(chalk.gray('Available teams:'));
-            teams.forEach(team => console.log(chalk.gray(`  - ${team.name}`)));
+            teams.forEach((team, index) => console.log(chalk.gray(`  ${index + 1}. ${team.name} (ID: ${team.id})`)));
             process.exit(1);
           }
           
+          const teamToSwitch = teams[teamNumber - 1]; // Convert to 0-based index
+          
           await storage.updateSelectedTeam(teamToSwitch.id, teamToSwitch.name);
-          console.log(chalk.green(`✅ Switched to team: ${chalk.cyan(teamToSwitch.name)}`));
+          console.log(chalk.green(`✅ Switched to team: ${chalk.cyan(teamToSwitch.name)} (#${teamNumber})`));
           console.log(chalk.gray(`🌐 Using backend: ${backendUrl}`));
           return;
         }
@@ -71,18 +70,18 @@ export function registerTeamsCommand(program: Command) {
         if (selectedTeam) {
           console.log(chalk.gray(`🎯 Currently selected: ${chalk.cyan(selectedTeam.name)}`));
         } else {
-          console.log(chalk.yellow('⚠️  No team selected - use --switch <team-name> to select one'));
+          console.log(chalk.yellow('⚠️  No team selected - use --switch <team-number> to select one'));
         }
         
         console.log(chalk.gray(`🌐 Using backend: ${backendUrl}\n`));
 
         // Create table
         const table = TableFormatter.createTable({
-          head: ['Team Name', 'Role', 'Ownership', 'Default', 'Selected'],
-          colWidths: [25, 18, 15, 10, 10]
+          head: ['#', 'Team Name', 'Role', 'Ownership', 'Default', 'Selected'],
+          colWidths: [3, 20, 16, 12, 10, 10]
         });
 
-        teams.forEach(team => {
+        teams.forEach((team, index) => {
           // Format role with colors and descriptions
           let roleDisplay: string;
           if (team.role === 'team_admin') {
@@ -95,14 +94,15 @@ export function registerTeamsCommand(program: Command) {
           const ownershipDisplay = team.is_owner ? chalk.green('✅ Owner') : chalk.gray('👤 Member');
 
           // Format default team status
-          const defaultDisplay = team.is_default ? chalk.yellow('✅ Default') : chalk.gray('Regular');
+          const defaultDisplay = team.is_default ? chalk.yellow('Default') : chalk.gray('Regular');
           
           // Format selected team status
           const isSelected = selectedTeam && selectedTeam.id === team.id;
-          const selectedDisplay = isSelected ? chalk.green('✅ Active') : chalk.gray('Inactive');
+          const selectedDisplay = isSelected ? chalk.green('Active') : chalk.gray('Inactive');
 
           table.push([
-            TableFormatter.truncate(team.name, 23),
+            chalk.cyan((index + 1).toString()),
+            TableFormatter.truncate(team.name, 18),
             roleDisplay,
             ownershipDisplay,
             defaultDisplay,
@@ -114,7 +114,7 @@ export function registerTeamsCommand(program: Command) {
 
         // Show helpful tips
         console.log();
-        console.log(chalk.gray(`💡 Use 'deploystack teams --switch <team-name>' to switch to a different team`));
+        console.log(chalk.gray(`💡 Use 'deploystack teams --switch <team-number>' to switch to a different team`));
         
         // Show ownership summary
         const ownedTeams = teams.filter(team => team.is_owner);
