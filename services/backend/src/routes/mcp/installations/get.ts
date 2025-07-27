@@ -1,6 +1,7 @@
 import { type FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { createSchema } from 'zod-openapi';
+import { requireAuthenticationAny, requireOAuthScope } from '../../../middleware/oauthMiddleware';
 import { requireTeamPermission } from '../../../middleware/roleMiddleware';
 import { McpInstallationService } from '../../../services/mcpInstallationService';
 import { getDb } from '../../../db';
@@ -50,8 +51,11 @@ export default async function getInstallationRoute(fastify: FastifyInstance) {
     schema: {
       tags: ['MCP Installations'],
       summary: 'Get MCP installation by ID',
-      description: 'Retrieves a specific MCP server installation by ID for the specified team.',
-      security: [{ cookieAuth: [] }],
+      description: 'Retrieves a specific MCP server installation by ID for the specified team. Supports both cookie-based authentication (for web users) and OAuth2 Bearer token authentication (for CLI users). Requires mcp:read scope for OAuth2 access.',
+      security: [
+        { cookieAuth: [] },
+        { bearerAuth: [] }
+      ],
       params: createSchema(z.object({
         teamId: z.string().min(1, 'Team ID is required'),
         installationId: z.string().min(1, 'Installation ID is required')
@@ -59,21 +63,36 @@ export default async function getInstallationRoute(fastify: FastifyInstance) {
         }),
       response: {
         200: createSchema(successResponseSchema.describe('Installation details')),
-        401: createSchema(errorResponseSchema.describe('Unauthorized - Authentication required')),
-        403: createSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions')),
+        401: createSchema(errorResponseSchema.describe('Unauthorized - Authentication required or invalid token')),
+        403: createSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions or scope')),
         404: createSchema(errorResponseSchema.describe('Not Found - Installation not found'))
       }
     },
-    preValidation: requireTeamPermission('mcp.installations.view')
+    preValidation: [
+      requireAuthenticationAny(),
+      requireOAuthScope('mcp:read'),
+      requireTeamPermission('mcp.installations.view')
+    ]
   }, async (request, reply) => {
     const { teamId, installationId } = request.params;
     const userId = request.user!.id;
+    const authType = request.tokenPayload ? 'oauth2' : 'cookie';
+
+    request.log.debug({
+      operation: 'mcp_installation_operation',
+      userId,
+      authType,
+      clientId: request.tokenPayload?.clientId,
+      scope: request.tokenPayload?.scope,
+      endpoint: request.url
+    }, 'Authentication method determined for MCP installation operation');
 
     request.log.info({
       operation: 'get_mcp_installation',
       teamId,
       installationId,
-      userId
+      userId,
+      authType
     }, 'Getting MCP installation by ID');
 
     try {
@@ -100,7 +119,8 @@ export default async function getInstallationRoute(fastify: FastifyInstance) {
         operation: 'get_mcp_installation',
         teamId,
         installationId,
-        userId
+        userId,
+      authType
       }, 'Retrieved MCP installation');
 
       return reply.status(200).send({

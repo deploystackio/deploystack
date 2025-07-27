@@ -115,6 +115,22 @@ export async function initializeDatabaseDependentServices(
         server.log.warn('⚠️ Continuing without role synchronization due to error');
       }
       
+      // Start OAuth2 cleanup service
+      try {
+        server.log.debug('🔄 Starting OAuth2 cleanup service...');
+        const { OAuthCleanupService } = await import('./services/oauth/cleanupService');
+        OAuthCleanupService.start(server.log);
+        server.log.debug('✅ OAuth2 cleanup service started');
+      } catch (oauthCleanupError) {
+        server.log.error('❌ OAuth2 cleanup service failed to start:', {
+          error: oauthCleanupError,
+          message: oauthCleanupError instanceof Error ? oauthCleanupError.message : 'Unknown error',
+          stack: oauthCleanupError instanceof Error ? oauthCleanupError.stack : 'No stack trace'
+        });
+        // Don't throw - continue with startup but log the error
+        server.log.warn('⚠️ Continuing without OAuth2 cleanup service due to error');
+      }
+
       // Initialize global settings with comprehensive debugging
       try {
         server.log.debug('🔄 Starting global settings initialization...');
@@ -394,6 +410,12 @@ export const createServer = async () => {
             type: 'apiKey',
             in: 'cookie',
             name: 'auth_session'
+          },
+          bearerAuth: {
+            type: 'http',
+            scheme: 'bearer',
+            bearerFormat: 'JWT',
+            description: 'OAuth2 Bearer token authentication'
           }
         }
       }

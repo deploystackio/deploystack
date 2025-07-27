@@ -233,6 +233,44 @@ export const mcpServerInstallations = sqliteTable('mcpServerInstallations', {
   userIdx: index('mcp_installations_user_idx').on(table.user_id),
 }));
 
+// OAuth2 Authorization Codes for PKCE flow
+export const oauthAuthorizationCodes = sqliteTable('oauth_authorization_codes', {
+  id: text('id').primaryKey(),
+  user_id: text('user_id').notNull().references(() => authUser.id, { onDelete: 'cascade' }),
+  client_id: text('client_id').notNull(),
+  redirect_uri: text('redirect_uri').notNull(),
+  scope: text('scope').notNull(),
+  state: text('state').notNull(),
+  code_challenge: text('code_challenge').notNull(),
+  code_challenge_method: text('code_challenge_method').notNull(),
+  code: text('code').notNull().unique(),
+  used: integer('used', { mode: 'boolean' }).notNull().default(false),
+  created_at: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  expires_at: integer('expires_at', { mode: 'timestamp' }).notNull(),
+});
+
+// OAuth2 Access Tokens
+export const oauthAccessTokens = sqliteTable('oauth_access_tokens', {
+  id: text('id').primaryKey(),
+  user_id: text('user_id').notNull().references(() => authUser.id, { onDelete: 'cascade' }),
+  client_id: text('client_id').notNull(),
+  scope: text('scope').notNull(),
+  token_hash: text('token_hash').notNull().unique(), // Argon2 hash of the token
+  created_at: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  expires_at: integer('expires_at', { mode: 'timestamp' }).notNull(),
+});
+
+// OAuth2 Refresh Tokens
+export const oauthRefreshTokens = sqliteTable('oauth_refresh_tokens', {
+  id: text('id').primaryKey(),
+  user_id: text('user_id').notNull().references(() => authUser.id, { onDelete: 'cascade' }),
+  client_id: text('client_id').notNull(),
+  token_hash: text('token_hash').notNull().unique(), // Argon2 hash of the token
+  used: integer('used', { mode: 'boolean' }).notNull().default(false),
+  created_at: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  expires_at: integer('expires_at', { mode: 'timestamp' }).notNull(),
+});
+
 // Plugin table definitions - populated dynamically by the plugin system
 // This object will hold definitions for plugin tables, to be populated dynamically.
 // Key: Table name (e.g., 'myPlugin_myTable')

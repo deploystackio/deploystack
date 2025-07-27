@@ -19,6 +19,8 @@ import cloudCredentialsRoute from './cloud-credentials'
 import healthRoute from './health'
 // Import MCP routes
 import mcpRoutes from './mcp'
+// Import OAuth2 routes
+import oauth2Routes from './oauth2'
 
 // Response schema for the root health check endpoint
 const healthCheckResponseSchema = z.object({
@@ -53,7 +55,11 @@ export const registerRoutes = (server: FastifyInstance): void => {
     
     // Register MCP routes
     await apiInstance.register(mcpRoutes);
+    
+    // Register OAuth2 routes
+    await apiInstance.register(oauth2Routes);
   }, { prefix: '/api' });
+
 
   // Define a default route with comprehensive OpenAPI documentation
   server.get('/', {
