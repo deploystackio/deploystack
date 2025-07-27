@@ -1,5 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import fetch from 'node-fetch';
-import { StoredCredentials, UserInfo, TokenInfo, Team, TeamsResponse, AuthError, AuthenticationError } from '../../types/auth';
+import { StoredCredentials, UserInfo, TokenInfo, Team, AuthError, AuthenticationError } from '../../types/auth';
 import { buildAuthConfig } from '../../utils/auth-config';
 
 export class DeployStackAPI {
@@ -128,7 +129,7 @@ export class DeployStackAPI {
       } else {
         errorData = { error: await response.text() };
       }
-    } catch (parseError) {
+    } catch {
       errorData = { error: 'Unknown error' };
     }
 

@@ -8,10 +8,12 @@ export interface MCPServer {
   env?: Record<string, string>;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface MCPRequest {
   // Placeholder for MCP request types
 }
 
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface MCPResponse {
   // Placeholder for MCP response types
 }

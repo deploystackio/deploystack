@@ -70,6 +70,7 @@ export class OAuth2Client {
             'Authentication timeout - no response received within the specified time'
           )), timeout)
         )
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ]) as any;
 
       if (callbackResult.error) {
@@ -173,6 +174,7 @@ export class OAuth2Client {
       });
 
       if (!response.ok) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const errorData = await response.json().catch(() => ({ error: 'unknown_error' })) as any;
         throw new AuthenticationError(
           AuthError.INVALID_GRANT,
@@ -250,6 +252,7 @@ export class OAuth2Client {
       });
 
       if (!response.ok) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const errorData = await response.json().catch(() => ({ error: 'unknown_error' })) as any;
         throw new AuthenticationError(
           AuthError.INVALID_GRANT,
