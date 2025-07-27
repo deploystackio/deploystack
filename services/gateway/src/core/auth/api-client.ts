@@ -12,7 +12,9 @@ export class DeployStackAPI {
   }
 
   /**
-   * Get authenticated user information
+   * Get authenticated user information from the backend API
+   * Makes a real-time API call to /api/oauth2/userinfo to verify token validity
+   * and retrieve fresh user information including sub, email, name, etc.
    * @returns User information
    */
   async getUserInfo(): Promise<UserInfo> {
