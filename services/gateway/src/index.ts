@@ -6,6 +6,8 @@ import { getVersionString } from './config/version';
 import {
   registerLoginCommand,
   registerLogoutCommand,
+  registerWhoamiCommand,
+  registerTeamsCommand,
   registerStartCommand,
   registerStopCommand,
   registerStatusCommand,
@@ -23,6 +25,8 @@ program
 // Register all commands
 registerLoginCommand(program);
 registerLogoutCommand(program);
+registerWhoamiCommand(program);
+registerTeamsCommand(program);
 registerStartCommand(program);
 registerStopCommand(program);
 registerStatusCommand(program);

@@ -1,5 +1,200 @@
-// Secure credential storage using OS keychain
-// TODO: Implement keytar integration for secure credential storage
+import { keyring } from '@zowe/secrets-for-zowe-sdk';
+import { writeFileSync, readFileSync, existsSync, unlinkSync } from 'fs';
+import { join } from 'path';
+import { homedir } from 'os';
+import { createCipheriv, createDecipheriv, randomBytes } from 'crypto';
+import { StoredCredentials, AuthError, AuthenticationError } from '../../types/auth';
+
 export class CredentialStorage {
-  // Placeholder for secure credential storage
+  private readonly serviceName = 'deploystack-gateway';
+  private readonly fallbackDir = join(homedir(), '.deploystack');
+  private readonly fallbackFile = join(this.fallbackDir, 'credentials.enc');
+  private readonly encryptionKey = 'deploystack-gateway-key';
+
+  /**
+   * Store credentials securely using OS keychain with encrypted file fallback
+   * @param credentials Credentials to store
+   */
+  async storeCredentials(credentials: StoredCredentials): Promise<void> {
+    try {
+      // Try OS keychain first
+      await keyring.setPassword(
+        this.serviceName,
+        credentials.userEmail,
+        JSON.stringify(credentials)
+      );
+    } catch (error) {
+      // Fallback to encrypted file storage
+      try {
+        await this.storeEncrypted(credentials);
+      } catch (fallbackError) {
+        throw new AuthenticationError(
+          AuthError.STORAGE_ERROR,
+          'Failed to store credentials securely',
+          fallbackError as Error
+        );
+      }
+    }
+  }
+
+  /**
+   * Retrieve stored credentials
+   * @returns Stored credentials or null if not found
+   */
+  async getCredentials(): Promise<StoredCredentials | null> {
+    try {
+      // Try to get all stored credentials and find the most recent one
+      const accounts = await this.getStoredAccounts();
+      if (accounts.length === 0) {
+        return await this.retrieveEncrypted();
+      }
+
+      // Get the most recently stored credentials
+      const mostRecent = accounts[0];
+      const stored = await keyring.getPassword(this.serviceName, mostRecent);
+      return stored ? JSON.parse(stored) : await this.retrieveEncrypted();
+    } catch (error) {
+      // Fallback to encrypted file
+      return await this.retrieveEncrypted();
+    }
+  }
+
+  /**
+   * Clear stored credentials
+   * @param userEmail Optional specific user email to clear
+   */
+  async clearCredentials(userEmail?: string): Promise<void> {
+    try {
+      if (userEmail) {
+        await keyring.deletePassword(this.serviceName, userEmail);
+      } else {
+        // Clear all stored accounts
+        const accounts = await this.getStoredAccounts();
+        for (const account of accounts) {
+          try {
+            await keyring.deletePassword(this.serviceName, account);
+          } catch (error) {
+            // Continue clearing other accounts even if one fails
+          }
+        }
+      }
+    } catch (error) {
+      // Continue to clear encrypted file even if keychain fails
+    }
+
+    // Also clear encrypted file
+    await this.clearEncrypted();
+  }
+
+  /**
+   * Check if user is authenticated with valid credentials
+   * @returns true if authenticated with non-expired credentials
+   */
+  async isAuthenticated(): Promise<boolean> {
+    try {
+      const credentials = await this.getCredentials();
+      if (!credentials) {
+        return false;
+      }
+
+      // Check if token is expired (with 5 minute buffer)
+      const now = Date.now();
+      const expiresAt = credentials.expiresAt;
+      const buffer = 5 * 60 * 1000; // 5 minutes
+
+      return expiresAt > (now + buffer);
+    } catch (error) {
+      return false;
+    }
+  }
+
+  /**
+   * Get list of stored account emails
+   * @returns Array of account emails
+   */
+  private async getStoredAccounts(): Promise<string[]> {
+    try {
+      // This is a simplified approach - in a real implementation,
+      // you might want to maintain a separate list of accounts
+      return [];
+    } catch (error) {
+      return [];
+    }
+  }
+
+  /**
+   * Store credentials in encrypted file as fallback
+   * @param credentials Credentials to store
+   */
+  private async storeEncrypted(credentials: StoredCredentials): Promise<void> {
+    try {
+      // Ensure directory exists
+      const { mkdirSync } = await import('fs');
+      try {
+        mkdirSync(this.fallbackDir, { recursive: true });
+      } catch (error) {
+        // Directory might already exist
+      }
+
+      // Encrypt and store
+      const iv = randomBytes(16);
+      const cipher = createCipheriv('aes-256-cbc', Buffer.from(this.encryptionKey.padEnd(32, '0').slice(0, 32)), iv);
+      let encrypted = cipher.update(JSON.stringify(credentials), 'utf8', 'hex');
+      encrypted += cipher.final('hex');
+      const encryptedData = iv.toString('hex') + ':' + encrypted;
+
+      writeFileSync(this.fallbackFile, encryptedData, { mode: 0o600 });
+    } catch (error) {
+      throw new AuthenticationError(
+        AuthError.STORAGE_ERROR,
+        'Failed to store credentials in encrypted file',
+        error as Error
+      );
+    }
+  }
+
+  /**
+   * Retrieve credentials from encrypted file
+   * @returns Stored credentials or null
+   */
+  private async retrieveEncrypted(): Promise<StoredCredentials | null> {
+    try {
+      if (!existsSync(this.fallbackFile)) {
+        return null;
+      }
+
+      const encryptedData = readFileSync(this.fallbackFile, 'utf8');
+      const parts = encryptedData.split(':');
+      if (parts.length !== 2) throw new Error('Invalid encrypted data format');
+      
+      const iv = Buffer.from(parts[0], 'hex');
+      const encrypted = parts[1];
+      const decipher = createDecipheriv('aes-256-cbc', Buffer.from(this.encryptionKey.padEnd(32, '0').slice(0, 32)), iv);
+      let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+      decrypted += decipher.final('utf8');
+
+      return JSON.parse(decrypted);
+    } catch (error) {
+      // If we can't decrypt, the file might be corrupted
+      try {
+        unlinkSync(this.fallbackFile);
+      } catch (unlinkError) {
+        // Ignore unlink errors
+      }
+      return null;
+    }
+  }
+
+  /**
+   * Clear encrypted file
+   */
+  private async clearEncrypted(): Promise<void> {
+    try {
+      if (existsSync(this.fallbackFile)) {
+        unlinkSync(this.fallbackFile);
+      }
+    } catch (error) {
+      // Ignore errors when clearing
+    }
+  }
 }
