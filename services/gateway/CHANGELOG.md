@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.3.0 (2025-07-27)
+
+* simplify error handling in login command ([47c8edf](https://github.com/deploystackio/deploystack/commit/47c8edf145c15f05517bcc95b1a72039fc01ba00))
+* implement scoped commit message guidelines and templates ([a6839b8](https://github.com/deploystackio/deploystack/commit/a6839b880248a35a213cfb44f19ec29c0b9553cc))
+* update README with new links and SVG assets ([704799c](https://github.com/deploystackio/deploystack/commit/704799c34ef1d67824b5a1911d14ae148b0f4b15))
+* add 'whoami' and 'teams' commands for user information and team management ([571b031](https://github.com/deploystackio/deploystack/commit/571b031c29ddc39a1dbb9426c6ac9888c763e0c2))
+* add version command to display gateway version info ([11f9a93](https://github.com/deploystackio/deploystack/commit/11f9a93ef730ced54816ac38beffcab6e5af7b08))
+* configure ESLint and update linting scripts ([135e4ad](https://github.com/deploystackio/deploystack/commit/135e4ad371f0e37c67a6573dc57077deb7baba48))
+* enhance login and teams commands with team selection ([c1a8082](https://github.com/deploystackio/deploystack/commit/c1a808266878b8df87cf1d9c6776eed744b94616))
+* enhance login command to exit successfully after auth ([23e400e](https://github.com/deploystackio/deploystack/commit/23e400e1829fd08b738d2d061e24f9dd296e4a17))
+* enhance whoami command to display additional user info ([215c5ee](https://github.com/deploystackio/deploystack/commit/215c5eedd1556ea5787100eca4a68e52382d5ef3))
+* update team switching command to use team number ([2e7b2e1](https://github.com/deploystackio/deploystack/commit/2e7b2e1e4ab140821596818c40b0cb0b5eff5b84))
+* update teams and whoami commands to use backend URL ([f24c699](https://github.com/deploystackio/deploystack/commit/f24c69946a0d9e68b204138ac44fedaf19e76731))
+* remove scoped commit implementation documentation ([8311fc8](https://github.com/deploystackio/deploystack/commit/8311fc89c5c7c6ca4944c0f7040275e00d5170b9))
+
 ## <small>0.0.1 (2025-07-26)</small>
 
 * update @typescript-eslint/parser to version 8.35.1 and add license information ([6c0c303](https://github.com/deploystackio/deploystack/commit/6c0c303bd2a950749d9da62f48e9fc3c6b54fbad))
