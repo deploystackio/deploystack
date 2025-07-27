@@ -19,7 +19,7 @@ export const DEFAULT_AUTH_CONFIG: AuthConfig = {
   authUrl: 'https://cloud.deploystack.io/api/oauth2/auth',
   tokenUrl: 'https://cloud.deploystack.io/api/oauth2/token',
   userInfoUrl: 'https://cloud.deploystack.io/api/oauth2/userinfo',
-  teamsUrl: 'https://cloud.deploystack.io/api/teams',
+  teamsUrl: 'https://cloud.deploystack.io/api/teams/me',
   redirectUri: 'http://localhost:8976/oauth/callback',
   scopes: [
     'mcp:read',
@@ -43,7 +43,7 @@ export function buildAuthConfig(baseUrl: string): AuthConfig {
     authUrl: `${baseUrl}/api/oauth2/auth`,
     tokenUrl: `${baseUrl}/api/oauth2/token`,
     userInfoUrl: `${baseUrl}/api/oauth2/userinfo`,
-    teamsUrl: `${baseUrl}/api/teams`
+    teamsUrl: `${baseUrl}/api/teams/me`
   };
 }
 

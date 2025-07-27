@@ -10,6 +10,7 @@ export function registerTeamsCommand(program: Command) {
     .command('teams')
     .description('List your teams and team information')
     .option('--url <url>', 'DeployStack backend URL (override stored URL)')
+    .option('--switch <team-name>', 'Switch to a different team')
     .action(async (options) => {
       const storage = new CredentialStorage();
       let backendUrl = 'https://cloud.deploystack.io'; // Default fallback
@@ -33,30 +34,79 @@ export function registerTeamsCommand(program: Command) {
         backendUrl = options.url || credentials.baseUrl || 'https://cloud.deploystack.io';
         const api = new DeployStackAPI(credentials, backendUrl);
 
-        // Get teams
+        // Get fresh teams data from the API (real-time verification)
         const teams = await api.getUserTeams();
+        
+        // Handle team switching
+        if (options.switch) {
+          const teamToSwitch = teams.find(team => 
+            team.name.toLowerCase() === options.switch.toLowerCase() ||
+            team.slug.toLowerCase() === options.switch.toLowerCase()
+          );
+          
+          if (!teamToSwitch) {
+            console.log(chalk.red(`❌ Team "${options.switch}" not found`));
+            console.log(chalk.gray('Available teams:'));
+            teams.forEach(team => console.log(chalk.gray(`  - ${team.name}`)));
+            process.exit(1);
+          }
+          
+          await storage.updateSelectedTeam(teamToSwitch.id, teamToSwitch.name);
+          console.log(chalk.green(`✅ Switched to team: ${chalk.cyan(teamToSwitch.name)}`));
+          console.log(chalk.gray(`🌐 Using backend: ${backendUrl}`));
+          return;
+        }
 
         if (teams.length === 0) {
           console.log(chalk.yellow('📭 You are not a member of any teams'));
           console.log(chalk.gray('💡 Contact your administrator to be added to a team'));
+          console.log(chalk.gray(`🌐 Using backend: ${backendUrl}`));
           return;
         }
 
-        console.log(chalk.blue(`👥 Your Teams (${teams.length} team${teams.length === 1 ? '' : 's'} found)\n`));
+        console.log(chalk.blue(`👥 Your Teams (${teams.length} team${teams.length === 1 ? '' : 's'} found)`));
+        
+        // Show currently selected team
+        const selectedTeam = await storage.getSelectedTeam();
+        if (selectedTeam) {
+          console.log(chalk.gray(`🎯 Currently selected: ${chalk.cyan(selectedTeam.name)}`));
+        } else {
+          console.log(chalk.yellow('⚠️  No team selected - use --switch <team-name> to select one'));
+        }
+        
+        console.log(chalk.gray(`🌐 Using backend: ${backendUrl}\n`));
 
         // Create table
         const table = TableFormatter.createTable({
-          head: ['Team Name', 'Role', 'Members', 'Default', 'Created'],
-          colWidths: [25, 15, 8, 7, 12]
+          head: ['Team Name', 'Role', 'Ownership', 'Default', 'Selected'],
+          colWidths: [25, 18, 15, 10, 10]
         });
 
         teams.forEach(team => {
+          // Format role with colors and descriptions
+          let roleDisplay: string;
+          if (team.role === 'team_admin') {
+            roleDisplay = team.is_owner ? chalk.green('Owner/Admin') : chalk.cyan('Admin');
+          } else {
+            roleDisplay = chalk.gray('User');
+          }
+
+          // Format ownership status
+          const ownershipDisplay = team.is_owner ? chalk.green('✅ Owner') : chalk.gray('👤 Member');
+
+          // Format default team status
+          const defaultDisplay = team.is_default ? chalk.yellow('✅ Default') : chalk.gray('Regular');
+          
+          // Format selected team status
+          const isSelected = selectedTeam && selectedTeam.id === team.id;
+          const selectedDisplay = isSelected ? chalk.green('✅ Active') : chalk.gray('Inactive');
+
           table.push([
             TableFormatter.truncate(team.name, 23),
-            team.role === 'team_admin' ? chalk.cyan('admin') : chalk.gray('user'),
-            team.member_count.toString(),
-            TableFormatter.formatBoolean(team.is_default),
-            TableFormatter.formatDate(team.created_at)
+            roleDisplay,
+            ownershipDisplay,
+            defaultDisplay,
+            selectedDisplay
           ]);
         });
 
@@ -64,18 +114,32 @@ export function registerTeamsCommand(program: Command) {
 
         // Show helpful tips
         console.log();
-        console.log(chalk.gray(`💡 Use 'deploystack start --team <team-name>' to start gateway for specific team`));
+        console.log(chalk.gray(`💡 Use 'deploystack teams --switch <team-name>' to switch to a different team`));
         
-        // Show default team info
+        // Show ownership summary
+        const ownedTeams = teams.filter(team => team.is_owner);
+        const adminTeams = teams.filter(team => team.role === 'team_admin' && !team.is_owner);
+        const userTeams = teams.filter(team => team.role === 'team_user');
         const defaultTeam = teams.find(team => team.is_default);
+        
+        if (ownedTeams.length > 0) {
+          console.log(chalk.gray(`💡 You own ${ownedTeams.length} team${ownedTeams.length === 1 ? '' : 's'}: ${ownedTeams.map(t => chalk.cyan(t.name)).join(', ')}`));
+        }
+        if (adminTeams.length > 0) {
+          console.log(chalk.gray(`💡 You have admin access to ${adminTeams.length} additional team${adminTeams.length === 1 ? '' : 's'}`));
+        }
+        if (userTeams.length > 0) {
+          console.log(chalk.gray(`💡 You have user access to ${userTeams.length} team${userTeams.length === 1 ? '' : 's'}`));
+        }
         if (defaultTeam) {
           console.log(chalk.gray(`💡 Your default team is: ${chalk.cyan(defaultTeam.name)}`));
         }
-
-        // Show admin teams
-        const adminTeams = teams.filter(team => team.role === 'team_admin');
-        if (adminTeams.length > 0) {
-          console.log(chalk.gray(`💡 You have admin access to ${adminTeams.length} team${adminTeams.length === 1 ? '' : 's'}`));
+        
+        // Show member count if available
+        const teamsWithMemberCount = teams.filter(team => team.member_count !== undefined);
+        if (teamsWithMemberCount.length > 0) {
+          const totalMembers = teamsWithMemberCount.reduce((sum, team) => sum + (team.member_count || 0), 0);
+          console.log(chalk.gray(`📊 Total team members across all teams: ${totalMembers}`));
         }
 
       } catch (error) {
