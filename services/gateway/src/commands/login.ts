@@ -61,6 +61,9 @@ export function registerLoginCommand(program: Command) {
           console.log(chalk.yellow(`   ⚠️  For MCP changes, visit: ${options.url}`));
         }
 
+        // Exit successfully
+        process.exit(0);
+
       } catch (error) {
         if (spinner) {
           spinner.fail('Authentication failed');
