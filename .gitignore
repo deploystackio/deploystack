@@ -76,3 +76,6 @@ cookie.txt
 
 coverage/
 persistent_data/database-test/
+
+services/backend/_catalog
+services/backend/_dereferenced
