@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
+import { toast } from 'vue-sonner'
 import { Button } from '@/components/ui/button'
 import {
   AlertDialog,
@@ -80,21 +81,25 @@ async function handleUninstall() {
     // Close modal
     showUninstallModal.value = false
 
-    // Store success notification for persistence across navigation
-    const message = t('mcpInstallations.notifications.uninstallSuccess')
-
-    // Use event bus storage to persist notification across navigation
-    eventBus.setState('pending_notification', {
-      message,
-      type: 'success',
-      timestamp: Date.now()
+    // Show success toast
+    toast.success(t('mcpInstallations.notifications.uninstallSuccess'), {
+      description: t('mcpInstallations.removal.notifications.success')
     })
+
+    // Emit event for other components to update
+    eventBus.emit('mcp-installations-updated')
 
     // Navigate back to MCP servers list
     router.push('/mcp-server')
 
   } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Unknown error occurred'
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred'
+    error.value = errorMessage
+    
+    // Show error toast
+    toast.error(t('mcpInstallations.removal.notifications.genericError', { error: errorMessage }), {
+      description: t('mcpInstallations.details.dangerZone.uninstall.modal.warning')
+    })
   } finally {
     isUninstalling.value = false
   }

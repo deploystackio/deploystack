@@ -7,6 +7,7 @@ import {
   registerLogoutCommand,
   registerWhoamiCommand,
   registerTeamsCommand,
+  registerMCPCommand,
   registerStartCommand,
   registerStopCommand,
   registerStatusCommand,
@@ -26,6 +27,7 @@ registerLoginCommand(program);
 registerLogoutCommand(program);
 registerWhoamiCommand(program);
 registerTeamsCommand(program);
+registerMCPCommand(program);
 registerStartCommand(program);
 registerStopCommand(program);
 registerStatusCommand(program);

@@ -2,6 +2,7 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import ora from 'ora';
 import { CredentialStorage } from '../core/auth/storage';
+import { MCPConfigService } from '../core/mcp';
 import { AuthenticationError } from '../types/auth';
 
 export function registerLogoutCommand(program: Command) {
@@ -28,19 +29,27 @@ export function registerLogoutCommand(program: Command) {
 
         if (options.all) {
           console.log(chalk.blue('🔐 Clearing all stored credentials...'));
-          spinner = ora('Clearing credentials from secure storage...').start();
+          spinner = ora('Clearing credentials and MCP configurations...').start();
+          
+          // Clear MCP configurations
+          const mcpService = new MCPConfigService();
+          await mcpService.clearMCPConfig();
           
           await storage.clearCredentials();
           
-          spinner.succeed('All credentials cleared');
+          spinner.succeed('All credentials and configurations cleared');
           console.log(chalk.green('✅ Successfully logged out all users'));
         } else {
           console.log(chalk.blue(`🔐 Logging out ${userEmail}...`));
-          spinner = ora('Clearing credentials from secure storage...').start();
+          spinner = ora('Clearing credentials and MCP configurations...').start();
+          
+          // Clear MCP configurations for selected team
+          const mcpService = new MCPConfigService();
+          await mcpService.clearMCPConfig();
           
           await storage.clearCredentials(userEmail);
           
-          spinner.succeed('Credentials cleared');
+          spinner.succeed('Credentials and configurations cleared');
           console.log(chalk.green(`✅ Successfully logged out ${userEmail}`));
         }
 

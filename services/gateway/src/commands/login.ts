@@ -4,6 +4,7 @@ import ora from 'ora';
 import { OAuth2Client } from '../core/auth/oauth';
 import { CredentialStorage } from '../core/auth/storage';
 import { DeployStackAPI } from '../core/auth/api-client';
+import { MCPConfigService } from '../core/mcp';
 import { AuthenticationError } from '../types/auth';
 
 export function registerLoginCommand(program: Command) {
@@ -46,7 +47,7 @@ export function registerLoginCommand(program: Command) {
         // Store credentials
         await storage.storeCredentials(authResult.credentials);
 
-        // Set default team as selected team
+        // Set default team as selected team and download MCP config
         spinner.text = 'Setting up default team...';
         try {
           const api = new DeployStackAPI(authResult.credentials, options.url);
@@ -55,7 +56,20 @@ export function registerLoginCommand(program: Command) {
           
           if (defaultTeam) {
             await storage.updateSelectedTeam(defaultTeam.id, defaultTeam.name);
-            spinner.succeed('Credentials stored and default team selected');
+            
+            // Download MCP configuration for the default team
+            spinner.text = 'Downloading MCP server configurations...';
+            const mcpService = new MCPConfigService();
+            try {
+              await mcpService.downloadAndStoreMCPConfig(defaultTeam.id, defaultTeam.name, api, false);
+              spinner.succeed('Credentials stored, default team selected, and MCP config downloaded');
+            } catch (mcpError) {
+              spinner.succeed('Credentials stored and default team selected');
+              console.log(chalk.yellow('⚠️  Could not download MCP configurations - you can try again later'));
+              if (mcpError instanceof Error) {
+                console.log(chalk.gray(`   MCP Error: ${mcpError.message}`));
+              }
+            }
           } else {
             spinner.succeed('Credentials stored securely');
             console.log(chalk.yellow('⚠️  No default team found - you may need to select a team manually'));
@@ -73,6 +87,7 @@ export function registerLoginCommand(program: Command) {
         console.log(chalk.blue(`\n💡 Available commands:`));
         console.log(chalk.gray(`   deploystack whoami     - Show your user information`));
         console.log(chalk.gray(`   deploystack teams      - List your teams`));
+        console.log(chalk.gray(`   deploystack mcp        - Manage MCP server configurations`));
         console.log(chalk.gray(`   deploystack start      - Start the gateway server`));
         
         if (options.url !== 'https://cloud.deploystack.io') {

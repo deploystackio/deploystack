@@ -27,28 +27,38 @@ const activeTab = ref('information')
 
 const installationId = route.params.id as string
 
-// Find which team owns the installation and get user's role in that team
-async function findInstallationTeam(installationId: string): Promise<{ team: Team; installation: McpInstallation; userRole: 'team_admin' | 'team_user' } | null> {
+// Get team context from event bus storage and load installation
+async function loadInstallationWithTeamContext(installationId: string): Promise<{ team: Team; installation: McpInstallation; userRole: 'team_admin' | 'team_user' } | null> {
   try {
-    // Get user's teams with role information
-    const userTeams = await TeamService.getUserTeams()
-
-    for (const team of userTeams) {
-      try {
-        const installation = await McpInstallationService.getInstallationById(team.id, installationId)
-        if (installation) {
-          // Get user's role in this specific team
-          const userRole = team.role || 'team_user' // Fallback to team_user if role not available
-          return { team, installation, userRole }
-        }
-      } catch {
-        // Continue to next team if not found
-        continue
-      }
+    // Get selected team from storage
+    const selectedTeamId = eventBus.getState<string>('selected_team_id')
+    
+    if (!selectedTeamId) {
+      console.warn('No team selected in storage')
+      return null
     }
 
-    return null
-  } catch {
+    // Get user's teams to find the selected team with role information
+    const userTeams = await TeamService.getUserTeams()
+    const selectedTeam = userTeams.find(team => team.id === selectedTeamId)
+    
+    if (!selectedTeam) {
+      console.warn('Selected team not found in user teams')
+      return null
+    }
+
+    // Load installation from the selected team
+    const installation = await McpInstallationService.getInstallationById(selectedTeam.id, installationId)
+    
+    if (!installation) {
+      return null
+    }
+
+    // Get user's role in this specific team
+    const userRole = selectedTeam.role || 'team_user' // Fallback to team_user if role not available
+    return { team: selectedTeam, installation, userRole }
+  } catch (error) {
+    console.error('Error loading installation with team context:', error)
     return null
   }
 }
@@ -57,7 +67,7 @@ async function findInstallationTeam(installationId: string): Promise<{ team: Tea
 onMounted(async () => {
   try {
     isLoading.value = true
-    const result = await findInstallationTeam(installationId)
+    const result = await loadInstallationWithTeamContext(installationId)
 
     if (result) {
       installation.value = result.installation
@@ -65,7 +75,7 @@ onMounted(async () => {
       userTeamRole.value = result.userRole
       error.value = null
     } else {
-      error.value = 'Installation not found or you do not have access to it'
+      error.value = 'Installation not found in the selected team or no team selected'
       installation.value = null
       currentTeam.value = null
       userTeamRole.value = null

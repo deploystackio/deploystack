@@ -9,14 +9,8 @@ export interface GatewayConfig {
 
 export interface TeamConfig {
   teamId: string;
-  servers: MCPServerConfig[];
-}
-
-export interface MCPServerConfig {
-  name: string;
-  command: string;
-  args: string[];
-  env?: Record<string, string>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  servers: any[]; // Use any[] to avoid conflicts with mcp.ts types
 }
 
 export interface AuthConfig {

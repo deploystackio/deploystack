@@ -2,9 +2,9 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import { toast } from 'vue-sonner'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { DsAlert } from '@/components/ui/ds-alert'
 import CategoryDisplay from '@/components/mcp-server/CategoryDisplay.vue'
 import { ArrowLeft, Github, ExternalLink, Star, Package, Code, Settings, Calendar, Tag, Trash2, AlertTriangle, Edit } from 'lucide-vue-next'
 import DashboardLayout from '@/components/DashboardLayout.vue'
@@ -38,7 +38,6 @@ const isLoading = ref(true)
 const isDeleting = ref(false)
 const error = ref<string | null>(null)
 const showDeleteDialog = ref(false)
-const showSuccessAlert = ref(false)
 
 const serverId = route.params.id as string
 
@@ -56,7 +55,7 @@ onMounted(async () => {
 
     // Check for success query parameter
     if (route.query.updated === 'true') {
-      showSuccessAlert.value = true
+      toast.success(t('mcpCatalog.messages.updateSuccess'))
       // Remove the query parameter from URL without triggering navigation
       router.replace({ query: {} })
     }
@@ -243,11 +242,6 @@ const handleEditServer = () => {
 const goBack = () => {
   router.push('/admin/mcp-server-catalog')
 }
-
-// Close success alert
-const closeSuccessAlert = () => {
-  showSuccessAlert.value = false
-}
 </script>
 
 <template>
@@ -284,15 +278,6 @@ const closeSuccessAlert = () => {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-
-      <DsAlert
-        v-if="showSuccessAlert"
-        variant="success"
-        title="Success!"
-        :description="t('mcpCatalog.messages.updateSuccess')"
-        dismissible
-        @dismiss="closeSuccessAlert"
-      />
 
       <!-- Loading State -->
       <div v-if="isLoading" class="text-muted-foreground">

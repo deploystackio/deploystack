@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
+import { toast } from 'vue-sonner'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft } from 'lucide-vue-next'
 import DashboardLayout from '@/components/DashboardLayout.vue'
@@ -107,11 +108,13 @@ const handleSubmit = async (formData: McpServerAddFormData) => {
     // Submit to API
     await McpCatalogService.createGlobalServer(requestData)
 
-    // Navigate back to catalog with success parameter
-    await router.push({
-      path: '/admin/mcp-server-catalog',
-      query: { created: 'true', serverName: formData.basic.name }
+    // Show success toast
+    toast.success(t('mcpCatalog.messages.createSuccess'), {
+      description: `${formData.basic.name} has been added to the catalog`
     })
+
+    // Navigate back to catalog without query parameters
+    await router.push('/admin/mcp-server-catalog')
 
   } catch (error) {
     // Re-throw error to let the wizard handle it

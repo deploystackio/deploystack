@@ -95,6 +95,7 @@ export class McpInstallationService {
         status: row.server.status,
         tags: this.parseJsonField(row.server.tags, []),
         environment_variables: this.parseJsonField(row.server.environment_variables, []),
+        installation_methods: this.parseJsonField(row.server.installation_methods, []),
         category_id: row.server.category_id
       } : undefined
     }));
