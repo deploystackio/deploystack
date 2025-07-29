@@ -2,6 +2,7 @@
 import { onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import { toast } from 'vue-sonner'
 import { ArrowLeft } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { useEventBus } from '@/composables/useEventBus'
@@ -22,13 +23,12 @@ const goBack = () => {
 // Handle wizard completion
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const handleWizardComplete = (installationData: any) => {
-  // console.log('Installation completed:', installationData)
-
   // Emit events for other components to update
   eventBus.emit('mcp-installations-updated')
-  eventBus.emit('notification-show', {
-    message: t('mcpInstallations.wizard.success.installed', { name: installationData.installation_name }),
-    type: 'success'
+  
+  // Show success toast
+  toast.success(t('mcpInstallations.wizard.success.installed', { name: installationData.installation_name }), {
+    description: t('mcpInstallations.notifications.installSuccess')
   })
 
   // Navigate back to main page

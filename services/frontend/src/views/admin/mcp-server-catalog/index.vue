@@ -2,6 +2,7 @@
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter, useRoute } from 'vue-router'
+import { toast } from 'vue-sonner'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-vue-next'
@@ -11,8 +12,6 @@ import { useEventBus } from '@/composables/useEventBus'
 import McpServerTableColumns from './McpServerTableColumns.vue'
 import PaginationControls from '@/components/ui/pagination/PaginationControls.vue'
 import type { McpServer, McpServerFilters } from './types'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { CheckCircle } from 'lucide-vue-next'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -24,7 +23,6 @@ const servers = ref<McpServer[]>([])
 const isLoading = ref(true)
 const error = ref<string | null>(null)
 const searchQuery = ref('')
-const successMessage = ref<string | null>(null)
 
 // Pagination state
 const currentPage = ref(1)
@@ -89,15 +87,19 @@ const handleToggleFeatured = async (serverId: string, featured: boolean) => {
       servers.value[index] = updatedServer
     }
 
-    // Show success message
-    successMessage.value = featured
+    // Show success toast
+    toast.success(featured
       ? t('mcpCatalog.messages.featureSuccess')
       : t('mcpCatalog.messages.unfeatureSuccess')
+    )
 
     // Emit global event
     eventBus.emit('mcp-catalog-updated')
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'Failed to update server'
+    toast.error(t('mcpCatalog.messages.updateError'), {
+      description: err instanceof Error ? err.message : 'Failed to update server'
+    })
   }
 }
 
@@ -141,7 +143,7 @@ const handlePageSizeChange = async (newPageSize: number) => {
 // Handle server creation success from add page
 const handleServerCreated = () => {
   fetchServers()
-  successMessage.value = t('mcpCatalog.messages.createSuccess')
+  toast.success(t('mcpCatalog.messages.createSuccess'))
 }
 
 // Load data on component mount
@@ -151,7 +153,7 @@ onMounted(async () => {
   // Check for delete success message from query parameters
   const deletedServerName = route.query.deleted as string
   if (deletedServerName) {
-    successMessage.value = t('mcpCatalog.messages.deleteSuccess')
+    toast.success(t('mcpCatalog.messages.deleteSuccess'))
 
     // Clean up the query parameter
     router.replace({ query: {} })
@@ -160,7 +162,7 @@ onMounted(async () => {
   // Check for create success message from query parameters
   const createdServer = route.query.created as string
   if (createdServer === 'true') {
-    successMessage.value = t('mcpCatalog.messages.createSuccess')
+    toast.success(t('mcpCatalog.messages.createSuccess'))
 
     // Clean up the query parameters
     router.replace({ query: {} })
@@ -198,12 +200,6 @@ onUnmounted(() => {
           {{ t('mcpCatalog.addButton') }}
         </Button>
       </div>
-
-      <!-- Success Message -->
-      <Alert v-if="successMessage" class="border-green-200 bg-green-50 text-green-800">
-        <CheckCircle class="h-4 w-4" />
-        <AlertDescription>{{ successMessage }}</AlertDescription>
-      </Alert>
 
       <!-- Loading State -->
       <div v-if="isLoading" class="text-muted-foreground">

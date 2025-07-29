@@ -163,7 +163,7 @@ describe('Teams Route', () => {
           schema: expect.objectContaining({
             tags: ['Teams'],
             summary: 'Get current user teams',
-            security: [{ cookieAuth: [] }],
+            security: [{ cookieAuth: [] }, { bearerAuth: [] }],
           }),
         }),
         expect.any(Function)
@@ -1100,7 +1100,7 @@ describe('Teams Route', () => {
       expect(options.schema).toBeDefined();
       expect(options.schema.tags).toEqual(['Teams']);
       expect(options.schema.summary).toBe('Get current user teams');
-      expect(options.schema.security).toEqual([{ cookieAuth: [] }]);
+      expect(options.schema.security).toEqual([{ cookieAuth: [] }, { bearerAuth: [] }]);
       expect(options.schema.response).toBeDefined();
       expect(options.schema.response[200]).toBeDefined();
       expect(options.schema.response[401]).toBeDefined();

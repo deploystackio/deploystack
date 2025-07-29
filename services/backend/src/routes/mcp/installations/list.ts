@@ -23,10 +23,15 @@ const installationSchema = z.object({
     name: z.string(),
     description: z.string(),
     github_url: z.string().nullable(),
+    homepage_url: z.string().nullable(),
+    author_name: z.string().nullable(),
+    language: z.string(),
     runtime: z.string(),
-    installation_methods: z.array(z.any()),
+    status: z.string(),
+    tags: z.array(z.any()),
     environment_variables: z.array(z.any()),
-    default_config: z.any().nullable()
+    installation_methods: z.array(z.any()),
+    category_id: z.string().nullable()
   }).optional()
 });
 

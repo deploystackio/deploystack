@@ -5,9 +5,7 @@ import { useRouter } from 'vue-router'
 import DashboardLayout from '@/components/DashboardLayout.vue'
 import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-vue-next'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { DsAlert } from '@/components/ui/ds-alert'
-import { CheckCircle } from 'lucide-vue-next'
+import { toast } from 'vue-sonner'
 import { useEventBus } from '@/composables/useEventBus'
 import McpInstallationsCard from '@/components/mcp-server/McpInstallationsCard.vue'
 import type { McpInstallation } from '@/types/mcp-installations'
@@ -22,8 +20,6 @@ const eventBus = useEventBus()
 const installations = ref<McpInstallation[]>([])
 const isLoading = ref(true)
 const error = ref<string | null>(null)
-const successMessage = ref<string | null>(null)
-const notificationMessage = ref<{ message: string; type: string } | null>(null)
 
 // Team context using event bus storage
 const selectedTeam = ref<Team | null>(null)
@@ -115,8 +111,8 @@ const handleRemoveInstallation = async (installationId: string) => {
     // Remove from local state (the actual API call is handled by the modal)
     installations.value = installations.value.filter(inst => inst.id !== installationId)
 
-    // Show success message
-    successMessage.value = t('mcpInstallations.removal.notifications.success')
+    // Show success toast
+    toast.success(t('mcpInstallations.notifications.removeSuccess'))
 
     // Clear any existing error
     error.value = null
@@ -124,7 +120,11 @@ const handleRemoveInstallation = async (installationId: string) => {
     // Emit event for other components
     eventBus.emit('mcp-installations-updated')
   } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Failed to remove installation'
+    const errorMessage = err instanceof Error ? err.message : 'Failed to remove installation'
+    error.value = errorMessage
+    toast.error(t('mcpInstallations.notifications.removeError'), {
+      description: errorMessage
+    })
   }
 }
 
@@ -135,17 +135,40 @@ const handleInstallationsUpdate = () => {
 }
 
 const handleNotificationShow = (data: { message: string; type: string }) => {
-  notificationMessage.value = data
+  // Convert event bus notifications to Sonner toasts
+  switch (data.type) {
+    case 'success':
+      toast.success(data.message)
+      break
+    case 'error':
+      toast.error(data.message)
+      break
+    case 'warning':
+      toast.warning(data.message)
+      break
+    default:
+      toast(data.message)
+  }
 }
 
 /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
 const handleStorageChange = (data: { key: string; oldValue: any; newValue: any }) => {
   // Check if it's a pending notification
   if (data.key === 'pending_notification' && data.newValue) {
-    // Display the notification
-    notificationMessage.value = {
-      message: data.newValue.message,
-      type: data.newValue.type
+    // Display the notification using Sonner
+    const notification = data.newValue
+    switch (notification.type) {
+      case 'success':
+        toast.success(notification.message)
+        break
+      case 'error':
+        toast.error(notification.message)
+        break
+      case 'warning':
+        toast.warning(notification.message)
+        break
+      default:
+        toast(notification.message)
     }
 
     // Clear the pending notification from storage
@@ -157,10 +180,19 @@ const checkForPendingNotification = () => {
   const pendingNotification = eventBus.getState<{ message: string; type: string; timestamp: number }>('pending_notification')
 
   if (pendingNotification && pendingNotification.message && pendingNotification.type) {
-    // Display the notification
-    notificationMessage.value = {
-      message: pendingNotification.message,
-      type: pendingNotification.type
+    // Display the notification using Sonner
+    switch (pendingNotification.type) {
+      case 'success':
+        toast.success(pendingNotification.message)
+        break
+      case 'error':
+        toast.error(pendingNotification.message)
+        break
+      case 'warning':
+        toast.warning(pendingNotification.message)
+        break
+      default:
+        toast(pendingNotification.message)
     }
 
     // Clear the pending notification from storage
@@ -168,15 +200,7 @@ const checkForPendingNotification = () => {
   }
 }
 
-const dismissNotification = () => {
-  notificationMessage.value = null
-}
 
-// Computed property for notification variant to avoid ESLint false positive
-const notificationVariant = computed(() => {
-  if (!notificationMessage.value) return 'default'
-  return notificationMessage.value.type as 'success' | 'error' | 'warning' | 'info' | 'default'
-})
 
 // Lifecycle
 onMounted(async () => {
@@ -231,20 +255,7 @@ onUnmounted(() => {
         </Button>
       </div>
 
-      <!-- Success Message (old alert style, keeping for compatibility) -->
-      <Alert v-if="successMessage" class="border-green-200 bg-green-50 text-green-800">
-        <CheckCircle class="h-4 w-4" />
-        <AlertDescription>{{ successMessage }}</AlertDescription>
-      </Alert>
 
-      <!-- Notification Alert (using DsAlert component) -->
-      <DsAlert
-        v-if="notificationMessage"
-        :variant="notificationVariant"
-        :description="notificationMessage.message"
-        dismissible
-        @dismiss="dismissNotification"
-      />
 
       <!-- No team selected state -->
       <div v-if="!selectedTeam" class="text-center py-12">

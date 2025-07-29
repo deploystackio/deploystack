@@ -4,13 +4,17 @@ import { join } from 'path';
 import { homedir } from 'os';
 import { createCipheriv, createDecipheriv, randomBytes } from 'crypto';
 import { StoredCredentials, AuthError, AuthenticationError } from '../../types/auth';
+import { TeamMCPConfig } from '../../types/mcp';
 
 export class CredentialStorage {
   private readonly serviceName = 'deploystack-gateway';
+  private readonly mcpServiceName = 'deploystack-gateway-mcp';
   private readonly fallbackDir = join(homedir(), '.deploystack');
   private readonly fallbackFile = join(this.fallbackDir, 'credentials.enc');
+  private readonly mcpFallbackFile = join(this.fallbackDir, 'mcp-config.enc');
   private readonly accountsFile = join(this.fallbackDir, 'accounts.json');
   private readonly encryptionKey = 'deploystack-gateway-key';
+  private readonly mcpEncryptionKey = 'deploystack-mcp-key';
 
   /**
    * Store credentials securely using OS keychain with encrypted file fallback
@@ -329,6 +333,209 @@ export class CredentialStorage {
     try {
       if (existsSync(this.fallbackFile)) {
         unlinkSync(this.fallbackFile);
+      }
+    } catch {
+      // Ignore errors when clearing
+    }
+  }
+
+  // ===== MCP Configuration Management =====
+
+  /**
+   * Store MCP configuration securely for a team
+   * @param config Team MCP configuration to store
+   */
+  async storeMCPConfig(config: TeamMCPConfig): Promise<void> {
+    const credentials = await this.getCredentials();
+    if (!credentials) {
+      throw new AuthenticationError(
+        AuthError.STORAGE_ERROR,
+        'No authentication found - cannot store MCP config'
+      );
+    }
+
+    const mcpKey = `${credentials.userEmail}-${config.team_id}`;
+    let keychainError: Error | null = null;
+    
+    try {
+      // Try OS keychain first
+      await keyring.setPassword(
+        this.mcpServiceName,
+        mcpKey,
+        JSON.stringify(config)
+      );
+      
+      console.log('✓ MCP config stored in OS keychain');
+      return; // Success, no need for fallback
+    } catch (error) {
+      keychainError = error as Error;
+      console.log('⚠ MCP keychain storage failed, trying encrypted file fallback...');
+    }
+
+    // Fallback to encrypted file storage
+    try {
+      await this.storeMCPEncrypted(config);
+      console.log('✓ MCP config stored in encrypted file');
+    } catch (fallbackError) {
+      console.error('❌ Both MCP keychain and file storage failed:');
+      console.error('Keychain error:', keychainError?.message);
+      console.error('File error:', (fallbackError as Error)?.message);
+      throw new AuthenticationError(
+        AuthError.STORAGE_ERROR,
+        'Failed to store MCP configuration securely',
+        fallbackError as Error
+      );
+    }
+  }
+
+  /**
+   * Retrieve MCP configuration for a team
+   * @param teamId Team ID to get config for
+   * @returns Team MCP configuration or null if not found
+   */
+  async getMCPConfig(teamId?: string): Promise<TeamMCPConfig | null> {
+    const credentials = await this.getCredentials();
+    if (!credentials) {
+      return null;
+    }
+
+    // If no teamId provided, use selected team
+    const targetTeamId = teamId || credentials.selectedTeam?.id;
+    if (!targetTeamId) {
+      return null;
+    }
+
+    const mcpKey = `${credentials.userEmail}-${targetTeamId}`;
+
+    // First try encrypted file (more reliable for single-user scenario)
+    try {
+      const encryptedConfig = await this.retrieveMCPEncrypted(targetTeamId);
+      if (encryptedConfig) {
+        return encryptedConfig;
+      }
+    } catch {
+      // Continue to keychain fallback
+    }
+
+    // Fallback to keychain
+    try {
+      const stored = await keyring.getPassword(this.mcpServiceName, mcpKey);
+      if (stored) {
+        return JSON.parse(stored);
+      }
+    } catch {
+      // Continue to return null
+    }
+
+    return null;
+  }
+
+  /**
+   * Clear MCP configuration for a team
+   * @param teamId Team ID to clear config for
+   */
+  async clearMCPConfig(teamId?: string): Promise<void> {
+    const credentials = await this.getCredentials();
+    if (!credentials) {
+      return;
+    }
+
+    const targetTeamId = teamId || credentials.selectedTeam?.id;
+    if (!targetTeamId) {
+      return;
+    }
+
+    const mcpKey = `${credentials.userEmail}-${targetTeamId}`;
+
+    // Clear from keychain
+    try {
+      await keyring.deletePassword(this.mcpServiceName, mcpKey);
+    } catch {
+      // Continue to clear encrypted file even if keychain fails
+    }
+
+    // Clear encrypted file
+    await this.clearMCPEncrypted();
+  }
+
+  /**
+   * Store MCP config in encrypted file as fallback
+   * @param config MCP configuration to store
+   */
+  private async storeMCPEncrypted(config: TeamMCPConfig): Promise<void> {
+    try {
+      // Ensure directory exists
+      const { mkdirSync } = await import('fs');
+      try {
+        mkdirSync(this.fallbackDir, { recursive: true });
+      } catch {
+        // Directory might already exist
+      }
+
+      // Encrypt and store
+      const iv = randomBytes(16);
+      const cipher = createCipheriv('aes-256-cbc', Buffer.from(this.mcpEncryptionKey.padEnd(32, '0').slice(0, 32)), iv);
+      let encrypted = cipher.update(JSON.stringify(config), 'utf8', 'hex');
+      encrypted += cipher.final('hex');
+      const encryptedData = iv.toString('hex') + ':' + encrypted;
+
+      writeFileSync(this.mcpFallbackFile, encryptedData, { mode: 0o600 });
+    } catch (error) {
+      throw new AuthenticationError(
+        AuthError.STORAGE_ERROR,
+        'Failed to store MCP config in encrypted file',
+        error as Error
+      );
+    }
+  }
+
+  /**
+   * Retrieve MCP config from encrypted file
+   * @param teamId Team ID to retrieve config for
+   * @returns MCP configuration or null
+   */
+  private async retrieveMCPEncrypted(teamId: string): Promise<TeamMCPConfig | null> {
+    try {
+      if (!existsSync(this.mcpFallbackFile)) {
+        return null;
+      }
+
+      const encryptedData = readFileSync(this.mcpFallbackFile, 'utf8');
+      const parts = encryptedData.split(':');
+      if (parts.length !== 2) throw new Error('Invalid encrypted data format');
+      
+      const iv = Buffer.from(parts[0], 'hex');
+      const encrypted = parts[1];
+      const decipher = createDecipheriv('aes-256-cbc', Buffer.from(this.mcpEncryptionKey.padEnd(32, '0').slice(0, 32)), iv);
+      let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+      decrypted += decipher.final('utf8');
+
+      const config = JSON.parse(decrypted) as TeamMCPConfig;
+      
+      // Verify this config is for the requested team
+      if (config.team_id === teamId) {
+        return config;
+      }
+      
+      return null;
+    } catch {
+      // If we can't decrypt, the file might be corrupted
+      try {
+        unlinkSync(this.mcpFallbackFile);
+      } catch {
+        // Ignore unlink errors
+      }
+      return null;
+    }
+  }
+
+  /**
+   * Clear MCP encrypted file
+   */
+  private async clearMCPEncrypted(): Promise<void> {
+    try {
+      if (existsSync(this.mcpFallbackFile)) {
+        unlinkSync(this.mcpFallbackFile);
       }
     } catch {
       // Ignore errors when clearing

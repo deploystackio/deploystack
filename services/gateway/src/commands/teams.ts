@@ -2,7 +2,9 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import { CredentialStorage } from '../core/auth/storage';
 import { DeployStackAPI } from '../core/auth/api-client';
+import { MCPConfigService } from '../core/mcp';
 import { TableFormatter } from '../utils/table';
+import { ToolDiscoveryManager } from '../utils/tool-discovery-manager';
 import { AuthenticationError } from '../types/auth';
 
 export function registerTeamsCommand(program: Command) {
@@ -50,9 +52,35 @@ export function registerTeamsCommand(program: Command) {
           
           const teamToSwitch = teams[teamNumber - 1]; // Convert to 0-based index
           
-          await storage.updateSelectedTeam(teamToSwitch.id, teamToSwitch.name);
-          console.log(chalk.green(`✅ Switched to team: ${chalk.cyan(teamToSwitch.name)} (#${teamNumber})`));
-          console.log(chalk.gray(`🌐 Using backend: ${backendUrl}`));
+          try {
+            // Update selected team
+            await storage.updateSelectedTeam(teamToSwitch.id, teamToSwitch.name);
+            
+            // Switch MCP configuration
+            const mcpService = new MCPConfigService();
+            const mcpConfig = await mcpService.switchTeamMCPConfig(teamToSwitch.id, teamToSwitch.name, api);
+            
+            console.log(chalk.green(`✅ Switched to team: ${chalk.cyan(teamToSwitch.name)} (#${teamNumber})`));
+            console.log(chalk.green('✅ MCP server configurations updated'));
+            
+            // Automatically discover and cache tools from all MCP servers
+            const toolDiscoveryManager = new ToolDiscoveryManager();
+            await toolDiscoveryManager.discoverTeamTools(mcpConfig, {
+              showProgress: true,
+              showSpinner: true,
+              continueOnError: true
+            });
+            
+            console.log(chalk.gray(`🌐 Using backend: ${backendUrl}`));
+          } catch (mcpError) {
+            // Team switch succeeded but MCP config failed - still show success but warn about MCP
+            console.log(chalk.green(`✅ Switched to team: ${chalk.cyan(teamToSwitch.name)} (#${teamNumber})`));
+            console.log(chalk.yellow('⚠️  Could not download MCP configurations for new team'));
+            if (mcpError instanceof Error) {
+              console.log(chalk.gray(`   MCP Error: ${mcpError.message}`));
+            }
+            console.log(chalk.gray(`🌐 Using backend: ${backendUrl}`));
+          }
           return;
         }
 
@@ -140,6 +168,21 @@ export function registerTeamsCommand(program: Command) {
         if (teamsWithMemberCount.length > 0) {
           const totalMembers = teamsWithMemberCount.reduce((sum, team) => sum + (team.member_count || 0), 0);
           console.log(chalk.gray(`📊 Total team members across all teams: ${totalMembers}`));
+        }
+        
+        // Show MCP configuration status for selected team
+        if (selectedTeam) {
+          try {
+            const mcpService = new MCPConfigService();
+            const mcpSummary = await mcpService.getMCPConfigSummary(selectedTeam.id);
+            if (mcpSummary) {
+              console.log(chalk.gray(`🤖 MCP servers configured: ${mcpSummary.serverCount} server${mcpSummary.serverCount === 1 ? '' : 's'}`));
+            } else {
+              console.log(chalk.gray('🤖 No MCP servers configured for selected team'));
+            }
+          } catch {
+            // Silently ignore MCP status errors
+          }
         }
 
       } catch (error) {

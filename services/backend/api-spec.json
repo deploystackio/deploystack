@@ -16771,10 +16771,36 @@
                                     }
                                   ]
                                 },
+                                "homepage_url": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "author_name": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "language": {
+                                  "type": "string"
+                                },
                                 "runtime": {
                                   "type": "string"
                                 },
-                                "installation_methods": {
+                                "status": {
+                                  "type": "string"
+                                },
+                                "tags": {
                                   "type": "array",
                                   "items": {}
                                 },
@@ -16782,9 +16808,15 @@
                                   "type": "array",
                                   "items": {}
                                 },
-                                "default_config": {
+                                "installation_methods": {
+                                  "type": "array",
+                                  "items": {}
+                                },
+                                "category_id": {
                                   "anyOf": [
-                                    {},
+                                    {
+                                      "type": "string"
+                                    },
                                     {
                                       "type": "null"
                                     }
@@ -16796,10 +16828,15 @@
                                 "name",
                                 "description",
                                 "github_url",
+                                "homepage_url",
+                                "author_name",
+                                "language",
                                 "runtime",
-                                "installation_methods",
+                                "status",
+                                "tags",
                                 "environment_variables",
-                                "default_config"
+                                "installation_methods",
+                                "category_id"
                               ],
                               "additionalProperties": false
                             }

@@ -5,7 +5,7 @@ import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import { Button } from '@/components/ui/button'
 import { ProgressBars } from '@/components/ui/progress-bars'
-import { Alert, AlertDescription } from '@/components/ui/alert'
+import { toast } from 'vue-sonner'
 import { Server, Settings, Cloud, Loader2 } from 'lucide-vue-next'
 import { McpInstallationService } from '@/services/mcpInstallationService'
 import { TeamService } from '@/services/teamService'
@@ -108,7 +108,7 @@ const handleStepClick = (step: any, index: number) => {
 // State
 const currentStep = ref(0)
 const isSubmitting = ref(false)
-const submitError = ref<string | null>(null)
+
 const environmentValidation = ref({
   isValid: true,
   missingFields: [] as string[]
@@ -166,6 +166,17 @@ const nextStep = () => {
   // Mark environment step as touched when user tries to proceed from it
   if (currentStep.value === 1) {
     environmentStepTouched.value = true
+    
+    // Check validation before proceeding
+    if (!environmentValidation.value.isValid) {
+      // Show error toast for missing required fields
+      if (environmentValidation.value.missingFields.length > 0) {
+        toast.error(t('mcpInstallations.wizard.environment.missingRequiredFields'), {
+          description: environmentValidation.value.missingFields.join(', ')
+        })
+      }
+      return
+    }
   }
 
   if (canGoNext.value) {
@@ -223,7 +234,9 @@ const initializeTeamContext = async () => {
     }
   } catch (error) {
     console.error('Error initializing team context:', error)
-    submitError.value = 'Failed to initialize team context. Please refresh the page.'
+    toast.error('Failed to initialize team context', {
+      description: 'Please refresh the page and try again.'
+    })
   }
 }
 
@@ -231,7 +244,6 @@ const initializeTeamContext = async () => {
 const submitInstallation = async () => {
   try {
     isSubmitting.value = true
-    submitError.value = null
 
     // Ensure we have a team ID
     if (!currentTeamId.value) {
@@ -259,7 +271,10 @@ const submitInstallation = async () => {
     }
 
   } catch (error) {
-    submitError.value = error instanceof Error ? error.message : 'Failed to submit installation'
+    const errorMessage = error instanceof Error ? error.message : 'Failed to submit installation'
+    toast.error(t('mcpInstallations.notifications.installError', { error: errorMessage }), {
+      description: t('mcpInstallations.wizard.environment.helpText')
+    })
   } finally {
     isSubmitting.value = false
   }
@@ -326,7 +341,9 @@ const handleQueryParameters = async () => {
       }
     } catch (error) {
       console.error('Error loading server from query parameters:', error)
-      submitError.value = 'Failed to load the selected server. Please try again.'
+      toast.error(t('mcpInstallations.wizard.server.errorTitle'), {
+        description: 'Failed to load the specified server. Please try again.'
+      })
     }
   }
 }
@@ -346,7 +363,7 @@ onMounted(async () => {
       environment: { user_environment_variables: {} },
       platform: { installation_type: 'local' }
     }
-    submitError.value = null
+
   })
 })
 </script>
@@ -363,19 +380,7 @@ onMounted(async () => {
       @step-click="handleStepClick"
     />
 
-    <!-- Error Message -->
-    <Alert v-if="submitError" variant="destructive">
-      <AlertDescription>
-        {{ submitError }}
-      </AlertDescription>
-    </Alert>
 
-    <!-- Validation Error for Environment Variables (only show after user tries to proceed) -->
-    <Alert v-if="currentStep === 1 && environmentStepTouched && !environmentValidation.isValid && environmentValidation.missingFields.length > 0" variant="destructive">
-      <AlertDescription>
-        {{ t('mcpInstallations.wizard.environment.missingRequiredFields') }}: {{ environmentValidation.missingFields.join(', ') }}
-      </AlertDescription>
-    </Alert>
 
     <!-- Step Content -->
     <div>
