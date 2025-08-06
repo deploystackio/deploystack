@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.22.0 (2025-07-29)
+
+* Implement session management and SSE handling ([cb58e53](https://github.com/deploystackio/deploystack/commit/cb58e538b8b6927e30c175ed979708aa89170c5c))
+
 ## <small>0.21.1 (2025-07-27)</small>
 
 * remove scoped commit implementation documentation ([8311fc8](https://github.com/deploystackio/deploystack/commit/8311fc89c5c7c6ca4944c0f7040275e00d5170b9))
