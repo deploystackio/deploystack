@@ -66,6 +66,33 @@ function generateSchema(): AnySchema {
   return generatedSchema;
 }
 
+/**
+ * Split SQL content into individual statements for Turso compatibility
+ */
+function splitSQLStatements(sqlContent: string): string[] {
+  // First split by the statement breakpoint marker
+  const sections = sqlContent.split('--> statement-breakpoint');
+  const statements: string[] = [];
+  
+  for (const section of sections) {
+    const trimmed = section.trim();
+    if (!trimmed) continue;
+    
+    // Further split by semicolons to ensure each statement is separate
+    // This handles cases where multiple statements aren't separated by breakpoints
+    const subStatements = trimmed.split(';');
+    
+    for (const subStatement of subStatements) {
+      const cleanStatement = subStatement.trim();
+      if (cleanStatement) {
+        // Add semicolon back if it was removed by split
+        statements.push(cleanStatement + ';');
+      }
+    }
+  }
+  
+  return statements;
+}
 
 /**
  * Create database instance based on configuration
@@ -200,18 +227,8 @@ async function applyMigrations(db: AnyDatabase, config: DatabaseConfig, logger: 
       // SQLite uses the better-sqlite3 client
       (db as any).$client.exec(createTableQuery);
     } else if (config.type === 'turso') {
-      // Turso uses libSQL client - try different approaches
-      if ((db as any).$client && typeof (db as any).$client.execute === 'function') {
-        // Use execute method for libSQL
-        await (db as any).$client.execute(createTableQuery);
-      } else if ((db as any).$client && typeof (db as any).$client.prepare === 'function') {
-        // Use prepare/run for libSQL
-        const prepared = (db as any).$client.prepare(createTableQuery);
-        await prepared.run();
-      } else {
-        // Fallback: use Drizzle's run method
-        await db.run(createTableQuery);
-      }
+      // Turso uses libSQL client - execute single statement
+      await (db as any).$client.execute(createTableQuery.trim());
     }
     
     if (!isTestMode()) {
@@ -240,18 +257,8 @@ async function applyMigrations(db: AnyDatabase, config: DatabaseConfig, logger: 
       appliedMigrations = (db as any).$client.prepare(selectAppliedQuery).all();
     } else if (config.type === 'turso') {
       // Turso uses libSQL client
-      if ((db as any).$client && typeof (db as any).$client.execute === 'function') {
-        const result = await (db as any).$client.execute(selectAppliedQuery);
-        appliedMigrations = result.rows || [];
-      } else if ((db as any).$client && typeof (db as any).$client.prepare === 'function') {
-        const prepared = (db as any).$client.prepare(selectAppliedQuery);
-        const result = await prepared.all();
-        appliedMigrations = result || [];
-      } else {
-        // Fallback: use Drizzle's all method
-        const result = await db.all(selectAppliedQuery);
-        appliedMigrations = result || [];
-      }
+      const result = await (db as any).$client.execute(selectAppliedQuery);
+      appliedMigrations = result.rows || [];
     }
     
     if (!isTestMode()) {
@@ -294,27 +301,58 @@ async function applyMigrations(db: AnyDatabase, config: DatabaseConfig, logger: 
       }
       const migrationFilePath = path.join(migrationsPath, file);
       const sqlContent = await fs.readFile(migrationFilePath, 'utf8');
-      const statements = sqlContent.split('--> statement-breakpoint');
+      
+      // Use improved statement splitting for Turso
+      const statements = config.type === 'turso' 
+        ? splitSQLStatements(sqlContent)
+        : sqlContent.split('--> statement-breakpoint');
 
       try {
+        let statementCount = 0;
         for (const statement of statements) {
           const trimmedStatement = statement.trim();
           if (trimmedStatement) {
+            statementCount++;
             if (config.type === 'sqlite') {
               (db as any).$client.exec(trimmedStatement);
             } else if (config.type === 'turso') {
-              // Turso uses libSQL client
-              if ((db as any).$client && typeof (db as any).$client.execute === 'function') {
+              // Log each statement for debugging
+              if (!isTestMode()) {
+                logger.debug({
+                  operation: 'apply_migrations',
+                  migrationFile: file,
+                  statementNumber: statementCount,
+                  statementPreview: trimmedStatement.substring(0, 100) + (trimmedStatement.length > 100 ? '...' : ''),
+                  databaseType: config.type
+                }, `Executing statement ${statementCount}`);
+              }
+              
+              // Turso - execute each statement individually
+              try {
                 await (db as any).$client.execute(trimmedStatement);
-              } else if ((db as any).$client && typeof (db as any).$client.prepare === 'function') {
-                const prepared = (db as any).$client.prepare(trimmedStatement);
-                await prepared.run();
-              } else {
-                // Fallback: use Drizzle's run method
-                await db.run(trimmedStatement);
+              } catch (stmtError: any) {
+                logger.error({
+                  operation: 'apply_migrations',
+                  migrationFile: file,
+                  statementNumber: statementCount,
+                  statement: trimmedStatement,
+                  databaseType: config.type,
+                  error: stmtError,
+                  errorMessage: stmtError.message
+                }, `Failed to execute statement ${statementCount}`);
+                throw stmtError;
               }
             }
           }
+        }
+        
+        if (!isTestMode()) {
+          logger.info({
+            operation: 'apply_migrations',
+            migrationFile: file,
+            statementCount,
+            databaseType: config.type
+          }, `Successfully executed ${statementCount} statements from migration`);
         }
         
         // Record the migration as applied
@@ -322,16 +360,11 @@ async function applyMigrations(db: AnyDatabase, config: DatabaseConfig, logger: 
         if (config.type === 'sqlite') {
           (db as any).$client.prepare(insertMigrationQuery).run(file);
         } else if (config.type === 'turso') {
-          // Turso uses libSQL client
-          if ((db as any).$client && typeof (db as any).$client.execute === 'function') {
-            await (db as any).$client.execute(insertMigrationQuery, [file]);
-          } else if ((db as any).$client && typeof (db as any).$client.prepare === 'function') {
-            const prepared = (db as any).$client.prepare(insertMigrationQuery);
-            await prepared.run([file]);
-          } else {
-            // Fallback: use Drizzle's run method
-            await db.run(insertMigrationQuery, [file]);
-          }
+          // Turso uses libSQL client with parameterized query
+          await (db as any).$client.execute({
+            sql: insertMigrationQuery,
+            args: [file]
+          });
         }
         
         if (!isTestMode()) {
