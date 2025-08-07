@@ -135,7 +135,7 @@ const returnToDashboard = () => {
       <div class="text-center mb-8">
         <img
           class="mx-auto h-16 w-auto mb-6"
-          src="/deploystack-logo-74x80.webp"
+          src="/deploystack-logo-80x80.png"
           alt="DeployStack Logo"
         />
         <h1 class="text-2xl font-bold text-gray-900">
