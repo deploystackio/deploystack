@@ -71,6 +71,7 @@ services/backend/tests/e2e/test-data/*.db
 ._*.yml
 ._*.yaml
 ._*.css
+._*.ico
 cookies.txt
 cookiejar.txt
 cookie.txt
