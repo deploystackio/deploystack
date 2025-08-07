@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.0 (2025-08-07)
+
+* Implement session management and SSE handling ([cb58e53](https://github.com/deploystackio/deploystack/commit/cb58e538b8b6927e30c175ed979708aa89170c5c))
+
 ## <small>0.0.2 (2025-07-27)</small>
 
 * update README links for better formatting ([ba15434](https://github.com/deploystackio/deploystack/commit/ba15434bd65f371d9ad39576a56a923a9040f74e))
