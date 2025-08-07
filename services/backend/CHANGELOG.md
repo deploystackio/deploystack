@@ -1,5 +1,9 @@
 # Changelog
 
+## <small>0.28.2 (2025-08-07)</small>
+
+* enhance SQL statement handling for Turso compatibility ([98fe23e](https://github.com/deploystackio/deploystack/commit/98fe23ef374d03c9a1724be815e43ae543ea8521))
+
 ## <small>0.28.1 (2025-08-07)</small>
 
 * remove scoped commit implementation documentation ([8311fc8](https://github.com/deploystackio/deploystack/commit/8311fc89c5c7c6ca4944c0f7040275e00d5170b9))
