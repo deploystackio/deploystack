@@ -1,5 +1,44 @@
 # Changelog
 
+## <small>0.28.1 (2025-08-07)</small>
+
+* remove scoped commit implementation documentation ([8311fc8](https://github.com/deploystackio/deploystack/commit/8311fc89c5c7c6ca4944c0f7040275e00d5170b9))
+* add paths for backend catalog and dereferenced data ([9af5c3e](https://github.com/deploystackio/deploystack/commit/9af5c3e0ec37f85d671ea2c2bbc1b096779b0940))
+* release v0.28.0 ([55eed57](https://github.com/deploystackio/deploystack/commit/55eed57cfdee0fb073ebb6ec20c609857a049072))
+* Implement session management and SSE handling ([cb58e53](https://github.com/deploystackio/deploystack/commit/cb58e538b8b6927e30c175ed979708aa89170c5c))
+* implement scoped commit message guidelines and templates ([a6839b8](https://github.com/deploystackio/deploystack/commit/a6839b880248a35a213cfb44f19ec29c0b9553cc))
+* update README with new links and SVG assets ([704799c](https://github.com/deploystackio/deploystack/commit/704799c34ef1d67824b5a1911d14ae148b0f4b15))
+* add OAuth2 UserInfo endpoint for user information retrieval ([0493bec](https://github.com/deploystackio/deploystack/commit/0493becac71e16909912e262e90c403a5bbac5ed))
+* add response type validation in OAuth2 authorization ([f8b82b1](https://github.com/deploystackio/deploystack/commit/f8b82b1237356d86af1c890a4bb50fcb1e6cc0bd))
+* add userinfo route and extend token expiration to 1 week ([2660d2e](https://github.com/deploystackio/deploystack/commit/2660d2e8a2f83ece50ac045c59d862e84519ddac))
+* enhance API documentation for authentication methods ([237b590](https://github.com/deploystackio/deploystack/commit/237b59003041e4f6e1a1b8b69a5077786b504f9b))
+* enhance API spec with health check and consent details ([56282e9](https://github.com/deploystackio/deploystack/commit/56282e988ecd8a3ec8aab1aa17d51365ed9e4449))
+* Implement OAuth2 consent flow with detailed consent management ([a9ae782](https://github.com/deploystackio/deploystack/commit/a9ae7823ff27129f1a5bee54baba2f3bba678998))
+* skip OAuth scope validation for cookie-based authentication ([5ffa12c](https://github.com/deploystackio/deploystack/commit/5ffa12cc415e610ae67eb773a44d931b2e3e9d03))
+* update cloud credential tests for GCP provider ([666ce2d](https://github.com/deploystackio/deploystack/commit/666ce2d6123077c3a9f5d023d1f8f9134768d0d4))
+* update README links for better formatting ([ba15434](https://github.com/deploystackio/deploystack/commit/ba15434bd65f371d9ad39576a56a923a9040f74e))
+* remove unnecessary whitespace in registerRoutes function ([1c6dd17](https://github.com/deploystackio/deploystack/commit/1c6dd17dfc9663bfc648e54cc24e698b8a43b2bb))
+* simplify token handling in TokenService ([16f177b](https://github.com/deploystackio/deploystack/commit/16f177bf41234554595e7352808e2f87ab9a0d09))
+
+## 0.28.0 (2025-08-07)
+
+* remove scoped commit implementation documentation ([8311fc8](https://github.com/deploystackio/deploystack/commit/8311fc89c5c7c6ca4944c0f7040275e00d5170b9))
+* add paths for backend catalog and dereferenced data ([9af5c3e](https://github.com/deploystackio/deploystack/commit/9af5c3e0ec37f85d671ea2c2bbc1b096779b0940))
+* Implement session management and SSE handling ([cb58e53](https://github.com/deploystackio/deploystack/commit/cb58e538b8b6927e30c175ed979708aa89170c5c))
+* implement scoped commit message guidelines and templates ([a6839b8](https://github.com/deploystackio/deploystack/commit/a6839b880248a35a213cfb44f19ec29c0b9553cc))
+* update README with new links and SVG assets ([704799c](https://github.com/deploystackio/deploystack/commit/704799c34ef1d67824b5a1911d14ae148b0f4b15))
+* add OAuth2 UserInfo endpoint for user information retrieval ([0493bec](https://github.com/deploystackio/deploystack/commit/0493becac71e16909912e262e90c403a5bbac5ed))
+* add response type validation in OAuth2 authorization ([f8b82b1](https://github.com/deploystackio/deploystack/commit/f8b82b1237356d86af1c890a4bb50fcb1e6cc0bd))
+* add userinfo route and extend token expiration to 1 week ([2660d2e](https://github.com/deploystackio/deploystack/commit/2660d2e8a2f83ece50ac045c59d862e84519ddac))
+* enhance API documentation for authentication methods ([237b590](https://github.com/deploystackio/deploystack/commit/237b59003041e4f6e1a1b8b69a5077786b504f9b))
+* enhance API spec with health check and consent details ([56282e9](https://github.com/deploystackio/deploystack/commit/56282e988ecd8a3ec8aab1aa17d51365ed9e4449))
+* Implement OAuth2 consent flow with detailed consent management ([a9ae782](https://github.com/deploystackio/deploystack/commit/a9ae7823ff27129f1a5bee54baba2f3bba678998))
+* skip OAuth scope validation for cookie-based authentication ([5ffa12c](https://github.com/deploystackio/deploystack/commit/5ffa12cc415e610ae67eb773a44d931b2e3e9d03))
+* update cloud credential tests for GCP provider ([666ce2d](https://github.com/deploystackio/deploystack/commit/666ce2d6123077c3a9f5d023d1f8f9134768d0d4))
+* update README links for better formatting ([ba15434](https://github.com/deploystackio/deploystack/commit/ba15434bd65f371d9ad39576a56a923a9040f74e))
+* remove unnecessary whitespace in registerRoutes function ([1c6dd17](https://github.com/deploystackio/deploystack/commit/1c6dd17dfc9663bfc648e54cc24e698b8a43b2bb))
+* simplify token handling in TokenService ([16f177b](https://github.com/deploystackio/deploystack/commit/16f177bf41234554595e7352808e2f87ab9a0d09))
+
 ## <small>0.27.1 (2025-07-26)</small>
 
 * bump @libsql/client from 0.15.9 to 0.15.10 ([908efef](https://github.com/deploystackio/deploystack/commit/908efefe920ad03cd859e17c9df9a2e52493e99b))
