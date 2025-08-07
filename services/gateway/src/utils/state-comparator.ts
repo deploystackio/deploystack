@@ -103,7 +103,6 @@ export class StateComparator {
     };
 
     // Calculate healthy processes
-    const totalProblems = summary.missing + summary.failed + summary.unhealthy;
     const runningHealthy = runningProcesses.filter(p => 
       p.status === 'running' && 
       p.healthStatus !== 'unhealthy' &&
@@ -292,6 +291,7 @@ export class StateComparator {
       
       serverDetails.push({
         name: expectedServer.installation_name,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         status: serverHealth.status as any,
         runtime: expectedServer.runtime,
         uptime: serverHealth.process ? Date.now() - serverHealth.process.startTime : undefined,
@@ -306,6 +306,7 @@ export class StateComparator {
     const extraProcesses = this.getExtraProcesses(expectedServers, teamId);
     for (const extra of extraProcesses) {
       if (extra.actual) {
+         
         serverDetails.push({
           name: extra.actual.installationName,
           status: 'extra',

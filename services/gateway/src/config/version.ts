@@ -104,6 +104,7 @@ export const checkForUpdates = async (timeout: number = 5000, debug: boolean = f
     const data = await response.json() as {
       name?: string;
       'dist-tags': { latest: string };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       versions: { [key: string]: any };
       description?: string;
       time?: { modified: string };
@@ -259,7 +260,7 @@ export const displayVersionInfo = async (skipUpdateCheck: boolean = false, debug
       } else {
         console.log(chalk.green('✅ You are running the latest version'));
       }
-    } catch (error) {
+    } catch {
       console.log(chalk.gray('ℹ️  Could not check for updates'));
     }
   }

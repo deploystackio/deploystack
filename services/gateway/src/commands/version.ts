@@ -15,6 +15,7 @@ export function registerVersionCommand(program: Command) {
           // JSON output for programmatic use
           const versionInfo = getGatewayVersion();
           
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           let output: any = {
             version: versionInfo.version,
             buildTime: versionInfo.buildTime,
@@ -35,7 +36,7 @@ export function registerVersionCommand(program: Command) {
                 isUpdateAvailable: updateCheck.isUpdateAvailable,
                 updateMessage: updateCheck.updateMessage
               };
-            } catch (error) {
+            } catch {
               output.updateCheck = {
                 error: 'Failed to check for updates'
               };

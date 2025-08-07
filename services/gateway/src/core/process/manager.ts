@@ -195,7 +195,7 @@ export class ProcessManager extends EventEmitter {
               console.log(chalk.yellow(`   ⚠️  Force stopped ${processInfo.config.installation_name}`));
             }
           }
-        } catch (forceError) {
+        } catch {
           if (showProgress) {
             console.error(chalk.red(`   ❌ Failed to force stop ${processInfo.config.installation_name}`));
           }

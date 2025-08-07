@@ -7,7 +7,6 @@ import os from 'os';
 import { CredentialStorage } from '../core/auth/storage';
 import { DeployStackAPI } from '../core/auth/api-client';
 import { MCPConfigService } from '../core/mcp';
-import { ToolDiscoveryManager } from '../utils/tool-discovery-manager';
 import { TableFormatter } from '../utils/table';
 import { AuthenticationError } from '../types/auth';
 
@@ -101,6 +100,7 @@ export function registerMCPCommand(program: Command) {
           console.log(chalk.blue('🔗 Communicating with running MCP server...\n'));
 
           // NEW: Communicate with already-running MCP server via HTTP
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           let tools: any[] = [];
 
           try {
@@ -131,7 +131,8 @@ export function registerMCPCommand(program: Command) {
             colWidths: [3, 25, 40, 30]
           });
 
-          tools.forEach((tool: any, index: number) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            tools.forEach((tool: any, index: number) => {
             // Format parameters
             const requiredParams = tool.inputSchema.required || [];
             const allParams = Object.keys(tool.inputSchema.properties || {});
@@ -150,13 +151,15 @@ export function registerMCPCommand(program: Command) {
           console.log(table.toString());
 
           // Show parameter details for tools with parameters
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const toolsWithParams = tools.filter((tool: any) => 
             tool.inputSchema.properties && Object.keys(tool.inputSchema.properties).length > 0
           );
 
           if (toolsWithParams.length > 0) {
             console.log(chalk.blue('\n📋 Parameter Details:'));
-            
+
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             toolsWithParams.forEach((tool: any) => {
               console.log(chalk.yellow(`\n${tool.name}:`));
               
@@ -357,8 +360,9 @@ function isGatewayRunning(): boolean {
 /**
  * Fetch tools from running gateway server via HTTP
  */
-async function fetchToolsFromRunningGateway(serverName: string): Promise<any[]> {
-  const fetch = (await import('node-fetch')).default;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function fetchToolsFromRunningGateway(_serverName: string): Promise<any[]> {
+  // const fetch = (await import('node-fetch')).default; // Unused variable
   
   try {
     // Note: The /mcp endpoint has been removed. This function would need to be updated

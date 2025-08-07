@@ -90,8 +90,26 @@ export class AuthorizationService {
     const { db, schema } = this.getDbAndSchema();
     
     try {
+      // Clean up any expired or pending authorization requests for this user/client combo
+      // This helps prevent accumulation of unused records
+      const now = new Date();
+      await (db as any)
+        .delete(schema.oauthAuthorizationCodes)
+        .where(
+          and(
+            eq(schema.oauthAuthorizationCodes.user_id, userId),
+            eq(schema.oauthAuthorizationCodes.client_id, clientId),
+            // Delete if expired OR if it's a pending request (starts with 'pending_')
+            lt(schema.oauthAuthorizationCodes.expires_at, now)
+          )
+        );
+      
       const requestId = generateId(32);
       const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+      
+      // Generate a unique placeholder code for pending authorization
+      // This prevents UNIQUE constraint violations when multiple auth requests are made
+      const placeholderCode = `pending_${generateId(32)}`;
       
       // Store authorization request (temporary, for consent page)
       const authRequest = {
@@ -103,7 +121,7 @@ export class AuthorizationService {
         state,
         code_challenge: codeChallenge,
         code_challenge_method: codeChallengeMethod,
-        code: '', // Will be filled when user approves
+        code: placeholderCode,
         used: false,
         expires_at: expiresAt,
       };
@@ -253,6 +271,15 @@ export class AuthorizationService {
     const { db, schema } = this.getDbAndSchema();
     
     try {
+      // Reject placeholder codes immediately
+      if (code.startsWith('pending_')) {
+        logger?.warn({
+          operation: 'verify_authorization_code',
+          error: 'Attempted to verify placeholder code',
+        }, 'Invalid authorization code - placeholder code submitted');
+        return null;
+      }
+      
       // Find authorization code
       const result = await (db as any)
         .select()

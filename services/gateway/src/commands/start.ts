@@ -5,7 +5,6 @@ import { CredentialStorage } from '../core/auth/storage';
 import { MCPConfigService } from '../core/mcp';
 import { RuntimeState } from '../core/process/runtime-state';
 import { ProcessManager } from '../core/process/manager';
-import { TeamContextManager } from '../core/mcp/team-context-manager';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
@@ -90,7 +89,7 @@ async function startDaemon(port: number, host: string): Promise<void> {
     console.log(chalk.gray(`   Messages: http://${host}:${port}/message`));
     console.log(chalk.gray('   Use "deploystack status" to check status'));
     console.log(chalk.gray('   Use "deploystack stop" to stop the server'));
-  } catch (error) {
+  } catch {
     removePidFile();
     console.error(chalk.red('❌ Failed to start daemon process'));
     console.error(chalk.red('Error:'), 'Process died during startup');
@@ -112,7 +111,6 @@ async function startServer(port: number, host: string, foreground: boolean): Pro
   const mcpConfigService = new MCPConfigService();
   const runtimeState = new RuntimeState();
   const processManager = new ProcessManager();
-  const teamContextManager = new TeamContextManager(runtimeState, processManager, mcpConfigService);
   
   // Create proxy server with shared instances for runtime state integration
   const server = new ProxyServer(processManager, mcpConfigService, credentialStorage);

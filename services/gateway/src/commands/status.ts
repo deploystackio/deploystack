@@ -1,8 +1,6 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 import Table from 'cli-table3';
-import { CredentialStorage } from '../core/auth/storage';
-import { MCPConfigService } from '../core/mcp';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
@@ -128,8 +126,9 @@ async function fetchServerStatus(): Promise<any> {
 /**
  * Display status in human-readable format
  */
+ 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function displayStatus(status: any, verbose: boolean, compare: boolean = false): Promise<void> {
+async function displayStatus(status: any, verbose: boolean, _compare: boolean = false): Promise<void> {
   console.log(chalk.bold('\n📊 DeployStack Gateway Status\n'));
 
   // Gateway status
