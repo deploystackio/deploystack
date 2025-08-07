@@ -1,5 +1,10 @@
 # Changelog
 
+## <small>0.28.3 (2025-08-07)</small>
+
+* release v0.28.2 ([d2c1945](https://github.com/deploystackio/deploystack/commit/d2c19455bf76a85bcb2e2a75215c3b53330b76f7))
+* enhance SQL statement handling for Turso compatibility ([98fe23e](https://github.com/deploystackio/deploystack/commit/98fe23ef374d03c9a1724be815e43ae543ea8521))
+
 ## <small>0.28.2 (2025-08-07)</small>
 
 * enhance SQL statement handling for Turso compatibility ([98fe23e](https://github.com/deploystackio/deploystack/commit/98fe23ef374d03c9a1724be815e43ae543ea8521))
