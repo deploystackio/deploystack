@@ -174,7 +174,7 @@ onMounted(() => {
     <div class="sm:mx-auto sm:w-full sm:max-w-sm">
       <img
         class="mx-auto h-20 w-auto"
-        src="/deploystack-logo-74x80.webp"
+        src="/deploystack-logo-80x80.png"
         alt="DeployStack Logo"
       />
       <h2 class="mt-10 text-center text-2xl font-bold tracking-tight text-gray-900">
