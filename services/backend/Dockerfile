@@ -16,8 +16,8 @@ COPY services/backend/dist ./dist
 RUN mkdir -p /shared/public/img/
 COPY services/shared/public/img/favicon.ico /shared/public/img/
 
-# Create data directory for SQLite database
-RUN mkdir -p /app/data
+# Create persistent_data directory structure
+RUN mkdir -p /app/persistent_data
 
 # Create a default .env file
 RUN echo "NODE_ENV=production" > .env && \

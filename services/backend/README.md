@@ -15,13 +15,21 @@ A modular and extensible backend API for the DeployStack CI/CD platform, built w
 - **Logging**: Comprehensive request logging with request IDs and timing
 - **Developer-friendly**: Pretty logging in development, production-ready in production
 
-## 🚀 Run
+## 🚀 Quick Start with Docker
 
 ```bash
+# Run with Docker (using docker-compose recommended)
+docker-compose up -d
+
+# Or run standalone with volume for data persistence
 docker run -it -p 3000:3000 \
-  -e FOO=bar22 \
-  -v $(pwd)/data:/app/data \
+  -e NODE_ENV=production \
+  -e DEPLOYSTACK_ENCRYPTION_SECRET=your-32-character-secret-key-here \
+  -v deploystack_data:/app/persistent_data \
   deploystack/backend:latest
+
+# Access the setup wizard at http://localhost:3000
+# (or http://localhost:8080 if using the full docker-compose stack)
 ```
 
 ## 📋 Prerequisites
@@ -31,9 +39,11 @@ docker run -it -p 3000:3000 \
 
 ## 🛠️ Installation
 
+### Development Setup
+
 ```bash
 # Clone the repository
-git clone https://github.com/deploystack/deploystack.git
+git clone https://github.com/deploystackio/deploystack.git
 cd deploystack
 
 # Navigate to backend directory
@@ -41,9 +51,31 @@ cd services/backend
 
 # Install dependencies
 npm install
+
+# Create .env file (see Environment Variables section)
+cp .env.example .env  # Or create manually
+
+# Start development server
+npm run dev
+
+# Access at http://localhost:3000
+```
+
+### Production Setup with Docker
+
+```bash
+# Using Docker Compose (recommended)
+git clone https://github.com/deploystackio/deploystack.git
+cd deploystack
+docker-compose up -d
+
+# Access frontend at http://localhost:8080
+# Backend API at http://localhost:3000
 ```
 
 ## 🚀 Usage
+
+### Development Commands
 
 ```bash
 # Run in development mode (with live reloading)
@@ -57,94 +89,73 @@ npm run start
 
 # Lint and fix TypeScript files
 npm run lint
+
+# Database migrations
+npm run db:generate  # Generate new migrations
+npm run db:up        # Apply migrations
+
+# API documentation
+npm run api:spec      # Generate OpenAPI spec
 ```
 
-## 🧱 Project Structure
+### Initial Setup
 
-```bash
-services/backend/
-├── src/
-│   ├── api/            # API route handlers
-│   ├── db/             # Database configuration and schema
-│   │   ├── config.ts   # Database connection setup
-│   │   ├── index.ts    # Database exports
-│   │   ├── migrations.ts # Migration management
-│   │   └── schema.ts   # Database schema definitions
-│   ├── email/          # Email system (NEW)
-│   │   ├── templates/  # Pug email templates
-│   │   │   ├── layouts/    # Base layout components
-│   │   │   │   ├── base.pug    # Main email layout
-│   │   │   │   ├── header.pug  # Email header
-│   │   │   │   └── footer.pug  # Email footer
-│   │   │   ├── welcome.pug     # Welcome email template
-│   │   │   ├── password-reset.pug # Password reset template
-│   │   │   └── notification.pug   # General notification template
-│   │   ├── emailService.ts     # Main email service
-│   │   ├── templateRenderer.ts # Pug template renderer
-│   │   ├── types.ts           # Email type definitions
-│   │   ├── example.ts         # Usage examples
-│   │   └── index.ts           # Email module exports
-│   ├── fastify/        # Fastify configuration
-│   │   ├── config/     # Fastify setup
-│   │   ├── hooks/      # Request/response hooks
-│   │   └── plugins/    # Fastify plugins
-│   ├── global-settings/ # Global configuration system
-│   │   ├── github-oauth.ts # GitHub OAuth settings
-│   │   ├── smtp.ts     # SMTP email settings
-│   │   ├── types.ts    # Global settings types
-│   │   └── index.ts    # Settings initialization
-│   ├── hooks/          # Authentication hooks
-│   ├── lib/            # External library integrations
-│   │   └── lucia.ts    # Lucia authentication setup
-│   ├── middleware/     # Request middleware
-│   ├── plugin-system/  # Plugin architecture
-│   ├── plugins/        # Available plugins
-│   ├── routes/         # API route definitions
-│   │   ├── auth/       # Authentication routes
-│   │   ├── db/         # Database management routes
-│   │   ├── globalSettings/ # Settings management routes
-│   │   ├── roles/      # Role management routes
-│   │   └── users/      # User management routes
-│   ├── services/       # Business logic services
-│   │   ├── globalSettingsService.ts # Settings service
-│   │   ├── roleService.ts           # Role management
-│   │   ├── teamService.ts           # Team management
-│   │   └── userService.ts           # User management
-│   ├── types/          # TypeScript type definitions
-│   ├── utils/          # Utility functions
-│   │   ├── banner.ts   # Startup banner
-│   │   └── encryption.ts # Encryption utilities
-│   ├── server.ts       # Server configuration
-│   └── index.ts        # Application entry point
-├── drizzle/            # Database migrations
-├── persistent_data/    # Persistent application data
-├── tests/              # Test files
-├── .env                # Environment variables (not in version control)
-├── DB.md               # Database documentation
-├── GLOBAL_SETTINGS.md  # Global settings documentation
-├── Mail.md             # Email system documentation (NEW)
-├── PLUGINS.md          # Plugin system documentation
-├── ROLES.md            # Role management documentation
-├── SECURITY.md         # Security documentation
-├── package.json        # Package dependencies and scripts
-└── tsconfig.json       # TypeScript configuration
-```
+1. **First Run**: Navigate to `/setup` in your browser
+2. **Choose Database**: Select SQLite (default) or Turso
+3. **Create Admin**: Set up your administrator account
+4. **Configure Settings**: Access Global Settings to configure email, features, etc.
 
 ## 💾 Persistent Data
 
-The `services/backend/persistent_data/` directory is designated for storing all data that needs to persist across application restarts or deployments.
+All persistent data is stored in the `persistent_data/` directory, which maintains the same structure across development and production environments.
 
-**Purpose:**
+### Directory Structure
 
-- To provide a single, consistent location for all persistent backend data.
-- When developing backend features that require data persistence (e.g., database files, configuration files that should not be in version control but are generated/modified at runtime), use this directory exclusively.
+```
+persistent_data/
+├── database/
+│   └── deploystack.db     # SQLite database (if using SQLite)
+└── db.selection.json       # Database type configuration
+```
 
-**Examples of data stored here:**
+### Environment-Specific Locations
 
-- SQLite database file (e.g., `persistent_data/database/deploystack.db`)
-- Database selection configuration (e.g., `persistent_data/db.selection.json`)
+**Development (Local):**
+- Location: `services/backend/persistent_data/`
+- Created automatically when running `npm run dev`
+- Direct file system access
 
-This ensures that persistent data is managed in a predictable way and is not scattered across the project.
+**Production (Docker):**
+- Location: `/app/persistent_data/` (inside container)
+- Mounted as Docker volume: `deploystack_backend_persistent`
+- Persists data between container restarts
+
+### Backup Strategies
+
+**Docker Volume Backup:**
+```bash
+# Create backup
+docker run --rm -v deploystack_backend_persistent:/data \
+  -v $(pwd):/backup alpine \
+  tar czf /backup/deploystack-backup-$(date +%Y%m%d).tar.gz /data
+
+# Restore backup
+docker run --rm -v deploystack_backend_persistent:/data \
+  -v $(pwd):/backup alpine \
+  tar xzf /backup/deploystack-backup-20250108.tar.gz -C /
+```
+
+**Local Development Backup:**
+```bash
+# Create backup
+tar czf deploystack-backup-$(date +%Y%m%d).tar.gz \
+  services/backend/persistent_data/
+
+# Restore backup
+tar xzf deploystack-backup-20250108.tar.gz
+```
+
+**Important:** Always backup the entire `persistent_data/` directory/volume, not just the database file, as it contains critical configuration.
 
 ## 📧 Email System
 
@@ -192,6 +203,7 @@ NODE_ENV=development
 PORT=3000
 HOST=localhost
 LOG_LEVEL=info
+DEPLOYSTACK_FRONTEND_URL=http://localhost:5173  # Frontend URL for CORS and redirects
 DEPLOYSTACK_ENCRYPTION_SECRET=your-32-character-secret-key-here  # Required for global settings encryption
 ```
 

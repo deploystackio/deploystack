@@ -1,230 +1,136 @@
 # DeployStack Frontend
 
-The frontend application is built with Vue 3, TypeScript, and Vite.
+The DeployStack frontend is a modern Vue 3 application built with TypeScript and Vite, providing a seamless UI for managing MCP (Model Context Protocol) tools and configurations.
+
+## 🚀 Quick Start
+
+### Development
 
 ```bash
 # Navigate to frontend directory
 cd services/frontend
 
+# Install dependencies
+npm install
+
+# Copy environment template
+cp .env .env.local
+
 # Run development server
 npm run dev
+```
 
+The application will be available at `http://localhost:5173`
+
+### Production Build
+
+```bash
 # Build for production
 npm run build
+
+# Preview production build locally
+npm run preview
 ```
 
-## 🚀 Run
+### Docker
 
 ```bash
-docker run -it -p 80:80 \
-  -e FOO=bar22 \
-  -e VITE_API_URL="kaczory" \
-  deploystack/frontend:v0.10.0
+# Run with Docker
+docker run -it -p 8080:80 \
+  -e VITE_DEPLOYSTACK_BACKEND_URL="https://api.deploystack.io" \
+  -e VITE_APP_TITLE="DeployStack Production" \
+  deploystack/frontend:latest
 ```
 
-## UI
+## 🎨 Tech Stack
 
-Frontend is using TailwindCSS and [shadcn-vue](https://www.shadcn-vue.com/).
+- **Framework**: Vue 3 with Composition API
+- **Language**: TypeScript
+- **Build Tool**: Vite
+- **Styling**: TailwindCSS + [shadcn-vue](https://www.shadcn-vue.com/)
+- **State Management**: Pinia
+- **Router**: Vue Router
+- **Icons**: Lucide Icons
+- **Internationalization**: Vue I18n
 
-To install components please use:
+## 🎨 UI Components
+
+The frontend uses TailwindCSS and [shadcn-vue](https://www.shadcn-vue.com/) for consistent, accessible components.
+
+### Installing New Components
 
 ```bash
+# Add a new shadcn-vue component
 npx shadcn-vue@latest add button
+
+# Add multiple components
+npx shadcn-vue@latest add dialog card input
 ```
+
+### Available Components
+
+Check `components/ui/` for all available shadcn-vue components. Common ones include:
+- Button, Card, Dialog, Input, Label
+- Select, Switch, Tabs, Toast
+- Table, Form, Alert, Badge
 
 ## Icons
 
 The project uses [Lucide Icons](https://lucide.dev/) via the `lucide-vue-next` package.
 
-### How to use icons
+## 🔧 Environment Variables
 
-1. Import the specific icons you need:
+The frontend uses a dual-layer environment system that works seamlessly across development and production.
 
-```typescript
-import { Mail, Lock, User, Settings } from 'lucide-vue-next'
-```
+### Core Variables
 
-2. Use them in your template:
+| Variable | Description | Default | Required |
+|----------|-------------|---------|----------|
+| `VITE_DEPLOYSTACK_BACKEND_URL` | Backend API URL | `http://localhost:3000` | Yes |
+| `VITE_APP_TITLE` | Application title | `DeployStack` | Yes |
 
-```html
-<Mail class="h-4 w-4 text-gray-500" />
-<Lock class="h-4 w-4 text-gray-500" />
-```
-
-3. You can customize icons with classes:
-
-```html
-<!-- Change size -->
-<Settings class="h-6 w-6" />
-
-<!-- Change color -->
-<User class="text-indigo-600" />
-
-<!-- Position absolutely -->
-<Mail class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
-```
-
-## Environment Variables
-
-The frontend application supports environment variables in both development and production Docker environments.
-
-### Development Environment
-
-For local development, create a `.env` file in the `services/frontend` directory:
+### Development Setup
 
 ```bash
-VITE_API_URL=http://localhost:3000
-VITE_APP_TITLE=DeployStack (Dev)
+# Create local environment file (gitignored)
+cp .env .env.local
+
+# Edit .env.local with your settings
+vim .env.local
 ```
 
-Vite will automatically load these variables when you run `npm run dev`.
+**Environment file priority** (highest to lowest):
+1. `.env.local` (personal settings, gitignored)
+2. `.env.development.local`
+3. `.env.development`
+4. `.env` (base configuration)
 
-### Production (Docker) Environment
-
-In Docker production environment, you can pass environment variables using the `-e` flag:
+### Production (Docker)
 
 ```bash
-docker run -it -p 80:80 \
-  -e VITE_API_URL="https://api.example.com" \
-  -e VITE_APP_TITLE="DeployStack (Prod)" \
-  -e FOO="custom value" \
+# Pass environment variables at runtime
+docker run -d -p 8080:80 \
+  -e VITE_DEPLOYSTACK_BACKEND_URL="https://api.deploystack.io" \
+  -e VITE_APP_TITLE="DeployStack" \
   deploystack/frontend:latest
 ```
 
-### Accessing Environment Variables in Components
+## 📚 Documentation
 
-Use the `getEnv` utility function to access environment variables consistently across all environments:
+- [Frontend Development Guide](https://docs.deploystack.io/development/frontend)
+- [Environment Variables](https://docs.deploystack.io/development/frontend/environment-variables)
+- [API Documentation](https://docs.deploystack.io/api)
+- [Deployment Guide](https://docs.deploystack.io/self-hosted/docker-compose)
 
-```typescript
-import { getEnv } from '@/utils/env';
+## 🤝 Contributing
 
-// In your component:
-const apiUrl = getEnv('VITE_API_URL');
-const appTitle = getEnv('VITE_APP_TITLE');
-const foo = getEnv('FOO');
-```
+We welcome contributions! Please:
 
-### Adding New Environment Variables
+1. Follow the existing code style
+2. Write tests for new features
+3. Update documentation as needed
+4. Create detailed pull requests
 
-1. **Add type definitions** in `env.d.ts`:
+## 📝 License
 
-```typescript
-interface ImportMetaEnv {
-  readonly VITE_API_URL: string
-  readonly VITE_NEW_VARIABLE: string
-  // add more variables here
-}
-
-interface Window {
-  RUNTIME_ENV?: {
-    VITE_API_URL?: string
-    VITE_NEW_VARIABLE?: string
-    // match the variables above
-    FOO?: string
-    // add any non-VITE variables here
-  }
-}
-```
-
-2. **For non-VITE variables** in Docker, update `env-config.sh` to include the variable name:
-
-```bash
-# Add specific non-VITE_ variables you want to expose
-for var in FOO BAR NEW_VARIABLE; do
-  # ...
-done
-```
-
-3. **Use the variable** in your component with `getEnv('VARIABLE_NAME')`.
-
-This approach provides a consistent way to access environment variables across all environments.
-
-## Internationalization (i18n)
-
-The project uses Vue I18n for internationalization with a modular file structure to organize translations by feature.
-
-### Directory Structure
-
-```bash
-src/
-├── i18n/
-│   ├── index.ts               // Main i18n initialization
-│   └── locales/
-│       └── en/                // English translations
-│           ├── index.ts       // Exports all English translations
-│           ├── common.ts      // Common translations
-│           ├── login.ts       // Login page specific translations
-│           └── register.ts    // Register page specific translations
-```
-
-### Using i18n in Components
-
-1. In the script section:
-
-```typescript
-import { useI18n } from 'vue-i18n'
-
-// Inside setup function or script setup
-const { t } = useI18n()
-
-// Use in JavaScript
-const message = t('login.title')
-```
-
-2. In the template section:
-
-```html
-<!-- Simple translation -->
-<h1>{{ $t('login.title') }}</h1>
-
-<!-- With parameters -->
-<p>{{ $t('validation.required', { field: $t('login.form.email.label') }) }}</p>
-
-<!-- In attributes -->
-<Input :placeholder="$t('login.form.email.placeholder')" />
-```
-
-### Adding New Translations
-
-1. For a new feature or page:
-
-```typescript
-// Create a new file: src/i18n/locales/en/feature-name.ts
-export default {
-  title: 'Feature Title',
-  description: 'Feature description',
-  // other translations...
-}
-
-// Add to src/i18n/locales/en/index.ts
-import featureName from './feature-name'
-
-export default {
-  ...common,
-  login,
-  register,
-  featureName
-}
-```
-
-2. For a new language (e.g., German):
-
-```typescript
-// Create a folder structure similar to 'en' but with translated content
-// src/i18n/locales/de/index.ts, common.ts, login.ts, etc.
-
-// Update src/i18n/index.ts to include the new language
-import { createI18n } from 'vue-i18n'
-import en from './locales/en'
-import de from './locales/de'
-
-const i18n = createI18n({
-  legacy: false,
-  locale: 'en', // default language
-  fallbackLocale: 'en',
-  messages: {
-    en,
-    de
-  }
-})
-```
+Copyright (c) 2024 DeployStack. All rights reserved.
