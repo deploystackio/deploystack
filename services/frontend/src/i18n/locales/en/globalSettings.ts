@@ -2,10 +2,28 @@ export default {
   globalSettings: {
     title: 'Global Settings',
     description: 'Manage global application settings',
+    loading: 'Loading settings...',
+    errors: {
+      loadSettings: 'Error loading settings',
+      saveSettings: 'Failed to save settings',
+      configNotSet: 'VITE_DEPLOYSTACK_BACKEND_URL is not configured.',
+      savingConfigNotSet: 'VITE_DEPLOYSTACK_BACKEND_URL is not configured for saving settings.',
+      fetchFailed: 'Failed to fetch setting groups',
+      saveFailed: 'Failed to save settings due to an API error.',
+      unknownError: 'An unknown error occurred'
+    },
     alerts: {
       successTitle: "Success!",
       saveSuccess: "Your settings have been saved successfully.",
       noChanges: "No changes detected. Settings are up to date."
+    },
+    form: {
+      saveChanges: 'Save Changes',
+      encryptedValue: 'This value is encrypted.',
+      noSettings: 'No settings in this group.',
+      groupNotFound: 'Group not found or settings unavailable.',
+      selectCategory: 'Select a category from the sidebar to view its settings.',
+      noGroups: 'No setting groups found.'
     }
   },
   githubApp: {

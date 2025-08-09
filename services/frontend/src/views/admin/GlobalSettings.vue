@@ -2,12 +2,12 @@
 import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import { toast } from 'vue-sonner'
 import { useEventBus } from '@/composables/useEventBus'
 import GlobalSettingsSidebarNav, { type GlobalSettingGroup } from '@/components/settings/GlobalSettingsSidebarNav.vue'
 import DashboardLayout from '@/components/DashboardLayout.vue'
 import { getEnv } from '@/utils/env'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { CheckCircle2Icon, XIcon } from 'lucide-vue-next'
+
 import {
   Card,
   CardContent,
@@ -23,21 +23,20 @@ const route = useRoute()
 const settingGroups = ref<GlobalSettingGroup[]>([])
 const isLoading = ref(true)
 const error = ref<string | null>(null)
-const showSuccessAlert = ref(false)
-const successAlertMessage = ref('')
+
 
 const apiUrl = getEnv('VITE_DEPLOYSTACK_BACKEND_URL') || '' // Fallback to empty string if not set
 
 // Placeholder for the actual API call
 async function fetchSettingGroupsApi(): Promise<GlobalSettingGroup[]> {
   if (!apiUrl) {
-    throw new Error('VITE_DEPLOYSTACK_BACKEND_URL is not configured.')
+    throw new Error(t('globalSettings.errors.configNotSet'))
   }
   const response = await fetch(`${apiUrl}/api/settings/groups`, { credentials: 'include' })
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}))
-    throw new Error(errorData.message || `Failed to fetch setting groups: ${response.statusText} (status: ${response.status})`)
+    throw new Error(errorData.message || `${t('globalSettings.errors.fetchFailed')}: ${response.statusText} (status: ${response.status})`)
   }
 
   const result = await response.json()
@@ -62,7 +61,7 @@ onMounted(async () => {
     settingGroups.value = fetchedGroups // Direct assignment is fine now
     error.value = null
   } catch (err) {
-    error.value = err instanceof Error ? err.message : 'An unknown error occurred'
+    error.value = err instanceof Error ? err.message : t('globalSettings.errors.unknownError')
     settingGroups.value = [] // Clear or set to empty on error
   } finally {
     isLoading.value = false
@@ -108,9 +107,10 @@ function handleSettingsUpdated(updatedSettings: Setting[]) {
     settingGroups.value = newSettingGroups
   }
 
-  // Show success message
-  successAlertMessage.value = t('globalSettings.alerts.saveSuccess')
-  showSuccessAlert.value = true
+  // Show success message with Sonner toast
+  toast.success(t('globalSettings.alerts.successTitle'), {
+    description: t('globalSettings.alerts.saveSuccess')
+  })
 
   // Emit event for other components
   eventBus.emit('settings-updated')
@@ -161,10 +161,7 @@ function createInitialValues(settings: Setting[]) {
   return values
 }
 
-// Watch for route changes and reset success alert
-watch(() => route.params.groupId, () => {
-  showSuccessAlert.value = false
-})
+
 
 // Watch for group changes and set form values
 watch(() => selectedGroup.value, (newGroup) => {
@@ -206,7 +203,7 @@ async function handleSubmit(event: Event) {
 
   try {
     if (!apiUrl) {
-      throw new Error('VITE_DEPLOYSTACK_BACKEND_URL is not configured for saving settings.')
+      throw new Error(t('globalSettings.errors.savingConfigNotSet'))
     }
 
     const requestBody = { settings: settingsToUpdate }
@@ -222,7 +219,7 @@ async function handleSubmit(event: Event) {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))
-      throw new Error(errorData.error || errorData.message || `Failed to save settings: ${response.statusText} (status: ${response.status})`)
+      throw new Error(errorData.error || errorData.message || `${t('globalSettings.errors.saveSettings')}: ${response.statusText} (status: ${response.status})`)
     }
 
 
@@ -230,10 +227,13 @@ async function handleSubmit(event: Event) {
     const result = await response.json()
 
     if (!result.success) {
-      throw new Error(result.message || 'Failed to save settings due to an API error.')
+      throw new Error(result.message || t('globalSettings.errors.saveFailed'))
     }
-    successAlertMessage.value = t('globalSettings.alerts.saveSuccess')
-    showSuccessAlert.value = true
+    
+    // Show success message with Sonner toast
+    toast.success(t('globalSettings.alerts.successTitle'), {
+      description: t('globalSettings.alerts.saveSuccess')
+    })
 
     // Update local state
     const groupIndex = settingGroups.value.findIndex(g => g.id === selectedGroup.value?.id)
@@ -253,8 +253,15 @@ async function handleSubmit(event: Event) {
       settingGroups.value = newSettingGroups
     }
 
+    // Emit event for other components
+    eventBus.emit('settings-updated')
+
   } catch (err) {
-    // Handle save error silently or show user-friendly error message
+    // Show error toast with meaningful message
+    const errorMessage = err instanceof Error ? err.message : t('globalSettings.errors.unknownError')
+    toast.error(t('globalSettings.errors.saveSettings'), {
+      description: errorMessage
+    })
     console.error('Failed to save settings:', err)
   }
 }
@@ -271,25 +278,8 @@ async function handleSubmit(event: Event) {
         </aside>
         <div class="flex-1 lg:max-w-3xl">
 
-          <Alert v-if="showSuccessAlert" variant="default" class="mb-8 border-green-500 bg-green-50 text-green-700 relative">
-            <CheckCircle2Icon class="h-5 w-5 text-green-600" />
-            <AlertTitle class="font-semibold text-green-800">{{ t('globalSettings.alerts.successTitle') }}</AlertTitle>
-            <AlertDescription>
-              {{ successAlertMessage }}
-            </AlertDescription>
-            <Button
-              variant="ghost"
-              size="sm"
-              class="absolute top-2 right-2 p-1 h-auto text-green-700 hover:bg-green-100"
-              @click="showSuccessAlert = false"
-              aria-label="Dismiss success alert"
-            >
-              <XIcon class="h-4 w-4" />
-            </Button>
-          </Alert>
-
-          <div v-if="isLoading" class="text-muted-foreground">Loading settings...</div>
-          <div v-else-if="error" class="text-red-500">Error loading settings: {{ error }}</div>
+          <div v-if="isLoading" class="text-muted-foreground">{{ t('globalSettings.loading') }}</div>
+          <div v-else-if="error" class="text-red-500">{{ t('globalSettings.errors.loadSettings') }}: {{ error }}</div>
 
 
           <div v-else-if="selectedGroup" class="space-y-6">
@@ -348,18 +338,18 @@ async function handleSubmit(event: Event) {
                       />
                     </div>
 
-                    <p v-if="setting.is_encrypted" class="text-xs text-muted-foreground">This value is encrypted.</p>
+                    <p v-if="setting.is_encrypted" class="text-xs text-muted-foreground">{{ t('globalSettings.form.encryptedValue') }}</p>
                   </div>
 
                   <Button type="submit">
-                    Save Changes
+                    {{ t('globalSettings.form.saveChanges') }}
                   </Button>
                 </form>
                 <div v-else-if="selectedGroup && (!selectedGroup.settings || selectedGroup.settings.length === 0)">
-                  <p class="text-sm text-muted-foreground">No settings in this group.</p>
+                  <p class="text-sm text-muted-foreground">{{ t('globalSettings.form.noSettings') }}</p>
                 </div>
                 <div v-else>
-                  <p class="text-sm text-muted-foreground">Group not found or settings unavailable.</p>
+                  <p class="text-sm text-muted-foreground">{{ t('globalSettings.form.groupNotFound') }}</p>
                 </div>
               </CardContent>
             </Card>
@@ -367,10 +357,10 @@ async function handleSubmit(event: Event) {
 
 
           <div v-else-if="!currentGroupId && settingGroups.length > 0">
-            <p class="text-muted-foreground">Select a category from the sidebar to view its settings.</p>
+            <p class="text-muted-foreground">{{ t('globalSettings.form.selectCategory') }}</p>
           </div>
           <div v-else-if="!currentGroupId && settingGroups.length === 0 && !isLoading">
-              <p class="text-muted-foreground">No setting groups found.</p>
+              <p class="text-muted-foreground">{{ t('globalSettings.form.noGroups') }}</p>
           </div>
         </div>
       </div>
