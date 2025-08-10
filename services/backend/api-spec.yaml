@@ -13073,6 +13073,144 @@ paths:
                     - error_description
                   additionalProperties: false
                 components: {}
+  /api/admin/email/test:
+    post:
+      summary: Send test email
+      tags:
+        - Admin Email
+      description: "Sends a test email to verify SMTP configuration. Only global
+        administrators can access this endpoint. Requires Content-Type:
+        application/json header when sending request body."
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+              required:
+                - email
+              additionalProperties: false
+        required: true
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                schema:
+                  description: Test email sent successfully
+                  type: object
+                  properties:
+                    success:
+                      description: Indicates if the test email was sent successfully
+                      type: boolean
+                    message:
+                      description: Success message
+                      type: string
+                    messageId:
+                      description: Email message ID from SMTP server
+                      type: string
+                    recipients:
+                      description: List of email recipients
+                      type: array
+                      items:
+                        type: string
+                  required:
+                    - success
+                    - message
+                    - recipients
+                  additionalProperties: false
+                components: {}
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                schema:
+                  description: Bad Request - Invalid email address or validation error
+                  type: object
+                  properties:
+                    success:
+                      description: Indicates the operation failed
+                      default: false
+                      type: boolean
+                    error:
+                      description: Error message describing what went wrong
+                      type: string
+                  required:
+                    - success
+                    - error
+                  additionalProperties: false
+                components: {}
+        "401":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                schema:
+                  description: Unauthorized - Authentication required
+                  type: object
+                  properties:
+                    success:
+                      description: Indicates the operation failed
+                      default: false
+                      type: boolean
+                    error:
+                      description: Error message describing what went wrong
+                      type: string
+                  required:
+                    - success
+                    - error
+                  additionalProperties: false
+                components: {}
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                schema:
+                  description: Forbidden - Insufficient permissions (requires email.test
+                    permission)
+                  type: object
+                  properties:
+                    success:
+                      description: Indicates the operation failed
+                      default: false
+                      type: boolean
+                    error:
+                      description: Error message describing what went wrong
+                      type: string
+                  required:
+                    - success
+                    - error
+                  additionalProperties: false
+                components: {}
+        "500":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                schema:
+                  description: Internal Server Error - SMTP configuration or email sending failed
+                  type: object
+                  properties:
+                    success:
+                      description: Indicates the operation failed
+                      default: false
+                      type: boolean
+                    error:
+                      description: Error message describing what went wrong
+                      type: string
+                  required:
+                    - success
+                    - error
+                  additionalProperties: false
+                components: {}
   /api/auth/email/register:
     post:
       summary: User registration via email
