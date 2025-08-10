@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { UserService } from '@/services/userService'
-import { CheckCircle, AlertCircle, Loader2 } from 'lucide-vue-next'
+import { CheckCircle, AlertCircle } from 'lucide-vue-next'
 import type { User } from '@/views/admin/users/types'
 
 interface Props {
@@ -130,11 +130,12 @@ const clearMessages = () => {
           <AlertDialogTrigger as-child>
             <Button
               variant="outline"
-              :disabled="!canResetPassword || isLoading"
+              :disabled="!canResetPassword"
+              :loading="isLoading"
+              :loading-text="t('adminUsers.userDetail.actions.forceResetPassword')"
               :title="!canResetPassword ? t('adminUsers.userDetail.actions.resetPasswordDisabled') : undefined"
               class="justify-start"
             >
-              <Loader2 v-if="isLoading" class="h-4 w-4 mr-2 animate-spin" />
               {{ t('adminUsers.userDetail.actions.forceResetPassword') }}
             </Button>
           </AlertDialogTrigger>
@@ -155,9 +156,14 @@ const clearMessages = () => {
               <AlertDialogCancel>
                 {{ t('adminUsers.userDetail.actions.resetPasswordConfirm.cancel') }}
               </AlertDialogCancel>
-              <AlertDialogAction @click="handlePasswordReset" :disabled="isLoading">
-                <Loader2 v-if="isLoading" class="h-4 w-4 mr-2 animate-spin" />
-                {{ t('adminUsers.userDetail.actions.resetPasswordConfirm.confirm') }}
+              <AlertDialogAction as-child>
+                <Button 
+                  @click="handlePasswordReset" 
+                  :loading="isLoading"
+                  :loading-text="t('adminUsers.userDetail.actions.resetPasswordConfirm.confirm')"
+                >
+                  {{ t('adminUsers.userDetail.actions.resetPasswordConfirm.confirm') }}
+                </Button>
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

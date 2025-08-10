@@ -6,6 +6,7 @@ export default {
     search: {
       placeholder: 'Search credentials',
       button: 'Search',
+      searching: 'Searching...',
       noResults: 'No credentials found',
       results: 'Found {count} credential{count, plural, one {} other {s}} for "{query}"'
     },
@@ -79,7 +80,8 @@ export default {
       view: 'View Details',
       editCredential: 'Edit Credential',
       editName: 'Edit Name',
-      updateSecrets: 'Update Secrets'
+      updateSecrets: 'Update Secrets',
+      creating: 'Creating...'
     },
     editName: {
       title: 'Edit Name',

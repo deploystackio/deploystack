@@ -5,7 +5,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Plus, Loader2, Search, CheckCircle } from 'lucide-vue-next'
+import { Plus, Search, CheckCircle } from 'lucide-vue-next'
 import DashboardLayout from '@/components/DashboardLayout.vue'
 import { CredentialsService } from '@/services/credentialsService'
 import { UserService } from '@/services/userService'
@@ -36,6 +36,7 @@ const credentials = ref<CloudCredential[]>([])
 const searchResults = ref<CloudCredentialBasic[]>([])
 const isLoading = ref(true)
 const isSearching = ref(false)
+const isCreating = ref(false)
 const error = ref<string | null>(null)
 const showAddModal = ref(false)
 const canCreateCredentials = ref(false)
@@ -135,7 +136,7 @@ const fetchCredentials = async (): Promise<void> => {
 
     credentials.value = await CredentialsService.getTeamCredentials(selectedTeam.value.id)
   } catch (err) {
-    error.value = err instanceof Error ? err.message : 'An unknown error occurred'
+    error.value = err instanceof Error ? err.message : t('common.error')
     credentials.value = []
   } finally {
     isLoading.value = false
@@ -211,11 +212,23 @@ const handleCredentialCreated = async () => {
   eventBus.emit('credentials-updated')
 }
 
+// Handle add credential button click
+const handleAddCredential = () => {
+  isCreating.value = true
+  showAddModal.value = true
+}
+
+// Handle modal close
+const handleModalClose = () => {
+  isCreating.value = false
+  showAddModal.value = false
+}
+
 // Check for delete success message from query params
 const checkDeleteSuccess = () => {
   const deletedCredentialName = route.query.deleted as string
   if (deletedCredentialName) {
-    deleteSuccessMessage.value = `Credential "${deletedCredentialName}" has been successfully deleted.`
+    deleteSuccessMessage.value = t('credentials.delete.success', { name: deletedCredentialName })
 
     // Clear the query parameter from URL
     router.replace({ path: '/credentials' })
@@ -265,7 +278,9 @@ onUnmounted(() => {
         </div>
         <Button
           v-if="canCreateCredentials && selectedTeam"
-          @click="showAddModal = true"
+          @click="handleAddCredential"
+          :loading="isCreating"
+          :loading-text="t('credentials.actions.creating')"
           class="flex items-center gap-2"
         >
           <Plus class="h-4 w-4" />
@@ -309,10 +324,10 @@ onUnmounted(() => {
               variant="outline"
               class="rounded-l-none border-l-0 px-3"
               @click="handleManualSearch"
-              :disabled="isSearching"
+              :loading="isSearching"
+              :loading-text="t('credentials.search.searching')"
             >
-              <Loader2 v-if="isSearching" class="h-4 w-4 animate-spin" />
-              <Search v-else class="h-4 w-4" />
+              <Search class="h-4 w-4" />
               <span class="sr-only">{{ t('credentials.search.button') }}</span>
             </Button>
           </div>
@@ -352,6 +367,7 @@ onUnmounted(() => {
         v-model:open="showAddModal"
         :team-id="selectedTeam?.id"
         @credential-created="handleCredentialCreated"
+        @update:open="(open) => { if (!open) handleModalClose() }"
       />
     </div>
   </DashboardLayout>

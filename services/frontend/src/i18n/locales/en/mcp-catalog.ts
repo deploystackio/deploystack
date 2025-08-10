@@ -514,6 +514,11 @@ export default {
       cancel: 'Cancel',
       confirm: 'Delete Server',
       deleting: 'Deleting...'
+    },
+    errorActions: {
+      tryAgain: 'Try Again',
+      backToCatalog: 'Back to Catalog',
+      loading: 'Loading...'
     }
   },
 

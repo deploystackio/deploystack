@@ -242,6 +242,11 @@ export default {
         cancel: 'Cancel',
         confirm: 'Delete Team',
         deleting: 'Deleting...'
+      },
+      errorActions: {
+        tryAgain: 'Try Again',
+        backToTeams: 'Back to Teams',
+        loading: 'Loading...'
       }
     }
   }

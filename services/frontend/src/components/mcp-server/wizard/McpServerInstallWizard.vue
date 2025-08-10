@@ -6,7 +6,7 @@ import { useRoute } from 'vue-router'
 import { Button } from '@/components/ui/button'
 import { ProgressBars } from '@/components/ui/progress-bars'
 import { toast } from 'vue-sonner'
-import { Server, Settings, Cloud, Loader2 } from 'lucide-vue-next'
+import { Server, Settings, Cloud } from 'lucide-vue-next'
 import { McpInstallationService } from '@/services/mcpInstallationService'
 import { TeamService } from '@/services/teamService'
 import { McpCatalogService } from '@/services/mcpCatalogService'
@@ -448,10 +448,11 @@ onMounted(async () => {
         <Button
           v-else
           @click="submitInstallation"
-          :disabled="!canSubmit || isSubmitting"
+          :disabled="!canSubmit"
+          :loading="isSubmitting"
+          :loading-text="t('mcpInstallations.wizard.installing')"
         >
-          <Loader2 v-if="isSubmitting" class="h-4 w-4 animate-spin mr-2" />
-          {{ isSubmitting ? t('mcpInstallations.wizard.installing') : t('mcpInstallations.wizard.install') }}
+          {{ t('mcpInstallations.wizard.install') }}
         </Button>
       </div>
     </div>

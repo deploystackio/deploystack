@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { ProgressBars } from '@/components/ui/progress-bars'
-import { FileText, Github, Settings, Loader2 } from 'lucide-vue-next'
+import { FileText, Github, Settings } from 'lucide-vue-next'
 import { McpCatalogService } from '@/services/mcpCatalogService'
 import { useEventBus } from '@/composables/useEventBus'
 import GitHubRepositoryStep from '@/components/admin/mcp-catalog/GitHubRepositoryStep.vue'
@@ -454,10 +454,11 @@ onUnmounted(() => {
           v-if="currentStep === 0"
           @click="handleGitHubStepNext"
           :disabled="!canProceedFromGitHub"
+          :loading="isFetchingGitHub"
+          :loading-text="t('mcpCatalog.form.navigation.fetching')"
           class="min-w-[120px]"
         >
-          <Loader2 v-if="isFetchingGitHub" class="h-4 w-4 animate-spin mr-2" />
-          {{ isFetchingGitHub ? t('mcpCatalog.form.navigation.fetching') : t('mcpCatalog.form.navigation.next') }}
+          {{ t('mcpCatalog.form.navigation.next') }}
         </Button>
 
         <!-- Normal next button for Claude config step -->

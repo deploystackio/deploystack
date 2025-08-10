@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { ProgressBars } from '@/components/ui/progress-bars'
-import { FileText, Github, Code, Zap, CheckCircle, Loader2 } from 'lucide-vue-next'
+import { FileText, Github, Code, Zap, CheckCircle } from 'lucide-vue-next'
 import { McpCatalogService } from '@/services/mcpCatalogService'
 import { useEventBus } from '@/composables/useEventBus'
 import BasicInfoStep from '@/components/admin/mcp-catalog/BasicInfoStep.vue'
@@ -221,14 +221,6 @@ const canProceedFromGitHub = computed(() => {
 })
 
 // Dynamic button text based on props or defaults
-const submitText = computed(() => {
-  if (props.submitButtonText) return props.submitButtonText
-  if (isSubmitting.value) {
-    return props.mode === 'edit' ? t('mcpCatalog.form.navigation.updating') : t('mcpCatalog.form.navigation.creating')
-  }
-  return props.mode === 'edit' ? t('mcpCatalog.form.navigation.update') : t('mcpCatalog.form.navigation.submit')
-})
-
 const cancelText = computed(() => {
   return props.cancelButtonText || t('mcpCatalog.form.navigation.cancel')
 })
@@ -513,10 +505,11 @@ onUnmounted(() => {
           v-if="currentStep === 0"
           @click="handleGitHubStepNext"
           :disabled="!canProceedFromGitHub"
+          :loading="isFetchingGitHub"
+          :loading-text="t('mcpCatalog.form.navigation.fetching')"
           class="min-w-[120px]"
         >
-          <Loader2 v-if="isFetchingGitHub" class="h-4 w-4 animate-spin mr-2" />
-          {{ isFetchingGitHub ? t('mcpCatalog.form.navigation.fetching') : t('mcpCatalog.form.navigation.next') }}
+          {{ t('mcpCatalog.form.navigation.next') }}
         </Button>
 
         <!-- Normal next button for other steps -->
@@ -531,9 +524,10 @@ onUnmounted(() => {
         <Button
           v-else
           @click="submitForm"
-          :disabled="isSubmitting"
+          :loading="isSubmitting"
+          :loading-text="props.mode === 'edit' ? t('mcpCatalog.form.navigation.updating') : t('mcpCatalog.form.navigation.creating')"
         >
-          {{ submitText }}
+          {{ props.mode === 'edit' ? t('mcpCatalog.form.navigation.update') : t('mcpCatalog.form.navigation.submit') }}
         </Button>
       </div>
     </div>

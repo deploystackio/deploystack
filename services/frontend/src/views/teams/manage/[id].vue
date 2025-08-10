@@ -20,6 +20,7 @@ const eventBus = useEventBus()
 // State
 const team = ref<Team | null>(null)
 const isLoading = ref(true)
+const isRetrying = ref(false)
 const error = ref<string | null>(null)
 const activeTab = ref('team-info')
 
@@ -61,6 +62,7 @@ const memberCount = computed(() => {
 const loadTeam = async () => {
   try {
     isLoading.value = true
+    isRetrying.value = true
     error.value = null
 
     const teamData = await TeamService.getTeamById(teamId.value)
@@ -71,6 +73,7 @@ const loadTeam = async () => {
     console.error('Error loading team:', err)
   } finally {
     isLoading.value = false
+    isRetrying.value = false
   }
 }
 
@@ -156,7 +159,23 @@ onUnmounted(() => {
       <!-- Error State -->
       <Alert v-else-if="error" variant="destructive">
         <AlertTriangle class="h-4 w-4" />
-        <AlertDescription>{{ error }}</AlertDescription>
+        <AlertDescription>
+          {{ error }}
+        </AlertDescription>
+        <div class="mt-4 flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            :loading="isRetrying"
+            :loading-text="t('teams.manage.errorActions.loading')"
+            @click="loadTeam"
+          >
+            {{ t('teams.manage.errorActions.tryAgain') }}
+          </Button>
+          <Button variant="ghost" size="sm" @click="goBack">
+            {{ t('teams.manage.errorActions.backToTeams') }}
+          </Button>
+        </div>
       </Alert>
 
       <!-- Team Management with Tabs -->

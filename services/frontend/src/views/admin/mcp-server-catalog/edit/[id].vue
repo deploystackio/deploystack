@@ -22,6 +22,7 @@ const eventBus = useEventBus()
 
 // State
 const isLoading = ref(true)
+const isRetrying = ref(false)
 const loadError = ref<string | null>(null)
 const serverData = ref<McpServer | null>(null)
 const initialFormData = ref<Partial<McpServerFormData> | null>(null)
@@ -42,6 +43,7 @@ const goToCatalog = () => {
 const loadServerData = async () => {
   try {
     isLoading.value = true
+    isRetrying.value = true
     loadError.value = null
 
     const server = await McpCatalogService.getServerById(serverId)
@@ -55,6 +57,7 @@ const loadServerData = async () => {
     console.error('Failed to load server:', error)
   } finally {
     isLoading.value = false
+    isRetrying.value = false
   }
 }
 
@@ -194,56 +197,50 @@ const convertServerToFormData = (server: McpServer): Partial<McpServerFormData> 
 
 // Handle form submission
 const handleSubmit = async (formData: McpServerFormData) => {
-  try {
-    // Convert form data to API request format
-    const requestData: UpdateMcpServerRequest = {
-      // Basic info
-      name: formData.basic.name,
-      description: formData.basic.description,
-      long_description: formData.basic.long_description || undefined,
-      category_id: formData.basic.category_id || undefined,
-      author_name: formData.basic.author_name || undefined,
-      author_contact: formData.basic.author_contact || undefined,
-      organization: formData.basic.organization || undefined,
-      license: formData.basic.license || undefined,
-      tags: formData.basic.tags.length > 0 ? formData.basic.tags : undefined,
+  // Convert form data to API request format
+  const requestData: UpdateMcpServerRequest = {
+    // Basic info
+    name: formData.basic.name,
+    description: formData.basic.description,
+    long_description: formData.basic.long_description || undefined,
+    category_id: formData.basic.category_id || undefined,
+    author_name: formData.basic.author_name || undefined,
+    author_contact: formData.basic.author_contact || undefined,
+    organization: formData.basic.organization || undefined,
+    license: formData.basic.license || undefined,
+    tags: formData.basic.tags.length > 0 ? formData.basic.tags : undefined,
 
-      // Repository (use GitHub data if available, fallback to repository data)
-      github_url: formData.github.github_url || formData.repository.github_url || undefined,
-      git_branch: formData.github.git_branch || formData.repository.git_branch || 'main',
-      homepage_url: formData.repository.homepage_url || undefined,
+    // Repository (use GitHub data if available, fallback to repository data)
+    github_url: formData.github.github_url || formData.repository.github_url || undefined,
+    git_branch: formData.github.git_branch || formData.repository.git_branch || 'main',
+    homepage_url: formData.repository.homepage_url || undefined,
 
-      // Technical
-      language: formData.technical.language,
-      runtime: formData.technical.runtime,
-      runtime_min_version: formData.technical.runtime_min_version || undefined,
-      installation_methods: formData.technical.installation_methods,
-      dependencies: formData.technical.dependencies ? JSON.parse(formData.technical.dependencies) : undefined,
+    // Technical
+    language: formData.technical.language,
+    runtime: formData.technical.runtime,
+    runtime_min_version: formData.technical.runtime_min_version || undefined,
+    installation_methods: formData.technical.installation_methods,
+    dependencies: formData.technical.dependencies ? JSON.parse(formData.technical.dependencies) : undefined,
 
-      // Capabilities
-      tools: formData.capabilities.tools,
-      resources: formData.capabilities.resources.length > 0 ? formData.capabilities.resources : undefined,
-      prompts: formData.capabilities.prompts.length > 0 ? formData.capabilities.prompts : undefined,
-      environment_variables: formData.capabilities.environment_variables.length > 0 ? formData.capabilities.environment_variables : undefined,
-      default_config: formData.capabilities.default_config ? JSON.parse(formData.capabilities.default_config) : undefined
-    }
-
-    // Submit to API
-    await McpCatalogService.updateGlobalServer(serverId, requestData)
-
-    // Emit success event
-    eventBus.emit('mcp-server-updated', { serverId })
-
-    // Navigate back to view page with success parameter
-    router.push({
-      path: `/admin/mcp-server-catalog/view/${serverId}`,
-      query: { updated: 'true' }
-    })
-
-  } catch (error) {
-    // Re-throw error to let the wizard handle it
-    throw error
+    // Capabilities
+    tools: formData.capabilities.tools,
+    resources: formData.capabilities.resources.length > 0 ? formData.capabilities.resources : undefined,
+    prompts: formData.capabilities.prompts.length > 0 ? formData.capabilities.prompts : undefined,
+    environment_variables: formData.capabilities.environment_variables.length > 0 ? formData.capabilities.environment_variables : undefined,
+    default_config: formData.capabilities.default_config ? JSON.parse(formData.capabilities.default_config) : undefined
   }
+
+  // Submit to API
+  await McpCatalogService.updateGlobalServer(serverId, requestData)
+
+  // Emit success event
+  eventBus.emit('mcp-server-updated', { serverId })
+
+  // Navigate back to view page with success parameter
+  router.push({
+    path: `/admin/mcp-server-catalog/view/${serverId}`,
+    query: { updated: 'true' }
+  })
 }
 
 const handleCancel = () => {
@@ -281,11 +278,17 @@ onMounted(() => {
           {{ t('mcpCatalog.edit.errorLoading', { error: loadError }) }}
         </AlertDescription>
         <div class="mt-4 flex gap-2">
-          <Button variant="outline" size="sm" @click="loadServerData">
-            Try Again
+          <Button
+            variant="outline"
+            size="sm"
+            :loading="isRetrying"
+            :loading-text="t('mcpCatalog.edit.errorActions.loading')"
+            @click="loadServerData"
+          >
+            {{ t('mcpCatalog.edit.errorActions.tryAgain') }}
           </Button>
           <Button variant="ghost" size="sm" @click="goToCatalog">
-            Back to Catalog
+            {{ t('mcpCatalog.edit.errorActions.backToCatalog') }}
           </Button>
         </div>
       </Alert>

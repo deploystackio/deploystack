@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { CheckCircle, XCircle, Mail, Loader2, AlertTriangle } from 'lucide-vue-next'
+import { CheckCircle, XCircle, Mail, AlertTriangle, Loader2 } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 import { getEnv } from '@/utils/env'
 
@@ -303,12 +303,13 @@ onMounted(() => {
 
             <Button
               @click="resendVerification"
-              :disabled="isResending || !resendEmail"
+              :disabled="!resendEmail"
+              :loading="isResending"
+              :loading-text="$t('verifyEmail.error.resendSection.buttonSending')"
               class="w-full"
               variant="outline"
             >
-              <Loader2 v-if="isResending" class="h-4 w-4 animate-spin mr-2" />
-              {{ isResending ? $t('verifyEmail.error.resendSection.buttonSending') : $t('verifyEmail.error.resendSection.button') }}
+              {{ $t('verifyEmail.error.resendSection.button') }}
             </Button>
 
             <div class="flex space-x-3">

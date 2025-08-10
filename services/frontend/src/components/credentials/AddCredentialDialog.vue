@@ -389,11 +389,12 @@ onMounted(() => {
             </Button>
             <Button
               type="submit"
-              :disabled="!isFormValid || isSaving"
+              :disabled="!isFormValid"
+              :loading="isSaving"
+              :loading-text="t('credentials.form.buttons.saving')"
               class="min-w-[120px]"
             >
-              <Loader2 v-if="isSaving" class="h-4 w-4 animate-spin mr-2" />
-              {{ isSaving ? t('credentials.form.buttons.saving') : t('credentials.form.buttons.save') }}
+              {{ t('credentials.form.buttons.save') }}
             </Button>
           </div>
         </form>
