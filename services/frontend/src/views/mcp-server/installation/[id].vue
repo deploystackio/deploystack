@@ -3,7 +3,6 @@ import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
 import { ArrowLeft, Info, Settings, Shield } from 'lucide-vue-next'
 import { DsTabs, DsTabsItem } from '@/components/ui/ds-tabs'
 import DashboardLayout from '@/components/DashboardLayout.vue'
@@ -33,7 +32,7 @@ async function loadInstallationWithTeamContext(installationId: string): Promise<
   try {
     // Get selected team from storage
     const selectedTeamId = eventBus.getState<string>('selected_team_id')
-    
+
     if (!selectedTeamId) {
       console.warn('No team selected in storage')
       return null
@@ -42,7 +41,7 @@ async function loadInstallationWithTeamContext(installationId: string): Promise<
     // Get user's teams to find the selected team with role information
     const userTeams = await TeamService.getUserTeams()
     const selectedTeam = userTeams.find(team => team.id === selectedTeamId)
-    
+
     if (!selectedTeam) {
       console.warn('Selected team not found in user teams')
       return null
@@ -50,7 +49,7 @@ async function loadInstallationWithTeamContext(installationId: string): Promise<
 
     // Load installation from the selected team
     const installation = await McpInstallationService.getInstallationById(selectedTeam.id, installationId)
-    
+
     if (!installation) {
       return null
     }
@@ -119,7 +118,7 @@ const goBack = () => {
 const handleInstallationUpdated = (updatedInstallation: McpInstallation) => {
   // Update the local installation data
   installation.value = updatedInstallation
-  
+
   // Emit general installations updated event for other components that might need to refresh
   eventBus.emit('mcp-installations-updated')
 }
