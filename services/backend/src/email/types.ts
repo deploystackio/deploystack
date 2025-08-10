@@ -130,6 +130,13 @@ export interface PasswordChangedEmailVariables {
   supportEmail?: string;
 }
 
+export interface TestEmailVariables {
+  testDateTime: string;
+  adminUser: string;
+  appUrl: string;
+  supportEmail?: string;
+}
+
 // Template registry for type safety
 export interface TemplateVariableMap {
   welcome: WelcomeEmailVariables;
@@ -137,6 +144,7 @@ export interface TemplateVariableMap {
   notification: NotificationEmailVariables;
   'email-verification': EmailVerificationVariables;
   'password-changed': PasswordChangedEmailVariables;
+  test: TestEmailVariables;
 }
 
 export type TemplateNames = keyof TemplateVariableMap;

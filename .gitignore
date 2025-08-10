@@ -68,6 +68,7 @@ services/backend/tests/e2e/test-data/*.db
 ._*.png
 ._*.webp
 ._*.jpg
+._*.pug
 ._*.yml
 ._*.yaml
 ._*.css

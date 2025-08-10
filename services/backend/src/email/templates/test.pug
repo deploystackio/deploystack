@@ -1,0 +1,45 @@
+//- test.pug
+//- @description Test email template for verifying SMTP configuration
+//- @variables testDateTime, adminUser, appUrl, supportEmail
+extends layouts/base.pug
+
+block content
+  .test-header
+    h1 ✅ Email Test Successful
+    
+  .test-content
+    p Hello!
+    
+    p This is a test email from your DeployStack installation. If you're reading this, your SMTP configuration is working correctly.
+    
+    .test-details
+      h3 Test Details:
+      ul
+        li
+          strong Test Time: 
+          | #{testDateTime}
+        li
+          strong Initiated by: 
+          | #{adminUser}
+        li
+          strong Application URL: 
+          a(href=appUrl)= appUrl
+    
+    .test-actions
+      p Your email system is ready to send:
+      ul
+        li Welcome emails for new users
+        li Password reset notifications
+        li System alerts and notifications
+        li Team invitations
+    
+    hr
+    
+    .footer-note
+      p
+        em This email was sent as part of SMTP configuration testing. No action is required.
+      
+      if supportEmail
+        p
+          | If you have questions, contact support at 
+          a(href=`mailto:${supportEmail}`)= supportEmail

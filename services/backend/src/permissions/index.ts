@@ -41,6 +41,7 @@ export const ROLE_DEFINITIONS = {
     'mcp.installations.create',
     'mcp.installations.edit',
     'mcp.installations.delete',
+    'email.test',
   ],
   global_user: [
     'profile.view',

@@ -311,7 +311,7 @@ export class EmailService {
         userName: options.userName,
         userEmail: options.userEmail,
         loginUrl: options.loginUrl,
-        supportEmail: options.supportEmail || 'support@deploystack.com',
+        supportEmail: options.supportEmail || 'hello@deploystack.io',
       },
     }, logger);
   }
@@ -334,7 +334,7 @@ export class EmailService {
         userName: options.userName,
         resetUrl: options.resetUrl,
         expirationTime: options.expirationTime,
-        supportEmail: options.supportEmail || 'support@deploystack.com',
+        supportEmail: options.supportEmail || 'support@deploystack.io',
       },
     }, logger);
   }
@@ -387,8 +387,41 @@ export class EmailService {
         changeTime: options.changeTime,
         ipAddress: options.ipAddress,
         userAgent: options.userAgent,
-        loginUrl: options.loginUrl || 'https://app.deploystack.com/login',
-        supportEmail: options.supportEmail || 'support@deploystack.com',
+        loginUrl: options.loginUrl || 'https://cloud.deploystack.io/login',
+        supportEmail: options.supportEmail || 'support@deploystack.io',
+      },
+    }, logger);
+  }
+
+  /**
+   * Send a test email to verify SMTP configuration (type-safe helper)
+   */
+  static async sendTestEmail(options: {
+    to: string;
+    adminUser: string;
+    appUrl?: string;
+    supportEmail?: string;
+  }, logger: FastifyBaseLogger): Promise<EmailSendResult> {
+    const currentDateTime = new Date().toLocaleString('en-US', {
+      timeZone: 'UTC',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      timeZoneName: 'short'
+    });
+
+    return this.sendEmail({
+      to: options.to,
+      subject: '✅ DeployStack Email Test - Configuration Successful',
+      template: 'test',
+      variables: {
+        testDateTime: currentDateTime,
+        adminUser: options.adminUser,
+        appUrl: options.appUrl || 'https://cloud.deploystack.io',
+        supportEmail: options.supportEmail || 'support@deploystack.io',
       },
     }, logger);
   }
