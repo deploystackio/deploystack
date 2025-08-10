@@ -53,8 +53,8 @@ const formSchema = toTypedSchema(
         .max(30, {
           message: t('validation.maxLength', { field: t('register.form.name.label'), length: 30 }),
         })
-        .regex(/^[a-zA-Z0-9_]+$/, {
-          message: 'Username can only contain letters, numbers, and underscores (no spaces)',
+        .regex(/^[a-zA-Z0-9_.-]+$/, {
+          message: 'Username can only contain letters, numbers, underscores, dots, and hyphens (no spaces)',
         }),
       email: z
         .string()
@@ -305,7 +305,7 @@ onMounted(async () => {
                     <User class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
                     <Input
                       type="text"
-                      placeholder="Enter username (letters, numbers, underscores only)"
+                      placeholder="Enter username (letters, numbers, underscores, dots, hyphens only)"
                       v-bind="componentField"
                       class="pl-10"
                       autocomplete="username"

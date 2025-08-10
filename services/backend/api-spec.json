@@ -19403,7 +19403,8 @@
                 "properties": {
                   "email": {
                     "type": "string",
-                    "format": "email"
+                    "format": "email",
+                    "description": "Valid email address to send test email to"
                   }
                 },
                 "required": [
@@ -19422,162 +19423,142 @@
         ],
         "responses": {
           "200": {
-            "description": "Default Response",
+            "description": "Test email sent successfully",
             "content": {
               "application/json": {
                 "schema": {
-                  "schema": {
-                    "description": "Test email sent successfully",
-                    "type": "object",
-                    "properties": {
-                      "success": {
-                        "description": "Indicates if the test email was sent successfully",
-                        "type": "boolean"
-                      },
-                      "message": {
-                        "description": "Success message",
-                        "type": "string"
-                      },
-                      "messageId": {
-                        "description": "Email message ID from SMTP server",
-                        "type": "string"
-                      },
-                      "recipients": {
-                        "description": "List of email recipients",
-                        "type": "array",
-                        "items": {
-                          "type": "string"
-                        }
-                      }
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the test email was sent successfully"
                     },
-                    "required": [
-                      "success",
-                      "message",
-                      "recipients"
-                    ],
-                    "additionalProperties": false
+                    "message": {
+                      "type": "string",
+                      "description": "Success message"
+                    },
+                    "messageId": {
+                      "type": "string",
+                      "description": "Email message ID from SMTP server"
+                    },
+                    "recipients": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "List of email recipients"
+                    }
                   },
-                  "components": {}
+                  "required": [
+                    "success",
+                    "message",
+                    "recipients"
+                  ],
+                  "description": "Test email sent successfully"
                 }
               }
             }
           },
           "400": {
-            "description": "Default Response",
+            "description": "Bad Request - Invalid email address or validation error",
             "content": {
               "application/json": {
                 "schema": {
-                  "schema": {
-                    "description": "Bad Request - Invalid email address or validation error",
-                    "type": "object",
-                    "properties": {
-                      "success": {
-                        "description": "Indicates the operation failed",
-                        "default": false,
-                        "type": "boolean"
-                      },
-                      "error": {
-                        "description": "Error message describing what went wrong",
-                        "type": "string"
-                      }
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates the operation failed"
                     },
-                    "required": [
-                      "success",
-                      "error"
-                    ],
-                    "additionalProperties": false
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    }
                   },
-                  "components": {}
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Bad Request - Invalid email address or validation error"
                 }
               }
             }
           },
           "401": {
-            "description": "Default Response",
+            "description": "Unauthorized - Authentication required",
             "content": {
               "application/json": {
                 "schema": {
-                  "schema": {
-                    "description": "Unauthorized - Authentication required",
-                    "type": "object",
-                    "properties": {
-                      "success": {
-                        "description": "Indicates the operation failed",
-                        "default": false,
-                        "type": "boolean"
-                      },
-                      "error": {
-                        "description": "Error message describing what went wrong",
-                        "type": "string"
-                      }
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates the operation failed"
                     },
-                    "required": [
-                      "success",
-                      "error"
-                    ],
-                    "additionalProperties": false
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    }
                   },
-                  "components": {}
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Unauthorized - Authentication required"
                 }
               }
             }
           },
           "403": {
-            "description": "Default Response",
+            "description": "Forbidden - Insufficient permissions (requires email.test permission)",
             "content": {
               "application/json": {
                 "schema": {
-                  "schema": {
-                    "description": "Forbidden - Insufficient permissions (requires email.test permission)",
-                    "type": "object",
-                    "properties": {
-                      "success": {
-                        "description": "Indicates the operation failed",
-                        "default": false,
-                        "type": "boolean"
-                      },
-                      "error": {
-                        "description": "Error message describing what went wrong",
-                        "type": "string"
-                      }
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates the operation failed"
                     },
-                    "required": [
-                      "success",
-                      "error"
-                    ],
-                    "additionalProperties": false
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    }
                   },
-                  "components": {}
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Forbidden - Insufficient permissions (requires email.test permission)"
                 }
               }
             }
           },
           "500": {
-            "description": "Default Response",
+            "description": "Internal Server Error - SMTP configuration or email sending failed",
             "content": {
               "application/json": {
                 "schema": {
-                  "schema": {
-                    "description": "Internal Server Error - SMTP configuration or email sending failed",
-                    "type": "object",
-                    "properties": {
-                      "success": {
-                        "description": "Indicates the operation failed",
-                        "default": false,
-                        "type": "boolean"
-                      },
-                      "error": {
-                        "description": "Error message describing what went wrong",
-                        "type": "string"
-                      }
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates the operation failed"
                     },
-                    "required": [
-                      "success",
-                      "error"
-                    ],
-                    "additionalProperties": false
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    }
                   },
-                  "components": {}
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Internal Server Error - SMTP configuration or email sending failed"
                 }
               }
             }

@@ -1,26 +1,78 @@
 import { type FastifyInstance } from 'fastify';
-import { z } from 'zod';
-import { createSchema } from 'zod-openapi';
 import { requirePermission } from '../../../middleware/roleMiddleware';
 import { EmailService } from '../../../email';
 import type { User } from '../../../services/userService';
 
-// Define Zod schemas
-const TestEmailRequestSchema = z.object({
-  email: z.string().email('Please provide a valid email address'),
-});
+// Reusable Schema Constants
+const TEST_EMAIL_REQUEST_SCHEMA = {
+  type: 'object',
+  properties: {
+    email: { 
+      type: 'string', 
+      format: 'email',
+      description: 'Valid email address to send test email to'
+    }
+  },
+  required: ['email'],
+  additionalProperties: false
+} as const;
 
-const TestEmailSuccessResponseSchema = z.object({
-  success: z.boolean().describe('Indicates if the test email was sent successfully'),
-  message: z.string().describe('Success message'),
-  messageId: z.string().optional().describe('Email message ID from SMTP server'),
-  recipients: z.array(z.string()).describe('List of email recipients'),
-});
+const TEST_EMAIL_SUCCESS_RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    success: { 
+      type: 'boolean',
+      description: 'Indicates if the test email was sent successfully'
+    },
+    message: { 
+      type: 'string',
+      description: 'Success message'
+    },
+    messageId: { 
+      type: 'string',
+      description: 'Email message ID from SMTP server'
+    },
+    recipients: { 
+      type: 'array',
+      items: { type: 'string' },
+      description: 'List of email recipients'
+    }
+  },
+  required: ['success', 'message', 'recipients']
+} as const;
 
-const TestEmailErrorResponseSchema = z.object({
-  success: z.boolean().default(false).describe('Indicates the operation failed'),
-  error: z.string().describe('Error message describing what went wrong'),
-});
+const TEST_EMAIL_ERROR_RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    success: { 
+      type: 'boolean',
+      default: false,
+      description: 'Indicates the operation failed'
+    },
+    error: { 
+      type: 'string',
+      description: 'Error message describing what went wrong'
+    }
+  },
+  required: ['success', 'error']
+} as const;
+
+// TypeScript interfaces for type safety
+interface TestEmailRequest {
+  email: string;
+}
+
+interface TestEmailSuccessResponse {
+  success: boolean;
+  message: string;
+  messageId?: string;
+  recipients: string[];
+}
+
+interface TestEmailErrorResponse {
+  success: boolean;
+  error: string;
+}
 
 export default async function adminEmailTestRoute(server: FastifyInstance) {
   server.post('/test', {
@@ -32,37 +84,45 @@ export default async function adminEmailTestRoute(server: FastifyInstance) {
       security: [{ cookieAuth: [] }],
       
       // Fastify validation schema
-      body: {
-        type: 'object',
-        properties: {
-          email: { type: 'string', format: 'email' }
-        },
-        required: ['email'],
-        additionalProperties: false
-      },
+      body: TEST_EMAIL_REQUEST_SCHEMA,
       
-      // createSchema() for OpenAPI documentation
+      // OpenAPI documentation (same schema, reused)
       requestBody: {
         required: true,
         content: {
           'application/json': {
-            schema: createSchema(TestEmailRequestSchema)
+            schema: TEST_EMAIL_REQUEST_SCHEMA
           }
         }
       },
       
       response: {
-        200: createSchema(TestEmailSuccessResponseSchema.describe('Test email sent successfully')),
-        400: createSchema(TestEmailErrorResponseSchema.describe('Bad Request - Invalid email address or validation error')),
-        401: createSchema(TestEmailErrorResponseSchema.describe('Unauthorized - Authentication required')),
-        403: createSchema(TestEmailErrorResponseSchema.describe('Forbidden - Insufficient permissions (requires email.test permission)')),
-        500: createSchema(TestEmailErrorResponseSchema.describe('Internal Server Error - SMTP configuration or email sending failed'))
+        200: {
+          ...TEST_EMAIL_SUCCESS_RESPONSE_SCHEMA,
+          description: 'Test email sent successfully'
+        },
+        400: {
+          ...TEST_EMAIL_ERROR_RESPONSE_SCHEMA,
+          description: 'Bad Request - Invalid email address or validation error'
+        },
+        401: {
+          ...TEST_EMAIL_ERROR_RESPONSE_SCHEMA,
+          description: 'Unauthorized - Authentication required'
+        },
+        403: {
+          ...TEST_EMAIL_ERROR_RESPONSE_SCHEMA,
+          description: 'Forbidden - Insufficient permissions (requires email.test permission)'
+        },
+        500: {
+          ...TEST_EMAIL_ERROR_RESPONSE_SCHEMA,
+          description: 'Internal Server Error - SMTP configuration or email sending failed'
+        }
       }
     }
   }, async (request, reply) => {
     try {
-      // Validate email using Zod schema for extra safety
-      const { email } = TestEmailRequestSchema.parse(request.body);
+      // TypeScript type assertion (Fastify has already validated)
+      const { email } = request.body as TestEmailRequest;
       
       // Get current user info for the test email
       const currentUser = request.user! as User;
@@ -87,7 +147,7 @@ export default async function adminEmailTestRoute(server: FastifyInstance) {
           operation: 'send_test_email'
         }, 'Test email sent successfully');
         
-        const successResponse = {
+        const successResponse: TestEmailSuccessResponse = {
           success: true,
           message: `Test email sent successfully to ${email}`,
           messageId: result.messageId,
@@ -103,7 +163,7 @@ export default async function adminEmailTestRoute(server: FastifyInstance) {
           operation: 'send_test_email'
         }, 'Failed to send test email');
         
-        const errorResponse = {
+        const errorResponse: TestEmailErrorResponse = {
           success: false,
           error: result.error || 'Failed to send test email'
         };
@@ -116,7 +176,7 @@ export default async function adminEmailTestRoute(server: FastifyInstance) {
         operation: 'send_test_email'
       }, 'Error in test email endpoint');
       
-      const errorResponse = {
+      const errorResponse: TestEmailErrorResponse = {
         success: false,
         error: error instanceof Error ? error.message : 'Internal server error'
       };

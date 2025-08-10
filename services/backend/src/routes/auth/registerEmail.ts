@@ -69,7 +69,8 @@ export default async function registerEmailRoute(fastify: FastifyInstance) {
           return reply.status(403).type('application/json').send(jsonString);
         }
 
-      const { username, email, password, first_name, last_name } = request.body; // request.body should now be typed as RegisterEmailInput
+      // Validate request body with Zod
+      const { username, email, password, first_name, last_name } = RegisterEmailSchema.parse(request.body);
 
       const db = getDb();
       const schema = getSchema();

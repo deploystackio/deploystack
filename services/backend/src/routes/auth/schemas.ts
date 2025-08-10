@@ -3,7 +3,7 @@ import { z } from 'zod';
 export const RegisterEmailSchema = z.object({
   username: z.string().min(3, { message: 'Username must be at least 3 characters long' })
     .max(30, { message: 'Username cannot be longer than 30 characters' })
-    .regex(/^[a-zA-Z0-9_]+$/, { message: 'Username can only contain alphanumeric characters and underscores' }),
+    .regex(/^[a-zA-Z0-9_.-]+$/, { message: 'Username can only contain alphanumeric characters, underscores, dots, and hyphens' }),
   email: z.string().email({ message: 'Invalid email address' }),
   password: z.string().min(8, { message: 'Password must be at least 8 characters long' })
     .max(100, { message: 'Password cannot be longer than 100 characters long'}), // Max length for practical reasons
@@ -40,7 +40,7 @@ export type ChangePasswordInput = z.infer<typeof ChangePasswordSchema>;
 export const UpdateProfileSchema = z.object({
   username: z.string().min(3, { message: 'Username must be at least 3 characters long' })
     .max(30, { message: 'Username cannot be longer than 30 characters' })
-    .regex(/^[a-zA-Z0-9_]+$/, { message: 'Username can only contain alphanumeric characters and underscores' })
+    .regex(/^[a-zA-Z0-9_.-]+$/, { message: 'Username can only contain alphanumeric characters, underscores, dots, and hyphens' })
     .optional(),
   first_name: z.string().max(50, { message: 'First name cannot be longer than 50 characters' }).optional(),
   last_name: z.string().max(50, { message: 'Last name cannot be longer than 50 characters' }).optional(),
