@@ -1,41 +1,82 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { createSchema } from 'zod-openapi';
 import { TeamService } from '../../../services/teamService';
 import { checkUserPermission } from '../../../middleware/roleMiddleware';
 import {
-  SuccessResponseSchema,
-  ErrorResponseSchema,
+  SUCCESS_RESPONSE_SCHEMA,
+  ERROR_RESPONSE_SCHEMA,
+  type SuccessResponse,
+  type ErrorResponse
 } from '../schemas';
 
-export default async function removeTeamMemberRoute(fastify: FastifyInstance) {
-  // DELETE /teams/:id/members/:userId - Remove team member
-  fastify.delete<{ Params: { id: string; userId: string } }>('/teams/:id/members/:userId', {
+// Team member removal parameters schema
+const TEAM_MEMBER_REMOVAL_PARAMS_SCHEMA = {
+  type: 'object',
+  properties: {
+    id: {
+      type: 'string',
+      minLength: 1,
+      description: 'Team ID'
+    },
+    userId: {
+      type: 'string',
+      minLength: 1,
+      description: 'User ID of the member to remove'
+    }
+  },
+  required: ['id', 'userId'],
+  additionalProperties: false
+} as const;
+
+// TypeScript interface for parameters
+interface TeamMemberRemovalParams {
+  id: string;
+  userId: string;
+}
+
+export default async function removeTeamMemberRoute(server: FastifyInstance) {
+  server.delete('/teams/:id/members/:userId', {
+    // ✅ SECURITY FIRST: No preValidation middleware needed as this has manual permission checks
+    // This endpoint has complex authorization logic that needs to check team ownership and global permissions
     schema: {
       tags: ['Team Members'],
       summary: 'Remove team member',
       description: 'Removes a member from a team. Only team owners can remove members. Cannot remove members from default teams. Cannot remove team owner.',
       security: [{ cookieAuth: [] }],
-      params: {
-        type: 'object',
-        properties: {
-          id: { type: 'string' },
-          userId: { type: 'string' }
-        },
-        required: ['id', 'userId']
-      },
+      
+      // Parameter validation
+      params: TEAM_MEMBER_REMOVAL_PARAMS_SCHEMA,
+      
       response: {
-        200: createSchema(SuccessResponseSchema.describe('Team member removed successfully')),
-        400: createSchema(ErrorResponseSchema.describe('Bad Request - Cannot remove from default team, cannot remove owner, or would leave team empty')),
-        401: createSchema(ErrorResponseSchema.describe('Unauthorized - Authentication required')),
-        403: createSchema(ErrorResponseSchema.describe('Forbidden - Insufficient permissions')),
-        404: createSchema(ErrorResponseSchema.describe('Not Found - Team or user not found')),
-        500: createSchema(ErrorResponseSchema.describe('Internal Server Error'))
+        200: {
+          ...SUCCESS_RESPONSE_SCHEMA,
+          description: 'Team member removed successfully'
+        },
+        400: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Bad Request - Cannot remove from default team, cannot remove owner, or would leave team empty'
+        },
+        401: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Unauthorized - Authentication required'
+        },
+        403: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Forbidden - Insufficient permissions'
+        },
+        404: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Not Found - Team or user not found'
+        },
+        500: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Internal Server Error'
+        }
       }
     }
-  }, async (request: FastifyRequest<{ Params: { id: string; userId: string } }>, reply: FastifyReply) => {
+  }, async (request: FastifyRequest<{ Params: TeamMemberRemovalParams }>, reply: FastifyReply) => {
     try {
       if (!request.user) {
-        const errorResponse = {
+        const errorResponse: ErrorResponse = {
           success: false,
           error: 'Authentication required'
         };
@@ -43,13 +84,13 @@ export default async function removeTeamMemberRoute(fastify: FastifyInstance) {
         return reply.status(401).type('application/json').send(jsonString);
       }
 
-      const teamId = request.params.id;
-      const targetUserId = request.params.userId;
+      // TypeScript type assertion (Fastify has already validated)
+      const { id: teamId, userId: targetUserId } = request.params as TeamMemberRemovalParams;
 
       // Check if team exists
       const team = await TeamService.getTeamById(teamId);
       if (!team) {
-        const errorResponse = {
+        const errorResponse: ErrorResponse = {
           success: false,
           error: 'Team not found'
         };
@@ -63,7 +104,7 @@ export default async function removeTeamMemberRoute(fastify: FastifyInstance) {
         await TeamService.canUserManageTeamMember(teamId, request.user.id, targetUserId, 'remove');
 
       if (!canManage) {
-        const errorResponse = {
+        const errorResponse: ErrorResponse = {
           success: false,
           error: 'You do not have permission to remove this member'
         };
@@ -74,7 +115,7 @@ export default async function removeTeamMemberRoute(fastify: FastifyInstance) {
       // Remove the member
       await TeamService.removeTeamMember(teamId, targetUserId);
 
-      const successResponse = {
+      const successResponse: SuccessResponse = {
         success: true,
         message: 'Team member removed successfully'
       };
@@ -82,7 +123,7 @@ export default async function removeTeamMemberRoute(fastify: FastifyInstance) {
       return reply.status(200).type('application/json').send(jsonString);
     } catch (error) {
       if (error instanceof Error) {
-        const errorResponse = {
+        const errorResponse: ErrorResponse = {
           success: false,
           error: error.message
         };
@@ -90,8 +131,8 @@ export default async function removeTeamMemberRoute(fastify: FastifyInstance) {
         return reply.status(400).type('application/json').send(jsonString);
       }
 
-      fastify.log.error(error, 'Error removing team member');
-      const errorResponse = {
+      server.log.error(error, 'Error removing team member');
+      const errorResponse: ErrorResponse = {
         success: false,
         error: 'Failed to remove team member'
       };

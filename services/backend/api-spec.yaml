@@ -5006,165 +5006,130 @@ paths:
         - bearerAuth: []
       responses:
         "200":
-          description: Default Response
+          description: Default team retrieved successfully
           content:
             application/json:
               schema:
-                schema:
-                  description: Default team retrieved successfully
-                  type: object
-                  properties:
-                    success:
-                      description: Indicates if the operation was successful
-                      type: boolean
-                    data:
-                      description: Team data
-                      type: object
-                      properties:
-                        id:
-                          description: Team ID
-                          type: string
-                        name:
-                          description: Team name
-                          type: string
-                        slug:
-                          description: Team slug
-                          type: string
-                        description:
-                          description: Team description
-                          anyOf:
-                            - type: string
-                            - type: "null"
-                        owner_id:
-                          description: Team owner ID
-                          type: string
-                        is_default:
-                          description: Indicates if this is the user's default team
-                          type: boolean
-                        created_at:
-                          description: Team creation date
-                          type: string
-                        updated_at:
-                          description: Team last update date
-                          type: string
-                      required:
-                        - id
-                        - name
-                        - slug
-                        - description
-                        - owner_id
-                        - is_default
-                        - created_at
-                        - updated_at
-                      additionalProperties: false
-                    message:
-                      description: Success message
-                      type: string
-                  required:
-                    - success
-                    - data
-                  additionalProperties: false
-                components: {}
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Indicates if the default team was retrieved successfully
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        description: Team UUID
+                      name:
+                        type: string
+                        description: Team name
+                      slug:
+                        type: string
+                        description: Team slug
+                      description:
+                        type: string
+                        description: Team description
+                      owner_id:
+                        type: string
+                        description: Owner user ID
+                      is_default:
+                        type: boolean
+                        description: Whether this is the default team
+                      created_at:
+                        type: string
+                        description: Creation timestamp
+                      updated_at:
+                        type: string
+                        description: Last update timestamp
+                    required:
+                      - id
+                      - name
+                      - slug
+                      - owner_id
+                      - is_default
+                      - created_at
+                      - updated_at
+                  message:
+                    type: string
+                    description: Success message
+                required:
+                  - success
+                  - data
+                  - message
+                description: Default team retrieved successfully
         "401":
-          description: Default Response
+          description: Unauthorized - Authentication required or invalid token
           content:
             application/json:
               schema:
-                schema:
-                  description: Unauthorized - Authentication required or invalid token
-                  type: object
-                  properties:
-                    success:
-                      default: false
-                      description: Indicates if the operation was successful (false for errors)
-                      type: boolean
-                    error:
-                      description: Error message
-                      type: string
-                    details:
-                      description: Additional error details (validation errors)
-                      type: array
-                      items: {}
-                  required:
-                    - success
-                    - error
-                  additionalProperties: false
-                components: {}
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates the operation failed
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                required:
+                  - success
+                  - error
+                description: Unauthorized - Authentication required or invalid token
         "403":
-          description: Default Response
+          description: Forbidden - Insufficient permissions or scope
           content:
             application/json:
               schema:
-                schema:
-                  description: Forbidden - Insufficient permissions or scope
-                  type: object
-                  properties:
-                    success:
-                      default: false
-                      description: Indicates if the operation was successful (false for errors)
-                      type: boolean
-                    error:
-                      description: Error message
-                      type: string
-                    details:
-                      description: Additional error details (validation errors)
-                      type: array
-                      items: {}
-                  required:
-                    - success
-                    - error
-                  additionalProperties: false
-                components: {}
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates the operation failed
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                required:
+                  - success
+                  - error
+                description: Forbidden - Insufficient permissions or scope
         "404":
-          description: Default Response
+          description: Not Found - No default team found
           content:
             application/json:
               schema:
-                schema:
-                  description: Not Found - No default team found
-                  type: object
-                  properties:
-                    success:
-                      default: false
-                      description: Indicates if the operation was successful (false for errors)
-                      type: boolean
-                    error:
-                      description: Error message
-                      type: string
-                    details:
-                      description: Additional error details (validation errors)
-                      type: array
-                      items: {}
-                  required:
-                    - success
-                    - error
-                  additionalProperties: false
-                components: {}
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates the operation failed
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                required:
+                  - success
+                  - error
+                description: Not Found - No default team found
         "500":
-          description: Default Response
+          description: Internal Server Error
           content:
             application/json:
               schema:
-                schema:
-                  description: Internal Server Error
-                  type: object
-                  properties:
-                    success:
-                      default: false
-                      description: Indicates if the operation was successful (false for errors)
-                      type: boolean
-                    error:
-                      description: Error message
-                      type: string
-                    details:
-                      description: Additional error details (validation errors)
-                      type: array
-                      items: {}
-                  required:
-                    - success
-                    - error
-                  additionalProperties: false
-                components: {}
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates the operation failed
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                required:
+                  - success
+                  - error
+                description: Internal Server Error
   /api/teams/me:
     get:
       summary: Get current user teams
@@ -5180,158 +5145,130 @@ paths:
         - bearerAuth: []
       responses:
         "200":
-          description: Default Response
+          description: User teams retrieved successfully
           content:
             application/json:
               schema:
-                schema:
-                  description: User teams retrieved successfully
-                  type: object
-                  properties:
-                    success:
-                      description: Indicates if the operation was successful
-                      type: boolean
-                    data:
-                      description: Array of teams with enhanced role information
-                      type: array
-                      items:
-                        type: object
-                        properties:
-                          id:
-                            description: Team ID
-                            type: string
-                          name:
-                            description: Team name
-                            type: string
-                          slug:
-                            description: Team slug
-                            type: string
-                          description:
-                            description: Team description
-                            anyOf:
-                              - type: string
-                              - type: "null"
-                          owner_id:
-                            description: Team owner ID
-                            type: string
-                          is_default:
-                            description: Indicates if this is the user's default team
-                            type: boolean
-                          created_at:
-                            description: Team creation date
-                            type: string
-                          updated_at:
-                            description: Team last update date
-                            type: string
-                          role:
-                            description: User role in the team
-                            type: string
-                            enum:
-                              - team_admin
-                              - team_user
-                          is_admin:
-                            description: True if user is team admin
-                            type: boolean
-                          is_owner:
-                            description: True if user is team owner
-                            type: boolean
-                          member_count:
-                            description: Total number of team members
-                            type: number
-                        required:
-                          - id
-                          - name
-                          - slug
-                          - description
-                          - owner_id
-                          - is_default
-                          - created_at
-                          - updated_at
-                          - role
-                          - is_admin
-                          - is_owner
-                          - member_count
-                        additionalProperties: false
-                  required:
-                    - success
-                    - data
-                  additionalProperties: false
-                components: {}
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Indicates if the user teams were retrieved successfully
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          description: Team UUID
+                        name:
+                          type: string
+                          description: Team name
+                        slug:
+                          type: string
+                          description: Team slug
+                        description:
+                          type: string
+                          description: Team description
+                        owner_id:
+                          type: string
+                          description: Owner user ID
+                        is_default:
+                          type: boolean
+                          description: Whether this is the default team
+                        created_at:
+                          type: string
+                          description: Creation timestamp
+                        updated_at:
+                          type: string
+                          description: Last update timestamp
+                        role:
+                          type: string
+                          enum:
+                            - team_admin
+                            - team_user
+                          description: User role within this team
+                        is_admin:
+                          type: boolean
+                          description: Whether user is admin of this team
+                        is_owner:
+                          type: boolean
+                          description: Whether user is owner of this team
+                        member_count:
+                          type: number
+                          description: Total number of team members
+                      required:
+                        - id
+                        - name
+                        - slug
+                        - owner_id
+                        - is_default
+                        - created_at
+                        - updated_at
+                        - role
+                        - is_admin
+                        - is_owner
+                        - member_count
+                    description: Array of teams with user role information
+                required:
+                  - success
+                  - data
+                description: User teams retrieved successfully
         "401":
-          description: Default Response
+          description: Unauthorized - Authentication required or invalid token
           content:
             application/json:
               schema:
-                schema:
-                  description: Unauthorized - Authentication required or invalid token
-                  type: object
-                  properties:
-                    success:
-                      default: false
-                      description: Indicates if the operation was successful (false for errors)
-                      type: boolean
-                    error:
-                      description: Error message
-                      type: string
-                    details:
-                      description: Additional error details (validation errors)
-                      type: array
-                      items: {}
-                  required:
-                    - success
-                    - error
-                  additionalProperties: false
-                components: {}
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates the operation failed
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                required:
+                  - success
+                  - error
+                description: Unauthorized - Authentication required or invalid token
         "403":
-          description: Default Response
+          description: Forbidden - Insufficient permissions or scope
           content:
             application/json:
               schema:
-                schema:
-                  description: Forbidden - Insufficient permissions or scope
-                  type: object
-                  properties:
-                    success:
-                      default: false
-                      description: Indicates if the operation was successful (false for errors)
-                      type: boolean
-                    error:
-                      description: Error message
-                      type: string
-                    details:
-                      description: Additional error details (validation errors)
-                      type: array
-                      items: {}
-                  required:
-                    - success
-                    - error
-                  additionalProperties: false
-                components: {}
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates the operation failed
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                required:
+                  - success
+                  - error
+                description: Forbidden - Insufficient permissions or scope
         "500":
-          description: Default Response
+          description: Internal Server Error
           content:
             application/json:
               schema:
-                schema:
-                  description: Internal Server Error
-                  type: object
-                  properties:
-                    success:
-                      default: false
-                      description: Indicates if the operation was successful (false for errors)
-                      type: boolean
-                    error:
-                      description: Error message
-                      type: string
-                    details:
-                      description: Additional error details (validation errors)
-                      type: array
-                      items: {}
-                  required:
-                    - success
-                    - error
-                  additionalProperties: false
-                components: {}
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates the operation failed
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                required:
+                  - success
+                  - error
+                description: Internal Server Error
   /api/teams/{id}:
     get:
       summary: Get team by ID with user role
@@ -5345,189 +5282,155 @@ paths:
       parameters:
         - schema:
             type: string
+            minLength: 1
           in: path
           name: id
           required: true
+          description: Team UUID
       security:
         - cookieAuth: []
         - bearerAuth: []
       responses:
         "200":
-          description: Default Response
+          description: Team retrieved successfully with user role info
           content:
             application/json:
               schema:
-                schema:
-                  description: Team retrieved successfully with user role info
-                  type: object
-                  properties:
-                    success:
-                      description: Indicates if the operation was successful
-                      type: boolean
-                    data:
-                      description: Team data with user role information
-                      type: object
-                      properties:
-                        id:
-                          description: Team ID
-                          type: string
-                        name:
-                          description: Team name
-                          type: string
-                        slug:
-                          description: Team slug
-                          type: string
-                        description:
-                          description: Team description
-                          anyOf:
-                            - type: string
-                            - type: "null"
-                        owner_id:
-                          description: Team owner ID
-                          type: string
-                        is_default:
-                          description: Indicates if this is the user's default team
-                          type: boolean
-                        created_at:
-                          description: Team creation date
-                          type: string
-                        updated_at:
-                          description: Team last update date
-                          type: string
-                        role:
-                          description: User role in the team
-                          type: string
-                          enum:
-                            - team_admin
-                            - team_user
-                        is_admin:
-                          description: True if user is team admin
-                          type: boolean
-                        is_owner:
-                          description: True if user is team owner
-                          type: boolean
-                        member_count:
-                          description: Total number of team members
-                          type: number
-                      required:
-                        - id
-                        - name
-                        - slug
-                        - description
-                        - owner_id
-                        - is_default
-                        - created_at
-                        - updated_at
-                        - role
-                        - is_admin
-                        - is_owner
-                        - member_count
-                      additionalProperties: false
-                  required:
-                    - success
-                    - data
-                  additionalProperties: false
-                components: {}
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Indicates if the operation was successful
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        description: Team UUID
+                      name:
+                        type: string
+                        description: Team name
+                      slug:
+                        type: string
+                        description: Team slug
+                      description:
+                        type: string
+                        description: Team description
+                      owner_id:
+                        type: string
+                        description: Owner user ID
+                      is_default:
+                        type: boolean
+                        description: Whether this is the default team
+                      created_at:
+                        type: string
+                        description: Creation timestamp
+                      updated_at:
+                        type: string
+                        description: Last update timestamp
+                      role:
+                        type: string
+                        enum:
+                          - team_admin
+                          - team_user
+                        description: User role within this team
+                      is_admin:
+                        type: boolean
+                        description: Whether user is admin of this team
+                      is_owner:
+                        type: boolean
+                        description: Whether user is owner of this team
+                      member_count:
+                        type: number
+                        description: Total number of team members
+                    required:
+                      - id
+                      - name
+                      - slug
+                      - owner_id
+                      - is_default
+                      - created_at
+                      - updated_at
+                      - role
+                      - is_admin
+                      - is_owner
+                      - member_count
+                required:
+                  - success
+                  - data
+                description: Team retrieved successfully with user role info
         "401":
-          description: Default Response
+          description: Unauthorized - Authentication required or invalid token
           content:
             application/json:
               schema:
-                schema:
-                  description: Unauthorized - Authentication required or invalid token
-                  type: object
-                  properties:
-                    success:
-                      default: false
-                      description: Indicates if the operation was successful (false for errors)
-                      type: boolean
-                    error:
-                      description: Error message
-                      type: string
-                    details:
-                      description: Additional error details (validation errors)
-                      type: array
-                      items: {}
-                  required:
-                    - success
-                    - error
-                  additionalProperties: false
-                components: {}
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates the operation failed
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                required:
+                  - success
+                  - error
+                description: Unauthorized - Authentication required or invalid token
         "403":
-          description: Default Response
+          description: Forbidden - Insufficient permissions, scope, or not team member
           content:
             application/json:
               schema:
-                schema:
-                  description: Forbidden - Insufficient permissions or scope
-                  type: object
-                  properties:
-                    success:
-                      default: false
-                      description: Indicates if the operation was successful (false for errors)
-                      type: boolean
-                    error:
-                      description: Error message
-                      type: string
-                    details:
-                      description: Additional error details (validation errors)
-                      type: array
-                      items: {}
-                  required:
-                    - success
-                    - error
-                  additionalProperties: false
-                components: {}
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates the operation failed
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                required:
+                  - success
+                  - error
+                description: Forbidden - Insufficient permissions, scope, or not team member
         "404":
-          description: Default Response
+          description: Not Found - Team not found
           content:
             application/json:
               schema:
-                schema:
-                  description: Not Found - Team not found
-                  type: object
-                  properties:
-                    success:
-                      default: false
-                      description: Indicates if the operation was successful (false for errors)
-                      type: boolean
-                    error:
-                      description: Error message
-                      type: string
-                    details:
-                      description: Additional error details (validation errors)
-                      type: array
-                      items: {}
-                  required:
-                    - success
-                    - error
-                  additionalProperties: false
-                components: {}
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates the operation failed
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                required:
+                  - success
+                  - error
+                description: Not Found - Team not found
         "500":
-          description: Default Response
+          description: Internal Server Error
           content:
             application/json:
               schema:
-                schema:
-                  description: Internal Server Error
-                  type: object
-                  properties:
-                    success:
-                      default: false
-                      description: Indicates if the operation was successful (false for errors)
-                      type: boolean
-                    error:
-                      description: Error message
-                      type: string
-                    details:
-                      description: Additional error details (validation errors)
-                      type: array
-                      items: {}
-                  required:
-                    - success
-                    - error
-                  additionalProperties: false
-                components: {}
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates the operation failed
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                required:
+                  - success
+                  - error
+                description: Internal Server Error
     put:
       summary: Update team
       tags:
@@ -5757,14 +5660,16 @@ paths:
       parameters:
         - schema:
             type: string
+            minLength: 1
           in: path
           name: id
           required: true
+          description: Team UUID
       security:
         - cookieAuth: []
       responses:
         "200":
-          description: Default Response
+          description: Team deleted successfully
           content:
             application/json:
               schema:
@@ -5772,328 +5677,292 @@ paths:
                 properties:
                   success:
                     type: boolean
+                    description: Indicates if the team was deleted successfully
                   message:
                     type: string
+                    description: Success message
                 required:
                   - success
                   - message
+                description: Team deleted successfully
         "400":
-          description: Default Response
+          description: Bad Request - Cannot delete default team or team has active resources
           content:
             application/json:
               schema:
-                schema:
-                  description: Bad Request - Cannot delete default team or team has active
-                    resources
-                  type: object
-                  properties:
-                    success:
-                      default: false
-                      description: Indicates if the operation was successful (false for errors)
-                      type: boolean
-                    error:
-                      description: Error message
-                      type: string
-                    details:
-                      description: Additional error details (validation errors)
-                      type: array
-                      items: {}
-                  required:
-                    - success
-                    - error
-                  additionalProperties: false
-                components: {}
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates the operation failed
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                  details:
+                    type: string
+                    description: Optional error details
+                required:
+                  - success
+                  - error
+                description: Bad Request - Cannot delete default team or team has active
+                  resources
         "401":
-          description: Default Response
+          description: Unauthorized - Authentication required
           content:
             application/json:
               schema:
-                schema:
-                  description: Unauthorized - Authentication required
-                  type: object
-                  properties:
-                    success:
-                      default: false
-                      description: Indicates if the operation was successful (false for errors)
-                      type: boolean
-                    error:
-                      description: Error message
-                      type: string
-                    details:
-                      description: Additional error details (validation errors)
-                      type: array
-                      items: {}
-                  required:
-                    - success
-                    - error
-                  additionalProperties: false
-                components: {}
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates the operation failed
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                  details:
+                    type: string
+                    description: Optional error details
+                required:
+                  - success
+                  - error
+                description: Unauthorized - Authentication required
         "403":
-          description: Default Response
+          description: Forbidden - Insufficient permissions or not team owner
           content:
             application/json:
               schema:
-                schema:
-                  description: Forbidden - Insufficient permissions
-                  type: object
-                  properties:
-                    success:
-                      default: false
-                      description: Indicates if the operation was successful (false for errors)
-                      type: boolean
-                    error:
-                      description: Error message
-                      type: string
-                    details:
-                      description: Additional error details (validation errors)
-                      type: array
-                      items: {}
-                  required:
-                    - success
-                    - error
-                  additionalProperties: false
-                components: {}
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates the operation failed
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                  details:
+                    type: string
+                    description: Optional error details
+                required:
+                  - success
+                  - error
+                description: Forbidden - Insufficient permissions or not team owner
         "404":
-          description: Default Response
+          description: Not Found - Team not found
           content:
             application/json:
               schema:
-                schema:
-                  description: Not Found - Team not found
-                  type: object
-                  properties:
-                    success:
-                      default: false
-                      description: Indicates if the operation was successful (false for errors)
-                      type: boolean
-                    error:
-                      description: Error message
-                      type: string
-                    details:
-                      description: Additional error details (validation errors)
-                      type: array
-                      items: {}
-                  required:
-                    - success
-                    - error
-                  additionalProperties: false
-                components: {}
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates the operation failed
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                  details:
+                    type: string
+                    description: Optional error details
+                required:
+                  - success
+                  - error
+                description: Not Found - Team not found
         "500":
-          description: Default Response
+          description: Internal Server Error
           content:
             application/json:
               schema:
-                schema:
-                  description: Internal Server Error
-                  type: object
-                  properties:
-                    success:
-                      default: false
-                      description: Indicates if the operation was successful (false for errors)
-                      type: boolean
-                    error:
-                      description: Error message
-                      type: string
-                    details:
-                      description: Additional error details (validation errors)
-                      type: array
-                      items: {}
-                  required:
-                    - success
-                    - error
-                  additionalProperties: false
-                components: {}
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates the operation failed
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                  details:
+                    type: string
+                    description: Optional error details
+                required:
+                  - success
+                  - error
+                description: Internal Server Error
   /api/teams:
     post:
       summary: Create new team
       tags:
         - Teams
-      description: Creates a new team with the specified name and description. Users
+      description: "Creates a new team with the specified name and description. Users
         can create up to 3 teams maximum. The slug is automatically generated
-        from the team name and made unique.
+        from the team name and made unique. Requires Content-Type:
+        application/json header when sending request body."
       requestBody:
         content:
           application/json:
             schema:
-              schema:
-                type: object
-                properties:
-                  name:
-                    description: Team name
-                    type: string
-                    minLength: 1
-                    maxLength: 100
-                  description:
-                    description: Team description
-                    type: string
-                    maxLength: 500
-                required:
-                  - name
-                additionalProperties: false
-              components: {}
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 100
+                  description: Team name (1-100 characters)
+                description:
+                  type: string
+                  maxLength: 500
+                  description: Optional team description (max 500 characters)
+              required:
+                - name
+              additionalProperties: false
+        required: true
       security:
         - cookieAuth: []
       responses:
         "201":
-          description: Default Response
+          description: Team created successfully
           content:
             application/json:
               schema:
-                schema:
-                  description: Team created successfully
-                  type: object
-                  properties:
-                    success:
-                      description: Indicates if the operation was successful
-                      type: boolean
-                    data:
-                      description: Team data
-                      type: object
-                      properties:
-                        id:
-                          description: Team ID
-                          type: string
-                        name:
-                          description: Team name
-                          type: string
-                        slug:
-                          description: Team slug
-                          type: string
-                        description:
-                          description: Team description
-                          anyOf:
-                            - type: string
-                            - type: "null"
-                        owner_id:
-                          description: Team owner ID
-                          type: string
-                        is_default:
-                          description: Indicates if this is the user's default team
-                          type: boolean
-                        created_at:
-                          description: Team creation date
-                          type: string
-                        updated_at:
-                          description: Team last update date
-                          type: string
-                      required:
-                        - id
-                        - name
-                        - slug
-                        - description
-                        - owner_id
-                        - is_default
-                        - created_at
-                        - updated_at
-                      additionalProperties: false
-                    message:
-                      description: Success message
-                      type: string
-                  required:
-                    - success
-                    - data
-                  additionalProperties: false
-                components: {}
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Indicates if the team was created successfully
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        description: Team UUID
+                      name:
+                        type: string
+                        description: Team name
+                      slug:
+                        type: string
+                        description: Team slug
+                      description:
+                        type: string
+                        description: Team description
+                      owner_id:
+                        type: string
+                        description: Owner user ID
+                      created_at:
+                        type: string
+                        description: Creation timestamp
+                      updated_at:
+                        type: string
+                        description: Last update timestamp
+                    required:
+                      - id
+                      - name
+                      - slug
+                      - owner_id
+                      - created_at
+                      - updated_at
+                  message:
+                    type: string
+                    description: Success message
+                required:
+                  - success
+                  - data
+                  - message
+                description: Team created successfully
         "400":
-          description: Default Response
+          description: Bad Request - Validation error or team limit reached
           content:
             application/json:
               schema:
-                schema:
-                  description: Bad Request - Validation error or team limit reached
-                  type: object
-                  properties:
-                    success:
-                      default: false
-                      description: Indicates if the operation was successful (false for errors)
-                      type: boolean
-                    error:
-                      description: Error message
-                      type: string
-                    details:
-                      description: Additional error details (validation errors)
-                      type: array
-                      items: {}
-                  required:
-                    - success
-                    - error
-                  additionalProperties: false
-                components: {}
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates the operation failed
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                  details:
+                    type: array
+                    items:
+                      type: object
+                    description: Optional validation error details
+                required:
+                  - success
+                  - error
+                description: Bad Request - Validation error or team limit reached
         "401":
-          description: Default Response
+          description: Unauthorized - Authentication required
           content:
             application/json:
               schema:
-                schema:
-                  description: Unauthorized - Authentication required
-                  type: object
-                  properties:
-                    success:
-                      default: false
-                      description: Indicates if the operation was successful (false for errors)
-                      type: boolean
-                    error:
-                      description: Error message
-                      type: string
-                    details:
-                      description: Additional error details (validation errors)
-                      type: array
-                      items: {}
-                  required:
-                    - success
-                    - error
-                  additionalProperties: false
-                components: {}
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates the operation failed
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                  details:
+                    type: array
+                    items:
+                      type: object
+                    description: Optional validation error details
+                required:
+                  - success
+                  - error
+                description: Unauthorized - Authentication required
         "403":
-          description: Default Response
+          description: Forbidden - Insufficient permissions
           content:
             application/json:
               schema:
-                schema:
-                  description: Forbidden - Insufficient permissions
-                  type: object
-                  properties:
-                    success:
-                      default: false
-                      description: Indicates if the operation was successful (false for errors)
-                      type: boolean
-                    error:
-                      description: Error message
-                      type: string
-                    details:
-                      description: Additional error details (validation errors)
-                      type: array
-                      items: {}
-                  required:
-                    - success
-                    - error
-                  additionalProperties: false
-                components: {}
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates the operation failed
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                  details:
+                    type: array
+                    items:
+                      type: object
+                    description: Optional validation error details
+                required:
+                  - success
+                  - error
+                description: Forbidden - Insufficient permissions
         "500":
-          description: Default Response
+          description: Internal Server Error
           content:
             application/json:
               schema:
-                schema:
-                  description: Internal Server Error
-                  type: object
-                  properties:
-                    success:
-                      default: false
-                      description: Indicates if the operation was successful (false for errors)
-                      type: boolean
-                    error:
-                      description: Error message
-                      type: string
-                    details:
-                      description: Additional error details (validation errors)
-                      type: array
-                      items: {}
-                  required:
-                    - success
-                    - error
-                  additionalProperties: false
-                components: {}
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates the operation failed
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                  details:
+                    type: array
+                    items:
+                      type: object
+                    description: Optional validation error details
+                required:
+                  - success
+                  - error
+                description: Internal Server Error
   /api/teams/{id}/members:
     get:
       summary: Get team members

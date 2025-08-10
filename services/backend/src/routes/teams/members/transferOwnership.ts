@@ -1,44 +1,73 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { ZodError } from 'zod';
-import { createSchema } from 'zod-openapi';
 import { TeamService } from '../../../services/teamService';
 import { checkUserPermission } from '../../../middleware/roleMiddleware';
 import {
-  TransferOwnershipSchema,
-  SuccessResponseSchema,
-  ErrorResponseSchema,
+  TRANSFER_OWNERSHIP_SCHEMA,
+  SUCCESS_RESPONSE_SCHEMA,
+  ERROR_RESPONSE_SCHEMA,
+  TEAM_ID_PARAMS_SCHEMA,
   type TransferOwnershipInput,
+  type SuccessResponse,
+  type ErrorResponse
 } from '../schemas';
 
-export default async function transferOwnershipRoute(fastify: FastifyInstance) {
-  // PUT /teams/:id/ownership - Transfer team ownership
-  fastify.put<{ Params: { id: string }; Body: TransferOwnershipInput }>('/teams/:id/ownership', {
+export default async function transferOwnershipRoute(server: FastifyInstance) {
+  server.put('/teams/:id/ownership', {
+    // ✅ SECURITY FIRST: No authorization middleware needed as this has manual permission checks
+    // This endpoint has complex authorization logic that needs to check team ownership
     schema: {
       tags: ['Team Members'],
       summary: 'Transfer team ownership',
-      description: 'Transfers ownership of a team to another team member. Only current team owner can transfer ownership. Cannot transfer ownership of default teams.',
+      description: 'Transfers ownership of a team to another team member. Only current team owner can transfer ownership. Cannot transfer ownership of default teams. Requires Content-Type: application/json header when sending request body.',
       security: [{ cookieAuth: [] }],
-      params: {
-        type: 'object',
-        properties: {
-          id: { type: 'string' }
-        },
-        required: ['id']
+      
+      // Parameter validation
+      params: TEAM_ID_PARAMS_SCHEMA,
+      
+      // Request body validation
+      body: TRANSFER_OWNERSHIP_SCHEMA,
+      
+      // OpenAPI documentation (same schema, reused)
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: TRANSFER_OWNERSHIP_SCHEMA
+          }
+        }
       },
-      body: createSchema(TransferOwnershipSchema),
+      
       response: {
-        200: createSchema(SuccessResponseSchema.describe('Team ownership transferred successfully')),
-        400: createSchema(ErrorResponseSchema.describe('Bad Request - Validation error, cannot transfer default team ownership, or new owner not a member')),
-        401: createSchema(ErrorResponseSchema.describe('Unauthorized - Authentication required')),
-        403: createSchema(ErrorResponseSchema.describe('Forbidden - Insufficient permissions')),
-        404: createSchema(ErrorResponseSchema.describe('Not Found - Team not found')),
-        500: createSchema(ErrorResponseSchema.describe('Internal Server Error'))
+        200: {
+          ...SUCCESS_RESPONSE_SCHEMA,
+          description: 'Team ownership transferred successfully'
+        },
+        400: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Bad Request - Validation error, cannot transfer default team ownership, or new owner not a member'
+        },
+        401: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Unauthorized - Authentication required'
+        },
+        403: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Forbidden - Insufficient permissions'
+        },
+        404: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Not Found - Team not found'
+        },
+        500: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Internal Server Error'
+        }
       }
     }
   }, async (request: FastifyRequest<{ Params: { id: string }; Body: TransferOwnershipInput }>, reply: FastifyReply) => {
     try {
       if (!request.user) {
-        const errorResponse = {
+        const errorResponse: ErrorResponse = {
           success: false,
           error: 'Authentication required'
         };
@@ -46,13 +75,14 @@ export default async function transferOwnershipRoute(fastify: FastifyInstance) {
         return reply.status(401).type('application/json').send(jsonString);
       }
 
+      // TypeScript type assertion (Fastify has already validated)
       const teamId = request.params.id;
-      const validatedData = TransferOwnershipSchema.parse(request.body);
+      const { newOwnerId } = request.body as TransferOwnershipInput;
 
       // Check if team exists
       const team = await TeamService.getTeamById(teamId);
       if (!team) {
-        const errorResponse = {
+        const errorResponse: ErrorResponse = {
           success: false,
           error: 'Team not found'
         };
@@ -65,7 +95,7 @@ export default async function transferOwnershipRoute(fastify: FastifyInstance) {
       const isCurrentOwner = team.owner_id === request.user.id;
 
       if (!isCurrentOwner && !hasGlobalPermission) {
-        const errorResponse = {
+        const errorResponse: ErrorResponse = {
           success: false,
           error: 'Only the current team owner can transfer ownership'
         };
@@ -74,27 +104,17 @@ export default async function transferOwnershipRoute(fastify: FastifyInstance) {
       }
 
       // Transfer ownership
-      await TeamService.transferOwnership(teamId, validatedData.newOwnerId);
+      await TeamService.transferOwnership(teamId, newOwnerId);
 
-      const successResponse = {
+      const successResponse: SuccessResponse = {
         success: true,
         message: 'Team ownership transferred successfully'
       };
       const jsonString = JSON.stringify(successResponse);
       return reply.status(200).type('application/json').send(jsonString);
     } catch (error) {
-      if (error instanceof ZodError) {
-        const errorResponse = {
-          success: false,
-          error: 'Validation error',
-          details: error.issues
-        };
-        const jsonString = JSON.stringify(errorResponse);
-        return reply.status(400).type('application/json').send(jsonString);
-      }
-
       if (error instanceof Error) {
-        const errorResponse = {
+        const errorResponse: ErrorResponse = {
           success: false,
           error: error.message
         };
@@ -102,8 +122,8 @@ export default async function transferOwnershipRoute(fastify: FastifyInstance) {
         return reply.status(400).type('application/json').send(jsonString);
       }
 
-      fastify.log.error(error, 'Error transferring team ownership');
-      const errorResponse = {
+      server.log.error(error, 'Error transferring team ownership');
+      const errorResponse: ErrorResponse = {
         success: false,
         error: 'Failed to transfer team ownership'
       };

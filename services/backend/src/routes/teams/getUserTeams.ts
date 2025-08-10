@@ -1,12 +1,20 @@
-import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { createSchema } from 'zod-openapi';
+import type { FastifyInstance } from 'fastify';
 import { TeamService } from '../../services/teamService';
 import { requireAuthenticationAny, requireOAuthScope } from '../../middleware/oauthMiddleware';
-import { TeamsListWithRoleInfoResponseSchema, ErrorResponseSchema } from './schemas';
+import {
+  TEAMS_LIST_SUCCESS_RESPONSE_SCHEMA,
+  ERROR_RESPONSE_SCHEMA,
+  type TeamsListSuccessResponse,
+  type ErrorResponse
+} from './schemas';
 
-export default async function getUserTeamsRoute(fastify: FastifyInstance) {
+export default async function getUserTeamsRoute(server: FastifyInstance) {
   // GET /teams/me - Get current user's teams
-  fastify.get('/teams/me', {
+  server.get('/teams/me', {
+    preValidation: [
+      requireAuthenticationAny(),
+      requireOAuthScope('teams:read')
+    ],
     schema: {
       tags: ['Teams'],
       summary: 'Get current user teams',
@@ -16,23 +24,33 @@ export default async function getUserTeamsRoute(fastify: FastifyInstance) {
         { bearerAuth: [] }
       ],
       response: {
-        200: createSchema(TeamsListWithRoleInfoResponseSchema.describe('User teams retrieved successfully')),
-        401: createSchema(ErrorResponseSchema.describe('Unauthorized - Authentication required or invalid token')),
-        403: createSchema(ErrorResponseSchema.describe('Forbidden - Insufficient permissions or scope')),
-        500: createSchema(ErrorResponseSchema.describe('Internal Server Error'))
+        200: {
+          ...TEAMS_LIST_SUCCESS_RESPONSE_SCHEMA,
+          description: 'User teams retrieved successfully'
+        },
+        401: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Unauthorized - Authentication required or invalid token'
+        },
+        403: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Forbidden - Insufficient permissions or scope'
+        },
+        500: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Internal Server Error'
+        }
       }
     },
-    preValidation: [
-      requireAuthenticationAny(),
-      requireOAuthScope('teams:read')
-    ]
-  }, async (request: FastifyRequest, reply: FastifyReply) => {
+  }, async (request, reply) => {
     try {
       if (!request.user) {
-        return reply.status(401).send({
+        const errorResponse: ErrorResponse = {
           success: false,
-          error: 'Authentication required',
-        });
+          error: 'Authentication required'
+        };
+        const jsonString = JSON.stringify(errorResponse);
+        return reply.status(401).type('application/json').send(jsonString);
       }
 
       const authType = request.tokenPayload ? 'oauth2' : 'cookie';
@@ -49,16 +67,20 @@ export default async function getUserTeamsRoute(fastify: FastifyInstance) {
 
       const teamsWithRoles = await TeamService.getUserTeamsWithRoles(request.user.id);
 
-      return reply.status(200).send({
+      const successResponse: TeamsListSuccessResponse = {
         success: true,
-        data: teamsWithRoles,
-      });
+        data: teamsWithRoles
+      };
+      const jsonString = JSON.stringify(successResponse);
+      return reply.status(200).type('application/json').send(jsonString);
     } catch (error) {
-      fastify.log.error(error, 'Error fetching user teams');
-      return reply.status(500).send({
+      server.log.error(error, 'Error fetching user teams');
+      const errorResponse: ErrorResponse = {
         success: false,
-        error: 'Failed to fetch user teams',
-      });
+        error: 'Failed to fetch user teams'
+      };
+      const jsonString = JSON.stringify(errorResponse);
+      return reply.status(500).type('application/json').send(jsonString);
     }
   });
 }

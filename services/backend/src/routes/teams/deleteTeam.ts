@@ -1,98 +1,118 @@
-import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { createSchema } from 'zod-openapi';
+import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { TeamService } from '../../services/teamService';
 import { requirePermission } from '../../middleware/roleMiddleware';
-import { ErrorResponseSchema } from './schemas';
+import {
+  TEAM_ID_PARAMS_SCHEMA,
+  DELETE_SUCCESS_RESPONSE_SCHEMA,
+  ERROR_RESPONSE_SCHEMA,
+  type TeamIdParams,
+  type DeleteSuccessResponse,
+  type ErrorResponse
+} from './schemas';
 
-export default async function deleteTeamRoute(fastify: FastifyInstance) {
+export default async function deleteTeamRoute(server: FastifyInstance) {
   // DELETE /teams/:id - Delete team
-  fastify.delete<{ Params: { id: string } }>('/teams/:id', {
+  server.delete('/teams/:id', {
+    preValidation: requirePermission('teams.delete'),
     schema: {
       tags: ['Teams'],
       summary: 'Delete team',
       description: 'Deletes a team from the system. Only team owners can delete teams. Default teams cannot be deleted.',
       security: [{ cookieAuth: [] }],
-      params: {
-        type: 'object',
-        properties: {
-          id: { type: 'string' }
-        },
-        required: ['id']
-      },
+      
+      // Fastify validation schema
+      params: TEAM_ID_PARAMS_SCHEMA,
+      
       response: {
         200: {
-          type: 'object',
-          properties: {
-            success: { type: 'boolean' },
-            message: { type: 'string' }
-          },
-          required: ['success', 'message']
+          ...DELETE_SUCCESS_RESPONSE_SCHEMA,
+          description: 'Team deleted successfully'
         },
-        400: createSchema(ErrorResponseSchema.describe('Bad Request - Cannot delete default team or team has active resources')),
-        401: createSchema(ErrorResponseSchema.describe('Unauthorized - Authentication required')),
-        403: createSchema(ErrorResponseSchema.describe('Forbidden - Insufficient permissions')),
-        404: createSchema(ErrorResponseSchema.describe('Not Found - Team not found')),
-        500: createSchema(ErrorResponseSchema.describe('Internal Server Error'))
+        400: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Bad Request - Cannot delete default team or team has active resources'
+        },
+        401: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Unauthorized - Authentication required'
+        },
+        403: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Forbidden - Insufficient permissions or not team owner'
+        },
+        404: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Not Found - Team not found'
+        },
+        500: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Internal Server Error'
+        }
       }
     },
-    preValidation: requirePermission('teams.delete'),
-  }, async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+  }, async (request: FastifyRequest<{ Params: TeamIdParams }>, reply) => {
     try {
-      if (!request.user) {
-        return reply.status(401).send({
-          success: false,
-          error: 'Authentication required',
-        });
-      }
-
-      const teamId = request.params.id;
+      // TypeScript types are now properly inferred from route definition
+      const { id: teamId } = request.params;
 
       // Check if team exists
       const existingTeam = await TeamService.getTeamById(teamId);
       if (!existingTeam) {
-        return reply.status(404).send({
+        const errorResponse: ErrorResponse = {
           success: false,
-          error: 'Team not found',
-        });
+          error: 'Team not found'
+        };
+        const jsonString = JSON.stringify(errorResponse);
+        return reply.status(404).type('application/json').send(jsonString);
       }
 
-      // Check if user is team owner
-      if (existingTeam.owner_id !== request.user.id) {
-        return reply.status(403).send({
+      // Check if user is team owner (user is guaranteed to exist due to preValidation)
+      if (existingTeam.owner_id !== request.user!.id) {
+        const errorResponse: ErrorResponse = {
           success: false,
-          error: 'Only team owners can delete teams',
-        });
+          error: 'Only team owners can delete teams'
+        };
+        const jsonString = JSON.stringify(errorResponse);
+        return reply.status(403).type('application/json').send(jsonString);
       }
 
       // Check if it's a default team
       if (existingTeam.is_default) {
-        return reply.status(400).send({
+        const errorResponse: ErrorResponse = {
           success: false,
-          error: 'Default teams cannot be deleted',
-        });
+          error: 'Default teams cannot be deleted'
+        };
+        const jsonString = JSON.stringify(errorResponse);
+        return reply.status(400).type('application/json').send(jsonString);
       }
 
       // Delete the team
       await TeamService.deleteTeam(teamId);
 
-      return reply.status(200).send({
+      const successResponse: DeleteSuccessResponse = {
         success: true,
-        message: 'Team deleted successfully',
-      });
+        message: 'Team deleted successfully'
+      };
+      const jsonString = JSON.stringify(successResponse);
+      return reply.status(200).type('application/json').send(jsonString);
     } catch (error) {
       if (error instanceof Error && error.message.includes('active resources')) {
-        return reply.status(400).send({
+        const errorResponse: ErrorResponse = {
           success: false,
-          error: 'Cannot delete team with active resources',
-        });
+          error: 'Cannot delete team with active resources'
+        };
+        const jsonString = JSON.stringify(errorResponse);
+        return reply.status(400).type('application/json').send(jsonString);
       }
 
-      fastify.log.error(error, 'Error deleting team');
-      return reply.status(500).send({
+      server.log.error(error, 'Error deleting team');
+      const errorResponse: ErrorResponse = {
         success: false,
         error: 'Failed to delete team',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      });
+        details: [error instanceof Error ? error.message : 'Unknown error']
+      };
+      const jsonString = JSON.stringify(errorResponse);
+      return reply.status(500).type('application/json').send(jsonString);
     }
   });
 }

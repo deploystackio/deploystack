@@ -1,39 +1,96 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { createSchema } from 'zod-openapi';
-import { TeamService } from '../../../services/teamService';
+import { TeamService, type TeamMemberWithUser } from '../../../services/teamService';
 import { checkUserPermission } from '../../../middleware/roleMiddleware';
 import {
-  TeamMembersListResponseSchema,
-  ErrorResponseSchema,
+  ERROR_RESPONSE_SCHEMA,
+  TEAM_ID_PARAMS_SCHEMA,
+  type ErrorResponse
 } from '../schemas';
 
-export default async function listTeamMembersRoute(fastify: FastifyInstance) {
-  // GET /teams/:id/members - Get team members
-  fastify.get<{ Params: { id: string } }>('/teams/:id/members', {
+// Custom response schema for team members list (using actual service return type)
+const TEAM_MEMBERS_WITH_USER_INFO_RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    success: { type: 'boolean', description: 'Indicates if the operation was successful' },
+    data: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', description: 'Membership ID' },
+          user_id: { type: 'string', description: 'User ID' },
+          username: { type: 'string', description: 'Username' },
+          email: { type: 'string', description: 'User email' },
+          first_name: { type: 'string', nullable: true, description: 'User first name' },
+          last_name: { type: 'string', nullable: true, description: 'User last name' },
+          role: {
+            type: 'string',
+            enum: ['team_admin', 'team_user'],
+            description: 'User role in the team'
+          },
+          is_admin: { type: 'boolean', description: 'True if user is team admin' },
+          is_owner: { type: 'boolean', description: 'True if user is team owner' },
+          joined_at: { type: 'string', format: 'date-time', description: 'Date when user joined the team' }
+        },
+        required: ['id', 'user_id', 'username', 'email', 'role', 'is_admin', 'is_owner', 'joined_at']
+      },
+      description: 'Array of team members with user information'
+    }
+  },
+  required: ['success', 'data']
+} as const;
+
+// TypeScript interface for parameters
+interface TeamIdParams {
+  id: string;
+}
+
+// TypeScript interface for response
+interface TeamMembersWithUserInfoResponse {
+  success: boolean;
+  data: TeamMemberWithUser[];
+}
+
+export default async function listTeamMembersRoute(server: FastifyInstance) {
+  server.get('/teams/:id/members', {
+    // ✅ SECURITY FIRST: No preValidation middleware needed as this has manual permission checks
+    // This endpoint has complex authorization logic that needs to check team membership and global permissions
     schema: {
       tags: ['Team Members'],
       summary: 'Get team members',
       description: 'Retrieves all members of a specific team with their user information, roles, and status flags.',
       security: [{ cookieAuth: [] }],
-      params: {
-        type: 'object',
-        properties: {
-          id: { type: 'string' }
-        },
-        required: ['id']
-      },
+      
+      // Parameter validation
+      params: TEAM_ID_PARAMS_SCHEMA,
+      
       response: {
-        200: createSchema(TeamMembersListResponseSchema.describe('Team members retrieved successfully')),
-        401: createSchema(ErrorResponseSchema.describe('Unauthorized - Authentication required')),
-        403: createSchema(ErrorResponseSchema.describe('Forbidden - Insufficient permissions')),
-        404: createSchema(ErrorResponseSchema.describe('Not Found - Team not found')),
-        500: createSchema(ErrorResponseSchema.describe('Internal Server Error'))
+        200: {
+          ...TEAM_MEMBERS_WITH_USER_INFO_RESPONSE_SCHEMA,
+          description: 'Team members retrieved successfully'
+        },
+        401: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Unauthorized - Authentication required'
+        },
+        403: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Forbidden - Insufficient permissions'
+        },
+        404: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Not Found - Team not found'
+        },
+        500: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Internal Server Error'
+        }
       }
     }
-  }, async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+  }, async (request: FastifyRequest<{ Params: TeamIdParams }>, reply: FastifyReply) => {
     try {
       if (!request.user) {
-        const errorResponse = {
+        const errorResponse: ErrorResponse = {
           success: false,
           error: 'Authentication required'
         };
@@ -41,12 +98,13 @@ export default async function listTeamMembersRoute(fastify: FastifyInstance) {
         return reply.status(401).type('application/json').send(jsonString);
       }
 
-      const teamId = request.params.id;
+      // TypeScript type assertion (Fastify has already validated)
+      const { id: teamId } = request.params as TeamIdParams;
 
       // Check if team exists
       const team = await TeamService.getTeamById(teamId);
       if (!team) {
-        const errorResponse = {
+        const errorResponse: ErrorResponse = {
           success: false,
           error: 'Team not found'
         };
@@ -59,7 +117,7 @@ export default async function listTeamMembersRoute(fastify: FastifyInstance) {
       const hasGlobalPermission = await checkUserPermission(request.user.id, 'team.members.view');
       
       if (!isTeamMember && !hasGlobalPermission) {
-        const errorResponse = {
+        const errorResponse: ErrorResponse = {
           success: false,
           error: 'You do not have permission to view this team\'s members'
         };
@@ -69,15 +127,15 @@ export default async function listTeamMembersRoute(fastify: FastifyInstance) {
 
       const members = await TeamService.getTeamMembersWithUserInfo(teamId);
 
-      const successResponse = {
+      const successResponse: TeamMembersWithUserInfoResponse = {
         success: true,
         data: members
       };
       const jsonString = JSON.stringify(successResponse);
       return reply.status(200).type('application/json').send(jsonString);
     } catch (error) {
-      fastify.log.error(error, 'Error fetching team members');
-      const errorResponse = {
+      server.log.error(error, 'Error fetching team members');
+      const errorResponse: ErrorResponse = {
         success: false,
         error: 'Failed to fetch team members'
       };

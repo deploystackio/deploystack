@@ -1,56 +1,85 @@
-import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { ZodError } from 'zod';
-import { createSchema } from 'zod-openapi';
+import type { FastifyInstance } from 'fastify';
 import { TeamService } from '../../../services/teamService';
 import { UserService } from '../../../services/userService';
-import { checkUserPermission } from '../../../middleware/roleMiddleware';
+import { requireTeamPermission } from '../../../middleware/roleMiddleware';
 import {
-  AddTeamMemberSchema,
-  TeamMemberResponseSchema,
-  ErrorResponseSchema,
+  ADD_TEAM_MEMBER_SCHEMA,
+  TEAM_MEMBER_RESPONSE_SCHEMA,
+  ERROR_RESPONSE_SCHEMA,
   type AddTeamMemberInput,
+  type TeamMemberResponse,
+  type ErrorResponse,
+  type TeamMember,
 } from '../schemas';
 
-export default async function addTeamMemberRoute(fastify: FastifyInstance) {
+// Define the params interface locally
+interface TeamIdParams {
+  id: string;
+}
+
+export default async function addTeamMemberRoute(server: FastifyInstance) {
   const userService = new UserService();
   
   // POST /teams/:id/members - Add team member
-  fastify.post<{ Params: { id: string }; Body: AddTeamMemberInput }>('/teams/:id/members', {
+  server.post('/teams/:id/members', {
+    preValidation: requireTeamPermission('team.members.manage', (request) => {
+      const params = request.params as { id?: string };
+      return params?.id || '';
+    }),
     schema: {
       tags: ['Team Members'],
       summary: 'Add team member',
-      description: 'Adds a new member to a team by email address. Only team admins and owners can add members. Cannot add members to default teams. Teams are limited to 3 members maximum.',
+      description: 'Adds a new member to a team by email address. Only team admins and owners can add members. Cannot add members to default teams. Teams are limited to 3 members maximum. Requires Content-Type: application/json header when sending request body.',
       security: [{ cookieAuth: [] }],
       params: {
         type: 'object',
         properties: {
-          id: { type: 'string' }
+          id: { type: 'string', minLength: 1, description: 'Team ID' }
         },
-        required: ['id']
+        required: ['id'],
+        additionalProperties: false
       },
-      body: createSchema(AddTeamMemberSchema),
+      body: ADD_TEAM_MEMBER_SCHEMA,
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: ADD_TEAM_MEMBER_SCHEMA
+          }
+        }
+      },
       response: {
-        201: createSchema(TeamMemberResponseSchema.describe('Team member added successfully')),
-        400: createSchema(ErrorResponseSchema.describe('Bad Request - Validation error, team limit reached, user not found, or cannot add to default team')),
-        401: createSchema(ErrorResponseSchema.describe('Unauthorized - Authentication required')),
-        403: createSchema(ErrorResponseSchema.describe('Forbidden - Insufficient permissions')),
-        404: createSchema(ErrorResponseSchema.describe('Not Found - Team not found')),
-        500: createSchema(ErrorResponseSchema.describe('Internal Server Error'))
+        201: {
+          ...TEAM_MEMBER_RESPONSE_SCHEMA,
+          description: 'Team member added successfully'
+        },
+        400: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Bad Request - Validation error, team limit reached, user not found, or cannot add to default team'
+        },
+        401: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Unauthorized - Authentication required'
+        },
+        403: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Forbidden - Insufficient permissions'
+        },
+        404: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Not Found - Team not found'
+        },
+        500: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Internal Server Error'
+        }
       }
     }
-  }, async (request: FastifyRequest<{ Params: { id: string }; Body: AddTeamMemberInput }>, reply: FastifyReply) => {
+  }, async (request, reply) => {
     try {
-      if (!request.user) {
-        const errorResponse = {
-          success: false,
-          error: 'Authentication required'
-        };
-        const jsonString = JSON.stringify(errorResponse);
-        return reply.status(401).type('application/json').send(jsonString);
-      }
-
-      const teamId = request.params.id;
-      const validatedData = AddTeamMemberSchema.parse(request.body);
+      // TypeScript type assertion (Fastify has already validated)
+      const { id: teamId } = request.params as TeamIdParams;
+      const { email, role } = request.body as AddTeamMemberInput;
 
       // Check if team exists
       const team = await TeamService.getTeamById(teamId);
@@ -74,57 +103,51 @@ export default async function addTeamMemberRoute(fastify: FastifyInstance) {
       }
 
       // Find user by email address
-      const targetUser = await userService.getUserByEmail(validatedData.email);
+      const targetUser = await userService.getUserByEmail(email);
       if (!targetUser) {
-        const errorResponse = {
+        const errorResponse: ErrorResponse = {
           success: false,
-          error: `User with email '${validatedData.email}' not found. User must have a DeployStack account before being added to a team.`
+          error: `User with email '${email}' not found. User must have a DeployStack account before being added to a team.`
         };
         const jsonString = JSON.stringify(errorResponse);
         return reply.status(400).type('application/json').send(jsonString);
       }
 
-      // Check permissions
-      const hasGlobalPermission = await checkUserPermission(request.user.id, 'team.members.manage');
-      const canManage = hasGlobalPermission || 
-        await TeamService.canUserManageTeamMember(teamId, request.user.id, targetUser.id, 'add');
-
-      if (!canManage) {
-        const errorResponse = {
-          success: false,
-          error: 'You do not have permission to add members to this team'
-        };
-        const jsonString = JSON.stringify(errorResponse);
-        return reply.status(403).type('application/json').send(jsonString);
-      }
-
       // Add the member using the resolved user ID
-      await TeamService.addTeamMember(teamId, targetUser.id, validatedData.role);
+      await TeamService.addTeamMember(teamId, targetUser.id, role);
 
       // Get the full member info to return
       const members = await TeamService.getTeamMembersWithUserInfo(teamId);
-      const newMember = members.find(m => m.user_id === targetUser.id);
+      const newMemberData = members.find(m => m.user_id === targetUser.id);
+      
+      if (!newMemberData) {
+        throw new Error('Failed to retrieve newly added member');
+      }
+      
+      // Convert TeamMemberWithUser to TeamMember (handle optional properties)
+      const newMember: TeamMember = {
+        id: newMemberData.id,
+        user_id: newMemberData.user_id,
+        username: newMemberData.username,
+        email: newMemberData.email,
+        first_name: newMemberData.first_name ?? null,
+        last_name: newMemberData.last_name ?? null,
+        role: newMemberData.role,
+        is_admin: newMemberData.is_admin,
+        is_owner: newMemberData.is_owner,
+        joined_at: newMemberData.joined_at
+      };
 
-      const successResponse = {
+      const successResponse: TeamMemberResponse = {
         success: true,
         data: newMember,
-        message: `Team member '${validatedData.email}' added successfully`
+        message: `Team member '${email}' added successfully`
       };
       const jsonString = JSON.stringify(successResponse);
       return reply.status(201).type('application/json').send(jsonString);
     } catch (error) {
-      if (error instanceof ZodError) {
-        const errorResponse = {
-          success: false,
-          error: 'Validation error',
-          details: error.issues
-        };
-        const jsonString = JSON.stringify(errorResponse);
-        return reply.status(400).type('application/json').send(jsonString);
-      }
-
       if (error instanceof Error) {
-        const errorResponse = {
+        const errorResponse: ErrorResponse = {
           success: false,
           error: error.message
         };
@@ -132,8 +155,8 @@ export default async function addTeamMemberRoute(fastify: FastifyInstance) {
         return reply.status(400).type('application/json').send(jsonString);
       }
 
-      fastify.log.error(error, 'Error adding team member');
-      const errorResponse = {
+      server.log.error(error, 'Error adding team member');
+      const errorResponse: ErrorResponse = {
         success: false,
         error: 'Failed to add team member'
       };

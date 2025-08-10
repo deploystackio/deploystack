@@ -1,60 +1,81 @@
-import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { ZodError } from 'zod';
-import { createSchema } from 'zod-openapi';
+import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { TeamService } from '../../../services/teamService';
-import { checkUserPermission } from '../../../middleware/roleMiddleware';
+import { requireTeamPermission } from '../../../middleware/roleMiddleware';
 import {
-  UpdateMemberRoleSchema,
-  TeamMemberResponseSchema,
-  ErrorResponseSchema,
+  UPDATE_MEMBER_ROLE_SCHEMA,
+  TEAM_MEMBER_RESPONSE_SCHEMA,
+  ERROR_RESPONSE_SCHEMA,
   type UpdateMemberRoleInput,
+  type TeamMemberResponse,
+  type ErrorResponse
 } from '../schemas';
 
-export default async function updateMemberRoleRoute(fastify: FastifyInstance) {
+// TypeScript interfaces for route typing
+interface UpdateRoleParams {
+  id: string;
+  userId: string;
+}
+
+export default async function updateMemberRoleRoute(server: FastifyInstance) {
   // PUT /teams/:id/members/:userId/role - Update member role
-  fastify.put<{ Params: { id: string; userId: string }; Body: UpdateMemberRoleInput }>('/teams/:id/members/:userId/role', {
+  server.put('/teams/:id/members/:userId/role', {
+    preValidation: requireTeamPermission('team.members.manage', (request) => {
+      const params = request.params as { id?: string };
+      return params?.id || '';
+    }),
     schema: {
       tags: ['Team Members'],
       summary: 'Update team member role',
-      description: 'Updates a team member\'s role. Only team owners can change roles. Cannot change roles in default teams. Must maintain at least one team admin.',
+      description: 'Updates a team member\'s role. Only team owners can change roles. Cannot change roles in default teams. Must maintain at least one team admin. Requires Content-Type: application/json header when sending request body.',
       security: [{ cookieAuth: [] }],
       params: {
         type: 'object',
         properties: {
-          id: { type: 'string' },
-          userId: { type: 'string' }
+          id: { type: 'string', description: 'Team ID' },
+          userId: { type: 'string', description: 'User ID' }
         },
-        required: ['id', 'userId']
+        required: ['id', 'userId'],
+        additionalProperties: false
       },
-      body: createSchema(UpdateMemberRoleSchema),
+      body: UPDATE_MEMBER_ROLE_SCHEMA,
       response: {
-        200: createSchema(TeamMemberResponseSchema.describe('Team member role updated successfully')),
-        400: createSchema(ErrorResponseSchema.describe('Bad Request - Validation error, cannot change roles in default team, or would leave no admins')),
-        401: createSchema(ErrorResponseSchema.describe('Unauthorized - Authentication required')),
-        403: createSchema(ErrorResponseSchema.describe('Forbidden - Insufficient permissions')),
-        404: createSchema(ErrorResponseSchema.describe('Not Found - Team or user not found')),
-        500: createSchema(ErrorResponseSchema.describe('Internal Server Error'))
+        200: {
+          ...TEAM_MEMBER_RESPONSE_SCHEMA,
+          description: 'Team member role updated successfully'
+        },
+        400: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Bad Request - Validation error, cannot change roles in default team, or would leave no admins'
+        },
+        401: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Unauthorized - Authentication required'
+        },
+        403: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Forbidden - Insufficient permissions'
+        },
+        404: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Not Found - Team or user not found'
+        },
+        500: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Internal Server Error'
+        }
       }
     }
-  }, async (request: FastifyRequest<{ Params: { id: string; userId: string }; Body: UpdateMemberRoleInput }>, reply: FastifyReply) => {
+  }, async (request: FastifyRequest<{ Params: UpdateRoleParams; Body: UpdateMemberRoleInput }>, reply) => {
     try {
-      if (!request.user) {
-        const errorResponse = {
-          success: false,
-          error: 'Authentication required'
-        };
-        const jsonString = JSON.stringify(errorResponse);
-        return reply.status(401).type('application/json').send(jsonString);
-      }
-
+      // TypeScript types are now properly inferred from route definition
       const teamId = request.params.id;
       const targetUserId = request.params.userId;
-      const validatedData = UpdateMemberRoleSchema.parse(request.body);
+      const { role } = request.body;
 
       // Check if team exists
       const team = await TeamService.getTeamById(teamId);
       if (!team) {
-        const errorResponse = {
+        const errorResponse: ErrorResponse = {
           success: false,
           error: 'Team not found'
         };
@@ -62,47 +83,43 @@ export default async function updateMemberRoleRoute(fastify: FastifyInstance) {
         return reply.status(404).type('application/json').send(jsonString);
       }
 
-      // Check permissions
-      const hasGlobalPermission = await checkUserPermission(request.user.id, 'team.members.manage');
-      const canManage = hasGlobalPermission || 
-        await TeamService.canUserManageTeamMember(teamId, request.user.id, targetUserId, 'change_role');
-
-      if (!canManage) {
-        const errorResponse = {
-          success: false,
-          error: 'You do not have permission to change this member\'s role'
-        };
-        const jsonString = JSON.stringify(errorResponse);
-        return reply.status(403).type('application/json').send(jsonString);
-      }
-
       // Update the role
-      await TeamService.updateMemberRole(teamId, targetUserId, validatedData.role);
+      await TeamService.updateMemberRole(teamId, targetUserId, role);
 
       // Get the updated member info to return
       const members = await TeamService.getTeamMembersWithUserInfo(teamId);
       const updatedMember = members.find(m => m.user_id === targetUserId);
 
-      const successResponse = {
+      if (!updatedMember) {
+        const errorResponse: ErrorResponse = {
+          success: false,
+          error: 'Updated member not found after role change'
+        };
+        const jsonString = JSON.stringify(errorResponse);
+        return reply.status(404).type('application/json').send(jsonString);
+      }
+
+      const successResponse: TeamMemberResponse = {
         success: true,
-        data: updatedMember,
+        data: {
+          id: updatedMember.id,
+          user_id: updatedMember.user_id,
+          username: updatedMember.username,
+          email: updatedMember.email,
+          first_name: updatedMember.first_name ?? null,
+          last_name: updatedMember.last_name ?? null,
+          role: updatedMember.role,
+          is_admin: updatedMember.is_admin,
+          is_owner: updatedMember.is_owner,
+          joined_at: updatedMember.joined_at
+        },
         message: 'Team member role updated successfully'
       };
       const jsonString = JSON.stringify(successResponse);
       return reply.status(200).type('application/json').send(jsonString);
     } catch (error) {
-      if (error instanceof ZodError) {
-        const errorResponse = {
-          success: false,
-          error: 'Validation error',
-          details: error.issues
-        };
-        const jsonString = JSON.stringify(errorResponse);
-        return reply.status(400).type('application/json').send(jsonString);
-      }
-
       if (error instanceof Error) {
-        const errorResponse = {
+        const errorResponse: ErrorResponse = {
           success: false,
           error: error.message
         };
@@ -110,8 +127,8 @@ export default async function updateMemberRoleRoute(fastify: FastifyInstance) {
         return reply.status(400).type('application/json').send(jsonString);
       }
 
-      fastify.log.error(error, 'Error updating team member role');
-      const errorResponse = {
+      server.log.error(error, 'Error updating team member role');
+      const errorResponse: ErrorResponse = {
         success: false,
         error: 'Failed to update team member role'
       };

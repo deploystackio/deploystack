@@ -1,12 +1,20 @@
-import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { createSchema } from 'zod-openapi';
+import type { FastifyInstance } from 'fastify';
 import { TeamService } from '../../services/teamService';
 import { requireAuthenticationAny, requireOAuthScope } from '../../middleware/oauthMiddleware';
-import { TeamResponseSchema, ErrorResponseSchema } from './schemas';
+import {
+  TEAM_SUCCESS_RESPONSE_SCHEMA,
+  ERROR_RESPONSE_SCHEMA,
+  type TeamSuccessResponse,
+  type ErrorResponse
+} from './schemas';
 
-export default async function getDefaultTeamRoute(fastify: FastifyInstance) {
+export default async function getDefaultTeamRoute(server: FastifyInstance) {
   // GET /teams/me/default - Get current user's default team
-  fastify.get('/teams/me/default', {
+  server.get('/teams/me/default', {
+    preValidation: [
+      requireAuthenticationAny(),
+      requireOAuthScope('teams:read')
+    ],
     schema: {
       tags: ['Teams'],
       summary: 'Get current user default team',
@@ -16,24 +24,37 @@ export default async function getDefaultTeamRoute(fastify: FastifyInstance) {
         { bearerAuth: [] }
       ],
       response: {
-        200: createSchema(TeamResponseSchema.describe('Default team retrieved successfully')),
-        401: createSchema(ErrorResponseSchema.describe('Unauthorized - Authentication required or invalid token')),
-        403: createSchema(ErrorResponseSchema.describe('Forbidden - Insufficient permissions or scope')),
-        404: createSchema(ErrorResponseSchema.describe('Not Found - No default team found')),
-        500: createSchema(ErrorResponseSchema.describe('Internal Server Error'))
+        200: {
+          ...TEAM_SUCCESS_RESPONSE_SCHEMA,
+          description: 'Default team retrieved successfully'
+        },
+        401: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Unauthorized - Authentication required or invalid token'
+        },
+        403: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Forbidden - Insufficient permissions or scope'
+        },
+        404: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Not Found - No default team found'
+        },
+        500: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Internal Server Error'
+        }
       }
     },
-    preValidation: [
-      requireAuthenticationAny(),
-      requireOAuthScope('teams:read')
-    ]
-  }, async (request: FastifyRequest, reply: FastifyReply) => {
+  }, async (request, reply) => {
     try {
       if (!request.user) {
-        return reply.status(401).send({
+        const errorResponse: ErrorResponse = {
           success: false,
-          error: 'Authentication required',
-        });
+          error: 'Authentication required'
+        };
+        const jsonString = JSON.stringify(errorResponse);
+        return reply.status(401).type('application/json').send(jsonString);
       }
 
       const authType = request.tokenPayload ? 'oauth2' : 'cookie';
@@ -51,23 +72,29 @@ export default async function getDefaultTeamRoute(fastify: FastifyInstance) {
       const defaultTeam = await TeamService.getUserDefaultTeam(request.user.id);
       
       if (!defaultTeam) {
-        return reply.status(404).send({
+        const errorResponse: ErrorResponse = {
           success: false,
-          error: 'No default team found',
-        });
+          error: 'No default team found'
+        };
+        const jsonString = JSON.stringify(errorResponse);
+        return reply.status(404).type('application/json').send(jsonString);
       }
 
-      return reply.status(200).send({
+      const successResponse: TeamSuccessResponse = {
         success: true,
         data: defaultTeam,
-        message: 'Default team retrieved successfully',
-      });
+        message: 'Default team retrieved successfully'
+      };
+      const jsonString = JSON.stringify(successResponse);
+      return reply.status(200).type('application/json').send(jsonString);
     } catch (error) {
-      fastify.log.error(error, 'Error fetching user default team');
-      return reply.status(500).send({
+      server.log.error(error, 'Error fetching user default team');
+      const errorResponse: ErrorResponse = {
         success: false,
-        error: 'Failed to fetch default team',
-      });
+        error: 'Failed to fetch default team'
+      };
+      const jsonString = JSON.stringify(errorResponse);
+      return reply.status(500).type('application/json').send(jsonString);
     }
   });
 }
