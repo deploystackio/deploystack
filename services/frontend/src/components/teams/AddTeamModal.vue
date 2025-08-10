@@ -198,9 +198,11 @@ const handleDescriptionChange = () => {
           </Button>
           <Button
             type="submit"
-            :disabled="!isFormValid || isSubmitting"
+            :disabled="!isFormValid"
+            :loading="isSubmitting"
+            :loading-text="t('teams.addModal.buttons.creating')"
           >
-            {{ isSubmitting ? t('teams.addModal.buttons.creating') : t('teams.addModal.buttons.create') }}
+            {{ t('teams.addModal.buttons.create') }}
           </Button>
         </AlertDialogFooter>
       </form>

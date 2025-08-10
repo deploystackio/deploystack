@@ -224,8 +224,12 @@ const handleCancel = () => {
           <Button type="button" variant="outline" @click="handleCancel" :disabled="isAddingMember">
             {{ t('teams.manage.members.addModal.buttons.cancel') }}
           </Button>
-          <Button type="submit" :disabled="isAddingMember">
-            {{ isAddingMember ? t('teams.manage.members.addModal.buttons.adding') : t('teams.manage.members.addModal.buttons.add') }}
+          <Button
+            type="submit"
+            :loading="isAddingMember"
+            :loading-text="t('teams.manage.members.addModal.buttons.adding')"
+          >
+            {{ t('teams.manage.members.addModal.buttons.add') }}
           </Button>
         </DialogFooter>
       </form>

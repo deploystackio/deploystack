@@ -11,7 +11,6 @@ import {
   Calendar,
   Users,
   Hash,
-  Loader2,
   AlertTriangle
 } from 'lucide-vue-next'
 import { TeamService, type Team } from '@/services/teamService'
@@ -249,12 +248,13 @@ watch(() => props.team, () => {
     <div class="flex items-center justify-end pt-4 border-t">
       <Button
         @click="saveTeam"
-        :disabled="!hasChanges || isSaving"
+        :disabled="!hasChanges"
+        :loading="isSaving"
+        :loading-text="t('teams.manage.saving')"
         class="gap-2"
       >
-        <Loader2 v-if="isSaving" class="h-4 w-4 animate-spin" />
-        <Save v-else class="h-4 w-4" />
-        {{ isSaving ? t('teams.manage.saving') : t('teams.manage.save') }}
+        <Save class="h-4 w-4" />
+        {{ t('teams.manage.save') }}
       </Button>
     </div>
   </div>

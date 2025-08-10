@@ -5,16 +5,14 @@ import { useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { 
-  Trash2, 
+import {
+  Trash2,
   AlertTriangle,
   XCircle,
-  Loader2,
   Shield
 } from 'lucide-vue-next'
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -45,7 +43,7 @@ const deleteTeam = async () => {
     isDeleting.value = true
     error.value = null
     const teamName = props.team.name || 'Unknown Team'
-    
+
     await TeamService.deleteTeam(props.team.id)
 
     // Show success toast
@@ -102,7 +100,7 @@ const deleteTeam = async () => {
             <p class="text-sm text-muted-foreground mb-4">
               Permanently delete this team and all associated resources. This action cannot be undone.
             </p>
-            
+
             <!-- What gets deleted -->
             <div class="bg-background border rounded-lg p-4 mb-4">
               <h4 class="text-sm font-medium mb-3">This will permanently delete:</h4>
@@ -177,12 +175,12 @@ const deleteTeam = async () => {
           </AlertDialogTitle>
           <AlertDialogDescription class="space-y-4">
             <p>{{ t('teams.manage.deleteDialog.warning') }}</p>
-            
+
             <div class="rounded-lg border p-3 bg-muted/50">
               <p class="font-medium text-sm mb-1">{{ t('teams.manage.deleteDialog.teamName') }}:</p>
               <p class="font-mono text-sm">"{{ team.name }}"</p>
             </div>
-            
+
             <div class="rounded-lg border-destructive/50 bg-destructive/5 p-4 space-y-3">
               <p class="text-sm font-medium text-destructive">{{ t('teams.manage.deleteDialog.consequences') }}</p>
               <ul class="text-xs space-y-2">
@@ -210,15 +208,16 @@ const deleteTeam = async () => {
           <AlertDialogCancel @click="showDeleteDialog = false">
             {{ t('teams.manage.deleteDialog.cancel') }}
           </AlertDialogCancel>
-          <AlertDialogAction
+          <Button
+            variant="destructive"
             @click="deleteTeam"
-            :disabled="isDeleting"
+            :loading="isDeleting"
+            :loading-text="t('teams.manage.deleteDialog.deleting')"
             class="bg-destructive hover:bg-destructive/90 gap-2"
           >
-            <Loader2 v-if="isDeleting" class="h-4 w-4 animate-spin" />
-            <Trash2 v-else class="h-4 w-4" />
-            {{ isDeleting ? t('teams.manage.deleteDialog.deleting') : t('teams.manage.deleteDialog.confirm') }}
-          </AlertDialogAction>
+            <Trash2 class="h-4 w-4" />
+            {{ t('teams.manage.deleteDialog.confirm') }}
+          </Button>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

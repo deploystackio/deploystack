@@ -174,6 +174,39 @@ export default {
             removeMemberFailed: 'Failed to remove member: {status}',
             unknownError: 'Unknown error occurred'
           }
+        },
+        editRoleModal: {
+          title: 'Edit Team Member Role',
+          description: 'Change the role and permissions for this team member.',
+          ownerNotice: {
+            title: 'Team Owner',
+            description: 'The team owner\'s role cannot be changed. To change the owner\'s role, you must first transfer team ownership to another member.'
+          },
+          currentRole: {
+            label: 'Current Role',
+            unknown: 'Unknown Role'
+          },
+          newRole: {
+            label: 'Change Role To',
+            placeholder: 'Select new role'
+          },
+          roleDescriptions: {
+            admin: 'Can manage team members and all team resources',
+            user: 'Can view team resources with limited permissions'
+          },
+          buttons: {
+            cancel: 'Cancel',
+            update: 'Update Role',
+            updating: 'Updating...'
+          },
+          messages: {
+            success: 'Role updated successfully!',
+            successDescription: '{memberName} is now a {role}',
+            error: 'Failed to update role',
+            apiUrlNotConfigured: 'API URL not configured. Make sure VITE_DEPLOYSTACK_BACKEND_URL is set.',
+            updateRoleFailed: 'Failed to update member role: {status}',
+            unknownError: 'Unknown error occurred'
+          }
         }
       },
       fields: {

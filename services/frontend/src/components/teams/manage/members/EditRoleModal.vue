@@ -55,12 +55,12 @@ const roleOptions = [
   {
     value: 'team_admin' as const,
     label: t('teams.manage.members.roles.admin'),
-    description: 'Can manage team members and all team resources'
+    description: t('teams.manage.members.editRoleModal.roleDescriptions.admin')
   },
   {
     value: 'team_user' as const,
     label: t('teams.manage.members.roles.user'),
-    description: 'Can view team resources with limited permissions'
+    description: t('teams.manage.members.editRoleModal.roleDescriptions.user')
   }
 ]
 
@@ -89,7 +89,7 @@ const isRoleChanged = computed(() => {
 const getApiUrl = () => {
   const apiUrl = getEnv('VITE_DEPLOYSTACK_BACKEND_URL')
   if (!apiUrl) {
-    throw new Error('API URL not configured. Make sure VITE_DEPLOYSTACK_BACKEND_URL is set.')
+    throw new Error(t('teams.manage.members.editRoleModal.messages.apiUrlNotConfigured'))
   }
   return apiUrl
 }
@@ -137,7 +137,7 @@ const updateMemberRole = async () => {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))
-      throw new Error(errorData.error || `Failed to update member role: ${response.status}`)
+      throw new Error(errorData.error || t('teams.manage.members.editRoleModal.messages.updateRoleFailed', { status: response.status }))
     }
 
     const data = await response.json()
@@ -145,20 +145,23 @@ const updateMemberRole = async () => {
     if (data.success) {
       // Show success toast
       const roleLabel = roleOptions.find(r => r.value === selectedRole.value)?.label || selectedRole.value
-      toast.success('Role updated successfully!', {
-        description: `${props.member.name} is now a ${roleLabel}`
+      toast.success(t('teams.manage.members.editRoleModal.messages.success'), {
+        description: t('teams.manage.members.editRoleModal.messages.successDescription', { 
+          memberName: props.member.name, 
+          role: roleLabel 
+        })
       })
 
       // Close modal and emit success
       emit('update:open', false)
       emit('role-updated')
     } else {
-      throw new Error(data.error || 'Unknown error occurred')
+      throw new Error(data.error || t('teams.manage.members.editRoleModal.messages.unknownError'))
     }
   } catch (error) {
     console.error('Error updating member role:', error)
-    toast.error('Failed to update role', {
-      description: error instanceof Error ? error.message : 'Unknown error occurred'
+    toast.error(t('teams.manage.members.editRoleModal.messages.error'), {
+      description: error instanceof Error ? error.message : t('teams.manage.members.editRoleModal.messages.unknownError')
     })
   } finally {
     isUpdatingRole.value = false
@@ -174,9 +177,9 @@ const handleCancel = () => {
   <AlertDialog :open="props.open" @update:open="handleModalChange">
     <AlertDialogContent>
       <AlertDialogHeader>
-        <AlertDialogTitle>Edit Team Member Role</AlertDialogTitle>
+        <AlertDialogTitle>{{ $t('teams.manage.members.editRoleModal.title') }}</AlertDialogTitle>
         <AlertDialogDescription>
-          Change the role and permissions for this team member.
+          {{ $t('teams.manage.members.editRoleModal.description') }}
         </AlertDialogDescription>
       </AlertDialogHeader>
 
@@ -197,8 +200,7 @@ const handleCancel = () => {
         <!-- Owner Notice -->
         <div v-if="isOwner" class="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <p class="text-sm text-blue-800">
-            <strong>Team Owner:</strong> The team owner's role cannot be changed.
-            To change the owner's role, you must first transfer team ownership to another member.
+            <strong>{{ $t('teams.manage.members.editRoleModal.ownerNotice.title') }}:</strong> {{ $t('teams.manage.members.editRoleModal.ownerNotice.description') }}
           </p>
         </div>
 
@@ -206,20 +208,20 @@ const handleCancel = () => {
         <div v-else class="space-y-4">
           <!-- Current Role Display -->
           <div class="space-y-2">
-            <Label class="text-sm font-medium">Current Role</Label>
+            <Label class="text-sm font-medium">{{ $t('teams.manage.members.editRoleModal.currentRole.label') }}</Label>
             <div class="p-3 bg-muted/30 rounded-md">
               <p class="text-sm">
-                {{ roleOptions.find(r => r.value === currentRole)?.label || 'Unknown Role' }}
+                {{ roleOptions.find(r => r.value === currentRole)?.label || $t('teams.manage.members.editRoleModal.currentRole.unknown') }}
               </p>
             </div>
           </div>
 
           <!-- New Role Selection -->
           <div class="space-y-2">
-            <Label for="role-select" class="text-sm font-medium">Change Role To</Label>
+            <Label for="role-select" class="text-sm font-medium">{{ $t('teams.manage.members.editRoleModal.newRole.label') }}</Label>
             <Select v-model="selectedRole">
               <SelectTrigger id="role-select">
-                <SelectValue placeholder="Select new role" />
+                <SelectValue :placeholder="$t('teams.manage.members.editRoleModal.newRole.placeholder')" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem
@@ -240,14 +242,16 @@ const handleCancel = () => {
 
       <AlertDialogFooter>
         <AlertDialogCancel @click="handleCancel">
-          Cancel
+          {{ $t('teams.manage.members.editRoleModal.buttons.cancel') }}
         </AlertDialogCancel>
         <Button
           v-if="canChangeRole"
           @click="updateMemberRole"
-          :disabled="isUpdatingRole || !isRoleChanged"
+          :disabled="!isRoleChanged"
+          :loading="isUpdatingRole"
+          :loading-text="$t('teams.manage.members.editRoleModal.buttons.updating')"
         >
-          {{ isUpdatingRole ? 'Updating...' : 'Update Role' }}
+          {{ $t('teams.manage.members.editRoleModal.buttons.update') }}
         </Button>
       </AlertDialogFooter>
     </AlertDialogContent>

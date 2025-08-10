@@ -186,11 +186,13 @@ const handleCancel = () => {
           {{ t('teams.manage.members.removeModal.buttons.cancel') }}
         </AlertDialogCancel>
         <Button
+          variant="destructive"
           @click="removeMember"
-          :disabled="isRemovingMember"
+          :loading="isRemovingMember"
+          :loading-text="t('teams.manage.members.removeModal.buttons.removing')"
           class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
         >
-          {{ isRemovingMember ? t('teams.manage.members.removeModal.buttons.removing') : t('teams.manage.members.removeModal.buttons.remove') }}
+          {{ t('teams.manage.members.removeModal.buttons.remove') }}
         </Button>
       </AlertDialogFooter>
     </AlertDialogContent>
