@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { ArrowLeft, Info, Users, Shield, Loader2, AlertTriangle } from 'lucide-vue-next'
 import { DsTabs, DsTabsItem } from '@/components/ui/ds-tabs'
 import DashboardLayout from '@/components/DashboardLayout.vue'
+import ContentWrapper from '@/components/ContentWrapper.vue'
 import { TeamInfo, TeamMembers, TeamDangerZone } from '@/components/teams/manage'
 import { TeamService, type Team } from '@/services/teamService'
 import { useEventBus } from '@/composables/useEventBus'
@@ -197,39 +198,25 @@ onUnmounted(() => {
         </DsTabs>
 
         <!-- Tab Content -->
-        <div>
-          <!-- Content Wrapper with same styling as MCP installation page -->
-          <div class="bg-muted/50 rounded-lg sm:rounded-lg">
-            <div class="py-16">
-              <div class="mx-auto max-w-7xl sm:px-2 lg:px-8">
-                <div class="mx-auto max-w-2xl px-4 lg:max-w-4xl lg:px-0">
-                  <!-- White Card inside the gray wrapper -->
-                  <Card class="bg-white shadow-sm">
-                    <CardContent class="p-6">
-                      <TeamInfo
-                        v-if="activeTab === 'team-info'"
-                        :team="team"
-                        :can-edit-name="canEditName"
-                        :can-edit-description="canEditDescription"
-                        @team-updated="handleTeamUpdated"
-                      />
-                      <TeamMembers
-                        v-if="activeTab === 'members'"
-                        :team="team"
-                        :can-manage-members="canManageMembers"
-                      />
-                      <TeamDangerZone
-                        v-if="activeTab === 'danger-zone'"
-                        :team="team"
-                        :can-delete-team="canDeleteTeam"
-                      />
-                    </CardContent>
-                  </Card>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <ContentWrapper>
+          <TeamInfo
+            v-if="activeTab === 'team-info'"
+            :team="team"
+            :can-edit-name="canEditName"
+            :can-edit-description="canEditDescription"
+            @team-updated="handleTeamUpdated"
+          />
+          <TeamMembers
+            v-if="activeTab === 'members'"
+            :team="team"
+            :can-manage-members="canManageMembers"
+          />
+          <TeamDangerZone
+            v-if="activeTab === 'danger-zone'"
+            :team="team"
+            :can-delete-team="canDeleteTeam"
+          />
+        </ContentWrapper>
       </div>
     </div>
   </DashboardLayout>

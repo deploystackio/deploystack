@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { ArrowLeft, Info, Settings, Shield } from 'lucide-vue-next'
 import { DsTabs, DsTabsItem } from '@/components/ui/ds-tabs'
 import DashboardLayout from '@/components/DashboardLayout.vue'
+import ContentWrapper from '@/components/ContentWrapper.vue'
 import { InstallationInfo, EnvironmentVariables, DangerZone } from '@/components/mcp-server/installation'
 import { McpInstallationService } from '@/services/mcpInstallationService'
 import { TeamService, type Team } from '@/services/teamService'
@@ -167,39 +168,25 @@ const handleInstallationUpdated = (updatedInstallation: McpInstallation) => {
         </DsTabs>
 
         <!-- Tab Content -->
-        <div>
-          <!-- Content Wrapper with same styling as EnvironmentVariablesStep -->
-          <div class="bg-muted/50 rounded-lg sm:rounded-lg">
-            <div class="py-16">
-              <div class="mx-auto max-w-7xl sm:px-2 lg:px-8">
-                <div class="mx-auto max-w-2xl px-4 lg:max-w-4xl lg:px-0">
-                  <!-- White Card inside the gray wrapper -->
-                  <Card class="bg-white shadow-sm">
-                    <CardContent class="p-6">
-                      <InstallationInfo
-                        v-if="activeTab === 'information'"
-                        :installation="installation"
-                      />
-                      <EnvironmentVariables
-                        v-if="activeTab === 'environment'"
-                        :installation="installation"
-                        :can-edit="canEditInstallation"
-                        :user-role="userTeamRole"
-                        @installation-updated="handleInstallationUpdated"
-                      />
-                      <DangerZone
-                        v-if="activeTab === 'danger-zone'"
-                        :installation="installation"
-                        :can-edit="canEditInstallation"
-                        :user-role="userTeamRole"
-                      />
-                    </CardContent>
-                  </Card>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <ContentWrapper>
+          <InstallationInfo
+            v-if="activeTab === 'information'"
+            :installation="installation"
+          />
+          <EnvironmentVariables
+            v-if="activeTab === 'environment'"
+            :installation="installation"
+            :can-edit="canEditInstallation"
+            :user-role="userTeamRole"
+            @installation-updated="handleInstallationUpdated"
+          />
+          <DangerZone
+            v-if="activeTab === 'danger-zone'"
+            :installation="installation"
+            :can-edit="canEditInstallation"
+            :user-role="userTeamRole"
+          />
+        </ContentWrapper>
       </div>
     </div>
   </DashboardLayout>
