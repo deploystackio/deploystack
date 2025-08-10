@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { toast } from 'vue-sonner'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-vue-next'
@@ -9,8 +10,6 @@ import CategoryModal from '@/components/admin/mcp-categories/CategoryModal.vue'
 import { McpCategoriesService, type McpCategory } from '@/services/mcpCategoriesService'
 import { useEventBus } from '@/composables/useEventBus'
 import CategoryTableColumns from './CategoryTableColumns.vue'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { CheckCircle } from 'lucide-vue-next'
 
 const { t } = useI18n()
 const eventBus = useEventBus()
@@ -20,7 +19,6 @@ const categories = ref<McpCategory[]>([])
 const isLoading = ref(true)
 const error = ref<string | null>(null)
 const searchQuery = ref('')
-const successMessage = ref<string | null>(null)
 const showAddModal = ref(false)
 const editingCategory = ref<McpCategory | null>(null)
 
@@ -55,16 +53,16 @@ const handleDeleteCategory = async (categoryId: string) => {
     // Remove from local state
     categories.value = categories.value.filter(c => c.id !== categoryId)
 
-    // Show success message
-    successMessage.value = t('mcpCategories.messages.deleteSuccess')
-    setTimeout(() => {
-      successMessage.value = null
-    }, 5000)
+    // Show success toast
+    toast.success(t('mcpCategories.messages.deleteSuccess'))
 
     // Emit global event
     eventBus.emit('mcp-categories-updated')
   } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Failed to delete category'
+    const errorMessage = err instanceof Error ? err.message : 'Failed to delete category'
+    toast.error(t('mcpCategories.messages.deleteError'), {
+      description: errorMessage
+    })
   }
 }
 
@@ -76,8 +74,14 @@ const fetchCategories = async (forceRefresh = false): Promise<void> => {
 
     categories.value = await McpCategoriesService.getCategories(forceRefresh)
   } catch (err) {
-    error.value = err instanceof Error ? err.message : 'An unknown error occurred'
+    const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred'
+    error.value = errorMessage
     categories.value = []
+    
+    // Show error toast for fetch failures
+    toast.error(t('mcpCategories.messages.fetchError'), {
+      description: errorMessage
+    })
   } finally {
     isLoading.value = false
   }
@@ -86,12 +90,12 @@ const fetchCategories = async (forceRefresh = false): Promise<void> => {
 // Handle category creation/update success
 const handleCategorySuccess = (action: 'created' | 'updated') => {
   fetchCategories(true)
-  successMessage.value = action === 'created'
+  
+  // Show success toast
+  const message = action === 'created'
     ? t('mcpCategories.messages.createSuccess')
     : t('mcpCategories.messages.updateSuccess')
-  setTimeout(() => {
-    successMessage.value = null
-  }, 5000)
+  toast.success(message)
 
   // Emit global event
   eventBus.emit('mcp-categories-updated')
@@ -129,12 +133,6 @@ onUnmounted(() => {
           {{ t('mcpCategories.addButton') }}
         </Button>
       </div>
-
-      <!-- Success Message -->
-      <Alert v-if="successMessage" class="border-green-200 bg-green-50 text-green-800">
-        <CheckCircle class="h-4 w-4" />
-        <AlertDescription>{{ successMessage }}</AlertDescription>
-      </Alert>
 
       <!-- Loading State -->
       <div v-if="isLoading" class="text-muted-foreground">
