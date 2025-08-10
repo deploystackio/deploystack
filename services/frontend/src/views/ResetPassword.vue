@@ -250,8 +250,13 @@ onMounted(() => {
               </FormItem>
             </FormField>
 
-            <Button type="submit" class="w-full" :disabled="isLoading">
-              {{ isLoading ? $t('resetPassword.buttons.loading') : $t('resetPassword.buttons.submit') }}
+            <Button 
+              type="submit" 
+              class="w-full" 
+              :loading="isLoading"
+              :loading-text="$t('resetPassword.buttons.loading')"
+            >
+              {{ $t('resetPassword.buttons.submit') }}
             </Button>
           </form>
         </CardContent>

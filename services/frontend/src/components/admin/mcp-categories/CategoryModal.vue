@@ -295,12 +295,11 @@ const handleSortOrderChange = () => {
           </Button>
           <Button
             type="submit"
-            :disabled="!isFormValid || isSubmitting"
+            :disabled="!isFormValid"
+            :loading="isSubmitting"
+            :loading-text="t('mcpCategories.modal.saving')"
           >
-            {{ isSubmitting
-              ? t('mcpCategories.modal.saving')
-              : (isEditing ? t('mcpCategories.modal.update') : t('mcpCategories.modal.create'))
-            }}
+            {{ isEditing ? t('mcpCategories.modal.update') : t('mcpCategories.modal.create') }}
           </Button>
         </AlertDialogFooter>
       </form>

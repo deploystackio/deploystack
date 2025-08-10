@@ -226,15 +226,6 @@ const canSubmit = computed(() => {
          canProceedFromClaudeConfig.value
 })
 
-// Dynamic button text based on props or defaults
-const submitText = computed(() => {
-  if (props.submitButtonText) return props.submitButtonText
-  if (isSubmitting.value) {
-    return t('mcpCatalog.form.navigation.creating')
-  }
-  return t('mcpCatalog.form.navigation.submit')
-})
-
 const cancelText = computed(() => {
   return props.cancelButtonText || t('mcpCatalog.form.navigation.cancel')
 })
@@ -361,14 +352,14 @@ const submitForm = async () => {
     isSubmitting.value = true
     submitError.value = null
 
-    // Emit the form data to parent component
-    emit('submit', formData.value)
+    // Emit the form data to parent component and wait for completion
+    await emit('submit', formData.value)
 
   } catch (error) {
     submitError.value = error instanceof Error ? error.message : 'Failed to submit form'
-  } finally {
     isSubmitting.value = false
   }
+  // Note: isSubmitting will be reset by parent after successful redirect
 }
 
 // Form persistence using event bus
@@ -482,9 +473,11 @@ onUnmounted(() => {
         <Button
           v-else
           @click="submitForm"
-          :disabled="!canSubmit || isSubmitting"
+          :disabled="!canSubmit"
+          :loading="isSubmitting"
+          :loading-text="t('mcpCatalog.form.navigation.creating')"
         >
-          {{ submitText }}
+          {{ t('mcpCatalog.form.navigation.submit') }}
         </Button>
       </div>
     </div>

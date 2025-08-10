@@ -377,8 +377,13 @@ onMounted(async () => {
               </FormItem>
             </FormField>
 
-            <Button type="submit" class="w-full mt-6" :disabled="isLoading">
-              {{ isLoading ? $t('register.buttons.loading') : $t('register.buttons.submit') }}
+            <Button 
+              type="submit" 
+              class="w-full mt-6" 
+              :loading="isLoading"
+              :loading-text="$t('register.buttons.loading')"
+            >
+              {{ $t('register.buttons.submit') }}
             </Button>
           </form>
 

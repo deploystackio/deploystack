@@ -196,8 +196,13 @@ const navigateToLogin = () => {
               </FormItem>
             </FormField>
 
-            <Button type="submit" class="w-full" :disabled="isLoading">
-              {{ isLoading ? $t('forgotPassword.buttons.loading') : $t('forgotPassword.buttons.submit') }}
+            <Button 
+              type="submit" 
+              class="w-full" 
+              :loading="isLoading"
+              :loading-text="$t('forgotPassword.buttons.loading')"
+            >
+              {{ $t('forgotPassword.buttons.submit') }}
             </Button>
           </form>
         </CardContent>

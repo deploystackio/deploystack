@@ -117,7 +117,13 @@ const handleSubmit = async (formData: McpServerAddFormData) => {
     await router.push('/admin/mcp-server-catalog')
 
   } catch (error) {
-    // Re-throw error to let the wizard handle it
+    // Show error toast
+    const errorMessage = error instanceof Error ? error.message : 'Failed to create MCP server'
+    toast.error(t('mcpCatalog.messages.createError'), {
+      description: errorMessage
+    })
+    
+    // Re-throw error to let the wizard handle it and reset loading state
     throw error
   }
 }
