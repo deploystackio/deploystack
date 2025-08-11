@@ -1,67 +1,191 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import type { FastifyInstance, FastifyReply } from 'fastify';
-
-import { RegisterEmailSchema, type RegisterEmailInput } from './schemas';
+import type { FastifyInstance } from 'fastify';
 import { getDb, getSchema } from '../../db';
-import { eq, or } from 'drizzle-orm';
-import { generateId } from 'lucia'; // Lucia's utility for generating IDs
+import { eq } from 'drizzle-orm';
+import { generateId } from 'lucia';
 import { hash } from '@node-rs/argon2';
 import { TeamService } from '../../services/teamService';
 import { GlobalSettingsInitService } from '../../global-settings';
-import { z } from 'zod';
-import { createSchema } from 'zod-openapi';
 
-// Response schemas
-const userResponseSchema = z.object({
-  id: z.string().describe('User ID'),
-  username: z.string().describe("User's username"),
-  email: z.string().email().describe("User's email address"),
-  first_name: z.string().nullable().describe("User's first name"),
-  last_name: z.string().nullable().describe("User's last name"),
-  role_id: z.string().describe("User's role ID")
-});
-
-const registerSuccessResponseSchema = z.object({
-  success: z.boolean().describe('Indicates if the registration was successful'),
-  message: z.string().describe('Success message'),
-  user: userResponseSchema.describe('Information about the registered user')
-});
-
-const registerErrorResponseSchema = z.object({
-  success: z.boolean().describe('Indicates if the operation was successful (false for errors)').default(false),
-  error: z.string().describe('Error message describing what went wrong')
-});
-
-// Route schema for OpenAPI documentation
-const registerEmailRouteSchema = {
-  tags: ['Authentication'],
-  summary: 'User registration via email',
-  description: 'Creates a new user account using email and password. The first registered user automatically becomes a global administrator. Automatically creates a session and default team for the user. Requires Content-Type: application/json header when sending request body.',
-  requestBody: {
-    required: true,
-    content: {
-      'application/json': {
-        schema: createSchema(RegisterEmailSchema)
-      }
+// Reusable Schema Constants
+const REGISTER_EMAIL_REQUEST_SCHEMA = {
+  type: 'object',
+  properties: {
+    username: {
+      type: 'string',
+      minLength: 3,
+      maxLength: 50,
+      pattern: '^[a-zA-Z0-9_-]+$',
+      description: 'Username (3-50 characters, alphanumeric, underscore, hyphen only)'
+    },
+    email: {
+      type: 'string',
+      format: 'email',
+      maxLength: 255,
+      description: 'Valid email address'
+    },
+    password: {
+      type: 'string',
+      minLength: 8,
+      maxLength: 128,
+      description: 'Password (minimum 8 characters)'
+    },
+    first_name: {
+      type: 'string',
+      maxLength: 100,
+      description: 'First name (optional)'
+    },
+    last_name: {
+      type: 'string',
+      maxLength: 100,
+      description: 'Last name (optional)'
     }
   },
-  response: {
-    201: createSchema(registerSuccessResponseSchema.describe('User registered successfully')),
-    400: createSchema(registerErrorResponseSchema.describe('Bad Request - Invalid input, username taken, email already in use, or missing Content-Type header')),
-    403: createSchema(registerErrorResponseSchema.describe('Forbidden - Email registration is disabled by administrator')),
-    500: createSchema(registerErrorResponseSchema.describe('Internal Server Error - Registration failed'))
-  }
-};
+  required: ['username', 'email', 'password'],
+  additionalProperties: false
+} as const;
 
-export default async function registerEmailRoute(fastify: FastifyInstance) {
-  fastify.post<{ Body: RegisterEmailInput }>( // Use Fastify's generic type for request body
-    '/register',
-    { schema: registerEmailRouteSchema },
-    async (request, reply: FastifyReply) => { // request type will be inferred by Fastify
+const USER_RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    id: {
+      type: 'string',
+      description: 'User ID'
+    },
+    username: {
+      type: 'string',
+      description: "User's username"
+    },
+    email: {
+      type: 'string',
+      format: 'email',
+      description: "User's email address"
+    },
+    first_name: {
+      type: ['string', 'null'],
+      description: "User's first name"
+    },
+    last_name: {
+      type: ['string', 'null'],
+      description: "User's last name"
+    },
+    role_id: {
+      type: 'string',
+      description: "User's role ID"
+    }
+  },
+  required: ['id', 'username', 'email', 'first_name', 'last_name', 'role_id']
+} as const;
+
+const REGISTER_SUCCESS_RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    success: {
+      type: 'boolean',
+      description: 'Indicates if the registration was successful'
+    },
+    message: {
+      type: 'string',
+      description: 'Success message'
+    },
+    user: {
+      ...USER_RESPONSE_SCHEMA,
+      description: 'Information about the registered user'
+    }
+  },
+  required: ['success', 'message', 'user']
+} as const;
+
+const REGISTER_ERROR_RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    success: {
+      type: 'boolean',
+      default: false,
+      description: 'Indicates if the operation was successful (false for errors)'
+    },
+    error: {
+      type: 'string',
+      description: 'Error message describing what went wrong'
+    }
+  },
+  required: ['success', 'error']
+} as const;
+
+// TypeScript interfaces for type safety
+interface RegisterEmailRequest {
+  username: string;
+  email: string;
+  password: string;
+  first_name?: string;
+  last_name?: string;
+}
+
+interface UserResponse {
+  id: string;
+  username: string;
+  email: string;
+  first_name: string | null;
+  last_name: string | null;
+  role_id: string;
+}
+
+interface RegisterSuccessResponse {
+  success: boolean;
+  message: string;
+  user: UserResponse;
+}
+
+interface RegisterErrorResponse {
+  success: boolean;
+  error: string;
+}
+
+export default async function registerEmailRoute(server: FastifyInstance) {
+  server.post('/register', {
+    // No preValidation - this is a public endpoint
+    schema: {
+      tags: ['Authentication'],
+      summary: 'User registration via email',
+      description: 'Creates a new user account using email and password. The first registered user automatically becomes a global administrator. Automatically creates a session and default team for the user. Requires Content-Type: application/json header when sending request body.',
+      
+      // Fastify validation schema
+      body: REGISTER_EMAIL_REQUEST_SCHEMA,
+      
+      // OpenAPI documentation (same schema, reused)
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: REGISTER_EMAIL_REQUEST_SCHEMA
+          }
+        }
+      },
+      
+      response: {
+        201: {
+          ...REGISTER_SUCCESS_RESPONSE_SCHEMA,
+          description: 'User registered successfully'
+        },
+        400: {
+          ...REGISTER_ERROR_RESPONSE_SCHEMA,
+          description: 'Bad Request - Invalid input, email already in use, or missing Content-Type header'
+        },
+        403: {
+          ...REGISTER_ERROR_RESPONSE_SCHEMA,
+          description: 'Forbidden - Email registration is disabled by administrator'
+        },
+        500: {
+          ...REGISTER_ERROR_RESPONSE_SCHEMA,
+          description: 'Internal Server Error - Registration failed'
+        }
+      }
+    }
+  }, async (request, reply) => {
         // Check if email registration is enabled
         const isEmailRegistrationEnabled = await GlobalSettingsInitService.isEmailRegistrationEnabled();
         if (!isEmailRegistrationEnabled) {
-          const errorResponse = {
+          const errorResponse: RegisterErrorResponse = {
             success: false,
             error: 'Email registration is currently disabled by administrator.'
           };
@@ -69,16 +193,16 @@ export default async function registerEmailRoute(fastify: FastifyInstance) {
           return reply.status(403).type('application/json').send(jsonString);
         }
 
-      // Validate request body with Zod
-      const { username, email, password, first_name, last_name } = RegisterEmailSchema.parse(request.body);
+      // TypeScript type assertion (Fastify has already validated)
+      const { username, email, password, first_name, last_name } = request.body as RegisterEmailRequest;
 
       const db = getDb();
       const schema = getSchema();
       const authUserTable = schema.authUser; // Get the Drizzle table object
 
         if (!authUserTable) {
-          fastify.log.error('AuthUser table not found in schema');
-          const errorResponse = {
+          server.log.error('AuthUser table not found in schema');
+          const errorResponse: RegisterErrorResponse = {
             success: false,
             error: 'Internal server error: User table configuration missing.'
           };
@@ -87,33 +211,20 @@ export default async function registerEmailRoute(fastify: FastifyInstance) {
         }
 
       try {
-        // Check if username or email already exists
+        // Check if email already exists
         const existingUsers = await (db as any)
           .select()
           .from(authUserTable)
-          .where(or(eq(authUserTable.username, username), eq(authUserTable.email, email)))
+          .where(eq(authUserTable.email, email))
           .limit(1);
 
         if (existingUsers.length > 0) {
-          // Determine if username or email caused the conflict for a more specific message
-          const existingUserByUsername = await (db as any).select().from(authUserTable).where(eq(authUserTable.username, username)).limit(1);
-          if (existingUserByUsername.length > 0) {
-            const errorResponse = {
-              success: false,
-              error: 'Username already taken.'
-            };
-            const jsonString = JSON.stringify(errorResponse);
-            return reply.status(400).type('application/json').send(jsonString);
-          }
-          const existingUserByEmail = await (db as any).select().from(authUserTable).where(eq(authUserTable.email, email)).limit(1);
-          if (existingUserByEmail.length > 0) {
-            const errorResponse = {
-              success: false,
-              error: 'Email address already in use.'
-            };
-            const jsonString = JSON.stringify(errorResponse);
-            return reply.status(400).type('application/json').send(jsonString);
-          }
+          const errorResponse: RegisterErrorResponse = {
+            success: false,
+            error: 'Email address already in use.'
+          };
+          const jsonString = JSON.stringify(errorResponse);
+          return reply.status(400).type('application/json').send(jsonString);
         }
 
         const hashedPassword = await hash(password, {
@@ -130,7 +241,7 @@ export default async function registerEmailRoute(fastify: FastifyInstance) {
         const defaultRole = isFirstUser ? 'global_admin' : 'global_user';
 
         // For first user (global_admin), email is automatically verified
-        // For subsequent users, email verification depends on global.send_mail setting
+        // For subsequent users, email verification depends on smtp.enabled setting
         const emailVerified = isFirstUser;
 
         // Insert user directly into database (Lucia v3 doesn't have createUser with keys)
@@ -155,8 +266,8 @@ export default async function registerEmailRoute(fastify: FastifyInstance) {
           .limit(1);
 
         if (createdUser.length === 0) {
-          fastify.log.error('User creation failed - user not found after insert');
-          const errorResponse = {
+          server.log.error('User creation failed - user not found after insert');
+          const errorResponse: RegisterErrorResponse = {
             success: false,
             error: 'User creation failed.'
           };
@@ -164,7 +275,7 @@ export default async function registerEmailRoute(fastify: FastifyInstance) {
           return reply.status(500).type('application/json').send(jsonString);
         }
 
-        fastify.log.info(`User created successfully: ${userId} with role: ${defaultRole}`);
+        server.log.info(`User created successfully: ${userId} with role: ${defaultRole}`);
 
         // Create session for the user
         const sessionId = generateId(40); // Generate session ID
@@ -179,7 +290,7 @@ export default async function registerEmailRoute(fastify: FastifyInstance) {
           expires_at: expiresAt
         });
         
-        fastify.log.info(`Session created successfully for user: ${userId}`);
+        server.log.info(`Session created successfully for user: ${userId}`);
         
         // Import lucia and create session cookie
         const { getLucia } = await import('../../lib/lucia');
@@ -189,9 +300,9 @@ export default async function registerEmailRoute(fastify: FastifyInstance) {
         // Create default team for the user
         try {
           const team = await TeamService.createDefaultTeamForUser(userId, username);
-          fastify.log.info(`Default team created successfully for user ${userId}: ${team.id}`);
+          server.log.info(`Default team created successfully for user ${userId}: ${team.id}`);
         } catch (teamError) {
-          fastify.log.error(teamError, `Failed to create default team for user ${userId}:`);
+          server.log.error(teamError, `Failed to create default team for user ${userId}:`);
           // Don't fail registration if team creation fails, just log the error
         }
 
@@ -209,14 +320,14 @@ export default async function registerEmailRoute(fastify: FastifyInstance) {
               );
               
               if (!emailResult.success) {
-                fastify.log.warn(`Failed to send verification email to ${email}: ${emailResult.error}`);
+                server.log.warn(`Failed to send verification email to ${email}: ${emailResult.error}`);
                 // Don't fail registration if email sending fails
               } else {
-                fastify.log.info(`Verification email sent successfully to ${email}`);
+                server.log.info(`Verification email sent successfully to ${email}`);
               }
             }
           } catch (emailError) {
-            fastify.log.error(emailError, `Error sending verification email to ${email}:`);
+            server.log.error(emailError, `Error sending verification email to ${email}:`);
             // Don't fail registration if email sending fails
           }
         }
@@ -242,45 +353,36 @@ export default async function registerEmailRoute(fastify: FastifyInstance) {
           }
         }
 
-        // Create clean response object to avoid serialization issues
-        const cleanResponse = {
+        // Create typed response object
+        const successResponse: RegisterSuccessResponse = {
           success: true,
-          message: String(message),
+          message: message,
           user: {
-            id: String(user.id),
-            username: String(user.username),
-            email: String(user.email),
-            first_name: user.first_name ? String(user.first_name) : null,
-            last_name: user.last_name ? String(user.last_name) : null,
-            role_id: String(user.role_id)
+            id: user.id,
+            username: user.username,
+            email: user.email,
+            first_name: user.first_name,
+            last_name: user.last_name,
+            role_id: user.role_id
           }
         };
         
-        // Send as raw JSON string to bypass any serialization issues
-        const jsonString = JSON.stringify(cleanResponse);
-        fastify.log.info('Sending registration response:', jsonString);
+        const jsonString = JSON.stringify(successResponse);
+        server.log.info('Sending registration response:', jsonString);
         return reply.status(201).type('application/json').send(jsonString);
 
       } catch (error) {
-        fastify.log.error(error, 'Error during email registration:');
+        server.log.error(error, 'Error during email registration:');
         // Drizzle unique constraint errors might need specific handling if not caught above
-        if (error instanceof Error && (error.message.includes('UNIQUE constraint failed: authUser.username') || error.message.includes('Key (username)'))) {
-          const errorResponse = {
-            success: false,
-            error: 'Username already taken.'
-          };
-          const jsonString = JSON.stringify(errorResponse);
-          return reply.status(400).type('application/json').send(jsonString);
-        }
         if (error instanceof Error && (error.message.includes('UNIQUE constraint failed: authUser.email') || error.message.includes('Key (email)'))) {
-          const errorResponse = {
+          const errorResponse: RegisterErrorResponse = {
             success: false,
             error: 'Email address already in use.'
           };
           const jsonString = JSON.stringify(errorResponse);
           return reply.status(400).type('application/json').send(jsonString);
         }
-        const errorResponse = {
+        const errorResponse: RegisterErrorResponse = {
           success: false,
           error: 'An unexpected error occurred during registration.'
         };

@@ -30,10 +30,11 @@ describe('Health Route', () => {
     // Setup mock request (empty for health check)
     mockRequest = {};
 
-    // Setup mock reply
+    // Setup mock reply with proper chaining support
     mockReply = {
-      status: vi.fn().mockReturnThis(),
-      send: vi.fn().mockReturnThis(),
+      status: vi.fn(() => mockReply),
+      type: vi.fn(() => mockReply),
+      send: vi.fn(() => mockReply),
     };
   });
 
@@ -72,20 +73,33 @@ describe('Health Route', () => {
       const handler = routeHandlers['GET /health'];
       const result = await handler(mockRequest, mockReply);
 
-      expect(result).toEqual({ status: 'ok' });
+      expect(mockReply.status).toHaveBeenCalledWith(200);
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      expect(mockReply.send).toHaveBeenCalledWith(JSON.stringify({ status: 'ok' }));
+      expect(result).toBe(mockReply);
     });
 
     it('should always return the same response format', async () => {
       const handler = routeHandlers['GET /health'];
       
       // Call multiple times to ensure consistency
-      const result1 = await handler(mockRequest, mockReply);
-      const result2 = await handler(mockRequest, mockReply);
-      const result3 = await handler(mockRequest, mockReply);
+      await handler(mockRequest, mockReply);
+      await handler(mockRequest, mockReply);
+      await handler(mockRequest, mockReply);
 
-      expect(result1).toEqual({ status: 'ok' });
-      expect(result2).toEqual({ status: 'ok' });
-      expect(result3).toEqual({ status: 'ok' });
+      // Verify all calls used the same format
+      expect(mockReply.status).toHaveBeenCalledTimes(3);
+      expect(mockReply.type).toHaveBeenCalledTimes(3);
+      expect(mockReply.send).toHaveBeenCalledTimes(3);
+      
+      // Check that all calls had the same parameters
+      const statusCalls = (mockReply.status as any).mock.calls;
+      const typeCalls = (mockReply.type as any).mock.calls;
+      const sendCalls = (mockReply.send as any).mock.calls;
+      
+      statusCalls.forEach((call: any) => expect(call[0]).toBe(200));
+      typeCalls.forEach((call: any) => expect(call[0]).toBe('application/json'));
+      sendCalls.forEach((call: any) => expect(call[0]).toBe(JSON.stringify({ status: 'ok' })));
     });
 
     it('should not require any parameters', async () => {
@@ -93,34 +107,41 @@ describe('Health Route', () => {
       
       // Test with empty request
       const emptyRequest = {};
-      const result = await handler(emptyRequest, mockReply);
+      await handler(emptyRequest, mockReply);
 
-      expect(result).toEqual({ status: 'ok' });
+      expect(mockReply.status).toHaveBeenCalledWith(200);
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      expect(mockReply.send).toHaveBeenCalledWith(JSON.stringify({ status: 'ok' }));
     });
 
     it('should be synchronous and fast', async () => {
       const handler = routeHandlers['GET /health'];
       
       const startTime = Date.now();
-      const result = await handler(mockRequest, mockReply);
+      await handler(mockRequest, mockReply);
       const endTime = Date.now();
 
-      expect(result).toEqual({ status: 'ok' });
+      expect(mockReply.send).toHaveBeenCalledWith(JSON.stringify({ status: 'ok' }));
       // Health check should be very fast (less than 10ms in normal conditions)
       expect(endTime - startTime).toBeLessThan(100);
     });
 
     it('should return a response that matches the schema', async () => {
       const handler = routeHandlers['GET /health'];
-      const result = await handler(mockRequest, mockReply);
+      await handler(mockRequest, mockReply);
 
       // Validate response structure matches the expected schema
-      expect(result).toHaveProperty('status');
-      expect(result.status).toBe('ok');
-      expect(typeof result.status).toBe('string');
+      const expectedResponse = JSON.stringify({ status: 'ok' });
+      expect(mockReply.send).toHaveBeenCalledWith(expectedResponse);
+      
+      // Verify the JSON string contains the correct structure
+      const parsedResponse = JSON.parse(expectedResponse);
+      expect(parsedResponse).toHaveProperty('status');
+      expect(parsedResponse.status).toBe('ok');
+      expect(typeof parsedResponse.status).toBe('string');
       
       // Ensure no extra properties
-      expect(Object.keys(result)).toEqual(['status']);
+      expect(Object.keys(parsedResponse)).toEqual(['status']);
     });
   });
 
@@ -149,8 +170,11 @@ describe('Health Route', () => {
       ];
 
       for (const malformedRequest of malformedRequests) {
-        const result = await handler(malformedRequest, mockReply);
-        expect(result).toEqual({ status: 'ok' });
+        // Reset mocks for each iteration
+        vi.clearAllMocks();
+        
+        await handler(malformedRequest, mockReply);
+        expect(mockReply.send).toHaveBeenCalledWith(JSON.stringify({ status: 'ok' }));
       }
     });
   });
@@ -165,11 +189,17 @@ describe('Health Route', () => {
         handler(mockRequest, mockReply)
       );
 
-      const results = await Promise.all(promises);
+      await Promise.all(promises);
 
-      // All should return the same result
-      results.forEach(result => {
-        expect(result).toEqual({ status: 'ok' });
+      // All should have called the reply methods
+      expect(mockReply.status).toHaveBeenCalledTimes(100);
+      expect(mockReply.type).toHaveBeenCalledTimes(100);
+      expect(mockReply.send).toHaveBeenCalledTimes(100);
+      
+      // All calls should have the same parameters
+      const sendCalls = (mockReply.send as any).mock.calls;
+      sendCalls.forEach((call: any) => {
+        expect(call[0]).toBe(JSON.stringify({ status: 'ok' }));
       });
     });
 
@@ -179,9 +209,17 @@ describe('Health Route', () => {
 
       // Call many times to check for memory leaks
       for (let i = 0; i < 1000; i++) {
-        const result = await handler(mockRequest, mockReply);
-        expect(result).toEqual({ status: 'ok' });
+        await handler(mockRequest, mockReply);
       }
+      
+      // Verify all calls completed successfully
+      expect(mockReply.send).toHaveBeenCalledTimes(1000);
+      
+      // Sample a few calls to ensure consistency
+      const sendCalls = (mockReply.send as any).mock.calls;
+      expect(sendCalls[0][0]).toBe(JSON.stringify({ status: 'ok' }));
+      expect(sendCalls[500][0]).toBe(JSON.stringify({ status: 'ok' }));
+      expect(sendCalls[999][0]).toBe(JSON.stringify({ status: 'ok' }));
     });
   });
 });

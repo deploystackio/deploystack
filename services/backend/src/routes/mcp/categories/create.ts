@@ -1,36 +1,61 @@
 import { type FastifyInstance } from 'fastify';
-import { z } from 'zod';
-import { createSchema } from 'zod-openapi';
 import { requirePermission } from '../../../middleware/roleMiddleware';
 import { McpCategoriesService } from '../../../services/mcpCategoriesService';
 import { getDb } from '../../../db';
+import { CATEGORY_SCHEMA, ERROR_RESPONSE_SCHEMA, type Category, type ErrorResponse } from './schemas';
 
-// Request schema
-const createCategoryRequestSchema = z.object({
-  name: z.string().min(1, 'Name is required').max(100, 'Name must be 100 characters or less'),
-  description: z.string().optional(),
-  icon: z.string().optional(),
-  sort_order: z.number().int().min(0, 'Sort order must be non-negative').optional().default(0)
-});
+// Reusable Schema Constants
+const CREATE_CATEGORY_REQUEST_SCHEMA = {
+  type: 'object',
+  properties: {
+    name: {
+      type: 'string',
+      minLength: 1,
+      maxLength: 100,
+      description: 'Name of the category (1-100 characters)'
+    },
+    description: {
+      type: 'string',
+      description: 'Optional description of the category'
+    },
+    icon: {
+      type: 'string',
+      description: 'Optional icon identifier for the category'
+    },
+    sort_order: {
+      type: 'number',
+      minimum: 0,
+      description: 'Sort order for display (defaults to 0)'
+    }
+  },
+  required: ['name'],
+  additionalProperties: false
+} as const;
 
-// Response schemas
-const createCategoryResponseSchema = z.object({
-  success: z.boolean(),
-  data: z.object({
-    id: z.string(),
-    name: z.string(),
-    description: z.string().nullable(),
-    icon: z.string().nullable(),
-    sort_order: z.number(),
-    created_at: z.string()
-  })
-});
+const CREATE_CATEGORY_SUCCESS_RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    success: {
+      type: 'boolean',
+      description: 'Indicates if the category was created successfully'
+    },
+    data: CATEGORY_SCHEMA
+  },
+  required: ['success', 'data']
+} as const;
 
-const errorResponseSchema = z.object({
-  success: z.boolean().default(false),
-  error: z.string(),
-  details: z.any().optional()
-});
+// TypeScript interfaces for type safety
+interface CreateCategoryRequest {
+  name: string;
+  description?: string;
+  icon?: string;
+  sort_order?: number;
+}
+
+interface CreateCategorySuccessResponse {
+  success: boolean;
+  data: Category;
+}
 
 export default async function createCategory(server: FastifyInstance) {
   server.post('/mcp/categories', {
@@ -40,38 +65,50 @@ export default async function createCategory(server: FastifyInstance) {
       summary: 'Create MCP category (Admin only)',
       description: 'Create a new MCP server category - requires global admin permissions. Requires Content-Type: application/json header when sending request body.',
       security: [{ cookieAuth: [] }],
-      // Plain JSON Schema for Fastify validation
-      body: {
-        type: 'object',
-        properties: {
-          name: { type: 'string', minLength: 1, maxLength: 100 },
-          description: { type: 'string' },
-          icon: { type: 'string' },
-          sort_order: { type: 'number', minimum: 0 }
-        },
-        required: ['name'],
-        additionalProperties: false
-      },
-      // createSchema() for OpenAPI documentation
+      
+      // Fastify validation schema
+      body: CREATE_CATEGORY_REQUEST_SCHEMA,
+      
+      // OpenAPI documentation (same schema, reused)
       requestBody: {
         required: true,
         content: {
           'application/json': {
-            schema: createSchema(createCategoryRequestSchema)
+            schema: CREATE_CATEGORY_REQUEST_SCHEMA
           }
         }
       },
+      
       response: {
-        201: createSchema(createCategoryResponseSchema),
-        400: createSchema(errorResponseSchema.describe('Bad Request - Invalid input or missing Content-Type header')),
-        401: createSchema(errorResponseSchema.describe('Unauthorized - Authentication required')),
-        403: createSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions')),
-        409: createSchema(errorResponseSchema.describe('Conflict - Category name already exists')),
-        500: createSchema(errorResponseSchema.describe('Internal Server Error'))
+        201: {
+          ...CREATE_CATEGORY_SUCCESS_RESPONSE_SCHEMA,
+          description: 'Category created successfully'
+        },
+        400: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Bad Request - Invalid input or missing Content-Type header'
+        },
+        401: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Unauthorized - Authentication required'
+        },
+        403: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Forbidden - Insufficient permissions'
+        },
+        409: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Conflict - Category name already exists'
+        },
+        500: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Internal Server Error'
+        }
       }
     }
   }, async (request, reply) => {
-    const { name, description, icon, sort_order } = request.body as z.infer<typeof createCategoryRequestSchema>;
+    // TypeScript type assertion (Fastify has already validated)
+    const { name, description, icon, sort_order } = request.body as CreateCategoryRequest;
     
     request.log.info({
       operation: 'create_mcp_category',
@@ -98,8 +135,7 @@ export default async function createCategory(server: FastifyInstance) {
         categoryName: newCategory.name
       }, 'MCP category created successfully');
 
-      // Manual JSON serialization to avoid serialization issues
-      const successResponse = {
+      const successResponse: CreateCategorySuccessResponse = {
         success: true,
         data: {
           id: String(newCategory.id),
@@ -123,7 +159,7 @@ export default async function createCategory(server: FastifyInstance) {
 
       // Handle specific error cases
       if (error.message?.includes('UNIQUE constraint failed') || error.message?.includes('already exists')) {
-        const conflictResponse = {
+        const conflictResponse: ErrorResponse = {
           success: false,
           error: 'Category name already exists'
         };
@@ -131,7 +167,7 @@ export default async function createCategory(server: FastifyInstance) {
         return reply.status(409).type('application/json').send(jsonString);
       }
 
-      const errorResponse = {
+      const errorResponse: ErrorResponse = {
         success: false,
         error: 'Failed to create category'
       };

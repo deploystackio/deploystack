@@ -237,7 +237,7 @@ export class PasswordResetService {
   static async sendResetEmail(email: string, logger?: FastifyBaseLogger): Promise<{ success: boolean; error?: string }> {
     try {
       // Check if email sending is enabled
-      const isEmailEnabled = await GlobalSettings.getBoolean('global.send_mail', false);
+      const isEmailEnabled = await GlobalSettings.getBoolean('smtp.enabled', false);
       if (!isEmailEnabled) {
         return { success: false, error: 'Password reset is currently disabled. Email functionality is not enabled.' };
       }
@@ -314,7 +314,7 @@ export class PasswordResetService {
    * Check if password reset is available (email sending enabled)
    */
   static async isPasswordResetAvailable(): Promise<boolean> {
-    return await GlobalSettings.getBoolean('global.send_mail', false);
+    return await GlobalSettings.getBoolean('smtp.enabled', false);
   }
 
   /**
@@ -325,7 +325,7 @@ export class PasswordResetService {
   static async sendAdminResetEmail(email: string, adminUserId: string, logger?: FastifyBaseLogger): Promise<{ success: boolean; error?: string }> {
     try {
       // Check if email sending is enabled
-      const isEmailEnabled = await GlobalSettings.getBoolean('global.send_mail', false);
+      const isEmailEnabled = await GlobalSettings.getBoolean('smtp.enabled', false);
       if (!isEmailEnabled) {
         return { success: false, error: 'Password reset is currently disabled. Email functionality is not enabled.' };
       }

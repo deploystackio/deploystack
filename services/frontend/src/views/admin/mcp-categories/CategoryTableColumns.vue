@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
   Table,
@@ -26,7 +26,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
 import { MoreHorizontal, Edit, Trash2 } from 'lucide-vue-next'
 import type { McpCategory } from '@/services/mcpCategoriesService'
@@ -40,6 +39,29 @@ interface Props {
 }
 
 const props = defineProps<Props>()
+
+// State for delete dialog
+const deleteDialogOpen = ref(false)
+const categoryToDelete = ref<McpCategory | null>(null)
+
+// Handle delete confirmation
+const handleDeleteClick = (category: McpCategory) => {
+  categoryToDelete.value = category
+  deleteDialogOpen.value = true
+}
+
+const handleDeleteConfirm = () => {
+  if (categoryToDelete.value) {
+    props.onDeleteCategory(categoryToDelete.value.id)
+    deleteDialogOpen.value = false
+    categoryToDelete.value = null
+  }
+}
+
+const handleDeleteCancel = () => {
+  deleteDialogOpen.value = false
+  categoryToDelete.value = null
+}
 
 // Sort categories by sort_order, then by name
 const sortedCategories = computed(() => {
@@ -121,31 +143,13 @@ const getIconDisplay = (iconName?: string | null) => {
                   <Edit class="mr-2 h-4 w-4" />
                   {{ t('mcpCategories.table.actions.edit') }}
                 </DropdownMenuItem>
-                <AlertDialog>
-                  <AlertDialogTrigger as-child>
-                    <DropdownMenuItem @click.prevent class="text-destructive focus:text-destructive">
-                      <Trash2 class="mr-2 h-4 w-4" />
-                      {{ t('mcpCategories.table.actions.delete') }}
-                    </DropdownMenuItem>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>{{ t('mcpCategories.deleteDialog.title') }}</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        {{ t('mcpCategories.deleteDialog.description', { categoryName: category.name }) }}
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>{{ t('mcpCategories.deleteDialog.cancel') }}</AlertDialogCancel>
-                      <AlertDialogAction
-                        @click="props.onDeleteCategory(category.id)"
-                        class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                      >
-                        {{ t('mcpCategories.deleteDialog.confirm') }}
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                <DropdownMenuItem 
+                  @click="handleDeleteClick(category)" 
+                  class="text-destructive focus:text-destructive"
+                >
+                  <Trash2 class="mr-2 h-4 w-4" />
+                  {{ t('mcpCategories.table.actions.delete') }}
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </TableCell>
@@ -153,4 +157,25 @@ const getIconDisplay = (iconName?: string | null) => {
       </TableBody>
     </Table>
   </div>
+
+  <!-- Delete Confirmation Dialog -->
+  <AlertDialog :open="deleteDialogOpen" @update:open="deleteDialogOpen = $event">
+    <AlertDialogContent>
+      <AlertDialogHeader>
+        <AlertDialogTitle>{{ t('mcpCategories.deleteDialog.title') }}</AlertDialogTitle>
+        <AlertDialogDescription>
+          {{ t('mcpCategories.deleteDialog.description', { categoryName: categoryToDelete?.name || '' }) }}
+        </AlertDialogDescription>
+      </AlertDialogHeader>
+      <AlertDialogFooter>
+        <AlertDialogCancel @click="handleDeleteCancel">{{ t('mcpCategories.deleteDialog.cancel') }}</AlertDialogCancel>
+        <AlertDialogAction
+          @click="handleDeleteConfirm"
+          class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+        >
+          {{ t('mcpCategories.deleteDialog.confirm') }}
+        </AlertDialogAction>
+      </AlertDialogFooter>
+    </AlertDialogContent>
+  </AlertDialog>
 </template>

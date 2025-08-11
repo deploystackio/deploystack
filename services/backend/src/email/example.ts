@@ -17,8 +17,8 @@ export async function sendWelcomeEmailExample(logger: FastifyBaseLogger) {
       to: 'newuser@example.com',
       userName: 'John Doe',
       userEmail: 'newuser@example.com',
-      loginUrl: 'https://app.deploystack.com/login',
-      supportEmail: 'support@deploystack.com'
+      loginUrl: 'https://app.deploystack.io/login',
+      supportEmail: 'support@deploystack.io'
     }, logger);
 
     if (result.success) {
@@ -53,9 +53,9 @@ export async function sendPasswordResetExample(logger: FastifyBaseLogger) {
     const result = await EmailService.sendPasswordResetEmail({
       to: 'user@example.com',
       userName: 'Jane Smith',
-      resetUrl: 'https://app.deploystack.com/reset-password?token=abc123xyz',
+      resetUrl: 'https://app.deploystack.io/reset-password?token=abc123xyz',
       expirationTime: '24 hours',
-      supportEmail: 'support@deploystack.com'
+      supportEmail: 'support@deploystack.io'
     }, logger);
 
     if (result.success) {
@@ -91,7 +91,7 @@ export async function sendNotificationExample(logger: FastifyBaseLogger) {
       to: 'user@example.com',
       title: 'Deployment Complete',
       message: 'Your application "my-awesome-app" has been successfully deployed to production.',
-      actionUrl: 'https://app.deploystack.com/deployments/123',
+      actionUrl: 'https://app.deploystack.io/deployments/123',
       actionText: 'View Deployment Details',
       userName: 'Developer'
     }, logger);
@@ -133,7 +133,7 @@ export async function sendCustomEmailExample(logger: FastifyBaseLogger) {
       variables: {
         title: 'Monthly Report Available',
         message: 'Your monthly deployment report is ready. Please find the detailed report attached.',
-        actionUrl: 'https://app.deploystack.com/reports',
+        actionUrl: 'https://app.deploystack.io/reports',
         actionText: 'View Online Report'
       },
       attachments: [
@@ -247,13 +247,13 @@ export async function listAndValidateTemplatesExample(logger: FastifyBaseLogger)
           sampleVariables = {
             userName: 'Test User',
             userEmail: 'test@example.com',
-            loginUrl: 'https://app.deploystack.com/login'
+            loginUrl: 'https://app.deploystack.io/login'
           };
           break;
         case 'password-reset':
           sampleVariables = {
             userName: 'Test User',
-            resetUrl: 'https://app.deploystack.com/reset',
+            resetUrl: 'https://app.deploystack.io/reset',
             expirationTime: '24 hours'
           };
           break;
@@ -319,7 +319,7 @@ export async function userRegistrationIntegrationExample(userData: {
       userName: userData.name,
       userEmail: userData.email,
       loginUrl: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/login`,
-      supportEmail: 'support@deploystack.com'
+      supportEmail: 'support@deploystack.io'
     }, logger);
     
     if (emailResult.success) {

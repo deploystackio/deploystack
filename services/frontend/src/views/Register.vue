@@ -169,13 +169,9 @@ const onSubmit = form.handleSubmit(async (values) => {
       throw error
     }
 
-    const data = await response.json()
-    console.log('Registration successful!', data)
-
-    // Show success message
+    await response.json()
     successMessage.value = 'Account created successfully! Redirecting to login...'
 
-    // Redirect to login page after a short delay
     setTimeout(() => {
       router.push('/login')
     }, 2000)
@@ -377,9 +373,9 @@ onMounted(async () => {
               </FormItem>
             </FormField>
 
-            <Button 
-              type="submit" 
-              class="w-full mt-6" 
+            <Button
+              type="submit"
+              class="w-full mt-6"
               :loading="isLoading"
               :loading-text="$t('register.buttons.loading')"
             >

@@ -1,54 +1,143 @@
 import { type FastifyInstance } from 'fastify';
-import { z } from 'zod';
-import { createSchema } from 'zod-openapi';
 import { AuthorizationService } from '../../services/oauth/authorizationService';
 import { TokenService } from '../../services/oauth/tokenService';
+import {
+  AUTHORIZATION_CODE_GRANT_SCHEMA,
+  REFRESH_TOKEN_GRANT_SCHEMA,
+  AUTHORIZATION_CODE_SCHEMA,
+  REDIRECT_URI_SCHEMA,
+  CLIENT_ID_SCHEMA,
+  CODE_VERIFIER_SCHEMA,
+  REFRESH_TOKEN_SCHEMA,
+  ACCESS_TOKEN_SCHEMA,
+  TOKEN_TYPE_SCHEMA,
+  EXPIRES_IN_SCHEMA,
+  SCOPE_SCHEMA,
+  OAUTH2_ERROR_RESPONSE_SCHEMA,
+  type OAuth2ErrorResponse
+} from './schemas';
 
-const tokenRequestSchema = z.object({
-  grant_type: z.literal('authorization_code').describe('OAuth2 grant type, must be "authorization_code"'),
-  code: z.string().min(1).describe('Authorization code received from authorization endpoint'),
-  redirect_uri: z.string().url().describe('OAuth2 redirect URI, must match the one used in authorization'),
-  client_id: z.string().min(1).describe('OAuth2 client identifier'),
-  code_verifier: z.string().min(1).describe('PKCE code verifier')
-});
+// Reusable Schema Constants
+const TOKEN_REQUEST_SCHEMA = {
+  type: 'object',
+  properties: {
+    grant_type: AUTHORIZATION_CODE_GRANT_SCHEMA,
+    code: AUTHORIZATION_CODE_SCHEMA,
+    redirect_uri: {
+      ...REDIRECT_URI_SCHEMA,
+      description: 'OAuth2 redirect URI, must match the one used in authorization'
+    },
+    client_id: CLIENT_ID_SCHEMA,
+    code_verifier: CODE_VERIFIER_SCHEMA
+  },
+  required: ['grant_type', 'code', 'redirect_uri', 'client_id', 'code_verifier'],
+  additionalProperties: false
+} as const;
 
-const refreshTokenRequestSchema = z.object({
-  grant_type: z.literal('refresh_token').describe('OAuth2 grant type, must be "refresh_token"'),
-  refresh_token: z.string().min(1).describe('Refresh token to exchange for new access token'),
-  client_id: z.string().min(1).describe('OAuth2 client identifier')
-});
+const REFRESH_TOKEN_REQUEST_SCHEMA = {
+  type: 'object',
+  properties: {
+    grant_type: REFRESH_TOKEN_GRANT_SCHEMA,
+    refresh_token: REFRESH_TOKEN_SCHEMA,
+    client_id: CLIENT_ID_SCHEMA
+  },
+  required: ['grant_type', 'refresh_token', 'client_id'],
+  additionalProperties: false
+} as const;
 
-const tokenRequestBodySchema = z.union([tokenRequestSchema, refreshTokenRequestSchema]);
+const TOKEN_REQUEST_BODY_SCHEMA = {
+  oneOf: [
+    TOKEN_REQUEST_SCHEMA,
+    REFRESH_TOKEN_REQUEST_SCHEMA
+  ]
+} as const;
 
-const tokenResponseSchema = z.object({
-  access_token: z.string().describe('OAuth2 access token'),
-  token_type: z.literal('Bearer').describe('Token type, always "Bearer"'),
-  expires_in: z.number().describe('Access token lifetime in seconds'),
-  refresh_token: z.string().describe('Refresh token for obtaining new access tokens'),
-  scope: z.string().describe('Space-separated list of granted scopes')
-});
+const TOKEN_RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    access_token: ACCESS_TOKEN_SCHEMA,
+    token_type: TOKEN_TYPE_SCHEMA,
+    expires_in: EXPIRES_IN_SCHEMA,
+    refresh_token: {
+      ...REFRESH_TOKEN_SCHEMA,
+      description: 'Refresh token for obtaining new access tokens'
+    },
+    scope: {
+      ...SCOPE_SCHEMA,
+      description: 'Space-separated list of granted scopes'
+    }
+  },
+  required: ['access_token', 'token_type', 'expires_in', 'refresh_token', 'scope']
+} as const;
 
-const errorResponseSchema = z.object({
-  error: z.string().describe('OAuth2 error code'),
-  error_description: z.string().describe('Human-readable error description')
-});
+// TypeScript interfaces
+interface TokenRequest {
+  grant_type: 'authorization_code';
+  code: string;
+  redirect_uri: string;
+  client_id: string;
+  code_verifier: string;
+}
 
-export default async function tokenRoute(fastify: FastifyInstance) {
-  fastify.post('/oauth2/token', {
+interface RefreshTokenRequest {
+  grant_type: 'refresh_token';
+  refresh_token: string;
+  client_id: string;
+}
+
+type TokenRequestBody = TokenRequest | RefreshTokenRequest;
+
+interface TokenResponse {
+  access_token: string;
+  token_type: 'Bearer';
+  expires_in: number;
+  refresh_token: string;
+  scope: string;
+}
+
+
+export default async function tokenRoute(server: FastifyInstance) {
+  server.post('/oauth2/token', {
     schema: {
       tags: ['OAuth2'],
       summary: 'OAuth2 Token Endpoint',
-      description: 'Exchanges authorization code for access token using PKCE, or refreshes access token using refresh token.',
-      body: createSchema(tokenRequestBodySchema),
+      description: 'Exchanges authorization code for access token using PKCE, or refreshes access token using refresh token. Requires Content-Type: application/json header when sending request body.',
+      
+      // Fastify validation schema
+      body: TOKEN_REQUEST_BODY_SCHEMA,
+      
+      // OpenAPI documentation (same schema, reused)
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: TOKEN_REQUEST_BODY_SCHEMA
+          }
+        }
+      },
+      
       response: {
-        200: createSchema(tokenResponseSchema.describe('Successful token response')),
-        400: createSchema(errorResponseSchema.describe('Bad Request - Invalid parameters')),
-        401: createSchema(errorResponseSchema.describe('Unauthorized - Invalid client or credentials'))
+        200: {
+          ...TOKEN_RESPONSE_SCHEMA,
+          description: 'Successful token response'
+        },
+        400: {
+          ...OAUTH2_ERROR_RESPONSE_SCHEMA,
+          description: 'Bad Request - Invalid parameters'
+        },
+        401: {
+          ...OAUTH2_ERROR_RESPONSE_SCHEMA,
+          description: 'Unauthorized - Invalid client or credentials'
+        },
+        500: {
+          ...OAUTH2_ERROR_RESPONSE_SCHEMA,
+          description: 'Internal Server Error'
+        }
       }
     }
   }, async (request, reply) => {
     try {
-      const body = request.body as z.infer<typeof tokenRequestBodySchema>;
+      const body = request.body as TokenRequestBody;
 
       request.log.debug({
         operation: 'oauth2_token',
@@ -68,7 +157,7 @@ export default async function tokenRoute(fastify: FastifyInstance) {
             error: 'invalid_client',
           }, 'Invalid OAuth2 client');
 
-          const errorResponse = {
+          const errorResponse: OAuth2ErrorResponse = {
             error: 'invalid_client',
             error_description: 'Invalid client identifier'
           };
@@ -93,7 +182,7 @@ export default async function tokenRoute(fastify: FastifyInstance) {
             error: 'invalid_grant',
           }, 'Invalid authorization code or PKCE verification failed');
 
-          const errorResponse = {
+          const errorResponse: OAuth2ErrorResponse = {
             error: 'invalid_grant',
             error_description: 'Invalid authorization code or PKCE verification failed'
           };
@@ -122,7 +211,7 @@ export default async function tokenRoute(fastify: FastifyInstance) {
           scope: authCode.scope,
         }, 'OAuth2 tokens generated successfully');
 
-        const tokenResponse = {
+        const tokenResponse: TokenResponse = {
           access_token: accessToken,
           token_type: 'Bearer' as const,
           expires_in: 7 * 24 * 3600, // 1 week
@@ -146,7 +235,7 @@ export default async function tokenRoute(fastify: FastifyInstance) {
             error: 'invalid_client',
           }, 'Invalid OAuth2 client');
 
-          const errorResponse = {
+          const errorResponse: OAuth2ErrorResponse = {
             error: 'invalid_client',
             error_description: 'Invalid client identifier'
           };
@@ -168,7 +257,7 @@ export default async function tokenRoute(fastify: FastifyInstance) {
             error: 'invalid_grant',
           }, 'Invalid or expired refresh token');
 
-          const errorResponse = {
+          const errorResponse: OAuth2ErrorResponse = {
             error: 'invalid_grant',
             error_description: 'Invalid or expired refresh token'
           };
@@ -185,8 +274,8 @@ export default async function tokenRoute(fastify: FastifyInstance) {
         return reply.status(200).type('application/json').send(jsonString);
       }
 
-      // Should not reach here due to Zod validation
-      const errorResponse = {
+      // Should not reach here due to schema validation
+      const errorResponse: OAuth2ErrorResponse = {
         error: 'unsupported_grant_type',
         error_description: 'Unsupported grant type'
       };
@@ -199,7 +288,7 @@ export default async function tokenRoute(fastify: FastifyInstance) {
         error,
       }, 'OAuth2 token error');
 
-      const errorResponse = {
+      const errorResponse: OAuth2ErrorResponse = {
         error: 'server_error',
         error_description: 'An error occurred processing the token request'
       };

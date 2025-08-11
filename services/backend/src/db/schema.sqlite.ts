@@ -28,7 +28,7 @@ export const roles = sqliteTable('roles', {
 
 export const authUser = sqliteTable('authUser', {
   id: text('id').primaryKey(),
-  username: text('username').notNull().unique(),
+  username: text('username').notNull(),
   email: text('email').notNull().unique(),
   auth_type: text('auth_type').notNull(),
   first_name: text('first_name'),

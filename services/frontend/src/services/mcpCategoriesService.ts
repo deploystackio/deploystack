@@ -152,9 +152,6 @@ export class McpCategoriesService {
       const response = await fetch(`${this.baseUrl}/api/mcp/categories/${categoryId}`, {
         method: 'DELETE',
         credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
       })
 
       if (!response.ok) {

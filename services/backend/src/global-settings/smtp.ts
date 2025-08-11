@@ -10,6 +10,14 @@ export const smtpSettings: GlobalSettingsModule = {
   },
   settings: [
     {
+      key: 'smtp.enabled',
+      defaultValue: false,
+      type: 'boolean',
+      description: 'Enable or disable email sending functionality',
+      encrypted: false,
+      required: false
+    },
+    {
       key: 'smtp.host',
       defaultValue: '',
       type: 'string',

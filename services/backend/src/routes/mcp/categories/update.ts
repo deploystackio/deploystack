@@ -1,41 +1,61 @@
 import { type FastifyInstance } from 'fastify';
-import { z } from 'zod';
-import { createSchema } from 'zod-openapi';
 import { requirePermission } from '../../../middleware/roleMiddleware';
 import { McpCategoriesService } from '../../../services/mcpCategoriesService';
 import { getDb } from '../../../db';
+import { CATEGORY_SCHEMA, CATEGORY_ID_PARAM_SCHEMA, ERROR_RESPONSE_SCHEMA, type Category, type CategoryIdParams, type ErrorResponse } from './schemas';
 
-// Path parameter schema (type-only)
-type UpdateCategoryParams = {
-  id: string;
-};
+// Reusable Schema Constants
 
-// Request schema
-const updateCategoryRequestSchema = z.object({
-  name: z.string().min(1, 'Name is required').max(100, 'Name must be 100 characters or less').optional(),
-  description: z.string().optional(),
-  icon: z.string().optional(),
-  sort_order: z.number().int().min(0, 'Sort order must be non-negative').optional()
-});
+const UPDATE_CATEGORY_REQUEST_SCHEMA = {
+  type: 'object',
+  properties: {
+    name: {
+      type: 'string',
+      minLength: 1,
+      maxLength: 100,
+      description: 'Name of the category (1-100 characters)'
+    },
+    description: {
+      type: 'string',
+      description: 'Optional description of the category'
+    },
+    icon: {
+      type: 'string',
+      description: 'Optional icon identifier for the category'
+    },
+    sort_order: {
+      type: 'number',
+      minimum: 0,
+      description: 'Sort order for display (must be non-negative)'
+    }
+  },
+  additionalProperties: false
+} as const;
 
-// Response schemas
-const updateCategoryResponseSchema = z.object({
-  success: z.boolean(),
-  data: z.object({
-    id: z.string(),
-    name: z.string(),
-    description: z.string().nullable(),
-    icon: z.string().nullable(),
-    sort_order: z.number(),
-    created_at: z.string()
-  })
-});
+const UPDATE_CATEGORY_SUCCESS_RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    success: {
+      type: 'boolean',
+      description: 'Indicates if the category was updated successfully'
+    },
+    data: CATEGORY_SCHEMA
+  },
+  required: ['success', 'data']
+} as const;
 
-const errorResponseSchema = z.object({
-  success: z.boolean().default(false),
-  error: z.string(),
-  details: z.any().optional()
-});
+// TypeScript interfaces for type safety
+interface UpdateCategoryRequest {
+  name?: string;
+  description?: string;
+  icon?: string;
+  sort_order?: number;
+}
+
+interface UpdateCategorySuccessResponse {
+  success: boolean;
+  data: Category;
+}
 
 export default async function updateCategory(server: FastifyInstance) {
   server.put('/mcp/categories/:id', {
@@ -45,46 +65,56 @@ export default async function updateCategory(server: FastifyInstance) {
       summary: 'Update MCP category (Admin only)',
       description: 'Update an existing MCP server category - requires global admin permissions. Requires Content-Type: application/json header when sending request body.',
       security: [{ cookieAuth: [] }],
-      // Plain JSON Schema for Fastify validation
-      params: {
-        type: 'object',
-        properties: {
-          id: { type: 'string', minLength: 1 }
-        },
-        required: ['id']
-      },
-      body: {
-        type: 'object',
-        properties: {
-          name: { type: 'string', minLength: 1, maxLength: 100 },
-          description: { type: 'string' },
-          icon: { type: 'string' },
-          sort_order: { type: 'number', minimum: 0 }
-        },
-        additionalProperties: false
-      },
-      // createSchema() for OpenAPI documentation
+      
+      // Fastify validation schemas
+      params: CATEGORY_ID_PARAM_SCHEMA,
+      body: UPDATE_CATEGORY_REQUEST_SCHEMA,
+      
+      // OpenAPI documentation (same schemas, reused)
       requestBody: {
         required: true,
         content: {
           'application/json': {
-            schema: createSchema(updateCategoryRequestSchema)
+            schema: UPDATE_CATEGORY_REQUEST_SCHEMA
           }
         }
       },
+      
       response: {
-        200: createSchema(updateCategoryResponseSchema),
-        400: createSchema(errorResponseSchema.describe('Bad Request - Invalid input or missing Content-Type header')),
-        401: createSchema(errorResponseSchema.describe('Unauthorized - Authentication required')),
-        403: createSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions')),
-        404: createSchema(errorResponseSchema.describe('Not Found - Category does not exist')),
-        409: createSchema(errorResponseSchema.describe('Conflict - Category name already exists')),
-        500: createSchema(errorResponseSchema.describe('Internal Server Error'))
+        200: {
+          ...UPDATE_CATEGORY_SUCCESS_RESPONSE_SCHEMA,
+          description: 'Category updated successfully'
+        },
+        400: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Bad Request - Invalid input or missing Content-Type header'
+        },
+        401: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Unauthorized - Authentication required'
+        },
+        403: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Forbidden - Insufficient permissions'
+        },
+        404: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Not Found - Category does not exist'
+        },
+        409: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Conflict - Category name already exists'
+        },
+        500: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Internal Server Error'
+        }
       }
     }
   }, async (request, reply) => {
-    const { id } = request.params as UpdateCategoryParams;
-    const updateData = request.body as z.infer<typeof updateCategoryRequestSchema>;
+    // TypeScript type assertions (Fastify has already validated)
+    const { id } = request.params as CategoryIdParams;
+    const updateData = request.body as UpdateCategoryRequest;
     
     request.log.info({
       operation: 'update_mcp_category',
@@ -106,7 +136,7 @@ export default async function updateCategory(server: FastifyInstance) {
           categoryId: id
         }, 'MCP category not found');
 
-        const notFoundResponse = {
+        const notFoundResponse: ErrorResponse = {
           success: false,
           error: 'Category not found'
         };
@@ -121,8 +151,7 @@ export default async function updateCategory(server: FastifyInstance) {
         categoryName: updatedCategory.name
       }, 'MCP category updated successfully');
 
-      // Manual JSON serialization to avoid serialization issues
-      const successResponse = {
+      const successResponse: UpdateCategorySuccessResponse = {
         success: true,
         data: {
           id: String(updatedCategory.id),
@@ -146,7 +175,7 @@ export default async function updateCategory(server: FastifyInstance) {
 
       // Handle specific error cases
       if (error.message?.includes('Category not found')) {
-        const notFoundResponse = {
+        const notFoundResponse: ErrorResponse = {
           success: false,
           error: 'Category not found'
         };
@@ -155,7 +184,7 @@ export default async function updateCategory(server: FastifyInstance) {
       }
 
       if (error.message?.includes('UNIQUE constraint failed') || error.message?.includes('already exists')) {
-        const conflictResponse = {
+        const conflictResponse: ErrorResponse = {
           success: false,
           error: 'Category name already exists'
         };
@@ -163,7 +192,7 @@ export default async function updateCategory(server: FastifyInstance) {
         return reply.status(409).type('application/json').send(jsonString);
       }
 
-      const errorResponse = {
+      const errorResponse: ErrorResponse = {
         success: false,
         error: 'Failed to update category'
       };

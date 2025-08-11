@@ -1,37 +1,77 @@
 import { type FastifyInstance } from 'fastify';
-import { z } from 'zod';
-import { createSchema } from 'zod-openapi';
 import { AuthorizationService } from '../../services/oauth/authorizationService';
 import { GlobalSettingsInitService } from '../../global-settings';
+import {
+  RESPONSE_TYPE_SCHEMA,
+  CLIENT_ID_SCHEMA,
+  REDIRECT_URI_SCHEMA,
+  SCOPE_SCHEMA,
+  STATE_SCHEMA,
+  CODE_CHALLENGE_SCHEMA,
+  CODE_CHALLENGE_METHOD_SCHEMA,
+  OAUTH2_ERROR_RESPONSE_SCHEMA,
+  type OAuth2ErrorResponse
+} from './schemas';
 
-const authorizationQuerySchema = z.object({
-  response_type: z.literal('code').describe('OAuth2 response type, must be "code"'),
-  client_id: z.string().min(1).describe('OAuth2 client identifier'),
-  redirect_uri: z.string().url().describe('OAuth2 redirect URI for callback'),
-  scope: z.string().describe('Space-separated list of requested scopes'),
-  state: z.string().min(1).describe('CSRF protection state parameter'),
-  code_challenge: z.string().min(1).describe('PKCE code challenge'),
-  code_challenge_method: z.literal('S256').describe('PKCE code challenge method, must be "S256"')
-});
+// Reusable Schema Constants
+const AUTHORIZATION_QUERY_SCHEMA = {
+  type: 'object',
+  properties: {
+    response_type: {
+      ...RESPONSE_TYPE_SCHEMA,
+      description: 'OAuth2 response type, must be "code"'
+    },
+    client_id: {
+      ...CLIENT_ID_SCHEMA,
+      description: 'OAuth2 client identifier'
+    },
+    redirect_uri: {
+      ...REDIRECT_URI_SCHEMA,
+      description: 'OAuth2 redirect URI for callback'
+    },
+    scope: {
+      ...SCOPE_SCHEMA,
+      description: 'Space-separated list of requested scopes'
+    },
+    state: STATE_SCHEMA,
+    code_challenge: CODE_CHALLENGE_SCHEMA,
+    code_challenge_method: CODE_CHALLENGE_METHOD_SCHEMA
+  },
+  required: ['response_type', 'client_id', 'redirect_uri', 'scope', 'state', 'code_challenge', 'code_challenge_method'],
+  additionalProperties: false
+} as const;
 
-const errorResponseSchema = z.object({
-  error: z.string().describe('OAuth2 error code'),
-  error_description: z.string().describe('Human-readable error description')
-});
+// TypeScript interfaces
+interface AuthorizationQuery {
+  response_type: 'code';
+  client_id: string;
+  redirect_uri: string;
+  scope: string;
+  state: string;
+  code_challenge: string;
+  code_challenge_method: 'S256';
+}
 
-export default async function authorizationRoute(fastify: FastifyInstance) {
-  fastify.get('/oauth2/auth', {
+export default async function authorizationRoute(server: FastifyInstance) {
+  server.get('/oauth2/auth', {
     schema: {
       tags: ['OAuth2'],
       summary: 'OAuth2 Authorization Endpoint',
       description: 'Initiates OAuth2 authorization flow with PKCE. Validates client credentials and redirects to consent page for user authorization.',
-      querystring: createSchema(authorizationQuerySchema),
+      querystring: AUTHORIZATION_QUERY_SCHEMA,
       response: {
         302: {
           type: 'string',
           description: 'Redirect to consent page or error redirect'
         },
-        400: createSchema(errorResponseSchema.describe('Bad Request - Invalid parameters'))
+        400: {
+          ...OAUTH2_ERROR_RESPONSE_SCHEMA,
+          description: 'Bad Request - Invalid parameters'
+        },
+        500: {
+          ...OAUTH2_ERROR_RESPONSE_SCHEMA,
+          description: 'Internal Server Error'
+        }
       }
     }
   }, async (request, reply) => {
@@ -44,7 +84,7 @@ export default async function authorizationRoute(fastify: FastifyInstance) {
         state,
         code_challenge,
         code_challenge_method
-      } = request.query as z.infer<typeof authorizationQuerySchema>;
+      } = request.query as AuthorizationQuery;
 
       // Validate response_type (additional validation beyond schema)
       if (response_type !== 'code') {
@@ -88,7 +128,7 @@ export default async function authorizationRoute(fastify: FastifyInstance) {
           error: 'invalid_redirect_uri',
         }, 'Invalid OAuth2 redirect URI');
 
-        const errorResponse = {
+        const errorResponse: OAuth2ErrorResponse = {
           error: 'invalid_request',
           error_description: 'Invalid redirect URI'
         };
@@ -152,7 +192,7 @@ export default async function authorizationRoute(fastify: FastifyInstance) {
         error,
       }, 'OAuth2 authorization error');
 
-      const errorResponse = {
+      const errorResponse: OAuth2ErrorResponse = {
         error: 'server_error',
         error_description: 'An error occurred processing the authorization request'
       };

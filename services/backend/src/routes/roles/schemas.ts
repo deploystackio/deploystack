@@ -1,66 +1,246 @@
-import { z } from 'zod';
 import { AVAILABLE_PERMISSIONS } from '../../permissions';
 
-// Role schemas
-export const RoleSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  description: z.string().nullable(),
-  permissions: z.array(z.string()),
-  is_system_role: z.boolean(),
-  created_at: z.string(),
-  updated_at: z.string(),
-});
+// ✅ CORE ROLE SCHEMA (used by multiple endpoints)
+export const ROLE_SCHEMA = {
+  type: 'object',
+  properties: {
+    id: { type: 'string', description: 'Unique role identifier' },
+    name: { type: 'string', description: 'Role name' },
+    description: { type: ['string', 'null'], description: 'Role description' },
+    permissions: { 
+      type: 'array', 
+      items: { type: 'string' },
+      description: 'Array of permissions assigned to this role'
+    },
+    is_system_role: { type: 'boolean', description: 'Whether this is a system-defined role' },
+    created_at: { type: 'string', description: 'Role creation timestamp' },
+    updated_at: { type: 'string', description: 'Role last update timestamp' }
+  },
+  required: ['id', 'name', 'permissions', 'is_system_role', 'created_at', 'updated_at']
+} as const;
 
-export const CreateRoleSchema = z.object({
-  id: z.string().min(1, 'Role ID is required'),
-  name: z.string().min(1, 'Role name is required'),
-  description: z.string().optional(),
-  permissions: z.array(z.string()).min(1, 'At least one permission is required'),
-});
+// ✅ REQUEST SCHEMAS
+export const CREATE_ROLE_REQUEST_SCHEMA = {
+  type: 'object',
+  properties: {
+    id: { 
+      type: 'string', 
+      minLength: 1,
+      description: 'Unique role identifier'
+    },
+    name: { 
+      type: 'string', 
+      minLength: 1,
+      description: 'Human-readable role name'
+    },
+    description: { 
+      type: 'string',
+      description: 'Optional role description'
+    },
+    permissions: { 
+      type: 'array',
+      items: { type: 'string' },
+      minItems: 1,
+      description: 'Array of permission strings'
+    }
+  },
+  required: ['id', 'name', 'permissions'],
+  additionalProperties: false
+} as const;
 
-export const UpdateRoleSchema = z.object({
-  name: z.string().min(1).optional(),
-  description: z.string().optional(),
-  permissions: z.array(z.string()).min(1).optional(),
-});
+export const UPDATE_ROLE_REQUEST_SCHEMA = {
+  type: 'object',
+  properties: {
+    name: { 
+      type: 'string', 
+      minLength: 1,
+      description: 'Human-readable role name'
+    },
+    description: { 
+      type: 'string',
+      description: 'Optional role description'
+    },
+    permissions: { 
+      type: 'array',
+      items: { type: 'string' },
+      minItems: 1,
+      description: 'Array of permission strings'
+    }
+  },
+  additionalProperties: false
+} as const;
 
-export const AssignRoleSchema = z.object({
-  role_id: z.string().min(1, 'Role ID is required'),
-});
+export const ROLE_ID_PARAMS_SCHEMA = {
+  type: 'object',
+  properties: {
+    id: { 
+      type: 'string',
+      minLength: 1,
+      description: 'Role ID'
+    }
+  },
+  required: ['id'],
+  additionalProperties: false
+} as const;
 
-// User management schemas
-export const UserSchema = z.object({
-  id: z.string(),
-  username: z.string(),
-  email: z.string(),
-  auth_type: z.string(),
-  first_name: z.string().nullable(),
-  last_name: z.string().nullable(),
-  github_id: z.string().nullable(),
-  role_id: z.string().nullable(),
-  role: z.object({
-    id: z.string(),
-    name: z.string(),
-    permissions: z.array(z.string()),
-  }).optional(),
-});
+// ✅ RESPONSE SCHEMAS
+export const ROLE_SUCCESS_RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    success: { 
+      type: 'boolean',
+      description: 'Indicates if the operation was successful'
+    },
+    data: ROLE_SCHEMA,
+    message: { 
+      type: 'string',
+      description: 'Success message'
+    }
+  },
+  required: ['success', 'data']
+} as const;
 
-export const UpdateUserSchema = z.object({
-  username: z.string().min(1).optional(),
-  email: z.string().email().optional(),
-  first_name: z.string().optional(),
-  last_name: z.string().optional(),
-  role_id: z.string().optional(),
-});
+export const ROLES_LIST_SUCCESS_RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    success: { 
+      type: 'boolean',
+      description: 'Indicates if the operation was successful'
+    },
+    data: {
+      type: 'array',
+      items: ROLE_SCHEMA,
+      description: 'Array of roles'
+    }
+  },
+  required: ['success', 'data']
+} as const;
 
-// Request/Response types
-export type CreateRoleInput = z.infer<typeof CreateRoleSchema>;
-export type UpdateRoleInput = z.infer<typeof UpdateRoleSchema>;
-export type AssignRoleInput = z.infer<typeof AssignRoleSchema>;
-export type UpdateUserInput = z.infer<typeof UpdateUserSchema>;
+export const PERMISSIONS_SUCCESS_RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    success: { 
+      type: 'boolean',
+      description: 'Indicates if the operation was successful'
+    },
+    data: {
+      type: 'object',
+      properties: {
+        permissions: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Array of available permissions'
+        },
+        default_roles: {
+          type: 'object',
+          additionalProperties: {
+            type: 'array',
+            items: { type: 'string' }
+          },
+          description: 'Default role permissions mapping'
+        }
+      },
+      required: ['permissions', 'default_roles'],
+      description: 'Permissions and default roles data'
+    }
+  },
+  required: ['success', 'data']
+} as const;
 
-// Available permissions are now imported from centralized permissions registry
-// This ensures consistency across the entire application
+export const SUCCESS_MESSAGE_RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    success: { 
+      type: 'boolean',
+      description: 'Indicates if the operation was successful'
+    },
+    message: { 
+      type: 'string',
+      description: 'Success message'
+    }
+  },
+  required: ['success', 'message']
+} as const;
+
+export const ERROR_RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    success: { 
+      type: 'boolean', 
+      default: false,
+      description: 'Indicates the operation failed'
+    },
+    error: { 
+      type: 'string',
+      description: 'Error message describing what went wrong'
+    },
+    details: {
+      type: 'object',
+      description: 'Additional error details (validation errors, invalid permissions)',
+      additionalProperties: true
+    }
+  },
+  required: ['success', 'error']
+} as const;
+
+// ✅ TYPESCRIPT INTERFACES
+export interface Role {
+  id: string;
+  name: string;
+  description: string | null;
+  permissions: string[];
+  is_system_role: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateRoleRequest {
+  id: string;
+  name: string;
+  description?: string;
+  permissions: string[];
+}
+
+export interface UpdateRoleRequest {
+  name?: string;
+  description?: string;
+  permissions?: string[];
+}
+
+export interface RoleParams {
+  id: string;
+}
+
+export interface RoleSuccessResponse {
+  success: boolean;
+  data: Role;
+  message?: string;
+}
+
+export interface RolesListSuccessResponse {
+  success: boolean;
+  data: Role[];
+}
+
+export interface PermissionsSuccessResponse {
+  success: boolean;
+  data: {
+    permissions: string[];
+    default_roles: Record<string, string[]>;
+  };
+}
+
+export interface SuccessMessageResponse {
+  success: boolean;
+  message: string;
+}
+
+export interface ErrorResponse {
+  success: boolean;
+  error: string;
+  details?: Record<string, unknown>;
+}
+
+// ✅ RE-EXPORT PERMISSIONS (keep this useful part)
 export { AVAILABLE_PERMISSIONS } from '../../permissions';
 export type Permission = typeof AVAILABLE_PERMISSIONS[number];

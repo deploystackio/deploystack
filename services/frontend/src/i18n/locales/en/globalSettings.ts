@@ -71,5 +71,79 @@ export default {
       saving: 'Saving...',
       saveChanges: 'Save Changes'
     }
+  },
+  smtp: {
+    fields: {
+      enabled: {
+        label: 'Enable Email Functionality',
+        description: 'Enable or disable all email sending functionality (password reset, email verification, notifications)'
+      },
+      host: {
+        label: 'SMTP Host',
+        placeholder: 'smtp.gmail.com',
+        description: 'SMTP server hostname (e.g., smtp.gmail.com, smtp.outlook.com)'
+      },
+      port: {
+        label: 'SMTP Port',
+        placeholder: '587',
+        description: 'SMTP server port (587 for TLS, 465 for SSL, 25 for unencrypted)'
+      },
+      username: {
+        label: 'Username',
+        placeholder: 'your-email-here',
+        description: 'SMTP authentication username (usually your email address)'
+      },
+      password: {
+        label: 'Password',
+        placeholder: 'Enter your password or app password',
+        description: 'SMTP authentication password. This value is encrypted when stored.'
+      },
+      secure: {
+        label: 'Use SSL/TLS',
+        description: 'Enable secure connection (SSL/TLS) for SMTP communication'
+      },
+      fromName: {
+        label: 'From Name',
+        placeholder: 'DeployStack',
+        description: 'Default sender name for outgoing emails (optional)'
+      },
+      fromEmail: {
+        label: 'From Email',
+        placeholder: 'noreply-here',
+        description: 'Default sender email address (optional, uses username if not set)'
+      }
+    },
+    emailTest: {
+      title: 'Send Test Email',
+      description: 'Send a test email to verify your SMTP configuration is working correctly.',
+      emailAddress: {
+        label: 'Test Email Address',
+        placeholder: 'test-here',
+        description: 'Enter the email address where you want to send the test email',
+        invalid: 'Please enter a valid email address'
+      },
+      button: {
+        test: 'Send Test Email',
+        testing: 'Sending...'
+      },
+      status: {
+        success: 'Test Email Sent Successfully',
+        failed: 'Test Email Failed'
+      },
+      requirements: {
+        title: 'Required for testing:',
+        enabled: 'Email functionality enabled',
+        host: 'SMTP Host',
+        port: 'SMTP Port',
+        username: 'Username',
+        password: 'Password',
+        testEmail: 'Valid test email address'
+      }
+    },
+    form: {
+      unsavedChanges: 'Unsaved changes',
+      saving: 'Saving...',
+      saveChanges: 'Save Changes'
+    }
   }
 }

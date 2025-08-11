@@ -1,56 +1,45 @@
 import { type FastifyInstance } from 'fastify';
-import { z } from 'zod';
-import { createSchema } from 'zod-openapi';
 import { requireAuthenticationAny, requireOAuthScope } from '../../../middleware/oauthMiddleware';
 import { requireTeamPermission } from '../../../middleware/roleMiddleware';
 import { McpInstallationService } from '../../../services/mcpInstallationService';
 import { getDb } from '../../../db';
+import {
+  TEAM_AND_INSTALLATION_PARAMS_SCHEMA,
+  INSTALLATION_DELETE_SUCCESS_RESPONSE_SCHEMA,
+  COMMON_ERROR_RESPONSES,
+  DUAL_AUTH_SECURITY,
+  type TeamAndInstallationParams,
+  type InstallationDeleteSuccessResponse,
+  type ErrorResponse
+} from './schemas';
 
-// Response schemas
-const successResponseSchema = z.object({
-  success: z.boolean().default(true),
-  data: z.object({
-    id: z.string(),
-    deleted: z.boolean().default(true)
-  })
-});
-
-const errorResponseSchema = z.object({
-  success: z.boolean().default(false),
-  error: z.string()
-});
-
-export default async function deleteInstallationRoute(fastify: FastifyInstance) {
-  fastify.delete<{
-    Params: { teamId: string; installationId: string };
-  }>('/teams/:teamId/mcp/installations/:installationId', {
-    schema: {
-      tags: ['MCP Installations'],
-      summary: 'Delete MCP installation',
-      description: 'Removes an MCP server installation from the specified team. No Content-Type header required for this DELETE request. Supports both cookie-based authentication (for web users) and OAuth2 Bearer token authentication (for CLI users). Requires mcp:read scope for OAuth2 access.',
-      security: [
-        { cookieAuth: [] },
-        { bearerAuth: [] }
-      ],
-      params: createSchema(z.object({
-        teamId: z.string().min(1, 'Team ID is required'),
-        installationId: z.string().min(1, 'Installation ID is required')
-      }), {
-        }),
-      response: {
-        200: createSchema(successResponseSchema.describe('Installation deleted successfully')),
-        401: createSchema(errorResponseSchema.describe('Unauthorized - Authentication required or invalid token')),
-        403: createSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions or scope')),
-        404: createSchema(errorResponseSchema.describe('Not Found - Installation not found'))
-      }
-    },
+export default async function deleteInstallationRoute(server: FastifyInstance) {
+  server.delete('/teams/:teamId/mcp/installations/:installationId', {
     preValidation: [
       requireAuthenticationAny(),
       requireOAuthScope('mcp:read'),
       requireTeamPermission('mcp.installations.delete')
-    ]
+    ],
+    schema: {
+      tags: ['MCP Installations'],
+      summary: 'Delete MCP installation',
+      description: 'Removes an MCP server installation from the specified team. No Content-Type header required for this DELETE request. Supports both cookie-based authentication (for web users) and OAuth2 Bearer token authentication (for CLI users). Requires mcp:read scope for OAuth2 access.',
+      security: DUAL_AUTH_SECURITY,
+      
+      // Fastify validation schema
+      params: TEAM_AND_INSTALLATION_PARAMS_SCHEMA,
+      
+      response: {
+        200: {
+          ...INSTALLATION_DELETE_SUCCESS_RESPONSE_SCHEMA,
+          description: 'Installation deleted successfully'
+        },
+        ...COMMON_ERROR_RESPONSES
+      }
+    }
   }, async (request, reply) => {
-    const { teamId, installationId } = request.params;
+    // TypeScript type assertion (Fastify has already validated)
+    const { teamId, installationId } = request.params as TeamAndInstallationParams;
     const userId = request.user!.id;
     const authType = request.tokenPayload ? 'oauth2' : 'cookie';
 
@@ -78,10 +67,12 @@ export default async function deleteInstallationRoute(fastify: FastifyInstance) 
       const deleted = await installationService.deleteInstallation(installationId, teamId);
 
       if (!deleted) {
-        return reply.status(404).send({
+        const notFoundResponse: ErrorResponse = {
           success: false,
           error: 'Installation not found'
-        });
+        };
+        const jsonString = JSON.stringify(notFoundResponse);
+        return reply.status(404).type('application/json').send(jsonString);
       }
 
       request.log.info({
@@ -92,13 +83,15 @@ export default async function deleteInstallationRoute(fastify: FastifyInstance) 
       authType
       }, 'MCP installation deleted successfully');
 
-      return reply.status(200).send({
+      const response: InstallationDeleteSuccessResponse = {
         success: true,
         data: {
           id: installationId,
           deleted: true
         }
-      });
+      };
+      const jsonString = JSON.stringify(response);
+      return reply.status(200).type('application/json').send(jsonString);
 
     } catch (error) {
       request.log.error({
@@ -111,10 +104,12 @@ export default async function deleteInstallationRoute(fastify: FastifyInstance) 
 
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       
-      return reply.status(500).send({
+      const errorResponse: ErrorResponse = {
         success: false,
         error: errorMessage
-      });
+      };
+      const jsonString = JSON.stringify(errorResponse);
+      return reply.status(500).type('application/json').send(jsonString);
     }
   });
 }

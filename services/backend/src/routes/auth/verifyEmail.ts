@@ -1,69 +1,136 @@
-import type { FastifyInstance, FastifyReply } from 'fastify';
-import { EmailVerificationSchema, type EmailVerificationInput } from './schemas';
+import type { FastifyInstance } from 'fastify';
 import { EmailVerificationService } from '../../services/emailVerificationService';
-import { z } from 'zod';
-import { createSchema } from 'zod-openapi';
 
-// Response schemas
-const verifySuccessResponseSchema = z.object({
-  success: z.boolean().describe('Indicates if the verification was successful'),
-  message: z.string().describe('Success message'),
-  userId: z.string().describe('ID of the verified user')
-});
+// Reusable Schema Constants
+const VERIFY_EMAIL_QUERYSTRING_SCHEMA = {
+  type: 'object',
+  properties: {
+    token: {
+      type: 'string',
+      minLength: 1,
+      description: 'Email verification token received via email'
+    }
+  },
+  required: ['token'],
+  additionalProperties: false
+} as const;
 
-const verifyErrorResponseSchema = z.object({
-  success: z.boolean().describe('Indicates if the operation was successful (false for errors)').default(false),
-  error: z.string().describe('Error message describing what went wrong')
-});
+const VERIFY_EMAIL_SUCCESS_RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    success: {
+      type: 'boolean',
+      description: 'Indicates if the verification was successful'
+    },
+    message: {
+      type: 'string',
+      description: 'Success message'
+    },
+    userId: {
+      type: 'string',
+      description: 'ID of the verified user'
+    }
+  },
+  required: ['success', 'message', 'userId']
+} as const;
 
-// Route schema for OpenAPI documentation
-const verifyEmailRouteSchema = {
-  tags: ['Authentication'],
-  summary: 'Verify email address',
-  description: 'Verifies a user\'s email address using a verification token sent via email. This endpoint is public and does not require authentication. Once verified, the user\'s email_verified status is set to true.',
-  querystring: createSchema(EmailVerificationSchema),
-  response: {
-    200: createSchema(verifySuccessResponseSchema.describe('Email verified successfully')),
-    400: createSchema(verifyErrorResponseSchema.describe('Bad Request - Invalid or expired token')),
-    500: createSchema(verifyErrorResponseSchema.describe('Internal Server Error - Verification failed'))
-  }
-};
+const VERIFY_EMAIL_ERROR_RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    success: {
+      type: 'boolean',
+      default: false,
+      description: 'Indicates if the operation was successful (false for errors)'
+    },
+    error: {
+      type: 'string',
+      description: 'Error message describing what went wrong'
+    }
+  },
+  required: ['success', 'error']
+} as const;
 
-export default async function verifyEmailRoute(fastify: FastifyInstance) {
-  fastify.get<{ Querystring: EmailVerificationInput }>(
-    '/verify',
-    { schema: verifyEmailRouteSchema },
-    async (request, reply: FastifyReply) => {
-      const { token } = request.query;
+// TypeScript interfaces for type safety
+interface VerifyEmailQuery {
+  token: string;
+}
+
+interface VerifyEmailSuccessResponse {
+  success: boolean;
+  message: string;
+  userId: string;
+}
+
+interface VerifyEmailErrorResponse {
+  success: boolean;
+  error: string;
+}
+
+export default async function verifyEmailRoute(server: FastifyInstance) {
+  server.get('/verify', {
+    // No preValidation - this is a public endpoint (token provides security)
+    schema: {
+      tags: ['Authentication'],
+      summary: 'Verify email address',
+      description: 'Verifies a user\'s email address using a verification token sent via email. This endpoint is public and does not require authentication. Once verified, the user\'s email_verified status is set to true.',
+      
+      // Fastify validation schema for query parameters
+      querystring: VERIFY_EMAIL_QUERYSTRING_SCHEMA,
+      
+      response: {
+        200: {
+          ...VERIFY_EMAIL_SUCCESS_RESPONSE_SCHEMA,
+          description: 'Email verified successfully'
+        },
+        400: {
+          ...VERIFY_EMAIL_ERROR_RESPONSE_SCHEMA,
+          description: 'Bad Request - Invalid or expired token'
+        },
+        500: {
+          ...VERIFY_EMAIL_ERROR_RESPONSE_SCHEMA,
+          description: 'Internal Server Error - Verification failed'
+        }
+      }
+    }
+  }, async (request, reply) => {
+      // TypeScript type assertion (Fastify has already validated)
+      const { token } = request.query as VerifyEmailQuery;
 
       try {
         // Verify the email token
         const result = await EmailVerificationService.verifyEmailToken(token);
 
         if (!result.success) {
-          return reply.status(400).send({
+          const errorResponse: VerifyEmailErrorResponse = {
             success: false,
             error: result.error || 'Invalid or expired verification token'
-          });
+          };
+          const jsonString = JSON.stringify(errorResponse);
+          return reply.status(400).type('application/json').send(jsonString);
         }
 
         // Clean up expired tokens (housekeeping)
         EmailVerificationService.cleanupExpiredTokens().catch(error => {
-          fastify.log.warn('Failed to cleanup expired tokens:', error);
+          server.log.warn('Failed to cleanup expired tokens:', error);
         });
 
-        return reply.status(200).send({
+        // Create typed success response
+        const successResponse: VerifyEmailSuccessResponse = {
           success: true,
           message: 'Email verified successfully. You can now log in to your account.',
-          userId: result.userId
-        });
+          userId: result.userId!
+        };
+        const jsonString = JSON.stringify(successResponse);
+        return reply.status(200).type('application/json').send(jsonString);
 
       } catch (error) {
-        fastify.log.error(error, 'Error during email verification:');
-        return reply.status(500).send({
+        server.log.error(error, 'Error during email verification:');
+        const errorResponse: VerifyEmailErrorResponse = {
           success: false,
           error: 'An unexpected error occurred during verification'
-        });
+        };
+        const jsonString = JSON.stringify(errorResponse);
+        return reply.status(500).type('application/json').send(jsonString);
       }
     }
   );

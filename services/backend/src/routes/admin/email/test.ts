@@ -136,7 +136,7 @@ export default async function adminEmailTestRoute(server: FastifyInstance) {
         to: email,
         adminUser: adminUserName,
         appUrl,
-        supportEmail: 'support@deploystack.com'
+        supportEmail: 'support@deploystack.io'
       }, request.log);
       
       if (result.success) {

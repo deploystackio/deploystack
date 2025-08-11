@@ -61,6 +61,13 @@ describe('Users Route', () => {
 
     // Setup mock Fastify instance
     mockFastify = {
+      register: vi.fn(async (plugin: any) => {
+        // Execute the plugin to register routes
+        if (typeof plugin === 'function') {
+          await plugin(mockFastify);
+        }
+        return mockFastify as FastifyInstance;
+      }),
       get: vi.fn((path: string, options: any, handler?: any) => {
         if (handler) {
           routeHandlers[`GET ${path}`] = handler;
@@ -158,10 +165,33 @@ describe('Users Route', () => {
 
       expect(mockUserService.getAllUsers).toHaveBeenCalled();
       expect(mockReply.status).toHaveBeenCalledWith(200);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        success: true,
-        data: mockUsers,
-      });
+      expect(mockReply.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          success: true,
+          data: [
+            {
+              id: '1',
+              username: 'user1',
+              email: 'user1@example.com',
+              auth_type: 'undefined',
+              first_name: null,
+              last_name: null,
+              github_id: null,
+              role_id: null
+            },
+            {
+              id: '2',
+              username: 'user2',
+              email: 'user2@example.com',
+              auth_type: 'undefined',
+              first_name: null,
+              last_name: null,
+              github_id: null,
+              role_id: null
+            }
+          ]
+        })
+      );
     });
 
     it('should handle service errors', async () => {
@@ -173,10 +203,12 @@ describe('Users Route', () => {
 
       expect(mockFastify.log!.error).toHaveBeenCalledWith(error, 'Error fetching users');
       expect(mockReply.status).toHaveBeenCalledWith(500);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        success: false,
-        error: 'Failed to fetch users',
-      });
+      expect(mockReply.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          success: false,
+          error: 'Failed to fetch users',
+        })
+      );
     });
   });
 

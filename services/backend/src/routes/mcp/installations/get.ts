@@ -1,80 +1,47 @@
 import { type FastifyInstance } from 'fastify';
-import { z } from 'zod';
-import { createSchema } from 'zod-openapi';
 import { requireAuthenticationAny, requireOAuthScope } from '../../../middleware/oauthMiddleware';
 import { requireTeamPermission } from '../../../middleware/roleMiddleware';
 import { McpInstallationService } from '../../../services/mcpInstallationService';
 import { getDb } from '../../../db';
+import {
+  TEAM_AND_INSTALLATION_PARAMS_SCHEMA,
+  INSTALLATION_SUCCESS_RESPONSE_SCHEMA,
+  COMMON_ERROR_RESPONSES,
+  DUAL_AUTH_SECURITY,
+  formatInstallationResponse,
+  type TeamAndInstallationParams,
+  type InstallationData,
+  type InstallationSuccessResponse,
+  type ErrorResponse
+} from './schemas';
 
-// Response schemas
-const installationSchema = z.object({
-  id: z.string(),
-  team_id: z.string(),
-  server_id: z.string(),
-  user_id: z.string(),
-  installation_name: z.string(),
-  installation_type: z.enum(['local', 'cloud']),
-  user_environment_variables: z.record(z.string(), z.string()).optional(),
-  created_at: z.string(),
-  updated_at: z.string(),
-  last_used_at: z.string().nullable(),
-  server: z.object({
-    id: z.string(),
-    name: z.string(),
-    description: z.string(),
-    github_url: z.string().nullable(),
-    homepage_url: z.string().nullable(),
-    author_name: z.string().nullable(),
-    language: z.string(),
-    runtime: z.string(),
-    status: z.enum(['active', 'deprecated', 'maintenance']),
-    tags: z.array(z.string()).nullable(),
-    environment_variables: z.array(z.any()).nullable(),
-    category_id: z.string().nullable()
-  }).optional()
-});
-
-const successResponseSchema = z.object({
-  success: z.boolean().default(true),
-  data: installationSchema
-});
-
-const errorResponseSchema = z.object({
-  success: z.boolean().default(false),
-  error: z.string()
-});
-
-export default async function getInstallationRoute(fastify: FastifyInstance) {
-  fastify.get<{
-    Params: { teamId: string; installationId: string };
-  }>('/teams/:teamId/mcp/installations/:installationId', {
-    schema: {
-      tags: ['MCP Installations'],
-      summary: 'Get MCP installation by ID',
-      description: 'Retrieves a specific MCP server installation by ID for the specified team. Supports both cookie-based authentication (for web users) and OAuth2 Bearer token authentication (for CLI users). Requires mcp:read scope for OAuth2 access.',
-      security: [
-        { cookieAuth: [] },
-        { bearerAuth: [] }
-      ],
-      params: createSchema(z.object({
-        teamId: z.string().min(1, 'Team ID is required'),
-        installationId: z.string().min(1, 'Installation ID is required')
-      }), {
-        }),
-      response: {
-        200: createSchema(successResponseSchema.describe('Installation details')),
-        401: createSchema(errorResponseSchema.describe('Unauthorized - Authentication required or invalid token')),
-        403: createSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions or scope')),
-        404: createSchema(errorResponseSchema.describe('Not Found - Installation not found'))
-      }
-    },
+export default async function getInstallationRoute(server: FastifyInstance) {
+  server.get('/teams/:teamId/mcp/installations/:installationId', {
     preValidation: [
       requireAuthenticationAny(),
       requireOAuthScope('mcp:read'),
       requireTeamPermission('mcp.installations.view')
-    ]
+    ],
+    schema: {
+      tags: ['MCP Installations'],
+      summary: 'Get MCP installation by ID',
+      description: 'Retrieves a specific MCP server installation by ID for the specified team. No Content-Type header required for this GET request. Supports both cookie-based authentication (for web users) and OAuth2 Bearer token authentication (for CLI users). Requires mcp:read scope for OAuth2 access.',
+      security: DUAL_AUTH_SECURITY,
+      
+      // Fastify validation schema
+      params: TEAM_AND_INSTALLATION_PARAMS_SCHEMA,
+      
+      response: {
+        200: {
+          ...INSTALLATION_SUCCESS_RESPONSE_SCHEMA,
+          description: 'Installation details'
+        },
+        ...COMMON_ERROR_RESPONSES
+      }
+    }
   }, async (request, reply) => {
-    const { teamId, installationId } = request.params;
+    // TypeScript type assertion (Fastify has already validated)
+    const { teamId, installationId } = request.params as TeamAndInstallationParams;
     const userId = request.user!.id;
     const authType = request.tokenPayload ? 'oauth2' : 'cookie';
 
@@ -99,7 +66,7 @@ export default async function getInstallationRoute(fastify: FastifyInstance) {
       const db = getDb();
       const installationService = new McpInstallationService(db, request.log);
       
-      const installation = await installationService.getInstallationById(installationId, teamId);
+      const installation = await installationService.getInstallationById(installationId, teamId) as InstallationData | null;
 
       if (!installation) {
         request.log.warn({
@@ -109,10 +76,12 @@ export default async function getInstallationRoute(fastify: FastifyInstance) {
           userId
         }, 'MCP installation not found');
 
-        return reply.status(404).send({
+        const notFoundResponse: ErrorResponse = {
           success: false,
           error: 'Installation not found'
-        });
+        };
+        const jsonString = JSON.stringify(notFoundResponse);
+        return reply.status(404).type('application/json').send(jsonString);
       }
 
       request.log.info({
@@ -123,15 +92,12 @@ export default async function getInstallationRoute(fastify: FastifyInstance) {
       authType
       }, 'Retrieved MCP installation');
 
-      return reply.status(200).send({
+      const response: InstallationSuccessResponse = {
         success: true,
-        data: {
-          ...installation,
-          created_at: installation.created_at.toISOString(),
-          updated_at: installation.updated_at.toISOString(),
-          last_used_at: installation.last_used_at?.toISOString() || null
-        }
-      });
+        data: formatInstallationResponse(installation)
+      };
+      const jsonString = JSON.stringify(response);
+      return reply.status(200).type('application/json').send(jsonString);
 
     } catch (error) {
       request.log.error({
@@ -144,10 +110,12 @@ export default async function getInstallationRoute(fastify: FastifyInstance) {
 
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       
-      return reply.status(500).send({
+      const errorResponse: ErrorResponse = {
         success: false,
         error: errorMessage
-      });
+      };
+      const jsonString = JSON.stringify(errorResponse);
+      return reply.status(500).type('application/json').send(jsonString);
     }
   });
 }

@@ -176,7 +176,7 @@ export class EmailVerificationService {
   static async sendVerificationEmail(userId: string, userEmail: string, userName: string, logger?: FastifyBaseLogger): Promise<{ success: boolean; error?: string }> {
     try {
       // Check if email sending is enabled
-      const isEmailEnabled = await GlobalSettings.getBoolean('global.send_mail', false);
+      const isEmailEnabled = await GlobalSettings.getBoolean('smtp.enabled', false);
       if (!isEmailEnabled) {
         return { success: false, error: 'Email sending is disabled' };
       }
@@ -261,6 +261,6 @@ export class EmailVerificationService {
    * Check if email verification is required for login
    */
   static async isVerificationRequired(): Promise<boolean> {
-    return await GlobalSettings.getBoolean('global.send_mail', false);
+    return await GlobalSettings.getBoolean('smtp.enabled', false);
   }
 }

@@ -18,14 +18,6 @@ export const globalSettings: GlobalSettingsModule = {
       required: false
     },
     {
-      key: 'global.send_mail',
-      defaultValue: false,
-      type: 'boolean',
-      description: 'Enable or disable email sending functionality',
-      encrypted: false,
-      required: false
-    },
-    {
       key: 'global.enable_login',
       defaultValue: true,
       type: 'boolean',

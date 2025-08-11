@@ -1,42 +1,76 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { z } from 'zod';
-import { createSchema } from 'zod-openapi';
 import { requireValidAccessToken, requireOAuthScope } from '../../middleware/oauthMiddleware';
 import { UserService } from '../../services/userService';
+import {
+  USER_SUBJECT_SCHEMA,
+  USER_EMAIL_SCHEMA,
+  USER_NAME_SCHEMA,
+  USERNAME_SCHEMA,
+  EMAIL_VERIFIED_SCHEMA,
+  GIVEN_NAME_SCHEMA,
+  FAMILY_NAME_SCHEMA,
+  OAUTH2_ERROR_RESPONSE_SCHEMA,
+  type OAuth2ErrorResponse
+} from './schemas';
 
-// OAuth2 UserInfo response schema (RFC 6749 / OpenID Connect standard)
-const userInfoResponseSchema = z.object({
-  sub: z.string().describe('Subject identifier - unique user ID'),
-  email: z.string().email().describe('User email address'),
-  name: z.string().optional().describe('Full name of the user'),
-  preferred_username: z.string().describe('Preferred username'),
-  email_verified: z.boolean().describe('Whether the email address has been verified'),
-  given_name: z.string().optional().describe('Given name (first name)'),
-  family_name: z.string().optional().describe('Family name (last name)')
-});
+// Reusable Schema Constants
+const USERINFO_RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    sub: USER_SUBJECT_SCHEMA,
+    email: USER_EMAIL_SCHEMA,
+    name: USER_NAME_SCHEMA,
+    preferred_username: USERNAME_SCHEMA,
+    email_verified: EMAIL_VERIFIED_SCHEMA,
+    given_name: GIVEN_NAME_SCHEMA,
+    family_name: FAMILY_NAME_SCHEMA
+  },
+  required: ['sub', 'email', 'preferred_username', 'email_verified']
+} as const;
 
-// Error response schema for OAuth2 errors
-const oauthErrorResponseSchema = z.object({
-  error: z.string().describe('OAuth2 error code'),
-  error_description: z.string().describe('Human-readable error description')
-});
+// TypeScript interfaces
+interface UserInfoResponse {
+  sub: string;
+  email: string;
+  preferred_username: string;
+  email_verified: boolean;
+  name?: string;
+  given_name?: string;
+  family_name?: string;
+}
 
-export default async function userinfoRoute(fastify: FastifyInstance) {
+
+export default async function userinfoRoute(server: FastifyInstance) {
   const userService = new UserService();
 
   // GET /oauth2/userinfo - Standard OAuth2 UserInfo endpoint
-  fastify.get('/oauth2/userinfo', {
+  server.get('/oauth2/userinfo', {
     schema: {
       tags: ['OAuth2'],
       summary: 'Get user information',
       description: 'Returns user information for the authenticated user. This is the standard OAuth2/OpenID Connect UserInfo endpoint. Requires a valid OAuth2 access token with user:read scope.',
       security: [{ bearerAuth: [] }],
       response: {
-        200: createSchema(userInfoResponseSchema.describe('User information retrieved successfully')),
-        401: createSchema(oauthErrorResponseSchema.describe('Unauthorized - Invalid or missing access token')),
-        403: createSchema(oauthErrorResponseSchema.describe('Forbidden - Insufficient scope')),
-        404: createSchema(oauthErrorResponseSchema.describe('Not Found - User not found')),
-        500: createSchema(oauthErrorResponseSchema.describe('Internal Server Error'))
+        200: {
+          ...USERINFO_RESPONSE_SCHEMA,
+          description: 'User information retrieved successfully'
+        },
+        401: {
+          ...OAUTH2_ERROR_RESPONSE_SCHEMA,
+          description: 'Unauthorized - Invalid or missing access token'
+        },
+        403: {
+          ...OAUTH2_ERROR_RESPONSE_SCHEMA,
+          description: 'Forbidden - Insufficient scope'
+        },
+        404: {
+          ...OAUTH2_ERROR_RESPONSE_SCHEMA,
+          description: 'Not Found - User not found'
+        },
+        500: {
+          ...OAUTH2_ERROR_RESPONSE_SCHEMA,
+          description: 'Internal Server Error'
+        }
       }
     },
     preValidation: [
@@ -47,12 +81,12 @@ export default async function userinfoRoute(fastify: FastifyInstance) {
     try {
       // At this point, the user is authenticated via OAuth2 and has the required scope
       if (!request.tokenPayload) {
-        fastify.log.error({
+        server.log.error({
           operation: 'oauth2_userinfo',
           error: 'Missing token payload after validation'
         }, 'OAuth2 userinfo: Missing token payload');
         
-        const errorResponse = {
+        const errorResponse: OAuth2ErrorResponse = {
           error: 'server_error',
           error_description: 'Internal authentication error'
         };
@@ -63,7 +97,7 @@ export default async function userinfoRoute(fastify: FastifyInstance) {
       const userId = request.tokenPayload.user.id;
       const userEmail = request.tokenPayload.user.email;
       
-      fastify.log.debug({
+      server.log.debug({
         operation: 'oauth2_userinfo',
         userId,
         userEmail,
@@ -75,13 +109,13 @@ export default async function userinfoRoute(fastify: FastifyInstance) {
       const user = await userService.getUserById(userId);
       
       if (!user) {
-        fastify.log.warn({
+        server.log.warn({
           operation: 'oauth2_userinfo',
           userId,
           userEmail
         }, 'OAuth2 userinfo: User not found in database');
         
-        const errorResponse = {
+        const errorResponse: OAuth2ErrorResponse = {
           error: 'invalid_token',
           error_description: 'User associated with token not found'
         };
@@ -99,7 +133,7 @@ export default async function userinfoRoute(fastify: FastifyInstance) {
       }
 
       // Create OAuth2 UserInfo response following RFC standards
-      const userInfoResponse = {
+      const userInfoResponse: UserInfoResponse = {
         sub: String(user.id),                    // Subject identifier (required)
         email: String(user.email),               // Email address (required)
         preferred_username: String(user.username), // Username (required)
@@ -109,7 +143,7 @@ export default async function userinfoRoute(fastify: FastifyInstance) {
         ...(user.last_name && { family_name: String(user.last_name) })   // Last name (optional)
       };
 
-      fastify.log.info({
+      server.log.info({
         operation: 'oauth2_userinfo',
         userId,
         userEmail,
@@ -121,14 +155,14 @@ export default async function userinfoRoute(fastify: FastifyInstance) {
       return reply.status(200).type('application/json').send(jsonString);
       
     } catch (error) {
-      fastify.log.error({
+      server.log.error({
         operation: 'oauth2_userinfo',
         error,
         userId: request.tokenPayload?.user.id,
         userEmail: request.tokenPayload?.user.email
       }, 'OAuth2 userinfo: Unexpected error');
       
-      const errorResponse = {
+      const errorResponse: OAuth2ErrorResponse = {
         error: 'server_error',
         error_description: 'An error occurred while retrieving user information'
       };

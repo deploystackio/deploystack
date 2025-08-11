@@ -28,7 +28,6 @@ CREATE TABLE `authUser` (
 	FOREIGN KEY (`role_id`) REFERENCES `roles`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX `authUser_username_unique` ON `authUser` (`username`);--> statement-breakpoint
 CREATE UNIQUE INDEX `authUser_email_unique` ON `authUser` (`email`);--> statement-breakpoint
 CREATE UNIQUE INDEX `authUser_github_id_unique` ON `authUser` (`github_id`);--> statement-breakpoint
 CREATE TABLE `emailVerificationTokens` (

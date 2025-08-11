@@ -8,6 +8,10 @@ export default {
       createSuccess: 'Category created successfully.',
       updateSuccess: 'Category updated successfully.',
       deleteSuccess: 'Category deleted successfully.',
+      fetchError: 'Failed to load categories.',
+      createError: 'Failed to create category.',
+      updateError: 'Failed to update category.',
+      deleteError: 'Failed to delete category.',
     },
 
     table: {

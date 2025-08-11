@@ -1,26 +1,33 @@
 import { type FastifyInstance } from 'fastify';
-import { z } from 'zod';
-import { createSchema } from 'zod-openapi';
 import { requirePermission } from '../../../middleware/roleMiddleware';
 import { McpCategoriesService } from '../../../services/mcpCategoriesService';
 import { getDb } from '../../../db';
+import { CATEGORY_ID_PARAM_SCHEMA, ERROR_RESPONSE_SCHEMA, type CategoryIdParams, type ErrorResponse } from './schemas';
 
-// Path parameter schema (type-only)
-type DeleteCategoryParams = {
-  id: string;
-};
+// Reusable Schema Constants
 
-// Response schemas
-const deleteCategoryResponseSchema = z.object({
-  success: z.boolean(),
-  message: z.string()
-});
+const DELETE_CATEGORY_SUCCESS_RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    success: {
+      type: 'boolean',
+      description: 'Indicates if the category was deleted successfully'
+    },
+    message: {
+      type: 'string',
+      description: 'Success message confirming the deletion'
+    }
+  },
+  required: ['success', 'message']
+} as const;
 
-const errorResponseSchema = z.object({
-  success: z.boolean().default(false),
-  error: z.string(),
-  details: z.any().optional()
-});
+
+
+// TypeScript interfaces for type safety
+interface DeleteCategorySuccessResponse {
+  success: boolean;
+  message: string;
+}
 
 export default async function deleteCategory(server: FastifyInstance) {
   server.delete('/mcp/categories/:id', {
@@ -30,24 +37,36 @@ export default async function deleteCategory(server: FastifyInstance) {
       summary: 'Delete MCP category (Admin only)',
       description: 'Delete an MCP server category - requires global admin permissions. No Content-Type header required for this DELETE request.',
       security: [{ cookieAuth: [] }],
-      // Plain JSON Schema for Fastify validation
-      params: {
-        type: 'object',
-        properties: {
-          id: { type: 'string', minLength: 1 }
-        },
-        required: ['id']
-      },
+      
+      // Fastify validation schema
+      params: CATEGORY_ID_PARAM_SCHEMA,
+      
       response: {
-        200: createSchema(deleteCategoryResponseSchema),
-        401: createSchema(errorResponseSchema.describe('Unauthorized - Authentication required')),
-        403: createSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions')),
-        404: createSchema(errorResponseSchema.describe('Not Found - Category does not exist')),
-        500: createSchema(errorResponseSchema.describe('Internal Server Error'))
+        200: {
+          ...DELETE_CATEGORY_SUCCESS_RESPONSE_SCHEMA,
+          description: 'Category deleted successfully'
+        },
+        401: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Unauthorized - Authentication required'
+        },
+        403: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Forbidden - Insufficient permissions'
+        },
+        404: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Not Found - Category does not exist'
+        },
+        500: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Internal Server Error'
+        }
       }
     }
   }, async (request, reply) => {
-    const { id } = request.params as DeleteCategoryParams;
+    // TypeScript type assertion (Fastify has already validated)
+    const { id } = request.params as CategoryIdParams;
     
     request.log.info({
       operation: 'delete_mcp_category',
@@ -68,7 +87,7 @@ export default async function deleteCategory(server: FastifyInstance) {
           categoryId: id
         }, 'MCP category not found');
 
-        const notFoundResponse = {
+        const notFoundResponse: ErrorResponse = {
           success: false,
           error: 'Category not found'
         };
@@ -82,8 +101,7 @@ export default async function deleteCategory(server: FastifyInstance) {
         categoryId: id
       }, 'MCP category deleted successfully');
 
-      // Manual JSON serialization to avoid serialization issues
-      const successResponse = {
+      const successResponse: DeleteCategorySuccessResponse = {
         success: true,
         message: 'Category deleted successfully'
       };
@@ -98,7 +116,7 @@ export default async function deleteCategory(server: FastifyInstance) {
         error
       }, 'Failed to delete MCP category');
 
-      const errorResponse = {
+      const errorResponse: ErrorResponse = {
         success: false,
         error: 'Failed to delete category'
       };

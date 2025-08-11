@@ -1,100 +1,183 @@
-import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { ResetPasswordSchema, type ResetPasswordInput } from './schemas';
+import type { FastifyInstance } from 'fastify';
 import { PasswordResetService } from '../../services/passwordResetService';
-import { z } from 'zod';
-import { createSchema } from 'zod-openapi';
 
-// Response schemas
-const resetPasswordSuccessResponseSchema = z.object({
-  success: z.boolean().describe('Indicates if the password reset was successful'),
-  message: z.string().describe('Success message')
-});
-
-const resetPasswordErrorResponseSchema = z.object({
-  success: z.boolean().describe('Indicates if the operation was successful (false for errors)').default(false),
-  error: z.string().describe('Error message describing what went wrong')
-});
-
-// Route schema for OpenAPI documentation
-const resetPasswordRouteSchema = {
-  tags: ['Authentication'],
-  summary: 'Reset password using reset token',
-  description: 'Resets the password for email users using a valid reset token. The token must be valid and not expired (10-minute expiration). After successful reset, all user sessions are invalidated for security. Only works for users with email authentication. Requires Content-Type: application/json header when sending request body.',
-  requestBody: {
-    required: true,
-    content: {
-      'application/json': {
-        schema: createSchema(ResetPasswordSchema)
-      }
+// Reusable Schema Constants
+const RESET_PASSWORD_REQUEST_SCHEMA = {
+  type: 'object',
+  properties: {
+    token: {
+      type: 'string',
+      minLength: 1,
+      description: 'Valid password reset token received via email'
+    },
+    new_password: {
+      type: 'string',
+      minLength: 8,
+      maxLength: 128,
+      description: 'New password (minimum 8 characters)'
     }
   },
-  response: {
-    200: createSchema(resetPasswordSuccessResponseSchema.describe('Password reset successfully')),
-    400: createSchema(resetPasswordErrorResponseSchema.describe('Bad Request - Invalid token, expired token, invalid password, or missing Content-Type header')),
-    403: createSchema(resetPasswordErrorResponseSchema.describe('Forbidden - User not eligible for password reset')),
-    503: createSchema(resetPasswordErrorResponseSchema.describe('Service Unavailable - Email functionality disabled')),
-    500: createSchema(resetPasswordErrorResponseSchema.describe('Internal Server Error - Password reset failed'))
-  }
-};
+  required: ['token', 'new_password'],
+  additionalProperties: false
+} as const;
 
-export default async function resetPasswordRoute(fastify: FastifyInstance) {
-  fastify.post<{ Body: ResetPasswordInput }>(
-    '/email/reset-password',
-    { schema: resetPasswordRouteSchema },
-    async (request: FastifyRequest, reply: FastifyReply) => {
+const RESET_PASSWORD_SUCCESS_RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    success: {
+      type: 'boolean',
+      description: 'Indicates if the password reset was successful'
+    },
+    message: {
+      type: 'string',
+      description: 'Success message'
+    }
+  },
+  required: ['success', 'message']
+} as const;
+
+const RESET_PASSWORD_ERROR_RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    success: {
+      type: 'boolean',
+      default: false,
+      description: 'Indicates if the operation was successful (false for errors)'
+    },
+    error: {
+      type: 'string',
+      description: 'Error message describing what went wrong'
+    }
+  },
+  required: ['success', 'error']
+} as const;
+
+// TypeScript interfaces for type safety
+interface ResetPasswordRequest {
+  token: string;
+  new_password: string;
+}
+
+interface ResetPasswordSuccessResponse {
+  success: boolean;
+  message: string;
+}
+
+interface ResetPasswordErrorResponse {
+  success: boolean;
+  error: string;
+}
+
+export default async function resetPasswordRoute(server: FastifyInstance) {
+  server.post('/email/reset-password', {
+    // No preValidation - this is a public endpoint (token provides security)
+    schema: {
+      tags: ['Authentication'],
+      summary: 'Reset password using reset token',
+      description: 'Resets the password for email users using a valid reset token. The token must be valid and not expired (10-minute expiration). After successful reset, all user sessions are invalidated for security. Only works for users with email authentication. Requires Content-Type: application/json header when sending request body.',
+      
+      // Fastify validation schema
+      body: RESET_PASSWORD_REQUEST_SCHEMA,
+      
+      // OpenAPI documentation (same schema, reused)
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: RESET_PASSWORD_REQUEST_SCHEMA
+          }
+        }
+      },
+      
+      response: {
+        200: {
+          ...RESET_PASSWORD_SUCCESS_RESPONSE_SCHEMA,
+          description: 'Password reset successfully'
+        },
+        400: {
+          ...RESET_PASSWORD_ERROR_RESPONSE_SCHEMA,
+          description: 'Bad Request - Invalid token, expired token, invalid password, or missing Content-Type header'
+        },
+        403: {
+          ...RESET_PASSWORD_ERROR_RESPONSE_SCHEMA,
+          description: 'Forbidden - User not eligible for password reset'
+        },
+        503: {
+          ...RESET_PASSWORD_ERROR_RESPONSE_SCHEMA,
+          description: 'Service Unavailable - Email functionality disabled'
+        },
+        500: {
+          ...RESET_PASSWORD_ERROR_RESPONSE_SCHEMA,
+          description: 'Internal Server Error - Password reset failed'
+        }
+      }
+    }
+  }, async (request, reply) => {
       try {
         // Check if password reset is available (email sending enabled)
         const isResetAvailable = await PasswordResetService.isPasswordResetAvailable();
         if (!isResetAvailable) {
-          return reply.status(503).send({ 
-            success: false, 
-            error: 'Password reset is currently disabled. Email functionality is not enabled.' 
-          });
+          const errorResponse: ResetPasswordErrorResponse = {
+            success: false,
+            error: 'Password reset is currently disabled. Email functionality is not enabled.'
+          };
+          const jsonString = JSON.stringify(errorResponse);
+          return reply.status(503).type('application/json').send(jsonString);
         }
 
-        const body = request.body as ResetPasswordInput;
-        const { token, new_password } = body;
+        // TypeScript type assertion (Fastify has already validated)
+        const { token, new_password } = request.body as ResetPasswordRequest;
 
-        fastify.log.info('Password reset attempt with token');
+        server.log.info('Password reset attempt with token');
 
         // Validate token and reset password
         const result = await PasswordResetService.validateAndResetPassword(token, new_password);
 
         if (!result.success) {
           if (result.error === 'Invalid or expired reset token') {
-            return reply.status(400).send({ 
-              success: false, 
-              error: result.error 
-            });
+            const errorResponse: ResetPasswordErrorResponse = {
+              success: false,
+              error: result.error
+            };
+            const jsonString = JSON.stringify(errorResponse);
+            return reply.status(400).type('application/json').send(jsonString);
           }
           
           if (result.error === 'User not found or not eligible for password reset') {
-            return reply.status(403).send({ 
-              success: false, 
-              error: 'This user is not eligible for password reset.' 
-            });
+            const errorResponse: ResetPasswordErrorResponse = {
+              success: false,
+              error: 'This user is not eligible for password reset.'
+            };
+            const jsonString = JSON.stringify(errorResponse);
+            return reply.status(403).type('application/json').send(jsonString);
           }
 
-          return reply.status(500).send({ 
-            success: false, 
-            error: result.error || 'An error occurred during password reset.' 
-          });
+          const errorResponse: ResetPasswordErrorResponse = {
+            success: false,
+            error: result.error || 'An error occurred during password reset.'
+          };
+          const jsonString = JSON.stringify(errorResponse);
+          return reply.status(500).type('application/json').send(jsonString);
         }
 
-        fastify.log.info(`Password reset successful for user: ${result.userId}`);
+        server.log.info(`Password reset successful for user: ${result.userId}`);
 
-        // Send success response
-        return reply.status(200).send({
+        // Create typed success response
+        const successResponse: ResetPasswordSuccessResponse = {
           success: true,
           message: 'Password has been reset successfully. All sessions have been invalidated for security. Please log in with your new password.'
-        });
+        };
+        const jsonString = JSON.stringify(successResponse);
+        return reply.status(200).type('application/json').send(jsonString);
 
       } catch (error) {
-        fastify.log.error(error, 'Error during password reset:');
-        return reply.status(500).send({ 
-          success: false, 
-          error: 'An unexpected error occurred during password reset.' 
-        });
+        server.log.error(error, 'Error during password reset:');
+        const errorResponse: ResetPasswordErrorResponse = {
+          success: false,
+          error: 'An unexpected error occurred during password reset.'
+        };
+        const jsonString = JSON.stringify(errorResponse);
+        return reply.status(500).type('application/json').send(jsonString);
       }
     }
   );

@@ -149,6 +149,53 @@ export function useConnectionTest() {
   }
 
   /**
+   * Test SMTP email sending using the admin endpoint
+   */
+  async function testSmtpEmailConnection(email: string): Promise<ConnectionTestResult> {
+    if (!apiUrl) {
+      throw new Error('VITE_DEPLOYSTACK_BACKEND_URL is not configured')
+    }
+
+    isTestingConnection.value = true
+
+    try {
+      const response = await fetch(`${apiUrl}/api/admin/email/test`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ email })
+      })
+
+      const result = await response.json()
+
+      const testResult: ConnectionTestResult = {
+        success: response.ok && result.success,
+        message: result.message || (response.ok ? 'Test email sent successfully' : 'Failed to send test email'),
+        details: result.details || { messageId: result.messageId, recipients: result.recipients },
+        timestamp: new Date()
+      }
+
+      lastTestResult.value = testResult
+      return testResult
+
+    } catch (error) {
+      const testResult: ConnectionTestResult = {
+        success: false,
+        message: error instanceof Error ? error.message : 'Unknown error occurred while sending test email',
+        timestamp: new Date()
+      }
+
+      lastTestResult.value = testResult
+      return testResult
+
+    } finally {
+      isTestingConnection.value = false
+    }
+  }
+
+  /**
    * Clear the last test result
    */
   function clearTestResult() {
@@ -182,6 +229,7 @@ export function useConnectionTest() {
     testConnection,
     testGitHubAppConnection,
     testSmtpConnection,
+    testSmtpEmailConnection,
     clearTestResult,
     getStatusMessage,
     getAlertVariant

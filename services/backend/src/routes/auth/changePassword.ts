@@ -176,7 +176,7 @@ export default async function changePasswordRoute(fastify: FastifyInstance) {
         try {
           // Check if email sending is enabled in global settings
           const emailSettings = await GlobalSettingsService.getByGroup('global');
-          const sendMailSetting = emailSettings?.find(s => s.key === 'global.send_mail');
+          const sendMailSetting = emailSettings?.find(s => s.key === 'smtp.enabled');
           const isEmailEnabled = sendMailSetting?.value === 'true';
 
           if (isEmailEnabled) {

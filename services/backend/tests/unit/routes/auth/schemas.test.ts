@@ -69,7 +69,7 @@ describe('Auth Schemas', () => {
       const result = RegisterEmailSchema.safeParse(invalidRegistration);
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toBe('Username can only contain alphanumeric characters and underscores');
+        expect(result.error.issues[0].message).toBe('Username can only contain alphanumeric characters, underscores, dots, and hyphens');
       }
     });
 

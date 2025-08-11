@@ -1,60 +1,164 @@
 import { type FastifyInstance } from 'fastify';
-import { z } from 'zod';
-import { createSchema } from 'zod-openapi';
 import { AuthorizationService } from '../../services/oauth/authorizationService';
+import {
+  REQUEST_ID_SCHEMA,
+  CONSENT_ACTION_SCHEMA,
+  API_ERROR_RESPONSE_SCHEMA,
+  OAUTH2_SCOPE_DESCRIPTIONS,
+  OAUTH2_CLIENT_NAMES,
+  type ApiErrorResponse
+} from './schemas';
 
-const consentDetailsQuerySchema = z.object({
-  request_id: z.string().min(1).describe('Authorization request ID')
-});
+// Reusable Schema Constants
+const CONSENT_DETAILS_QUERY_SCHEMA = {
+  type: 'object',
+  properties: {
+    request_id: REQUEST_ID_SCHEMA
+  },
+  required: ['request_id'],
+  additionalProperties: false
+} as const;
 
-const consentDetailsResponseSchema = z.object({
-  success: z.boolean().describe('Whether the request was found'),
-  request_id: z.string().describe('Authorization request ID'),
-  client_id: z.string().describe('OAuth2 client identifier'),
-  client_name: z.string().describe('Human-readable client name'),
-  user_email: z.string().describe('Email of the authenticated user'),
-  scopes: z.array(z.object({
-    name: z.string().describe('Scope name'),
-    description: z.string().describe('Human-readable scope description')
-  })).describe('Requested scopes with descriptions'),
-  expires_at: z.string().describe('When the authorization request expires (ISO string)')
-});
+const CONSENT_DETAILS_RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    success: {
+      type: 'boolean',
+      description: 'Whether the request was found'
+    },
+    request_id: {
+      type: 'string',
+      description: 'Authorization request ID'
+    },
+    client_id: {
+      type: 'string',
+      description: 'OAuth2 client identifier'
+    },
+    client_name: {
+      type: 'string',
+      description: 'Human-readable client name'
+    },
+    user_email: {
+      type: 'string',
+      description: 'Email of the authenticated user'
+    },
+    scopes: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          name: {
+            type: 'string',
+            description: 'Scope name'
+          },
+          description: {
+            type: 'string',
+            description: 'Human-readable scope description'
+          }
+        },
+        required: ['name', 'description']
+      },
+      description: 'Requested scopes with descriptions'
+    },
+    expires_at: {
+      type: 'string',
+      description: 'When the authorization request expires (ISO string)'
+    }
+  },
+  required: ['success', 'request_id', 'client_id', 'client_name', 'user_email', 'scopes', 'expires_at']
+} as const;
 
-const consentBodySchema = z.object({
-  request_id: z.string().min(1).describe('Authorization request ID'),
-  action: z.enum(['approve', 'deny']).describe('User consent decision')
-});
+const CONSENT_BODY_SCHEMA = {
+  type: 'object',
+  properties: {
+    request_id: REQUEST_ID_SCHEMA,
+    action: CONSENT_ACTION_SCHEMA
+  },
+  required: ['request_id', 'action'],
+  additionalProperties: false
+} as const;
 
-const consentResponseSchema = z.object({
-  success: z.boolean().describe('Whether the consent was processed successfully'),
-  redirect_url: z.string().optional().describe('URL to redirect to after consent')
-});
+const CONSENT_RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    success: {
+      type: 'boolean',
+      description: 'Whether the consent was processed successfully'
+    },
+    redirect_url: {
+      type: 'string',
+      description: 'URL to redirect to after consent'
+    }
+  },
+  required: ['success']
+} as const;
 
-const errorResponseSchema = z.object({
-  success: z.boolean().describe('Always false for errors'),
-  error: z.string().describe('OAuth2 error code'),
-  error_description: z.string().describe('Human-readable error description')
-});
+// TypeScript interfaces
+interface ConsentDetailsQuery {
+  request_id: string;
+}
 
-export default async function consentRoute(fastify: FastifyInstance) {
+interface ConsentDetailsResponse {
+  success: boolean;
+  request_id: string;
+  client_id: string;
+  client_name: string;
+  user_email: string;
+  scopes: {
+    name: string;
+    description: string;
+  }[];
+  expires_at: string;
+}
+
+interface ConsentBody {
+  request_id: string;
+  action: 'approve' | 'deny';
+}
+
+interface ConsentResponse {
+  success: boolean;
+  redirect_url?: string;
+}
+
+export default async function consentRoute(server: FastifyInstance) {
   // GET /oauth2/consent/details - Get consent details as JSON for frontend
-  fastify.get('/oauth2/consent/details', {
+  server.get('/oauth2/consent/details', {
     schema: {
       tags: ['OAuth2'],
       summary: 'Get OAuth2 Consent Details',
       description: 'Returns consent details as JSON for frontend to display consent page.',
-      querystring: createSchema(consentDetailsQuerySchema),
+      querystring: CONSENT_DETAILS_QUERY_SCHEMA,
       response: {
-        200: createSchema(consentDetailsResponseSchema.describe('Consent details')),
-        400: createSchema(errorResponseSchema.describe('Bad Request - Invalid request ID')),
-        401: createSchema(errorResponseSchema.describe('Unauthorized - User not authenticated')),
-        403: createSchema(errorResponseSchema.describe('Forbidden - User mismatch')),
-        404: createSchema(errorResponseSchema.describe('Not Found - Request not found or expired'))
+        200: {
+          ...CONSENT_DETAILS_RESPONSE_SCHEMA,
+          description: 'Consent details'
+        },
+        400: {
+          ...API_ERROR_RESPONSE_SCHEMA,
+          description: 'Bad Request - Invalid request ID'
+        },
+        401: {
+          ...API_ERROR_RESPONSE_SCHEMA,
+          description: 'Unauthorized - User not authenticated'
+        },
+        403: {
+          ...API_ERROR_RESPONSE_SCHEMA,
+          description: 'Forbidden - User mismatch'
+        },
+        404: {
+          ...API_ERROR_RESPONSE_SCHEMA,
+          description: 'Not Found - Request not found or expired'
+        },
+        500: {
+          ...API_ERROR_RESPONSE_SCHEMA,
+          description: 'Internal Server Error'
+        }
       }
     }
   }, async (request, reply) => {
     try {
-      const { request_id } = request.query as z.infer<typeof consentDetailsQuerySchema>;
+      const { request_id } = request.query as ConsentDetailsQuery;
 
       request.log.debug({
         operation: 'oauth2_consent_details',
@@ -69,11 +173,13 @@ export default async function consentRoute(fastify: FastifyInstance) {
           error: 'user_not_authenticated',
         }, 'User not authenticated');
 
-        return reply.status(401).send({
+        const errorResponse: ApiErrorResponse = {
           success: false,
           error: 'unauthorized',
           error_description: 'User authentication required'
-        });
+        };
+        const jsonString = JSON.stringify(errorResponse);
+        return reply.status(401).type('application/json').send(jsonString);
       }
 
       // Get authorization request
@@ -86,11 +192,13 @@ export default async function consentRoute(fastify: FastifyInstance) {
           error: 'request_not_found',
         }, 'Authorization request not found or expired');
 
-        return reply.status(404).send({
+        const errorResponse: ApiErrorResponse = {
           success: false,
           error: 'invalid_request',
           error_description: 'Authorization request not found or expired'
-        });
+        };
+        const jsonString = JSON.stringify(errorResponse);
+        return reply.status(404).type('application/json').send(jsonString);
       }
 
       // Check if user matches the request
@@ -103,38 +211,27 @@ export default async function consentRoute(fastify: FastifyInstance) {
           error: 'user_mismatch',
         }, 'User mismatch for authorization request');
 
-        return reply.status(403).send({
+        const errorResponse: ApiErrorResponse = {
           success: false,
           error: 'access_denied',
           error_description: 'User authentication mismatch'
-        });
+        };
+        const jsonString = JSON.stringify(errorResponse);
+        return reply.status(403).type('application/json').send(jsonString);
       }
 
       // Parse scopes and add descriptions
       const scopes = authRequest.scope.split(' ');
-      const scopeDescriptions: Record<string, string> = {
-        'mcp:read': 'Access your MCP server installations and configurations',
-        'account:read': 'Read your account information',
-        'user:read': 'Read your user profile information',
-        'teams:read': 'Read your team memberships and team information',
-        'offline_access': 'Maintain access when you\'re not actively using the application'
-      };
-
       const scopesWithDescriptions = scopes.map(scope => ({
         name: scope,
-        description: scopeDescriptions[scope] || scope
+        description: OAUTH2_SCOPE_DESCRIPTIONS[scope] || scope
       }));
 
-      // Client name mapping
-      const clientNames: Record<string, string> = {
-        'deploystack-gateway-cli': 'DeployStack Gateway CLI'
-      };
-
-      const response = {
+      const response: ConsentDetailsResponse = {
         success: true,
         request_id: request_id,
         client_id: authRequest.clientId,
-        client_name: clientNames[authRequest.clientId] || authRequest.clientId,
+        client_name: OAUTH2_CLIENT_NAMES[authRequest.clientId] || authRequest.clientId,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         user_email: (request.user as any).email,
         scopes: scopesWithDescriptions,
@@ -149,7 +246,8 @@ export default async function consentRoute(fastify: FastifyInstance) {
         scopes: scopes,
       }, 'OAuth2 consent details returned');
 
-      return reply.send(response);
+      const jsonString = JSON.stringify(response);
+      return reply.status(200).type('application/json').send(jsonString);
 
     } catch (error) {
       request.log.error({
@@ -157,32 +255,66 @@ export default async function consentRoute(fastify: FastifyInstance) {
         error,
       }, 'OAuth2 consent details error');
 
-      return reply.status(500).send({
+      const errorResponse: ApiErrorResponse = {
         success: false,
         error: 'server_error',
         error_description: 'An error occurred retrieving consent details'
-      });
+      };
+      const jsonString = JSON.stringify(errorResponse);
+      return reply.status(500).type('application/json').send(jsonString);
     }
   });
 
   // POST /oauth2/consent - Process consent decision (JSON only)
-  fastify.post('/oauth2/consent', {
+  server.post('/oauth2/consent', {
     schema: {
       tags: ['OAuth2'],
       summary: 'Process OAuth2 Consent',
-      description: 'Processes user consent decision and returns redirect URL or error.',
-      body: createSchema(consentBodySchema),
+      description: 'Processes user consent decision and returns redirect URL or error. Requires Content-Type: application/json header when sending request body.',
+      
+      // Fastify validation schema
+      body: CONSENT_BODY_SCHEMA,
+      
+      // OpenAPI documentation (same schema, reused)
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: CONSENT_BODY_SCHEMA
+          }
+        }
+      },
+      
       response: {
-        200: createSchema(consentResponseSchema.describe('Consent processed successfully')),
-        400: createSchema(errorResponseSchema.describe('Bad Request - Invalid parameters')),
-        401: createSchema(errorResponseSchema.describe('Unauthorized - User not authenticated')),
-        403: createSchema(errorResponseSchema.describe('Forbidden - User mismatch')),
-        404: createSchema(errorResponseSchema.describe('Not Found - Request not found or expired'))
+        200: {
+          ...CONSENT_RESPONSE_SCHEMA,
+          description: 'Consent processed successfully'
+        },
+        400: {
+          ...API_ERROR_RESPONSE_SCHEMA,
+          description: 'Bad Request - Invalid parameters'
+        },
+        401: {
+          ...API_ERROR_RESPONSE_SCHEMA,
+          description: 'Unauthorized - User not authenticated'
+        },
+        403: {
+          ...API_ERROR_RESPONSE_SCHEMA,
+          description: 'Forbidden - User mismatch'
+        },
+        404: {
+          ...API_ERROR_RESPONSE_SCHEMA,
+          description: 'Not Found - Request not found or expired'
+        },
+        500: {
+          ...API_ERROR_RESPONSE_SCHEMA,
+          description: 'Internal Server Error'
+        }
       }
     }
   }, async (request, reply) => {
     try {
-      const { request_id, action } = request.body as z.infer<typeof consentBodySchema>;
+      const { request_id, action } = request.body as ConsentBody;
 
       request.log.debug({
         operation: 'oauth2_consent_process',
@@ -198,11 +330,13 @@ export default async function consentRoute(fastify: FastifyInstance) {
           error: 'user_not_authenticated',
         }, 'User not authenticated');
 
-        return reply.status(401).send({
+        const errorResponse: ApiErrorResponse = {
           success: false,
           error: 'unauthorized',
           error_description: 'User authentication required'
-        });
+        };
+        const jsonString = JSON.stringify(errorResponse);
+        return reply.status(401).type('application/json').send(jsonString);
       }
 
       // Get authorization request
@@ -215,11 +349,13 @@ export default async function consentRoute(fastify: FastifyInstance) {
           error: 'request_not_found',
         }, 'Authorization request not found or expired');
 
-        return reply.status(404).send({
+        const errorResponse: ApiErrorResponse = {
           success: false,
           error: 'invalid_request',
           error_description: 'Authorization request not found or expired'
-        });
+        };
+        const jsonString = JSON.stringify(errorResponse);
+        return reply.status(404).type('application/json').send(jsonString);
       }
 
       // Check if user matches the request
@@ -232,11 +368,13 @@ export default async function consentRoute(fastify: FastifyInstance) {
           error: 'user_mismatch',
         }, 'User mismatch for authorization request');
 
-        return reply.status(403).send({
+        const errorResponse: ApiErrorResponse = {
           success: false,
           error: 'access_denied',
           error_description: 'User authentication mismatch'
-        });
+        };
+        const jsonString = JSON.stringify(errorResponse);
+        return reply.status(403).type('application/json').send(jsonString);
       }
 
       if (action === 'deny') {
@@ -249,10 +387,12 @@ export default async function consentRoute(fastify: FastifyInstance) {
 
         const errorUrl = `${authRequest.redirectUri}?error=access_denied&error_description=${encodeURIComponent('User denied the authorization request')}&state=${authRequest.state}`;
         
-        return reply.send({
+        const response: ConsentResponse = {
           success: true,
           redirect_url: errorUrl
-        });
+        };
+        const jsonString = JSON.stringify(response);
+        return reply.status(200).type('application/json').send(jsonString);
       }
 
       if (action === 'approve') {
@@ -268,10 +408,12 @@ export default async function consentRoute(fastify: FastifyInstance) {
 
           const errorUrl = `${authRequest.redirectUri}?error=server_error&error_description=${encodeURIComponent('Failed to generate authorization code')}&state=${authRequest.state}`;
           
-          return reply.send({
+          const response: ConsentResponse = {
             success: true,
             redirect_url: errorUrl
-          });
+          };
+          const jsonString = JSON.stringify(response);
+          return reply.status(200).type('application/json').send(jsonString);
         }
 
         request.log.info({
@@ -285,18 +427,22 @@ export default async function consentRoute(fastify: FastifyInstance) {
         // Return success URL with authorization code
         const successUrl = `${authRequest.redirectUri}?code=${code}&state=${authRequest.state}`;
         
-        return reply.send({
+        const response: ConsentResponse = {
           success: true,
           redirect_url: successUrl
-        });
+        };
+        const jsonString = JSON.stringify(response);
+        return reply.status(200).type('application/json').send(jsonString);
       }
 
-      // Should not reach here due to Zod validation
-      return reply.status(400).send({
+      // Should not reach here due to schema validation
+      const errorResponse: ApiErrorResponse = {
         success: false,
         error: 'invalid_request',
         error_description: 'Invalid action'
-      });
+      };
+      const jsonString = JSON.stringify(errorResponse);
+      return reply.status(400).type('application/json').send(jsonString);
 
     } catch (error) {
       request.log.error({
@@ -304,11 +450,13 @@ export default async function consentRoute(fastify: FastifyInstance) {
         error,
       }, 'OAuth2 consent processing error');
 
-      return reply.status(500).send({
+      const errorResponse: ApiErrorResponse = {
         success: false,
         error: 'server_error',
         error_description: 'An error occurred processing the consent'
-      });
+      };
+      const jsonString = JSON.stringify(errorResponse);
+      return reply.status(500).type('application/json').send(jsonString);
     }
   });
 }

@@ -1,79 +1,48 @@
 import { type FastifyInstance } from 'fastify';
-import { z } from 'zod';
-import { createSchema } from 'zod-openapi';
 import { requireAuthenticationAny, requireOAuthScope } from '../../../middleware/oauthMiddleware';
 import { requireTeamPermission } from '../../../middleware/roleMiddleware';
 import { McpInstallationService } from '../../../services/mcpInstallationService';
 import { getDb } from '../../../db';
+import {
+  TEAM_ID_PARAM_SCHEMA,
+  INSTALLATION_LIST_SUCCESS_RESPONSE_SCHEMA,
+  COMMON_ERROR_RESPONSES,
+  DUAL_AUTH_SECURITY,
+  formatInstallationListResponse,
+  type TeamIdParams,
+  type InstallationListSuccessResponse,
+  type ErrorResponse
+} from './schemas';
 
-// Response schemas
-const installationSchema = z.object({
-  id: z.string(),
-  team_id: z.string(),
-  server_id: z.string(),
-  user_id: z.string(),
-  installation_name: z.string(),
-  installation_type: z.enum(['local', 'cloud']),
-  user_environment_variables: z.record(z.string(), z.string()).optional(),
-  created_at: z.string(),
-  updated_at: z.string(),
-  last_used_at: z.string().nullable(),
-  server: z.object({
-    id: z.string(),
-    name: z.string(),
-    description: z.string(),
-    github_url: z.string().nullable(),
-    homepage_url: z.string().nullable(),
-    author_name: z.string().nullable(),
-    language: z.string(),
-    runtime: z.string(),
-    status: z.string(),
-    tags: z.array(z.any()),
-    environment_variables: z.array(z.any()),
-    installation_methods: z.array(z.any()),
-    category_id: z.string().nullable()
-  }).optional()
-});
-
-const successResponseSchema = z.object({
-  success: z.boolean().default(true),
-  data: z.array(installationSchema)
-});
-
-const errorResponseSchema = z.object({
-  success: z.boolean().default(false),
-  error: z.string()
-});
-
-export default async function listInstallationsRoute(fastify: FastifyInstance) {
-  fastify.get<{
-    Params: { teamId: string };
+export default async function listInstallationsRoute(server: FastifyInstance) {
+  server.get<{
+    Params: TeamIdParams;
   }>('/teams/:teamId/mcp/installations', {
+    preValidation: [
+      requireAuthenticationAny(),     // ✅ Accept either auth method
+      requireOAuthScope('mcp:read'),  // ✅ Enforce OAuth2 scope
+      requireTeamPermission('mcp.installations.view') // ✅ Team permission required
+    ],
     schema: {
       tags: ['MCP Installations'],
       summary: 'List team MCP installations',
       description: 'Retrieves all MCP server installations for the specified team. Supports both cookie-based authentication (for web users) and OAuth2 Bearer token authentication (for CLI users). Requires mcp:read scope for OAuth2 access.',
-      security: [
-        { cookieAuth: [] },
-        { bearerAuth: [] }
-      ],
-      params: createSchema(z.object({
-        teamId: z.string().min(1, 'Team ID is required')
-      })),
+      security: DUAL_AUTH_SECURITY,
+      
+      // Fastify validation schema
+      params: TEAM_ID_PARAM_SCHEMA,
+      
       response: {
-        200: createSchema(successResponseSchema.describe('List of team installations')),
-        401: createSchema(errorResponseSchema.describe('Unauthorized - Authentication required or invalid token')),
-        403: createSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions or scope')),
-        404: createSchema(errorResponseSchema.describe('Not Found - Team not found'))
+        200: {
+          ...INSTALLATION_LIST_SUCCESS_RESPONSE_SCHEMA,
+          description: 'List of team installations retrieved successfully'
+        },
+        ...COMMON_ERROR_RESPONSES
       }
-    },
-    preValidation: [
-      requireAuthenticationAny(),
-      requireOAuthScope('mcp:read'),
-      requireTeamPermission('mcp.installations.view')
-    ]
+    }
   }, async (request, reply) => {
-    const { teamId } = request.params;
+    // TypeScript type assertion (Fastify has already validated)
+    const { teamId } = request.params as TeamIdParams;
     const userId = request.user!.id;
     const authType = request.tokenPayload ? 'oauth2' : 'cookie';
 
@@ -107,15 +76,12 @@ export default async function listInstallationsRoute(fastify: FastifyInstance) {
         installationsCount: installations.length
       }, 'Retrieved MCP installations for team');
 
-      return reply.status(200).send({
+      const successResponse: InstallationListSuccessResponse = {
         success: true,
-        data: installations.map(installation => ({
-          ...installation,
-          created_at: installation.created_at.toISOString(),
-          updated_at: installation.updated_at.toISOString(),
-          last_used_at: installation.last_used_at?.toISOString() || null
-        }))
-      });
+        data: formatInstallationListResponse(installations as any[]) // eslint-disable-line @typescript-eslint/no-explicit-any
+      };
+      const jsonString = JSON.stringify(successResponse);
+      return reply.status(200).type('application/json').send(jsonString);
 
     } catch (error) {
       request.log.error({
@@ -127,10 +93,12 @@ export default async function listInstallationsRoute(fastify: FastifyInstance) {
 
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       
-      return reply.status(500).send({
+      const errorResponse: ErrorResponse = {
         success: false,
         error: errorMessage
-      });
+      };
+      const jsonString = JSON.stringify(errorResponse);
+      return reply.status(500).type('application/json').send(jsonString);
     }
   });
 }

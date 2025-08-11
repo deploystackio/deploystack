@@ -622,7 +622,7 @@ export class GlobalSettingsInitService {
     try {
       const settings = await Promise.all([
         GlobalSettingsService.get('global.page_url'),
-        GlobalSettingsService.get('global.send_mail'),
+        GlobalSettingsService.get('smtp.enabled'),
         GlobalSettingsService.get('global.enable_login'),
         GlobalSettingsService.get('global.enable_email_registration')
       ]);
@@ -645,7 +645,7 @@ export class GlobalSettingsInitService {
    */
   static async isEmailSendingEnabled(): Promise<boolean> {
     try {
-      const setting = await GlobalSettingsService.get('global.send_mail');
+      const setting = await GlobalSettingsService.get('smtp.enabled');
       return setting?.value === 'true';
     } catch {
       return false; // Default to disabled if there's an error

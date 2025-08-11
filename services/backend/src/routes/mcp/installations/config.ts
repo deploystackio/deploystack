@@ -1,61 +1,45 @@
 import { type FastifyInstance } from 'fastify';
-import { z } from 'zod';
-import { createSchema } from 'zod-openapi';
 import { requireAuthenticationAny, requireOAuthScope } from '../../../middleware/oauthMiddleware';
 import { requireTeamPermission } from '../../../middleware/roleMiddleware';
 import { McpInstallationService } from '../../../services/mcpInstallationService';
 import { getDb } from '../../../db';
+import {
+  CLIENT_CONFIG_PARAMS_SCHEMA,
+  CLIENT_CONFIG_SUCCESS_RESPONSE_SCHEMA,
+  COMMON_ERROR_RESPONSES,
+  DUAL_AUTH_SECURITY,
+  type ClientConfigParams,
+  type ClientConfigSuccessResponse,
+  type ErrorResponse
+} from './schemas';
 
-// Response schemas
-const successResponseSchema = z.object({
-  success: z.boolean().default(true),
-  data: z.any() // Client configuration varies by client type
-});
-
-const errorResponseSchema = z.object({
-  success: z.boolean().default(false),
-  error: z.string()
-});
-
-export default async function getClientConfigRoute(fastify: FastifyInstance) {
-  fastify.get<{
-    Params: { teamId: string; installationId: string; clientType: string };
-  }>('/teams/:teamId/mcp/installations/:installationId/config/:clientType', {
-    schema: {
-      tags: ['MCP Installations'],
-      summary: 'Get client configuration for installation',
-      description: 'Generates client-specific configuration for an MCP server installation. Supports claude-desktop, vscode, and cursor clients. No Content-Type header required for this GET request. Supports both cookie-based authentication (for web users) and OAuth2 Bearer token authentication (for CLI users). Requires mcp:read scope for OAuth2 access.',
-      security: [
-        { cookieAuth: [] },
-        { bearerAuth: [] }
-      ],
-      // Plain JSON Schema for Fastify validation
-      params: {
-        type: 'object',
-        properties: {
-          teamId: { type: 'string', minLength: 1 },
-          installationId: { type: 'string', minLength: 1 },
-          clientType: { type: 'string', enum: ['claude-desktop', 'vscode', 'cursor'] }
-        },
-        required: ['teamId', 'installationId', 'clientType'],
-        additionalProperties: false
-      },
-      // createSchema() for OpenAPI documentation
-      response: {
-        200: createSchema(successResponseSchema.describe('Client configuration generated successfully')),
-        400: createSchema(errorResponseSchema.describe('Bad Request - Invalid client type or installation')),
-        401: createSchema(errorResponseSchema.describe('Unauthorized - Authentication required or invalid token')),
-        403: createSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions or scope')),
-        404: createSchema(errorResponseSchema.describe('Not Found - Installation not found'))
-      }
-    },
+export default async function getClientConfigRoute(server: FastifyInstance) {
+  server.get('/teams/:teamId/mcp/installations/:installationId/config/:clientType', {
     preValidation: [
       requireAuthenticationAny(),
       requireOAuthScope('mcp:read'),
       requireTeamPermission('mcp.installations.view')
-    ]
+    ],
+    schema: {
+      tags: ['MCP Installations'],
+      summary: 'Get client configuration for installation',
+      description: 'Generates client-specific configuration for an MCP server installation. Supports claude-desktop, vscode, and cursor clients. No Content-Type header required for this GET request. Supports both cookie-based authentication (for web users) and OAuth2 Bearer token authentication (for CLI users). Requires mcp:read scope for OAuth2 access.',
+      security: DUAL_AUTH_SECURITY,
+      
+      // Fastify validation schema
+      params: CLIENT_CONFIG_PARAMS_SCHEMA,
+      
+      response: {
+        200: {
+          ...CLIENT_CONFIG_SUCCESS_RESPONSE_SCHEMA,
+          description: 'Client configuration generated successfully'
+        },
+        ...COMMON_ERROR_RESPONSES
+      }
+    }
   }, async (request, reply) => {
-    const { teamId, installationId, clientType } = request.params;
+    // TypeScript type assertion (Fastify has already validated)
+    const { teamId, installationId, clientType } = request.params as ClientConfigParams;
     const userId = request.user!.id;
     const authType = request.tokenPayload ? 'oauth2' : 'cookie';
 
@@ -96,7 +80,7 @@ export default async function getClientConfigRoute(fastify: FastifyInstance) {
       authType
       }, 'Client configuration generated successfully');
 
-      const response = {
+      const response: ClientConfigSuccessResponse = {
         success: true,
         data: config
       };
@@ -116,7 +100,7 @@ export default async function getClientConfigRoute(fastify: FastifyInstance) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       
       if (errorMessage.includes('not found')) {
-        const notFoundResponse = {
+        const notFoundResponse: ErrorResponse = {
           success: false,
           error: errorMessage
         };
@@ -126,7 +110,7 @@ export default async function getClientConfigRoute(fastify: FastifyInstance) {
 
       if (errorMessage.includes('Unsupported client type') || 
           errorMessage.includes('does not support')) {
-        const badRequestResponse = {
+        const badRequestResponse: ErrorResponse = {
           success: false,
           error: errorMessage
         };
@@ -134,7 +118,7 @@ export default async function getClientConfigRoute(fastify: FastifyInstance) {
         return reply.status(400).type('application/json').send(jsonString);
       }
 
-      const errorResponse = {
+      const errorResponse: ErrorResponse = {
         success: false,
         error: errorMessage
       };

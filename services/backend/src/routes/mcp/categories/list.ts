@@ -1,33 +1,43 @@
 import { type FastifyInstance } from 'fastify';
-import { z } from 'zod';
-import { createSchema } from 'zod-openapi';
 import { McpCategoriesService } from '../../../services/mcpCategoriesService';
 import { getDb } from '../../../db';
 import { requirePermission } from '../../../middleware/roleMiddleware';
 import { requireAuthenticationAny, requireOAuthScope } from '../../../middleware/oauthMiddleware';
+import { CATEGORY_SCHEMA, ERROR_RESPONSE_SCHEMA, type Category, type ErrorResponse } from './schemas';
 
-// Response schema
-const categorySchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  description: z.string().nullable(),
-  icon: z.string().nullable(),
-  sort_order: z.number(),
-  created_at: z.string()
-});
+// Reusable Schema Constants
 
-const listCategoriesResponseSchema = z.object({
-  success: z.boolean(),
-  data: z.array(categorySchema)
-});
+const LIST_CATEGORIES_SUCCESS_RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    success: {
+      type: 'boolean',
+      description: 'Indicates if the categories were retrieved successfully'
+    },
+    data: {
+      type: 'array',
+      items: CATEGORY_SCHEMA,
+      description: 'Array of MCP server categories'
+    }
+  },
+  required: ['success', 'data']
+} as const;
 
-const errorResponseSchema = z.object({
-  success: z.boolean().default(false),
-  error: z.string()
-});
+
+
+// TypeScript interfaces for type safety
+interface ListCategoriesSuccessResponse {
+  success: boolean;
+  data: Category[];
+}
 
 export default async function listCategories(server: FastifyInstance) {
   server.get('/mcp/categories', {
+    preValidation: [
+      requireAuthenticationAny(),
+      requireOAuthScope('mcp:categories:read'),
+      requirePermission('mcp.categories.view')
+    ],
     schema: {
       tags: ['MCP Categories'],
       summary: 'List all MCP server categories',
@@ -37,21 +47,28 @@ export default async function listCategories(server: FastifyInstance) {
         { bearerAuth: [] }
       ],
       response: {
-        200: createSchema(listCategoriesResponseSchema),
-        401: createSchema(errorResponseSchema.describe('Unauthorized - Authentication required or invalid token')),
-        403: createSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions or scope')),
-        500: createSchema(errorResponseSchema)
+        200: {
+          ...LIST_CATEGORIES_SUCCESS_RESPONSE_SCHEMA,
+          description: 'Categories retrieved successfully'
+        },
+        401: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Unauthorized - Authentication required or invalid token'
+        },
+        403: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Forbidden - Insufficient permissions or scope'
+        },
+        500: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Internal Server Error'
+        }
       }
-    },
-    preValidation: [
-      requireAuthenticationAny(),
-      requireOAuthScope('mcp:categories:read'),
-      requirePermission('mcp.categories.view')
-    ]
+    }
   }, async (request, reply) => {
     try {
       if (!request.user) {
-        const errorResponse = {
+        const errorResponse: ErrorResponse = {
           success: false,
           error: 'Authentication required'
         };
@@ -75,8 +92,7 @@ export default async function listCategories(server: FastifyInstance) {
       const categoriesService = new McpCategoriesService(db, server.log);
       const categories = await categoriesService.getAllCategories();
 
-      // Manual JSON serialization to avoid serialization issues
-      const successResponse = {
+      const successResponse: ListCategoriesSuccessResponse = {
         success: true,
         data: categories.map(cat => ({
           id: String(cat.id),
@@ -95,7 +111,7 @@ export default async function listCategories(server: FastifyInstance) {
         error
       }, 'Failed to list MCP categories');
       
-      const errorResponse = {
+      const errorResponse: ErrorResponse = {
         success: false,
         error: 'Failed to retrieve categories'
       };

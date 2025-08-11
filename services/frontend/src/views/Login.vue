@@ -104,10 +104,7 @@ const onSubmit = form.handleSubmit(async (values) => {
 
   try {
     // Use the UserService login method which handles cache clearing
-    const data = await UserService.login(values.login, values.password)
-    console.log('Login successful!', data)
-
-    // Handle successful login - redirect to MCP server page
+    await UserService.login(values.login, values.password)
     router.push('/mcp-server')
 
   } catch (e) {
@@ -271,9 +268,9 @@ onMounted(async () => {
               </FormItem>
             </FormField>
 
-            <Button 
-              type="submit" 
-              class="w-full" 
+            <Button
+              type="submit"
+              class="w-full"
               :loading="isLoading"
               :loading-text="$t('login.buttons.loading')"
             >

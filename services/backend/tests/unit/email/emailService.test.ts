@@ -423,7 +423,7 @@ describe('EmailService', () => {
         expect(mockRender).toHaveBeenCalledWith({
           template: 'welcome',
           variables: expect.objectContaining({
-            supportEmail: 'support@deploystack.com',
+            supportEmail: 'hello@deploystack.io',
           }),
         });
       });
@@ -447,7 +447,7 @@ describe('EmailService', () => {
             userName: 'John Doe',
             resetUrl: 'https://app.example.com/reset?token=abc123',
             expirationTime: '24 hours',
-            supportEmail: 'support@deploystack.com',
+            supportEmail: 'support@deploystack.io',
           },
         });
         expect(mockSendMail).toHaveBeenCalledWith(expect.objectContaining({

@@ -8,6 +8,23 @@ import { ROLE_DEFINITIONS } from '../permissions/index';
 // We'll use the existing type
 
 /**
+ * Basic authentication middleware - just checks if user is logged in
+ */
+export function requireAuthentication() {
+  return async (request: FastifyRequest, reply: FastifyReply) => {
+    // Check if user is authenticated
+    if (!request.user) {
+      const errorResponse = {
+        success: false,
+        error: 'Authentication required'
+      };
+      const jsonString = JSON.stringify(errorResponse);
+      return reply.status(401).type('application/json').send(jsonString);
+    }
+  };
+}
+
+/**
  * Middleware to check if user has required permission
  */
 export function requirePermission(permission: string) {
