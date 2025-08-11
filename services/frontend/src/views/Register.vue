@@ -309,7 +309,7 @@ onMounted(async () => {
                     />
                   </div>
                 </FormControl>
-                <FormMessage class="text-red-600 text-sm mt-1" />
+                <FormMessage />
               </FormItem>
             </FormField>
 
@@ -329,7 +329,7 @@ onMounted(async () => {
                     />
                   </div>
                 </FormControl>
-                <FormMessage class="text-red-600 text-sm mt-1" />
+                <FormMessage />
               </FormItem>
             </FormField>
 
@@ -349,7 +349,7 @@ onMounted(async () => {
                     />
                   </div>
                 </FormControl>
-                <FormMessage class="text-red-600 text-sm mt-1" />
+                <FormMessage />
               </FormItem>
             </FormField>
 
@@ -369,7 +369,7 @@ onMounted(async () => {
                     />
                   </div>
                 </FormControl>
-                <FormMessage class="text-red-600 text-sm mt-1" />
+                <FormMessage />
               </FormItem>
             </FormField>
 
