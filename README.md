@@ -77,7 +77,6 @@ This architecture means developers never handle sensitive credentials, and the o
 1. **Install the Gateway**:
 
     ```bash
-    # Installation command coming soon
     npm install -g @deploystack/gateway
     ```
 
@@ -102,18 +101,19 @@ Our roadmap is designed to build the essential infrastructure for using MCP secu
 - **[Done]** Created the initial MCP Server Catalog for tool discovery.
 - **[Done]** Established documentation and self-hosted Docker support.
 
-### Phase 2: The Secure Gateway (Current Focus)
+### Phase 2: The Secure Gateway (Completed)
 
-- **[In Progress]** Develop the `DeployStack Gateway` local application.
-- **[In Progress]** Implement secure authentication and configuration synchronization between the Gateway and the cloud.
-- **[To Do]** Build the on-demand `stdio` process spawning and management logic.
-- **[To Do]** Add support for proxying to remote, HTTP-based MCP servers.
+- **[Done]** Developed the `DeployStack Gateway` local application.
+- **[Done]** Implemented secure authentication and configuration synchronization between the Gateway and the cloud.
+- **[Done]** Built the on-demand `stdio` process spawning and management logic.
+- **[Done]** Added support for multi-user teams with role-based access control.
 
-### Phase 3: Enterprise Governance
+### Phase 3: Enterprise Governance (Current Focus)
 
 - **[To Do]** Build out Audit Logging features in the cloud UI.
 - **[To Do]** Develop Analytics dashboards for tool usage and performance.
 - **[To Do]** Implement advanced policy controls (e.g., rate limiting, request validation).
+- **[To Do]** Add support for proxying to remote, HTTP-based MCP servers.
 
 ### Phase 4: Ecosystem & Integration
 
@@ -123,35 +123,35 @@ Our roadmap is designed to build the essential infrastructure for using MCP secu
 
 ## Project Structure
 
-This repository uses a monorepo structure. The new `gateway` service will be added here:
+This repository uses a monorepo structure with the following components:
 
 ```bash
 deploystack/
 ├── services/
 │   ├── frontend/        # Vue.js frontend application for cloud.deploystack.io
 │   ├── backend/         # Fastify backend API for the cloud control plane
-│   ├── gateway/         # The local DeployStack Gateway
+│   ├── gateway/         # The DeployStack Gateway
 │   └── shared/          # Shared utilities and types
 └── ...
 ```
 
 ## Contributing
 
-We are excited about this new direction and welcome contributions. The most immediate need is help building the `DeployStack Gateway`.
+We welcome contributions to help expand and improve the DeployStack platform.
 
 1. Fork this repository.
-2. Create your feature branch (`git checkout -b feature/gateway-stdio-spawner`).
+2. Create your feature branch (`git checkout -b feature/analytics-dashboard`).
 3. Commit your changes following our [commit guidelines](CONTRIBUTING.md#commit-message-guidelines).
-4. Push to the branch (`git push origin feature/gateway-stdio-spawner`).
+4. Push to the branch (`git push origin feature/analytics-dashboard`).
 5. Open a Pull Request.
 
 For detailed contribution guidelines, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Community and Support
 
-- **Discord**: Join our community at [discord.gg/42Ce3S7b3b](https://discord.gg/42Ce3S7b3b) to discuss the new roadmap.
+- **Discord**: Join our community at [discord.gg/42Ce3S7b3b](https://discord.gg/42Ce3S7b3b) to discuss DeployStack.
 - **GitHub Discussions**: Ask questions and share ideas about the Enterprise Control Plane.
-- **Twitter**: Follow [@deploystack](https://twitter.com/deploystack) for updates on our progress.
+- **Twitter**: Follow [@deploystack](https://twitter.com/deploystack) for updates.
 
 ## License
 
