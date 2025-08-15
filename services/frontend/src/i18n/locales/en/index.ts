@@ -16,6 +16,8 @@ import mcpCatalogMessages from './mcp-catalog'
 import mcpCategoriesMessages from './mcp-categories'
 import mcpInstallationsMessages from './mcp-installations'
 import oauthMessages from './oauth'
+import registerMessages from './register'
+import loginMessages from './login'
 
 export default {
   ...commonMessages,
@@ -35,6 +37,8 @@ export default {
   mcpCatalog: mcpCatalogMessages,
   mcpInstallations: mcpInstallationsMessages,
   oauth: oauthMessages,
+  register: registerMessages,
+  login: loginMessages,
   // If there are any top-level keys directly under 'en', they can be added here.
   // For example, if you had a global 'appName': 'My Application'
   // appName: 'DeployStack Application',
