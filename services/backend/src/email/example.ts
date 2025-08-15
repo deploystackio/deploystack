@@ -6,7 +6,7 @@
  */
 
 import type { FastifyBaseLogger } from 'fastify';
-import { EmailService } from './emailservice';
+import { EmailService } from './emailService';
 
 /**
  * Example: Send a welcome email to a new user
