@@ -1,5 +1,6 @@
 import { type FastifyInstance } from 'fastify';
 import { requireAuthenticationAny, requireOAuthScope } from '../../../middleware/oauthMiddleware';
+import { requirePermission } from '../../../middleware/roleMiddleware';
 import { 
   CLIENT_PARAM_SCHEMA, 
   SUCCESS_RESPONSE_SCHEMA, 
@@ -63,7 +64,8 @@ export default async function getClientConfig(server: FastifyInstance) {
   server.get('/gateway/config/:client', {
     preValidation: [
       requireAuthenticationAny(),
-      requireOAuthScope('gateway:config:read')
+      requireOAuthScope('gateway:config:read'),
+      requirePermission('gateway.config:read')
     ],
     schema: {
       tags: ['Gateway Configuration'],

@@ -1,5 +1,6 @@
 import { type FastifyInstance } from 'fastify';
 import { requireAuthenticationAny, requireOAuthScope } from '../../../middleware/oauthMiddleware';
+import { requirePermission } from '../../../middleware/roleMiddleware';
 import { 
   CLIENT_TYPES, 
   CLIENTS_LIST_RESPONSE_SCHEMA, 
@@ -12,7 +13,8 @@ export default async function listClients(server: FastifyInstance) {
   server.get('/gateway/config/clients', {
     preValidation: [
       requireAuthenticationAny(),
-      requireOAuthScope('gateway:config:read')
+      requireOAuthScope('gateway:config:read'),
+      requirePermission('gateway.config:read')
     ],
     schema: {
       tags: ['Gateway Configuration'],
