@@ -111,7 +111,7 @@ All persistent data is stored in the `persistent_data/` directory, which maintai
 
 ### Directory Structure
 
-```
+```bash
 persistent_data/
 ├── database/
 │   └── deploystack.db     # SQLite database (if using SQLite)
@@ -121,11 +121,13 @@ persistent_data/
 ### Environment-Specific Locations
 
 **Development (Local):**
+
 - Location: `services/backend/persistent_data/`
 - Created automatically when running `npm run dev`
 - Direct file system access
 
 **Production (Docker):**
+
 - Location: `/app/persistent_data/` (inside container)
 - Mounted as Docker volume: `deploystack_backend_persistent`
 - Persists data between container restarts
@@ -133,6 +135,7 @@ persistent_data/
 ### Backup Strategies
 
 **Docker Volume Backup:**
+
 ```bash
 # Create backup
 docker run --rm -v deploystack_backend_persistent:/data \
@@ -146,6 +149,7 @@ docker run --rm -v deploystack_backend_persistent:/data \
 ```
 
 **Local Development Backup:**
+
 ```bash
 # Create backup
 tar czf deploystack-backup-$(date +%Y%m%d).tar.gz \

@@ -70,6 +70,7 @@ npx shadcn-vue@latest add dialog card input
 ### Available Components
 
 Check `components/ui/` for all available shadcn-vue components. Common ones include:
+
 - Button, Card, Dialog, Input, Label
 - Select, Switch, Tabs, Toast
 - Table, Form, Alert, Badge
@@ -100,6 +101,7 @@ vim .env.local
 ```
 
 **Environment file priority** (highest to lowest):
+
 1. `.env.local` (personal settings, gitignored)
 2. `.env.development.local`
 3. `.env.development`
