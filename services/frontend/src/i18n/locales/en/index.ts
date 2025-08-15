@@ -26,7 +26,7 @@ export default {
   ...notFoundMessages,
   ...adminUsersMessages,
   ...sidebarMessages,
-  ...verifyEmailMessages,
+  verifyEmail: verifyEmailMessages,
   ...forgotPasswordMessages,
   ...resetPasswordMessages,
   ...teamsMessages,

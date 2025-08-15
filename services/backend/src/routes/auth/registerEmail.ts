@@ -316,7 +316,8 @@ export default async function registerEmailRoute(server: FastifyInstance) {
               const emailResult = await EmailVerificationService.sendVerificationEmail(
                 userId,
                 email.toLowerCase(),
-                username
+                username,
+                request.log
               );
               
               if (!emailResult.success) {

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { toast } from 'vue-sonner'
 import { Button } from '@/components/ui/button'
 import { 
   AlertDialog,
@@ -13,9 +14,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
-import { Alert, AlertDescription } from '@/components/ui/alert'
 import { UserService } from '@/services/userService'
-import { CheckCircle, AlertCircle } from 'lucide-vue-next'
 import type { User } from '@/views/admin/users/types'
 
 interface Props {
@@ -26,8 +25,6 @@ const props = defineProps<Props>()
 const { t } = useI18n()
 
 const isLoading = ref(false)
-const successMessage = ref<string | null>(null)
-const errorMessage = ref<string | null>(null)
 const showDialog = ref(false)
 
 // Check if user can have password reset (only email users)
@@ -39,18 +36,13 @@ const canResetPassword = computed(() => {
 const handlePasswordReset = async () => {
   try {
     isLoading.value = true
-    errorMessage.value = null
     
     const result = await UserService.adminResetPassword(props.user.email)
     
     if (result.success) {
-      successMessage.value = t('adminUsers.userDetail.actions.resetPasswordSuccess', { 
+      toast.success(t('adminUsers.userDetail.actions.resetPasswordSuccess', { 
         email: props.user.email 
-      })
-      // Auto-hide success message after 5 seconds
-      setTimeout(() => {
-        successMessage.value = null
-      }, 5000)
+      }))
     }
   } catch (error) {
     const errorKey = 'adminUsers.userDetail.actions.resetPasswordError'
@@ -74,50 +66,16 @@ const handlePasswordReset = async () => {
       }
     }
     
-    errorMessage.value = t(errorKey, { error: errorText })
+    toast.error(t(errorKey, { error: errorText }))
   } finally {
     isLoading.value = false
     showDialog.value = false
   }
 }
-
-// Clear messages
-const clearMessages = () => {
-  successMessage.value = null
-  errorMessage.value = null
-}
 </script>
 
 <template>
   <div class="space-y-4">
-    <!-- Success Message -->
-    <Alert v-if="successMessage" class="border-green-200 bg-green-50">
-      <CheckCircle class="h-4 w-4 text-green-600" />
-      <AlertDescription class="text-green-800">
-        {{ successMessage }}
-        <button 
-          @click="clearMessages"
-          class="ml-2 text-green-600 hover:text-green-800 underline text-sm"
-        >
-          Dismiss
-        </button>
-      </AlertDescription>
-    </Alert>
-
-    <!-- Error Message -->
-    <Alert v-if="errorMessage" variant="destructive">
-      <AlertCircle class="h-4 w-4" />
-      <AlertDescription>
-        {{ errorMessage }}
-        <button 
-          @click="clearMessages"
-          class="ml-2 text-red-600 hover:text-red-800 underline text-sm"
-        >
-          Dismiss
-        </button>
-      </AlertDescription>
-    </Alert>
-
     <!-- Actions Group -->
     <div class="border rounded-lg p-4 bg-gray-50">
       <h3 class="text-sm font-medium text-gray-900 mb-3">

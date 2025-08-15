@@ -65,7 +65,7 @@ export default async function adminResetPasswordRoute(fastify: FastifyInstance) 
         fastify.log.info(`Admin-initiated password reset requested by admin ${adminUserId} for email: ${email}`);
 
         // Send admin-initiated reset email
-        const result = await PasswordResetService.sendAdminResetEmail(email, adminUserId);
+        const result = await PasswordResetService.sendAdminResetEmail(email, adminUserId, fastify.log);
 
         if (!result.success && result.error) {
           fastify.log.error(`Admin password reset failed for ${email} by admin ${adminUserId}: ${result.error}`);
