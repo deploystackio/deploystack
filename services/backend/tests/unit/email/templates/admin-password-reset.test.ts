@@ -179,7 +179,7 @@ describe('Admin Password Reset Email Template', () => {
         variables: validVariables,
       });
 
-      expect(result).toContain('background-color: #007bff');
+      expect(result).toContain('background-color: #0f766e');
       expect(result).toContain('color: white');
       expect(result).toContain('text-decoration: none');
       expect(result).toContain('border-radius: 4px');

@@ -93,7 +93,7 @@ describe('Admin Reset Password Route', () => {
       await handler(mockRequest, mockReply);
 
       expect(mockPasswordResetService.isPasswordResetAvailable).toHaveBeenCalled();
-      expect(mockPasswordResetService.sendAdminResetEmail).toHaveBeenCalledWith('user@example.com', 'admin-user-id');
+      expect(mockPasswordResetService.sendAdminResetEmail).toHaveBeenCalledWith('user@example.com', 'admin-user-id', mockFastify.log);
       expect(mockFastify.log!.info).toHaveBeenCalledWith(
         'Admin-initiated password reset requested by admin admin-user-id for email: user@example.com'
       );
@@ -145,7 +145,7 @@ describe('Admin Reset Password Route', () => {
       const handler = routeHandlers['POST /admin/reset-password'];
       await handler(mockRequest, mockReply);
 
-      expect(mockPasswordResetService.sendAdminResetEmail).toHaveBeenCalledWith('user@example.com', 'admin-user-id');
+      expect(mockPasswordResetService.sendAdminResetEmail).toHaveBeenCalledWith('user@example.com', 'admin-user-id', mockFastify.log);
       expect(mockFastify.log!.error).toHaveBeenCalledWith(
         'Admin password reset failed for user@example.com by admin admin-user-id: User not found or not eligible for password reset (must have email authentication)'
       );
@@ -165,7 +165,7 @@ describe('Admin Reset Password Route', () => {
       const handler = routeHandlers['POST /admin/reset-password'];
       await handler(mockRequest, mockReply);
 
-      expect(mockPasswordResetService.sendAdminResetEmail).toHaveBeenCalledWith('user@example.com', 'admin-user-id');
+      expect(mockPasswordResetService.sendAdminResetEmail).toHaveBeenCalledWith('user@example.com', 'admin-user-id', mockFastify.log);
       expect(mockFastify.log!.error).toHaveBeenCalledWith(
         'Admin password reset failed for user@example.com by admin admin-user-id: Administrators cannot reset their own password using this endpoint'
       );
@@ -253,7 +253,7 @@ describe('Admin Reset Password Route', () => {
       const handler = routeHandlers['POST /admin/reset-password'];
       await handler(mockRequest, mockReply);
 
-      expect(mockPasswordResetService.sendAdminResetEmail).toHaveBeenCalledWith('user+test@example.co.uk', 'admin-user-id');
+      expect(mockPasswordResetService.sendAdminResetEmail).toHaveBeenCalledWith('user+test@example.co.uk', 'admin-user-id', mockFastify.log);
       expect(mockFastify.log!.info).toHaveBeenCalledWith(
         'Admin-initiated password reset requested by admin admin-user-id for email: user+test@example.co.uk'
       );

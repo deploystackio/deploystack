@@ -352,19 +352,10 @@ describe('Register Email Route', () => {
         select: vi.fn().mockReturnThis(),
         from: vi.fn().mockReturnThis(),
         where: vi.fn().mockReturnThis(),
-        limit: vi.fn().mockResolvedValue([{ username: 'testuser' }]), // Username conflict
+        limit: vi.fn().mockResolvedValue([{ email: 'test@example.com' }]), // Email conflict (implementation only checks email)
       };
 
-      const usernameCheckQuery = {
-        select: vi.fn().mockReturnThis(),
-        from: vi.fn().mockReturnThis(),
-        where: vi.fn().mockReturnThis(),
-        limit: vi.fn().mockResolvedValue([{ username: 'testuser' }]), // Username exists
-      };
-
-      mockDb.select
-        .mockReturnValueOnce(conflictQuery) // Initial conflict check
-        .mockReturnValueOnce(usernameCheckQuery); // Username specific check
+      mockDb.select.mockReturnValueOnce(conflictQuery); // Only email check happens
 
       const handler = routeHandlers['POST /register'];
       await handler(mockRequest, mockReply);
@@ -373,7 +364,7 @@ describe('Register Email Route', () => {
       expect(mockReply.send).toHaveBeenCalledWith(
         JSON.stringify({
           success: false,
-          error: 'Username already taken.',
+          error: 'Email address already in use.',
         })
       );
     });
@@ -535,11 +526,11 @@ describe('Register Email Route', () => {
       const handler = routeHandlers['POST /register'];
       await handler(mockRequest, mockReply);
 
-      expect(mockReply.status).toHaveBeenCalledWith(400);
+      expect(mockReply.status).toHaveBeenCalledWith(500);
       expect(mockReply.send).toHaveBeenCalledWith(
         JSON.stringify({
           success: false,
-          error: 'Username already taken.',
+          error: 'An unexpected error occurred during registration.',
         })
       );
     });

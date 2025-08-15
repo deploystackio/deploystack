@@ -116,7 +116,7 @@ describe('PasswordResetService - Admin Reset Email', () => {
 
       const result = await PasswordResetService.sendAdminResetEmail('user@example.com', 'admin-123', mockLogger);
 
-      expect(mockGlobalSettings.getBoolean).toHaveBeenCalledWith('global.send_mail', false);
+      expect(mockGlobalSettings.getBoolean).toHaveBeenCalledWith('smtp.enabled', false);
       expect(mockDb.select).toHaveBeenCalled();
       expect(mockDb.where).toHaveBeenCalledWith(
         and(
@@ -147,7 +147,7 @@ describe('PasswordResetService - Admin Reset Email', () => {
 
       const result = await PasswordResetService.sendAdminResetEmail('user@example.com', 'admin-123', mockLogger);
 
-      expect(mockGlobalSettings.getBoolean).toHaveBeenCalledWith('global.send_mail', false);
+      expect(mockGlobalSettings.getBoolean).toHaveBeenCalledWith('smtp.enabled', false);
       expect(mockDb.select).not.toHaveBeenCalled();
       expect(result).toEqual({
         success: false,

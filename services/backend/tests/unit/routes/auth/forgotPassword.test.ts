@@ -72,7 +72,7 @@ describe('Forgot Password Route', () => {
       await handler(mockRequest, mockReply);
 
       expect(mockPasswordResetService.isPasswordResetAvailable).toHaveBeenCalled();
-      expect(mockPasswordResetService.sendResetEmail).toHaveBeenCalledWith('test@example.com');
+      expect(mockPasswordResetService.sendResetEmail).toHaveBeenCalledWith('test@example.com', mockFastify.log);
       expect(mockFastify.log!.info).toHaveBeenCalledWith('Password reset requested for email: test@example.com');
       expect(mockReply.status).toHaveBeenCalledWith(200);
       expect(mockReply.send).toHaveBeenCalledWith({
@@ -105,7 +105,7 @@ describe('Forgot Password Route', () => {
       const handler = routeHandlers['POST /email/forgot-password'];
       await handler(mockRequest, mockReply);
 
-      expect(mockPasswordResetService.sendResetEmail).toHaveBeenCalledWith('test@example.com');
+      expect(mockPasswordResetService.sendResetEmail).toHaveBeenCalledWith('test@example.com', mockFastify.log);
       expect(mockFastify.log!.error).toHaveBeenCalledWith('Password reset email failed for test@example.com: SMTP configuration error');
       expect(mockReply.status).toHaveBeenCalledWith(500);
       expect(mockReply.send).toHaveBeenCalledWith({
@@ -182,7 +182,7 @@ describe('Forgot Password Route', () => {
       const handler = routeHandlers['POST /email/forgot-password'];
       await handler(mockRequest, mockReply);
 
-      expect(mockPasswordResetService.sendResetEmail).toHaveBeenCalledWith('user+test@example.co.uk');
+      expect(mockPasswordResetService.sendResetEmail).toHaveBeenCalledWith('user+test@example.co.uk', mockFastify.log);
       expect(mockFastify.log!.info).toHaveBeenCalledWith('Password reset requested for email: user+test@example.co.uk');
       expect(mockReply.status).toHaveBeenCalledWith(200);
     });

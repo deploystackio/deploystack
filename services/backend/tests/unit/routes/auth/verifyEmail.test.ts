@@ -5,6 +5,34 @@ import { EmailVerificationService } from '../../../../src/services/emailVerifica
 
 // Mock dependencies
 vi.mock('../../../../src/services/emailVerificationService');
+vi.mock('../../../../src/email', () => ({
+  EmailService: {
+    shouldSendWelcomeEmail: vi.fn(),
+    sendWelcomeEmail: vi.fn(),
+  },
+}));
+vi.mock('../../../../src/global-settings/helpers', () => ({
+  GlobalSettings: {
+    get: vi.fn(),
+  },
+}));
+vi.mock('../../../../src/db', () => ({
+  getDb: vi.fn(() => ({
+    select: vi.fn().mockReturnThis(),
+    from: vi.fn().mockReturnThis(),
+    where: vi.fn().mockReturnThis(),
+    limit: vi.fn().mockReturnThis(),
+  })),
+  getSchema: vi.fn(() => ({
+    authUser: {
+      id: 'id',
+      email: 'email',
+      first_name: 'first_name',
+      last_name: 'last_name',
+      username: 'username',
+    }
+  })),
+}));
 
 // Type the mocked functions
 const mockEmailVerificationService = EmailVerificationService as any;
@@ -41,11 +69,23 @@ describe('Verify Email Route', () => {
       query: {
         token: 'valid-verification-token-123',
       },
+      log: {
+        warn: vi.fn(),
+        error: vi.fn(),
+        info: vi.fn(),
+        debug: vi.fn(),
+        child: vi.fn(),
+        level: 'info',
+        fatal: vi.fn(),
+        trace: vi.fn(),
+        silent: vi.fn(),
+      },
     };
 
     // Setup mock reply
     mockReply = {
       status: vi.fn().mockReturnThis(),
+      type: vi.fn().mockReturnThis(),
       send: vi.fn().mockReturnThis(),
     };
 
@@ -55,6 +95,8 @@ describe('Verify Email Route', () => {
       userId: 'user-123',
     });
     mockEmailVerificationService.cleanupExpiredTokens = vi.fn().mockResolvedValue(undefined);
+    
+    // The mocks are already set up in the vi.mock calls above
   });
 
   describe('Route Registration', () => {
@@ -77,11 +119,11 @@ describe('Verify Email Route', () => {
       expect(mockEmailVerificationService.verifyEmailToken).toHaveBeenCalledWith('valid-verification-token-123');
       expect(mockEmailVerificationService.cleanupExpiredTokens).toHaveBeenCalled();
       expect(mockReply.status).toHaveBeenCalledWith(200);
-      expect(mockReply.send).toHaveBeenCalledWith({
+      expect(mockReply.send).toHaveBeenCalledWith(JSON.stringify({
         success: true,
         message: 'Email verified successfully. You can now log in to your account.',
         userId: 'user-123',
-      });
+      }));
     });
 
     it('should return 400 for invalid token', async () => {
@@ -96,10 +138,10 @@ describe('Verify Email Route', () => {
       expect(mockEmailVerificationService.verifyEmailToken).toHaveBeenCalledWith('valid-verification-token-123');
       expect(mockEmailVerificationService.cleanupExpiredTokens).not.toHaveBeenCalled();
       expect(mockReply.status).toHaveBeenCalledWith(400);
-      expect(mockReply.send).toHaveBeenCalledWith({
+      expect(mockReply.send).toHaveBeenCalledWith(JSON.stringify({
         success: false,
         error: 'Invalid verification token',
-      });
+      }));
     });
 
     it('should return 400 for expired token', async () => {
@@ -113,10 +155,10 @@ describe('Verify Email Route', () => {
 
       expect(mockEmailVerificationService.verifyEmailToken).toHaveBeenCalledWith('valid-verification-token-123');
       expect(mockReply.status).toHaveBeenCalledWith(400);
-      expect(mockReply.send).toHaveBeenCalledWith({
+      expect(mockReply.send).toHaveBeenCalledWith(JSON.stringify({
         success: false,
         error: 'Verification token has expired',
-      });
+      }));
     });
 
     it('should return 400 with default error message when no error provided', async () => {
@@ -128,10 +170,10 @@ describe('Verify Email Route', () => {
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(400);
-      expect(mockReply.send).toHaveBeenCalledWith({
+      expect(mockReply.send).toHaveBeenCalledWith(JSON.stringify({
         success: false,
         error: 'Invalid or expired verification token',
-      });
+      }));
     });
 
     it('should handle cleanup failure gracefully', async () => {
@@ -145,11 +187,11 @@ describe('Verify Email Route', () => {
       expect(mockFastify.log!.warn).toHaveBeenCalledWith('Failed to cleanup expired tokens:', expect.any(Error));
       // Should still return success despite cleanup failure
       expect(mockReply.status).toHaveBeenCalledWith(200);
-      expect(mockReply.send).toHaveBeenCalledWith({
+      expect(mockReply.send).toHaveBeenCalledWith(JSON.stringify({
         success: true,
         message: 'Email verified successfully. You can now log in to your account.',
         userId: 'user-123',
-      });
+      }));
     });
 
     it('should handle unexpected errors during verification', async () => {
@@ -160,10 +202,10 @@ describe('Verify Email Route', () => {
 
       expect(mockFastify.log!.error).toHaveBeenCalledWith(expect.any(Error), 'Error during email verification:');
       expect(mockReply.status).toHaveBeenCalledWith(500);
-      expect(mockReply.send).toHaveBeenCalledWith({
+      expect(mockReply.send).toHaveBeenCalledWith(JSON.stringify({
         success: false,
         error: 'An unexpected error occurred during verification',
-      });
+      }));
     });
 
     it('should handle different token formats', async () => {
@@ -208,11 +250,11 @@ describe('Verify Email Route', () => {
       const handler = routeHandlers['GET /verify'];
       await handler(mockRequest, mockReply);
 
-      expect(mockReply.send).toHaveBeenCalledWith({
+      expect(mockReply.send).toHaveBeenCalledWith(JSON.stringify({
         success: true,
         message: 'Email verified successfully. You can now log in to your account.',
         userId: 'different-user-456',
-      });
+      }));
     });
   });
 });

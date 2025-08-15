@@ -47,6 +47,7 @@ describe('Reset Password Route', () => {
     // Setup mock reply
     mockReply = {
       status: vi.fn().mockReturnThis(),
+      type: vi.fn().mockReturnThis(),
       send: vi.fn().mockReturnThis(),
     };
 
@@ -76,14 +77,15 @@ describe('Reset Password Route', () => {
       await handler(mockRequest, mockReply);
 
       expect(mockPasswordResetService.isPasswordResetAvailable).toHaveBeenCalled();
-      expect(mockPasswordResetService.validateAndResetPassword).toHaveBeenCalledWith('valid-reset-token-123', 'newPassword123!');
+      expect(mockPasswordResetService.validateAndResetPassword).toHaveBeenCalledWith('valid-reset-token-123', 'newPassword123!', mockFastify.log);
       expect(mockFastify.log!.info).toHaveBeenCalledWith('Password reset attempt with token');
       expect(mockFastify.log!.info).toHaveBeenCalledWith('Password reset successful for user: user-123');
       expect(mockReply.status).toHaveBeenCalledWith(200);
-      expect(mockReply.send).toHaveBeenCalledWith({
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      expect(mockReply.send).toHaveBeenCalledWith(JSON.stringify({
         success: true,
         message: 'Password has been reset successfully. All sessions have been invalidated for security. Please log in with your new password.',
-      });
+      }));
     });
 
     it('should return 503 when password reset is not available', async () => {
@@ -95,10 +97,11 @@ describe('Reset Password Route', () => {
       expect(mockPasswordResetService.isPasswordResetAvailable).toHaveBeenCalled();
       expect(mockPasswordResetService.validateAndResetPassword).not.toHaveBeenCalled();
       expect(mockReply.status).toHaveBeenCalledWith(503);
-      expect(mockReply.send).toHaveBeenCalledWith({
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      expect(mockReply.send).toHaveBeenCalledWith(JSON.stringify({
         success: false,
         error: 'Password reset is currently disabled. Email functionality is not enabled.',
-      });
+      }));
     });
 
     it('should return 400 for invalid or expired token', async () => {
@@ -110,12 +113,13 @@ describe('Reset Password Route', () => {
       const handler = routeHandlers['POST /email/reset-password'];
       await handler(mockRequest, mockReply);
 
-      expect(mockPasswordResetService.validateAndResetPassword).toHaveBeenCalledWith('valid-reset-token-123', 'newPassword123!');
+      expect(mockPasswordResetService.validateAndResetPassword).toHaveBeenCalledWith('valid-reset-token-123', 'newPassword123!', mockFastify.log);
       expect(mockReply.status).toHaveBeenCalledWith(400);
-      expect(mockReply.send).toHaveBeenCalledWith({
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      expect(mockReply.send).toHaveBeenCalledWith(JSON.stringify({
         success: false,
         error: 'Invalid or expired reset token',
-      });
+      }));
     });
 
     it('should return 403 for user not eligible for password reset', async () => {
@@ -127,12 +131,13 @@ describe('Reset Password Route', () => {
       const handler = routeHandlers['POST /email/reset-password'];
       await handler(mockRequest, mockReply);
 
-      expect(mockPasswordResetService.validateAndResetPassword).toHaveBeenCalledWith('valid-reset-token-123', 'newPassword123!');
+      expect(mockPasswordResetService.validateAndResetPassword).toHaveBeenCalledWith('valid-reset-token-123', 'newPassword123!', mockFastify.log);
       expect(mockReply.status).toHaveBeenCalledWith(403);
-      expect(mockReply.send).toHaveBeenCalledWith({
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      expect(mockReply.send).toHaveBeenCalledWith(JSON.stringify({
         success: false,
         error: 'This user is not eligible for password reset.',
-      });
+      }));
     });
 
     it('should return 500 for other service errors', async () => {
@@ -144,12 +149,13 @@ describe('Reset Password Route', () => {
       const handler = routeHandlers['POST /email/reset-password'];
       await handler(mockRequest, mockReply);
 
-      expect(mockPasswordResetService.validateAndResetPassword).toHaveBeenCalledWith('valid-reset-token-123', 'newPassword123!');
+      expect(mockPasswordResetService.validateAndResetPassword).toHaveBeenCalledWith('valid-reset-token-123', 'newPassword123!', mockFastify.log);
       expect(mockReply.status).toHaveBeenCalledWith(500);
-      expect(mockReply.send).toHaveBeenCalledWith({
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      expect(mockReply.send).toHaveBeenCalledWith(JSON.stringify({
         success: false,
         error: 'Database connection failed',
-      });
+      }));
     });
 
     it('should return 500 for service errors without error message', async () => {
@@ -161,10 +167,11 @@ describe('Reset Password Route', () => {
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(500);
-      expect(mockReply.send).toHaveBeenCalledWith({
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      expect(mockReply.send).toHaveBeenCalledWith(JSON.stringify({
         success: false,
         error: 'An error occurred during password reset.',
-      });
+      }));
     });
 
     it('should handle unexpected errors during password reset', async () => {
@@ -175,10 +182,11 @@ describe('Reset Password Route', () => {
 
       expect(mockFastify.log!.error).toHaveBeenCalledWith(expect.any(Error), 'Error during password reset:');
       expect(mockReply.status).toHaveBeenCalledWith(500);
-      expect(mockReply.send).toHaveBeenCalledWith({
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      expect(mockReply.send).toHaveBeenCalledWith(JSON.stringify({
         success: false,
         error: 'An unexpected error occurred during password reset.',
-      });
+      }));
     });
 
     it('should handle validateAndResetPassword throwing an error', async () => {
@@ -189,10 +197,11 @@ describe('Reset Password Route', () => {
 
       expect(mockFastify.log!.error).toHaveBeenCalledWith(expect.any(Error), 'Error during password reset:');
       expect(mockReply.status).toHaveBeenCalledWith(500);
-      expect(mockReply.send).toHaveBeenCalledWith({
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      expect(mockReply.send).toHaveBeenCalledWith(JSON.stringify({
         success: false,
         error: 'An unexpected error occurred during password reset.',
-      });
+      }));
     });
 
     it('should handle different token formats', async () => {
@@ -204,7 +213,7 @@ describe('Reset Password Route', () => {
       const handler = routeHandlers['POST /email/reset-password'];
       await handler(mockRequest, mockReply);
 
-      expect(mockPasswordResetService.validateAndResetPassword).toHaveBeenCalledWith('different-token-format-456', 'anotherPassword456!');
+      expect(mockPasswordResetService.validateAndResetPassword).toHaveBeenCalledWith('different-token-format-456', 'anotherPassword456!', mockFastify.log);
       expect(mockReply.status).toHaveBeenCalledWith(200);
     });
 

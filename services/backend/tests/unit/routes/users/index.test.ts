@@ -4,16 +4,22 @@ import { ZodError } from 'zod';
 import usersRoute from '../../../../src/routes/users/index';
 import { UserService } from '../../../../src/services/userService';
 import { TeamService } from '../../../../src/services/teamService';
+import { UserPreferencesService } from '../../../../src/services/UserPreferencesService';
 import { requirePermission, requireOwnershipOrAdmin, getUserIdFromParams } from '../../../../src/middleware/roleMiddleware';
+import { getDb } from '../../../../src/db';
 
 // Mock dependencies
 vi.mock('../../../../src/services/userService');
 vi.mock('../../../../src/services/teamService');
+vi.mock('../../../../src/services/UserPreferencesService');
 vi.mock('../../../../src/middleware/roleMiddleware');
+vi.mock('../../../../src/db');
 
 // Type the mocked classes
 const MockedUserService = UserService as any;
 const MockedTeamService = TeamService as any;
+const MockedUserPreferencesService = UserPreferencesService as any;
+const mockGetDb = getDb as MockedFunction<typeof getDb>;
 const mockRequirePermission = requirePermission as MockedFunction<typeof requirePermission>;
 const mockRequireOwnershipOrAdmin = requireOwnershipOrAdmin as MockedFunction<typeof requireOwnershipOrAdmin>;
 const mockGetUserIdFromParams = getUserIdFromParams as MockedFunction<typeof getUserIdFromParams>;
@@ -51,6 +57,23 @@ describe('Users Route', () => {
     MockedTeamService.getUserTeams = mockTeamService.getUserTeams;
     MockedTeamService.getTeamMembership = mockTeamService.getTeamMembership;
 
+    // Setup mock UserPreferencesService
+    const mockUserPreferencesService = {
+      getPreferences: vi.fn(),
+      updatePreferences: vi.fn(),
+      setPreference: vi.fn(),
+      getPreference: vi.fn(),
+      completeWalkthrough: vi.fn(),
+      cancelWalkthrough: vi.fn(),
+      getWalkthroughStatus: vi.fn(),
+      acknowledgeNotification: vi.fn(),
+    };
+    MockedUserPreferencesService.mockImplementation(() => mockUserPreferencesService);
+
+    // Setup mock database
+    const mockDb = {};
+    mockGetDb.mockReturnValue(mockDb);
+
     // Setup mock middleware
     mockRequirePermission.mockReturnValue(vi.fn());
     mockRequireOwnershipOrAdmin.mockReturnValue(vi.fn());
@@ -73,6 +96,14 @@ describe('Users Route', () => {
           routeHandlers[`GET ${path}`] = handler;
         } else {
           routeHandlers[`GET ${path}`] = options;
+        }
+        return mockFastify as FastifyInstance;
+      }),
+      post: vi.fn((path: string, options: any, handler?: any) => {
+        if (handler) {
+          routeHandlers[`POST ${path}`] = handler;
+        } else {
+          routeHandlers[`POST ${path}`] = options;
         }
         return mockFastify as FastifyInstance;
       }),
