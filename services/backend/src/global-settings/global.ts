@@ -64,6 +64,14 @@ export const globalSettings: GlobalSettingsModule = {
       description: 'Maximum number of teams a user can create. This includes both default and custom teams.',
       encrypted: false,
       required: false
+    },
+    {
+      key: 'global.send_welcome_email',
+      defaultValue: false,
+      type: 'boolean',
+      description: 'Send welcome email to users when they verify their email or login via OAuth flows (GitHub, etc.)',
+      encrypted: false,
+      required: false
     }
   ]
 };

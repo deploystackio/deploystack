@@ -2,6 +2,7 @@ import * as nodemailer from 'nodemailer';
 import type { Transporter } from 'nodemailer';
 import type { FastifyBaseLogger } from 'fastify';
 import { GlobalSettingsService } from '../services/globalSettingsService';
+import { GlobalSettings } from '../global-settings/helpers';
 import { TemplateRenderer } from './templateRenderer';
 import { 
   SendEmailOptionsSchema, 
@@ -291,6 +292,15 @@ export class EmailService {
       }, 'Failed to load SMTP configuration');
       return null;
     }
+  }
+
+  /**
+   * Check if welcome emails should be sent
+   */
+  static async shouldSendWelcomeEmail(): Promise<boolean> {
+    const smtpEnabled = await GlobalSettings.getBoolean('smtp.enabled', false);
+    const welcomeEmailEnabled = await GlobalSettings.getBoolean('global.send_welcome_email', false);
+    return smtpEnabled && welcomeEmailEnabled;
   }
 
   /**

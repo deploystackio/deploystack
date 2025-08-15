@@ -1,5 +1,9 @@
 import type { FastifyInstance } from 'fastify';
 import { EmailVerificationService } from '../../services/emailVerificationService';
+import { EmailService } from '../../email';
+import { GlobalSettings } from '../../global-settings/helpers';
+import { getDb, getSchema } from '../../db';
+import { eq } from 'drizzle-orm';
 
 // Reusable Schema Constants
 const VERIFY_EMAIL_QUERYSTRING_SCHEMA = {
@@ -107,6 +111,63 @@ export default async function verifyEmailRoute(server: FastifyInstance) {
           };
           const jsonString = JSON.stringify(errorResponse);
           return reply.status(400).type('application/json').send(jsonString);
+        }
+
+        // Send welcome email if enabled
+        try {
+          const shouldSendWelcome = await EmailService.shouldSendWelcomeEmail();
+          if (shouldSendWelcome && result.userId) {
+            // Get user details to send welcome email
+            const db = getDb();
+            const schema = getSchema();
+            const authUserTable = schema.authUser;
+            
+            if (authUserTable) {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const users = await (db as any)
+                .select({
+                  email: authUserTable.email,
+                  first_name: authUserTable.first_name,
+                  last_name: authUserTable.last_name,
+                  username: authUserTable.username
+                })
+                .from(authUserTable)
+                .where(eq(authUserTable.id, result.userId))
+                .limit(1);
+              
+              if (users.length > 0) {
+                const user = users[0];
+                const userName = user.first_name 
+                  ? `${user.first_name}${user.last_name ? ` ${user.last_name}` : ''}`
+                  : user.username || 'User';
+                
+                const loginUrl = await GlobalSettings.get('global.page_url', 'http://localhost:5173') + '/login';
+                const supportEmail = await GlobalSettings.get('smtp.from_email') || undefined;
+                
+                // Send welcome email asynchronously (don't block verification response)
+                EmailService.sendWelcomeEmail({
+                  to: user.email,
+                  userName,
+                  userEmail: user.email,
+                  loginUrl,
+                  supportEmail
+                }, request.log).catch(error => {
+                  request.log.warn({
+                    error,
+                    userId: result.userId,
+                    operation: 'send_welcome_email_after_verification'
+                  }, 'Failed to send welcome email after email verification');
+                });
+              }
+            }
+          }
+        } catch (error) {
+          // Don't fail verification if welcome email fails
+          request.log.warn({
+            error,
+            userId: result.userId,
+            operation: 'send_welcome_email_after_verification'
+          }, 'Error occurred while trying to send welcome email after verification');
         }
 
         // Clean up expired tokens (housekeeping)

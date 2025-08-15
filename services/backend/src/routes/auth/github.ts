@@ -9,6 +9,8 @@ import { eq } from 'drizzle-orm';
 import { generateId } from 'lucia';
 import { generateState } from 'arctic';
 import { GlobalSettingsInitService } from '../../global-settings';
+import { EmailService } from '../../email';
+import { GlobalSettings } from '../../global-settings/helpers';
 
 // Response schemas for GitHub OAuth API
 const errorResponseSchema = z.object({
@@ -319,6 +321,41 @@ export default async function githubAuthRoutes(fastify: FastifyInstance) {
         };
         
         await (db as any).insert(authUserTable).values(newUserData);
+
+        // Send welcome email if enabled (for new OAuth users)
+        try {
+          const shouldSendWelcome = await EmailService.shouldSendWelcomeEmail();
+          if (shouldSendWelcome) {
+            const userName = newUserData.first_name 
+              ? `${newUserData.first_name}${newUserData.last_name ? ` ${newUserData.last_name}` : ''}`
+              : newUserData.username || 'User';
+            
+            const loginUrl = await GlobalSettings.get('global.page_url', 'http://localhost:5173') + '/login';
+            const supportEmail = await GlobalSettings.get('smtp.from_email') || undefined;
+            
+            // Send welcome email asynchronously (don't block OAuth flow)
+            EmailService.sendWelcomeEmail({
+              to: newUserData.email,
+              userName,
+              userEmail: newUserData.email,
+              loginUrl,
+              supportEmail
+            }, fastify.log).catch(error => {
+              fastify.log.warn({
+                error,
+                userId: newUserId,
+                operation: 'send_welcome_email_after_oauth_signup'
+              }, 'Failed to send welcome email after GitHub OAuth signup');
+            });
+          }
+        } catch (error) {
+          // Don't fail OAuth if welcome email fails
+          fastify.log.warn({
+            error,
+            userId: newUserId,
+            operation: 'send_welcome_email_after_oauth_signup'
+          }, 'Error occurred while trying to send welcome email after GitHub OAuth signup');
+        }
 
         // Create default team for the user
         try {

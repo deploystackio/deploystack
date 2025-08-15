@@ -6,52 +6,63 @@ block content
   h1 Welcome to DeployStack, #{userName}!
   
   p
-    | We're excited to have you join our community. Your account has been successfully created and you're ready to start deploying your applications with ease.
-  
-  p
-    strong Your account details:
-    br
-    | Email: #{userEmail}
-    br
-    | Registration Date: #{new Date().toLocaleDateString()}
+    | Thanks for joining our mission to simplify MCP complexity for development teams. Your account is now active, and you're ready to eliminate credential management hassles and get productive with MCP tools in minutes, not hours.
   
   .text-center
-    a.button(href=loginUrl) Get Started - Login to Your Account
+    a.button(href=loginUrl) Install DeployStack Gateway
   
-  h2 What's Next?
+  h2 Ready to get started?
   
-  p Here are some things you can do to get started:
+  p Here's how to get your MCP tools working instantly:
+  
+  .steps
+    p
+      strong 1. Install the gateway:
+      br
+      code npm install -g @deploystack/gateway
+    
+    p
+      strong 2. Login to your account:
+      br
+      code deploystack login
+    
+    p
+      strong 3. Start using your team's MCP tools:
+      br
+      code deploystack start
+    
+    p
+      strong 4. Configure VS Code:
+      br
+      | Replace your MCP config with our gateway endpoint:
+      br
+      code "url": "http://localhost:9095/sse"
+  
+  h2 What's next?
   
   ul
+    li 
+      strong Add your first MCP server&nbsp;
+      | - Browse our catalog and add tools like GitHub, BrightData, or Weather
     li
-      strong Set up your first project
-      | - Create your first deployment stack and configure your environment
-    li
-      strong Explore the dashboard
-      | - Familiarize yourself with the interface and available features
-    li
-      strong Configure integrations
-      | - Connect your favorite tools and services to streamline your workflow
-    li
-      strong Join our community
-      | - Connect with other developers and share your experiences
+      strong Invite team members&nbsp;
+      | - Share secure access to MCP tools without credential sharing
   
-  h2 Need Help?
+  h2 Need help?
   
-  p
-    | If you have any questions or need assistance getting started, our support team is here to help. You can:
+  p We're here to help you succeed:
   
   ul
-    li Check out our documentation and tutorials
-    li Browse our FAQ section
-    if supportEmail
-      li
-        | Contact our support team at 
-        a(href=`mailto:${supportEmail}`)= supportEmail
-    li Join our community forums for tips and discussions
+    li 📚 Check our 
+      a(href="https://docs.deploystack.io/quick-start") quick start guide
+    li 💬 Join our 
+      a(href="https://discord.gg/42Ce3S7b3b") Discord community
+    li 🔍 Browse the 
+      a(href=loginUrl) MCP catalog
+      |  for available tools
   
   p
-    | Thank you for choosing DeployStack. We look forward to helping you streamline your deployment process!
+    | We're excited to see what you'll build with zero-configuration MCP access!
   
   p.text-muted
     | Best regards,
