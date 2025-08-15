@@ -17,7 +17,7 @@ export default async function createTeamRoute(server: FastifyInstance) {
     schema: {
       tags: ['Teams'],
       summary: 'Create new team',
-      description: 'Creates a new team with the specified name and description. Users can create up to 3 teams maximum. The slug is automatically generated from the team name and made unique. Requires Content-Type: application/json header when sending request body.',
+      description: 'Creates a new team with the specified name and description. Team creation limit is configurable via global settings (default: 3 teams maximum). The slug is automatically generated from the team name and made unique. Requires Content-Type: application/json header when sending request body.',
       security: [{ cookieAuth: [] }],
       
       // Fastify validation schema
@@ -70,12 +70,15 @@ export default async function createTeamRoute(server: FastifyInstance) {
       // TypeScript type assertion (Fastify has already validated)
       const { name, description } = request.body as CreateTeamRequest;
 
-      // Check if user can create more teams (3 team limit)
+      // Check if user can create more teams (dynamic team limit)
       const canCreate = await TeamService.canUserCreateTeam(request.user.id);
       if (!canCreate) {
+        // Get the current team limit for a proper error message
+        const { GlobalSettings } = await import('../../global-settings/helpers');
+        const teamLimit = await GlobalSettings.getNumber('global.team_creation_limit', 3);
         const errorResponse: ErrorResponse = {
           success: false,
-          error: 'You have reached the maximum limit of 3 teams'
+          error: `You have reached the maximum limit of ${teamLimit} teams`
         };
         const jsonString = JSON.stringify(errorResponse);
         return reply.status(400).type('application/json').send(jsonString);

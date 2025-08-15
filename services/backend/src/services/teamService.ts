@@ -211,11 +211,12 @@ export class TeamService {
   }
 
   /**
-   * Check if user can create more teams (max 3)
+   * Check if user can create more teams (dynamic limit from global settings)
    */
   static async canUserCreateTeam(userId: string): Promise<boolean> {
     const teamCount = await this.getUserTeamCount(userId);
-    return teamCount < 3;
+    const teamLimit = await GlobalSettings.getNumber('global.team_creation_limit', 3);
+    return teamCount < teamLimit;
   }
 
   /**

@@ -56,6 +56,14 @@ export const globalSettings: GlobalSettingsModule = {
       description: 'Maximum number of members allowed in non-default teams. Default teams are always limited to 1 member (the owner).',
       encrypted: false,
       required: false
+    },
+    {
+      key: 'global.team_creation_limit',
+      defaultValue: 3,
+      type: 'number',
+      description: 'Maximum number of teams a user can create. This includes both default and custom teams.',
+      encrypted: false,
+      required: false
     }
   ]
 };

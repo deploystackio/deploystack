@@ -7737,7 +7737,7 @@
         "tags": [
           "Teams"
         ],
-        "description": "Creates a new team with the specified name and description. Users can create up to 3 teams maximum. The slug is automatically generated from the team name and made unique. Requires Content-Type: application/json header when sending request body.",
+        "description": "Creates a new team with the specified name and description. Team creation limit is configurable via global settings (default: 3 teams maximum). The slug is automatically generated from the team name and made unique. Requires Content-Type: application/json header when sending request body.",
         "requestBody": {
           "content": {
             "application/json": {
@@ -8215,7 +8215,7 @@
         "tags": [
           "Team Members"
         ],
-        "description": "Adds a new member to a team by email address. Only team admins and owners can add members. Cannot add members to default teams. Teams are limited to 3 members maximum. Requires Content-Type: application/json header when sending request body.",
+        "description": "Adds a new member to a team by email address. Only team admins and owners can add members. Cannot add members to default teams. Team member limit is configurable via global settings (default: 3 members maximum). Requires Content-Type: application/json header when sending request body.",
         "requestBody": {
           "content": {
             "application/json": {
@@ -18605,178 +18605,199 @@
           "Authentication"
         ],
         "description": "Creates a new user account using email and password. The first registered user automatically becomes a global administrator. Automatically creates a session and default team for the user. Requires Content-Type: application/json header when sending request body.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "username": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 50,
+                    "pattern": "^[a-zA-Z0-9_-]+$",
+                    "description": "Username (3-50 characters, alphanumeric, underscore, hyphen only)"
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "maxLength": 255,
+                    "description": "Valid email address"
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 8,
+                    "maxLength": 128,
+                    "description": "Password (minimum 8 characters)"
+                  },
+                  "first_name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "description": "First name (optional)"
+                  },
+                  "last_name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "description": "Last name (optional)"
+                  }
+                },
+                "required": [
+                  "username",
+                  "email",
+                  "password"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "201": {
-            "description": "Default Response",
+            "description": "User registered successfully",
             "content": {
               "application/json": {
                 "schema": {
-                  "schema": {
-                    "description": "User registered successfully",
-                    "type": "object",
-                    "properties": {
-                      "success": {
-                        "description": "Indicates if the registration was successful",
-                        "type": "boolean"
-                      },
-                      "message": {
-                        "description": "Success message",
-                        "type": "string"
-                      },
-                      "user": {
-                        "description": "Information about the registered user",
-                        "type": "object",
-                        "properties": {
-                          "id": {
-                            "description": "User ID",
-                            "type": "string"
-                          },
-                          "username": {
-                            "description": "User's username",
-                            "type": "string"
-                          },
-                          "email": {
-                            "description": "User's email address",
-                            "type": "string",
-                            "format": "email",
-                            "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
-                          },
-                          "first_name": {
-                            "description": "User's first name",
-                            "anyOf": [
-                              {
-                                "type": "string"
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ]
-                          },
-                          "last_name": {
-                            "description": "User's last name",
-                            "anyOf": [
-                              {
-                                "type": "string"
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ]
-                          },
-                          "role_id": {
-                            "description": "User's role ID",
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "id",
-                          "username",
-                          "email",
-                          "first_name",
-                          "last_name",
-                          "role_id"
-                        ],
-                        "additionalProperties": false
-                      }
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the registration was successful"
                     },
-                    "required": [
-                      "success",
-                      "message",
-                      "user"
-                    ],
-                    "additionalProperties": false
+                    "message": {
+                      "type": "string",
+                      "description": "Success message"
+                    },
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "User ID"
+                        },
+                        "username": {
+                          "type": "string",
+                          "description": "User's username"
+                        },
+                        "email": {
+                          "type": "string",
+                          "format": "email",
+                          "description": "User's email address"
+                        },
+                        "first_name": {
+                          "type": [
+                            "null",
+                            "string"
+                          ],
+                          "description": "User's first name"
+                        },
+                        "last_name": {
+                          "type": [
+                            "null",
+                            "string"
+                          ],
+                          "description": "User's last name"
+                        },
+                        "role_id": {
+                          "type": "string",
+                          "description": "User's role ID"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "username",
+                        "email",
+                        "first_name",
+                        "last_name",
+                        "role_id"
+                      ],
+                      "description": "Information about the registered user"
+                    }
                   },
-                  "components": {}
+                  "required": [
+                    "success",
+                    "message",
+                    "user"
+                  ],
+                  "description": "User registered successfully"
                 }
               }
             }
           },
           "400": {
-            "description": "Default Response",
+            "description": "Bad Request - Invalid input, email already in use, or missing Content-Type header",
             "content": {
               "application/json": {
                 "schema": {
-                  "schema": {
-                    "description": "Bad Request - Invalid input, username taken, email already in use, or missing Content-Type header",
-                    "type": "object",
-                    "properties": {
-                      "success": {
-                        "default": false,
-                        "description": "Indicates if the operation was successful (false for errors)",
-                        "type": "boolean"
-                      },
-                      "error": {
-                        "description": "Error message describing what went wrong",
-                        "type": "string"
-                      }
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates if the operation was successful (false for errors)"
                     },
-                    "required": [
-                      "success",
-                      "error"
-                    ],
-                    "additionalProperties": false
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    }
                   },
-                  "components": {}
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Bad Request - Invalid input, email already in use, or missing Content-Type header"
                 }
               }
             }
           },
           "403": {
-            "description": "Default Response",
+            "description": "Forbidden - Email registration is disabled by administrator",
             "content": {
               "application/json": {
                 "schema": {
-                  "schema": {
-                    "description": "Forbidden - Email registration is disabled by administrator",
-                    "type": "object",
-                    "properties": {
-                      "success": {
-                        "default": false,
-                        "description": "Indicates if the operation was successful (false for errors)",
-                        "type": "boolean"
-                      },
-                      "error": {
-                        "description": "Error message describing what went wrong",
-                        "type": "string"
-                      }
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates if the operation was successful (false for errors)"
                     },
-                    "required": [
-                      "success",
-                      "error"
-                    ],
-                    "additionalProperties": false
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    }
                   },
-                  "components": {}
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Forbidden - Email registration is disabled by administrator"
                 }
               }
             }
           },
           "500": {
-            "description": "Default Response",
+            "description": "Internal Server Error - Registration failed",
             "content": {
               "application/json": {
                 "schema": {
-                  "schema": {
-                    "description": "Internal Server Error - Registration failed",
-                    "type": "object",
-                    "properties": {
-                      "success": {
-                        "default": false,
-                        "description": "Indicates if the operation was successful (false for errors)",
-                        "type": "boolean"
-                      },
-                      "error": {
-                        "description": "Error message describing what went wrong",
-                        "type": "string"
-                      }
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates if the operation was successful (false for errors)"
                     },
-                    "required": [
-                      "success",
-                      "error"
-                    ],
-                    "additionalProperties": false
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    }
                   },
-                  "components": {}
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Internal Server Error - Registration failed"
                 }
               }
             }
@@ -19211,118 +19232,94 @@
         "parameters": [
           {
             "schema": {
-              "type": "object",
-              "properties": {
-                "token": {
-                  "type": "string",
-                  "minLength": 1
-                }
-              },
-              "additionalProperties": false
+              "type": "string",
+              "minLength": 1
             },
             "in": "query",
-            "name": "schema",
-            "required": [
-              "token"
-            ]
-          },
-          {
-            "schema": {},
-            "in": "query",
-            "name": "components"
+            "name": "token",
+            "required": true,
+            "description": "Email verification token received via email"
           }
         ],
         "responses": {
           "200": {
-            "description": "Default Response",
+            "description": "Email verified successfully",
             "content": {
               "application/json": {
                 "schema": {
-                  "schema": {
-                    "description": "Email verified successfully",
-                    "type": "object",
-                    "properties": {
-                      "success": {
-                        "description": "Indicates if the verification was successful",
-                        "type": "boolean"
-                      },
-                      "message": {
-                        "description": "Success message",
-                        "type": "string"
-                      },
-                      "userId": {
-                        "description": "ID of the verified user",
-                        "type": "string"
-                      }
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the verification was successful"
                     },
-                    "required": [
-                      "success",
-                      "message",
-                      "userId"
-                    ],
-                    "additionalProperties": false
+                    "message": {
+                      "type": "string",
+                      "description": "Success message"
+                    },
+                    "userId": {
+                      "type": "string",
+                      "description": "ID of the verified user"
+                    }
                   },
-                  "components": {}
+                  "required": [
+                    "success",
+                    "message",
+                    "userId"
+                  ],
+                  "description": "Email verified successfully"
                 }
               }
             }
           },
           "400": {
-            "description": "Default Response",
+            "description": "Bad Request - Invalid or expired token",
             "content": {
               "application/json": {
                 "schema": {
-                  "schema": {
-                    "description": "Bad Request - Invalid or expired token",
-                    "type": "object",
-                    "properties": {
-                      "success": {
-                        "default": false,
-                        "description": "Indicates if the operation was successful (false for errors)",
-                        "type": "boolean"
-                      },
-                      "error": {
-                        "description": "Error message describing what went wrong",
-                        "type": "string"
-                      }
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates if the operation was successful (false for errors)"
                     },
-                    "required": [
-                      "success",
-                      "error"
-                    ],
-                    "additionalProperties": false
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    }
                   },
-                  "components": {}
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Bad Request - Invalid or expired token"
                 }
               }
             }
           },
           "500": {
-            "description": "Default Response",
+            "description": "Internal Server Error - Verification failed",
             "content": {
               "application/json": {
                 "schema": {
-                  "schema": {
-                    "description": "Internal Server Error - Verification failed",
-                    "type": "object",
-                    "properties": {
-                      "success": {
-                        "default": false,
-                        "description": "Indicates if the operation was successful (false for errors)",
-                        "type": "boolean"
-                      },
-                      "error": {
-                        "description": "Error message describing what went wrong",
-                        "type": "string"
-                      }
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates if the operation was successful (false for errors)"
                     },
-                    "required": [
-                      "success",
-                      "error"
-                    ],
-                    "additionalProperties": false
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    }
                   },
-                  "components": {}
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Internal Server Error - Verification failed"
                 }
               }
             }
@@ -19489,7 +19486,7 @@
         "tags": [
           "Authentication"
         ],
-        "description": "Sends a password reset email to users with email authentication. Always returns success for security (does not reveal if email exists). Requires email functionality to be enabled via global.send_mail setting. Reset tokens expire in 10 minutes. Requires Content-Type: application/json header when sending request body.",
+        "description": "Sends a password reset email to users with email authentication. Always returns success for security (does not reveal if email exists). Requires email functionality to be enabled via smtp.enabled setting. Reset tokens expire in 10 minutes. Requires Content-Type: application/json header when sending request body.",
         "responses": {
           "200": {
             "description": "Default Response",
@@ -19620,152 +19617,160 @@
           "Authentication"
         ],
         "description": "Resets the password for email users using a valid reset token. The token must be valid and not expired (10-minute expiration). After successful reset, all user sessions are invalidated for security. Only works for users with email authentication. Requires Content-Type: application/json header when sending request body.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Valid password reset token received via email"
+                  },
+                  "new_password": {
+                    "type": "string",
+                    "minLength": 8,
+                    "maxLength": 128,
+                    "description": "New password (minimum 8 characters)"
+                  }
+                },
+                "required": [
+                  "token",
+                  "new_password"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
-            "description": "Default Response",
+            "description": "Password reset successfully",
             "content": {
               "application/json": {
                 "schema": {
-                  "schema": {
-                    "description": "Password reset successfully",
-                    "type": "object",
-                    "properties": {
-                      "success": {
-                        "description": "Indicates if the password reset was successful",
-                        "type": "boolean"
-                      },
-                      "message": {
-                        "description": "Success message",
-                        "type": "string"
-                      }
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the password reset was successful"
                     },
-                    "required": [
-                      "success",
-                      "message"
-                    ],
-                    "additionalProperties": false
+                    "message": {
+                      "type": "string",
+                      "description": "Success message"
+                    }
                   },
-                  "components": {}
+                  "required": [
+                    "success",
+                    "message"
+                  ],
+                  "description": "Password reset successfully"
                 }
               }
             }
           },
           "400": {
-            "description": "Default Response",
+            "description": "Bad Request - Invalid token, expired token, invalid password, or missing Content-Type header",
             "content": {
               "application/json": {
                 "schema": {
-                  "schema": {
-                    "description": "Bad Request - Invalid token, expired token, invalid password, or missing Content-Type header",
-                    "type": "object",
-                    "properties": {
-                      "success": {
-                        "default": false,
-                        "description": "Indicates if the operation was successful (false for errors)",
-                        "type": "boolean"
-                      },
-                      "error": {
-                        "description": "Error message describing what went wrong",
-                        "type": "string"
-                      }
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates if the operation was successful (false for errors)"
                     },
-                    "required": [
-                      "success",
-                      "error"
-                    ],
-                    "additionalProperties": false
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    }
                   },
-                  "components": {}
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Bad Request - Invalid token, expired token, invalid password, or missing Content-Type header"
                 }
               }
             }
           },
           "403": {
-            "description": "Default Response",
+            "description": "Forbidden - User not eligible for password reset",
             "content": {
               "application/json": {
                 "schema": {
-                  "schema": {
-                    "description": "Forbidden - User not eligible for password reset",
-                    "type": "object",
-                    "properties": {
-                      "success": {
-                        "default": false,
-                        "description": "Indicates if the operation was successful (false for errors)",
-                        "type": "boolean"
-                      },
-                      "error": {
-                        "description": "Error message describing what went wrong",
-                        "type": "string"
-                      }
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates if the operation was successful (false for errors)"
                     },
-                    "required": [
-                      "success",
-                      "error"
-                    ],
-                    "additionalProperties": false
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    }
                   },
-                  "components": {}
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Forbidden - User not eligible for password reset"
                 }
               }
             }
           },
           "500": {
-            "description": "Default Response",
+            "description": "Internal Server Error - Password reset failed",
             "content": {
               "application/json": {
                 "schema": {
-                  "schema": {
-                    "description": "Internal Server Error - Password reset failed",
-                    "type": "object",
-                    "properties": {
-                      "success": {
-                        "default": false,
-                        "description": "Indicates if the operation was successful (false for errors)",
-                        "type": "boolean"
-                      },
-                      "error": {
-                        "description": "Error message describing what went wrong",
-                        "type": "string"
-                      }
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates if the operation was successful (false for errors)"
                     },
-                    "required": [
-                      "success",
-                      "error"
-                    ],
-                    "additionalProperties": false
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    }
                   },
-                  "components": {}
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Internal Server Error - Password reset failed"
                 }
               }
             }
           },
           "503": {
-            "description": "Default Response",
+            "description": "Service Unavailable - Email functionality disabled",
             "content": {
               "application/json": {
                 "schema": {
-                  "schema": {
-                    "description": "Service Unavailable - Email functionality disabled",
-                    "type": "object",
-                    "properties": {
-                      "success": {
-                        "default": false,
-                        "description": "Indicates if the operation was successful (false for errors)",
-                        "type": "boolean"
-                      },
-                      "error": {
-                        "description": "Error message describing what went wrong",
-                        "type": "string"
-                      }
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates if the operation was successful (false for errors)"
                     },
-                    "required": [
-                      "success",
-                      "error"
-                    ],
-                    "additionalProperties": false
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    }
                   },
-                  "components": {}
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Service Unavailable - Email functionality disabled"
                 }
               }
             }
