@@ -10,8 +10,8 @@ import fastifySwaggerUI from '@fastify/swagger-ui';
 import { registerRoutes } from './routes'
 import { PluginManager } from './plugin-system'
 import { authHook } from './hooks/authHook' // Import the auth hook
-import registerEmailRoute from './routes/auth/registerEmail'
-import loginEmailRoute from './routes/auth/loginEmail'
+import registerEmailRoute from './routes/auth/registeremail'
+import loginEmailRoute from './routes/auth/loginemail'
 import githubAuthRoutes from './routes/auth/github'
 import logoutRoute from './routes/auth/logout'
 import changePasswordRoute from './routes/auth/changePassword'
@@ -19,8 +19,8 @@ import updateProfileRoute from './routes/auth/updateProfile'
 import verifyEmailRoute from './routes/auth/verifyEmail'
 import resendVerificationRoute from './routes/auth/resendVerification'
 import forgotPasswordRoute from './routes/auth/forgotPassword'
-import resetPasswordRoute from './routes/auth/resetPassword'
-import adminResetPasswordRoute from './routes/auth/adminResetPassword'
+import resetPasswordRoute from './routes/auth/resetpassword'
+import adminResetPasswordRoute from './routes/auth/adminresetpassword'
 import githubStatusRoute from './routes/auth/githubStatus'
 import { 
   initializeDatabase, 
