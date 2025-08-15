@@ -11,7 +11,10 @@ export default {
   
   clients: {
     claudeDesktop: 'Claude Desktop',
-    cursor: 'Cursor'
+    cline: 'Cline',
+    vscode: 'VS Code',
+    cursor: 'Cursor',
+    windsurf: 'Windsurf'
   },
   
   button: {
