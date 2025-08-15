@@ -4,22 +4,17 @@ import { toTypedSchema } from '@vee-validate/zod'
 import * as z from 'zod'
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { Mail, Lock, User, AlertTriangle } from 'lucide-vue-next'
+import { Mail, Lock, User } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 import { getEnv } from '@/utils/env'
 import { Github } from 'lucide-vue-next'
+import { toast } from 'vue-sonner'
 
 import {
   Card,
   CardContent,
   CardFooter,
 } from '@/components/ui/card'
-
-import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-} from '@/components/ui/alert'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -33,10 +28,8 @@ import { Input } from '@/components/ui/input'
 
 const router = useRouter()
 const isLoading = ref(false)
-const errorMessage = ref('')
-const successMessage = ref('')
 const githubOAuthEnabled = ref(false)
-const { t } = useI18n() // Initialize i18n composable
+const { t } = useI18n()
 
 // Get API URL from environment
 const apiUrl = getEnv('VITE_DEPLOYSTACK_BACKEND_URL')
@@ -96,10 +89,9 @@ const form = useForm({
   },
 })
 
-// Clear error when user starts typing
+// Clear any existing toasts when user starts typing
 const clearError = () => {
-  errorMessage.value = ''
-  successMessage.value = ''
+  // Toasts auto-dismiss, no manual clearing needed
 }
 
 interface RegisterError {
@@ -114,30 +106,34 @@ interface PotentialError {
   status?: unknown;
 }
 
-// Handle different types of errors
+// Handle different types of errors with Sonner toasts
 const handleError = (error: RegisterError) => {
+  let message = ''
+  
   if (error.name === 'TypeError' && error.message && error.message.includes('fetch')) {
     // Network error - backend is down
-    errorMessage.value = 'Unable to connect to server. Please try again later.'
+    message = t('register.errors.networkError', 'Unable to connect to server. Please try again later.')
   } else if (error.status && error.status === 409) {
     // Conflict - username or email already exists
-    errorMessage.value = error.message || 'Username or email already exists.'
+    message = error.message || t('register.errors.conflict', 'Username or email already exists.')
   } else if (error.status && error.status >= 500) {
     // Server error
-    errorMessage.value = 'Server error occurred. Please try again later.'
+    message = t('register.errors.serverError', 'Server error occurred. Please try again later.')
   } else if (error.name === 'AbortError') {
     // Request timeout
-    errorMessage.value = 'Request timed out. Please try again.'
+    message = t('register.errors.timeout', 'Request timed out. Please try again.')
   } else {
     // Unknown error
-    errorMessage.value = error.message || 'An unexpected error occurred during registration.'
+    message = error.message || t('register.errors.unknownError', 'An unexpected error occurred during registration.')
   }
+  
+  toast.error(t('register.errors.title', 'Registration Error'), {
+    description: message
+  })
 }
 
 const onSubmit = form.handleSubmit(async (values) => {
   isLoading.value = true
-  errorMessage.value = ''
-  successMessage.value = ''
 
   try {
     // Create AbortController for timeout handling
@@ -170,11 +166,14 @@ const onSubmit = form.handleSubmit(async (values) => {
     }
 
     await response.json()
-    successMessage.value = 'Account created successfully! Redirecting to login...'
-
-    setTimeout(() => {
-      router.push('/login')
-    }, 2000)
+    
+    // Show success toast and redirect to login
+    toast.success(t('register.success.title', 'Account created successfully!'), {
+      description: t('register.success.description', 'You can now sign in with your credentials.')
+    })
+    
+    // Immediate redirect to login
+    router.push('/login')
 
   } catch (e) {
     console.error('Registration error:', e);
@@ -235,12 +234,16 @@ const handleGitHubSignup = async () => {
   try {
     const isEnabled = await checkGitHubOAuthStatus()
     if (!isEnabled) {
-      errorMessage.value = t('login.oauth.github.unavailable')
+      toast.error(t('register.errors.title', 'Registration Error'), {
+        description: t('login.oauth.github.unavailable', 'GitHub OAuth is not available')
+      })
       return
     }
 
     if (!apiUrl) {
-      errorMessage.value = t('login.errors.networkError')
+      toast.error(t('register.errors.title', 'Registration Error'), {
+        description: t('login.errors.networkError', 'Network error occurred')
+      })
       return
     }
 
@@ -248,7 +251,9 @@ const handleGitHubSignup = async () => {
     window.location.href = `${apiUrl}/api/auth/github/login`
   } catch (error) {
     console.error('GitHub OAuth error:', error)
-    errorMessage.value = t('login.errors.githubOAuthError')
+    toast.error(t('register.errors.title', 'Registration Error'), {
+      description: t('login.errors.githubOAuthError', 'GitHub OAuth error occurred')
+    })
   }
 }
 
@@ -272,24 +277,6 @@ onMounted(async () => {
     </div>
 
     <div class="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
-      <!-- Error Alert -->
-      <Alert v-if="errorMessage" variant="destructive" class="mb-6">
-        <AlertTriangle class="h-4 w-4" />
-        <AlertTitle>Registration Error</AlertTitle>
-        <AlertDescription>
-          {{ errorMessage }}
-        </AlertDescription>
-      </Alert>
-
-      <!-- Success Alert -->
-      <Alert v-if="successMessage" class="mb-6">
-        <AlertTriangle class="h-4 w-4" />
-        <AlertTitle>Success</AlertTitle>
-        <AlertDescription>
-          {{ successMessage }}
-        </AlertDescription>
-      </Alert>
-
       <Card>
         <CardContent class="pt-6">
           <form @submit="onSubmit" class="space-y-4">
