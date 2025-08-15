@@ -4,10 +4,13 @@ import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { toast } from 'vue-sonner'
 import { useEventBus } from '@/composables/useEventBus'
-import GlobalSettingsSidebarNav, { type GlobalSettingGroup } from '@/components/settings/GlobalSettingsSidebarNav.vue'
+import GlobalSettingsSidebarNav, { type GlobalSettingGroup, type Setting } from '@/components/globalSettings/GlobalSettingsSidebarNav.vue'
 import DashboardLayout from '@/components/DashboardLayout.vue'
 import { getEnv } from '@/utils/env'
-
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Switch } from '@/components/ui/switch'
+import { Label } from '@/components/ui/label'
 import {
   Card,
   CardContent,
@@ -23,7 +26,6 @@ const route = useRoute()
 const settingGroups = ref<GlobalSettingGroup[]>([])
 const isLoading = ref(true)
 const error = ref<string | null>(null)
-
 
 const apiUrl = getEnv('VITE_DEPLOYSTACK_BACKEND_URL') || '' // Fallback to empty string if not set
 
@@ -69,7 +71,7 @@ onMounted(async () => {
 })
 
 const currentGroupId = computed(() => {
-  const groupId = route.params.groupId as string | undefined;
+  const groupId = route.params.type as string | undefined;
   return groupId;
 })
 
@@ -123,13 +125,6 @@ function handleConnectionTested(result: { success: boolean; message: string }) {
   // Connection test results are handled by individual components
 }
 
-// For editable form
-import { type Setting } from '@/components/settings/GlobalSettingsSidebarNav.vue' // Import Setting interface
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Switch } from '@/components/ui/switch'
-import { Label } from '@/components/ui/label'
-
 // Reactive form values
 const formValues = ref<Record<string, string | number | boolean>>({})
 
@@ -160,8 +155,6 @@ function createInitialValues(settings: Setting[]) {
   })
   return values
 }
-
-
 
 // Watch for group changes and set form values
 watch(() => selectedGroup.value, (newGroup) => {
@@ -222,8 +215,6 @@ async function handleSubmit(event: Event) {
       throw new Error(errorData.error || errorData.message || `${t('globalSettings.errors.saveSettings')}: ${response.statusText} (status: ${response.status})`)
     }
 
-
-     
     const result = await response.json()
 
     if (!result.success) {
@@ -265,13 +256,11 @@ async function handleSubmit(event: Event) {
     console.error('Failed to save settings:', err)
   }
 }
-
 </script>
 
 <template>
   <DashboardLayout :title="t('globalSettings.title')">
     <div class="hidden space-y-6 pb-16 md:block">
-
       <div class="flex flex-col space-y-8 lg:flex-row lg:space-x-12 lg:space-y-0">
         <aside class="lg:w-1/5">
           <GlobalSettingsSidebarNav :groups="settingGroups" />
@@ -280,7 +269,6 @@ async function handleSubmit(event: Event) {
 
           <div v-if="isLoading" class="text-muted-foreground">{{ t('globalSettings.loading') }}</div>
           <div v-else-if="error" class="text-red-500">{{ t('globalSettings.errors.loadSettings') }}: {{ error }}</div>
-
 
           <div v-else-if="selectedGroup" class="space-y-6">
             <!-- Custom Component -->
@@ -354,7 +342,6 @@ async function handleSubmit(event: Event) {
               </CardContent>
             </Card>
           </div>
-
 
           <div v-else-if="!currentGroupId && settingGroups.length > 0">
             <p class="text-muted-foreground">{{ t('globalSettings.form.selectCategory') }}</p>

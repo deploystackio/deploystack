@@ -12,7 +12,7 @@ import { PluginManager } from './plugin-system/plugin-manager'
 import { loadPlugins } from './plugins'
 import ExtensionPoint from './components/ExtensionPoint.vue'
 import type { EventBusEvents } from './composables/useEventBus'
-import { registerSettingsComponents } from './components/settings'
+import { registerSettingsComponents } from './components/globalSettings'
 
 const app = createApp(App)
 const pinia = createPinia()

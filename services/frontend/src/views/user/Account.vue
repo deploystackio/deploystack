@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import AccountSidebarNav from '@/components/settings/AccountSidebarNav.vue'
+import AccountSidebarNav from '@/components/account/AccountSidebarNav.vue'
 import DashboardLayout from '@/components/DashboardLayout.vue'
 import { getEnv } from '@/utils/env'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'

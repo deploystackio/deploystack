@@ -1,5 +1,5 @@
 import { ref, computed, watch } from 'vue'
-import type { Setting } from '@/components/settings/GlobalSettingsSidebarNav.vue'
+import type { Setting } from '@/components/globalSettings/GlobalSettingsSidebarNav.vue'
 import { getEnv } from '@/utils/env'
 
 export interface FormValues {

@@ -150,12 +150,13 @@ const routes = [
     children: [
       {
         path: 'settings',
-        redirect: '/admin/settings/global'
+        name: 'AdminSettingsIndex',
+        component: () => import('../views/admin/settings/index.vue'),
       },
       {
-        path: 'settings/:groupId',
+        path: 'settings/:type',
         name: 'AdminSettings',
-        component: () => import('../views/admin/GlobalSettings.vue'),
+        component: () => import('../views/admin/settings/[type].vue'),
       },
       {
         path: 'users',

@@ -1,5 +1,5 @@
 import type { Component } from 'vue'
-import type { GlobalSettingGroup, Setting } from '@/components/settings/GlobalSettingsSidebarNav.vue'
+import type { GlobalSettingGroup, Setting } from '@/components/globalSettings/GlobalSettingsSidebarNav.vue'
 
 export interface SettingsComponentProps {
   group: GlobalSettingGroup
