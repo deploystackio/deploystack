@@ -23,6 +23,7 @@ export const DEFAULT_AUTH_CONFIG: AuthConfig = {
   redirectUri: 'http://localhost:8976/oauth/callback',
   scopes: [
     'mcp:read',
+    'mcp:categories:read',
     'account:read',
     'user:read',
     'teams:read',
@@ -52,6 +53,7 @@ export function buildAuthConfig(baseUrl: string): AuthConfig {
  */
 export const SCOPE_DESCRIPTIONS: Record<string, string> = {
   'mcp:read': 'Access your MCP server installations and configurations',
+  'mcp:categories:read': 'Read MCP server categories and organization',
   'account:read': 'Read your account information',
   'user:read': 'Read your user profile information',
   'teams:read': 'Read your team memberships and information',

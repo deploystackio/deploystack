@@ -346,7 +346,7 @@ export class TokenService {
         .where(eq(schema.oauthRefreshTokens.id, validRefreshToken.id));
 
       // Generate new tokens
-      const scope = 'mcp:read account:read user:read teams:read offline_access';
+      const scope = 'mcp:read mcp:categories:read account:read user:read teams:read offline_access';
       const accessToken = await this.generateAccessToken(
         validRefreshToken.user_id,
         scope,
