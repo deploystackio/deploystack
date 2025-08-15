@@ -1,8 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import Fastify, { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
-
-import type { FastifyCorsOptions } from '@fastify/cors';
 
 import chalk from 'chalk';
 import { ProcessManager, ProcessInfo } from '../process/manager';
@@ -150,7 +149,7 @@ export class ProxyServer {
     this.fastify.register(helmet as any);
 
     // CORS configuration
-    this.fastify.register(require('@fastify/cors'), {
+    this.fastify.register(cors as any, {
       origin: ['http://localhost:3000', 'https://claude.ai'],
       methods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
       allowedHeaders: [
