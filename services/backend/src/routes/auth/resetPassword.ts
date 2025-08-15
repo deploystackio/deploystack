@@ -131,7 +131,7 @@ export default async function resetPasswordRoute(server: FastifyInstance) {
         server.log.info('Password reset attempt with token');
 
         // Validate token and reset password
-        const result = await PasswordResetService.validateAndResetPassword(token, new_password);
+        const result = await PasswordResetService.validateAndResetPassword(token, new_password, server.log);
 
         if (!result.success) {
           if (result.error === 'Invalid or expired reset token') {

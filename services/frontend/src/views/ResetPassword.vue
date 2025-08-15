@@ -161,6 +161,7 @@ const navigateToLogin = () => {
 // Extract token from URL on component mount
 onMounted(() => {
   const urlToken = route.query.token as string
+  
   if (!urlToken) {
     errorMessage.value = t('resetPassword.errors.invalidToken')
     return

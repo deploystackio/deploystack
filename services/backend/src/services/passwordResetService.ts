@@ -75,35 +75,82 @@ export class PasswordResetService {
   /**
    * Validate reset token and reset password
    */
-  static async validateAndResetPassword(token: string, newPassword: string, logger?: FastifyBaseLogger): Promise<{ success: boolean; error?: string; userId?: string }> {
+  static async validateAndResetPassword(token: string, newPassword: string, logger: FastifyBaseLogger): Promise<{ success: boolean; error?: string; userId?: string }> {
     const db = getDb();
     const schema = getSchema();
     const passwordResetTokensTable = schema.passwordResetTokens;
     const authUserTable = schema.authUser;
 
     if (!passwordResetTokensTable || !authUserTable) {
-      return { success: false, error: 'Database tables not found' };
+      const error = 'Database tables not found';
+      logger.error({ error }, 'Database configuration error during password reset');
+      return { success: false, error };
     }
 
     try {
-      // Get all non-expired tokens
+      logger.debug({
+        tokenLength: token.length,
+        tokenStart: token.substring(0, 8) + '...',
+        operation: 'validate_reset_password'
+      }, 'Starting password reset token validation');
+
+      // Get all non-expired tokens with more detailed logging
+      const currentTime = new Date();
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const tokens = await (db as any)
         .select()
         .from(passwordResetTokensTable)
-        .where(gt(passwordResetTokensTable.expires_at, new Date()));
+        .where(gt(passwordResetTokensTable.expires_at, currentTime));
 
-      // Find matching token
+      logger.debug({
+        totalTokensFound: tokens.length,
+        currentTime: currentTime.toISOString(),
+        operation: 'validate_reset_password'
+      }, 'Retrieved non-expired tokens from database');
+
+      if (tokens.length === 0) {
+        logger.warn('No non-expired tokens found in database');
+        return { success: false, error: 'Invalid or expired reset token' };
+      }
+
+      // Find matching token with detailed logging
       let matchingToken = null;
+      let verificationAttempts = 0;
+      
       for (const dbToken of tokens) {
+        verificationAttempts++;
+        logger.debug({
+          attempt: verificationAttempts,
+          tokenId: dbToken.id,
+          expiresAt: dbToken.expires_at,
+          userId: dbToken.user_id
+        }, 'Attempting token verification');
+        
         const isValid = await this.verifyToken(token, dbToken.token_hash);
+        
+        logger.debug({
+          attempt: verificationAttempts,
+          tokenId: dbToken.id,
+          isValid
+        }, 'Token verification result');
+        
         if (isValid) {
           matchingToken = dbToken;
+          logger.debug({
+            tokenId: dbToken.id,
+            userId: dbToken.user_id,
+            attempts: verificationAttempts
+          }, 'Found matching token');
           break;
         }
       }
 
       if (!matchingToken) {
+        logger.warn({
+          totalAttempts: verificationAttempts,
+          providedTokenLength: token.length,
+          operation: 'validate_reset_password'
+        }, 'No matching token found after verification attempts');
         return { success: false, error: 'Invalid or expired reset token' };
       }
 
@@ -153,12 +200,10 @@ export class PasswordResetService {
 
       return { success: true, userId: matchingToken.user_id };
     } catch (error) {
-      if (logger) {
-        logger.error({
-          error,
-          operation: 'validate_reset_password'
-        }, 'Error validating reset token and resetting password');
-      }
+      logger.error({
+        error,
+        operation: 'validate_reset_password'
+      }, 'Error validating reset token and resetting password');
       return { success: false, error: 'An error occurred during password reset' };
     }
   }
