@@ -1,16 +1,28 @@
 //- Email footer component
-.footer
-  p
-    | © #{currentYear} #{appName || 'DeployStack'}. All rights reserved.
-  
-  p
-    | You received this email because you have an account with us.
-    br
-    if supportEmail
-      | If you have any questions, please contact us at 
-      a(href=`mailto:${supportEmail}`)= supportEmail
-    else
-      | If you have any questions, please contact our support team.
-  
-  p.text-muted.mb-0
-    | This email was sent from an automated system. Please do not reply to this email.
+table(align="center" width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation" style="margin:60px 0")
+  tbody
+    tr
+      td
+        table(align="center" width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation" style="max-width:37.5em")
+          tbody
+            tr(style="width:100%")
+              td
+                table(align="center" width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation" style="width:50%")
+                  tbody(style="width:100%")
+                    tr(style="width:100%")
+                      td(align="center" style="width:25%")
+                        a(href="https://x.com/DeployStack" style="color:#000;text-decoration:underline;text-decoration-color:#00E699;font-size:14px;font-weight:500;margin:0 10px" target="_blank") X
+                      td(align="center" style="width:25%")
+                        a(href="https://www.youtube.com/deploystack" style="color:#000;text-decoration:underline;text-decoration-color:#00E699;font-size:14px;font-weight:500;margin:0 10px" target="_blank") YouTube
+                      td(align="center" style="width:25%")
+                        a(href="https://github.com/deploystackio" style="color:#000;text-decoration:underline;text-decoration-color:#00E699;font-size:14px;font-weight:500;margin:0 10px" target="_blank") GitHub
+                      td(align="center" style="width:25%")
+                        a(href="https://discord.com/invite/42Ce3S7b3b" style="color:#000;text-decoration:underline;text-decoration-color:#00E699;font-size:14px;font-weight:500;margin:0 10px" target="_blank") Discord
+                
+                p(style="font-size:0.75rem;line-height:1.375rem;margin:16px 0;color:#898989;margin-top:0.75rem;margin-bottom:1.5rem;text-align:center")
+                  span DeployStack.io
+                  br
+                  br
+                  | You received this email because you have an account with us.
+                  br
+                  | This email was sent from an automated system. Please do not reply.
