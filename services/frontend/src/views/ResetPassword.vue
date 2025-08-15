@@ -4,20 +4,15 @@ import { toTypedSchema } from '@vee-validate/zod'
 import * as z from 'zod'
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { Lock, AlertTriangle, CheckCircle } from 'lucide-vue-next'
+import { Lock } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
+import { toast } from 'vue-sonner'
 import { UserService } from '@/services/userService'
 
 import {
   Card,
   CardContent,
 } from '@/components/ui/card'
-
-import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-} from '@/components/ui/alert'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -32,8 +27,6 @@ import { Input } from '@/components/ui/input'
 const router = useRouter()
 const route = useRoute()
 const isLoading = ref(false)
-const errorMessage = ref('')
-const showSuccess = ref(false)
 const token = ref('')
 const { t } = useI18n()
 
@@ -60,95 +53,32 @@ const form = useForm({
   },
 })
 
-// Clear error when user starts typing
-const clearError = () => {
-  errorMessage.value = ''
-}
 
-interface ResetPasswordError {
-  name?: string;
-  message?: string;
-  status?: number;
-}
-
-interface PotentialError {
-  name?: unknown;
-  message?: unknown;
-  status?: unknown;
-}
-
-// Handle different types of errors
-const handleError = (error: ResetPasswordError) => {
-  if (error.name === 'TypeError' && error.message && error.message.includes('fetch')) {
-    // Network error - backend is down
-    errorMessage.value = t('resetPassword.errors.networkError')
-  } else if (error.message === 'INVALID_TOKEN') {
-    // Invalid or expired token
-    errorMessage.value = t('resetPassword.errors.invalidToken')
-  } else if (error.message === 'FORBIDDEN') {
-    // User not eligible for password reset
-    errorMessage.value = t('resetPassword.errors.invalidToken')
-  } else if (error.message === 'SERVICE_UNAVAILABLE') {
-    // Service unavailable
-    errorMessage.value = t('resetPassword.errors.serviceUnavailable')
-  } else if (error.status && error.status >= 500) {
-    // Server error
-    errorMessage.value = t('resetPassword.errors.serverError')
-  } else if (error.name === 'AbortError') {
-    // Request timeout
-    errorMessage.value = t('resetPassword.errors.networkError')
-  } else {
-    // Unknown error
-    errorMessage.value = t('resetPassword.errors.unknownError')
-  }
-}
 
 const onSubmit = form.handleSubmit(async (values) => {
   if (!token.value) {
-    errorMessage.value = t('resetPassword.errors.invalidToken')
+    toast.error('Invalid reset token')
     return
   }
 
   isLoading.value = true
-  errorMessage.value = ''
 
   try {
     await UserService.resetPassword(token.value, values.password)
 
-    // Show success message
-    showSuccess.value = true
+    // Show success toast and redirect to login
+    toast.success('Password reset successfully! Redirecting to login...')
 
-    // Redirect to login after 3 seconds
-    setTimeout(() => {
-      router.push('/login')
-    }, 3000)
+    // Redirect to login page
+    router.push('/login')
 
-  } catch (e) {
-    console.error('Password reset error:', e);
-    const errorToHandle: ResetPasswordError = { message: t('resetPassword.errors.unknownError') };
-    const potentialError = e as PotentialError;
-
-    if (typeof potentialError.name === 'string') {
-      errorToHandle.name = potentialError.name;
-    }
-    if (typeof potentialError.message === 'string') {
-      errorToHandle.message = potentialError.message;
-    }
-    if (typeof potentialError.status === 'number') {
-      errorToHandle.status = potentialError.status;
-    }
-
-    // If it's a standard Error instance, prefer its properties
-    if (e instanceof Error) {
-      errorToHandle.name = e.name;
-      errorToHandle.message = e.message;
-    }
-
-    // Ensure message is always set if not already by previous checks
-    if (!errorToHandle.message) {
-        errorToHandle.message = t('resetPassword.errors.unknownError');
-    }
-    handleError(errorToHandle);
+  } catch (error) {
+    console.error('Password reset error:', error)
+    
+    // Show error toast
+    toast.error('Failed to reset password', {
+      description: 'Please try again or request a new reset link'
+    })
   } finally {
     isLoading.value = false
   }
@@ -163,7 +93,7 @@ onMounted(() => {
   const urlToken = route.query.token as string
   
   if (!urlToken) {
-    errorMessage.value = t('resetPassword.errors.invalidToken')
+    toast.error('Missing or invalid reset token')
     return
   }
   token.value = urlToken
@@ -187,28 +117,7 @@ onMounted(() => {
     </div>
 
     <div class="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
-      <!-- Success Alert -->
-      <Alert v-if="showSuccess" class="mb-6">
-        <CheckCircle class="h-4 w-4" />
-        <AlertTitle>{{ $t('resetPassword.success.title') }}</AlertTitle>
-        <AlertDescription>
-          <div class="space-y-2">
-            <p>{{ $t('resetPassword.success.message') }}</p>
-            <p class="text-sm">{{ $t('resetPassword.success.instruction') }}</p>
-          </div>
-        </AlertDescription>
-      </Alert>
-
-      <!-- Error Alert -->
-      <Alert v-if="errorMessage" variant="destructive" class="mb-6">
-        <AlertTriangle class="h-4 w-4" />
-        <AlertTitle>{{ $t('resetPassword.errors.title') }}</AlertTitle>
-        <AlertDescription>
-          {{ errorMessage }}
-        </AlertDescription>
-      </Alert>
-
-      <Card v-if="!showSuccess && token">
+      <Card v-if="token">
         <CardContent class="pt-6">
           <form @submit="onSubmit" class="space-y-6">
             <FormField v-slot="{ componentField }" name="password">
@@ -223,7 +132,6 @@ onMounted(() => {
                       v-bind="componentField"
                       class="pl-10"
                       autocomplete="new-password"
-                      @input="clearError"
                     />
                   </div>
                 </FormControl>
@@ -243,7 +151,6 @@ onMounted(() => {
                       v-bind="componentField"
                       class="pl-10"
                       autocomplete="new-password"
-                      @input="clearError"
                     />
                   </div>
                 </FormControl>

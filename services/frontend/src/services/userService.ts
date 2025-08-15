@@ -158,7 +158,22 @@ export class UserService {
         return await response.json();
       }
 
-      throw new Error(`Login failed with status: ${response.status}`);
+      // Parse error response to get the actual error message
+      let errorMessage = `Login failed with status: ${response.status}`;
+      try {
+        const errorData = await response.json();
+        if (errorData && errorData.error) {
+          errorMessage = errorData.error;
+        }
+      } catch (parseError) {
+        // If we can't parse the response, use the default message
+        console.warn('Could not parse error response:', parseError);
+      }
+
+      // Create an error object with status property for proper handling
+      const error = new Error(errorMessage) as Error & { status: number };
+      error.status = response.status;
+      throw error;
     } catch (error) {
       console.error('Login error:', error);
       throw error;

@@ -57,7 +57,7 @@ export default async function forgotPasswordRoute(fastify: FastifyInstance) {
         fastify.log.info(`Password reset requested for email: ${email}`);
 
         // Send reset email (always returns success for security)
-        const result = await PasswordResetService.sendResetEmail(email);
+        const result = await PasswordResetService.sendResetEmail(email, fastify.log);
 
         if (!result.success && result.error) {
           // Only log actual errors, not security responses

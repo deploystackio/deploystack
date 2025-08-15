@@ -84,8 +84,14 @@ const handleError = (error: LoginError) => {
     // Network error - backend is down
     errorMessage.value = t('login.errors.networkError')
   } else if (error.status && (error.status === 400 || error.status === 401)) {
-    // Bad Request or Unauthorized - invalid credentials
-    errorMessage.value = t('login.errors.invalidCredentials')
+    // Bad Request or Unauthorized - use backend error message if available, fallback to translation
+    if (error.message && error.message !== `Login failed with status: ${error.status}`) {
+      // Use the actual backend error message
+      errorMessage.value = error.message
+    } else {
+      // Fallback to translation
+      errorMessage.value = t('login.errors.invalidCredentials')
+    }
   } else if (error.status && error.status >= 500) {
     // Server error
     errorMessage.value = t('login.errors.serverError')
@@ -126,6 +132,10 @@ const onSubmit = form.handleSubmit(async (values) => {
     if (e instanceof Error) {
       errorToHandle.name = e.name;
       errorToHandle.message = e.message;
+      // Check if the error has a status property (from our updated UserService)
+      if ('status' in e && typeof (e as any).status === 'number') {
+        errorToHandle.status = (e as any).status;
+      }
     }
 
     // Ensure message is always set if not already by previous checks
