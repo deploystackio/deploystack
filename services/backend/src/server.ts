@@ -10,7 +10,7 @@ import fastifySwaggerUI from '@fastify/swagger-ui';
 import { registerRoutes } from './routes'
 import { PluginManager } from './plugin-system'
 import { authHook } from './hooks/authHook' // Import the auth hook
-import registerEmailRoute from './routes/auth/registeremail'
+import registerEmailRoute from './routes/auth/registerEmail'
 import loginEmailRoute from './routes/auth/loginemail'
 import githubAuthRoutes from './routes/auth/github'
 import logoutRoute from './routes/auth/logout'

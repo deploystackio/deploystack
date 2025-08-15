@@ -23,6 +23,8 @@ import mcpRoutes from './mcp'
 import oauth2Routes from './oauth2'
 // Import admin routes
 import adminRoutes from './admin'
+// Import gateway routes
+import gatewayRoutes from './gateway'
 
 // Response schema for the root health check endpoint
 const healthCheckResponseSchema = z.object({
@@ -63,6 +65,9 @@ export const registerRoutes = (server: FastifyInstance): void => {
     
     // Register admin routes
     await apiInstance.register(adminRoutes);
+    
+    // Register gateway routes
+    await apiInstance.register(gatewayRoutes);
   }, { prefix: '/api' });
 
 

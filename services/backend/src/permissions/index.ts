@@ -44,6 +44,7 @@ export const ROLE_DEFINITIONS = {
     'email.test',
     'preferences.view',
     'preferences.edit',
+    'gateway.config:read',
   ],
   global_user: [
     'profile.view',
@@ -57,6 +58,7 @@ export const ROLE_DEFINITIONS = {
     'mcp.categories.view',
     'preferences.view',
     'preferences.edit',
+    'gateway.config:read',
   ],
   team_admin: [
     'teams.view',

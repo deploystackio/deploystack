@@ -67,6 +67,7 @@ export class AuthorizationService {
       'account:read',
       'user:read',
       'teams:read',
+      'gateway:config:read',
       'offline_access'
     ];
     

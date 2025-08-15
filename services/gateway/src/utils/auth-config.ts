@@ -27,6 +27,7 @@ export const DEFAULT_AUTH_CONFIG: AuthConfig = {
     'account:read',
     'user:read',
     'teams:read',
+    'gateway:config:read',
     'offline_access'
   ],
   callbackTimeout: 120000 // 2 minutes
@@ -57,5 +58,6 @@ export const SCOPE_DESCRIPTIONS: Record<string, string> = {
   'account:read': 'Read your account information',
   'user:read': 'Read your user profile information',
   'teams:read': 'Read your team memberships and information',
+  'gateway:config:read': 'Generate client-specific gateway configuration files',
   'offline_access': 'Maintain access when not actively using the application'
 };

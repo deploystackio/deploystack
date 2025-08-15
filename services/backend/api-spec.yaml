@@ -2561,40 +2561,18 @@ paths:
                   preferences:
                     type: object
                     properties:
-                      show_survey_overall:
-                        type: boolean
-                        description: Show overall survey
-                      show_survey_company:
-                        type: boolean
-                        description: Show company survey
                       walkthrough_completed:
                         type: boolean
-                        description: Whether walkthrough was completed
                       walkthrough_cancelled:
                         type: boolean
-                        description: Whether walkthrough was cancelled
-                      theme:
-                        type: string
-                        enum:
-                          - light
-                          - dark
-                          - auto
-                        description: UI theme preference
-                      sidebar_collapsed:
-                        type: boolean
-                        description: Sidebar collapsed state
                       email_notifications_enabled:
                         type: boolean
-                        description: Email notifications enabled
                       browser_notifications_enabled:
                         type: boolean
-                        description: Browser notifications enabled
                       notification_acknowledgments:
                         type: string
-                        description: Comma-separated list of acknowledged notification IDs
                       beta_features_enabled:
                         type: boolean
-                        description: Beta features enabled
                     additionalProperties: false
                 required:
                   - success
@@ -2644,21 +2622,9 @@ paths:
             schema:
               type: object
               properties:
-                show_survey_overall:
-                  type: boolean
-                show_survey_company:
-                  type: boolean
                 walkthrough_completed:
                   type: boolean
                 walkthrough_cancelled:
-                  type: boolean
-                theme:
-                  type: string
-                  enum:
-                    - light
-                    - dark
-                    - auto
-                sidebar_collapsed:
                   type: boolean
                 email_notifications_enabled:
                   type: boolean
@@ -13467,6 +13433,86 @@ paths:
                   - success
                   - error
                 description: Internal Server Error - SMTP configuration or email sending failed
+  /api/config/{client}:
+    get:
+      summary: Get client-specific gateway configuration
+      tags:
+        - Gateway Configuration
+      description: Returns the appropriate configuration format for connecting the
+        specified MCP client to the local DeployStack Gateway.
+      parameters:
+        - schema:
+            type: string
+            enum:
+              - claude-desktop
+              - cline
+              - vscode
+              - cursor
+              - windsurf
+          in: path
+          name: client
+          required: true
+          description: The MCP client type
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Client-specific gateway configuration
+          content:
+            application/json:
+              schema:
+                type: object
+                description: Client-specific gateway configuration
+                additionalProperties: true
+        "400":
+          description: Bad Request - Invalid client type
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - success
+                  - error
+                description: Bad Request - Invalid client type
+        "401":
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - success
+                  - error
+                description: Unauthorized - Authentication required
+        "403":
+          description: Forbidden - Insufficient permissions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - success
+                  - error
+                description: Forbidden - Insufficient permissions
   /api/auth/email/register:
     post:
       summary: User registration via email
