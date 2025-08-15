@@ -13433,7 +13433,7 @@ paths:
                   - success
                   - error
                 description: Internal Server Error - SMTP configuration or email sending failed
-  /api/config/{client}:
+  /api/gateway/config/{client}:
     get:
       summary: Get client-specific gateway configuration
       tags:
@@ -13481,6 +13481,71 @@ paths:
                   - success
                   - error
                 description: Bad Request - Invalid client type
+        "401":
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - success
+                  - error
+                description: Unauthorized - Authentication required
+        "403":
+          description: Forbidden - Insufficient permissions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - success
+                  - error
+                description: Forbidden - Insufficient permissions
+  /api/gateway/config/clients:
+    get:
+      summary: List supported MCP client types
+      tags:
+        - Gateway Configuration
+      description: Returns a list of all supported MCP client types that can be
+        configured with the DeployStack Gateway.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      responses:
+        "200":
+          description: List of supported MCP client types
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  clients:
+                    type: array
+                    items:
+                      type: string
+                      enum:
+                        - claude-desktop
+                        - cline
+                        - vscode
+                        - cursor
+                        - windsurf
+                    description: List of supported MCP client types
+                required:
+                  - clients
+                additionalProperties: false
+                description: List of supported MCP client types
         "401":
           description: Unauthorized - Authentication required
           content:

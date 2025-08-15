@@ -28,6 +28,7 @@ export default {
     retry: 'Retry',
     clear: 'Clear',
     clearSearch: 'Clear Search',
+    close: 'Close',
     cancel: 'Cancel',
     save: 'Save',
     saving: 'Saving...'

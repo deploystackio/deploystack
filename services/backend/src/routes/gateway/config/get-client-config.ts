@@ -1,44 +1,12 @@
 import { type FastifyInstance } from 'fastify';
 import { requireAuthenticationAny, requireOAuthScope } from '../../../middleware/oauthMiddleware';
-
-// Reusable Schema Constants
-const CLIENT_PARAM_SCHEMA = {
-  type: 'object',
-  properties: {
-    client: {
-      type: 'string',
-      enum: ['claude-desktop', 'cline', 'vscode', 'cursor', 'windsurf'],
-      description: 'The MCP client type'
-    }
-  },
-  required: ['client'],
-  additionalProperties: false
-} as const;
-
-const SUCCESS_RESPONSE_SCHEMA = {
-  type: 'object',
-  description: 'Client-specific gateway configuration (format varies by client type)',
-  additionalProperties: true
-} as const;
-
-const ERROR_RESPONSE_SCHEMA = {
-  type: 'object',
-  properties: {
-    success: { type: 'boolean', default: false },
-    error: { type: 'string' }
-  },
-  required: ['success', 'error']
-} as const;
-
-// TypeScript interfaces
-interface ClientParams {
-  client: 'claude-desktop' | 'cline' | 'vscode' | 'cursor' | 'windsurf';
-}
-
-interface ErrorResponse {
-  success: boolean;
-  error: string;
-}
+import { 
+  CLIENT_PARAM_SCHEMA, 
+  SUCCESS_RESPONSE_SCHEMA, 
+  ERROR_RESPONSE_SCHEMA,
+  type ClientParams,
+  type ErrorResponse
+} from './schemas';
 
 // Client configuration generator
 function generateClientConfig(clientType: string): object {
@@ -92,7 +60,7 @@ function generateClientConfig(clientType: string): object {
 }
 
 export default async function getClientConfig(server: FastifyInstance) {
-  server.get('/config/:client', {
+  server.get('/gateway/config/:client', {
     preValidation: [
       requireAuthenticationAny(),
       requireOAuthScope('gateway:config:read')

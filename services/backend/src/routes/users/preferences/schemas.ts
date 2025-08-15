@@ -5,6 +5,7 @@ import { DEFAULT_USER_PREFERENCES, type PreferenceValue } from '../../../config/
 
 // Helper function to generate schema properties from config
 function generateSchemaProperties() {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const properties: Record<string, any> = {};
   
   for (const [key, defaultValue] of Object.entries(DEFAULT_USER_PREFERENCES)) {

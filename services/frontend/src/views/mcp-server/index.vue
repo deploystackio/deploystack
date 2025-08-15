@@ -8,6 +8,7 @@ import { Plus } from 'lucide-vue-next'
 import { toast } from 'vue-sonner'
 import { useEventBus } from '@/composables/useEventBus'
 import McpInstallationsCard from '@/components/mcp-server/McpInstallationsCard.vue'
+import ClientConfigurationModal from '@/components/gateway-config/ClientConfigurationModal.vue'
 import type { McpInstallation } from '@/types/mcp-installations'
 import { McpInstallationService } from '@/services/mcpInstallationService'
 import { TeamService, type Team } from '@/services/teamService'
@@ -23,6 +24,9 @@ const error = ref<string | null>(null)
 
 // Team context using event bus storage
 const selectedTeam = ref<Team | null>(null)
+
+// Gateway configuration modal state
+const isConfigModalOpen = ref(false)
 
 // Computed
 const hasInstallations = computed(() => installations.value.length > 0)
@@ -96,6 +100,10 @@ const fetchInstallations = async (): Promise<void> => {
 
 const handleInstallServer = () => {
   router.push('/mcp-server/add')
+}
+
+const handleOpenConfigModal = () => {
+  isConfigModalOpen.value = true
 }
 
 const handleViewInstallation = (serverId: string) => {
@@ -245,14 +253,22 @@ onUnmounted(() => {
         <div>
           <p class="text-muted-foreground">{{ t('mcpInstallations.description') }}</p>
         </div>
-        <Button
-          v-if="selectedTeam"
-          @click="handleInstallServer"
-          class="flex items-center gap-2"
-        >
-          <Plus class="h-4 w-4" />
-          {{ t('mcpInstallations.actions.install') }}
-        </Button>
+        <div v-if="selectedTeam" class="flex items-center gap-3">
+          <Button
+            @click="handleOpenConfigModal"
+            variant="outline"
+            class="flex items-center gap-2 bg-black text-white border-black hover:bg-black/90 hover:border-black hover:text-white"
+          >
+            {{ t('gatewayConfig.button.getConfiguration') }}
+          </Button>
+          <Button
+            @click="handleInstallServer"
+            class="flex items-center gap-2"
+          >
+            <Plus class="h-4 w-4" />
+            {{ t('mcpInstallations.actions.install') }}
+          </Button>
+        </div>
       </div>
 
 
@@ -285,5 +301,10 @@ onUnmounted(() => {
       </div>
 
     </div>
+
+    <!-- Gateway Configuration Modal -->
+    <ClientConfigurationModal
+      v-model:open="isConfigModalOpen"
+    />
   </DashboardLayout>
 </template>
