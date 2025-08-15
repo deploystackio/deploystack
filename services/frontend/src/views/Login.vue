@@ -133,8 +133,8 @@ const onSubmit = form.handleSubmit(async (values) => {
       errorToHandle.name = e.name;
       errorToHandle.message = e.message;
       // Check if the error has a status property (from our updated UserService)
-      if ('status' in e && typeof (e as any).status === 'number') {
-        errorToHandle.status = (e as any).status;
+      if ('status' in e && typeof (e as Error & { status?: number }).status === 'number') {
+        errorToHandle.status = (e as Error & { status: number }).status;
       }
     }
 
