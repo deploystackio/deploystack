@@ -391,7 +391,7 @@ export default async function githubAuthRoutes(fastify: FastifyInstance) {
         const frontendUrl = await GlobalSettingsInitService.getPageUrl();
         return reply.redirect(frontendUrl);
 
-      } catch (error) {
+      } catch (error: unknown) {
         fastify.log.error(error, 'Error during GitHub OAuth callback:');
         if (error instanceof Error && error.message.includes('OAuth')) {
           // Specific OAuth errors (e.g., invalid code)

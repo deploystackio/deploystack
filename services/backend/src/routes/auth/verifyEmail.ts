@@ -161,7 +161,7 @@ export default async function verifyEmailRoute(server: FastifyInstance) {
               }
             }
           }
-        } catch (error) {
+        } catch (error: unknown) {
           // Don't fail verification if welcome email fails
           request.log.warn({
             error,

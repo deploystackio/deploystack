@@ -2,11 +2,13 @@
   "compilerOptions": {
     "target": "ES2022",
     "module": "commonjs",
+    "moduleResolution": "node",
     "outDir": "dist",
     "rootDir": "src",
     "strict": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
     "baseUrl": ".",
     "paths": {
