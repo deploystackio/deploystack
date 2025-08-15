@@ -112,6 +112,7 @@ Our roadmap is designed to build the essential infrastructure for using MCP secu
 
 - **[To Do]** Build out Audit Logging features in the cloud UI.
 - **[To Do]** Develop Analytics dashboards for tool usage and performance.
+- **[To Do]** Add `deploystack logs` command for real-time gateway activity monitoring.
 - **[To Do]** Implement advanced policy controls (e.g., rate limiting, request validation).
 - **[To Do]** Add support for proxying to remote, HTTP-based MCP servers.
 

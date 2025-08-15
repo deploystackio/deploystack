@@ -29,7 +29,7 @@ export default async function addTeamMemberRoute(server: FastifyInstance) {
     schema: {
       tags: ['Team Members'],
       summary: 'Add team member',
-      description: 'Adds a new member to a team by email address. Only team admins and owners can add members. Cannot add members to default teams. Teams are limited to 3 members maximum. Requires Content-Type: application/json header when sending request body.',
+      description: 'Adds a new member to a team by email address. Only team admins and owners can add members. Cannot add members to default teams. Team member limit is configurable via global settings (default: 3 members maximum). Requires Content-Type: application/json header when sending request body.',
       security: [{ cookieAuth: [] }],
       params: {
         type: 'object',

@@ -2,6 +2,7 @@
 import { eq, and, count } from 'drizzle-orm';
 import { getDb, getSchema } from '../db/index';
 import { generateId } from 'lucia';
+import { GlobalSettings } from '../global-settings/helpers';
 
 export interface Team {
   id: string;
@@ -423,9 +424,12 @@ export class TeamService {
       return false;
     }
 
-    // Check if team has less than 3 members
+    // Get team member limit from global settings
+    const memberLimit = await GlobalSettings.getNumber('global.team_member_limit', 3);
+    
+    // Check if team has less than the configured limit
     const memberCount = await this.getTeamMemberCount(teamId);
-    return memberCount < 3;
+    return memberCount < memberLimit;
   }
 
   /**
@@ -527,7 +531,9 @@ export class TeamService {
       if (await this.isTeamDefault(teamId)) {
         throw new Error('Cannot add members to default teams');
       } else {
-        throw new Error('Team has reached maximum capacity (3 members)');
+        // Get the actual limit for the error message
+        const memberLimit = await GlobalSettings.getNumber('global.team_member_limit', 3);
+        throw new Error(`Team has reached maximum capacity (${memberLimit} members)`);
       }
     }
 

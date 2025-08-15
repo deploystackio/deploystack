@@ -48,6 +48,14 @@ export const globalSettings: GlobalSettingsModule = {
       description: 'Show backend version in the root API response. When disabled, version information is hidden from visitors.',
       encrypted: false,
       required: false
+    },
+    {
+      key: 'global.team_member_limit',
+      defaultValue: 3,
+      type: 'number',
+      description: 'Maximum number of members allowed in non-default teams. Default teams are always limited to 1 member (the owner).',
+      encrypted: false,
+      required: false
     }
   ]
 };
