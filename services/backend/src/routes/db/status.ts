@@ -40,7 +40,7 @@ async function getDbStatusHandler(
     
     // Send as raw JSON string to bypass any serialization issues
     const jsonString = JSON.stringify(cleanResponse);
-    server.log.info('Sending status response:', jsonString);
+    server.log.info({ response: jsonString }, 'Sending status response:');
     return reply.type('application/json').send(jsonString);
   } catch (error) {
     server.log.error(error, 'Error fetching database status'); // Use server.log

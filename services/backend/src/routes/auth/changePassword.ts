@@ -219,7 +219,7 @@ export default async function changePasswordRoute(fastify: FastifyInstance) {
           }
         } catch (emailError) {
           // Don't fail the password change if email fails
-          fastify.log.warn('Failed to send password change notification email:', emailError);
+          fastify.log.warn({ error: emailError }, 'Failed to send password change notification email:');
         }
 
         // Optional: Invalidate all other sessions for security

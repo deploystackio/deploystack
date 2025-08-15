@@ -49,7 +49,7 @@ export default async function getPreferences(server: FastifyInstance) {
       const jsonString = JSON.stringify(successResponse);
       return reply.status(200).type('application/json').send(jsonString);
     } catch (error) {
-      request.log.error('Error getting user preferences:', error);
+      request.log.error({ error }, 'Error getting user preferences:');
       
       const errorResponse: ErrorResponse = {
         success: false,

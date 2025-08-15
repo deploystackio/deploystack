@@ -69,7 +69,7 @@ export default async function acknowledgeNotification(server: FastifyInstance) {
       const jsonString = JSON.stringify(successResponse);
       return reply.status(200).type('application/json').send(jsonString);
     } catch (error) {
-      request.log.error('Error acknowledging notification:', error);
+      request.log.error({ error }, 'Error acknowledging notification:');
       
       const errorResponse: ErrorResponse = {
         success: false,

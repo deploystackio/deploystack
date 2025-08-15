@@ -100,7 +100,7 @@ export default async function bulkGlobalSettingsRoute(fastify: FastifyInstance) 
           );
           results.push(setting);
         } catch (error) {
-          fastify.log.error(`Error processing setting ${settingData.key}:`, error);
+          fastify.log.error({ error }, `Error processing setting ${settingData.key}:`);
           errors.push({
             key: settingData.key,
             error: error instanceof Error ? error.message : 'Unknown error',

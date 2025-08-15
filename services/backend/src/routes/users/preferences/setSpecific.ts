@@ -83,7 +83,7 @@ export default async function setSpecificPreference(server: FastifyInstance) {
       const jsonString = JSON.stringify(successResponse);
       return reply.status(200).type('application/json').send(jsonString);
     } catch (error) {
-      request.log.error('Error setting specific preference:', error);
+      request.log.error({ error }, 'Error setting specific preference:');
       
       const errorResponse: ErrorResponse = {
         success: false,

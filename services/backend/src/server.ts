@@ -106,11 +106,11 @@ export async function initializeDatabaseDependentServices(
         await roleSyncService.syncRoles();
         server.log.debug('✅ Role synchronization completed');
       } catch (roleSyncError) {
-        server.log.error('❌ Role synchronization failed:', {
+        server.log.error({
           error: roleSyncError,
           message: roleSyncError instanceof Error ? roleSyncError.message : 'Unknown error',
           stack: roleSyncError instanceof Error ? roleSyncError.stack : 'No stack trace'
-        });
+        }, '❌ Role synchronization failed:');
         // Don't throw - continue with startup but log the error
         server.log.warn('⚠️ Continuing without role synchronization due to error');
       }
@@ -122,11 +122,11 @@ export async function initializeDatabaseDependentServices(
         OAuthCleanupService.start(server.log);
         server.log.debug('✅ OAuth2 cleanup service started');
       } catch (oauthCleanupError) {
-        server.log.error('❌ OAuth2 cleanup service failed to start:', {
+        server.log.error({
           error: oauthCleanupError,
           message: oauthCleanupError instanceof Error ? oauthCleanupError.message : 'Unknown error',
           stack: oauthCleanupError instanceof Error ? oauthCleanupError.stack : 'No stack trace'
-        });
+        }, '❌ OAuth2 cleanup service failed to start:');
         // Don't throw - continue with startup but log the error
         server.log.warn('⚠️ Continuing without OAuth2 cleanup service due to error');
       }
@@ -137,12 +137,12 @@ export async function initializeDatabaseDependentServices(
         
         // Check database status before proceeding
         const dbStatus = getDbStatus();
-        server.log.debug('🔍 Database status before global settings init:', {
+        server.log.debug({
           configured: dbStatus.configured,
           initialized: dbStatus.initialized,
           dialect: dbStatus.dialect,
           type: dbStatus.type
-        });
+        }, '🔍 Database status before global settings init:');
 
         // Step 1: Load settings definitions
         server.log.debug('📥 Step 1: Loading global settings definitions...');
@@ -153,11 +153,11 @@ export async function initializeDatabaseDependentServices(
           const loadTime = Date.now() - startLoadTime;
           server.log.debug(`✅ Step 1 completed successfully in ${loadTime}ms`);
         } catch (loadError) {
-          server.log.error('❌ Step 1 FAILED - Error loading settings definitions:', {
+          server.log.error({
             error: loadError,
             message: loadError instanceof Error ? loadError.message : 'Unknown error',
             stack: loadError instanceof Error ? loadError.stack : 'No stack trace'
-          });
+          }, '❌ Step 1 FAILED - Error loading settings definitions:');
           throw loadError;
         }
         
@@ -170,11 +170,11 @@ export async function initializeDatabaseDependentServices(
           const initTime = Date.now() - startInitTime;
         server.log.debug(`✅ Step 2 completed successfully in ${initTime}ms - ${result.created} created, ${result.skipped} skipped`);
         } catch (initError) {
-          server.log.error('❌ Step 2 FAILED - Error initializing settings:', {
+          server.log.error({
             error: initError,
             message: initError instanceof Error ? initError.message : 'Unknown error',
             stack: initError instanceof Error ? initError.stack : 'No stack trace'
-          });
+          }, '❌ Step 2 FAILED - Error initializing settings:');
           throw initError;
         }
 
@@ -187,23 +187,23 @@ export async function initializeDatabaseDependentServices(
           const pluginTime = Date.now() - startPluginTime;
           server.log.debug(`✅ Step 3 completed successfully in ${pluginTime}ms`);
         } catch (pluginError) {
-          server.log.error('❌ Step 3 FAILED - Error initializing plugin settings:', {
+          server.log.error({
             error: pluginError,
             message: pluginError instanceof Error ? pluginError.message : 'Unknown error',
             stack: pluginError instanceof Error ? pluginError.stack : 'No stack trace'
-          });
+          }, '❌ Step 3 FAILED - Error initializing plugin settings:');
           throw pluginError;
         }
 
         server.log.info('🎉 All global settings initialization steps completed successfully!');
 
       } catch (error) {
-        server.log.error('❌ CRITICAL FAILURE in global settings initialization:', {
+        server.log.error({
           errorType: error instanceof Error ? error.constructor.name : typeof error,
-          message: error instanceof Error ? error.message : 'Unknown error',
+          message: error instanceof Error ? error.message : String(error),
           stack: error instanceof Error ? error.stack : 'No stack trace',
           name: error instanceof Error ? error.name : 'Unknown error type'
-        });
+        }, '❌ CRITICAL FAILURE in global settings initialization:');
         
         // Don't re-throw - let the service continue but mark as failed
         server.log.warn('⚠️ Continuing without global settings initialization due to error');
@@ -229,14 +229,14 @@ export async function initializeDatabaseDependentServices(
       return false;
     }
   } catch (error) {
-    server.log.error('❌ CRITICAL ERROR in initializeDatabaseDependentServices:', {
+    server.log.error({
       errorType: error instanceof Error ? error.constructor.name : typeof error,
-      message: error instanceof Error ? error.message : 'Unknown error',
+      message: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : 'No stack trace',
       name: error instanceof Error ? error.name : 'Unknown error type'
-    });
-    server.log.error('❌ Full error object:', error);
-    server.log.error('❌ Error stringified:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
+    }, '❌ CRITICAL ERROR in initializeDatabaseDependentServices:');
+    server.log.error({ error }, '❌ Full error object:');
+    server.log.error({ errorStringified: JSON.stringify(error, Object.getOwnPropertyNames(error), 2) }, '❌ Error stringified:');
     return false;
   }
 }
@@ -257,7 +257,7 @@ export async function reinitializePluginsWithDatabase(
     
     server.log.info('Plugin re-initialization completed.');
   } catch (error) {
-    server.log.error('Error during plugin re-initialization:', error);
+    server.log.error({ error }, 'Error during plugin re-initialization:');
     throw error;
   }
 }
@@ -373,7 +373,7 @@ export const createServer = async () => {
         swaggerEnabled = true;
       }
     } catch (error) {
-      server.log.error('Error fetching "global.enable_swagger_docs" setting. Defaulting to true.', error);
+      server.log.error({ error }, 'Error fetching "global.enable_swagger_docs" setting. Defaulting to true.');
       swaggerEnabled = true;
     }
   }
@@ -447,7 +447,7 @@ export const createServer = async () => {
             }
             request.server.log.info(`Swagger UI access check (using Service): "global.enable_swagger_docs" is ${showSwagger}. Raw value: ${setting ? setting.value : 'Not found'}`);
           } catch (err) {
-            request.server.log.error('Error fetching "global.enable_swagger_docs" with Service in preHandler. Defaulting to show Swagger.', err);
+            request.server.log.error({ error: err }, 'Error fetching "global.enable_swagger_docs" with Service in preHandler. Defaulting to show Swagger.');
             showSwagger = true;
           }
         } else {

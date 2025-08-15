@@ -118,7 +118,7 @@ export class PluginManager {
         this.logger?.debug(`Trying to import as module: ${pluginPath}`);
         pluginPackage = await import(pluginPath);
       } catch (err) {
-        this.logger?.debug(`Module import failed, trying require: ${pluginPath}`, err);
+        this.logger?.debug({ error: err }, `Module import failed, trying require: ${pluginPath}`);
         // Using dynamic import with a constructed path to avoid require()
         // This is a workaround for the ESLint rule @typescript-eslint/no-require-imports
         pluginPackage = await import(`${pluginPath}`);
@@ -153,7 +153,7 @@ export class PluginManager {
       if (error instanceof PluginDuplicateError) {
         throw error;
       }
-      this.logger?.error(`Error loading plugin from ${pluginPath}:`, error);
+      this.logger?.error({ error }, `Error loading plugin from ${pluginPath}:`);
       throw new PluginLoadError(path.basename(pluginPath), error);
     }
   }
@@ -210,7 +210,7 @@ export class PluginManager {
                   this.logger?.debug(`Found main file: ${mainPath}`);
                   await this.loadPlugin(mainPath);
                 } catch (accessErr) {
-                  this.logger?.debug(`Main file not found: ${mainPath}, error:`, accessErr);
+                  this.logger?.debug({ error: accessErr }, `Main file not found: ${mainPath}, error:`);
                   
                   // If preferred file not found, try alternative
                   const altExtension = pluginExtension === 'ts' ? 'js' : 'ts';
@@ -236,7 +236,7 @@ export class PluginManager {
           await this.loadPlugin(pluginPath);
         }
       } catch (error) {
-        this.logger?.error(`Error discovering plugins at ${pluginPath}:`, error);
+        this.logger?.error({ error }, `Error discovering plugins at ${pluginPath}:`);
       }
     }
     
@@ -331,7 +331,7 @@ export class PluginManager {
           this.logger?.warn(`Global setting group ID '${group.id}' already exists (Existing Name: "${existingGroup.name}"). Plugin's attempt to define a group with this ID (Plugin's proposed Name: "${group.name}") will use the existing group. Plugin-specific metadata for this group ID (name, description, icon, sort_order) is ignored.`);
         }
       } catch (error) {
-        this.logger?.error(`Error processing plugin-defined group '${group.id}' (Plugin's proposed Name: "${group.name}"):`, error);
+        this.logger?.error({ error }, `Error processing plugin-defined group '${group.id}' (Plugin's proposed Name: "${group.name}"):`);
       }
     }
 
@@ -342,7 +342,7 @@ export class PluginManager {
       const coreSettings = await GlobalSettingsService.getAll();
       coreSettings.forEach(cs => initializedKeys.add(cs.key));
     } catch (error) {
-      this.logger?.error('Failed to get all core settings for precedence check:', error);
+      this.logger?.error({ error }, 'Failed to get all core settings for precedence check:');
       // If this fails, we might risk overwriting, but proceed with caution.
     }
 
@@ -362,7 +362,7 @@ export class PluginManager {
         initializedKeys.add(definition.key); // Add to set after successful initialization
         this.logger?.info(`Initialized global setting '${definition.key}' from plugin '${pluginId}'.`);
       } catch (error) {
-        this.logger?.error(`Failed to initialize global setting '${definition.key}' from plugin '${pluginId}':`, error);
+        this.logger?.error({ error }, `Failed to initialize global setting '${definition.key}' from plugin '${pluginId}':`);
       }
     }
     this.logger?.info('Plugin global settings initialization complete.');
@@ -402,7 +402,7 @@ export class PluginManager {
       } catch (error) {
         // Log individual plugin initialization errors but continue with others.
         const typedError = error as Error;
-        this.logger?.error(`Failed to initialize plugin ${plugin.meta.id}: ${typedError.message}`, typedError.stack);
+        this.logger?.error({ error: typedError, stack: typedError.stack }, `Failed to initialize plugin ${plugin.meta.id}: ${typedError.message}`);
         // Optionally, re-throw: throw new PluginInitializeError(plugin.meta.id, error);
       }
     }
@@ -440,7 +440,7 @@ export class PluginManager {
         }
       } catch (error) {
         const typedError = error as Error;
-        this.logger?.error(`Failed to re-initialize plugin ${plugin.meta.id}: ${typedError.message}`, typedError.stack);
+        this.logger?.error({ error: typedError, stack: typedError.stack }, `Failed to re-initialize plugin ${plugin.meta.id}: ${typedError.message}`);
         // Continue with other plugins even if one fails
       }
     }
@@ -459,7 +459,7 @@ export class PluginManager {
           const pluginLogger = this.logger?.child({ pluginId: plugin.meta.id }) || this.app!.log.child({ pluginId: plugin.meta.id });
           await plugin.shutdown(pluginLogger);
         } catch (error) {
-          this.logger?.error(`Error shutting down plugin ${plugin.meta.id}:`, error);
+          this.logger?.error({ error }, `Error shutting down plugin ${plugin.meta.id}:`);
         }
       }
     }

@@ -49,7 +49,7 @@ export default async function completeWalkthrough(server: FastifyInstance) {
       const jsonString = JSON.stringify(successResponse);
       return reply.status(200).type('application/json').send(jsonString);
     } catch (error) {
-      request.log.error('Error completing walkthrough:', error);
+      request.log.error({ error }, 'Error completing walkthrough:');
       
       const errorResponse: ErrorResponse = {
         success: false,

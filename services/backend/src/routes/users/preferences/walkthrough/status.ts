@@ -62,7 +62,7 @@ export default async function getWalkthroughStatus(server: FastifyInstance) {
       const jsonString = JSON.stringify(successResponse);
       return reply.status(200).type('application/json').send(jsonString);
     } catch (error) {
-      request.log.error('Error getting walkthrough status:', error);
+      request.log.error({ error }, 'Error getting walkthrough status:');
       
       const errorResponse: ErrorResponse = {
         success: false,

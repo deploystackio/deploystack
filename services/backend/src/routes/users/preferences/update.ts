@@ -70,7 +70,7 @@ export default async function updatePreferences(server: FastifyInstance) {
       const jsonString = JSON.stringify(successResponse);
       return reply.status(200).type('application/json').send(jsonString);
     } catch (error) {
-      request.log.error('Error updating user preferences:', error);
+      request.log.error({ error }, 'Error updating user preferences:');
       
       const errorResponse: ErrorResponse = {
         success: false,

@@ -303,7 +303,7 @@ export default async function loginEmailRoute(server: FastifyInstance) {
         
         // Send as raw JSON string to bypass any serialization issues
         const jsonString = JSON.stringify(cleanResponse);
-        server.log.info('Sending login response:', jsonString);
+        server.log.info({ response: jsonString }, 'Sending login response:');
         return reply.status(200).type('application/json').send(jsonString);
 
       } catch (error) {

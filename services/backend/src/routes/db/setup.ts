@@ -142,7 +142,7 @@ async function setupDbHandler(
       dbConfig = getDatabaseConfig(server.log);
     } catch (error) {
       const typedError = error as Error;
-      server.log.error('Database configuration error:', typedError.message);
+      server.log.error({ error: typedError.message }, 'Database configuration error:');
       return reply.status(400).send({ 
         error: 'Database configuration incomplete. Please check environment variables.',
         details: typedError.message
@@ -191,7 +191,7 @@ async function setupDbHandler(
           
           // Send as raw JSON string to bypass any serialization issues
           const jsonString = JSON.stringify(cleanResponse);
-          server.log.info('Sending clean response:', jsonString);
+          server.log.info({ response: jsonString }, 'Sending clean response:');
           return reply.status(200).type('application/json').send(jsonString);
         } else {
           server.log.warn('Database initialization succeeded but re-initialization failed. Manual restart may be required.');
@@ -200,11 +200,11 @@ async function setupDbHandler(
             restart_required: true,
             database_type: String(dbType)
           };
-          server.log.info('Sending response object:', JSON.stringify(responseObj));
+          server.log.info({ response: JSON.stringify(responseObj) }, 'Sending response object:');
           return reply.status(200).send(responseObj);
         }
       } catch (reinitError) {
-        server.log.error('Error during re-initialization after database setup:', reinitError);
+        server.log.error({ error: reinitError }, 'Error during re-initialization after database setup:');
         return reply.status(200).send({ 
           message: 'Database setup successful, but re-initialization failed. Please restart the server to complete setup.',
           restart_required: true,

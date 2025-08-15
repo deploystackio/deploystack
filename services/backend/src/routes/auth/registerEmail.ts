@@ -380,7 +380,7 @@ export default async function registerEmailRoute(server: FastifyInstance) {
         };
         
         const jsonString = JSON.stringify(successResponse);
-        server.log.info('Sending registration response:', jsonString);
+        server.log.info({ response: jsonString }, 'Sending registration response:');
         return reply.status(201).type('application/json').send(jsonString);
 
       } catch (error) {
