@@ -18820,11 +18820,13 @@
                 "properties": {
                   "login": {
                     "type": "string",
-                    "minLength": 1
+                    "minLength": 1,
+                    "description": "User's registered email address or username"
                   },
                   "password": {
                     "type": "string",
-                    "minLength": 1
+                    "minLength": 1,
+                    "description": "User's password"
                   }
                 },
                 "required": [
@@ -18837,193 +18839,145 @@
           },
           "required": true
         },
-        "security": [
-          {
-            "cookieAuth": []
-          }
-        ],
         "responses": {
           "200": {
-            "description": "Default Response",
+            "description": "Login successful. Session cookie is set.",
             "content": {
               "application/json": {
                 "schema": {
-                  "schema": {
-                    "description": "Login successful. Session cookie is set.",
-                    "type": "object",
-                    "properties": {
-                      "success": {
-                        "description": "Indicates if the login operation was successful.",
-                        "type": "boolean"
-                      },
-                      "message": {
-                        "description": "Human-readable message about the login result.",
-                        "type": "string"
-                      },
-                      "user": {
-                        "description": "Basic information about the logged-in user.",
-                        "type": "object",
-                        "properties": {
-                          "id": {
-                            "description": "User ID",
-                            "type": "string"
-                          },
-                          "email": {
-                            "description": "User's primary email address.",
-                            "type": "string",
-                            "format": "email",
-                            "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
-                          },
-                          "username": {
-                            "description": "User's username.",
-                            "anyOf": [
-                              {
-                                "type": "string"
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ]
-                          },
-                          "first_name": {
-                            "description": "User's first name.",
-                            "anyOf": [
-                              {
-                                "type": "string"
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ]
-                          },
-                          "last_name": {
-                            "description": "User's last name.",
-                            "anyOf": [
-                              {
-                                "type": "string"
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ]
-                          },
-                          "role_id": {
-                            "description": "User's role ID.",
-                            "anyOf": [
-                              {
-                                "type": "string"
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ]
-                          }
-                        },
-                        "required": [
-                          "id",
-                          "email"
-                        ],
-                        "additionalProperties": false
-                      }
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the login operation was successful"
                     },
-                    "required": [
-                      "success",
-                      "message",
-                      "user"
-                    ],
-                    "additionalProperties": false
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable message about the login result"
+                    },
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "User ID"
+                        },
+                        "email": {
+                          "type": "string",
+                          "format": "email",
+                          "description": "User's primary email address"
+                        },
+                        "username": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "User's username"
+                        },
+                        "first_name": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "User's first name"
+                        },
+                        "last_name": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "User's last name"
+                        },
+                        "role_id": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "User's role ID"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "email"
+                      ]
+                    }
                   },
-                  "components": {}
+                  "required": [
+                    "success",
+                    "message",
+                    "user"
+                  ],
+                  "description": "Login successful. Session cookie is set."
                 }
               }
             }
           },
           "400": {
-            "description": "Default Response",
+            "description": "Bad Request - Invalid input, invalid credentials, or missing Content-Type header",
             "content": {
               "application/json": {
                 "schema": {
-                  "schema": {
-                    "description": "Bad Request - Invalid input, invalid credentials, or missing Content-Type header.",
-                    "type": "object",
-                    "properties": {
-                      "success": {
-                        "default": false,
-                        "description": "Indicates if the operation was successful (typically false for errors).",
-                        "type": "boolean"
-                      },
-                      "error": {
-                        "description": "Error message.",
-                        "type": "string"
-                      }
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates the operation failed"
                     },
-                    "required": [
-                      "success",
-                      "error"
-                    ],
-                    "additionalProperties": false
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    }
                   },
-                  "components": {}
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Bad Request - Invalid input, invalid credentials, or missing Content-Type header"
                 }
               }
             }
           },
           "403": {
-            "description": "Default Response",
+            "description": "Forbidden - Login is disabled by administrator",
             "content": {
               "application/json": {
                 "schema": {
-                  "schema": {
-                    "description": "Forbidden - Login is disabled by administrator.",
-                    "type": "object",
-                    "properties": {
-                      "success": {
-                        "default": false,
-                        "description": "Indicates if the operation was successful (typically false for errors).",
-                        "type": "boolean"
-                      },
-                      "error": {
-                        "description": "Error message.",
-                        "type": "string"
-                      }
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates the operation failed"
                     },
-                    "required": [
-                      "success",
-                      "error"
-                    ],
-                    "additionalProperties": false
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    }
                   },
-                  "components": {}
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Forbidden - Login is disabled by administrator"
                 }
               }
             }
           },
           "500": {
-            "description": "Default Response",
+            "description": "Internal Server Error - An unexpected error occurred on the server",
             "content": {
               "application/json": {
                 "schema": {
-                  "schema": {
-                    "description": "Internal Server Error - An unexpected error occurred on the server.",
-                    "type": "object",
-                    "properties": {
-                      "success": {
-                        "default": false,
-                        "description": "Indicates if the operation was successful (typically false for errors).",
-                        "type": "boolean"
-                      },
-                      "error": {
-                        "description": "Error message.",
-                        "type": "string"
-                      }
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates the operation failed"
                     },
-                    "required": [
-                      "success",
-                      "error"
-                    ],
-                    "additionalProperties": false
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    }
                   },
-                  "components": {}
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Internal Server Error - An unexpected error occurred on the server"
                 }
               }
             }

@@ -1,93 +1,169 @@
 import type { FastifyInstance, FastifyReply } from 'fastify';
-import { getLucia } from '../../lib/lucia'; // Corrected import
-// argon2 is not directly used here as lucia.useKey handles password verification
+import { getLucia } from '../../lib/lucia';
 import { verify } from '@node-rs/argon2';
 import { getDb, getSchema } from '../../db';
 import { eq, or } from 'drizzle-orm';
 import { GlobalSettingsInitService } from '../../global-settings';
-import { z } from 'zod';
-import { createSchema } from 'zod-openapi';
 
-// Zod Schemas
-const loginEmailBodySchema = z.object({
-  login: z.string().describe("User's registered email address or username."),
-  password: z.string().describe("User's password.")
-});
+// Reusable Schema Constants
+const LOGIN_REQUEST_SCHEMA = {
+  type: 'object',
+  properties: {
+    login: { 
+      type: 'string', 
+      minLength: 1,
+      description: "User's registered email address or username"
+    },
+    password: { 
+      type: 'string', 
+      minLength: 1,
+      description: "User's password"
+    }
+  },
+  required: ['login', 'password'],
+  additionalProperties: false
+} as const;
 
-const userResponseSchema = z.object({
-  id: z.string().describe('User ID'),
-  email: z.string().email().describe("User's primary email address."),
-  username: z.string().optional().nullable().describe("User's username."),
-  first_name: z.string().optional().nullable().describe("User's first name."),
-  last_name: z.string().optional().nullable().describe("User's last name."),
-  role_id: z.string().optional().nullable().describe("User's role ID.")
-});
+const USER_RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    id: { 
+      type: 'string',
+      description: 'User ID'
+    },
+    email: { 
+      type: 'string',
+      format: 'email',
+      description: "User's primary email address"
+    },
+    username: { 
+      type: 'string',
+      nullable: true,
+      description: "User's username"
+    },
+    first_name: { 
+      type: 'string',
+      nullable: true,
+      description: "User's first name"
+    },
+    last_name: { 
+      type: 'string',
+      nullable: true,
+      description: "User's last name"
+    },
+    role_id: { 
+      type: 'string',
+      nullable: true,
+      description: "User's role ID"
+    }
+  },
+  required: ['id', 'email']
+} as const;
 
-const successResponseSchema = z.object({
-  success: z.boolean().describe('Indicates if the login operation was successful.'),
-  message: z.string().describe('Human-readable message about the login result.'),
-  user: userResponseSchema.describe('Basic information about the logged-in user.')
-});
+const SUCCESS_RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    success: { 
+      type: 'boolean',
+      description: 'Indicates if the login operation was successful'
+    },
+    message: { 
+      type: 'string',
+      description: 'Human-readable message about the login result'
+    },
+    user: USER_RESPONSE_SCHEMA
+  },
+  required: ['success', 'message', 'user']
+} as const;
 
-const errorResponseSchema = z.object({
-  success: z.boolean().describe('Indicates if the operation was successful (typically false for errors).').default(false),
-  error: z.string().describe('Error message.')
-});
+const ERROR_RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    success: { 
+      type: 'boolean',
+      default: false,
+      description: 'Indicates the operation failed'
+    },
+    error: { 
+      type: 'string',
+      description: 'Error message describing what went wrong'
+    }
+  },
+  required: ['success', 'error']
+} as const;
+
+// TypeScript interfaces for type safety
+interface LoginRequest {
+  login: string;
+  password: string;
+}
+
+interface UserResponse {
+  id: string;
+  email: string;
+  username: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  role_id: string | null;
+}
+
+interface LoginSuccessResponse {
+  success: boolean;
+  message: string;
+  user: UserResponse;
+}
+
+interface LoginErrorResponse {
+  success: boolean;
+  error: string;
+}
 
 const loginEmailRouteSchema = {
   tags: ['Authentication'],
   summary: 'User login via email/password',
   description: "Authenticates a user using their registered identifier (email or username) and password. This endpoint is accessed via the /api/auth/email/login path due to server-level prefixing. Establishes a session by setting an authentication cookie. Requires Content-Type: application/json header when sending request body.",
-  body: {
-    type: 'object',
-    properties: {
-      login: { type: 'string', minLength: 1 },
-      password: { type: 'string', minLength: 1 }
-    },
-    required: ['login', 'password'],
-    additionalProperties: false
-  },
+  
+  // Fastify validation schema
+  body: LOGIN_REQUEST_SCHEMA,
+  
+  // OpenAPI documentation (same schema, reused)
   requestBody: {
     required: true,
     content: {
       'application/json': {
-        schema: createSchema(loginEmailBodySchema)
+        schema: LOGIN_REQUEST_SCHEMA
       }
     }
   },
+  
   response: {
-    200: createSchema(successResponseSchema.describe('Login successful. Session cookie is set.')),
-    400: createSchema(errorResponseSchema.describe('Bad Request - Invalid input, invalid credentials, or missing Content-Type header.'), {
-      // examples: [
-      //   { success: false, error: "Email/username and password are required." },
-      //   { success: false, error: "Invalid email/username or password." }
-      // ]
-    }),
-    403: createSchema(errorResponseSchema.describe('Forbidden - Login is disabled by administrator.'), {
-      // examples: [
-      //   { success: false, error: "Login is currently disabled by administrator." }
-      // ]
-    }),
-    500: createSchema(errorResponseSchema.describe('Internal Server Error - An unexpected error occurred on the server.'), {
-      // examples: [
-      //   { success: false, error: "An unexpected error occurred during login." },
-      //   { success: false, error: "Internal server error: User table configuration missing." },
-      //   { success: false, error: "User ID not found." }
-      // ]
-    })
-  },
-  security: [{ cookieAuth: [] }]
+    200: {
+      ...SUCCESS_RESPONSE_SCHEMA,
+      description: 'Login successful. Session cookie is set.'
+    },
+    400: {
+      ...ERROR_RESPONSE_SCHEMA,
+      description: 'Bad Request - Invalid input, invalid credentials, or missing Content-Type header'
+    },
+    403: {
+      ...ERROR_RESPONSE_SCHEMA,
+      description: 'Forbidden - Login is disabled by administrator'
+    },
+    500: {
+      ...ERROR_RESPONSE_SCHEMA,
+      description: 'Internal Server Error - An unexpected error occurred on the server'
+    }
+  }
 };
 
-export default async function loginEmailRoute(fastify: FastifyInstance) {
-  fastify.post<{ Body: { login: string; password: string } }>(
-    '/login',
-    { schema: loginEmailRouteSchema },
-    async (request, reply: FastifyReply) => {
+export default async function loginEmailRoute(server: FastifyInstance) {
+  server.post('/login', {
+    schema: loginEmailRouteSchema
+  }, async (request, reply: FastifyReply) => {
       // Check if login is enabled
       const isLoginEnabled = await GlobalSettingsInitService.isLoginEnabled();
       if (!isLoginEnabled) {
-        const errorResponse = {
+        const errorResponse: LoginErrorResponse = {
           success: false,
           error: 'Login is currently disabled by administrator.'
         };
@@ -95,9 +171,9 @@ export default async function loginEmailRoute(fastify: FastifyInstance) {
         return reply.status(403).type('application/json').send(jsonString);
       }
 
-      // Fastify has already validated the request body using our Zod schema
+      // Fastify has already validated the request body using our JSON schema
       // If we reach here, request.body is guaranteed to be valid with required fields
-      const { login, password } = request.body;
+      const { login, password } = request.body as LoginRequest;
 
       try {
         const db = getDb();
@@ -105,8 +181,8 @@ export default async function loginEmailRoute(fastify: FastifyInstance) {
         const authUserTable = schema.authUser;
 
         if (!authUserTable) {
-          fastify.log.error('AuthUser table not found in schema');
-          const errorResponse = {
+          server.log.error('AuthUser table not found in schema');
+          const errorResponse: LoginErrorResponse = {
             success: false,
             error: 'Internal server error: User table configuration missing.'
           };
@@ -123,7 +199,7 @@ export default async function loginEmailRoute(fastify: FastifyInstance) {
           .limit(1);
 
         if (users.length === 0) {
-          const errorResponse = {
+          const errorResponse: LoginErrorResponse = {
             success: false,
             error: 'Invalid email/username or password.'
           };
@@ -135,7 +211,7 @@ export default async function loginEmailRoute(fastify: FastifyInstance) {
         
         // Verify password
         if (!user.hashed_password) {
-          const errorResponse = {
+          const errorResponse: LoginErrorResponse = {
             success: false,
             error: 'Invalid email/username or password.'
           };
@@ -151,7 +227,7 @@ export default async function loginEmailRoute(fastify: FastifyInstance) {
         });
 
         if (!validPassword) {
-          const errorResponse = {
+          const errorResponse: LoginErrorResponse = {
             success: false,
             error: 'Invalid email/username or password.'
           };
@@ -166,7 +242,7 @@ export default async function loginEmailRoute(fastify: FastifyInstance) {
             const isVerificationRequired = await EmailVerificationService.isVerificationRequired();
             
             if (isVerificationRequired && !user.email_verified) {
-              const errorResponse = {
+              const errorResponse: LoginErrorResponse = {
                 success: false,
                 error: 'Please verify your email address before logging in. Check your inbox for a verification email.'
               };
@@ -174,15 +250,15 @@ export default async function loginEmailRoute(fastify: FastifyInstance) {
               return reply.status(400).type('application/json').send(jsonString);
             }
           } catch (verificationError) {
-            fastify.log.error(verificationError, 'Error checking email verification status:');
+            server.log.error(verificationError, 'Error checking email verification status:');
             // Continue with login if verification check fails
           }
         }
 
         // Check if user ID exists
         if (!user.id) {
-          fastify.log.error('User ID is null or undefined:', user.id);
-          const errorResponse = {
+          server.log.error('User ID is null or undefined:', user.id);
+          const errorResponse: LoginErrorResponse = {
             success: false,
             error: 'User ID not found.'
           };
@@ -205,14 +281,14 @@ export default async function loginEmailRoute(fastify: FastifyInstance) {
           expires_at: expiresAt
         });
         
-        fastify.log.info(`Session created successfully for user: ${user.id}`);
+        server.log.info(`Session created successfully for user: ${user.id}`);
         
         const sessionCookie = getLucia().createSessionCookie(sessionId);
 
         reply.setCookie(sessionCookie.name, sessionCookie.value, sessionCookie.attributes);
         
         // Create clean response object to avoid serialization issues
-        const cleanResponse = {
+        const cleanResponse: LoginSuccessResponse = {
           success: true,
           message: 'Logged in successfully.',
           user: {
@@ -227,12 +303,12 @@ export default async function loginEmailRoute(fastify: FastifyInstance) {
         
         // Send as raw JSON string to bypass any serialization issues
         const jsonString = JSON.stringify(cleanResponse);
-        fastify.log.info('Sending login response:', jsonString);
+        server.log.info('Sending login response:', jsonString);
         return reply.status(200).type('application/json').send(jsonString);
 
       } catch (error) {
-        fastify.log.error(error, 'Error during email login:');
-        const errorResponse = {
+        server.log.error(error, 'Error during email login:');
+        const errorResponse: LoginErrorResponse = {
           success: false,
           error: 'An unexpected error occurred during login.'
         };
