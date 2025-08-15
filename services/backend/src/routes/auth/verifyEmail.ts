@@ -184,7 +184,7 @@ export default async function verifyEmailRoute(server: FastifyInstance) {
         const jsonString = JSON.stringify(successResponse);
         return reply.status(200).type('application/json').send(jsonString);
 
-      } catch (error) {
+      } catch (error: unknown) {
         server.log.error(error, 'Error during email verification:');
         const errorResponse: VerifyEmailErrorResponse = {
           success: false,

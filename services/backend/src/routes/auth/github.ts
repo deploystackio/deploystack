@@ -348,7 +348,7 @@ export default async function githubAuthRoutes(fastify: FastifyInstance) {
               }, 'Failed to send welcome email after GitHub OAuth signup');
             });
           }
-        } catch (error) {
+        } catch (error: unknown) {
           // Don't fail OAuth if welcome email fails
           fastify.log.warn({
             error,
