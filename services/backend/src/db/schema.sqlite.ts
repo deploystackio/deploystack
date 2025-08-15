@@ -39,6 +39,22 @@ export const authUser = sqliteTable('authUser', {
   email_verified: integer('email_verified', { mode: 'boolean' }).notNull().default(false),
 });
 
+// User Preferences - Separate table for flexible preference management
+export const userPreferences = sqliteTable('userPreferences', {
+  id: text('id').primaryKey(),
+  user_id: text('user_id').notNull().references(() => authUser.id, { onDelete: 'cascade' }),
+  preference_key: text('preference_key').notNull(),
+  preference_value: text('preference_value').notNull(),
+  created_at: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  updated_at: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+}, (table) => ({
+  userKeyIdx: index('user_preferences_user_key_idx').on(table.user_id, table.preference_key),
+  userIdx: index('user_preferences_user_idx').on(table.user_id),
+  keyIdx: index('user_preferences_key_idx').on(table.preference_key),
+  // Unique constraint to prevent duplicate keys per user
+  uniqueUserKey: index('user_preferences_unique_user_key').on(table.user_id, table.preference_key),
+}));
+
 export const authSession = sqliteTable('authSession', {
   id: text('id').primaryKey(),
   user_id: text('user_id').notNull().references(() => authUser.id, { onDelete: 'cascade' }),

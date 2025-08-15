@@ -6,6 +6,7 @@ import { generateId } from 'lucia';
 import { hash } from '@node-rs/argon2';
 import { TeamService } from '../../services/teamService';
 import { GlobalSettingsInitService } from '../../global-settings';
+import { UserPreferencesService } from '../../services/UserPreferencesService';
 
 // Reusable Schema Constants
 const REGISTER_EMAIL_REQUEST_SCHEMA = {
@@ -304,6 +305,16 @@ export default async function registerEmailRoute(server: FastifyInstance) {
         } catch (teamError) {
           server.log.error(teamError, `Failed to create default team for user ${userId}:`);
           // Don't fail registration if team creation fails, just log the error
+        }
+
+        // Initialize default user preferences
+        try {
+          const preferencesService = new UserPreferencesService(db);
+          await preferencesService.initializeUserPreferences(userId);
+          server.log.info(`Default preferences initialized successfully for user ${userId}`);
+        } catch (preferencesError) {
+          server.log.error(preferencesError, `Failed to initialize preferences for user ${userId}:`);
+          // Don't fail registration if preferences initialization fails, just log the error
         }
 
         // Send verification email for non-first users when email sending is enabled

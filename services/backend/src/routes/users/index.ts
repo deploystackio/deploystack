@@ -9,6 +9,7 @@ import getUsersByRoleRoute from './getUsersByRole';
 import getCurrentUserRoute from './getCurrentUser';
 import getCurrentUserTeamsRoute from './getCurrentUserTeams';
 import getUserTeamsRoute from './getUserTeams';
+import preferencesRoutes from './preferences';
 
 export default async function usersRoute(server: FastifyInstance) {
   // Register individual user route handlers
@@ -22,4 +23,7 @@ export default async function usersRoute(server: FastifyInstance) {
   await server.register(getCurrentUserRoute);
   await server.register(getCurrentUserTeamsRoute);
   await server.register(getUserTeamsRoute);
+  
+  // Register preferences routes
+  await server.register(preferencesRoutes);
 }

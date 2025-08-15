@@ -2539,6 +2539,655 @@ paths:
                   - success
                   - error
                 description: Internal Server Error
+  /api/users/me/preferences:
+    get:
+      summary: Get user preferences
+      tags:
+        - User Preferences
+      description: Retrieves all preferences for the authenticated user
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: User preferences retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: true
+                  preferences:
+                    type: object
+                    properties:
+                      show_survey_overall:
+                        type: boolean
+                        description: Show overall survey
+                      show_survey_company:
+                        type: boolean
+                        description: Show company survey
+                      walkthrough_completed:
+                        type: boolean
+                        description: Whether walkthrough was completed
+                      walkthrough_cancelled:
+                        type: boolean
+                        description: Whether walkthrough was cancelled
+                      theme:
+                        type: string
+                        enum:
+                          - light
+                          - dark
+                          - auto
+                        description: UI theme preference
+                      sidebar_collapsed:
+                        type: boolean
+                        description: Sidebar collapsed state
+                      email_notifications_enabled:
+                        type: boolean
+                        description: Email notifications enabled
+                      browser_notifications_enabled:
+                        type: boolean
+                        description: Browser notifications enabled
+                      notification_acknowledgments:
+                        type: string
+                        description: Comma-separated list of acknowledged notification IDs
+                      beta_features_enabled:
+                        type: boolean
+                        description: Beta features enabled
+                    additionalProperties: false
+                required:
+                  - success
+                  - preferences
+                description: User preferences retrieved successfully
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - success
+                  - error
+                description: Unauthorized
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - success
+                  - error
+                description: Internal server error
+    post:
+      summary: Update user preferences
+      tags:
+        - User Preferences
+      description: "Updates multiple user preferences at once. Requires Content-Type:
+        application/json header when sending request body."
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                show_survey_overall:
+                  type: boolean
+                show_survey_company:
+                  type: boolean
+                walkthrough_completed:
+                  type: boolean
+                walkthrough_cancelled:
+                  type: boolean
+                theme:
+                  type: string
+                  enum:
+                    - light
+                    - dark
+                    - auto
+                sidebar_collapsed:
+                  type: boolean
+                email_notifications_enabled:
+                  type: boolean
+                browser_notifications_enabled:
+                  type: boolean
+                notification_acknowledgments:
+                  type: string
+                beta_features_enabled:
+                  type: boolean
+              additionalProperties: false
+              minProperties: 1
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Preferences updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: true
+                  message:
+                    type: string
+                required:
+                  - success
+                  - message
+                description: Preferences updated successfully
+        "400":
+          description: Bad Request - Invalid preference data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - success
+                  - error
+                description: Bad Request - Invalid preference data
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - success
+                  - error
+                description: Unauthorized
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - success
+                  - error
+                description: Internal server error
+  /api/users/me/preferences/{key}:
+    get:
+      summary: Get specific preference
+      tags:
+        - User Preferences
+      description: Retrieves a specific preference value by key path (e.g.,
+        "walkthrough", "ui.theme")
+      parameters:
+        - schema:
+            type: string
+            minLength: 1
+          in: path
+          name: key
+          required: true
+          description: Preference key path (supports dot notation for nested preferences)
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Preference value retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: true
+                  value:
+                    oneOf:
+                      - type: string
+                      - type: number
+                      - type: boolean
+                    description: The preference value
+                required:
+                  - success
+                  - value
+                description: Preference value retrieved successfully
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - success
+                  - error
+                description: Unauthorized
+        "404":
+          description: Preference not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - success
+                  - error
+                description: Preference not found
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - success
+                  - error
+                description: Internal server error
+    put:
+      summary: Set specific preference
+      tags:
+        - User Preferences
+      description: 'Sets a specific preference value by key path (e.g., "walkthrough",
+        "ui.theme"). Requires Content-Type: application/json header when sending
+        request body.'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                value:
+                  oneOf:
+                    - type: string
+                    - type: number
+                    - type: boolean
+                  description: The preference value to set (string, number, or boolean)
+              required:
+                - value
+              additionalProperties: false
+        required: true
+      parameters:
+        - schema:
+            type: string
+            minLength: 1
+          in: path
+          name: key
+          required: true
+          description: Preference key path (supports dot notation for nested preferences)
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Preference set successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: true
+                  message:
+                    type: string
+                required:
+                  - success
+                  - message
+                description: Preference set successfully
+        "400":
+          description: Bad Request - Invalid preference data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - success
+                  - error
+                description: Bad Request - Invalid preference data
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - success
+                  - error
+                description: Unauthorized
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - success
+                  - error
+                description: Internal server error
+  /api/users/me/preferences/walkthrough/complete:
+    post:
+      summary: Complete walkthrough
+      tags:
+        - User Preferences
+        - Walkthrough
+      description: Marks the user walkthrough as completed and records the completion
+        timestamp
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Walkthrough marked as completed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: true
+                  message:
+                    type: string
+                required:
+                  - success
+                  - message
+                description: Walkthrough marked as completed
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - success
+                  - error
+                description: Unauthorized
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - success
+                  - error
+                description: Internal server error
+  /api/users/me/preferences/walkthrough/cancel:
+    post:
+      summary: Cancel walkthrough
+      tags:
+        - User Preferences
+        - Walkthrough
+      description: Marks the user walkthrough as cancelled and records the
+        cancellation timestamp
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Walkthrough marked as cancelled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: true
+                  message:
+                    type: string
+                required:
+                  - success
+                  - message
+                description: Walkthrough marked as cancelled
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - success
+                  - error
+                description: Unauthorized
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - success
+                  - error
+                description: Internal server error
+  /api/users/me/preferences/walkthrough/status:
+    get:
+      summary: Get walkthrough status
+      tags:
+        - User Preferences
+        - Walkthrough
+      description: Checks if the user should see the walkthrough based on their
+        completion and cancellation status
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Walkthrough status retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: true
+                  should_show_walkthrough:
+                    type: boolean
+                required:
+                  - success
+                  - should_show_walkthrough
+                description: Walkthrough status retrieved successfully
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - success
+                  - error
+                description: Unauthorized
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - success
+                  - error
+                description: Internal server error
+  /api/users/me/preferences/notifications/acknowledge:
+    post:
+      summary: Acknowledge notification
+      tags:
+        - User Preferences
+        - Notifications
+      description: "Records that a user has acknowledged a specific notification.
+        Requires Content-Type: application/json header when sending request
+        body."
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                notification_id:
+                  type: string
+                  minLength: 1
+                  description: ID of the notification to acknowledge
+              required:
+                - notification_id
+              additionalProperties: false
+        required: true
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Notification acknowledged successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: true
+                  message:
+                    type: string
+                required:
+                  - success
+                  - message
+                description: Notification acknowledged successfully
+        "400":
+          description: Bad Request - Invalid notification ID
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - success
+                  - error
+                description: Bad Request - Invalid notification ID
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - success
+                  - error
+                description: Unauthorized
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - success
+                  - error
+                description: Internal server error
   /api/settings:
     get:
       summary: List all global settings

@@ -42,6 +42,8 @@ export const ROLE_DEFINITIONS = {
     'mcp.installations.edit',
     'mcp.installations.delete',
     'email.test',
+    'preferences.view',
+    'preferences.edit',
   ],
   global_user: [
     'profile.view',
@@ -53,6 +55,8 @@ export const ROLE_DEFINITIONS = {
     'team.members.view',
     'mcp.servers.read',
     'mcp.categories.view',
+    'preferences.view',
+    'preferences.edit',
   ],
   team_admin: [
     'teams.view',
