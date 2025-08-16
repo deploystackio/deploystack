@@ -31,9 +31,9 @@
     "inquirer": "^12.9.1",
     "node-fetch": "^3.3.0",
     "cli-table3": "^0.6.3",
-    "fastify": "^4.24.3",
+    "fastify": "^5.1.0",
     "@fastify/cors": "^11.1.0",
-    "@fastify/helmet": "^11.1.1",
+    "@fastify/helmet": "^12.0.1",
     "uuid": "^11.1.0",
     "fs-extra": "^11.1.1"
   },

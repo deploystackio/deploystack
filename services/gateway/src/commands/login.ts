@@ -6,6 +6,7 @@ import { CredentialStorage } from '../core/auth/storage';
 import { DeployStackAPI } from '../core/auth/api-client';
 import { MCPConfigService } from '../core/mcp';
 import { AuthenticationError } from '../types/auth';
+import { ServerStartService } from '../services/server-start-service';
 
 export function registerLoginCommand(program: Command) {
   program
@@ -62,7 +63,41 @@ export function registerLoginCommand(program: Command) {
             const mcpService = new MCPConfigService();
             try {
               await mcpService.downloadAndStoreMCPConfig(defaultTeam.id, defaultTeam.name, api, false);
-              spinner.succeed('Credentials stored, default team selected, and MCP config downloaded');
+              
+              // Auto-start the gateway server after successful MCP config download
+              spinner.text = 'Starting gateway server...';
+              const serverStartService = new ServerStartService();
+              
+              try {
+                const startResult = await serverStartService.startGatewayServer({
+                  port: 9095,
+                  host: 'localhost',
+                  foreground: false // Use daemon mode (default)
+                });
+
+                if (startResult.success) {
+                  spinner.succeed('Authentication complete - Gateway server is now running');
+                  console.log(chalk.green(`🚀 Gateway server started successfully`));
+                  console.log(chalk.blue(`   • Server URL: http://localhost:9095`));
+                  console.log(chalk.blue(`   • SSE Endpoint: http://localhost:9095/sse`));
+                  console.log(chalk.blue(`   • PID: ${startResult.pid}`));
+                  if (startResult.mcpServersStarted && startResult.mcpServersStarted > 0) {
+                    console.log(chalk.blue(`   • MCP Servers: ${startResult.mcpServersStarted} running`));
+                  }
+                } else {
+                  spinner.succeed('Credentials stored, default team selected, and MCP config downloaded');
+                  console.log(chalk.yellow('⚠️  Gateway server is already running - you can check status with "deploystack status"'));
+                  if (startResult.pid) {
+                    console.log(chalk.gray(`   Running PID: ${startResult.pid}`));
+                  }
+                }
+              } catch (serverError) {
+                spinner.succeed('Credentials stored, default team selected, and MCP config downloaded');
+                console.log(chalk.yellow('⚠️  Could not auto-start gateway server - you can start it manually with "deploystack start"'));
+                if (serverError instanceof Error) {
+                  console.log(chalk.gray(`   Server Error: ${serverError.message}`));
+                }
+              }
             } catch (mcpError) {
               spinner.succeed('Credentials stored and default team selected');
               console.log(chalk.yellow('⚠️  Could not download MCP configurations - you can try again later'));

@@ -26,20 +26,20 @@ npm install -g @deploystack/gateway
 ## 🚀 Usage
 
 ```bash
-# Login to your DeployStack account
+# Login to your DeployStack account (automatically starts the gateway)
 deploystack login
-
-# Start the gateway (runs on localhost:9095 by default)
-deploystack start
 
 # Check status
 deploystack status
+
+# Or start the gateway manually if needed
+deploystack start
 ```
 
 ## 🧱 How It Works
 
-1. **Login**: The gateway authenticates with `cloud.deploystack.io` and downloads your team's MCP server configurations
-2. **Persistent Process Startup**: When starting (`deploystack start`), all configured MCP servers launch as persistent background processes
+1. **Login & Auto-Start**: The gateway authenticates with `cloud.deploystack.io`, downloads your team's MCP server configurations, and automatically starts the gateway server
+2. **Persistent Process Startup**: All configured MCP servers launch as persistent background processes immediately after login
 3. **Tool Discovery**: Automatically discovers and caches individual tools from all running MCP servers for your team
 4. **SSE Connection**: VS Code connects to `/sse` endpoint and receives session information for message routing
 5. **Session-Based Communication**: All JSON-RPC requests are sent to `/message` endpoint with session context
