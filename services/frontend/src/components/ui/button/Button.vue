@@ -47,11 +47,11 @@ const spinnerSize = computed(() => {
   >
     <Loader2
       v-if="loading"
-      :class="cn(spinnerSize, 'animate-spin')"
+      :class="cn(spinnerSize, 'animate-spin mr-2')"
     />
     <template v-if="loading && loadingText">
       {{ loadingText }}
     </template>
-    <slot v-else-if="!loading" />
+    <slot v-else />
   </Primitive>
 </template>

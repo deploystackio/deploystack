@@ -178,12 +178,13 @@ function getSetting(key: string) {
               <Button
                 type="button"
                 @click="handleTestConnection"
-                :disabled="!canTestConnection || isTestingConnection"
+                :disabled="!canTestConnection"
+                :loading="isTestingConnection"
                 variant="outline"
                 size="sm"
               >
                 <TestTube class="h-4 w-4 mr-2" />
-                {{ isTestingConnection ? t('githubApp.connectionTest.button.testing') : t('githubApp.connectionTest.button.test') }}
+                {{ t('githubApp.connectionTest.button.test') }}
               </Button>
             </div>
 
@@ -226,10 +227,11 @@ function getSetting(key: string) {
             </div>
             <Button
               type="submit"
-              :disabled="!hasChanges || isSaving"
+              :disabled="!hasChanges"
+              :loading="isSaving"
               class="min-w-[120px]"
             >
-              {{ isSaving ? t('githubApp.form.saving') : t('githubApp.form.saveChanges') }}
+              {{ t('githubApp.form.saveChanges') }}
             </Button>
           </div>
         </form>

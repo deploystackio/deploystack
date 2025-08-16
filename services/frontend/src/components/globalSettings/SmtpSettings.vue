@@ -298,13 +298,14 @@ function getSetting(key: string) {
             <Button
               type="button"
               @click="handleTestEmail"
-              :disabled="!canTestConnection || isTestingConnection"
+              :disabled="!canTestConnection"
+              :loading="isTestingConnection"
               variant="outline"
               size="sm"
               class="w-full sm:w-auto"
             >
               <TestTube class="h-4 w-4 mr-2" />
-              {{ isTestingConnection ? t('smtp.emailTest.button.testing') : t('smtp.emailTest.button.test') }}
+              {{ t('smtp.emailTest.button.test') }}
             </Button>
 
             <!-- Test Status -->
@@ -349,10 +350,11 @@ function getSetting(key: string) {
             </div>
             <Button
               type="submit"
-              :disabled="!hasChanges || isSaving"
+              :disabled="!hasChanges"
+              :loading="isSaving"
               class="min-w-[120px]"
             >
-              {{ isSaving ? t('smtp.form.saving') : t('smtp.form.saveChanges') }}
+              {{ t('smtp.form.saveChanges') }}
             </Button>
           </div>
         </form>

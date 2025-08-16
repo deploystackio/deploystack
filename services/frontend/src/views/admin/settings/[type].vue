@@ -26,6 +26,7 @@ const route = useRoute()
 const settingGroups = ref<GlobalSettingGroup[]>([])
 const isLoading = ref(true)
 const error = ref<string | null>(null)
+const isSubmitting = ref(false)
 
 const apiUrl = getEnv('VITE_DEPLOYSTACK_BACKEND_URL') || '' // Fallback to empty string if not set
 
@@ -194,6 +195,8 @@ async function handleSubmit(event: Event) {
     }
   })
 
+  isSubmitting.value = true
+  
   try {
     if (!apiUrl) {
       throw new Error(t('globalSettings.errors.savingConfigNotSet'))
@@ -254,6 +257,8 @@ async function handleSubmit(event: Event) {
       description: errorMessage
     })
     console.error('Failed to save settings:', err)
+  } finally {
+    isSubmitting.value = false
   }
 }
 </script>
@@ -329,9 +334,12 @@ async function handleSubmit(event: Event) {
                     <p v-if="setting.is_encrypted" class="text-xs text-muted-foreground">{{ t('globalSettings.form.encryptedValue') }}</p>
                   </div>
 
-                  <Button type="submit">
-                    {{ t('globalSettings.form.saveChanges') }}
-                  </Button>
+          <Button 
+            type="submit"
+            :loading="isSubmitting"
+          >
+            {{ t('globalSettings.form.saveChanges') }}
+          </Button>
                 </form>
                 <div v-else-if="selectedGroup && (!selectedGroup.settings || selectedGroup.settings.length === 0)">
                   <p class="text-sm text-muted-foreground">{{ t('globalSettings.form.noSettings') }}</p>
