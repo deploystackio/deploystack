@@ -5,6 +5,7 @@ export { registerTeamsCommand } from './teams';
 export { registerMCPCommand } from './mcp';
 export { registerRefreshCommand } from './refresh';
 export { registerStartCommand } from './start';
+export { registerRestartCommand } from './restart';
 export { registerStopCommand } from './stop';
 export { registerStatusCommand } from './status';
 export { registerConfigCommand } from './config';

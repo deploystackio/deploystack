@@ -1,9 +1,12 @@
 import chalk from 'chalk';
 import ora from 'ora';
+import inquirer from 'inquirer';
 import { CredentialStorage } from '../core/auth/storage';
 import { DeployStackAPI } from '../core/auth/api-client';
 import { MCPConfigService } from '../core/mcp';
+import { ServerRestartService } from './server-restart-service';
 import { AuthenticationError } from '../types/auth';
+import { TeamMCPConfig, MCPServerConfig } from '../types/mcp';
 
 export interface RefreshOptions {
   url?: string;
@@ -12,10 +15,12 @@ export interface RefreshOptions {
 export class RefreshService {
   private storage: CredentialStorage;
   private mcpService: MCPConfigService;
+  private restartService: ServerRestartService;
 
   constructor() {
     this.storage = new CredentialStorage();
     this.mcpService = new MCPConfigService();
+    this.restartService = new ServerRestartService();
   }
 
   /**
@@ -51,25 +56,39 @@ export class RefreshService {
       const api = new DeployStackAPI(credentials, backendUrl);
 
       console.log(chalk.blue(`🔄 Refreshing MCP configuration for team: ${chalk.cyan(credentials.selectedTeam.name)}`));
+      
+      // Step 1: Get current configuration for comparison
+      const oldConfig = await this.mcpService.getMCPConfig(credentials.selectedTeam.id);
+      
+      // Step 2: Download new configuration
       spinner = ora('Downloading latest MCP configuration...').start();
       
       try {
-        const config = await this.mcpService.downloadAndStoreMCPConfig(
+        const newConfig = await this.mcpService.downloadAndStoreMCPConfig(
           credentials.selectedTeam.id,
           credentials.selectedTeam.name,
           api,
           false
         );
         
-        spinner.succeed(`MCP configuration refreshed (${config.servers.length} server${config.servers.length === 1 ? '' : 's'})`);
+        spinner.succeed(`MCP configuration refreshed (${newConfig.servers.length} server${newConfig.servers.length === 1 ? '' : 's'})`);
         console.log(chalk.green('✅ MCP configuration has been refreshed'));
+        
+        // Step 3: Detect changes and prompt for restart if needed
+        const changes = this.detectConfigurationChanges(oldConfig, newConfig);
+        
+        if (changes.hasChanges) {
+          await this.handleConfigurationChanges(changes);
+        } else {
+          console.log(chalk.gray('📋 No configuration changes detected'));
+        }
         
         // Show summary
         console.log(chalk.gray(`\n📊 Configuration Summary:`));
-        console.log(chalk.gray(`   Team: ${config.team_name}`));
-        console.log(chalk.gray(`   Installations: ${config.installations.length}`));
-        console.log(chalk.gray(`   Servers: ${config.servers.length}`));
-        console.log(chalk.gray(`   Last Updated: ${new Date(config.last_updated).toLocaleString()}`));
+        console.log(chalk.gray(`   Team: ${newConfig.team_name}`));
+        console.log(chalk.gray(`   Installations: ${newConfig.installations.length}`));
+        console.log(chalk.gray(`   Servers: ${newConfig.servers.length}`));
+        console.log(chalk.gray(`   Last Updated: ${new Date(newConfig.last_updated).toLocaleString()}`));
         
       } catch (error) {
         spinner.fail('Failed to refresh MCP configuration');
@@ -94,6 +113,168 @@ export class RefreshService {
       }
       
       process.exit(1);
+    }
+  }
+
+  /**
+   * Detect changes between old and new MCP configurations
+   */
+  private detectConfigurationChanges(oldConfig: TeamMCPConfig | null, newConfig: TeamMCPConfig): {
+    hasChanges: boolean;
+    changes: string[];
+    addedServers: string[];
+    removedServers: string[];
+    modifiedServers: string[];
+  } {
+    const changes: string[] = [];
+    const addedServers: string[] = [];
+    const removedServers: string[] = [];
+    const modifiedServers: string[] = [];
+
+    // If no old config, everything is new
+    if (!oldConfig) {
+      return {
+        hasChanges: false, // Don't prompt for restart on first-time config
+        changes: ['Initial configuration downloaded'],
+        addedServers: newConfig.servers.map(s => s.installation_name),
+        removedServers: [],
+        modifiedServers: []
+      };
+    }
+
+    // Create maps for easier comparison
+    const oldServers = new Map(oldConfig.servers.map(s => [s.installation_name, s]));
+    const newServers = new Map(newConfig.servers.map(s => [s.installation_name, s]));
+
+    // Check for added servers
+    for (const [name] of newServers) {
+      if (!oldServers.has(name)) {
+        addedServers.push(name);
+        changes.push(`• ${chalk.green(name)}: Added to team configuration`);
+      }
+    }
+
+    // Check for removed servers
+    for (const [name] of oldServers) {
+      if (!newServers.has(name)) {
+        removedServers.push(name);
+        changes.push(`• ${chalk.red(name)}: Removed from team configuration`);
+      }
+    }
+
+    // Check for modified servers
+    for (const [name, newServer] of newServers) {
+      const oldServer = oldServers.get(name);
+      if (oldServer && this.hasServerConfigChanged(oldServer, newServer)) {
+        modifiedServers.push(name);
+        const serverChanges = this.getServerChanges(oldServer, newServer);
+        changes.push(`• ${chalk.yellow(name)}: ${serverChanges.join(', ')}`);
+      }
+    }
+
+    return {
+      hasChanges: changes.length > 0,
+      changes,
+      addedServers,
+      removedServers,
+      modifiedServers
+    };
+  }
+
+  /**
+   * Check if a server configuration has changed
+   */
+  private hasServerConfigChanged(oldServer: MCPServerConfig, newServer: MCPServerConfig): boolean {
+    // Check command and args
+    if (oldServer.command !== newServer.command) return true;
+    if (JSON.stringify(oldServer.args) !== JSON.stringify(newServer.args)) return true;
+    
+    // Check environment variables
+    if (JSON.stringify(oldServer.env) !== JSON.stringify(newServer.env)) return true;
+    
+    // Check runtime
+    if (oldServer.runtime !== newServer.runtime) return true;
+    
+    return false;
+  }
+
+  /**
+   * Get specific changes for a server
+   */
+  private getServerChanges(oldServer: MCPServerConfig, newServer: MCPServerConfig): string[] {
+    const changes: string[] = [];
+    
+    if (oldServer.command !== newServer.command) {
+      changes.push('command updated');
+    }
+    
+    if (JSON.stringify(oldServer.args) !== JSON.stringify(newServer.args)) {
+      changes.push('arguments changed');
+    }
+    
+    if (JSON.stringify(oldServer.env) !== JSON.stringify(newServer.env)) {
+      changes.push('environment variables updated');
+    }
+    
+    if (oldServer.runtime !== newServer.runtime) {
+      changes.push('runtime changed');
+    }
+    
+    return changes;
+  }
+
+  /**
+   * Handle configuration changes with interactive restart prompt
+   */
+  private async handleConfigurationChanges(changeInfo: {
+    hasChanges: boolean;
+    changes: string[];
+    addedServers: string[];
+    removedServers: string[];
+    modifiedServers: string[];
+  }): Promise<void> {
+    console.log(chalk.blue('\n🔄 Configuration changes detected:'));
+    changeInfo.changes.forEach(change => console.log(`   ${change}`));
+
+    console.log(chalk.yellow('\n⚠️  Gateway restart required for changes to take effect.'));
+
+    // Check if gateway is running
+    const isRunning = this.restartService.isServerRunning();
+    
+    if (!isRunning) {
+      console.log(chalk.gray('💡 Gateway is not currently running. Changes will take effect when you start it.'));
+      return;
+    }
+
+    // Prompt user for restart
+    const { shouldRestart } = await inquirer.prompt([
+      {
+        type: 'confirm',
+        name: 'shouldRestart',
+        message: 'Do you want to restart the DeployStack Gateway now?',
+        default: true
+      }
+    ]);
+
+    if (shouldRestart) {
+      console.log(chalk.blue('\n🔄 Restarting gateway with updated configuration...'));
+      
+      try {
+        const result = await this.restartService.restartGatewayServer();
+        
+        if (result.restarted) {
+          console.log(chalk.green('✅ Gateway restarted successfully with new configuration'));
+          
+          if (result.mcpServersStarted !== undefined) {
+            console.log(chalk.blue(`🤖 Ready to serve ${result.mcpServersStarted} MCP server${result.mcpServersStarted === 1 ? '' : 's'}`));
+          }
+        }
+      } catch (error) {
+        console.log(chalk.red(`❌ Failed to restart gateway: ${error instanceof Error ? error.message : String(error)}`));
+        console.log(chalk.gray('💡 You can restart manually with "deploystack restart"'));
+      }
+    } else {
+      console.log(chalk.gray('💡 Configuration updated. Restart gateway manually with "deploystack restart" when ready.'));
     }
   }
 }

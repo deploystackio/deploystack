@@ -198,11 +198,17 @@ deploystack teams --switch 2
 
 ### `deploystack refresh`
 
-Refresh MCP server configurations from cloud control plane.
+Refresh MCP server configurations from cloud control plane with automatic change detection and restart prompting.
 
 **Options:**
 
 - `--url <url>` - DeployStack backend URL (override stored URL)
+
+**Features:**
+
+- **Change Detection**: Automatically detects configuration changes (added/removed/modified servers)
+- **Interactive Restart**: Prompts to restart gateway when changes require it
+- **Smart Behavior**: Only prompts for restart if gateway is running and changes detected
 
 **Examples:**
 
@@ -212,6 +218,21 @@ deploystack refresh
 
 # Refresh with custom backend URL
 deploystack refresh --url http://localhost:3000
+```
+
+**Sample Output with Changes:**
+
+```text
+🔄 Refreshing MCP configuration for team: My Team
+✅ MCP configuration refreshed (4 servers)
+
+🔄 Configuration changes detected:
+   • brightdata: Environment variables updated
+   • github-server: Arguments changed
+   • new-server: Added to team configuration
+
+⚠️  Gateway restart required for changes to take effect.
+? Do you want to restart the DeployStack Gateway now? (Y/n)
 ```
 
 ### `deploystack mcp`
@@ -274,6 +295,35 @@ deploystack start --foreground
    📨 Messages: http://localhost:9095/message
    📊 Health check: http://localhost:9095/health
 🤖 Ready to serve 2 MCP servers for team: kaka
+```
+
+### `deploystack restart`
+
+Restart the gateway server with graceful shutdown and startup sequence.
+
+**Options:**
+
+- `-p, --port <port>` - Port to run the gateway on (default: 9095)
+- `-h, --host <host>` - Host to bind the gateway to (default: localhost)
+- `-f, --foreground` - Run in foreground instead of daemon mode
+
+**Features:**
+
+- **Graceful Shutdown**: Properly stops all MCP server processes before restart
+- **Smart Behavior**: If gateway isn't running, performs a start operation instead
+- **Configuration Reload**: Picks up any configuration changes after restart
+
+**Examples:**
+
+```bash
+# Restart gateway with current configuration
+deploystack restart
+
+# Restart on custom port
+deploystack restart --port 8080
+
+# Restart in foreground for debugging
+deploystack restart --foreground
 ```
 
 ### `deploystack stop`

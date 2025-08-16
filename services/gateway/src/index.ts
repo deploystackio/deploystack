@@ -10,6 +10,7 @@ import {
   registerMCPCommand,
   registerRefreshCommand,
   registerStartCommand,
+  registerRestartCommand,
   registerStopCommand,
   registerStatusCommand,
   registerConfigCommand,
@@ -32,6 +33,7 @@ registerTeamsCommand(program);
 registerMCPCommand(program);
 registerRefreshCommand(program);
 registerStartCommand(program);
+registerRestartCommand(program);
 registerStopCommand(program);
 registerStatusCommand(program);
 registerConfigCommand(program);
