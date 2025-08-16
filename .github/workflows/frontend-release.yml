@@ -2,8 +2,7 @@ name: Frontend Release
 on:
   pull_request:
     types: [closed]
-    branches:
-      - main
+    branches: [main]
     paths:
       - 'services/frontend/**'
   
@@ -32,7 +31,6 @@ jobs:
           node-version: 20
           cache: npm
       
-      # Clean install dependencies
       - name: Install dependencies
         run: |
           npm ci || {
@@ -41,54 +39,45 @@ jobs:
             npm install --no-optional
           }
           
-      # Force install the missing rollup platform package if needed
       - name: Fix Rollup platform package
         run: |
           npm install @rollup/rollup-linux-x64-gnu --save-optional || echo "Rollup package already installed"
-      
-      # Run release-it with conventional changelog
-      - name: Prepare release
+          
+      - name: Create Release
         working-directory: services/frontend
         env:
           GITHUB_TOKEN: ${{ secrets.APP_INSTALLATION_TOKEN }}
-        run: npm run release -- --ci --verbose --no-git.requireCleanWorkingDir
+        run: |
+          # Let release-it handle the release process properly
+          npm run release -- --ci --verbose --no-git.requireCleanWorkingDir
         
-      # Get the version after release-it has run
       - name: Get version
         id: package-version
         uses: martinbeentjes/npm-get-version-action@main
         with:
           path: services/frontend
           
-      # Update .env file with version
       - name: Update .env with version
         working-directory: services/frontend
         run: |
-          # If .env doesn't exist, create it
           if [ ! -f .env ]; then
             touch .env
           fi
           
-          # Check if VITE_DEPLOYSTACK_APP_VERSION already exists in .env
           if grep -q "VITE_DEPLOYSTACK_APP_VERSION" .env; then
-            # Update existing env var
             sed -i "s/VITE_DEPLOYSTACK_APP_VERSION=.*/VITE_DEPLOYSTACK_APP_VERSION=${{ steps.package-version.outputs.current-version }}/" .env
           else
-            # Add new env var
             echo "VITE_DEPLOYSTACK_APP_VERSION=${{ steps.package-version.outputs.current-version }}" >> .env
           fi
           
-          # Show the updated .env (without sensitive values)
           echo "Updated .env file:"
           grep VITE_DEPLOYSTACK_APP_VERSION .env
       
-      # Build the frontend with version env var - with rollup fix
       - name: Build frontend
         working-directory: services/frontend
         env:
           VITE_DEPLOYSTACK_APP_VERSION: ${{ steps.package-version.outputs.current-version }}
         run: |
-          # Try build, if it fails due to rollup, try to fix and rebuild
           npm run build || {
             echo "Build failed, attempting rollup fix..."
             cd ../..

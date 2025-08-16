@@ -3,7 +3,9 @@ module.exports = {
     "commitMessage": "chore(gateway): release v${version}",
     "tagName": "gateway-v${version}",
     "tagAnnotation": "Gateway Release ${version}",
-    "addUntrackedFiles": "false"
+    "addUntrackedFiles": false,
+    // Ensure we're working from the correct directory
+    "requireCleanWorkingDir": false
   },
   "github": {
     "release": true,
@@ -14,7 +16,9 @@ module.exports = {
   },
   "hooks": {
     "before:init": ["npm run lint"],
-    "after:bump": "npm run build",
+    // Only run build when NOT in CI mode (i.e., during actual release merge)
+    // During PR creation (CI=true), skip build to avoid rollup issues
+    "after:bump": process.env.CI ? [] : ["npm run build"],
     "after:release": "echo 'Gateway ${version} released!'"
   },
   "plugins": {

@@ -27,7 +27,6 @@ jobs:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
-          # Use the app token for checkout as well
           token: ${{ secrets.APP_INSTALLATION_TOKEN }}
       - name: git config
         run: |
@@ -39,7 +38,6 @@ jobs:
           node-version: 20
           cache: npm
       
-      # Install dependencies from root (same as frontend pipeline)
       - name: Install dependencies
         run: |
           npm ci || {
@@ -62,34 +60,36 @@ jobs:
       - name: Check for console.log in backend
         working-directory: services/backend
         run: npm run check:no-console
-        
+          
       - name: Prepare release
         working-directory: services/backend
         env:
           GITHUB_TOKEN: ${{ secrets.APP_INSTALLATION_TOKEN }}
-          TYPE_ARG: ${{ fromJSON('{"patch":"patch", "minor":"minor", "major":"major"}')[github.event.inputs.type] }}
           BETA_ARG: ${{ github.event.inputs.beta == 'true' && '--preRelease=beta' || '' }}
-        run: npm run release -- $TYPE_ARG --ci --verbose --no-git.push --no-git.commit --no-git.tag --no-github $BETA_ARG
+          TYPE_ARG: ${{ github.event.inputs.type != 'patch' && format('--increment={0}', github.event.inputs.type) || '' }}
+        run: |
+          # Let release-it handle version detection and incrementing properly
+          npm run release -- $TYPE_ARG --ci --verbose --no-git.push --no-git.commit --no-git.tag --no-github $BETA_ARG
+          
       - name: Update version.ts file
         working-directory: services/backend
         run: |
           node scripts/update-version.js
           git add src/config/version.ts
+          
       - name: get-npm-version
         id: package-version
         uses: martinbeentjes/npm-get-version-action@main
         with:
           path: services/backend
+          
       - name: Extract release notes
         id: extract-release-notes
         run: |
-          # Get the current version from the package.json in the current working directory
           VERSION=$(cat package.json | grep '"version"' | cut -d'"' -f4)
           echo "Extracting release notes for version $VERSION"
           
-          # Extract the changelog section for this version
           if [ -f CHANGELOG.md ]; then
-            # Look for the version header and extract content until the next version or end of file
             RELEASE_NOTES=$(awk -v version="$VERSION" '
               BEGIN { found=0; content="" }
               /^##? [0-9]+\.[0-9]+\.[0-9]+/ { 
@@ -101,10 +101,8 @@ jobs:
               END { print content }
             ' CHANGELOG.md)
             
-            # Remove empty lines
             CLEAN_NOTES=$(echo "$RELEASE_NOTES" | sed '/^$/d')
             
-            # Save to output
             echo "release_notes<<EOF" >> $GITHUB_OUTPUT
             echo "$CLEAN_NOTES" >> $GITHUB_OUTPUT
             echo "EOF" >> $GITHUB_OUTPUT
@@ -116,11 +114,11 @@ jobs:
             echo "release_notes=" >> $GITHUB_OUTPUT
           fi
         working-directory: services/backend
+        
       - name: Create pull request
         uses: peter-evans/create-pull-request@v7
         id: cpr
         with:
-          # This is the key change - use the app token
           token: ${{ secrets.APP_INSTALLATION_TOKEN }}
           branch: backend-release
           delete-branch: true
@@ -143,7 +141,6 @@ jobs:
             - `linux/amd64` (Intel/AMD)
             - `linux/arm64` (Apple Silicon, AWS Graviton)
             
-            
             ## Release notes:
             ${{ steps.extract-release-notes.outputs.release_notes }}
           labels: |
@@ -151,6 +148,7 @@ jobs:
             release
             automated pr
           draft: false
+          
       - name: Show PR link
         if: ${{ steps.cpr.outputs.pull-request-url }}
         run: |
