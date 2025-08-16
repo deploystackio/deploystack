@@ -1,5 +1,9 @@
 # Changelog
 
+## <small>0.29.2 (2025-08-16)</small>
+
+* enhance build process with webpack integration ([1aab8fa](https://github.com/deploystackio/deploystack/commit/1aab8faab83777f2f8d66befb3bd9654dfd043bf))
+
 ## <small>0.29.1 (2025-08-15)</small>
 
 * update @typescript-eslint/parser to version 8.35.1 and add license information ([f4a2ab8](https://github.com/deploystackio/deploystack/commit/f4a2ab8d15866c490db17174eb88a133f26374aa))
