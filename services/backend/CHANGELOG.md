@@ -1,5 +1,10 @@
 # Changelog
 
+## <small>0.29.3 (2025-08-16)</small>
+
+* release v0.29.2 ([715c35f](https://github.com/deploystackio/deploystack/commit/715c35fef890d6a33458eaf0efe701661068b425))
+* enhance build process with webpack integration ([1aab8fa](https://github.com/deploystackio/deploystack/commit/1aab8faab83777f2f8d66befb3bd9654dfd043bf))
+
 ## <small>0.29.2 (2025-08-16)</small>
 
 * enhance build process with webpack integration ([1aab8fa](https://github.com/deploystackio/deploystack/commit/1aab8faab83777f2f8d66befb3bd9654dfd043bf))
