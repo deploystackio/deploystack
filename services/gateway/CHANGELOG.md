@@ -1,5 +1,9 @@
 # Changelog
 
+## <small>0.5.1 (2025-08-16)</small>
+
+* update release workflow and improve version handling ([67c7ab3](https://github.com/deploystackio/deploystack/commit/67c7ab3a72475da9b1df833208782fbfd2ed73ac))
+
 ## 0.5.0 (2025-08-15)
 
 * update @typescript-eslint/parser to version 8.35.1 and add license information ([f4a2ab8](https://github.com/deploystackio/deploystack/commit/f4a2ab8d15866c490db17174eb88a133f26374aa))
