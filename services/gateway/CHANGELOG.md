@@ -1,5 +1,10 @@
 # Changelog
 
+## <small>0.5.2 (2025-08-16)</small>
+
+* release v0.5.1 ([77ab293](https://github.com/deploystackio/deploystack/commit/77ab2933df6003a395f9712f37d4b6dc79a42712))
+* update release workflow and improve version handling ([67c7ab3](https://github.com/deploystackio/deploystack/commit/67c7ab3a72475da9b1df833208782fbfd2ed73ac))
+
 ## <small>0.5.1 (2025-08-16)</small>
 
 * update release workflow and improve version handling ([67c7ab3](https://github.com/deploystackio/deploystack/commit/67c7ab3a72475da9b1df833208782fbfd2ed73ac))
