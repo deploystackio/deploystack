@@ -13,7 +13,8 @@ import {
   registerStopCommand,
   registerStatusCommand,
   registerConfigCommand,
-  registerVersionCommand
+  registerVersionCommand,
+  registerLogsCommand
 } from './commands';
 
 const program = new Command();
@@ -35,6 +36,7 @@ registerStopCommand(program);
 registerStatusCommand(program);
 registerConfigCommand(program);
 registerVersionCommand(program);
+registerLogsCommand(program);
 
 // Show help if no command is provided
 if (process.argv.length <= 2) {

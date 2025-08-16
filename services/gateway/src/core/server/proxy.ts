@@ -11,6 +11,7 @@ import { TeamMCPConfig, MCPServerConfig } from '../../types/mcp';
 import { SessionManager } from './session-manager';
 import { SSEHandler } from './sse-handler';
 import { ToolDiscoveryManager } from '../../utils/tool-discovery-manager';
+import { logger } from '../../utils/logger';
 
 export interface ProxyServerOptions {
   port?: number;
@@ -199,6 +200,11 @@ export class ProxyServer {
     // Status endpoint
     this.fastify.get('/status', async () => {
       return this.getStatus();
+    });
+
+    // Logs streaming endpoint - real-time log streaming via SSE
+    this.fastify.get('/logs/stream', async (request, reply) => {
+      await this.handleLogsStream(request, reply);
     });
 
     // Root endpoint - helpful information about available endpoints
@@ -825,6 +831,93 @@ export class ProxyServer {
     }
     
     return processInfo;
+  }
+
+  /**
+   * Handle logs streaming endpoint - real-time log streaming via SSE
+   */
+  private async handleLogsStream(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    const query = request.query as any;
+    const lines = parseInt(query.lines || '50', 10);
+    const level = query.level as any;
+    const component = query.component as string;
+
+    logger.info('Logs stream connection established', 'proxy', { 
+      userAgent: request.headers['user-agent'],
+      lines,
+      level,
+      component 
+    });
+
+    // Set SSE headers
+    reply.raw.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers': 'Cache-Control'
+    });
+
+    // Send recent logs
+    const recentLogs = logger.filterLogs(level, component, lines);
+    for (const logEntry of recentLogs) {
+      const sseData = `data: ${JSON.stringify(logEntry)}\n\n`;
+      reply.raw.write(sseData);
+    }
+
+    // Listen for new log entries
+    const logHandler = (logEntry: any) => {
+      // Apply filters
+      if (level) {
+        const levelPriority: Record<string, number> = { debug: 0, info: 1, warn: 2, error: 3 };
+        const minPriority = levelPriority[level];
+        const entryPriority = levelPriority[logEntry.level];
+        if (entryPriority < minPriority) {
+          return;
+        }
+      }
+
+      if (component && logEntry.component !== component) {
+        return;
+      }
+
+      // Send log entry via SSE
+      const sseData = `data: ${JSON.stringify(logEntry)}\n\n`;
+      try {
+        reply.raw.write(sseData);
+      } catch {
+        // Connection closed, remove listener
+        logger.removeListener('log', logHandler);
+      }
+    };
+
+    logger.on('log', logHandler);
+
+    // Handle client disconnect
+    request.raw.on('close', () => {
+      logger.removeListener('log', logHandler);
+      logger.info('Logs stream connection closed', 'proxy');
+    });
+
+    request.raw.on('error', () => {
+      logger.removeListener('log', logHandler);
+      logger.warn('Logs stream connection error', 'proxy');
+    });
+
+    // Keep connection alive with periodic heartbeat
+    const heartbeat = setInterval(() => {
+      try {
+        reply.raw.write(': heartbeat\n\n');
+      } catch {
+        clearInterval(heartbeat);
+        logger.removeListener('log', logHandler);
+      }
+    }, 30000); // 30 seconds
+
+    // Clean up heartbeat on disconnect
+    request.raw.on('close', () => {
+      clearInterval(heartbeat);
+    });
   }
 
   /**
