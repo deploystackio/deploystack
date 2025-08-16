@@ -196,6 +196,24 @@ deploystack teams
 deploystack teams --switch 2
 ```
 
+### `deploystack refresh`
+
+Refresh MCP server configurations from cloud control plane.
+
+**Options:**
+
+- `--url <url>` - DeployStack backend URL (override stored URL)
+
+**Examples:**
+
+```bash
+# Refresh MCP configuration for current team
+deploystack refresh
+
+# Refresh with custom backend URL
+deploystack refresh --url http://localhost:3000
+```
+
 ### `deploystack mcp`
 
 Manage MCP server configurations and discover tools.
@@ -222,6 +240,8 @@ deploystack mcp --tools 1
 # Clear stored configuration
 deploystack mcp --clear
 ```
+
+**Note:** Both `deploystack refresh` and `deploystack mcp --refresh` perform identical operations using shared logic.
 
 ### `deploystack start`
 

@@ -5,10 +5,10 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import { CredentialStorage } from '../core/auth/storage';
-import { DeployStackAPI } from '../core/auth/api-client';
 import { MCPConfigService } from '../core/mcp';
 import { TableFormatter } from '../utils/table';
 import { AuthenticationError } from '../types/auth';
+import { RefreshService } from '../services/refresh-service';
 
 // PID file location
 const PID_FILE = path.join(os.tmpdir(), 'deploystack-gateway.pid');
@@ -209,43 +209,19 @@ export function registerMCPCommand(program: Command) {
           process.exit(1);
         }
 
-        const backendUrl = options.url || credentials.baseUrl || 'https://cloud.deploystack.io';
-        const api = new DeployStackAPI(credentials, backendUrl);
-
         // Handle refresh mode
         if (options.refresh) {
-          console.log(chalk.blue(`🔄 Refreshing MCP configuration for team: ${chalk.cyan(credentials.selectedTeam.name)}`));
-          spinner = ora('Downloading latest MCP configuration...').start();
-          
-          try {
-            const config = await mcpService.downloadAndStoreMCPConfig(
-              credentials.selectedTeam.id,
-              credentials.selectedTeam.name,
-              api,
-              false
-            );
-            
-            spinner.succeed(`MCP configuration refreshed (${config.servers.length} server${config.servers.length === 1 ? '' : 's'})`);
-            console.log(chalk.green('✅ MCP configuration has been refreshed'));
-            
-            // Show summary
-            console.log(chalk.gray(`\n📊 Configuration Summary:`));
-            console.log(chalk.gray(`   Team: ${config.team_name}`));
-            console.log(chalk.gray(`   Installations: ${config.installations.length}`));
-            console.log(chalk.gray(`   Servers: ${config.servers.length}`));
-            console.log(chalk.gray(`   Last Updated: ${new Date(config.last_updated).toLocaleString()}`));
-            
-          } catch (error) {
-            spinner.fail('Failed to refresh MCP configuration');
-            throw error;
-          }
+          const refreshService = new RefreshService();
+          await refreshService.refreshMCPConfiguration({ url: options.url });
           return;
         }
 
         // Handle status mode (default)
+        const backendUrl = options.url || credentials.baseUrl || 'https://cloud.deploystack.io';
+        
         console.log(chalk.blue(`🤖 MCP Configuration Status`));
         console.log(chalk.gray(`🎯 Current team: ${chalk.cyan(credentials.selectedTeam.name)}`));
-        console.log(chalk.gray(`🌐 Backend: ${backendUrl}\n`));
+        console.log(chalk.gray(` Backend: ${backendUrl}\n`));
 
         spinner = ora('Checking MCP configuration...').start();
         

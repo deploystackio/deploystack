@@ -3,6 +3,7 @@ export { registerLogoutCommand } from './logout';
 export { registerWhoamiCommand } from './whoami';
 export { registerTeamsCommand } from './teams';
 export { registerMCPCommand } from './mcp';
+export { registerRefreshCommand } from './refresh';
 export { registerStartCommand } from './start';
 export { registerStopCommand } from './stop';
 export { registerStatusCommand } from './status';
