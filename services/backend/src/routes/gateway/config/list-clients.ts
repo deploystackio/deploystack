@@ -36,6 +36,10 @@ export default async function listClients(server: FastifyInstance) {
         403: {
           ...ERROR_RESPONSE_SCHEMA,
           description: 'Forbidden - Insufficient permissions'
+        },
+        500: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Internal Server Error'
         }
       }
     }

@@ -337,6 +337,12 @@ export const searchCredentialsSchema = {
       data: z.array(SearchCredentialsResponseSchema).describe('Array of matching credentials (metadata only, no secret values)')
     }).describe('Search completed successfully'), { 
       }),
+    400: createSchema(z.object({
+      success: z.boolean().default(false).describe('Indicates if the operation was successful (false for errors)'),
+      error: z.string().describe('Error message'),
+      details: z.array(z.string()).describe('Validation error details').optional()
+    }).describe('Bad Request - Validation error'), { 
+      }),
     401: createSchema(z.object({
       success: z.boolean().default(false).describe('Indicates if the operation was successful (false for errors)'),
       error: z.string().describe('Error message')

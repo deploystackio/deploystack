@@ -108,6 +108,13 @@ export default async function getRepoInfo(server: FastifyInstance) {
             success: { type: 'boolean', default: false },
             error: { type: 'string' }
           }
+        },
+        500: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', default: false },
+            error: { type: 'string' }
+          }
         }
       }
     }
