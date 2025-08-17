@@ -7,6 +7,7 @@ import { ProgressBars } from '@/components/ui/progress-bars'
 import { FileText, Github, Settings } from 'lucide-vue-next'
 import { McpCatalogService } from '@/services/mcpCatalogService'
 import { useEventBus } from '@/composables/useEventBus'
+import ContentWrapper from '@/components/ContentWrapper.vue'
 import GitHubRepositoryStep from '@/components/admin/mcp-catalog/GitHubRepositoryStep.vue'
 import ClaudeDesktopConfigStep from '@/components/admin/mcp-catalog/ClaudeDesktopConfigStep.vue'
 import BasicInfoStep from '@/components/admin/mcp-catalog/BasicInfoStep.vue'
@@ -410,7 +411,7 @@ onUnmounted(() => {
     </Alert>
 
     <!-- Step Content -->
-    <div class="bg-white rounded-lg border p-6">
+    <ContentWrapper>
       <!-- GitHub Step -->
       <GitHubRepositoryStep
         v-if="currentStep === 0"
@@ -430,7 +431,7 @@ onUnmounted(() => {
         v-model="formData.basic"
         :form-data="compatibleFormData"
       />
-    </div>
+    </ContentWrapper>
 
     <!-- Navigation Buttons -->
     <div class="flex items-center justify-between">

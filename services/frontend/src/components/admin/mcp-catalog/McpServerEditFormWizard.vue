@@ -7,6 +7,7 @@ import { ProgressBars } from '@/components/ui/progress-bars'
 import { FileText, Github, Code, Zap, CheckCircle } from 'lucide-vue-next'
 import { McpCatalogService } from '@/services/mcpCatalogService'
 import { useEventBus } from '@/composables/useEventBus'
+import ContentWrapper from '@/components/ContentWrapper.vue'
 import BasicInfoStep from '@/components/admin/mcp-catalog/BasicInfoStep.vue'
 import TechnicalStep from '@/components/admin/mcp-catalog/TechnicalStep.vue'
 import CapabilitiesStep from '@/components/admin/mcp-catalog/CapabilitiesStep.vue'
@@ -589,7 +590,7 @@ onUnmounted(() => {
     </Alert>
 
     <!-- Step Content -->
-    <div class="bg-muted/50 rounded-lg px-12 py-16">
+    <ContentWrapper>
       <component
         :is="currentStepData.component"
         v-if="currentStepData.key === 'capabilities'"
@@ -603,7 +604,7 @@ onUnmounted(() => {
         :form-data="formData"
         @update:modelValue="(newValue: any) => formData[currentStepData.key] = newValue"
       />
-    </div>
+    </ContentWrapper>
 
     <!-- Navigation Buttons -->
     <div class="flex items-center justify-between">

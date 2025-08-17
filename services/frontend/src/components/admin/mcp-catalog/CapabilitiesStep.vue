@@ -7,7 +7,6 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Card, CardContent } from '@/components/ui/card'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -182,122 +181,111 @@ const modalTitle = computed(() => {
 </script>
 
 <template>
-  <div class="max-w-4xl mx-auto">
-    <!-- White Card inside the gray wrapper -->
-    <Card class="bg-white shadow-sm">
-      <CardContent class="p-6">
-        <!-- Header -->
-        <div class="px-4 sm:px-0">
-          <div class="flex items-center justify-between mb-4">
-            <div>
-              <Label class="text-base font-medium text-gray-900">{{ t('mcpCatalog.form.capabilities.environmentVariables.label') }}</Label>
-              <p class="mt-1 text-sm text-gray-500">
-                {{ t('mcpCatalog.form.capabilities.environmentVariables.description') }}
-              </p>
-            </div>
-            <Button
-              type="button"
-              @click="openAddModal"
-              class="flex items-center gap-2"
-            >
-              <Plus class="h-4 w-4" />
-              {{ t('mcpCatalog.form.capabilities.environmentVariables.addVariable') }}
-            </Button>
-          </div>
-        </div>
+  <div class="space-y-6">
+    <div>
+      <h3 class="text-lg font-medium">{{ t('mcpCatalog.form.capabilities.environmentVariables.label') }}</h3>
+      <p class="text-sm text-muted-foreground">
+        {{ t('mcpCatalog.form.capabilities.environmentVariables.description') }}
+      </p>
+    </div>
 
-        <div class="mt-6 border-t border-gray-100">
-          <!-- Environment Variables Section -->
-          <div class="px-4 py-6 sm:px-0">
+    <!-- Header with Add Button -->
+    <div class="flex items-center justify-between">
+      <div></div>
+      <Button
+        type="button"
+        @click="openAddModal"
+        class="flex items-center gap-2"
+      >
+        <Plus class="h-4 w-4" />
+        {{ t('mcpCatalog.form.capabilities.environmentVariables.addVariable') }}
+      </Button>
+    </div>
 
-            <!-- Environment Variables Display with Edit Actions -->
-            <div v-if="environmentVariables.length > 0" class="overflow-hidden">
-              <table class="w-full text-left">
-                <thead class="sr-only">
-                  <tr>
-                    <th>{{ t('mcpCatalog.form.capabilities.environmentVariables.name.label') }}</th>
-                    <th class="hidden sm:table-cell">{{ t('mcpCatalog.table.columns.properties', 'Properties') }}</th>
-                    <th class="hidden sm:table-cell">{{ t('mcpCatalog.table.columns.details', 'Details') }}</th>
-                    <th>{{ t('mcpCatalog.table.columns.actions') }}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="(variable, index) in environmentVariables" :key="index">
-                    <td class="relative py-5 pr-6">
-                      <div class="flex gap-x-6">
-                        <div class="flex-auto">
-                          <div class="flex items-start gap-x-3">
-                            <div class="text-sm/6 font-semibold text-gray-900">
-                              {{ variable.name }}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      <div class="absolute right-full bottom-0 h-px w-screen bg-gray-100" />
-                      <div class="absolute bottom-0 left-0 h-px w-screen bg-gray-100" />
-                    </td>
-                    <td class="hidden py-5 pr-6 sm:table-cell">
-                      <div class="space-y-1">
-                        <div v-if="variable.required" class="text-xs/5 text-gray-500">
-                          <span class="font-medium">{{ t('mcpCatalog.form.capabilities.environmentVariables.required.label') }}:</span> {{ t('common.labels.yes') }}
-                        </div>
-                        <div v-if="variable.type" class="text-xs/5 text-gray-500">
-                          <span class="font-medium">{{ t('mcpCatalog.form.capabilities.environmentVariables.type.label') }}:</span> {{ variable.type }}
-                        </div>
-                      </div>
-                    </td>
-                    <td class="hidden py-5 pr-6 sm:table-cell">
-                      <div v-if="variable.description" class="text-sm/6 text-gray-900">
-                        {{ variable.description }}
-                      </div>
-                      <div v-if="variable.placeholder" class="mt-1 text-xs/5 text-gray-500">
-                        {{ t('mcpCatalog.form.capabilities.environmentVariables.placeholder.label') }}: {{ variable.placeholder }}
-                      </div>
-                    </td>
-                    <td class="py-5 text-right">
-                      <div class="flex justify-end">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger as-child>
-                            <Button variant="ghost" class="h-8 w-8 p-0">
-                              <span class="sr-only">{{ t('mcpCatalog.table.openMenu') }} {{ variable.name }}</span>
-                              <MoreHorizontal class="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem @click="openEditModal(index)">
-                              <Edit class="mr-2 h-4 w-4" />
-                              {{ t('mcpCatalog.table.actions.edit') }}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              @click="handleDelete(index)"
-                              class="text-red-600 focus:text-red-600"
-                            >
-                              <Trash2 class="mr-2 h-4 w-4" />
-                              {{ t('mcpCatalog.table.actions.delete') }}
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-            <!-- Empty State -->
-            <div v-else class="text-center py-12">
-              <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gray-100 mb-4">
-                <Settings class="h-6 w-6 text-gray-400" />
+    <!-- Environment Variables Display with Edit Actions -->
+    <div v-if="environmentVariables.length > 0" class="overflow-hidden">
+      <table class="w-full text-left">
+        <thead class="sr-only">
+          <tr>
+            <th>{{ t('mcpCatalog.form.capabilities.environmentVariables.name.label') }}</th>
+            <th class="hidden sm:table-cell">{{ t('mcpCatalog.table.columns.properties', 'Properties') }}</th>
+            <th class="hidden sm:table-cell">{{ t('mcpCatalog.table.columns.details', 'Details') }}</th>
+            <th>{{ t('mcpCatalog.table.columns.actions') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="(variable, index) in environmentVariables" :key="index">
+            <td class="relative py-5 pr-6">
+              <div class="flex gap-x-6">
+                <div class="flex-auto">
+                  <div class="flex items-start gap-x-3">
+                    <div class="text-sm/6 font-semibold text-gray-900">
+                      {{ variable.name }}
+                    </div>
+                  </div>
+                </div>
               </div>
-              <h3 class="text-sm font-medium text-gray-900 mb-2">{{ t('mcpCatalog.form.capabilities.environmentVariables.noVariables') }}</h3>
-              <p class="text-sm text-gray-500 max-w-sm mx-auto">
-                {{ t('mcpCatalog.form.capabilities.environmentVariables.noVariablesDescription') }}
-              </p>
-            </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+              <div class="absolute right-full bottom-0 h-px w-screen bg-gray-100" />
+              <div class="absolute bottom-0 left-0 h-px w-screen bg-gray-100" />
+            </td>
+            <td class="hidden py-5 pr-6 sm:table-cell">
+              <div class="space-y-1">
+                <div v-if="variable.required" class="text-xs/5 text-gray-500">
+                  <span class="font-medium">{{ t('mcpCatalog.form.capabilities.environmentVariables.required.label') }}:</span> {{ t('common.labels.yes') }}
+                </div>
+                <div v-if="variable.type" class="text-xs/5 text-gray-500">
+                  <span class="font-medium">{{ t('mcpCatalog.form.capabilities.environmentVariables.type.label') }}:</span> {{ variable.type }}
+                </div>
+              </div>
+            </td>
+            <td class="hidden py-5 pr-6 sm:table-cell">
+              <div v-if="variable.description" class="text-sm/6 text-gray-900">
+                {{ variable.description }}
+              </div>
+              <div v-if="variable.placeholder" class="mt-1 text-xs/5 text-gray-500">
+                {{ t('mcpCatalog.form.capabilities.environmentVariables.placeholder.label') }}: {{ variable.placeholder }}
+              </div>
+            </td>
+            <td class="py-5 text-right">
+              <div class="flex justify-end">
+                <DropdownMenu>
+                  <DropdownMenuTrigger as-child>
+                    <Button variant="ghost" class="h-8 w-8 p-0">
+                      <span class="sr-only">{{ t('mcpCatalog.table.openMenu') }} {{ variable.name }}</span>
+                      <MoreHorizontal class="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem @click="openEditModal(index)">
+                      <Edit class="mr-2 h-4 w-4" />
+                      {{ t('mcpCatalog.table.actions.edit') }}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      @click="handleDelete(index)"
+                      class="text-red-600 focus:text-red-600"
+                    >
+                      <Trash2 class="mr-2 h-4 w-4" />
+                      {{ t('mcpCatalog.table.actions.delete') }}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Empty State -->
+    <div v-else class="text-center py-12">
+      <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gray-100 mb-4">
+        <Settings class="h-6 w-6 text-gray-400" />
+      </div>
+      <h3 class="text-sm font-medium text-gray-900 mb-2">{{ t('mcpCatalog.form.capabilities.environmentVariables.noVariables') }}</h3>
+      <p class="text-sm text-gray-500 max-w-sm mx-auto">
+        {{ t('mcpCatalog.form.capabilities.environmentVariables.noVariablesDescription') }}
+      </p>
+    </div>
 
     <!-- Add/Edit Environment Variable Modal -->
     <AlertDialog :open="isModalOpen" @update:open="(value) => isModalOpen = value">
