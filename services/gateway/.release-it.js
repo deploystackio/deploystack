@@ -3,6 +3,7 @@ module.exports = {
     commitMessage: 'chore(gateway): release v${version}',
     tagName: 'gateway-v${version}',
     tagAnnotation: 'Gateway Release ${version}',
+    commitsPath: 'services/gateway',
     addUntrackedFiles: false,
     requireCleanWorkingDir: false
   },
