@@ -199,8 +199,8 @@ describe('MCP Servers - Update Global', () => {
         language: 'javascript',
         runtime: 'node',
         runtime_min_version: null,
-        installation_methods: '[]',
-        tools: '[]',
+        installation_methods: [],
+        tools: [],
         resources: null,
         prompts: null,
         visibility: 'global',
@@ -217,8 +217,9 @@ describe('MCP Servers - Update Global', () => {
         tags: null,
         status: 'active',
         featured: false,
-        created_at: new Date('2024-01-01'),
-        updated_at: new Date('2024-01-02'),
+        transport_type: null,
+        created_at: '2024-01-01T00:00:00.000Z',
+        updated_at: '2024-01-02T00:00:00.000Z',
         last_sync_at: null
       };
 
@@ -242,22 +243,40 @@ describe('MCP Servers - Update Global', () => {
       expect(mockReply.status).toHaveBeenCalledWith(200);
       expect(mockReply.send).toHaveBeenCalledWith({
         success: true,
-        data: expect.objectContaining({
+        data: {
           id: 'test-server-id',
           name: 'Updated Server Name',
+          slug: 'updated-server-name',
           description: 'Updated description',
+          long_description: null,
+          github_url: null,
+          git_branch: null,
+          homepage_url: null,
+          language: 'javascript',
+          runtime: 'node',
+          runtime_min_version: null,
           installation_methods: [],
           tools: [],
           resources: null,
           prompts: null,
-          default_config: null,
+          visibility: 'global',
+          owner_team_id: null,
+          created_by: 'user-1',
+          author_name: null,
+          author_contact: null,
+          organization: null,
+          license: null,
           environment_variables: null,
           dependencies: null,
+          category_id: null,
           tags: null,
+          status: 'active',
+          featured: false,
+          transport_type: null,
           created_at: '2024-01-01T00:00:00.000Z',
           updated_at: '2024-01-02T00:00:00.000Z',
           last_sync_at: null
-        })
+        }
       });
     });
 
@@ -351,8 +370,8 @@ describe('MCP Servers - Update Global', () => {
         language: 'javascript',
         runtime: 'node',
         runtime_min_version: null,
-        installation_methods: '[]',
-        tools: '[]',
+        installation_methods: [],
+        tools: [],
         resources: null,
         prompts: null,
         visibility: 'global',
@@ -369,8 +388,9 @@ describe('MCP Servers - Update Global', () => {
         tags: null,
         status: 'active',
         featured: false,
-        created_at: new Date('2024-01-01'),
-        updated_at: new Date('2024-01-02'),
+        transport_type: null,
+        created_at: '2024-01-01T00:00:00.000Z',
+        updated_at: '2024-01-02T00:00:00.000Z',
         last_sync_at: null
       };
 
@@ -415,10 +435,10 @@ describe('MCP Servers - Update Global', () => {
         language: 'typescript',
         runtime: 'node',
         runtime_min_version: '18.0.0',
-        installation_methods: '[{"type": "npm", "command": "npm install"}]',
-        tools: '[{"name": "tool1", "description": "First tool"}]',
-        resources: '[{"type": "file", "description": "File resource"}]',
-        prompts: '[{"name": "prompt1", "description": "First prompt"}]',
+        installation_methods: [{ type: 'npm', command: 'npm install' }],
+        tools: [{ name: 'tool1', description: 'First tool' }],
+        resources: [{ type: 'file', description: 'File resource' }],
+        prompts: [{ name: 'prompt1', description: 'First prompt' }],
         visibility: 'global',
         owner_team_id: null,
         created_by: 'user-1',
@@ -426,16 +446,17 @@ describe('MCP Servers - Update Global', () => {
         author_contact: 'author@example.com',
         organization: 'Test Organization',
         license: 'MIT',
-        default_config: '{"key": "value"}',
-        environment_variables: '[{"name": "TEST_VAR", "description": "Test variable", "required": false}]',
-        dependencies: '{"dep1": "^1.0.0"}',
+        default_config: { key: 'value' },
+        environment_variables: [{ name: 'TEST_VAR', description: 'Test variable', required: false }],
+        dependencies: { dep1: '^1.0.0' },
         category_id: 'category-1',
-        tags: '["tag1", "tag2"]',
+        tags: ['tag1', 'tag2'],
         status: 'active',
         featured: true,
-        created_at: new Date('2024-01-01'),
-        updated_at: new Date('2024-01-02'),
-        last_sync_at: new Date('2024-01-03')
+        transport_type: null,
+        created_at: '2024-01-01T00:00:00.000Z',
+        updated_at: '2024-01-02T00:00:00.000Z',
+        last_sync_at: '2024-01-03T00:00:00.000Z'
       };
 
       mockMcpService.getServerById.mockResolvedValue(existingServer);
@@ -477,22 +498,40 @@ describe('MCP Servers - Update Global', () => {
       expect(mockReply.status).toHaveBeenCalledWith(200);
       expect(mockReply.send).toHaveBeenCalledWith({
         success: true,
-        data: expect.objectContaining({
+        data: {
           id: 'test-server-id',
           name: 'Complex Server Update',
+          slug: 'complex-server-update',
+          description: 'A comprehensive server update',
+          long_description: 'This is a detailed description',
+          github_url: 'https://github.com/complex/server',
+          git_branch: 'main',
+          homepage_url: 'https://complex-server.example.com',
+          language: 'typescript',
+          runtime: 'node',
+          runtime_min_version: '18.0.0',
           installation_methods: [{ type: 'npm', command: 'npm install' }],
           tools: [{ name: 'tool1', description: 'First tool' }],
           resources: [{ type: 'file', description: 'File resource' }],
           prompts: [{ name: 'prompt1', description: 'First prompt' }],
-          default_config: { key: 'value' },
+          visibility: 'global',
+          owner_team_id: null,
+          created_by: 'user-1',
+          author_name: 'Test Author',
+          author_contact: 'author@example.com',
+          organization: 'Test Organization',
+          license: 'MIT',
           environment_variables: [{ name: 'TEST_VAR', description: 'Test variable', required: false }],
           dependencies: { dep1: '^1.0.0' },
+          category_id: 'category-1',
           tags: ['tag1', 'tag2'],
+          status: 'active',
           featured: true,
+          transport_type: null,
           created_at: '2024-01-01T00:00:00.000Z',
           updated_at: '2024-01-02T00:00:00.000Z',
           last_sync_at: '2024-01-03T00:00:00.000Z'
-        })
+        }
       });
     });
 
@@ -516,10 +555,10 @@ describe('MCP Servers - Update Global', () => {
         language: 'javascript',
         runtime: 'node',
         runtime_min_version: null,
-        installation_methods: '["npm", "yarn"]',
-        tools: '[{"name": "test-tool"}]',
-        resources: '[{"name": "test-resource"}]',
-        prompts: '[{"name": "test-prompt"}]',
+        installation_methods: ['npm', 'yarn'],
+        tools: [{ name: 'test-tool' }],
+        resources: [{ name: 'test-resource' }],
+        prompts: [{ name: 'test-prompt' }],
         visibility: 'global',
         owner_team_id: null,
         created_by: 'user-1',
@@ -527,16 +566,17 @@ describe('MCP Servers - Update Global', () => {
         author_contact: null,
         organization: null,
         license: null,
-        default_config: '{"key": "value"}',
-        environment_variables: '[{"name": "TEST_VAR"}]',
-        dependencies: '{"dep1": "^1.0.0"}',
+        default_config: { key: 'value' },
+        environment_variables: [{ name: 'TEST_VAR' }],
+        dependencies: { dep1: '^1.0.0' },
         category_id: null,
-        tags: '["tag1", "tag2"]',
+        tags: ['tag1', 'tag2'],
         status: 'active',
         featured: false,
-        created_at: new Date('2024-01-01'),
-        updated_at: new Date('2024-01-02'),
-        last_sync_at: new Date('2024-01-03')
+        transport_type: null,
+        created_at: '2024-01-01T00:00:00.000Z',
+        updated_at: '2024-01-02T00:00:00.000Z',
+        last_sync_at: '2024-01-03T00:00:00.000Z'
       };
 
       mockMcpService.getServerById.mockResolvedValue(existingServer);
@@ -552,7 +592,6 @@ describe('MCP Servers - Update Global', () => {
       expect(server.tools).toEqual([{ name: 'test-tool' }]);
       expect(server.resources).toEqual([{ name: 'test-resource' }]);
       expect(server.prompts).toEqual([{ name: 'test-prompt' }]);
-      expect(server.default_config).toEqual({ key: 'value' });
       expect(server.environment_variables).toEqual([{ name: 'TEST_VAR' }]);
       expect(server.dependencies).toEqual({ dep1: '^1.0.0' });
       expect(server.tags).toEqual(['tag1', 'tag2']);
@@ -581,8 +620,8 @@ describe('MCP Servers - Update Global', () => {
         language: 'javascript',
         runtime: 'node',
         runtime_min_version: null,
-        installation_methods: '[]',
-        tools: '[]',
+        installation_methods: [],
+        tools: [],
         resources: null,
         prompts: null,
         visibility: 'global',
@@ -599,8 +638,9 @@ describe('MCP Servers - Update Global', () => {
         tags: null,
         status: 'active',
         featured: false,
-        created_at: new Date('2024-01-01'),
-        updated_at: new Date('2024-01-02'),
+        transport_type: null,
+        created_at: '2024-01-01T00:00:00.000Z',
+        updated_at: '2024-01-02T00:00:00.000Z',
         last_sync_at: null
       };
 
@@ -617,7 +657,6 @@ describe('MCP Servers - Update Global', () => {
       expect(server.tools).toEqual([]);
       expect(server.resources).toBeNull();
       expect(server.prompts).toBeNull();
-      expect(server.default_config).toBeNull();
       expect(server.environment_variables).toBeNull();
       expect(server.dependencies).toBeNull();
       expect(server.tags).toBeNull();
@@ -805,8 +844,8 @@ describe('MCP Servers - Update Global', () => {
         language: 'javascript',
         runtime: 'node',
         runtime_min_version: null,
-        installation_methods: '[]',
-        tools: '[]',
+        installation_methods: [],
+        tools: [],
         resources: null,
         prompts: null,
         visibility: 'global',
@@ -823,8 +862,9 @@ describe('MCP Servers - Update Global', () => {
         tags: null,
         status: 'active',
         featured: false,
-        created_at: new Date('2024-01-01'),
-        updated_at: new Date('2024-01-02'),
+        transport_type: null,
+        created_at: '2024-01-01T00:00:00.000Z',
+        updated_at: '2024-01-02T00:00:00.000Z',
         last_sync_at: null
       };
 
@@ -881,8 +921,8 @@ describe('MCP Servers - Update Global', () => {
         language: 'javascript',
         runtime: 'node',
         runtime_min_version: null,
-        installation_methods: '[]',
-        tools: '[]',
+        installation_methods: [],
+        tools: [],
         resources: null,
         prompts: null,
         visibility: 'global',
@@ -899,8 +939,9 @@ describe('MCP Servers - Update Global', () => {
         tags: null,
         status: 'active',
         featured: false,
-        created_at: new Date('2024-01-01'),
-        updated_at: new Date('2024-01-02'),
+        transport_type: null,
+        created_at: '2024-01-01T00:00:00.000Z',
+        updated_at: '2024-01-02T00:00:00.000Z',
         last_sync_at: null
       };
 
@@ -1063,8 +1104,8 @@ describe('MCP Servers - Update Global', () => {
           language: 'javascript',
           runtime: 'node',
           runtime_min_version: null,
-          installation_methods: '[]',
-          tools: '[]',
+          installation_methods: [],
+          tools: [],
           resources: null,
           prompts: null,
           visibility: 'global',
@@ -1081,8 +1122,9 @@ describe('MCP Servers - Update Global', () => {
           tags: null,
           status: statusUpdate.status || 'active',
           featured: statusUpdate.featured !== undefined ? statusUpdate.featured : false,
-          created_at: new Date('2024-01-01'),
-          updated_at: new Date('2024-01-02'),
+          transport_type: null,
+          created_at: '2024-01-01T00:00:00.000Z',
+          updated_at: '2024-01-02T00:00:00.000Z',
           last_sync_at: null
         };
 
@@ -1206,10 +1248,10 @@ describe('MCP Servers - Update Global', () => {
             const updatedServer = { 
               id: 'test-server-id', name: 'Updated Server Name', slug: 'updated-server-name', description: 'Updated description',
               long_description: null, github_url: null, git_branch: null, homepage_url: null, language: 'javascript', runtime: 'node',
-              runtime_min_version: null, installation_methods: '[]', tools: '[]', resources: null, prompts: null, visibility: 'global',
+              runtime_min_version: null, installation_methods: [], tools: [], resources: null, prompts: null, visibility: 'global',
               owner_team_id: null, created_by: 'user-1', author_name: null, author_contact: null, organization: null, license: null,
               default_config: null, environment_variables: null, dependencies: null, category_id: null, tags: null, status: 'active',
-              featured: false, created_at: new Date('2024-01-01'), updated_at: new Date('2024-01-02'), last_sync_at: null
+              featured: false, transport_type: null, created_at: '2024-01-01T00:00:00.000Z', updated_at: '2024-01-02T00:00:00.000Z', last_sync_at: null
             };
             mockMcpService.getServerById.mockResolvedValue(existingServer);
             mockMcpService.updateServer.mockResolvedValue(updatedServer);

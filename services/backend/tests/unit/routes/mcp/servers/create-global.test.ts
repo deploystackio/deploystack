@@ -213,7 +213,7 @@ describe('MCP Servers - Create Global', () => {
         author_contact: null,
         organization: null,
         license: null,
-        default_config: null,
+        transport_type: 'stdio',
         environment_variables: null,
         dependencies: null,
         category_id: null,
@@ -350,7 +350,7 @@ describe('MCP Servers - Create Global', () => {
         author_contact: 'author@example.com',
         organization: 'Test Organization',
         license: 'MIT',
-        default_config: '{"key": "value", "nested": {"prop": "test"}}',
+        transport_type: 'stdio',
         environment_variables: '[{"name": "TEST_VAR", "description": "Test variable", "required": true, "default_value": "test"}]',
         dependencies: '{"lodash": "^4.17.21", "express": "^4.18.0"}',
         category_id: 'category-123',
@@ -394,7 +394,6 @@ describe('MCP Servers - Create Global', () => {
           prompts: [
             { name: 'test-prompt', description: 'A test prompt' }
           ],
-          default_config: { key: 'value', nested: { prop: 'test' } },
           environment_variables: [
             { name: 'TEST_VAR', description: 'Test variable', required: true, default_value: 'test' }
           ],
@@ -429,7 +428,7 @@ describe('MCP Servers - Create Global', () => {
         author_contact: null,
         organization: null,
         license: null,
-        default_config: '{"key": "value"}',
+        transport_type: 'stdio',
         environment_variables: '[{"name": "JSON_VAR"}]',
         dependencies: '{"dep1": "^1.0.0"}',
         category_id: null,
@@ -455,7 +454,7 @@ describe('MCP Servers - Create Global', () => {
       expect(server.tools).toEqual([{ name: 'json-tool' }]);
       expect(server.resources).toEqual([{ name: 'json-resource' }]);
       expect(server.prompts).toEqual([{ name: 'json-prompt' }]);
-      expect(server.default_config).toEqual({ key: 'value' });
+      expect(server.transport_type).toEqual('stdio');
       expect(server.environment_variables).toEqual([{ name: 'JSON_VAR' }]);
       expect(server.dependencies).toEqual({ dep1: '^1.0.0' });
       expect(server.tags).toEqual(['json', 'test']);
@@ -488,7 +487,7 @@ describe('MCP Servers - Create Global', () => {
         author_contact: null,
         organization: null,
         license: null,
-        default_config: null,
+        transport_type: 'stdio',
         environment_variables: null,
         dependencies: null,
         category_id: null,
@@ -514,7 +513,7 @@ describe('MCP Servers - Create Global', () => {
       expect(server.tools).toEqual([]);
       expect(server.resources).toBeNull();
       expect(server.prompts).toBeNull();
-      expect(server.default_config).toBeNull();
+      expect(server.transport_type).toEqual('stdio');
       expect(server.environment_variables).toBeNull();
       expect(server.dependencies).toBeNull();
       expect(server.tags).toBeNull();
@@ -553,7 +552,7 @@ describe('MCP Servers - Create Global', () => {
         author_contact: null,
         organization: null,
         license: null,
-        default_config: null,
+        transport_type: 'stdio',
         environment_variables: null,
         dependencies: null,
         category_id: null,
@@ -711,7 +710,7 @@ describe('MCP Servers - Create Global', () => {
         author_contact: null,
         organization: null,
         license: null,
-        default_config: null,
+        transport_type: 'stdio',
         environment_variables: null,
         dependencies: null,
         category_id: null,
@@ -781,7 +780,7 @@ describe('MCP Servers - Create Global', () => {
         author_contact: null,
         organization: null,
         license: null,
-        default_config: null,
+        transport_type: 'stdio',
         environment_variables: null,
         dependencies: null,
         category_id: null,
@@ -1022,7 +1021,7 @@ describe('MCP Servers - Create Global', () => {
           author_contact: null,
           organization: null,
           license: null,
-          default_config: null,
+          transport_type: 'stdio',
           environment_variables: null,
           dependencies: null,
           category_id: null,
@@ -1163,7 +1162,7 @@ describe('MCP Servers - Create Global', () => {
               author_contact: null,
               organization: null,
               license: null,
-              default_config: null,
+              transport_type: 'stdio',
               environment_variables: null,
               dependencies: null,
               category_id: null,
