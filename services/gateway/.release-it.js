@@ -25,10 +25,7 @@ module.exports = {
         name: 'angular'
       },
       infile: 'CHANGELOG.md',
-      ignoreRecommendedBump: true,
-      gitRawCommitsOpts: {
-        path: 'services/gateway'
-      }
+      ignoreRecommendedBump: true
     }
   }
 };
