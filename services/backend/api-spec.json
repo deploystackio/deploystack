@@ -14487,7 +14487,7 @@
         "tags": [
           "MCP Servers"
         ],
-        "description": "Create a new global MCP server - requires global admin permissions. Global servers are visible to all users. Requires Content-Type: application/json header when sending request body.",
+        "description": "Create a new global MCP server - requires global admin permissions. Global servers are visible to all users. If transport_type is not provided, it will be automatically extracted from claude_desktop_config (CLI commands like npx, node, python = stdio). Requires Content-Type: application/json header when sending request body.",
         "requestBody": {
           "content": {
             "application/json": {
@@ -14670,7 +14670,6 @@
                   "description",
                   "language",
                   "runtime",
-                  "transport_type",
                   "claude_desktop_config"
                 ],
                 "additionalProperties": false
@@ -15143,7 +15142,7 @@
         "tags": [
           "MCP Servers"
         ],
-        "description": "Update an existing global MCP server - requires global admin permissions. Only global servers can be updated through this endpoint. Requires Content-Type: application/json header when sending request body.",
+        "description": "Update an existing global MCP server - requires global admin permissions. Only global servers can be updated through this endpoint. If transport_type is not provided but claude_desktop_config is, transport_type will be automatically extracted. Requires Content-Type: application/json header when sending request body.",
         "parameters": [
           {
             "schema": {

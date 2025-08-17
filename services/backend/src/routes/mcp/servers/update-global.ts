@@ -4,6 +4,7 @@ import { createSchema } from 'zod-openapi';
 import { requireGlobalAdmin } from '../../../middleware/roleMiddleware';
 import { McpCatalogService } from '../../../services/mcpCatalogService';
 import { getDb } from '../../../db';
+import { claudeDesktopConfigSchema, extractTransportTypeFromClaudeConfig } from '../../../utils/mcpConfigExtractor';
 
 // Path parameters schema
 const updateGlobalServerParamsSchema = z.object({
@@ -43,6 +44,7 @@ const updateGlobalServerRequestSchema = z.object({
   author_contact: z.string().optional(),
   organization: z.string().optional(),
   license: z.string().optional(),
+  claude_desktop_config: claudeDesktopConfigSchema.optional(),
   transport_type: z.enum(['stdio', 'http', 'sse']).optional(),
   environment_variables: z.array(z.object({
     name: z.string().min(1, 'Environment variable name is required'),
@@ -109,7 +111,7 @@ export default async function updateGlobalServer(server: FastifyInstance) {
     schema: {
       tags: ['MCP Servers'],
       summary: 'Update global MCP server (Global Admin only)',
-      description: 'Update an existing global MCP server - requires global admin permissions. Only global servers can be updated through this endpoint. Requires Content-Type: application/json header when sending request body.',
+      description: 'Update an existing global MCP server - requires global admin permissions. Only global servers can be updated through this endpoint. If transport_type is not provided but claude_desktop_config is, transport_type will be automatically extracted. Requires Content-Type: application/json header when sending request body.',
       security: [{ cookieAuth: [] }],
       params: createSchema(updateGlobalServerParamsSchema),
       requestBody: {
@@ -189,6 +191,20 @@ export default async function updateGlobalServer(server: FastifyInstance) {
         });
       }
 
+      // Extract transport_type from claude_desktop_config if provided but transport_type is not
+      let finalUpdateData = { ...updateData };
+      if (updateData.claude_desktop_config && !updateData.transport_type) {
+        const extractedTransportType = extractTransportTypeFromClaudeConfig(updateData.claude_desktop_config);
+        finalUpdateData.transport_type = extractedTransportType;
+        
+        request.log.debug({
+          operation: 'update_global_mcp_server',
+          userId: request.user?.id,
+          serverId,
+          extractedTransportType
+        }, 'Extracted transport_type from claude_desktop_config');
+      }
+
       request.log.info({
         operation: 'update_global_mcp_server',
         step: 'calling_service',
@@ -200,7 +216,7 @@ export default async function updateGlobalServer(server: FastifyInstance) {
         serverId,
         request.user!.id,
         'global_admin', // We know user is global admin due to middleware
-        updateData
+        finalUpdateData
       );
       
       request.log.info({
@@ -222,7 +238,7 @@ export default async function updateGlobalServer(server: FastifyInstance) {
         userId: request.user?.id,
         serverId,
         serverName: updatedServer.name,
-        updatedFields: Object.keys(updateData)
+        updatedFields: Object.keys(finalUpdateData)
       }, 'Global MCP server updated successfully');
 
       // Safe JSON parsing helper function

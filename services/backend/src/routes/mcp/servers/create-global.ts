@@ -4,18 +4,7 @@ import { createSchema } from 'zod-openapi';
 import { requireGlobalAdmin } from '../../../middleware/roleMiddleware';
 import { McpCatalogService } from '../../../services/mcpCatalogService';
 import { getDb } from '../../../db';
-
-// Claude Desktop configuration schema
-const claudeDesktopConfigSchema = z.object({
-  mcpServers: z.record(z.string(), z.object({
-    command: z.string().min(1, 'Command is required'),
-    args: z.array(z.string()),
-    env: z.record(z.string(), z.string()).optional()
-  }))
-}).refine(
-  (config) => Object.keys(config.mcpServers).length === 1,
-  { message: "Claude Desktop config must contain exactly one MCP server" }
-);
+import { claudeDesktopConfigSchema, extractMcpConfigData } from '../../../utils/mcpConfigExtractor';
 
 // Request schema for creating global MCP servers
 const createGlobalServerRequestSchema = z.object({
@@ -25,7 +14,7 @@ const createGlobalServerRequestSchema = z.object({
   language: z.string().min(1, 'Language is required'),
   runtime: z.string().min(1, 'Runtime is required'),
   claude_desktop_config: claudeDesktopConfigSchema,
-  transport_type: z.enum(['stdio', 'http', 'sse']).default('stdio'),
+  transport_type: z.enum(['stdio', 'http', 'sse']).optional(),
   tools: z.array(z.object({
     name: z.string().min(1, 'Tool name is required'),
     description: z.string().min(1, 'Tool description is required')
@@ -54,32 +43,6 @@ const createGlobalServerRequestSchema = z.object({
   tags: z.array(z.string()).optional(),
   featured: z.boolean().default(false)
 });
-
-// Utility function to extract MCP configuration data from Claude Desktop config
-function extractMcpConfigData(claudeConfig: z.infer<typeof claudeDesktopConfigSchema>) {
-  const serverKey = Object.keys(claudeConfig.mcpServers)[0];
-  const serverConfig = claudeConfig.mcpServers[serverKey];
-  
-  // Extract installation_methods (Claude Desktop format)
-  const installation_methods = [{
-    client: "claude-desktop",
-    command: serverConfig.command,
-    args: serverConfig.args,
-    env: serverConfig.env || {}
-  }];
-  
-  // Extract environment_variables metadata
-  const environment_variables = Object.keys(serverConfig.env || {}).map(envKey => ({
-    name: envKey,
-    description: `${envKey} environment variable`,
-    required: true,
-    type: "password",
-    validation: "",
-    placeholder: serverConfig.env![envKey]
-  }));
-  
-  return { installation_methods, environment_variables };
-}
 
 // Response schema for successful creation
 const createGlobalServerResponseSchema = z.object({
@@ -133,7 +96,7 @@ export default async function createGlobalServer(server: FastifyInstance) {
     schema: {
       tags: ['MCP Servers'],
       summary: 'Create global MCP server (Global Admin only)',
-      description: 'Create a new global MCP server - requires global admin permissions. Global servers are visible to all users. Requires Content-Type: application/json header when sending request body.',
+      description: 'Create a new global MCP server - requires global admin permissions. Global servers are visible to all users. If transport_type is not provided, it will be automatically extracted from claude_desktop_config (CLI commands like npx, node, python = stdio). Requires Content-Type: application/json header when sending request body.',
       security: [{ cookieAuth: [] }],
       // Plain JSON Schema for Fastify validation
       body: {
@@ -214,7 +177,7 @@ export default async function createGlobalServer(server: FastifyInstance) {
           tags: { type: 'array', items: { type: 'string' } },
           featured: { type: 'boolean' }
         },
-        required: ['name', 'description', 'language', 'runtime', 'transport_type', 'claude_desktop_config'],
+        required: ['name', 'description', 'language', 'runtime', 'claude_desktop_config'],
         additionalProperties: false
       },
       // createSchema() for OpenAPI documentation
@@ -258,14 +221,15 @@ export default async function createGlobalServer(server: FastifyInstance) {
         claudeConfig: requestData.claude_desktop_config
       }, 'Extracting MCP configuration data from Claude Desktop config');
       
-      const { installation_methods, environment_variables } = extractMcpConfigData(requestData.claude_desktop_config);
+      const { installation_methods, environment_variables, transport_type: extractedTransportType } = extractMcpConfigData(requestData.claude_desktop_config);
       
       request.log.debug({
         operation: 'create_global_mcp_server',
         userId: request.user?.id,
         extractedData: {
           installation_methods,
-          environment_variables
+          environment_variables,
+          extractedTransportType
         }
       }, 'Successfully extracted MCP configuration data');
       
@@ -289,7 +253,7 @@ export default async function createGlobalServer(server: FastifyInstance) {
         author_contact: requestData.author_contact,
         organization: requestData.organization,
         license: requestData.license,
-        transport_type: requestData.transport_type,
+        transport_type: requestData.transport_type || extractedTransportType,
         environment_variables,
         dependencies: requestData.dependencies,
         category_id: requestData.category_id,
