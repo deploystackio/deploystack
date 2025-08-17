@@ -2,6 +2,9 @@ module.exports = {
   git: {
     commitMessage: 'chore(backend): release v${version}',
     tagName: 'backend-v${version}',
+    tagAnnotation: 'Backend Release ${version}',
+    commitsPath: 'services/backend',
+    addUntrackedFiles: false,
     requireCleanWorkingDir: false
   },
   npm: {
@@ -16,10 +19,7 @@ module.exports = {
         name: 'angular'
       },
       infile: 'CHANGELOG.md',
-      ignoreRecommendedBump: true,
-      gitRawCommitsOpts: {
-        path: 'services/backend'
-      }
+      ignoreRecommendedBump: true
     }
   }
 };

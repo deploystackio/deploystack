@@ -3,7 +3,9 @@ module.exports = {
     commitMessage: 'chore(frontend): release v${version}',
     tagName: 'frontend-v${version}',
     tagAnnotation: 'Frontend Release ${version}',
-    addUntrackedFiles: false
+    commitsPath: 'services/frontend',
+    addUntrackedFiles: false,
+    requireCleanWorkingDir: false
   },
   github: {
     release: true,
@@ -23,10 +25,7 @@ module.exports = {
         name: 'angular'
       },
       infile: 'CHANGELOG.md',
-      ignoreRecommendedBump: true,
-      gitRawCommitsOpts: {
-        path: 'services/frontend'
-      }
+      ignoreRecommendedBump: true
     }
   }
 };

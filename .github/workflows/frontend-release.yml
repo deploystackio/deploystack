@@ -57,6 +57,51 @@ jobs:
         with:
           path: services/frontend
           
+      - name: Extract release notes
+        id: extract-release-notes
+        working-directory: services/frontend
+        run: |
+          VERSION=$(cat package.json | grep '"version"' | cut -d'"' -f4)
+          echo "Extracting release notes for version $VERSION"
+          
+          # Find the latest frontend tag (excluding the current one)
+          LATEST_TAG=$(git tag --list "frontend-v*" --sort=-version:refname | grep -v "frontend-v${VERSION}" | head -1)
+          
+          if [ -z "$LATEST_TAG" ]; then
+            echo "No previous frontend tag found, using all commits"
+            FRONTEND_COMMITS=$(git log --oneline --grep="(frontend)" --grep="(all)" --grep-or)
+          else
+            echo "Using commits since $LATEST_TAG"
+            # Get frontend and all scoped commits since last release
+            FRONTEND_COMMITS=$(git log ${LATEST_TAG}..HEAD --oneline --grep="(frontend)")
+            ALL_COMMITS=$(git log ${LATEST_TAG}..HEAD --oneline --grep="(all)")
+            
+            # Combine and format the commits
+            COMBINED_COMMITS=$(echo -e "$FRONTEND_COMMITS\n$ALL_COMMITS" | sort -u | grep -v "^$")
+          fi
+          
+          # Format commits for release notes
+          if [ -n "$COMBINED_COMMITS" ]; then
+            RELEASE_NOTES=""
+            while IFS= read -r commit; do
+              if [ -n "$commit" ]; then
+                # Extract commit hash and message
+                HASH=$(echo "$commit" | cut -d' ' -f1)
+                MESSAGE=$(echo "$commit" | cut -d' ' -f2-)
+                RELEASE_NOTES="${RELEASE_NOTES}- ${MESSAGE} ([${HASH}](https://github.com/deploystackio/deploystack/commit/${HASH}))\n"
+              fi
+            done <<< "$COMBINED_COMMITS"
+          else
+            RELEASE_NOTES="No significant changes since last release."
+          fi
+          
+          echo "release_notes<<EOF" >> $GITHUB_OUTPUT
+          echo -e "$RELEASE_NOTES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          
+          echo "Release notes extracted:"
+          echo -e "$RELEASE_NOTES"
+          
       - name: Update .env with version
         working-directory: services/frontend
         run: |
