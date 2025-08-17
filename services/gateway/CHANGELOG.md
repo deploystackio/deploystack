@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.6.0 (2025-08-17)
+
+* cicd(gateway): enhance release note extraction by including all relevant commits since the last tag ([3865b9d](https://github.com/deploystackio/deploystack/commit/3865b9d))
+* chore(all): update branch cleanup workflow to include gateway-release branch ([351ef11](https://github.com/deploystackio/deploystack/commit/351ef11))
+* chore(all): update release-it configuration for gateway service ([d1745e4](https://github.com/deploystackio/deploystack/commit/d1745e4))
+* chore(backend): release v0.29.2 ([715c35f](https://github.com/deploystackio/deploystack/commit/715c35f))
+* chore(backend): release v0.29.3 ([ae61537](https://github.com/deploystackio/deploystack/commit/ae61537))
+* chore(frontend): update button loading states and improve form submission handling ([206a356](https://github.com/deploystackio/deploystack/commit/206a356))
+* chore(gateway): specify commits path for release-it configuration ([8aed4aa](https://github.com/deploystackio/deploystack/commit/8aed4aa))
+* feat(backend): add error handling schemas for validation and internal server errors ([11c71ed](https://github.com/deploystackio/deploystack/commit/11c71ed))
+* feat(backend): enhance build process with webpack integration ([1aab8fa](https://github.com/deploystackio/deploystack/commit/1aab8fa))
+* feat(gateway): add 'deploystack refresh' command to refresh MCP server configurations ([e104b4c](https://github.com/deploystackio/deploystack/commit/e104b4c))
+* feat(gateway): add 'restart' command to gracefully restart the gateway server ([a65d849](https://github.com/deploystackio/deploystack/commit/a65d849))
+* feat(gateway): add logs streaming endpoint and centralized logging system ([44af50e](https://github.com/deploystackio/deploystack/commit/44af50e))
+* feat(gateway): update dependencies and enhance login command to auto-start gateway server ([f5d7661](https://github.com/deploystackio/deploystack/commit/f5d7661))
+
 ## <small>0.5.2 (2025-08-16)</small>
 
 * release v0.5.1 ([77ab293](https://github.com/deploystackio/deploystack/commit/77ab2933df6003a395f9712f37d4b6dc79a42712))
