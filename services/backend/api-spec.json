@@ -12084,6 +12084,43 @@
               }
             }
           },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "schema": {
+                    "description": "Bad Request - Validation error",
+                    "type": "object",
+                    "properties": {
+                      "success": {
+                        "description": "Indicates if the operation was successful (false for errors)",
+                        "default": false,
+                        "type": "boolean"
+                      },
+                      "error": {
+                        "description": "Error message",
+                        "type": "string"
+                      },
+                      "details": {
+                        "description": "Validation error details",
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "required": [
+                      "success",
+                      "error"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "components": {}
+                }
+              }
+            }
+          },
           "401": {
             "description": "Default Response",
             "content": {
@@ -13233,6 +13270,14 @@
                                     }
                                   ]
                                 },
+                                "transport_type": {
+                                  "type": "string",
+                                  "enum": [
+                                    "stdio",
+                                    "http",
+                                    "sse"
+                                  ]
+                                },
                                 "category_id": {
                                   "anyOf": [
                                     {
@@ -13302,6 +13347,7 @@
                                 "author_contact",
                                 "organization",
                                 "license",
+                                "transport_type",
                                 "category_id",
                                 "tags",
                                 "status",
@@ -13622,18 +13668,12 @@
                               }
                             ]
                           },
-                          "default_config": {
-                            "anyOf": [
-                              {
-                                "type": "object",
-                                "propertyNames": {
-                                  "type": "string"
-                                },
-                                "additionalProperties": {}
-                              },
-                              {
-                                "type": "null"
-                              }
+                          "transport_type": {
+                            "type": "string",
+                            "enum": [
+                              "stdio",
+                              "http",
+                              "sse"
                             ]
                           },
                           "environment_variables": {
@@ -13735,7 +13775,7 @@
                           "author_contact",
                           "organization",
                           "license",
-                          "default_config",
+                          "transport_type",
                           "environment_variables",
                           "dependencies",
                           "category_id",
@@ -14119,18 +14159,12 @@
                                     }
                                   ]
                                 },
-                                "default_config": {
-                                  "anyOf": [
-                                    {
-                                      "type": "object",
-                                      "propertyNames": {
-                                        "type": "string"
-                                      },
-                                      "additionalProperties": {}
-                                    },
-                                    {
-                                      "type": "null"
-                                    }
+                                "transport_type": {
+                                  "type": "string",
+                                  "enum": [
+                                    "stdio",
+                                    "http",
+                                    "sse"
                                   ]
                                 },
                                 "environment_variables": {
@@ -14232,7 +14266,7 @@
                                 "author_contact",
                                 "organization",
                                 "license",
-                                "default_config",
+                                "transport_type",
                                 "environment_variables",
                                 "dependencies",
                                 "category_id",
@@ -14477,6 +14511,14 @@
                     "type": "string",
                     "minLength": 1
                   },
+                  "transport_type": {
+                    "type": "string",
+                    "enum": [
+                      "stdio",
+                      "http",
+                      "sse"
+                    ]
+                  },
                   "claude_desktop_config": {
                     "type": "object",
                     "properties": {
@@ -14628,6 +14670,7 @@
                   "description",
                   "language",
                   "runtime",
+                  "transport_type",
                   "claude_desktop_config"
                 ],
                 "additionalProperties": false
@@ -14814,18 +14857,12 @@
                               }
                             ]
                           },
-                          "default_config": {
-                            "anyOf": [
-                              {
-                                "type": "object",
-                                "propertyNames": {
-                                  "type": "string"
-                                },
-                                "additionalProperties": {}
-                              },
-                              {
-                                "type": "null"
-                              }
+                          "transport_type": {
+                            "type": "string",
+                            "enum": [
+                              "stdio",
+                              "http",
+                              "sse"
                             ]
                           },
                           "environment_variables": {
@@ -14927,7 +14964,7 @@
                           "author_contact",
                           "organization",
                           "license",
-                          "default_config",
+                          "transport_type",
                           "environment_variables",
                           "dependencies",
                           "category_id",
@@ -15308,18 +15345,12 @@
                               }
                             ]
                           },
-                          "default_config": {
-                            "anyOf": [
-                              {
-                                "type": "object",
-                                "propertyNames": {
-                                  "type": "string"
-                                },
-                                "additionalProperties": {}
-                              },
-                              {
-                                "type": "null"
-                              }
+                          "transport_type": {
+                            "type": "string",
+                            "enum": [
+                              "stdio",
+                              "http",
+                              "sse"
                             ]
                           },
                           "environment_variables": {
@@ -15421,7 +15452,7 @@
                           "author_contact",
                           "organization",
                           "license",
-                          "default_config",
+                          "transport_type",
                           "environment_variables",
                           "dependencies",
                           "category_id",
@@ -16161,6 +16192,25 @@
                 }
               }
             }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -16372,9 +16422,14 @@
                               "nullable": true,
                               "description": "Category ID"
                             },
-                            "default_config": {
-                              "nullable": true,
-                              "description": "Default configuration"
+                            "transport_type": {
+                              "type": "string",
+                              "enum": [
+                                "stdio",
+                                "http",
+                                "sse"
+                              ],
+                              "description": "MCP transport type"
                             }
                           },
                           "description": "Optional server details if included"
@@ -16726,9 +16781,14 @@
                                 "nullable": true,
                                 "description": "Category ID"
                               },
-                              "default_config": {
-                                "nullable": true,
-                                "description": "Default configuration"
+                              "transport_type": {
+                                "type": "string",
+                                "enum": [
+                                  "stdio",
+                                  "http",
+                                  "sse"
+                                ],
+                                "description": "MCP transport type"
                               }
                             },
                             "description": "Optional server details if included"
@@ -17065,9 +17125,14 @@
                               "nullable": true,
                               "description": "Category ID"
                             },
-                            "default_config": {
-                              "nullable": true,
-                              "description": "Default configuration"
+                            "transport_type": {
+                              "type": "string",
+                              "enum": [
+                                "stdio",
+                                "http",
+                                "sse"
+                              ],
+                              "description": "MCP transport type"
                             }
                           },
                           "description": "Optional server details if included"
@@ -17424,9 +17489,14 @@
                               "nullable": true,
                               "description": "Category ID"
                             },
-                            "default_config": {
-                              "nullable": true,
-                              "description": "Default configuration"
+                            "transport_type": {
+                              "type": "string",
+                              "enum": [
+                                "stdio",
+                                "http",
+                                "sse"
+                              ],
+                              "description": "MCP transport type"
                             }
                           },
                           "description": "Optional server details if included"
@@ -17996,9 +18066,14 @@
                               "nullable": true,
                               "description": "Category ID"
                             },
-                            "default_config": {
-                              "nullable": true,
-                              "description": "Default configuration"
+                            "transport_type": {
+                              "type": "string",
+                              "enum": [
+                                "stdio",
+                                "http",
+                                "sse"
+                              ],
+                              "description": "MCP transport type"
                             }
                           },
                           "description": "Optional server details if included"
@@ -19748,6 +19823,30 @@
                     "error"
                   ],
                   "description": "Forbidden - Insufficient permissions"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Internal Server Error"
                 }
               }
             }

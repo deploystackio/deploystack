@@ -187,7 +187,7 @@ export const mcpServers = sqliteTable('mcpServers', {
   license: text('license'), // Apache-2.0, MIT
   
   // Deployment & Configuration
-  default_config: text('default_config'), // JSON of default configuration
+  transport_type: text('transport_type', { enum: ['stdio', 'http', 'sse'] }).notNull().default('stdio'), // MCP transport type
   environment_variables: text('environment_variables'), // JSON array of required env vars
   dependencies: text('dependencies'), // JSON of dependencies
   

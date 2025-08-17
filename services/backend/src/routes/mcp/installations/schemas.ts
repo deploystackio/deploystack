@@ -208,9 +208,10 @@ export const SERVER_DETAILS_SCHEMA = {
       nullable: true,
       description: 'Category ID'
     },
-    default_config: {
-      nullable: true,
-      description: 'Default configuration'
+    transport_type: {
+      type: 'string',
+      enum: ['stdio', 'http', 'sse'],
+      description: 'MCP transport type'
     }
   }
 } as const;
@@ -435,7 +436,7 @@ export interface ServerDetails {
   environment_variables: any[] | null; // eslint-disable-line @typescript-eslint/no-explicit-any
   installation_methods: any[]; // eslint-disable-line @typescript-eslint/no-explicit-any
   category_id: string | null;
-  default_config?: any; // eslint-disable-line @typescript-eslint/no-explicit-any
+  transport_type: 'stdio' | 'http' | 'sse';
 }
 
 export interface InstallationData {

@@ -30,7 +30,7 @@ export interface McpServer {
   author_contact?: string;
   organization?: string;
   license?: string;
-  default_config?: string; // JSON
+  transport_type: 'stdio' | 'http' | 'sse';
   environment_variables?: string; // JSON
   dependencies?: string; // JSON
   category_id?: string;
@@ -61,7 +61,7 @@ export interface CreateMcpServerRequest {
   author_contact?: string;
   organization?: string;
   license?: string;
-  default_config?: any; // Will be JSON stringified - auto-extracted from Claude Desktop config
+  transport_type?: 'stdio' | 'http' | 'sse'; // MCP transport type
   environment_variables?: any[]; // Will be JSON stringified - auto-extracted from Claude Desktop config
   dependencies?: any; // Will be JSON stringified
   category_id?: string;
@@ -87,7 +87,7 @@ export interface UpdateMcpServerRequest {
   author_contact?: string;
   organization?: string;
   license?: string;
-  default_config?: any;
+  transport_type?: 'stdio' | 'http' | 'sse';
   environment_variables?: any[];
   dependencies?: any;
   category_id?: string;
@@ -340,7 +340,7 @@ export class McpCatalogService {
       author_contact: data.author_contact,
       organization: data.organization,
       license: githubInfo.license || data.license,
-      default_config: data.default_config ? JSON.stringify(data.default_config) : null,
+      transport_type: data.transport_type || 'stdio',
       environment_variables: data.environment_variables ? JSON.stringify(data.environment_variables) : null,
       dependencies: data.dependencies ? JSON.stringify(data.dependencies) : null,
       category_id: data.category_id,
@@ -410,7 +410,7 @@ export class McpCatalogService {
     if (data.author_contact !== undefined) updateData.author_contact = data.author_contact;
     if (data.organization !== undefined) updateData.organization = data.organization;
     if (data.license !== undefined) updateData.license = data.license;
-    if (data.default_config !== undefined) updateData.default_config = data.default_config ? JSON.stringify(data.default_config) : null;
+    if (data.transport_type !== undefined) updateData.transport_type = data.transport_type;
     if (data.environment_variables !== undefined) updateData.environment_variables = data.environment_variables ? JSON.stringify(data.environment_variables) : null;
     if (data.dependencies !== undefined) updateData.dependencies = data.dependencies ? JSON.stringify(data.dependencies) : null;
     if (data.category_id !== undefined) updateData.category_id = data.category_id;
@@ -491,7 +491,7 @@ export class McpCatalogService {
     parsed.resources = parseJsonField('resources', parsed.resources, null);
     parsed.prompts = parseJsonField('prompts', parsed.prompts, null);
     parsed.environment_variables = parseJsonField('environment_variables', parsed.environment_variables, null);
-    parsed.default_config = parseJsonField('default_config', parsed.default_config, null);
+    // transport_type is a simple string field, no parsing needed
     parsed.dependencies = parseJsonField('dependencies', parsed.dependencies, null);
     parsed.tags = parseJsonField('tags', parsed.tags, null);
     

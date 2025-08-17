@@ -8428,6 +8428,32 @@ paths:
                     - data
                   additionalProperties: false
                 components: {}
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                schema:
+                  description: Bad Request - Validation error
+                  type: object
+                  properties:
+                    success:
+                      description: Indicates if the operation was successful (false for errors)
+                      default: false
+                      type: boolean
+                    error:
+                      description: Error message
+                      type: string
+                    details:
+                      description: Validation error details
+                      type: array
+                      items:
+                        type: string
+                  required:
+                    - success
+                    - error
+                  additionalProperties: false
+                components: {}
         "401":
           description: Default Response
           content:
@@ -9207,6 +9233,12 @@ paths:
                                 anyOf:
                                   - type: string
                                   - type: "null"
+                              transport_type:
+                                type: string
+                                enum:
+                                  - stdio
+                                  - http
+                                  - sse
                               category_id:
                                 anyOf:
                                   - type: string
@@ -9252,6 +9284,7 @@ paths:
                               - author_contact
                               - organization
                               - license
+                              - transport_type
                               - category_id
                               - tags
                               - status
@@ -9437,13 +9470,12 @@ paths:
                           anyOf:
                             - type: string
                             - type: "null"
-                        default_config:
-                          anyOf:
-                            - type: object
-                              propertyNames:
-                                type: string
-                              additionalProperties: {}
-                            - type: "null"
+                        transport_type:
+                          type: string
+                          enum:
+                            - stdio
+                            - http
+                            - sse
                         environment_variables:
                           anyOf:
                             - type: array
@@ -9505,7 +9537,7 @@ paths:
                         - author_contact
                         - organization
                         - license
-                        - default_config
+                        - transport_type
                         - environment_variables
                         - dependencies
                         - category_id
@@ -9738,13 +9770,12 @@ paths:
                                 anyOf:
                                   - type: string
                                   - type: "null"
-                              default_config:
-                                anyOf:
-                                  - type: object
-                                    propertyNames:
-                                      type: string
-                                    additionalProperties: {}
-                                  - type: "null"
+                              transport_type:
+                                type: string
+                                enum:
+                                  - stdio
+                                  - http
+                                  - sse
                               environment_variables:
                                 anyOf:
                                   - type: array
@@ -9806,7 +9837,7 @@ paths:
                               - author_contact
                               - organization
                               - license
-                              - default_config
+                              - transport_type
                               - environment_variables
                               - dependencies
                               - category_id
@@ -9964,6 +9995,12 @@ paths:
                 runtime:
                   type: string
                   minLength: 1
+                transport_type:
+                  type: string
+                  enum:
+                    - stdio
+                    - http
+                    - sse
                 claude_desktop_config:
                   type: object
                   properties:
@@ -10070,6 +10107,7 @@ paths:
                 - description
                 - language
                 - runtime
+                - transport_type
                 - claude_desktop_config
               additionalProperties: false
         required: true
@@ -10164,13 +10202,12 @@ paths:
                           anyOf:
                             - type: string
                             - type: "null"
-                        default_config:
-                          anyOf:
-                            - type: object
-                              propertyNames:
-                                type: string
-                              additionalProperties: {}
-                            - type: "null"
+                        transport_type:
+                          type: string
+                          enum:
+                            - stdio
+                            - http
+                            - sse
                         environment_variables:
                           anyOf:
                             - type: array
@@ -10232,7 +10269,7 @@ paths:
                         - author_contact
                         - organization
                         - license
-                        - default_config
+                        - transport_type
                         - environment_variables
                         - dependencies
                         - category_id
@@ -10463,13 +10500,12 @@ paths:
                           anyOf:
                             - type: string
                             - type: "null"
-                        default_config:
-                          anyOf:
-                            - type: object
-                              propertyNames:
-                                type: string
-                              additionalProperties: {}
-                            - type: "null"
+                        transport_type:
+                          type: string
+                          enum:
+                            - stdio
+                            - http
+                            - sse
                         environment_variables:
                           anyOf:
                             - type: array
@@ -10531,7 +10567,7 @@ paths:
                         - author_contact
                         - organization
                         - license
-                        - default_config
+                        - transport_type
                         - environment_variables
                         - dependencies
                         - category_id
@@ -11025,6 +11061,18 @@ paths:
                     default: false
                   error:
                     type: string
+        "500":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
   /api/teams/{teamId}/mcp/installations:
     post:
       summary: Install MCP server for team
@@ -11186,9 +11234,13 @@ paths:
                             type: string
                             nullable: true
                             description: Category ID
-                          default_config:
-                            nullable: true
-                            description: Default configuration
+                          transport_type:
+                            type: string
+                            enum:
+                              - stdio
+                              - http
+                              - sse
+                            description: MCP transport type
                         description: Optional server details if included
                     required:
                       - id
@@ -11443,9 +11495,13 @@ paths:
                               type: string
                               nullable: true
                               description: Category ID
-                            default_config:
-                              nullable: true
-                              description: Default configuration
+                            transport_type:
+                              type: string
+                              enum:
+                                - stdio
+                                - http
+                                - sse
+                              description: MCP transport type
                           description: Optional server details if included
                       required:
                         - id
@@ -11689,9 +11745,13 @@ paths:
                             type: string
                             nullable: true
                             description: Category ID
-                          default_config:
-                            nullable: true
-                            description: Default configuration
+                          transport_type:
+                            type: string
+                            enum:
+                              - stdio
+                              - http
+                              - sse
+                            description: MCP transport type
                         description: Optional server details if included
                     required:
                       - id
@@ -11950,9 +12010,13 @@ paths:
                             type: string
                             nullable: true
                             description: Category ID
-                          default_config:
-                            nullable: true
-                            description: Default configuration
+                          transport_type:
+                            type: string
+                            enum:
+                              - stdio
+                              - http
+                              - sse
+                            description: MCP transport type
                         description: Optional server details if included
                     required:
                       - id
@@ -12359,9 +12423,13 @@ paths:
                             type: string
                             nullable: true
                             description: Category ID
-                          default_config:
-                            nullable: true
-                            description: Default configuration
+                          transport_type:
+                            type: string
+                            enum:
+                              - stdio
+                              - http
+                              - sse
+                            description: MCP transport type
                         description: Optional server details if included
                     required:
                       - id
@@ -13578,6 +13646,22 @@ paths:
                   - success
                   - error
                 description: Forbidden - Insufficient permissions
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - success
+                  - error
+                description: Internal Server Error
   /api/auth/email/register:
     post:
       summary: User registration via email

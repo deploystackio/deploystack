@@ -27,7 +27,7 @@ export interface McpInstallation {
     runtime: string;
     installation_methods: any[];
     environment_variables: any[];
-    default_config: any;
+    transport_type: 'stdio' | 'http' | 'sse';
   };
 }
 
@@ -96,6 +96,7 @@ export class McpInstallationService {
         tags: this.parseJsonField(row.server.tags, []),
         environment_variables: this.parseJsonField(row.server.environment_variables, []),
         installation_methods: this.parseJsonField(row.server.installation_methods, []),
+        transport_type: row.server.transport_type,
         category_id: row.server.category_id
       } : undefined
     }));
@@ -151,6 +152,7 @@ export class McpInstallationService {
         status: server.status,
         tags: this.parseJsonField(server.tags, []),
         environment_variables: this.parseJsonField(server.environment_variables, []),
+        transport_type: server.transport_type,
         category_id: server.category_id
       } : undefined
     };

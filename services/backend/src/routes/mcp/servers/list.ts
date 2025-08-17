@@ -42,6 +42,7 @@ const serverSchema = z.object({
   author_contact: z.string().nullable(),
   organization: z.string().nullable(),
   license: z.string().nullable(),
+  transport_type: z.enum(['stdio', 'http', 'sse']),
   category_id: z.string().nullable(),
   tags: z.string().nullable(), // JSON string
   status: z.enum(['active', 'deprecated', 'maintenance']),

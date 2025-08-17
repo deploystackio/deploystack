@@ -25,6 +25,7 @@ const createGlobalServerRequestSchema = z.object({
   language: z.string().min(1, 'Language is required'),
   runtime: z.string().min(1, 'Runtime is required'),
   claude_desktop_config: claudeDesktopConfigSchema,
+  transport_type: z.enum(['stdio', 'http', 'sse']).default('stdio'),
   tools: z.array(z.object({
     name: z.string().min(1, 'Tool name is required'),
     description: z.string().min(1, 'Tool description is required')
@@ -77,17 +78,7 @@ function extractMcpConfigData(claudeConfig: z.infer<typeof claudeDesktopConfigSc
     placeholder: serverConfig.env![envKey]
   }));
   
-  // Extract default_config
-  const default_config = {
-    base_command: serverConfig.command,
-    base_args: serverConfig.args,
-    transport_type: "stdio",
-    required_env: Object.keys(serverConfig.env || {}),
-    optional_args: [],
-    working_directory: null
-  };
-  
-  return { installation_methods, environment_variables, default_config };
+  return { installation_methods, environment_variables };
 }
 
 // Response schema for successful creation
@@ -116,7 +107,7 @@ const createGlobalServerResponseSchema = z.object({
     author_contact: z.string().nullable(),
     organization: z.string().nullable(),
     license: z.string().nullable(),
-    default_config: z.record(z.string(), z.any()).nullable(),
+    transport_type: z.enum(['stdio', 'http', 'sse']),
     environment_variables: z.array(z.any()).nullable(),
     dependencies: z.record(z.string(), z.any()).nullable(),
     category_id: z.string().nullable(),
@@ -152,6 +143,7 @@ export default async function createGlobalServer(server: FastifyInstance) {
           description: { type: 'string', minLength: 1 },
           language: { type: 'string', minLength: 1 },
           runtime: { type: 'string', minLength: 1 },
+          transport_type: { type: 'string', enum: ['stdio', 'http', 'sse'] },
           claude_desktop_config: {
             type: 'object',
             properties: {
@@ -222,7 +214,7 @@ export default async function createGlobalServer(server: FastifyInstance) {
           tags: { type: 'array', items: { type: 'string' } },
           featured: { type: 'boolean' }
         },
-        required: ['name', 'description', 'language', 'runtime', 'claude_desktop_config'],
+        required: ['name', 'description', 'language', 'runtime', 'transport_type', 'claude_desktop_config'],
         additionalProperties: false
       },
       // createSchema() for OpenAPI documentation
@@ -266,15 +258,14 @@ export default async function createGlobalServer(server: FastifyInstance) {
         claudeConfig: requestData.claude_desktop_config
       }, 'Extracting MCP configuration data from Claude Desktop config');
       
-      const { installation_methods, environment_variables, default_config } = extractMcpConfigData(requestData.claude_desktop_config);
+      const { installation_methods, environment_variables } = extractMcpConfigData(requestData.claude_desktop_config);
       
       request.log.debug({
         operation: 'create_global_mcp_server',
         userId: request.user?.id,
         extractedData: {
           installation_methods,
-          environment_variables,
-          default_config
+          environment_variables
         }
       }, 'Successfully extracted MCP configuration data');
       
@@ -298,7 +289,7 @@ export default async function createGlobalServer(server: FastifyInstance) {
         author_contact: requestData.author_contact,
         organization: requestData.organization,
         license: requestData.license,
-        default_config,
+        transport_type: requestData.transport_type,
         environment_variables,
         dependencies: requestData.dependencies,
         category_id: requestData.category_id,
@@ -333,7 +324,7 @@ export default async function createGlobalServer(server: FastifyInstance) {
             tools: newServer.tools,
             resources: newServer.resources,
             prompts: newServer.prompts,
-            default_config: newServer.default_config,
+            transport_type: newServer.transport_type,
             environment_variables: newServer.environment_variables,
             dependencies: newServer.dependencies,
             tags: newServer.tags
@@ -363,7 +354,7 @@ export default async function createGlobalServer(server: FastifyInstance) {
           author_contact: newServer.author_contact || null,
           organization: newServer.organization || null,
           license: newServer.license || null,
-          default_config: newServer.default_config ? JSON.parse(newServer.default_config) : null,
+          transport_type: newServer.transport_type,
           environment_variables: newServer.environment_variables ? JSON.parse(newServer.environment_variables) : null,
           dependencies: newServer.dependencies ? JSON.parse(newServer.dependencies) : null,
           category_id: newServer.category_id || null,
@@ -406,7 +397,7 @@ export default async function createGlobalServer(server: FastifyInstance) {
             tools: newServer.tools,
             resources: newServer.resources,
             prompts: newServer.prompts,
-            default_config: newServer.default_config,
+            transport_type: newServer.transport_type,
             environment_variables: newServer.environment_variables,
             dependencies: newServer.dependencies,
             tags: newServer.tags
