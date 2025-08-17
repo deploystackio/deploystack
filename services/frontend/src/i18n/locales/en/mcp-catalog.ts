@@ -22,7 +22,9 @@ export default {
       status: 'Status',
       featured: 'Featured',
       created: 'Created',
-      actions: 'Actions'
+      actions: 'Actions',
+      properties: 'Properties',
+      details: 'Details'
     },
     actions: {
       edit: 'Edit',
@@ -254,24 +256,21 @@ export default {
         formatButton: 'Format JSON',
         validConfiguration: 'Valid Configuration',
         invalidConfiguration: 'Invalid Configuration',
+        helpText: 'Provide the Claude Desktop configuration for this MCP server in JSON format',
+        showExampleButton: 'Show example Config',
         preview: {
           title: 'Configuration Preview',
           serverName: 'Server Name',
           command: 'Command',
-          environmentVariables: 'Environment Variables'
+          environmentVariables: 'Environment Variables',
+          arguments: 'Arguments',
+          description: 'Preview of the extracted configuration values'
         },
         examples: {
-          title: 'Example Configurations',
-          brightData: {
-            title: 'Bright Data MCP',
-            description: 'Web scraping and data extraction server'
-          },
-          filesystem: {
-            title: 'Filesystem MCP',
-            description: 'File system access server'
-          },
-          copyExample: 'Copy example'
+          title: 'Example Configuration',
+          description: 'Click the button to copy this example to your clipboard'
         },
+        autoDescription: 'Environment variable extracted from Claude Desktop configuration',
         validation: {
           required: 'Configuration is required',
           invalidJson: 'Invalid JSON format',
@@ -390,6 +389,42 @@ export default {
         repository: 'Repository',
         technical: 'Technical',
         capabilities: 'Capabilities'
+      },
+      descriptions: {
+        basic: 'Review the basic server information and metadata',
+        repository: 'Repository and source code information',
+        technical: 'Technical specifications and installation requirements',
+        capabilities: 'MCP capabilities and configuration options'
+      },
+      fields: {
+        serverName: 'Server Name',
+        description: 'Description',
+        detailedDescription: 'Detailed Description',
+        category: 'Category',
+        featuredServer: 'Featured Server',
+        author: 'Author',
+        contact: 'Contact',
+        organization: 'Organization',
+        license: 'License',
+        tags: 'Tags',
+        githubRepository: 'GitHub Repository',
+        gitBranch: 'Git Branch',
+        homepage: 'Homepage',
+        language: 'Language',
+        runtime: 'Runtime',
+        minimumVersion: 'Minimum Version',
+        claudeDesktopConfiguration: 'Claude Desktop Configuration',
+        dependencies: 'Dependencies',
+        tools: 'Tools',
+        resources: 'Resources',
+        prompts: 'Prompts',
+        environmentVariables: 'Environment Variables',
+        defaultConfiguration: 'Default Configuration'
+      },
+      values: {
+        notSpecified: 'Not specified',
+        required: 'Required',
+        optional: 'Optional'
       },
       submit: {
         title: 'Create MCP Server',

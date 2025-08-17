@@ -2,12 +2,14 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useEventBus } from '@/composables/useEventBus'
-import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+
 import { Badge } from '@/components/ui/badge'
-import { AlertCircle, CheckCircle, Copy } from 'lucide-vue-next'
+
+import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card'
+import { AlertCircle, CheckCircle } from 'lucide-vue-next'
 import type {
   TechnicalFormData
 } from '@/views/admin/mcp-server-catalog/types'
@@ -20,6 +22,8 @@ interface Props {
 
 interface Emits {
   (e: 'update:modelValue', value: TechnicalFormData): void
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (e: 'update:formData', value: any): void
 }
 
 const props = defineProps<Props>()
@@ -33,23 +37,63 @@ const validationError = ref<string | null>(null)
 const isValid = ref(false)
 const extractedServerName = ref<string>('')
 const extractedCommand = ref<string>('')
+const extractedArgs = ref<string[]>([])
 const extractedEnvVars = ref<string[]>([])
+const isUpdatingFromStorage = ref(false)
 
 // Storage key for persistence
 const STORAGE_KEY = 'edit_claude_config'
 
+// Example configuration for hover card
+const exampleConfig = `{
+  "mcpServers": {
+    "memory": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-memory"
+      ],
+      "env": {
+        "MEMORY_FILE_PATH": "/path/to-your/memory/claude-memory.json"
+      }
+    }
+  }
+}`
+
 // Initialize from storage or convert from existing data
 onMounted(() => {
-  // Try to get from storage first
+  // Always load the latest config from storage first
+  loadLatestConfigFromStorage()
+
+  // Listen for step changes to trigger sync
+  eventBus.on('mcp-form-step-changed', handleStepChanged)
+
+  // Listen for storage changes to immediately sync
+  eventBus.on('storage-changed', handleStorageChanged)
+})
+
+// Handle storage changes for immediate sync
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const handleStorageChanged = (data: { key: string; oldValue: any; newValue: any }) => {
+  if (data.key === STORAGE_KEY && data.newValue && data.newValue !== jsonInput.value) {
+    isUpdatingFromStorage.value = true
+    jsonInput.value = data.newValue
+    isUpdatingFromStorage.value = false
+  }
+}
+
+// Load the latest configuration from storage
+const loadLatestConfigFromStorage = () => {
   const storedConfig = eventBus.getState<string>(STORAGE_KEY)
 
-  if (storedConfig) {
+  if (storedConfig && storedConfig.trim()) {
+    isUpdatingFromStorage.value = true
     jsonInput.value = storedConfig
+    isUpdatingFromStorage.value = false
   } else {
-    // Convert existing installation_methods to Claude Desktop format
     convertExistingDataToJson()
   }
-})
+}
 
 // Convert existing installation_methods to Claude Desktop JSON format
 const convertExistingDataToJson = () => {
@@ -109,37 +153,7 @@ const extractServerNameFromMethod = (method: any): string => {
   return 'mcp-server'
 }
 
-// Example configurations
-const examples = computed(() => [
-  {
-    title: t('mcpCatalog.form.technical.claudeConfig.examples.brightData.title'),
-    description: t('mcpCatalog.form.technical.claudeConfig.examples.brightData.description'),
-    config: `{
-  "mcpServers": {
-    "bright-data": {
-      "command": "npx",
-      "args": ["@brightdata/mcp"],
-      "env": {
-        "API_TOKEN": "<your-bright-data-api-token>"
-      }
-    }
-  }
-}`
-  },
-  {
-    title: t('mcpCatalog.form.technical.claudeConfig.examples.filesystem.title'),
-    description: t('mcpCatalog.form.technical.claudeConfig.examples.filesystem.description'),
-    config: `{
-  "mcpServers": {
-    "filesystem": {
-      "command": "npx",
-      "args": ["@modelcontextprotocol/server-filesystem", "/path/to/directory"],
-      "env": {}
-    }
-  }
-}`
-  }
-])
+
 
 // Validation function (copied from ClaudeDesktopConfigStep)
 const validateJson = (jsonString: string) => {
@@ -196,8 +210,10 @@ const validateJson = (jsonString: string) => {
 
 // Watch for input changes and validate
 watch(jsonInput, (newValue) => {
-  // Store in event bus storage
-  eventBus.setState(STORAGE_KEY, newValue)
+  // Don't save to storage if we're updating from storage (prevent recursion)
+  if (!isUpdatingFromStorage.value) {
+    eventBus.setState(STORAGE_KEY, newValue)
+  }
 
   const validation = validateJson(newValue)
 
@@ -206,6 +222,7 @@ watch(jsonInput, (newValue) => {
     isValid.value = true
     extractedServerName.value = validation.serverName || ''
     extractedCommand.value = validation.command || ''
+    extractedArgs.value = validation.args || []
     extractedEnvVars.value = validation.envVars || []
 
     // Convert back to installation_methods format for form compatibility
@@ -219,24 +236,45 @@ watch(jsonInput, (newValue) => {
       env: serverConfig.env || {}
     }]
 
-    // Update the form data
+    // Update the technical form data
     emit('update:modelValue', {
       ...props.modelValue,
       installation_methods: installationMethods
     })
+
+    // Also update the capabilities section with environment variables
+    if (validation.envVars && validation.envVars.length > 0) {
+      const envVariables = validation.envVars.map(envVar => ({
+        name: envVar,
+        description: t('mcpCatalog.form.technical.claudeConfig.autoDescription'),
+        required: true,
+        type: 'password' // Default to password type for security
+      }))
+
+      const updatedFormData = {
+        ...props.formData,
+        capabilities: {
+          ...props.formData.capabilities,
+          environment_variables: envVariables
+        }
+      }
+
+      emit('update:formData', updatedFormData)
+    }
   } else {
     validationError.value = validation.error || t('mcpCatalog.form.technical.claudeConfig.validation.invalidJson')
     isValid.value = false
     extractedServerName.value = ''
     extractedCommand.value = ''
+    extractedArgs.value = []
     extractedEnvVars.value = []
   }
 }, { immediate: true })
 
 // Helper functions
-const copyExample = (config: string) => {
-  jsonInput.value = config
-  navigator.clipboard.writeText(config)
+const showExample = () => {
+  // Only copy to clipboard, don't overwrite the textarea
+  navigator.clipboard.writeText(exampleConfig)
 }
 
 const formatJson = () => {
@@ -245,6 +283,17 @@ const formatJson = () => {
     jsonInput.value = JSON.stringify(parsed, null, 2)
   } catch {
     // Ignore formatting errors
+  }
+}
+
+// Handle step changes to trigger sync when navigating to TechnicalStep
+const handleStepChanged = (data: { from: number; to: number; stepKey: string }) => {
+  // If we're navigating TO the technical step, reload latest config
+  if (data.stepKey === 'technical') {
+    // Small delay to ensure component is ready
+    setTimeout(() => {
+      loadLatestConfigFromStorage()
+    }, 50)
   }
 }
 
@@ -259,107 +308,147 @@ const statusColor = computed(() => {
 
 // Clean up storage on unmount
 onUnmounted(() => {
-  eventBus.clearState(STORAGE_KEY)
+  // DON'T clear the storage - we need it for CapabilitiesStep to update
+  // eventBus.clearState(STORAGE_KEY)
+  eventBus.off('mcp-form-step-changed', handleStepChanged)
+  eventBus.off('storage-changed', handleStorageChanged)
 })
 </script>
 
 <template>
-  <div class="space-y-6">
-    <!-- Header -->
-    <div>
-      <h3 class="text-lg font-medium">{{ t('mcpCatalog.form.technical.title') }}</h3>
-      <p class="text-sm text-muted-foreground mt-1">
-        {{ t('mcpCatalog.form.technical.subtitle') }}
-      </p>
-    </div>
+  <!-- Header Section -->
+  <div class="px-4 sm:px-0">
+    <h3 class="text-base/7 font-semibold text-gray-900">{{ t('mcpCatalog.form.technical.title') }}</h3>
+    <p class="mt-1 max-w-2xl text-sm/6 text-gray-500">
+      {{ t('mcpCatalog.form.technical.subtitle') }}
+    </p>
+  </div>
 
-    <!-- Configuration Input -->
-    <div class="space-y-2">
-      <div class="flex items-center justify-between">
-        <Label for="claude-config">{{ t('mcpCatalog.form.technical.claudeConfig.label') }}</Label>
-        <div class="flex items-center gap-2">
-          <component :is="statusIcon" :class="['h-4 w-4', statusColor]" />
-          <span :class="['text-sm', statusColor]">
-            {{ isValid ? t('mcpCatalog.form.technical.claudeConfig.validConfiguration') : t('mcpCatalog.form.technical.claudeConfig.invalidConfiguration') }}
-          </span>
-        </div>
-      </div>
+  <!-- Structured Form Fields -->
+  <div class="mt-6 border-t border-gray-100">
+    <dl class="divide-y divide-gray-100">
+      <!-- Claude Desktop Configuration -->
+      <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+        <dt class="text-sm/6 font-medium text-gray-900">
+          {{ t('mcpCatalog.form.technical.claudeConfig.label') }}
+        </dt>
+        <dd class="mt-1 sm:col-span-2 sm:mt-0">
+          <div class="space-y-3">
+            <!-- Configuration Input -->
+            <Textarea
+              id="claude-config"
+              v-model="jsonInput"
+              :placeholder="t('mcpCatalog.form.technical.claudeConfig.placeholder')"
+              class="min-h-[300px] font-mono text-sm"
+              :class="{ 'border-destructive': validationError }"
+            />
 
-      <Textarea
-        id="claude-config"
-        v-model="jsonInput"
-        :placeholder="t('mcpCatalog.form.technical.claudeConfig.placeholder')"
-        class="min-h-[200px] font-mono text-sm"
-        :class="{ 'border-destructive': validationError }"
-      />
+            <!-- Action Buttons Row -->
+            <div class="flex justify-between items-center">
+              <!-- Show Example Button with Hover Card -->
+              <HoverCard>
+                <HoverCardTrigger as-child>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    type="button"
+                    @click="showExample"
+                  >
+                    {{ t('mcpCatalog.form.technical.claudeConfig.showExampleButton') }}
+                  </Button>
+                </HoverCardTrigger>
+                <HoverCardContent class="w-96">
+                  <div class="space-y-2">
+                    <h4 class="text-sm font-semibold">{{ t('mcpCatalog.form.technical.claudeConfig.examples.title') }}</h4>
+                    <p class="text-xs text-muted-foreground">
+                      {{ t('mcpCatalog.form.technical.claudeConfig.examples.description') }}
+                    </p>
+                    <pre class="text-xs bg-muted p-2 rounded overflow-x-auto whitespace-pre-wrap">{{ exampleConfig }}</pre>
+                  </div>
+                </HoverCardContent>
+              </HoverCard>
 
-      <div class="flex justify-end">
-        <button
-          type="button"
-          @click="formatJson"
-          class="text-xs text-muted-foreground hover:text-foreground"
-        >
-          {{ t('mcpCatalog.form.technical.claudeConfig.formatButton') }}
-        </button>
-      </div>
-    </div>
-
-    <!-- Validation Error -->
-    <Alert v-if="validationError" variant="destructive">
-      <AlertCircle class="h-4 w-4" />
-      <AlertDescription>
-        {{ validationError }}
-      </AlertDescription>
-    </Alert>
-
-    <!-- Configuration Preview -->
-    <Card v-if="isValid" class="border-green-200 bg-green-50">
-      <CardHeader>
-        <CardTitle class="text-sm text-green-800">{{ t('mcpCatalog.form.technical.claudeConfig.preview.title') }}</CardTitle>
-      </CardHeader>
-      <CardContent class="space-y-3">
-        <div>
-          <Label class="text-xs text-green-700">{{ t('mcpCatalog.form.technical.claudeConfig.preview.serverName') }}</Label>
-          <Badge variant="outline" class="ml-2">{{ extractedServerName }}</Badge>
-        </div>
-        <div>
-          <Label class="text-xs text-green-700">{{ t('mcpCatalog.form.technical.claudeConfig.preview.command') }}</Label>
-          <code class="ml-2 text-sm bg-green-100 px-2 py-1 rounded">{{ extractedCommand }}</code>
-        </div>
-        <div v-if="extractedEnvVars.length > 0">
-          <Label class="text-xs text-green-700">{{ t('mcpCatalog.form.technical.claudeConfig.preview.environmentVariables') }}</Label>
-          <div class="flex flex-wrap gap-1 mt-1">
-            <Badge v-for="envVar in extractedEnvVars" :key="envVar" variant="secondary" class="text-xs">
-              {{ envVar }}
-            </Badge>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-
-    <!-- Examples -->
-    <div class="space-y-4">
-      <h4 class="text-sm font-medium">{{ t('mcpCatalog.form.technical.claudeConfig.examples.title') }}</h4>
-      <div class="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
-        <Card v-for="example in examples" :key="example.title" class="cursor-pointer hover:bg-muted/50">
-          <CardHeader class="pb-2">
-            <div class="flex items-center justify-between">
-              <CardTitle class="text-sm">{{ example.title }}</CardTitle>
+              <!-- Format Button -->
               <button
-                @click="copyExample(example.config)"
-                class="p-1 hover:bg-background rounded"
-                :title="t('mcpCatalog.form.technical.claudeConfig.examples.copyExample')"
+                type="button"
+                @click="formatJson"
+                class="text-xs text-muted-foreground hover:text-foreground"
               >
-                <Copy class="h-3 w-3" />
+                {{ t('mcpCatalog.form.technical.claudeConfig.formatButton') }}
               </button>
             </div>
-            <CardDescription class="text-xs">{{ example.description }}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <pre class="text-xs bg-muted p-2 rounded overflow-x-auto">{{ example.config }}</pre>
-          </CardContent>
-        </Card>
+
+            <!-- Validation Status -->
+            <div class="flex items-center gap-2">
+              <component :is="statusIcon" :class="['h-4 w-4', statusColor]" />
+              <span :class="['text-sm', statusColor]">
+                {{ isValid ? t('mcpCatalog.form.technical.claudeConfig.validConfiguration') : t('mcpCatalog.form.technical.claudeConfig.invalidConfiguration') }}
+              </span>
+            </div>
+
+            <!-- Help Text -->
+            <p class="text-xs text-muted-foreground">
+              {{ t('mcpCatalog.form.technical.claudeConfig.helpText') }}
+            </p>
+          </div>
+        </dd>
       </div>
-    </div>
+
+      <!-- Configuration Preview (when valid) -->
+      <div v-if="isValid" class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+        <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.technical.claudeConfig.preview.title') }}</dt>
+        <dd class="mt-1 sm:col-span-2 sm:mt-0">
+          <div class="space-y-4">
+            <!-- Server Name -->
+            <div class="flex items-center space-x-2">
+              <span class="text-xs text-muted-foreground font-medium">{{ t('mcpCatalog.form.technical.claudeConfig.preview.serverName') }}:</span>
+              <Badge variant="outline">{{ extractedServerName }}</Badge>
+            </div>
+
+            <!-- Command -->
+            <div class="flex items-center space-x-2">
+              <span class="text-xs text-muted-foreground font-medium">{{ t('mcpCatalog.form.technical.claudeConfig.preview.command') }}:</span>
+              <code class="text-sm bg-muted px-2 py-1 rounded font-mono">{{ extractedCommand }}</code>
+            </div>
+
+            <!-- Arguments -->
+            <div v-if="extractedArgs.length > 0" class="space-y-2">
+              <span class="text-xs text-muted-foreground font-medium">{{ t('mcpCatalog.form.technical.claudeConfig.preview.arguments') }}:</span>
+              <ul class="list-disc list-inside space-y-1 ml-2">
+                <li v-for="arg in extractedArgs" :key="arg">
+                  <Badge variant="outline" class="text-xs">
+                    {{ arg }}
+                  </Badge>
+                </li>
+              </ul>
+            </div>
+
+            <!-- Environment Variables -->
+            <div v-if="extractedEnvVars.length > 0" class="space-y-2">
+              <span class="text-xs text-muted-foreground font-medium">{{ t('mcpCatalog.form.technical.claudeConfig.preview.environmentVariables') }}:</span>
+              <ul class="list-disc list-inside space-y-1 ml-2">
+                <li v-for="envVar in extractedEnvVars" :key="envVar">
+                  <Badge variant="secondary" class="text-xs">
+                    {{ envVar }}
+                  </Badge>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <p class="text-xs text-muted-foreground mt-3">
+            {{ t('mcpCatalog.form.technical.claudeConfig.preview.description') }}
+          </p>
+        </dd>
+      </div>
+    </dl>
   </div>
+
+  <!-- Validation Error Alert -->
+  <Alert v-if="validationError" variant="destructive" class="mt-6">
+    <AlertCircle class="h-4 w-4" />
+    <AlertDescription>
+      {{ validationError }}
+    </AlertDescription>
+  </Alert>
 </template>

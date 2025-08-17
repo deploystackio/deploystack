@@ -30,6 +30,7 @@ export type EventBusEvents = {
   'mcp-github-data-populated': any
   'mcp-form-step-changed': { from: number; to: number; stepKey: string }
   'mcp-capabilities-updated': any
+  'capabilities-env-vars-updated': { environmentVariables: any[] }
   'mcp-edit-draft-updated': { serverId: string; data: any; step: number }
   'mcp-edit-draft-cleared': { serverId: string }
   'icons-cache-loaded': { count: number }

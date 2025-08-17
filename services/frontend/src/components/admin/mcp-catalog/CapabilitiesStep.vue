@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useEventBus } from '@/composables/useEventBus'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -44,6 +45,7 @@ interface Emits {
 const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 const { t } = useI18n()
+const eventBus = useEventBus()
 
 // Modal state
 const isModalOpen = ref(false)
@@ -163,14 +165,26 @@ const handleDelete = (index: number) => {
 }
 
 const updateFormData = (newEnvironmentVariables: EnvironmentVariable[]) => {
+  const updatedCapabilities = {
+    ...props.formData.capabilities,
+    environment_variables: newEnvironmentVariables
+  }
+  
   const updatedFormData = {
     ...props.formData,
-    capabilities: {
-      ...props.formData.capabilities,
-      environment_variables: newEnvironmentVariables
-    }
+    capabilities: updatedCapabilities
   }
+  
   emit('update:formData', updatedFormData)
+  
+  // Store environment variables in global storage for wizard submission
+  eventBus.setState('capabilities_env_vars', newEnvironmentVariables)
+  
+  // Store complete capabilities data for ReviewStep  
+  eventBus.setState('edit_capabilities_data', updatedCapabilities)
+  
+  // Immediately update the Claude Desktop JSON config in storage
+  updateClaudeDesktopConfigInStorage(newEnvironmentVariables)
 }
 
 const modalTitle = computed(() => {
@@ -178,6 +192,111 @@ const modalTitle = computed(() => {
     ? t('mcpCatalog.form.capabilities.environmentVariables.addVariable')
     : t('mcpCatalog.form.capabilities.environmentVariables.editVariable')
 })
+
+// Function to update Claude Desktop JSON config directly in storage
+const updateClaudeDesktopConfigInStorage = (envVars: EnvironmentVariable[]) => {
+  const TECHNICAL_STORAGE_KEY = 'edit_claude_config'
+  
+  try {
+    // Get current JSON config from TechnicalStep storage
+    let currentJsonString = eventBus.getState<string>(TECHNICAL_STORAGE_KEY)
+    
+    // If no config exists, try to create a basic one from form data
+    if (!currentJsonString || !currentJsonString.trim()) {
+      
+      // Try to get server info from technical form data
+      const technicalData = props.formData?.technical
+      if (technicalData?.installation_methods?.[0]) {
+        const method = technicalData.installation_methods[0]
+        const serverName = extractServerNameFromTechnical(method) || 'mcp-server'
+        
+        const basicConfig = {
+          mcpServers: {
+            [serverName]: {
+              command: method.command || 'npx',
+              args: method.args || [],
+              env: {}
+            }
+          }
+        }
+        
+        currentJsonString = JSON.stringify(basicConfig, null, 2)
+      } else {
+        // Cannot create config - no technical data available
+        return
+      }
+    }
+    
+    const parsed = JSON.parse(currentJsonString)
+    
+    // Validate structure
+    if (!parsed.mcpServers || typeof parsed.mcpServers !== 'object') {
+      return
+    }
+    
+    const serverKeys = Object.keys(parsed.mcpServers)
+    if (serverKeys.length !== 1) {
+      return
+    }
+    
+    const serverKey = serverKeys[0]
+    const serverConfig = parsed.mcpServers[serverKey]
+    
+    // Build new env vars object
+    const newEnvVars: Record<string, string> = {}
+    envVars.forEach(envVar => {
+      const placeholder = `<insert-your-${envVar.name.toLowerCase().replace(/_/g, '-')}-here>`
+      newEnvVars[envVar.name] = placeholder
+    })
+    
+    // Update the env section
+    serverConfig.env = newEnvVars
+    
+    // Save updated JSON back to storage
+    const updatedJsonString = JSON.stringify(parsed, null, 2)
+    eventBus.setState(TECHNICAL_STORAGE_KEY, updatedJsonString)
+    
+    // Force immediate sync by emitting a storage change event
+    eventBus.emit('storage-changed', {
+      key: TECHNICAL_STORAGE_KEY,
+      oldValue: currentJsonString,
+      newValue: updatedJsonString
+    })
+    
+  } catch {
+    // Failed to update Claude Desktop config
+  }
+}
+
+// Helper function to extract server name from technical data
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const extractServerNameFromTechnical = (method: any): string => {
+  // Try to extract from package name in args
+  if (method.args && method.args.length > 0) {
+    for (const arg of method.args) {
+      // Handle npm packages like "@brightdata/mcp" or "playwright-mcp"
+      if (arg.includes('/')) {
+        const parts = arg.split('/')
+        return parts[parts.length - 1].replace('-mcp', '').replace('mcp-', '')
+      }
+      // Handle direct package names
+      if (arg.includes('mcp') || arg.includes('-')) {
+        return arg.replace('-mcp', '').replace('mcp-', '')
+      }
+    }
+  }
+
+  // Try to extract from form name
+  if (props.formData?.basic?.name) {
+    return props.formData.basic.name.toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .replace('-mcp', '')
+      .replace('mcp-', '')
+  }
+
+  return 'mcp-server'
+}
 </script>
 
 <template>

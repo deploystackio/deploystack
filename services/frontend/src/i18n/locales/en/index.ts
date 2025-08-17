@@ -41,7 +41,5 @@ export default {
   register: registerMessages,
   login: loginMessages,
   gatewayConfig: gatewayConfigMessages,
-  // If there are any top-level keys directly under 'en', they can be added here.
-  // For example, if you had a global 'appName': 'My Application'
-  // appName: 'DeployStack Application',
+  common: commonMessages
 }

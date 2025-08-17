@@ -2,7 +2,6 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import {
   Select,
@@ -109,9 +108,9 @@ onMounted(() => {
 
 <template>
   <div class="space-y-6">
-    <div>
-      <h3 class="text-lg font-medium">{{ t('mcpCatalog.form.basic.title') }}</h3>
-      <p class="text-sm text-muted-foreground">
+    <div class="px-4 sm:px-0">
+      <h3 class="text-base/7 font-semibold text-gray-900">{{ t('mcpCatalog.form.basic.title') }}</h3>
+      <p class="mt-1 max-w-2xl text-sm/6 text-gray-500">
         {{ t('mcpCatalog.form.basic.subtitle') }}
         <span v-if="isAutoPopulated"> (auto-populated from GitHub)</span>
       </p>
@@ -125,197 +124,213 @@ onMounted(() => {
       </AlertDescription>
     </Alert>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <!-- Server Name -->
-      <div class="space-y-2">
-        <Label for="name">{{ t('mcpCatalog.form.basic.name.label') }}</Label>
-        <Input
-          id="name"
-          v-model="localValue.name"
-          :placeholder="t('mcpCatalog.form.basic.name.placeholder')"
-          required
-        />
-        <p class="text-xs text-muted-foreground">
-          {{ t('mcpCatalog.form.basic.name.description') }}
-        </p>
-      </div>
-
-      <!-- Category -->
-      <div class="space-y-2">
-        <Label for="category">{{ t('mcpCatalog.form.basic.category.label') }}</Label>
-        <Select v-model="localValue.category_id" :disabled="categoriesLoading">
-          <SelectTrigger>
-            <SelectValue
-              :placeholder="categoriesLoading
-                ? 'Loading categories...'
-                : t('mcpCatalog.form.basic.category.placeholder')"
+    <div class="mt-6 border-t border-gray-100">
+      <dl class="divide-y divide-gray-100">
+        <!-- Server Name -->
+        <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+          <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.basic.name.label') }}</dt>
+          <dd class="mt-1 sm:col-span-2 sm:mt-0">
+            <Input
+              id="name"
+              v-model="localValue.name"
+              :placeholder="t('mcpCatalog.form.basic.name.placeholder')"
+              required
             />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem
-              v-for="category in categories"
-              :key="category.id"
-              :value="category.id"
-            >
-              {{ category.name }}
-            </SelectItem>
-          </SelectContent>
-        </Select>
-        <p class="text-xs text-muted-foreground">
-          {{ t('mcpCatalog.form.basic.category.description') }}
-        </p>
-      </div>
-    </div>
+            <p class="text-xs text-muted-foreground mt-1">
+              {{ t('mcpCatalog.form.basic.name.description') }}
+            </p>
+          </dd>
+        </div>
 
-    <!-- Short Description -->
-    <div class="space-y-2">
-      <Label for="description">{{ t('mcpCatalog.form.basic.description.label') }}</Label>
-      <Textarea
-        id="description"
-        v-model="localValue.description"
-        :placeholder="t('mcpCatalog.form.basic.description.placeholder')"
-        rows="3"
-        required
-      />
-      <p class="text-xs text-muted-foreground">
-        {{ t('mcpCatalog.form.basic.description.description') }}
-      </p>
-    </div>
+        <!-- Category -->
+        <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+          <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.basic.category.label') }}</dt>
+          <dd class="mt-1 sm:col-span-2 sm:mt-0">
+            <Select v-model="localValue.category_id" :disabled="categoriesLoading">
+              <SelectTrigger>
+                <SelectValue
+                  :placeholder="categoriesLoading
+                    ? 'Loading categories...'
+                    : t('mcpCatalog.form.basic.category.placeholder')"
+                />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem
+                  v-for="category in categories"
+                  :key="category.id"
+                  :value="category.id"
+                >
+                  {{ category.name }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            <p class="text-xs text-muted-foreground mt-1">
+              {{ t('mcpCatalog.form.basic.category.description') }}
+            </p>
+          </dd>
+        </div>
 
-    <!-- Long Description -->
-    <div class="space-y-2">
-      <Label for="long_description">{{ t('mcpCatalog.form.basic.longDescription.label') }}</Label>
-      <Textarea
-        id="long_description"
-        v-model="localValue.long_description"
-        :placeholder="t('mcpCatalog.form.basic.longDescription.placeholder')"
-        rows="5"
-      />
-      <p class="text-xs text-muted-foreground">
-        {{ t('mcpCatalog.form.basic.longDescription.description') }}
-      </p>
-    </div>
+        <!-- Short Description -->
+        <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+          <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.basic.description.label') }}</dt>
+          <dd class="mt-1 sm:col-span-2 sm:mt-0">
+            <Textarea
+              id="description"
+              v-model="localValue.description"
+              :placeholder="t('mcpCatalog.form.basic.description.placeholder')"
+              rows="3"
+              required
+            />
+            <p class="text-xs text-muted-foreground mt-1">
+              {{ t('mcpCatalog.form.basic.description.description') }}
+            </p>
+          </dd>
+        </div>
 
-    <!-- Featured Server -->
-    <div class="space-y-2">
-      <div class="flex items-center space-x-3">
-        <Switch
-          id="featured"
-          v-model="featuredValue"
-        />
-        <Label for="featured" class="text-sm font-medium">
-          {{ t('mcpCatalog.form.basic.featured.label') }}
-        </Label>
-      </div>
-      <p class="text-xs text-muted-foreground">
-        {{ t('mcpCatalog.form.basic.featured.description') }}
-      </p>
-    </div>
+        <!-- Long Description -->
+        <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+          <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.basic.longDescription.label') }}</dt>
+          <dd class="mt-1 sm:col-span-2 sm:mt-0">
+            <Textarea
+              id="long_description"
+              v-model="localValue.long_description"
+              :placeholder="t('mcpCatalog.form.basic.longDescription.placeholder')"
+              rows="5"
+            />
+            <p class="text-xs text-muted-foreground mt-1">
+              {{ t('mcpCatalog.form.basic.longDescription.description') }}
+            </p>
+          </dd>
+        </div>
 
-    <!-- Author Information -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <!-- Author Name -->
-      <div class="space-y-2">
-        <Label for="author_name">{{ t('mcpCatalog.form.basic.author.label') }}</Label>
-        <Input
-          id="author_name"
-          v-model="localValue.author_name"
-          :placeholder="t('mcpCatalog.form.basic.author.placeholder')"
-        />
-        <p class="text-xs text-muted-foreground">
-          {{ t('mcpCatalog.form.basic.author.description') }}
-        </p>
-      </div>
+        <!-- Featured Server -->
+        <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+          <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.basic.featured.label') }}</dt>
+          <dd class="mt-1 sm:col-span-2 sm:mt-0">
+            <div class="flex items-center space-x-3">
+              <Switch
+                id="featured"
+                v-model="featuredValue"
+              />
+              <span class="text-sm text-gray-700">
+                {{ featuredValue ? 'Yes' : 'No' }}
+              </span>
+            </div>
+            <p class="text-xs text-muted-foreground mt-1">
+              {{ t('mcpCatalog.form.basic.featured.description') }}
+            </p>
+          </dd>
+        </div>
 
-      <!-- Author Contact -->
-      <div class="space-y-2">
-        <Label for="author_contact">{{ t('mcpCatalog.form.basic.contact.label') }}</Label>
-        <Input
-          id="author_contact"
-          v-model="localValue.author_contact"
-          :placeholder="t('mcpCatalog.form.basic.contact.placeholder')"
-        />
-        <p class="text-xs text-muted-foreground">
-          {{ t('mcpCatalog.form.basic.contact.description') }}
-        </p>
-      </div>
-    </div>
+        <!-- Author Name -->
+        <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+          <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.basic.author.label') }}</dt>
+          <dd class="mt-1 sm:col-span-2 sm:mt-0">
+            <Input
+              id="author_name"
+              v-model="localValue.author_name"
+              :placeholder="t('mcpCatalog.form.basic.author.placeholder')"
+            />
+            <p class="text-xs text-muted-foreground mt-1">
+              {{ t('mcpCatalog.form.basic.author.description') }}
+            </p>
+          </dd>
+        </div>
 
-    <!-- Organization and License -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <!-- Organization -->
-      <div class="space-y-2">
-        <Label for="organization">{{ t('mcpCatalog.form.basic.organization.label') }}</Label>
-        <Input
-          id="organization"
-          v-model="localValue.organization"
-          :placeholder="t('mcpCatalog.form.basic.organization.placeholder')"
-        />
-        <p class="text-xs text-muted-foreground">
-          {{ t('mcpCatalog.form.basic.organization.description') }}
-        </p>
-      </div>
+        <!-- Author Contact -->
+        <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+          <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.basic.contact.label') }}</dt>
+          <dd class="mt-1 sm:col-span-2 sm:mt-0">
+            <Input
+              id="author_contact"
+              v-model="localValue.author_contact"
+              :placeholder="t('mcpCatalog.form.basic.contact.placeholder')"
+            />
+            <p class="text-xs text-muted-foreground mt-1">
+              {{ t('mcpCatalog.form.basic.contact.description') }}
+            </p>
+          </dd>
+        </div>
 
-      <!-- License -->
-      <div class="space-y-2">
-        <Label for="license">{{ t('mcpCatalog.form.basic.license.label') }}</Label>
-        <Input
-          id="license"
-          v-model="localValue.license"
-          :placeholder="t('mcpCatalog.form.basic.license.placeholder')"
-        />
-        <p class="text-xs text-muted-foreground">
-          {{ t('mcpCatalog.form.basic.license.description') }}
-        </p>
-      </div>
-    </div>
+        <!-- Organization -->
+        <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+          <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.basic.organization.label') }}</dt>
+          <dd class="mt-1 sm:col-span-2 sm:mt-0">
+            <Input
+              id="organization"
+              v-model="localValue.organization"
+              :placeholder="t('mcpCatalog.form.basic.organization.placeholder')"
+            />
+            <p class="text-xs text-muted-foreground mt-1">
+              {{ t('mcpCatalog.form.basic.organization.description') }}
+            </p>
+          </dd>
+        </div>
 
-    <!-- Tags -->
-    <div class="space-y-2">
-      <Label for="tags">{{ t('mcpCatalog.form.basic.tags.label') }}</Label>
+        <!-- License -->
+        <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+          <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.basic.license.label') }}</dt>
+          <dd class="mt-1 sm:col-span-2 sm:mt-0">
+            <Input
+              id="license"
+              v-model="localValue.license"
+              :placeholder="t('mcpCatalog.form.basic.license.placeholder')"
+            />
+            <p class="text-xs text-muted-foreground mt-1">
+              {{ t('mcpCatalog.form.basic.license.description') }}
+            </p>
+          </dd>
+        </div>
 
-      <!-- Existing Tags -->
-      <div v-if="localValue.tags.length > 0" class="flex flex-wrap gap-2 mb-2">
-        <Badge
-          v-for="tag in localValue.tags"
-          :key="tag"
-          variant="secondary"
-          class="flex items-center gap-1"
-        >
-          {{ tag }}
-          <Button
-            variant="ghost"
-            size="sm"
-            class="h-4 w-4 p-0 hover:bg-transparent"
-            @click="removeTag(tag)"
-          >
-            <X class="h-3 w-3" />
-          </Button>
-        </Badge>
-      </div>
+        <!-- Tags -->
+        <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+          <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.basic.tags.label') }}</dt>
+          <dd class="mt-1 sm:col-span-2 sm:mt-0">
+            <!-- Existing Tags -->
+            <div v-if="localValue.tags.length > 0" class="flex flex-wrap gap-2 mb-3">
+              <Badge
+                v-for="tag in localValue.tags"
+                :key="tag"
+                variant="secondary"
+                class="flex items-center gap-1"
+              >
+                {{ tag }}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  class="h-4 w-4 p-0 hover:bg-transparent"
+                  @click="removeTag(tag)"
+                >
+                  <X class="h-3 w-3" />
+                </Button>
+              </Badge>
+            </div>
 
-      <!-- Add New Tag -->
-      <div class="flex gap-2">
-        <Input
-          v-model="newTag"
-          :placeholder="t('mcpCatalog.form.basic.tags.placeholder')"
-          @keydown="handleTagKeydown"
-          class="flex-1"
-        />
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          @click="addTag"
-          :disabled="!newTag.trim()"
-        >
-          <Plus class="h-4 w-4" />
-        </Button>
-      </div>
+            <!-- Add New Tag -->
+            <div class="flex gap-2">
+              <Input
+                v-model="newTag"
+                :placeholder="t('mcpCatalog.form.basic.tags.placeholder')"
+                @keydown="handleTagKeydown"
+                class="flex-1"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                @click="addTag"
+                :disabled="!newTag.trim()"
+              >
+                <Plus class="h-4 w-4" />
+              </Button>
+            </div>
 
-      <p class="text-xs text-muted-foreground">
-        {{ t('mcpCatalog.form.basic.tags.description') }}
-      </p>
+            <p class="text-xs text-muted-foreground mt-1">
+              {{ t('mcpCatalog.form.basic.tags.description') }}
+            </p>
+          </dd>
+        </div>
+      </dl>
     </div>
   </div>
 </template>

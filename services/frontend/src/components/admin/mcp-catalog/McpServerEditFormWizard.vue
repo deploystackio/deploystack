@@ -525,14 +525,58 @@ watch(
   }
 )
 
-// Form submission
+// Form submission with fresh data from actual storage keys
 const submitForm = async () => {
   try {
     isSubmitting.value = true
     submitError.value = null
 
-    // Emit the form data to parent component
-    emit('submit', formData.value)
+    // Get fresh data from actual storage keys being used
+    const freshClaudeConfig = eventBus.getState<string>('edit_claude_config')
+    const freshCapabilitiesEnvVars = eventBus.getState('capabilities_env_vars')
+
+    // Start with current form data
+    const finalFormData = { ...formData.value }
+
+    // Update technical data from Claude Desktop config if available
+    if (freshClaudeConfig && freshClaudeConfig.trim()) {
+      try {
+        const parsed = JSON.parse(freshClaudeConfig)
+        if (parsed.mcpServers) {
+          const serverKeys = Object.keys(parsed.mcpServers)
+          if (serverKeys.length === 1) {
+            const serverConfig = parsed.mcpServers[serverKeys[0]]
+            
+            finalFormData.technical = {
+              ...finalFormData.technical,
+              installation_methods: [{
+                client: 'claude-desktop' as const,
+                command: serverConfig.command,
+                args: serverConfig.args,
+                env: serverConfig.env || {}
+              }]
+            }
+
+          }
+        }
+      } catch {
+        // Failed to parse Claude config
+      }
+    }
+
+    // Update capabilities data from environment variables if available
+    if (freshCapabilitiesEnvVars && Array.isArray(freshCapabilitiesEnvVars)) {
+      finalFormData.capabilities = {
+        ...finalFormData.capabilities,
+        environment_variables: freshCapabilitiesEnvVars
+      }
+
+    }
+
+
+
+    // Emit the fresh form data to parent component
+    emit('submit', finalFormData)
 
   } catch (error) {
     submitError.value = error instanceof Error ? error.message : 'Failed to submit form'
@@ -603,6 +647,7 @@ onUnmounted(() => {
         v-model="formData[currentStepData.key]"
         :form-data="formData"
         @update:modelValue="(newValue: any) => formData[currentStepData.key] = newValue"
+        @update:formData="(newFormData: any) => formData = newFormData"
       />
     </ContentWrapper>
 

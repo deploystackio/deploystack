@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { useI18n } from 'vue-i18n'
 import { useEventBus } from '@/composables/useEventBus'
@@ -20,12 +19,26 @@ defineEmits<Emits>()
 const { t } = useI18n()
 const eventBus = useEventBus()
 
-// Get Claude Desktop config from storage
+// Fresh data from storage - reactive refs
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const freshBasicData = ref<any>(null)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const freshRepositoryData = ref<any>(null) 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const freshTechnicalData = ref<any>(null)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const freshCapabilitiesData = ref<any>(null)
 const claudeConfig = ref<string>('')
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const parsedConfig = ref<any>(null)
 
 onMounted(() => {
+  // Get fresh data from storage for all form sections
+  freshBasicData.value = eventBus.getState('edit_basic_data')
+  freshRepositoryData.value = eventBus.getState('edit_repository_data')
+  freshTechnicalData.value = eventBus.getState('edit_technical_data')
+  freshCapabilitiesData.value = eventBus.getState('edit_capabilities_data')
+  
   // Get the stored Claude Desktop config
   const storedConfig = eventBus.getState<string>('edit_claude_config', '') || ''
   claudeConfig.value = storedConfig
@@ -40,6 +53,11 @@ onMounted(() => {
   }
 })
 
+// Helper functions to get fresh data with fallback to props
+const getBasicData = () => freshBasicData.value || props.formData.basic
+const getRepositoryData = () => freshRepositoryData.value || props.formData.repository
+const getTechnicalData = () => freshTechnicalData.value || props.formData.technical
+const getCapabilitiesData = () => freshCapabilitiesData.value || props.formData.capabilities
 
 const formatJson = (jsonString: string) => {
   if (!jsonString) return 'None'
@@ -52,165 +70,185 @@ const formatJson = (jsonString: string) => {
 </script>
 
 <template>
-  <div class="space-y-6">
-    <div>
-      <h3 class="text-lg font-medium">{{ t('mcpCatalog.form.review.title') }}</h3>
-      <p class="text-sm text-muted-foreground">{{ t('mcpCatalog.form.review.subtitle') }}</p>
-    </div>
+  <!-- Basic Information Section -->
+  <div class="px-4 sm:px-0">
+    <h3 class="text-base/7 font-semibold text-gray-900">{{ t('mcpCatalog.form.review.sections.basic') }}</h3>
+    <p class="mt-1 max-w-2xl text-sm/6 text-gray-500">{{ t('mcpCatalog.form.review.descriptions.basic') }}</p>
+  </div>
 
-    <!-- Basic Information -->
-    <Card>
-      <CardHeader>
-        <CardTitle class="text-base">{{ t('mcpCatalog.form.review.sections.basic') }}</CardTitle>
-      </CardHeader>
-      <CardContent class="space-y-4">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <h4 class="font-medium text-sm text-muted-foreground">Server Name</h4>
-            <p class="text-sm">{{ props.formData.basic.name || 'Not specified' }}</p>
-          </div>
-          <div>
-            <h4 class="font-medium text-sm text-muted-foreground">Category</h4>
-            <p class="text-sm">{{ props.formData.basic.category_id || 'Not specified' }}</p>
-          </div>
-          <div>
-            <h4 class="font-medium text-sm text-muted-foreground">Featured Server</h4>
-            <Badge v-if="props.formData.basic.featured" variant="default" class="text-xs">
-              {{ t('mcpCatalog.edit.values.yes') }}
-            </Badge>
-            <span v-else class="text-sm text-muted-foreground">
-              {{ t('mcpCatalog.edit.values.no') }}
-            </span>
-          </div>
-        </div>
+  <div class="mt-6 border-t border-gray-100">
+    <dl class="divide-y divide-gray-100">
+      <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+        <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.review.fields.serverName') }}</dt>
+        <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
+          {{ getBasicData().name || t('mcpCatalog.form.review.values.notSpecified') }}
+        </dd>
+      </div>
 
-        <div>
-          <h4 class="font-medium text-sm text-muted-foreground">Description</h4>
-          <p class="text-sm">{{ props.formData.basic.description || 'Not specified' }}</p>
-        </div>
+      <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+        <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.review.fields.description') }}</dt>
+        <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
+          {{ getBasicData().description || t('mcpCatalog.form.review.values.notSpecified') }}
+        </dd>
+      </div>
 
-        <div v-if="props.formData.basic.long_description">
-          <h4 class="font-medium text-sm text-muted-foreground">Detailed Description</h4>
-          <p class="text-sm">{{ props.formData.basic.long_description }}</p>
-        </div>
+      <div v-if="getBasicData().long_description" class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+        <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.review.fields.detailedDescription') }}</dt>
+        <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
+          {{ getBasicData().long_description }}
+        </dd>
+      </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <h4 class="font-medium text-sm text-muted-foreground">Author</h4>
-            <p class="text-sm">{{ props.formData.basic.author_name || 'Not specified' }}</p>
-          </div>
-          <div>
-            <h4 class="font-medium text-sm text-muted-foreground">Contact</h4>
-            <p class="text-sm">{{ props.formData.basic.author_contact || 'Not specified' }}</p>
-          </div>
-        </div>
+      <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+        <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.review.fields.category') }}</dt>
+        <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
+          {{ getBasicData().category_id || t('mcpCatalog.form.review.values.notSpecified') }}
+        </dd>
+      </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <h4 class="font-medium text-sm text-muted-foreground">Organization</h4>
-            <p class="text-sm">{{ props.formData.basic.organization || 'Not specified' }}</p>
-          </div>
-          <div>
-            <h4 class="font-medium text-sm text-muted-foreground">License</h4>
-            <p class="text-sm">{{ props.formData.basic.license || 'Not specified' }}</p>
-          </div>
-        </div>
+      <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+        <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.review.fields.featuredServer') }}</dt>
+        <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
+          <Badge v-if="getBasicData().featured" variant="default" class="text-xs">
+            {{ t('mcpCatalog.edit.values.yes') }}
+          </Badge>
+          <span v-else class="text-sm text-muted-foreground">
+            {{ t('mcpCatalog.edit.values.no') }}
+          </span>
+        </dd>
+      </div>
 
-        <div v-if="props.formData.basic.tags.length > 0">
-          <h4 class="font-medium text-sm text-muted-foreground">Tags</h4>
-          <div class="flex flex-wrap gap-1 mt-1">
-            <Badge v-for="tag in props.formData.basic.tags" :key="tag" variant="secondary" class="text-xs">
+      <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+        <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.review.fields.author') }}</dt>
+        <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
+          {{ getBasicData().author_name || t('mcpCatalog.form.review.values.notSpecified') }}
+        </dd>
+      </div>
+
+      <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+        <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.review.fields.contact') }}</dt>
+        <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
+          {{ getBasicData().author_contact || t('mcpCatalog.form.review.values.notSpecified') }}
+        </dd>
+      </div>
+
+      <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+        <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.review.fields.organization') }}</dt>
+        <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
+          {{ getBasicData().organization || t('mcpCatalog.form.review.values.notSpecified') }}
+        </dd>
+      </div>
+
+      <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+        <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.review.fields.license') }}</dt>
+        <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
+          {{ getBasicData().license || t('mcpCatalog.form.review.values.notSpecified') }}
+        </dd>
+      </div>
+
+      <div v-if="getBasicData().tags && getBasicData().tags.length > 0" class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+        <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.review.fields.tags') }}</dt>
+        <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
+          <div class="flex flex-wrap gap-1">
+            <Badge v-for="tag in getBasicData().tags" :key="tag" variant="secondary" class="text-xs">
               {{ tag }}
             </Badge>
           </div>
-        </div>
-      </CardContent>
-    </Card>
+        </dd>
+      </div>
+    </dl>
+  </div>
 
-    <!-- Repository Information -->
-    <Card>
-      <CardHeader>
-        <CardTitle class="text-base">{{ t('mcpCatalog.form.review.sections.repository') }}</CardTitle>
-      </CardHeader>
-      <CardContent class="space-y-4">
-        <div>
-          <h4 class="font-medium text-sm text-muted-foreground">GitHub Repository</h4>
-          <p class="text-sm">{{ props.formData.repository.github_url || 'Not specified' }}</p>
-        </div>
+  <!-- Repository Section -->
+  <div class="px-4 sm:px-0 mt-8">
+    <h3 class="text-base/7 font-semibold text-gray-900">{{ t('mcpCatalog.form.review.sections.repository') }}</h3>
+    <p class="mt-1 max-w-2xl text-sm/6 text-gray-500">{{ t('mcpCatalog.form.review.descriptions.repository') }}</p>
+  </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <h4 class="font-medium text-sm text-muted-foreground">Git Branch</h4>
-            <p class="text-sm">{{ props.formData.repository.git_branch || 'main' }}</p>
-          </div>
-          <div>
-            <h4 class="font-medium text-sm text-muted-foreground">Homepage</h4>
-            <p class="text-sm">{{ props.formData.repository.homepage_url || 'Not specified' }}</p>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+  <div class="mt-6 border-t border-gray-100">
+    <dl class="divide-y divide-gray-100">
+      <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+        <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.review.fields.githubRepository') }}</dt>
+        <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
+          {{ getRepositoryData().github_url || t('mcpCatalog.form.review.values.notSpecified') }}
+        </dd>
+      </div>
 
-    <!-- Technical Specifications -->
-    <Card>
-      <CardHeader>
-        <CardTitle class="text-base">{{ t('mcpCatalog.form.review.sections.technical') }}</CardTitle>
-      </CardHeader>
-      <CardContent class="space-y-4">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <h4 class="font-medium text-sm text-muted-foreground">Language</h4>
-            <p class="text-sm">{{ props.formData.technical.language || 'Not specified' }}</p>
-          </div>
-          <div>
-            <h4 class="font-medium text-sm text-muted-foreground">Runtime</h4>
-            <p class="text-sm">{{ props.formData.technical.runtime || 'Not specified' }}</p>
-          </div>
-          <div>
-            <h4 class="font-medium text-sm text-muted-foreground">Min Version</h4>
-            <p class="text-sm">{{ props.formData.technical.runtime_min_version || 'Not specified' }}</p>
-          </div>
-        </div>
+      <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+        <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.review.fields.gitBranch') }}</dt>
+        <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
+          {{ getRepositoryData().git_branch || 'main' }}
+        </dd>
+      </div>
 
-        <div v-if="props.formData.technical.installation_methods.length > 0">
-          <h4 class="font-medium text-sm text-muted-foreground">Installation Methods</h4>
-          <div class="space-y-2 mt-2">
+      <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+        <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.review.fields.homepage') }}</dt>
+        <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
+          {{ getRepositoryData().homepage_url || t('mcpCatalog.form.review.values.notSpecified') }}
+        </dd>
+      </div>
+    </dl>
+  </div>
+
+  <!-- Technical Section -->
+  <div class="px-4 sm:px-0 mt-8">
+    <h3 class="text-base/7 font-semibold text-gray-900">{{ t('mcpCatalog.form.review.sections.technical') }}</h3>
+    <p class="mt-1 max-w-2xl text-sm/6 text-gray-500">{{ t('mcpCatalog.form.review.descriptions.technical') }}</p>
+  </div>
+
+  <div class="mt-6 border-t border-gray-100">
+    <dl class="divide-y divide-gray-100">
+      <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+        <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.review.fields.language') }}</dt>
+        <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
+          {{ getTechnicalData().language || t('mcpCatalog.form.review.values.notSpecified') }}
+        </dd>
+      </div>
+
+      <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+        <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.review.fields.runtime') }}</dt>
+        <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
+          {{ getTechnicalData().runtime || t('mcpCatalog.form.review.values.notSpecified') }}
+        </dd>
+      </div>
+
+      <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+        <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.review.fields.minimumVersion') }}</dt>
+        <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
+          {{ getTechnicalData().runtime_min_version || t('mcpCatalog.form.review.values.notSpecified') }}
+        </dd>
+      </div>
+
+      <div v-if="claudeConfig || (getTechnicalData().installation_methods && getTechnicalData().installation_methods.length > 0)" class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+        <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.review.fields.claudeDesktopConfiguration') }}</dt>
+        <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
+          <pre class="text-xs bg-muted p-3 rounded overflow-x-auto">{{ claudeConfig || formatJson(JSON.stringify(getTechnicalData().installation_methods)) }}</pre>
+        </dd>
+      </div>
+
+      <div v-if="getTechnicalData().dependencies" class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+        <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.review.fields.dependencies') }}</dt>
+        <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
+          {{ getTechnicalData().dependencies }}
+        </dd>
+      </div>
+    </dl>
+  </div>
+
+  <!-- Capabilities Section -->
+  <div class="px-4 sm:px-0 mt-8">
+    <h3 class="text-base/7 font-semibold text-gray-900">{{ t('mcpCatalog.form.review.sections.capabilities') }}</h3>
+    <p class="mt-1 max-w-2xl text-sm/6 text-gray-500">{{ t('mcpCatalog.form.review.descriptions.capabilities') }}</p>
+  </div>
+
+  <div class="mt-6 border-t border-gray-100">
+    <dl class="divide-y divide-gray-100">
+      <div v-if="getCapabilitiesData().tools && getCapabilitiesData().tools.length > 0" class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+        <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.review.fields.tools') }} ({{ getCapabilitiesData().tools.length }})</dt>
+        <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
+          <div class="space-y-2">
             <div
-              v-for="(method, index) in props.formData.technical.installation_methods"
-              :key="index"
-              class="flex items-center gap-2 text-sm"
-            >
-              <Badge variant="outline" class="text-xs">{{ method.client || 'Unknown' }}</Badge>
-              <code class="text-xs bg-muted px-2 py-1 rounded">{{ method.command }}</code>
-              <span v-if="method.args && method.args.length > 0" class="text-xs text-muted-foreground">
-                + {{ method.args.length }} arg{{ method.args.length > 1 ? 's' : '' }}
-              </span>
-              <span v-if="method.env && Object.keys(method.env).length > 0" class="text-xs text-muted-foreground">
-                + {{ Object.keys(method.env).length }} env var{{ Object.keys(method.env).length > 1 ? 's' : '' }}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div v-if="props.formData.technical.dependencies">
-          <h4 class="font-medium text-sm text-muted-foreground">Dependencies</h4>
-          <p class="text-sm">{{ props.formData.technical.dependencies }}</p>
-        </div>
-      </CardContent>
-    </Card>
-
-    <!-- Capabilities -->
-    <Card>
-      <CardHeader>
-        <CardTitle class="text-base">{{ t('mcpCatalog.form.review.sections.capabilities') }}</CardTitle>
-      </CardHeader>
-      <CardContent class="space-y-4">
-        <!-- Tools -->
-        <div v-if="props.formData.capabilities.tools.length > 0">
-          <h4 class="font-medium text-sm text-muted-foreground">Tools ({{ props.formData.capabilities.tools.length }})</h4>
-          <div class="space-y-2 mt-2">
-            <div
-              v-for="(tool, index) in props.formData.capabilities.tools"
+              v-for="(tool, index) in getCapabilitiesData().tools"
               :key="index"
               class="text-sm"
             >
@@ -218,14 +256,15 @@ const formatJson = (jsonString: string) => {
               <span v-if="tool.description" class="text-muted-foreground"> - {{ tool.description }}</span>
             </div>
           </div>
-        </div>
+        </dd>
+      </div>
 
-        <!-- Resources -->
-        <div v-if="props.formData.capabilities.resources.length > 0">
-          <h4 class="font-medium text-sm text-muted-foreground">Resources ({{ props.formData.capabilities.resources.length }})</h4>
-          <div class="space-y-2 mt-2">
+      <div v-if="getCapabilitiesData().resources && getCapabilitiesData().resources.length > 0" class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+        <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.review.fields.resources') }} ({{ getCapabilitiesData().resources.length }})</dt>
+        <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
+          <div class="space-y-2">
             <div
-              v-for="(resource, index) in props.formData.capabilities.resources"
+              v-for="(resource, index) in getCapabilitiesData().resources"
               :key="index"
               class="text-sm"
             >
@@ -233,14 +272,15 @@ const formatJson = (jsonString: string) => {
               <span v-if="resource.description" class="text-muted-foreground"> - {{ resource.description }}</span>
             </div>
           </div>
-        </div>
+        </dd>
+      </div>
 
-        <!-- Prompts -->
-        <div v-if="props.formData.capabilities.prompts.length > 0">
-          <h4 class="font-medium text-sm text-muted-foreground">Prompts ({{ props.formData.capabilities.prompts.length }})</h4>
-          <div class="space-y-2 mt-2">
+      <div v-if="getCapabilitiesData().prompts && getCapabilitiesData().prompts.length > 0" class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+        <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.review.fields.prompts') }} ({{ getCapabilitiesData().prompts.length }})</dt>
+        <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
+          <div class="space-y-2">
             <div
-              v-for="(prompt, index) in props.formData.capabilities.prompts"
+              v-for="(prompt, index) in getCapabilitiesData().prompts"
               :key="index"
               class="text-sm"
             >
@@ -248,32 +288,33 @@ const formatJson = (jsonString: string) => {
               <span v-if="prompt.description" class="text-muted-foreground"> - {{ prompt.description }}</span>
             </div>
           </div>
-        </div>
+        </dd>
+      </div>
 
-        <!-- Environment Variables -->
-        <div v-if="props.formData.capabilities.environment_variables.length > 0">
-          <h4 class="font-medium text-sm text-muted-foreground">Environment Variables ({{ props.formData.capabilities.environment_variables.length }})</h4>
-          <div class="space-y-2 mt-2">
+      <div v-if="getCapabilitiesData().environment_variables && getCapabilitiesData().environment_variables.length > 0" class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+        <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.review.fields.environmentVariables') }} ({{ getCapabilitiesData().environment_variables.length }})</dt>
+        <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
+          <div class="space-y-2">
             <div
-              v-for="(envVar, index) in props.formData.capabilities.environment_variables"
+              v-for="(envVar, index) in getCapabilitiesData().environment_variables"
               :key="index"
               class="flex items-center gap-2 text-sm"
             >
               <code class="text-xs bg-muted px-2 py-1 rounded">{{ envVar.name }}</code>
-              <Badge v-if="envVar.required" variant="destructive" class="text-xs">Required</Badge>
-              <Badge v-else variant="secondary" class="text-xs">Optional</Badge>
+              <Badge v-if="envVar.required" variant="destructive" class="text-xs">{{ t('mcpCatalog.form.review.values.required') }}</Badge>
+              <Badge v-else variant="secondary" class="text-xs">{{ t('mcpCatalog.form.review.values.optional') }}</Badge>
               <span v-if="envVar.description" class="text-muted-foreground">{{ envVar.description }}</span>
             </div>
           </div>
-        </div>
+        </dd>
+      </div>
 
-        <!-- Default Configuration -->
-        <div v-if="props.formData.capabilities.default_config">
-          <h4 class="font-medium text-sm text-muted-foreground">Default Configuration</h4>
-          <pre class="text-xs bg-muted p-3 rounded mt-2 overflow-x-auto">{{ formatJson(props.formData.capabilities.default_config) }}</pre>
-        </div>
-      </CardContent>
-    </Card>
-
+      <div v-if="getCapabilitiesData().default_config" class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+        <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.review.fields.defaultConfiguration') }}</dt>
+        <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
+          <pre class="text-xs bg-muted p-3 rounded overflow-x-auto">{{ formatJson(getCapabilitiesData().default_config) }}</pre>
+        </dd>
+      </div>
+    </dl>
   </div>
 </template>
