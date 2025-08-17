@@ -6,7 +6,7 @@ import { toast } from 'vue-sonner'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import CategoryDisplay from '@/components/mcp-server/CategoryDisplay.vue'
-import { ArrowLeft, Github, ExternalLink, Star, Package, Code, Settings, Calendar, Tag, Trash2, AlertTriangle, Edit } from 'lucide-vue-next'
+import { ArrowLeft, Github, ExternalLink, Package, Code, Settings, Calendar, Tag, Trash2, AlertTriangle, Edit } from 'lucide-vue-next'
 import DashboardLayout from '@/components/DashboardLayout.vue'
 import EnvironmentVariablesDisplay from '@/components/admin/mcp-catalog/EnvironmentVariablesDisplay.vue'
 import { McpCatalogService } from '@/services/mcpCatalogService'
@@ -301,13 +301,7 @@ const goBack = () => {
             <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
               <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.edit.fields.name') }}</dt>
               <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
-                <div class="flex items-center gap-2">
-                  {{ server.name }}
-                  <Badge v-if="server.featured" variant="default" class="flex items-center gap-1">
-                    <Star class="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                    {{ t('mcpCatalog.edit.values.featured') }}
-                  </Badge>
-                </div>
+                {{ server.name }}
               </dd>
             </div>
 
@@ -332,6 +326,19 @@ const goBack = () => {
               <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.edit.fields.category') }}</dt>
               <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
                 <CategoryDisplay :category-id="server.category_id" />
+              </dd>
+            </div>
+
+            <!-- Featured -->
+            <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+              <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.basic.featured.label') }}</dt>
+              <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
+                <Badge v-if="server.featured" variant="default">
+                  {{ t('mcpCatalog.edit.values.yes') }}
+                </Badge>
+                <span v-else class="text-muted-foreground">
+                  {{ t('mcpCatalog.edit.values.no') }}
+                </span>
               </dd>
             </div>
 

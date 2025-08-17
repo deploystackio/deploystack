@@ -52,8 +52,7 @@ const filteredServers = computed(() => {
     server.description.toLowerCase().includes(query) ||
     (server.tags && server.tags.some(tag => tag.toLowerCase().includes(query))) ||
     (server.author_name && server.author_name.toLowerCase().includes(query)) ||
-    server.language.toLowerCase().includes(query) ||
-    server.runtime.toLowerCase().includes(query)
+    server.language.toLowerCase().includes(query)
   )
 })
 
@@ -75,32 +74,6 @@ const handleAddServer = () => {
 
 const handleEditServer = (serverId: string) => {
   router.push(`/admin/mcp-server-catalog/view/${serverId}`)
-}
-
-const handleToggleFeatured = async (serverId: string, featured: boolean) => {
-  try {
-    const updatedServer = await McpCatalogService.toggleFeatured(serverId, featured)
-
-    // Update local state
-    const index = servers.value.findIndex(s => s.id === serverId)
-    if (index !== -1) {
-      servers.value[index] = updatedServer
-    }
-
-    // Show success toast
-    toast.success(featured
-      ? t('mcpCatalog.messages.featureSuccess')
-      : t('mcpCatalog.messages.unfeatureSuccess')
-    )
-
-    // Emit global event
-    eventBus.emit('mcp-catalog-updated')
-  } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Failed to update server'
-    toast.error(t('mcpCatalog.messages.updateError'), {
-      description: err instanceof Error ? err.message : 'Failed to update server'
-    })
-  }
 }
 
 
@@ -226,7 +199,6 @@ onUnmounted(() => {
         <McpServerTableColumns
           :servers="displayedServers"
           :on-edit-server="handleEditServer"
-          :on-toggle-featured="handleToggleFeatured"
         />
 
         <!-- Pagination Controls (only show when not searching) -->

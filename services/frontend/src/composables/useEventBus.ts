@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { inject } from 'vue'
 import type { Emitter } from 'mitt'
 
@@ -21,27 +22,22 @@ export type EventBusEvents = {
   'mcp-server-installed': { serverId: string; installationId: string }
   'mcp-installation-removed': { installationId: string }
   'mcp-install-wizard-reset': void
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   'notification-show': { message: string; type: string; [key: string]: any }
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   'mcp-form-data-updated': { step: number; data: any }
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   'mcp-add-form-data-updated': { step: number; data: any }
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   'mcp-form-data-loaded': { formData: any; currentStep: number }
   'mcp-form-data-cleared': void
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   'mcp-github-data-populated': any
   'mcp-form-step-changed': { from: number; to: number; stepKey: string }
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   'mcp-capabilities-updated': any
+  'mcp-edit-draft-updated': { serverId: string; data: any; step: number }
+  'mcp-edit-draft-cleared': { serverId: string }
   'icons-cache-loaded': { count: number }
   'icons-cache-error': { message: string }
   'icons-cache-cleared': void
   'settings-updated': void
   'settings-group-updated': { groupId: string }
   'settings-connection-tested': { groupId: string; success: boolean; message: string }
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   'storage-changed': { key: string; oldValue: any; newValue: any }
 }
 
@@ -59,7 +55,6 @@ interface EnhancedEventBus extends Emitter<EventBusEvents> {
   getState<T>(key: string, defaultValue?: T): T | null
   clearState(key: string): void
   hasState(key: string): boolean
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   getAllState(): Record<string, any>
   clearAllState(): void
 }
@@ -78,7 +73,7 @@ function safeJsonParse<T>(value: string | null, defaultValue?: T): T | null {
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 function safeJsonStringify(value: any): string {
   try {
     return JSON.stringify(value)
@@ -152,9 +147,9 @@ export function useEventBus(): EnhancedEventBus {
   }
 
   // Get all stored state
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  
   enhancedEmitter.getAllState = function(): Record<string, any> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    
     const result: Record<string, any> = {}
 
     try {

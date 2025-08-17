@@ -15,7 +15,7 @@ interface Emits {
   (e: 'update:modelValue', value: ReviewFormData): void
 }
 
-defineProps<Props>()
+const props = defineProps<Props>()
 defineEmits<Emits>()
 const { t } = useI18n()
 const eventBus = useEventBus()
@@ -64,53 +64,62 @@ const formatJson = (jsonString: string) => {
         <CardTitle class="text-base">{{ t('mcpCatalog.form.review.sections.basic') }}</CardTitle>
       </CardHeader>
       <CardContent class="space-y-4">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <h4 class="font-medium text-sm text-muted-foreground">Server Name</h4>
-            <p class="text-sm">{{ formData.basic.name || 'Not specified' }}</p>
+            <p class="text-sm">{{ props.formData.basic.name || 'Not specified' }}</p>
           </div>
           <div>
             <h4 class="font-medium text-sm text-muted-foreground">Category</h4>
-            <p class="text-sm">{{ formData.basic.category_id || 'Not specified' }}</p>
+            <p class="text-sm">{{ props.formData.basic.category_id || 'Not specified' }}</p>
+          </div>
+          <div>
+            <h4 class="font-medium text-sm text-muted-foreground">Featured Server</h4>
+            <Badge v-if="props.formData.basic.featured" variant="default" class="text-xs">
+              {{ t('mcpCatalog.edit.values.yes') }}
+            </Badge>
+            <span v-else class="text-sm text-muted-foreground">
+              {{ t('mcpCatalog.edit.values.no') }}
+            </span>
           </div>
         </div>
 
         <div>
           <h4 class="font-medium text-sm text-muted-foreground">Description</h4>
-          <p class="text-sm">{{ formData.basic.description || 'Not specified' }}</p>
+          <p class="text-sm">{{ props.formData.basic.description || 'Not specified' }}</p>
         </div>
 
-        <div v-if="formData.basic.long_description">
+        <div v-if="props.formData.basic.long_description">
           <h4 class="font-medium text-sm text-muted-foreground">Detailed Description</h4>
-          <p class="text-sm">{{ formData.basic.long_description }}</p>
+          <p class="text-sm">{{ props.formData.basic.long_description }}</p>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <h4 class="font-medium text-sm text-muted-foreground">Author</h4>
-            <p class="text-sm">{{ formData.basic.author_name || 'Not specified' }}</p>
+            <p class="text-sm">{{ props.formData.basic.author_name || 'Not specified' }}</p>
           </div>
           <div>
             <h4 class="font-medium text-sm text-muted-foreground">Contact</h4>
-            <p class="text-sm">{{ formData.basic.author_contact || 'Not specified' }}</p>
+            <p class="text-sm">{{ props.formData.basic.author_contact || 'Not specified' }}</p>
           </div>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <h4 class="font-medium text-sm text-muted-foreground">Organization</h4>
-            <p class="text-sm">{{ formData.basic.organization || 'Not specified' }}</p>
+            <p class="text-sm">{{ props.formData.basic.organization || 'Not specified' }}</p>
           </div>
           <div>
             <h4 class="font-medium text-sm text-muted-foreground">License</h4>
-            <p class="text-sm">{{ formData.basic.license || 'Not specified' }}</p>
+            <p class="text-sm">{{ props.formData.basic.license || 'Not specified' }}</p>
           </div>
         </div>
 
-        <div v-if="formData.basic.tags.length > 0">
+        <div v-if="props.formData.basic.tags.length > 0">
           <h4 class="font-medium text-sm text-muted-foreground">Tags</h4>
           <div class="flex flex-wrap gap-1 mt-1">
-            <Badge v-for="tag in formData.basic.tags" :key="tag" variant="secondary" class="text-xs">
+            <Badge v-for="tag in props.formData.basic.tags" :key="tag" variant="secondary" class="text-xs">
               {{ tag }}
             </Badge>
           </div>
@@ -126,17 +135,17 @@ const formatJson = (jsonString: string) => {
       <CardContent class="space-y-4">
         <div>
           <h4 class="font-medium text-sm text-muted-foreground">GitHub Repository</h4>
-          <p class="text-sm">{{ formData.repository.github_url || 'Not specified' }}</p>
+          <p class="text-sm">{{ props.formData.repository.github_url || 'Not specified' }}</p>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <h4 class="font-medium text-sm text-muted-foreground">Git Branch</h4>
-            <p class="text-sm">{{ formData.repository.git_branch || 'main' }}</p>
+            <p class="text-sm">{{ props.formData.repository.git_branch || 'main' }}</p>
           </div>
           <div>
             <h4 class="font-medium text-sm text-muted-foreground">Homepage</h4>
-            <p class="text-sm">{{ formData.repository.homepage_url || 'Not specified' }}</p>
+            <p class="text-sm">{{ props.formData.repository.homepage_url || 'Not specified' }}</p>
           </div>
         </div>
       </CardContent>
@@ -151,23 +160,23 @@ const formatJson = (jsonString: string) => {
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <h4 class="font-medium text-sm text-muted-foreground">Language</h4>
-            <p class="text-sm">{{ formData.technical.language || 'Not specified' }}</p>
+            <p class="text-sm">{{ props.formData.technical.language || 'Not specified' }}</p>
           </div>
           <div>
             <h4 class="font-medium text-sm text-muted-foreground">Runtime</h4>
-            <p class="text-sm">{{ formData.technical.runtime || 'Not specified' }}</p>
+            <p class="text-sm">{{ props.formData.technical.runtime || 'Not specified' }}</p>
           </div>
           <div>
             <h4 class="font-medium text-sm text-muted-foreground">Min Version</h4>
-            <p class="text-sm">{{ formData.technical.runtime_min_version || 'Not specified' }}</p>
+            <p class="text-sm">{{ props.formData.technical.runtime_min_version || 'Not specified' }}</p>
           </div>
         </div>
 
-        <div v-if="formData.technical.installation_methods.length > 0">
+        <div v-if="props.formData.technical.installation_methods.length > 0">
           <h4 class="font-medium text-sm text-muted-foreground">Installation Methods</h4>
           <div class="space-y-2 mt-2">
             <div
-              v-for="(method, index) in formData.technical.installation_methods"
+              v-for="(method, index) in props.formData.technical.installation_methods"
               :key="index"
               class="flex items-center gap-2 text-sm"
             >
@@ -183,9 +192,9 @@ const formatJson = (jsonString: string) => {
           </div>
         </div>
 
-        <div v-if="formData.technical.dependencies">
+        <div v-if="props.formData.technical.dependencies">
           <h4 class="font-medium text-sm text-muted-foreground">Dependencies</h4>
-          <p class="text-sm">{{ formData.technical.dependencies }}</p>
+          <p class="text-sm">{{ props.formData.technical.dependencies }}</p>
         </div>
       </CardContent>
     </Card>
@@ -197,11 +206,11 @@ const formatJson = (jsonString: string) => {
       </CardHeader>
       <CardContent class="space-y-4">
         <!-- Tools -->
-        <div v-if="formData.capabilities.tools.length > 0">
-          <h4 class="font-medium text-sm text-muted-foreground">Tools ({{ formData.capabilities.tools.length }})</h4>
+        <div v-if="props.formData.capabilities.tools.length > 0">
+          <h4 class="font-medium text-sm text-muted-foreground">Tools ({{ props.formData.capabilities.tools.length }})</h4>
           <div class="space-y-2 mt-2">
             <div
-              v-for="(tool, index) in formData.capabilities.tools"
+              v-for="(tool, index) in props.formData.capabilities.tools"
               :key="index"
               class="text-sm"
             >
@@ -212,11 +221,11 @@ const formatJson = (jsonString: string) => {
         </div>
 
         <!-- Resources -->
-        <div v-if="formData.capabilities.resources.length > 0">
-          <h4 class="font-medium text-sm text-muted-foreground">Resources ({{ formData.capabilities.resources.length }})</h4>
+        <div v-if="props.formData.capabilities.resources.length > 0">
+          <h4 class="font-medium text-sm text-muted-foreground">Resources ({{ props.formData.capabilities.resources.length }})</h4>
           <div class="space-y-2 mt-2">
             <div
-              v-for="(resource, index) in formData.capabilities.resources"
+              v-for="(resource, index) in props.formData.capabilities.resources"
               :key="index"
               class="text-sm"
             >
@@ -227,11 +236,11 @@ const formatJson = (jsonString: string) => {
         </div>
 
         <!-- Prompts -->
-        <div v-if="formData.capabilities.prompts.length > 0">
-          <h4 class="font-medium text-sm text-muted-foreground">Prompts ({{ formData.capabilities.prompts.length }})</h4>
+        <div v-if="props.formData.capabilities.prompts.length > 0">
+          <h4 class="font-medium text-sm text-muted-foreground">Prompts ({{ props.formData.capabilities.prompts.length }})</h4>
           <div class="space-y-2 mt-2">
             <div
-              v-for="(prompt, index) in formData.capabilities.prompts"
+              v-for="(prompt, index) in props.formData.capabilities.prompts"
               :key="index"
               class="text-sm"
             >
@@ -242,11 +251,11 @@ const formatJson = (jsonString: string) => {
         </div>
 
         <!-- Environment Variables -->
-        <div v-if="formData.capabilities.environment_variables.length > 0">
-          <h4 class="font-medium text-sm text-muted-foreground">Environment Variables ({{ formData.capabilities.environment_variables.length }})</h4>
+        <div v-if="props.formData.capabilities.environment_variables.length > 0">
+          <h4 class="font-medium text-sm text-muted-foreground">Environment Variables ({{ props.formData.capabilities.environment_variables.length }})</h4>
           <div class="space-y-2 mt-2">
             <div
-              v-for="(envVar, index) in formData.capabilities.environment_variables"
+              v-for="(envVar, index) in props.formData.capabilities.environment_variables"
               :key="index"
               class="flex items-center gap-2 text-sm"
             >
@@ -259,9 +268,9 @@ const formatJson = (jsonString: string) => {
         </div>
 
         <!-- Default Configuration -->
-        <div v-if="formData.capabilities.default_config">
+        <div v-if="props.formData.capabilities.default_config">
           <h4 class="font-medium text-sm text-muted-foreground">Default Configuration</h4>
-          <pre class="text-xs bg-muted p-3 rounded mt-2 overflow-x-auto">{{ formatJson(formData.capabilities.default_config) }}</pre>
+          <pre class="text-xs bg-muted p-3 rounded mt-2 overflow-x-auto">{{ formatJson(props.formData.capabilities.default_config) }}</pre>
         </div>
       </CardContent>
     </Card>

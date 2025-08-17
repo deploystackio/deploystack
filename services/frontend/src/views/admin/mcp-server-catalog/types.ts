@@ -149,6 +149,7 @@ export interface BasicInfoFormData {
   organization: string
   license: string
   tags: string[]
+  featured: boolean
 }
 
 export interface RepositoryFormData {

@@ -14,6 +14,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Switch } from '@/components/ui/switch'
 import { X, Plus, CheckCircle } from 'lucide-vue-next'
 import type { BasicInfoFormData, McpCategory } from '@/views/admin/mcp-server-catalog/types'
 import { McpCategoriesCache } from '@/services/mcpCatalogService'
@@ -44,6 +45,18 @@ const newTag = ref('')
 const localValue = computed({
   get: () => props.modelValue,
   set: (value) => emit('update:modelValue', value)
+})
+
+// Specific computed for featured field to handle boolean updates properly
+const featuredValue = computed({
+  get: () => props.modelValue.featured,
+  set: (value: boolean) => {
+    const updatedValue = {
+      ...props.modelValue,
+      featured: value
+    }
+    emit('update:modelValue', updatedValue)
+  }
 })
 
 // Check if data was auto-populated from GitHub
@@ -180,6 +193,22 @@ onMounted(() => {
       />
       <p class="text-xs text-muted-foreground">
         {{ t('mcpCatalog.form.basic.longDescription.description') }}
+      </p>
+    </div>
+
+    <!-- Featured Server -->
+    <div class="space-y-2">
+      <div class="flex items-center space-x-3">
+        <Switch
+          id="featured"
+          v-model="featuredValue"
+        />
+        <Label for="featured" class="text-sm font-medium">
+          {{ t('mcpCatalog.form.basic.featured.label') }}
+        </Label>
+      </div>
+      <p class="text-xs text-muted-foreground">
+        {{ t('mcpCatalog.form.basic.featured.description') }}
       </p>
     </div>
 

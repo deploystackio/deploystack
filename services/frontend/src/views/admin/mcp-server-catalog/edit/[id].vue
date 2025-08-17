@@ -165,7 +165,8 @@ const convertServerToFormData = (server: McpServer): Partial<McpServerFormData> 
       author_contact: server.author_contact || '',
       organization: server.organization || '',
       license: server.license || '',
-      tags: parsedTags
+      tags: parsedTags,
+      featured: Boolean(server.featured)
     },
     repository: {
       github_url: server.github_url || '',
@@ -209,6 +210,7 @@ const handleSubmit = async (formData: McpServerFormData) => {
     organization: formData.basic.organization || undefined,
     license: formData.basic.license || undefined,
     tags: formData.basic.tags.length > 0 ? formData.basic.tags : undefined,
+    featured: formData.basic.featured,
 
     // Repository (use GitHub data if available, fallback to repository data)
     github_url: formData.github.github_url || formData.repository.github_url || undefined,
@@ -298,6 +300,7 @@ onMounted(() => {
         v-if="initialFormData"
         mode="edit"
         :initial-data="initialFormData"
+        :server-id="serverId"
         :submit-button-text="t('mcpCatalog.form.navigation.update')"
         @submit="handleSubmit"
         @cancel="handleCancel"

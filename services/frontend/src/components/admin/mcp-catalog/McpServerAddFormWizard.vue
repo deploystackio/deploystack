@@ -57,6 +57,7 @@ interface McpServerAddFormData {
     organization: string
     license: string
     tags: string[]
+    featured: boolean
   }
 }
 
@@ -170,7 +171,8 @@ const formData = ref<McpServerAddFormData>({
     author_contact: '',
     organization: '',
     license: '',
-    tags: []
+    tags: [],
+    featured: false
   }
 })
 

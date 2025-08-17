@@ -22,12 +22,14 @@ interface Props {
   initialData?: Partial<McpServerFormData>
   submitButtonText?: string
   cancelButtonText?: string
+  serverId?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
   mode: 'create',
   submitButtonText: '',
-  cancelButtonText: ''
+  cancelButtonText: '',
+  serverId: ''
 })
 
 // Emits
@@ -40,6 +42,10 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 const eventBus = useEventBus()
+
+// Storage key for form drafts
+const FORM_DRAFTS_KEY = 'mcp_edit_drafts'
+const DRAFT_EXPIRY_HOURS = 24
 
 // Form steps configuration
 const steps = [
@@ -155,7 +161,8 @@ const formData = ref<McpServerFormData>({
     author_contact: '',
     organization: '',
     license: '',
-    tags: []
+    tags: [],
+    featured: false
   },
   repository: {
     github_url: '',
@@ -337,7 +344,8 @@ const autoPopulateFromGitHub = (githubData: any) => {
       author_contact: githubData.owner?.email || githubData.author_contact || '',
       organization: githubData.owner?.type === 'Organization' ? githubData.owner.login : (githubData.organization || ''),
       license: githubData.license?.spdx_id || githubData.license || '',
-      tags: githubData.topics || githubData.tags || []
+      tags: githubData.topics || githubData.tags || [],
+      featured: formData.value.basic.featured // Keep user selection for featured status
     },
     repository: {
       github_url: githubData.html_url || githubData.github_url || formData.value.github.github_url,
@@ -404,19 +412,117 @@ const parseInstallationMethods = (githubData: any): string[] => {
   return methods.length > 0 ? methods : ['manual']
 }
 
-// Form persistence using event bus
-const saveFormData = () => {
-  eventBus.emit('mcp-form-data-updated', {
-    step: currentStep.value,
-    data: formData.value
+// Draft management functions with proper typing
+interface FormDraft {
+  data: McpServerFormData
+  lastModified: string
+  currentStep: number
+}
+
+interface FormDrafts {
+  [serverId: string]: FormDraft
+}
+
+const getDrafts = (): FormDrafts => {
+  return eventBus.getState<FormDrafts>(FORM_DRAFTS_KEY, {}) || {}
+}
+
+const saveDraft = () => {
+  if (!props.serverId) return
+
+  const drafts = getDrafts()
+  drafts[props.serverId] = {
+    data: formData.value,
+    lastModified: new Date().toISOString(),
+    currentStep: currentStep.value
+  }
+
+  eventBus.setState(FORM_DRAFTS_KEY, drafts)
+  
+  // Emit specific events for real-time updates
+  eventBus.emit('mcp-edit-draft-updated', {
+    serverId: props.serverId,
+    data: formData.value,
+    step: currentStep.value
   })
 }
 
-const loadFormData = () => {
-  // Try to load persisted form data
-  // This would be implemented with localStorage or session storage
-  // For now, we'll keep the default empty form
+const loadDraft = (): boolean => {
+  if (!props.serverId) return false
+
+  const drafts = getDrafts()
+  const draft = drafts[props.serverId]
+
+  if (draft) {
+    // Check if draft is not expired
+    const draftAge = Date.now() - new Date(draft.lastModified).getTime()
+    const maxAge = DRAFT_EXPIRY_HOURS * 60 * 60 * 1000
+
+    if (draftAge < maxAge) {
+      formData.value = draft.data
+      currentStep.value = draft.currentStep || 0
+      return true
+    } else {
+      // Remove expired draft
+      clearDraft()
+    }
+  }
+
+  return false
 }
+
+const clearDraft = () => {
+  if (!props.serverId) return
+
+  const drafts = getDrafts()
+  if (drafts[props.serverId]) {
+    delete drafts[props.serverId]
+    eventBus.setState(FORM_DRAFTS_KEY, drafts)
+    
+    eventBus.emit('mcp-edit-draft-cleared', {
+      serverId: props.serverId
+    })
+  }
+}
+
+const cleanupExpiredDrafts = () => {
+  const drafts = getDrafts()
+  const maxAge = DRAFT_EXPIRY_HOURS * 60 * 60 * 1000
+  let hasChanges = false
+
+  Object.keys(drafts).forEach(serverId => {
+    const draft = drafts[serverId]
+    if (draft && draft.lastModified) {
+      const draftAge = Date.now() - new Date(draft.lastModified).getTime()
+      
+      if (draftAge >= maxAge) {
+        delete drafts[serverId]
+        hasChanges = true
+      }
+    }
+  })
+
+  if (hasChanges) {
+    eventBus.setState(FORM_DRAFTS_KEY, drafts)
+  }
+}
+
+// Enhanced form data watcher for real-time storage
+watch(
+  formData,
+  () => {
+    saveDraft()
+  },
+  { deep: true }
+)
+
+// Watch current step changes
+watch(
+  currentStep,
+  () => {
+    saveDraft()
+  }
+)
 
 // Form submission
 const submitForm = async () => {
@@ -436,11 +542,28 @@ const submitForm = async () => {
 
 // Lifecycle
 onMounted(() => {
-  loadFormData()
+  // Clean up expired drafts on mount
+  cleanupExpiredDrafts()
+  
+  // In edit mode, check for existing draft and clear it before loading initial data
+  if (props.mode === 'edit' && props.serverId) {
+    clearDraft() // Clear any existing draft for this server
+  }
+  
+  // Try to load draft (mainly for create mode or if user refreshed page)
+  const draftLoaded = loadDraft()
+  
+  // If no draft was loaded and we have initial data, use it
+  if (!draftLoaded && props.initialData) {
+    // The initialData watcher will handle this
+  }
 })
 
 onUnmounted(() => {
-  saveFormData()
+  // Save current state as draft when component unmounts (unless submitting)
+  if (!isSubmitting.value) {
+    saveDraft()
+  }
 })
 </script>
 
@@ -478,6 +601,7 @@ onUnmounted(() => {
         v-else
         v-model="formData[currentStepData.key]"
         :form-data="formData"
+        @update:modelValue="(newValue: any) => formData[currentStepData.key] = newValue"
       />
     </div>
 

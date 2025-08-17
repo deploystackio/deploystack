@@ -184,6 +184,10 @@ export default {
         label: 'Tags',
         placeholder: 'Add tags (press Enter to add)',
         description: 'Keywords to help users discover this server'
+      },
+      featured: {
+        label: 'Featured Server',
+        description: 'Featured servers are highlighted in the catalog and appear at the top of search results. This helps users discover high-quality or recommended MCP servers.'
       }
     },
 
@@ -482,6 +486,8 @@ export default {
     values: {
       featured: 'Featured',
       notProvided: 'Not provided',
+      yes: 'Yes',
+      no: 'No',
       authorName: 'Name:',
       authorContact: 'Contact:',
       organization: 'Organization:',

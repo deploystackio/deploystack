@@ -14,8 +14,6 @@ import { Button } from '@/components/ui/button'
 import { DynamicIcon } from '@/components/ui/dynamic-icon'
 import {
   Edit,
-  Star,
-  StarOff,
   Github,
   ExternalLink
 } from 'lucide-vue-next'
@@ -25,7 +23,6 @@ import { McpCategoriesService, type McpCategory } from '@/services/mcpCategories
 interface Props {
   servers: McpServer[]
   onEditServer: (serverId: string) => void
-  onToggleFeatured: (serverId: string, featured: boolean) => void
 }
 
 const props = defineProps<Props>()
@@ -46,11 +43,6 @@ onMounted(async () => {
     categoriesLoading.value = false
   }
 })
-
-// Format date for display
-const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString()
-}
 
 // Get status badge variant
 const getStatusVariant = (status: string) => {
@@ -86,17 +78,14 @@ const sortedServers = computed(() => {
           <TableHead>{{ t('mcpCatalog.table.columns.name') }}</TableHead>
           <TableHead>{{ t('mcpCatalog.table.columns.description') }}</TableHead>
           <TableHead>{{ t('mcpCatalog.table.columns.category') }}</TableHead>
-          <TableHead>{{ t('mcpCatalog.table.columns.runtime') }}</TableHead>
           <TableHead>{{ t('mcpCatalog.table.columns.status') }}</TableHead>
-          <TableHead>{{ t('mcpCatalog.table.columns.featured') }}</TableHead>
-          <TableHead>{{ t('mcpCatalog.table.columns.created') }}</TableHead>
           <TableHead class="w-[100px]">{{ t('mcpCatalog.table.columns.actions') }}</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         <!-- Empty State -->
         <TableRow v-if="sortedServers.length === 0">
-          <TableCell :colspan="8" class="h-24 text-center">
+          <TableCell :colspan="5" class="h-24 text-center">
             {{ t('mcpCatalog.table.noData') }}
           </TableCell>
         </TableRow>
@@ -164,45 +153,11 @@ const sortedServers = computed(() => {
             </span>
           </TableCell>
 
-          <!-- Runtime -->
-          <TableCell>
-            <div class="text-sm">
-              {{ server.runtime }}
-              <div v-if="server.runtime_min_version" class="text-xs text-muted-foreground">
-                {{ server.runtime_min_version }}+
-              </div>
-            </div>
-          </TableCell>
-
           <!-- Status -->
           <TableCell>
             <Badge :variant="getStatusVariant(server.status)">
               {{ t(`mcpCatalog.status.${server.status}`) }}
             </Badge>
-          </TableCell>
-
-          <!-- Featured -->
-          <TableCell>
-            <Button
-              variant="ghost"
-              size="sm"
-              @click="props.onToggleFeatured(server.id, !server.featured)"
-              class="h-8 w-8 p-0"
-            >
-              <Star
-                v-if="server.featured"
-                class="h-4 w-4 fill-yellow-400 text-yellow-400"
-              />
-              <StarOff
-                v-else
-                class="h-4 w-4 text-muted-foreground"
-              />
-            </Button>
-          </TableCell>
-
-          <!-- Created -->
-          <TableCell class="text-sm text-muted-foreground">
-            {{ formatDate(server.created_at) }}
           </TableCell>
 
           <!-- Actions -->
