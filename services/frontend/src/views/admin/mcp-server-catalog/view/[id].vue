@@ -6,6 +6,7 @@ import { toast } from 'vue-sonner'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import CategoryDisplay from '@/components/mcp-server/CategoryDisplay.vue'
+import ContentWrapper from '@/components/ContentWrapper.vue'
 import { ArrowLeft, Github, ExternalLink, Package, Code, Settings, Calendar, Tag, Trash2, AlertTriangle, Edit } from 'lucide-vue-next'
 import DashboardLayout from '@/components/DashboardLayout.vue'
 import EnvironmentVariablesDisplay from '@/components/admin/mcp-catalog/EnvironmentVariablesDisplay.vue'
@@ -290,7 +291,8 @@ const goBack = () => {
       </div>
 
       <!-- Server Details -->
-      <div v-else-if="server">
+      <ContentWrapper v-if="server">
+        <!-- Basic Information Section -->
         <div class="px-4 sm:px-0">
           <h3 class="text-base/7 font-semibold text-gray-900">{{ t('mcpCatalog.edit.serverInformation') }}</h3>
           <p class="mt-1 max-w-2xl text-sm/6 text-gray-500">{{ t('mcpCatalog.edit.serverDetails') }}</p>
@@ -447,70 +449,16 @@ const goBack = () => {
               </dd>
             </div>
 
-            <!-- Installation Methods -->
-            <div v-if="displayInstallationMethods.length > 0" class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
-              <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.edit.fields.installation') }}</dt>
-              <dd class="mt-2 text-sm text-gray-900 sm:col-span-2 sm:mt-0">
-                <ul role="list" class="divide-y divide-gray-100 rounded-md border border-gray-200">
-                  <li
-                    v-for="(method, index) in displayInstallationMethods"
-                    :key="index"
-                    class="py-4 pr-5 pl-4 text-sm/6"
-                  >
-                    <div class="flex items-start gap-3">
-                      <Package class="size-5 shrink-0 text-gray-400 mt-0.5" aria-hidden="true" />
-                      <div class="flex-1 space-y-3">
-                        <!-- Client and Command -->
-                        <div class="flex items-center gap-2">
-                          <span class="font-medium">{{ method.client || 'Unknown Client' }}</span>
-                          <span class="text-gray-500">•</span>
-                          <code class="bg-gray-100 px-2 py-1 rounded text-xs font-mono">{{ method.command }}</code>
-                        </div>
+          </dl>
+        </div>
 
-                        <!-- Arguments -->
-                        <div v-if="method.args && method.args.length > 0" class="space-y-1">
-                          <div class="text-xs font-medium text-gray-600">Arguments:</div>
-                          <div class="flex flex-wrap gap-1">
-                            <code
-                              v-for="(arg, argIndex) in method.args"
-                              :key="argIndex"
-                              class="bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs font-mono"
-                            >
-                              {{ arg }}
-                            </code>
-                          </div>
-                        </div>
-
-                        <!-- Environment Variables -->
-                        <div v-if="method.env && Object.keys(method.env).length > 0" class="space-y-1">
-                          <div class="text-xs font-medium text-gray-600">Environment Variables:</div>
-                          <div class="space-y-1">
-                            <div
-                              v-for="(value, key) in method.env"
-                              :key="key"
-                              class="flex items-center gap-2 text-xs"
-                            >
-                              <code class="bg-green-50 text-green-700 px-2 py-1 rounded font-mono">{{ key }}</code>
-                              <span class="text-gray-400">=</span>
-                              <code class="bg-gray-50 text-gray-600 px-2 py-1 rounded font-mono">{{ value }}</code>
-                            </div>
-                          </div>
-                        </div>
-
-                        <!-- Full Command Preview -->
-                        <div class="bg-gray-50 rounded-md p-2">
-                          <div class="text-xs font-medium text-gray-600 mb-1">Command Preview:</div>
-                          <code class="text-xs font-mono text-gray-800">
-                            {{ method.command }}{{ method.args && method.args.length > 0 ? ' ' + method.args.join(' ') : '' }}
-                          </code>
-                        </div>
-                      </div>
-                    </div>
-                  </li>
-                </ul>
-              </dd>
-            </div>
-
+        <!-- Capabilities Section -->
+        <div v-if="displayTools.length > 0 || displayResources.length > 0 || displayPrompts.length > 0" class="px-4 sm:px-0 mt-8">
+          <h3 class="text-base/7 font-semibold text-gray-900">{{ t('mcpCatalog.edit.fields.capabilities') }}</h3>
+          <p class="mt-1 max-w-2xl text-sm/6 text-gray-500">Tools, resources, and prompts provided by this server</p>
+        </div>
+        <div v-if="displayTools.length > 0 || displayResources.length > 0 || displayPrompts.length > 0" class="mt-6 border-t border-gray-100">
+          <dl class="divide-y divide-gray-100">
             <!-- Tools -->
             <div v-if="displayTools.length > 0" class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
               <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.edit.fields.tools') }}</dt>
@@ -582,6 +530,79 @@ const goBack = () => {
                 </ul>
               </dd>
             </div>
+          </dl>
+        </div>
+
+        <!-- Installation & Configuration Section -->
+        <div class="px-4 sm:px-0 mt-8">
+          <h3 class="text-base/7 font-semibold text-gray-900">Installation & Configuration</h3>
+          <p class="mt-1 max-w-2xl text-sm/6 text-gray-500">Installation methods and configuration options</p>
+        </div>
+        <div class="mt-6 border-t border-gray-100">
+          <dl class="divide-y divide-gray-100">
+            <!-- Installation Methods -->
+            <div v-if="displayInstallationMethods.length > 0" class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+              <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.edit.fields.installation') }}</dt>
+              <dd class="mt-2 text-sm text-gray-900 sm:col-span-2 sm:mt-0">
+                <ul role="list" class="divide-y divide-gray-100 rounded-md border border-gray-200">
+                  <li
+                    v-for="(method, index) in displayInstallationMethods"
+                    :key="index"
+                    class="py-4 pr-5 pl-4 text-sm/6"
+                  >
+                    <div class="flex items-start gap-3">
+                      <Package class="size-5 shrink-0 text-gray-400 mt-0.5" aria-hidden="true" />
+                      <div class="flex-1 space-y-3">
+                        <!-- Client and Command -->
+                        <div class="flex items-center gap-2">
+                          <span class="font-medium">{{ method.client || 'Unknown Client' }}</span>
+                          <span class="text-gray-500">•</span>
+                          <code class="bg-gray-100 px-2 py-1 rounded text-xs font-mono">{{ method.command }}</code>
+                        </div>
+
+                        <!-- Arguments -->
+                        <div v-if="method.args && method.args.length > 0" class="space-y-1">
+                          <div class="text-xs font-medium text-gray-600">Arguments:</div>
+                          <div class="flex flex-wrap gap-1">
+                            <code
+                              v-for="(arg, argIndex) in method.args"
+                              :key="argIndex"
+                              class="bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs font-mono"
+                            >
+                              {{ arg }}
+                            </code>
+                          </div>
+                        </div>
+
+                        <!-- Environment Variables -->
+                        <div v-if="method.env && Object.keys(method.env).length > 0" class="space-y-1">
+                          <div class="text-xs font-medium text-gray-600">Environment Variables:</div>
+                          <div class="space-y-1">
+                            <div
+                              v-for="(value, key) in method.env"
+                              :key="key"
+                              class="flex items-center gap-2 text-xs"
+                            >
+                              <code class="bg-green-50 text-green-700 px-2 py-1 rounded font-mono">{{ key }}</code>
+                              <span class="text-gray-400">=</span>
+                              <code class="bg-gray-50 text-gray-600 px-2 py-1 rounded font-mono">{{ value }}</code>
+                            </div>
+                          </div>
+                        </div>
+
+                        <!-- Full Command Preview -->
+                        <div class="bg-gray-50 rounded-md p-2">
+                          <div class="text-xs font-medium text-gray-600 mb-1">Command Preview:</div>
+                          <code class="text-xs font-mono text-gray-800">
+                            {{ method.command }}{{ method.args && method.args.length > 0 ? ' ' + method.args.join(' ') : '' }}
+                          </code>
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+                </ul>
+              </dd>
+            </div>
 
             <!-- Environment Variables -->
             <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
@@ -619,10 +640,18 @@ const goBack = () => {
                 </div>
               </dd>
             </div>
+          </dl>
+        </div>
 
-            <!-- System Information -->
+        <!-- System Information Section -->
+        <div class="px-4 sm:px-0 mt-8">
+          <h3 class="text-base/7 font-semibold text-gray-900">{{ t('mcpCatalog.edit.fields.systemInfo') }}</h3>
+          <p class="mt-1 max-w-2xl text-sm/6 text-gray-500">Server metadata and tracking information</p>
+        </div>
+        <div class="mt-6 border-t border-gray-100">
+          <dl class="divide-y divide-gray-100">
             <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
-              <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.edit.fields.systemInfo') }}</dt>
+              <dt class="text-sm/6 font-medium text-gray-900">Timestamps</dt>
               <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
                 <div class="space-y-2">
                   <div class="flex items-center gap-1">
@@ -637,6 +666,14 @@ const goBack = () => {
                     <Calendar class="h-4 w-4 text-muted-foreground" />
                     <span class="font-medium">{{ t('mcpCatalog.edit.values.lastSync') }}</span> {{ formatDate(server.last_sync_at) }}
                   </div>
+                </div>
+              </dd>
+            </div>
+
+            <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+              <dt class="text-sm/6 font-medium text-gray-900">Identifiers</dt>
+              <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
+                <div class="space-y-2">
                   <div><span class="font-medium">{{ t('mcpCatalog.edit.values.serverId') }}</span> <span class="font-mono text-xs">{{ server.id }}</span></div>
                   <div><span class="font-medium">{{ t('mcpCatalog.edit.values.slug') }}</span> <span class="font-mono text-xs">{{ server.slug }}</span></div>
                 </div>
@@ -644,7 +681,7 @@ const goBack = () => {
             </div>
           </dl>
         </div>
-      </div>
+      </ContentWrapper>
 
       <!-- Delete Confirmation Dialog -->
       <AlertDialog :open="showDeleteDialog" @update:open="showDeleteDialog = $event">

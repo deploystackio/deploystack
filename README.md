@@ -156,4 +156,4 @@ For detailed contribution guidelines, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
-This project is licensed under the DeployStack License (DSL), a permissive license that allows for almost all uses except offering the software as a cloud service that competes with DeployStack's offerings. See the [LICENSE](LICENSE) file for details.
+This project is licensed under the Server Side Public License (SSPL) v1. This allows you to use, modify, and distribute DeployStack freely, including for commercial purposes. The only restriction is that if you offer DeployStack as a managed service, you must open source your entire service infrastructure. See the [LICENSE](LICENSE) file for details.
