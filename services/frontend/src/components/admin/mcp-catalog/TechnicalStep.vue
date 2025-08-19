@@ -61,8 +61,14 @@ const isUpdatingFromStorage = ref(false)
 // Load data from storage
 const loadFromStorage = () => {
   const storedData = eventBus.getState<TechnicalFormData>(STORAGE_KEY)
+  
   if (storedData) {
     localData.value = { ...localData.value, ...storedData }
+  } else if (props.formData?.technical) {
+    // If no stored data but we have initial form data (edit mode), use it
+    localData.value = { ...localData.value, ...props.formData.technical }
+    // Save it to storage for consistency
+    saveToStorage()
   }
 }
 
@@ -97,6 +103,22 @@ const handleStorageChange = (data: { key: string; newValue: any }) => {
 
 // Watch for changes in localData and save to storage
 watch(localData, saveToStorage, { deep: true })
+
+// Watch for changes in props.formData to handle initial data loading in edit mode
+watch(
+  () => props.formData?.technical,
+  (newTechnicalData) => {
+    if (newTechnicalData && isEditMode.value) {
+      // Only update if storage doesn't already have data or if the language is missing
+      const storedData = eventBus.getState<TechnicalFormData>(STORAGE_KEY)
+      if (!storedData || !storedData.language) {
+        localData.value = { ...localData.value, ...newTechnicalData }
+        saveToStorage()
+      }
+    }
+  },
+  { immediate: true, deep: true }
+)
 
 // Example configuration for hover card
 const exampleConfig = `{
@@ -397,6 +419,44 @@ onUnmounted(() => {
   <!-- Structured Form Fields -->
   <div class="mt-6 border-t border-gray-100">
     <dl class="divide-y divide-gray-100">
+      <!-- Language Selection -->
+      <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+        <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.technical.language.label') }}</dt>
+        <dd class="mt-1 sm:col-span-2 sm:mt-0">
+          <Select
+            :model-value="localData.language"
+            @update:model-value="(value) => updateField('language', String(value || ''))"
+          >
+            <SelectTrigger>
+              <SelectValue :placeholder="t('mcpCatalog.form.technical.language.placeholder')" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="JavaScript">
+                {{ t('mcpCatalog.form.technical.language.options.javascript') }}
+              </SelectItem>
+              <SelectItem value="TypeScript">
+                {{ t('mcpCatalog.form.technical.language.options.typescript') }}
+              </SelectItem>
+              <SelectItem value="Python">
+                {{ t('mcpCatalog.form.technical.language.options.python') }}
+              </SelectItem>
+              <SelectItem value="Go">
+                {{ t('mcpCatalog.form.technical.language.options.go') }}
+              </SelectItem>
+              <SelectItem value="C#">
+                {{ t('mcpCatalog.form.technical.language.options.csharp') }}
+              </SelectItem>
+              <SelectItem value="C++">
+                {{ t('mcpCatalog.form.technical.language.options.cpp') }}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+          <p class="text-xs text-muted-foreground mt-1">
+            {{ t('mcpCatalog.form.technical.language.description') }}
+          </p>
+        </dd>
+      </div>
+
       <!-- Transport Type -->
       <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
         <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.technical.transportType.label') }}</dt>

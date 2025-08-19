@@ -235,8 +235,16 @@ export default {
       description: 'Define runtime and installation requirements',
       language: {
         label: 'Programming Language',
-        placeholder: 'Select language',
-        description: 'Primary programming language used'
+        placeholder: 'Select programming language',
+        description: 'Primary programming language used for this MCP server',
+        options: {
+          typescript: 'TypeScript',
+          javascript: 'JavaScript',
+          python: 'Python',
+          go: 'Go',
+          csharp: 'C#',
+          cpp: 'C++'
+        }
       },
       runtime: {
         label: 'Runtime Environment',
