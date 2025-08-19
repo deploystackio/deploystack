@@ -32,7 +32,7 @@
     "arctic": "^3.7.0",
     "argon2": "^0.44.0",
     "better-sqlite3": "^12.2.0",
-    "drizzle-orm": "^0.44.3",
+    "drizzle-orm": "^0.44.4",
     "fastify": "^5.4.0",
     "fastify-favicon": "^5.0.0",
     "lucia": "^3.2.2",
