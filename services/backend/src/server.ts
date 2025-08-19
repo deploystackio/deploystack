@@ -37,6 +37,10 @@ import { RoleSyncService } from './services/roleSyncService'; // Import the role
 import type SqliteDriver from 'better-sqlite3'; // For type checking in onClose
 import type { FastifyInstance } from 'fastify'
 
+// Import event system
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { DeployStackEventBus, EVENT_NAMES } from './events'
+
 // Import type extensions
 import './types/fastify'
 
@@ -323,6 +327,11 @@ export const createServer = async () => {
   server.addHook('onRequest', authHook);
   server.log.info('Global auth hook registered.');
 
+  // Initialize EventBus
+  const eventBus = new DeployStackEventBus(server.log);
+  server.decorate('eventBus', eventBus);
+  server.log.info('EventBus initialized and decorated on server instance.');
+
   // Create and configure the plugin manager
   const isDevelopment = process.env.NODE_ENV !== 'production';
   const pluginManager = new PluginManager({
@@ -335,6 +344,7 @@ export const createServer = async () => {
   })
   
   pluginManager.setApp(server); // Set app early for plugins that might need it
+  pluginManager.setEventBus(eventBus); // Set EventBus for plugin event listener registration
 
   // Discover available plugins first
   await pluginManager.discoverPlugins();

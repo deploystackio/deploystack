@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import path from 'node:path';
 import fs from 'node:fs';
 import fsPromises from 'node:fs/promises';
@@ -14,6 +15,7 @@ import {
   type GlobalSettingGroupForPlugin,
   PluginRouteManager
 } from './types';
+import { type DeployStackEventBus } from '../events';
 import { 
   PluginLoadError, 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -31,9 +33,11 @@ export class PluginManager {
   private pluginOptions: Map<string, PluginOptions> = new Map();
   private app: FastifyInstance | null = null;
   private db: AnyDatabase | null = null; // Updated type
+  private eventBus: DeployStackEventBus | null = null;
   private pluginPaths: string[] = [];
   private initialized = false;
   private logger: FastifyBaseLogger | null = null;
+  private pluginEventListeners: Map<string, Map<string, any>> = new Map();
 
   /**
    * Create a new plugin manager
@@ -64,6 +68,13 @@ export class PluginManager {
    */
   setDatabase(db: AnyDatabase | null): void { // Updated type
     this.db = db;
+  }
+
+  /**
+   * Set the EventBus instance for plugin event listener registration
+   */
+  setEventBus(eventBus: DeployStackEventBus): void {
+    this.eventBus = eventBus;
   }
 
   /**
@@ -399,6 +410,11 @@ export class PluginManager {
           await plugin.registerRoutes(routeManager, this.db, pluginLogger);
           this.logger?.info(`Registered routes for plugin: ${plugin.meta.id}`);
         }
+
+        // Register plugin event listeners
+        if (plugin.eventListeners && this.eventBus) {
+          await this.registerEventListeners(plugin);
+        }
       } catch (error) {
         // Log individual plugin initialization errors but continue with others.
         const typedError = error as Error;
@@ -465,5 +481,119 @@ export class PluginManager {
     }
     
     this.initialized = false;
+  }
+
+  /**
+   * Register event listeners for a plugin
+   * @param plugin The plugin to register event listeners for
+   */
+  private async registerEventListeners(plugin: Plugin): Promise<void> {
+    if (!plugin.eventListeners || !this.eventBus) {
+      return;
+    }
+
+    const listeners = new Map<string, any>();
+    
+    for (const [eventName, handler] of Object.entries(plugin.eventListeners)) {
+      // Validate event name format
+      if (!this.isValidEventName(eventName)) {
+        throw new Error(`Invalid event name: ${eventName} in plugin ${plugin.meta.id}`);
+      }
+
+      // Wrap handler with error handling and plugin context
+      const wrappedHandler = this.wrapEventHandler(plugin.meta.id, eventName, handler);
+      
+      // Register with event bus
+      this.eventBus.registerPluginListener(plugin.meta.id, eventName as any, wrappedHandler);
+      listeners.set(eventName, wrappedHandler);
+      
+      this.logger?.info(`Registered event listener for ${eventName} in plugin ${plugin.meta.id}`);
+    }
+
+    this.pluginEventListeners.set(plugin.meta.id, listeners);
+    const listenerCount = listeners.size;
+    this.logger?.info(`Registered ${listenerCount} event listeners for plugin: ${plugin.meta.id}`);
+  }
+
+  /**
+   * Unregister event listeners for a plugin
+   * @param plugin The plugin to unregister event listeners for
+   */
+  private async unregisterEventListeners(plugin: Plugin): Promise<void> {
+    const listeners = this.pluginEventListeners.get(plugin.meta.id);
+    if (!listeners || !this.eventBus) {
+      return;
+    }
+
+    for (const [eventName] of listeners.entries()) {
+      this.eventBus.unregisterPlugin(plugin.meta.id);
+      this.logger?.info(`Unregistered event listener for ${eventName} in plugin ${plugin.meta.id}`);
+    }
+
+    this.pluginEventListeners.delete(plugin.meta.id);
+  }
+
+  /**
+   * Wrap an event handler with error handling and plugin context
+   * @param pluginId The plugin ID
+   * @param eventName The event name
+   * @param handler The original handler
+   * @returns The wrapped handler
+   */
+  private wrapEventHandler(pluginId: string, eventName: string, handler: any): any {
+    return async (eventData: any, context: any) => {
+      try {
+        this.logger?.debug(`Plugin ${pluginId} handling event ${eventName}`);
+        await handler(eventData, context);
+      } catch (error) {
+        const typedError = error as Error;
+        this.logger?.error({ error: typedError, stack: typedError.stack }, `Error in plugin ${pluginId} event handler for ${eventName}: ${typedError.message}`);
+        
+        // Emit error event for monitoring if eventBus is available
+        if (this.eventBus) {
+          this.eventBus.emitWithContext('plugin.error' as any, {
+            pluginId,
+            originalEvent: eventName,
+            error: typedError.message,
+            stack: typedError.stack
+          }, context);
+        }
+      }
+    };
+  }
+
+  /**
+   * Validate event name format
+   * @param eventName The event name to validate
+   * @returns True if valid, false otherwise
+   */
+  private isValidEventName(eventName: string): boolean {
+    // Validate against EVENT_NAMES constants pattern
+    const validPattern = /^[a-z]+\.[a-z_]+$/;
+    return validPattern.test(eventName);
+  }
+
+  /**
+   * Get plugin event listeners for debugging
+   * @param pluginId The plugin ID
+   * @returns Array of event names the plugin is listening to
+   */
+  getPluginEventListeners(pluginId: string): string[] {
+    const listeners = this.pluginEventListeners.get(pluginId);
+    return listeners ? Array.from(listeners.keys()) : [];
+  }
+
+  /**
+   * Get all registered event listeners
+   * @returns Record of plugin IDs to their event listener names
+   */
+  getAllEventListeners(): Record<string, string[]> {
+    const result: Record<string, string[]> = {};
+    
+    for (const [pluginId, listeners] of this.pluginEventListeners.entries()) {
+      result[pluginId] = Array.from(listeners.keys());
+    }
+    
+    return result;
   }
 }
