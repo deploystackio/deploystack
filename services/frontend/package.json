@@ -30,7 +30,7 @@
     "vue": "^3.5.18",
     "vue-i18n": "^11.1.11",
     "vue-router": "^4.5.1",
-    "vue-sonner": "^2.0.2",
+    "vue-sonner": "^2.0.8",
     "zod": "^4.0.17"
   },
   "devDependencies": {
