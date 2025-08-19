@@ -4,6 +4,8 @@ import { verify } from '@node-rs/argon2';
 import { getDb, getSchema } from '../../db';
 import { eq, or } from 'drizzle-orm';
 import { GlobalSettingsInitService } from '../../global-settings';
+import { EVENT_NAMES } from '../../events';
+import type { EventContext } from '../../events/types';
 
 // Reusable Schema Constants
 const LOGIN_REQUEST_SCHEMA = {
@@ -286,6 +288,46 @@ export default async function loginEmailRoute(server: FastifyInstance) {
         const sessionCookie = getLucia().createSessionCookie(sessionId);
 
         reply.setCookie(sessionCookie.name, sessionCookie.value, sessionCookie.attributes);
+        
+        // Emit USER_LOGIN event
+        try {
+          const eventContext: EventContext = {
+            db,
+            logger: server.log,
+            user: {
+              id: user.id,
+              email: user.email,
+              roleId: user.role_id
+            },
+            request: {
+              ip: request.ip,
+              userAgent: request.headers['user-agent'],
+              requestId: request.id
+            },
+            timestamp: new Date()
+          };
+
+          server.eventBus.emitWithContext(
+            EVENT_NAMES.USER_LOGIN,
+            {
+              user: {
+                id: user.id,
+                email: user.email,
+                name: user.username || `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email
+              },
+              metadata: {
+                loginMethod: 'email',
+                ip: request.ip,
+                userAgent: request.headers['user-agent']
+              }
+            },
+            eventContext
+          );
+          server.log.info(`USER_LOGIN event emitted for user: ${user.id}`);
+        } catch (eventError) {
+          server.log.error(eventError, `Failed to emit USER_LOGIN event for user ${user.id}:`);
+          // Don't fail login if event emission fails
+        }
         
         // Create clean response object to avoid serialization issues
         const cleanResponse: LoginSuccessResponse = {

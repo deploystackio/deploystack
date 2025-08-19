@@ -337,6 +337,56 @@ export interface CoreEventData {
     };
   };
 
+  [EVENT_NAMES.MCP_SERVER_CREATED]: {
+    server: {
+      id: string;
+      name: string;
+      description?: string;
+      language: string;
+      runtime: string;
+    };
+    createdBy: {
+      id: string;
+      email: string;
+    };
+    metadata: {
+      ip: string;
+    };
+  };
+
+  [EVENT_NAMES.MCP_SERVER_UPDATED]: {
+    server: {
+      id: string;
+      name: string;
+      description?: string;
+      language: string;
+      runtime: string;
+    };
+    updatedBy: {
+      id: string;
+      email: string;
+    };
+    changes: Record<string, any>;
+    metadata: {
+      ip: string;
+    };
+  };
+
+  [EVENT_NAMES.MCP_SERVER_DELETED]: {
+    server: {
+      id: string;
+      name: string;
+      description?: string;
+    };
+    deletedBy: {
+      id: string;
+      email: string;
+    };
+    metadata: {
+      ip: string;
+    };
+  };
+
   [EVENT_NAMES.SYSTEM_STARTUP]: {
     version: string;
     environment: string;

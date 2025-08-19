@@ -5,6 +5,8 @@ import { requireGlobalAdmin } from '../../../middleware/roleMiddleware';
 import { McpCatalogService } from '../../../services/mcpCatalogService';
 import { getDb } from '../../../db';
 import { claudeDesktopConfigSchema, extractMcpConfigData } from '../../../utils/mcpConfigExtractor';
+import { EVENT_NAMES } from '../../../events';
+import type { EventContext } from '../../../events/types';
 
 // Request schema for creating global MCP servers
 const createGlobalServerRequestSchema = z.object({
@@ -282,6 +284,52 @@ export default async function createGlobalServer(server: FastifyInstance) {
         featured: newServer.featured,
         auto_install_new_default_team: newServer.auto_install_new_default_team
       }, 'Global MCP server created successfully');
+
+      // Emit MCP_SERVER_CREATED event
+      try {
+        const eventContext: EventContext = {
+          db,
+          logger: request.log,
+          user: {
+            id: request.user!.id,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            email: (request.user as any).email,
+            roleId: 'global_admin'
+          },
+          request: {
+            ip: request.ip,
+            userAgent: request.headers['user-agent'],
+            requestId: request.id
+          },
+          timestamp: new Date()
+        };
+
+        server.eventBus.emitWithContext(
+          EVENT_NAMES.MCP_SERVER_CREATED,
+          {
+            server: {
+              id: newServer.id,
+              name: newServer.name,
+              description: newServer.description,
+              language: newServer.language,
+              runtime: newServer.runtime
+            },
+            createdBy: {
+              id: request.user!.id,
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              email: (request.user as any).email
+            },
+            metadata: {
+              ip: request.ip
+            }
+          },
+          eventContext
+        );
+        request.log.info(`MCP_SERVER_CREATED event emitted for server: ${newServer.id}`);
+      } catch (eventError) {
+        request.log.error(eventError, `Failed to emit MCP_SERVER_CREATED event for server ${newServer.id}:`);
+        // Don't fail server creation if event emission fails
+      }
 
       // Parse JSON fields for response with proper null checks and error handling
       try {

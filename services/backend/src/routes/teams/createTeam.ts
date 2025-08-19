@@ -9,6 +9,8 @@ import {
   type TeamSuccessResponse,
   type ErrorResponse
 } from './schemas';
+import { EVENT_NAMES } from '../../events';
+import type { EventContext } from '../../events/types';
 
 export default async function createTeamRoute(server: FastifyInstance) {
   // POST /teams - Create a new team
@@ -90,6 +92,50 @@ export default async function createTeamRoute(server: FastifyInstance) {
         description,
         owner_id: request.user.id,
       });
+
+      // Emit TEAM_CREATED event
+      try {
+        const eventContext: EventContext = {
+          db: server.db,
+          logger: server.log,
+          user: {
+            id: request.user.id,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            email: (request.user as any).email,
+            roleId: 'unknown' // We'd need to fetch this from DB if needed
+          },
+          request: {
+            ip: request.ip,
+            userAgent: request.headers['user-agent'],
+            requestId: request.id
+          },
+          timestamp: new Date()
+        };
+
+        server.eventBus.emitWithContext(
+          EVENT_NAMES.TEAM_CREATED,
+          {
+            team: {
+              id: team.id,
+              name: team.name,
+              description: team.description || undefined
+            },
+            createdBy: {
+              id: request.user.id,
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              email: (request.user as any).email
+            },
+            metadata: {
+              ip: request.ip
+            }
+          },
+          eventContext
+        );
+        server.log.info(`TEAM_CREATED event emitted for team: ${team.id}`);
+      } catch (eventError) {
+        server.log.error(eventError, `Failed to emit TEAM_CREATED event for team ${team.id}:`);
+        // Don't fail team creation if event emission fails
+      }
 
       const successResponse: TeamSuccessResponse = {
         success: true,

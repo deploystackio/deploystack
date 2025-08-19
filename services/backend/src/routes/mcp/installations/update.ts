@@ -16,6 +16,8 @@ import {
   type InstallationUpdateSuccessResponse,
   type ErrorResponse
 } from './schemas';
+import { EVENT_NAMES } from '../../../events';
+import type { EventContext } from '../../../events/types';
 
 export default async function updateInstallationRoute(server: FastifyInstance) {
   server.put<{
@@ -103,6 +105,52 @@ export default async function updateInstallationRoute(server: FastifyInstance) {
         userId,
         authType
       }, 'Successfully updated MCP installation');
+
+      // Emit MCP_INSTALLATION_UPDATED event
+      try {
+        const eventContext: EventContext = {
+          db,
+          logger: request.log,
+          user: {
+            id: userId,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            email: (request.user as any).email,
+            roleId: 'unknown'
+          },
+          request: {
+            ip: request.ip,
+            userAgent: request.headers['user-agent'],
+            requestId: request.id
+          },
+          timestamp: new Date()
+        };
+
+        const installation = updatedInstallation as InstallationData;
+        server.eventBus.emitWithContext(
+          EVENT_NAMES.MCP_INSTALLATION_UPDATED,
+          {
+            installation: {
+              id: installation.id,
+              serverId: installation.server_id,
+              teamId: teamId
+            },
+            updatedBy: {
+              id: userId,
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              email: (request.user as any).email
+            },
+            changes: updateData,
+            metadata: {
+              ip: request.ip
+            }
+          },
+          eventContext
+        );
+        request.log.info(`MCP_INSTALLATION_UPDATED event emitted for installation: ${installationId}`);
+      } catch (eventError) {
+        request.log.error(eventError, `Failed to emit MCP_INSTALLATION_UPDATED event for installation ${installationId}:`);
+        // Don't fail update if event emission fails
+      }
 
       const successResponse: InstallationUpdateSuccessResponse = {
         success: true,

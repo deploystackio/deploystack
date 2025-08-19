@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { getLucia } from '../../lib/lucia';
 import { getDb, getSchema, getDbStatus } from '../../db';
@@ -5,6 +6,8 @@ import { eq } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { z } from 'zod';
 import { createSchema } from 'zod-openapi';
+import { EVENT_NAMES } from '../../events';
+import type { EventContext } from '../../events/types';
 
 // Zod schema for the logout response
 const logoutResponseSchema = z.object({
@@ -58,7 +61,7 @@ export default async function logoutRoute(fastify: FastifyInstance) {
             if (authSessionTable && authSessionTable.id) {
               const dbStatus = getDbStatus();
               if (dbStatus.dialect === 'sqlite') {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                 
                 const sqliteDb = db as BetterSQLite3Database<any>;
                 await sqliteDb.delete(authSessionTable).where(eq(authSessionTable.id, sessionId));
               }
@@ -94,6 +97,67 @@ export default async function logoutRoute(fastify: FastifyInstance) {
         reply.setCookie(blankCookie.name, blankCookie.value, blankCookie.attributes);
         fastify.log.info('Blank cookie sent to clear client session');
         
+        // Emit USER_LOGOUT event
+        try {
+          if (request.user) {
+            // Get user role from database since it's not in the session
+            const db = getDb();
+            const schema = getSchema();
+            const authUserTable = schema.authUser;
+            let userRole = 'unknown';
+            
+            try {
+              const userResult = await (db as any)
+                .select({ role_id: authUserTable.role_id })
+                .from(authUserTable)
+                .where(eq(authUserTable.id, request.user.id))
+                .limit(1);
+              
+              if (userResult.length > 0) {
+                userRole = userResult[0].role_id;
+              }
+            } catch (roleError) {
+              fastify.log.warn(roleError, 'Failed to fetch user role for logout event');
+            }
+
+            const eventContext: EventContext = {
+              db,
+              logger: fastify.log,
+              user: {
+                id: request.user.id,
+                email: (request.user as any).email,
+                roleId: userRole
+              },
+              request: {
+                ip: request.ip,
+                userAgent: request.headers['user-agent'],
+                requestId: request.id
+              },
+              timestamp: new Date()
+            };
+
+            fastify.eventBus.emitWithContext(
+              EVENT_NAMES.USER_LOGOUT,
+              {
+                user: {
+                  id: request.user.id,
+                  email: (request.user as any).email,
+                  name: (request.user as any).username || `${(request.user as any).firstName || ''} ${(request.user as any).lastName || ''}`.trim() || (request.user as any).email
+                },
+                metadata: {
+                  ip: request.ip,
+                  userAgent: request.headers['user-agent']
+                }
+              },
+              eventContext
+            );
+            fastify.log.info(`USER_LOGOUT event emitted for user: ${request.user.id}`);
+          }
+        } catch (eventError) {
+          fastify.log.error(eventError, 'Failed to emit USER_LOGOUT event:');
+          // Don't fail logout if event emission fails
+        }
+        
         const response = { success: true, message: 'Logged out successfully.' };
         const jsonString = JSON.stringify(response);
         return reply.status(200).type('application/json').send(jsonString);
@@ -112,7 +176,7 @@ export default async function logoutRoute(fastify: FastifyInstance) {
           if (authSessionTable && authSessionTable.id) {
             const dbStatus = getDbStatus();
             if (dbStatus.dialect === 'sqlite') {
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+               
               const sqliteDb = db as BetterSQLite3Database<any>;
               await sqliteDb.delete(authSessionTable).where(eq(authSessionTable.id, sessionId));
             }

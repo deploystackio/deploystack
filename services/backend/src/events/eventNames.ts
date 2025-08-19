@@ -35,6 +35,9 @@ export const EVENT_NAMES = {
   MCP_INSTALLATION_CREATED: 'mcp.installation_created', // matches mcp.installations.create
   MCP_INSTALLATION_UPDATED: 'mcp.installation_updated', // matches mcp.installations.edit
   MCP_INSTALLATION_DELETED: 'mcp.installation_deleted', // matches mcp.installations.delete
+  MCP_SERVER_CREATED: 'mcp.server_created',             // matches mcp.servers.create
+  MCP_SERVER_UPDATED: 'mcp.server_updated',             // matches mcp.servers.edit
+  MCP_SERVER_DELETED: 'mcp.server_deleted',             // matches mcp.servers.delete
 
   // System Events
   SYSTEM_STARTUP: 'system.startup',

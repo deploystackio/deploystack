@@ -5,6 +5,8 @@ import { requireGlobalAdmin } from '../../../middleware/roleMiddleware';
 import { McpCatalogService } from '../../../services/mcpCatalogService';
 import { getDb } from '../../../db';
 import { claudeDesktopConfigSchema, extractTransportTypeFromClaudeConfig } from '../../../utils/mcpConfigExtractor';
+import { EVENT_NAMES } from '../../../events';
+import type { EventContext } from '../../../events/types';
 
 // Path parameters schema
 const updateGlobalServerParamsSchema = z.object({
@@ -242,6 +244,53 @@ export default async function updateGlobalServer(server: FastifyInstance) {
         serverName: updatedServer.name,
         updatedFields: Object.keys(finalUpdateData)
       }, 'Global MCP server updated successfully');
+
+      // Emit MCP_SERVER_UPDATED event
+      try {
+        const eventContext: EventContext = {
+          db,
+          logger: request.log,
+          user: {
+            id: request.user!.id,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            email: (request.user as any).email,
+            roleId: 'global_admin'
+          },
+          request: {
+            ip: request.ip,
+            userAgent: request.headers['user-agent'],
+            requestId: request.id
+          },
+          timestamp: new Date()
+        };
+
+        server.eventBus.emitWithContext(
+          EVENT_NAMES.MCP_SERVER_UPDATED,
+          {
+            server: {
+              id: updatedServer.id,
+              name: updatedServer.name,
+              description: updatedServer.description,
+              language: updatedServer.language,
+              runtime: updatedServer.runtime
+            },
+            updatedBy: {
+              id: request.user!.id,
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              email: (request.user as any).email
+            },
+            changes: finalUpdateData,
+            metadata: {
+              ip: request.ip
+            }
+          },
+          eventContext
+        );
+        request.log.info(`MCP_SERVER_UPDATED event emitted for server: ${updatedServer.id}`);
+      } catch (eventError) {
+        request.log.error(eventError, `Failed to emit MCP_SERVER_UPDATED event for server ${updatedServer.id}:`);
+        // Don't fail update if event emission fails
+      }
 
       // Safe JSON parsing helper function
       // eslint-disable-next-line @typescript-eslint/no-explicit-any

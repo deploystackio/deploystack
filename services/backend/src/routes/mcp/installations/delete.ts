@@ -12,6 +12,8 @@ import {
   type InstallationDeleteSuccessResponse,
   type ErrorResponse
 } from './schemas';
+import { EVENT_NAMES } from '../../../events';
+import type { EventContext } from '../../../events/types';
 
 export default async function deleteInstallationRoute(server: FastifyInstance) {
   server.delete('/teams/:teamId/mcp/installations/:installationId', {
@@ -80,8 +82,52 @@ export default async function deleteInstallationRoute(server: FastifyInstance) {
         teamId,
         installationId,
         userId,
-      authType
+        authType
       }, 'MCP installation deleted successfully');
+
+      // Emit MCP_INSTALLATION_DELETED event
+      try {
+        const eventContext: EventContext = {
+          db,
+          logger: request.log,
+          user: {
+            id: userId,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            email: (request.user as any).email,
+            roleId: 'unknown'
+          },
+          request: {
+            ip: request.ip,
+            userAgent: request.headers['user-agent'],
+            requestId: request.id
+          },
+          timestamp: new Date()
+        };
+
+        server.eventBus.emitWithContext(
+          EVENT_NAMES.MCP_INSTALLATION_DELETED,
+          {
+            installation: {
+              id: installationId,
+              serverId: 'unknown', // We don't have server info after deletion
+              teamId: teamId
+            },
+            deletedBy: {
+              id: userId,
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              email: (request.user as any).email
+            },
+            metadata: {
+              ip: request.ip
+            }
+          },
+          eventContext
+        );
+        request.log.info(`MCP_INSTALLATION_DELETED event emitted for installation: ${installationId}`);
+      } catch (eventError) {
+        request.log.error(eventError, `Failed to emit MCP_INSTALLATION_DELETED event for installation ${installationId}:`);
+        // Don't fail deletion if event emission fails
+      }
 
       const response: InstallationDeleteSuccessResponse = {
         success: true,

@@ -16,6 +16,8 @@ import {
   type InstallationSuccessResponse,
   type ErrorResponse
 } from './schemas';
+import { EVENT_NAMES } from '../../../events';
+import type { EventContext } from '../../../events/types';
 
 export default async function createInstallationRoute(server: FastifyInstance) {
   server.post('/teams/:teamId/mcp/installations', {
@@ -98,6 +100,50 @@ export default async function createInstallationRoute(server: FastifyInstance) {
         teamId,
         serverId: installationData.server_id
       }, 'MCP server installation created successfully');
+
+      // Emit MCP_INSTALLATION_CREATED event
+      try {
+        const eventContext: EventContext = {
+          db,
+          logger: request.log,
+          user: {
+            id: userId,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            email: (request.user as any).email,
+            roleId: 'unknown'
+          },
+          request: {
+            ip: request.ip,
+            userAgent: request.headers['user-agent'],
+            requestId: request.id
+          },
+          timestamp: new Date()
+        };
+
+        server.eventBus.emitWithContext(
+          EVENT_NAMES.MCP_INSTALLATION_CREATED,
+          {
+            installation: {
+              id: installation.id,
+              serverId: installation.server_id,
+              teamId: teamId
+            },
+            installedBy: {
+              id: userId,
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              email: (request.user as any).email
+            },
+            metadata: {
+              ip: request.ip
+            }
+          },
+          eventContext
+        );
+        request.log.info(`MCP_INSTALLATION_CREATED event emitted for installation: ${installation.id}`);
+      } catch (eventError) {
+        request.log.error(eventError, `Failed to emit MCP_INSTALLATION_CREATED event for installation ${installation.id}:`);
+        // Don't fail installation creation if event emission fails
+      }
 
       const response: InstallationSuccessResponse = {
         success: true,

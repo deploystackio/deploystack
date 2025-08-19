@@ -4,6 +4,7 @@ import { type AnyDatabase } from '../db'
 // Import types for raw connections/pools
 import type SqliteDriver from 'better-sqlite3'
 import { type PluginManager } from '../plugin-system'
+import { type DeployStackEventBus } from '../events'
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -19,6 +20,9 @@ declare module 'fastify' {
     // For now, we remove it to enforce usage of the new property.
     
     pluginManager: PluginManager
+    
+    // Event bus for global event system
+    eventBus: DeployStackEventBus
     
     // Methods for re-initializing database services after setup
     reinitializeDatabaseServices: () => Promise<boolean>

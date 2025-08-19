@@ -7,6 +7,8 @@ import { hash } from '@node-rs/argon2';
 import { TeamService } from '../../services/teamService';
 import { GlobalSettingsInitService } from '../../global-settings';
 import { UserPreferencesService } from '../../services/UserPreferencesService';
+import { EVENT_NAMES } from '../../events';
+import type { EventContext } from '../../events/types';
 
 // Reusable Schema Constants
 const REGISTER_EMAIL_REQUEST_SCHEMA = {
@@ -346,6 +348,47 @@ export default async function registerEmailRoute(server: FastifyInstance) {
 
         // Get the created user data
         const user = createdUser[0];
+
+        // Emit USER_REGISTERED event
+        try {
+          const eventContext: EventContext = {
+            db,
+            logger: server.log,
+            user: {
+              id: user.id,
+              email: user.email,
+              roleId: user.role_id
+            },
+            request: {
+              ip: request.ip,
+              userAgent: request.headers['user-agent'],
+              requestId: request.id
+            },
+            timestamp: new Date()
+          };
+
+          server.eventBus.emitWithContext(
+            EVENT_NAMES.USER_REGISTERED,
+            {
+              user: {
+                id: user.id,
+                email: user.email,
+                name: user.username || `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email,
+                createdAt: new Date()
+              },
+              metadata: {
+                registrationMethod: 'email',
+                ip: request.ip,
+                userAgent: request.headers['user-agent']
+              }
+            },
+            eventContext
+          );
+          server.log.info(`USER_REGISTERED event emitted for user: ${user.id}`);
+        } catch (eventError) {
+          server.log.error(eventError, `Failed to emit USER_REGISTERED event for user ${user.id}:`);
+          // Don't fail registration if event emission fails
+        }
 
         // Customize message based on email verification status
         let message = 'User registered successfully.';

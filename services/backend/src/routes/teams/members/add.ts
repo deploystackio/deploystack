@@ -11,6 +11,8 @@ import {
   type ErrorResponse,
   type TeamMember,
 } from '../schemas';
+import { EVENT_NAMES } from '../../../events';
+import type { EventContext } from '../../../events/types';
 
 // Define the params interface locally
 interface TeamIdParams {
@@ -137,6 +139,55 @@ export default async function addTeamMemberRoute(server: FastifyInstance) {
         is_owner: newMemberData.is_owner,
         joined_at: newMemberData.joined_at
       };
+
+      // Emit TEAM_MEMBER_ADDED event
+      try {
+        const eventContext: EventContext = {
+          db: server.db,
+          logger: server.log,
+          user: {
+            id: request.user!.id,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            email: (request.user as any).email,
+            roleId: 'unknown'
+          },
+          request: {
+            ip: request.ip,
+            userAgent: request.headers['user-agent'],
+            requestId: request.id
+          },
+          timestamp: new Date()
+        };
+
+        server.eventBus.emitWithContext(
+          EVENT_NAMES.TEAM_MEMBER_ADDED,
+          {
+            team: {
+              id: team.id,
+              name: team.name
+            },
+            member: {
+              id: targetUser.id,
+              email: targetUser.email,
+              name: targetUser.username || `${targetUser.first_name || ''} ${targetUser.last_name || ''}`.trim() || targetUser.email,
+              role: role
+            },
+            addedBy: {
+              id: request.user!.id,
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              email: (request.user as any).email
+            },
+            metadata: {
+              ip: request.ip
+            }
+          },
+          eventContext
+        );
+        server.log.info(`TEAM_MEMBER_ADDED event emitted for team: ${team.id}, member: ${targetUser.id}`);
+      } catch (eventError) {
+        server.log.error(eventError, `Failed to emit TEAM_MEMBER_ADDED event for team ${team.id}:`);
+        // Don't fail member addition if event emission fails
+      }
 
       const successResponse: TeamMemberResponse = {
         success: true,

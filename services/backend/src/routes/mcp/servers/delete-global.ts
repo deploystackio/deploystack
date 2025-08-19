@@ -4,6 +4,8 @@ import { createSchema } from 'zod-openapi';
 import { requireGlobalAdmin } from '../../../middleware/roleMiddleware';
 import { McpCatalogService } from '../../../services/mcpCatalogService';
 import { getDb } from '../../../db';
+import { EVENT_NAMES } from '../../../events';
+import type { EventContext } from '../../../events/types';
 
 // Path parameters schema
 const deleteGlobalServerParamsSchema = z.object({
@@ -118,6 +120,50 @@ export default async function deleteGlobalServer(server: FastifyInstance) {
         serverId,
         serverName: serverInfo.name
       }, 'Global MCP server deleted successfully');
+
+      // Emit MCP_SERVER_DELETED event
+      try {
+        const eventContext: EventContext = {
+          db,
+          logger: request.log,
+          user: {
+            id: request.user!.id,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            email: (request.user as any).email,
+            roleId: 'global_admin'
+          },
+          request: {
+            ip: request.ip,
+            userAgent: request.headers['user-agent'],
+            requestId: request.id
+          },
+          timestamp: new Date()
+        };
+
+        server.eventBus.emitWithContext(
+          EVENT_NAMES.MCP_SERVER_DELETED,
+          {
+            server: {
+              id: serverInfo.id,
+              name: serverInfo.name,
+              description: existingServer.description
+            },
+            deletedBy: {
+              id: request.user!.id,
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              email: (request.user as any).email
+            },
+            metadata: {
+              ip: request.ip
+            }
+          },
+          eventContext
+        );
+        request.log.info(`MCP_SERVER_DELETED event emitted for server: ${serverInfo.id}`);
+      } catch (eventError) {
+        request.log.error(eventError, `Failed to emit MCP_SERVER_DELETED event for server ${serverInfo.id}:`);
+        // Don't fail deletion if event emission fails
+      }
 
       return reply.status(200).send({
         success: true,
