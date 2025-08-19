@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useEventBus } from '@/composables/useEventBus'
 import { Button } from '@/components/ui/button'
@@ -23,7 +23,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Plus, Edit, Trash2, Settings, MoreHorizontal } from 'lucide-vue-next'
-import type { EnvironmentVariable } from '@/views/admin/mcp-server-catalog/types'
+import type { EnvironmentVariable, CapabilitiesFormData } from '@/views/admin/mcp-server-catalog/types'
 
 // Extended interface for form editing
 interface ExtendedEnvironmentVariable extends EnvironmentVariable {
@@ -34,18 +34,29 @@ interface ExtendedEnvironmentVariable extends EnvironmentVariable {
 
 interface Props {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  formData: any
+  formData?: any
+  mode?: 'create' | 'edit'
 }
 
-interface Emits {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (e: 'update:formData', value: any): void
-}
-
-const props = defineProps<Props>()
-const emit = defineEmits<Emits>()
+const props = withDefaults(defineProps<Props>(), {
+  mode: 'create'
+})
 const { t } = useI18n()
 const eventBus = useEventBus()
+
+// Storage key for capabilities data
+const STORAGE_KEY = 'edit_capabilities_data'
+
+// Local reactive data - storage-first approach
+const localData = ref<CapabilitiesFormData>({
+  tools: [],
+  resources: [],
+  prompts: [],
+  environment_variables: []
+})
+
+// Flag to prevent recursive updates
+const isUpdatingFromStorage = ref(false)
 
 // Modal state
 const isModalOpen = ref(false)
@@ -64,9 +75,118 @@ const formDataLocal = ref<ExtendedEnvironmentVariable>({
 
 const formErrors = ref<Record<string, string>>({})
 
+// Smart merge function for environment variables
+const mergeEnvironmentVariables = (databaseEnvVars: EnvironmentVariable[], technicalEnvVars: EnvironmentVariable[]): EnvironmentVariable[] => {
+  const merged: EnvironmentVariable[] = []
+
+  // Create a map of technical env vars by name for quick lookup
+  const technicalMap = new Map<string, EnvironmentVariable>()
+  technicalEnvVars.forEach(envVar => {
+    technicalMap.set(envVar.name, envVar)
+  })
+
+  // First, add all database env vars (preserving their properties)
+  databaseEnvVars.forEach(dbEnvVar => {
+    if (technicalMap.has(dbEnvVar.name)) {
+      // This env var exists in both - keep database properties, ensure name is correct
+      merged.push({ ...dbEnvVar, name: dbEnvVar.name })
+      // Remove from technical map so we don't add it again
+      technicalMap.delete(dbEnvVar.name)
+    }
+    // If database env var doesn't exist in technical step, we still keep it
+    // (user might have manually added it)
+    else {
+      merged.push(dbEnvVar)
+    }
+  })
+
+  // Then, add any remaining technical env vars (new ones not in database)
+  technicalMap.forEach(techEnvVar => {
+    merged.push(techEnvVar)
+  })
+
+  return merged
+}
+
+// Load data from storage with smart merging
+const loadFromStorage = () => {
+  isUpdatingFromStorage.value = true
+
+  const storedData = eventBus.getState<CapabilitiesFormData>(STORAGE_KEY)
+  if (storedData) {
+    localData.value = { ...localData.value, ...storedData }
+  }
+
+  // Smart merge: prioritize database values over technical step defaults
+  const envVarsFromTechnical = eventBus.getState('capabilities_env_vars')
+  if (envVarsFromTechnical && Array.isArray(envVarsFromTechnical)) {
+    // If we have database values (from props in edit mode), merge intelligently
+    const databaseEnvVars = localData.value.environment_variables || []
+
+    if (databaseEnvVars.length > 0) {
+      // Merge: keep database properties, add new vars from technical step
+      const mergedEnvVars = mergeEnvironmentVariables(databaseEnvVars, envVarsFromTechnical)
+      localData.value.environment_variables = mergedEnvVars
+    } else {
+      // No database values, use technical step values
+      localData.value.environment_variables = envVarsFromTechnical
+    }
+  }
+
+  isUpdatingFromStorage.value = false
+}
+
+// Initialize from props data (for edit mode)
+const initializeFromProps = () => {
+  if (props.formData?.capabilities && props.mode === 'edit') {
+    isUpdatingFromStorage.value = true
+
+    // Initialize with database data
+    localData.value = {
+      ...localData.value,
+      ...props.formData.capabilities
+    }
+
+    // Store in storage for other components
+    eventBus.setState(STORAGE_KEY, localData.value)
+
+    // Store environment variables separately for wizard submission
+    if (localData.value.environment_variables) {
+      eventBus.setState('capabilities_env_vars', localData.value.environment_variables)
+    }
+
+    isUpdatingFromStorage.value = false
+  }
+}
+
+// Save data to storage
+const saveToStorage = () => {
+  if (!isUpdatingFromStorage.value) {
+    eventBus.setState(STORAGE_KEY, localData.value)
+  }
+}
+
+// Listen for storage changes from other components
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const handleStorageChange = (data: { key: string; newValue: any }) => {
+  if (isUpdatingFromStorage.value) return
+
+  if (data.key === STORAGE_KEY && data.newValue) {
+    isUpdatingFromStorage.value = true
+    localData.value = { ...localData.value, ...data.newValue }
+    isUpdatingFromStorage.value = false
+  } else if (data.key === 'capabilities_env_vars' && data.newValue) {
+    // Update environment variables from technical step
+    isUpdatingFromStorage.value = true
+    localData.value.environment_variables = data.newValue
+    saveToStorage()
+    isUpdatingFromStorage.value = false
+  }
+}
+
 // Computed properties
 const environmentVariables = computed(() => {
-  return props.formData?.capabilities?.environment_variables || []
+  return localData.value.environment_variables || []
 })
 
 const isFormValid = computed(() => {
@@ -165,26 +285,20 @@ const handleDelete = (index: number) => {
 }
 
 const updateFormData = (newEnvironmentVariables: EnvironmentVariable[]) => {
-  const updatedCapabilities = {
-    ...props.formData.capabilities,
-    environment_variables: newEnvironmentVariables
-  }
-  
-  const updatedFormData = {
-    ...props.formData,
-    capabilities: updatedCapabilities
-  }
-  
-  emit('update:formData', updatedFormData)
-  
-  // Store environment variables in global storage for wizard submission
+  // Prevent recursive updates
+  isUpdatingFromStorage.value = true
+
+  // Update local data directly
+  localData.value.environment_variables = newEnvironmentVariables
+
+  // Store in both storage locations
+  eventBus.setState(STORAGE_KEY, localData.value)
   eventBus.setState('capabilities_env_vars', newEnvironmentVariables)
-  
-  // Store complete capabilities data for ReviewStep  
-  eventBus.setState('edit_capabilities_data', updatedCapabilities)
-  
+
   // Immediately update the Claude Desktop JSON config in storage
   updateClaudeDesktopConfigInStorage(newEnvironmentVariables)
+
+  isUpdatingFromStorage.value = false
 }
 
 const modalTitle = computed(() => {
@@ -196,20 +310,20 @@ const modalTitle = computed(() => {
 // Function to update Claude Desktop JSON config directly in storage
 const updateClaudeDesktopConfigInStorage = (envVars: EnvironmentVariable[]) => {
   const TECHNICAL_STORAGE_KEY = 'edit_claude_config'
-  
+
   try {
     // Get current JSON config from TechnicalStep storage
     let currentJsonString = eventBus.getState<string>(TECHNICAL_STORAGE_KEY)
-    
+
     // If no config exists, try to create a basic one from form data
     if (!currentJsonString || !currentJsonString.trim()) {
-      
+
       // Try to get server info from technical form data
       const technicalData = props.formData?.technical
       if (technicalData?.installation_methods?.[0]) {
         const method = technicalData.installation_methods[0]
         const serverName = extractServerNameFromTechnical(method) || 'mcp-server'
-        
+
         const basicConfig = {
           mcpServers: {
             [serverName]: {
@@ -219,50 +333,50 @@ const updateClaudeDesktopConfigInStorage = (envVars: EnvironmentVariable[]) => {
             }
           }
         }
-        
+
         currentJsonString = JSON.stringify(basicConfig, null, 2)
       } else {
         // Cannot create config - no technical data available
         return
       }
     }
-    
+
     const parsed = JSON.parse(currentJsonString)
-    
+
     // Validate structure
     if (!parsed.mcpServers || typeof parsed.mcpServers !== 'object') {
       return
     }
-    
+
     const serverKeys = Object.keys(parsed.mcpServers)
     if (serverKeys.length !== 1) {
       return
     }
-    
+
     const serverKey = serverKeys[0]
     const serverConfig = parsed.mcpServers[serverKey]
-    
+
     // Build new env vars object
     const newEnvVars: Record<string, string> = {}
     envVars.forEach(envVar => {
       const placeholder = `<insert-your-${envVar.name.toLowerCase().replace(/_/g, '-')}-here>`
       newEnvVars[envVar.name] = placeholder
     })
-    
+
     // Update the env section
     serverConfig.env = newEnvVars
-    
+
     // Save updated JSON back to storage
     const updatedJsonString = JSON.stringify(parsed, null, 2)
     eventBus.setState(TECHNICAL_STORAGE_KEY, updatedJsonString)
-    
+
     // Force immediate sync by emitting a storage change event
     eventBus.emit('storage-changed', {
       key: TECHNICAL_STORAGE_KEY,
       oldValue: currentJsonString,
       newValue: updatedJsonString
     })
-    
+
   } catch {
     // Failed to update Claude Desktop config
   }
@@ -286,9 +400,10 @@ const extractServerNameFromTechnical = (method: any): string => {
     }
   }
 
-  // Try to extract from form name
-  if (props.formData?.basic?.name) {
-    return props.formData.basic.name.toLowerCase()
+  // Try to extract from basic data in storage
+  const basicData = eventBus.getState<{ name?: string }>('edit_basic_data')
+  if (basicData?.name) {
+    return basicData.name.toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '')
       .replace('-mcp', '')
@@ -297,6 +412,42 @@ const extractServerNameFromTechnical = (method: any): string => {
 
   return 'mcp-server'
 }
+
+// Fresh data loading on step entry
+const refreshDataOnStepEntry = () => {
+  // Always reload fresh data when entering this step
+  if (props.mode === 'edit') {
+    initializeFromProps()
+  }
+  loadFromStorage()
+}
+
+// Listen for step changes
+const handleStepChange = (data: { to: number; stepKey: string }) => {
+  if (data.stepKey === 'capabilities') {
+    refreshDataOnStepEntry()
+  }
+}
+
+onMounted(() => {
+  // First initialize from props (database data in edit mode)
+  initializeFromProps()
+
+  // Then load any additional data from storage
+  loadFromStorage()
+
+  // Listen for storage changes
+  eventBus.on('storage-changed', handleStorageChange)
+
+  // Listen for step changes to refresh data
+  eventBus.on('mcp-form-step-changed', handleStepChange)
+})
+
+onUnmounted(() => {
+  // Clean up event listeners
+  eventBus.off('storage-changed', handleStorageChange)
+  eventBus.off('mcp-form-step-changed', handleStepChange)
+})
 </script>
 
 <template>
@@ -307,6 +458,7 @@ const extractServerNameFromTechnical = (method: any): string => {
         {{ t('mcpCatalog.form.capabilities.environmentVariables.description') }}
       </p>
     </div>
+
 
     <!-- Header with Add Button -->
     <div class="flex items-center justify-between">
@@ -352,8 +504,8 @@ const extractServerNameFromTechnical = (method: any): string => {
                 <div v-if="variable.required" class="text-xs/5 text-gray-500">
                   <span class="font-medium">{{ t('mcpCatalog.form.capabilities.environmentVariables.required.label') }}:</span> {{ t('common.labels.yes') }}
                 </div>
-                <div v-if="variable.type" class="text-xs/5 text-gray-500">
-                  <span class="font-medium">{{ t('mcpCatalog.form.capabilities.environmentVariables.type.label') }}:</span> {{ variable.type }}
+                <div v-if="(variable as ExtendedEnvironmentVariable).type" class="text-xs/5 text-gray-500">
+                  <span class="font-medium">{{ t('mcpCatalog.form.capabilities.environmentVariables.type.label') }}:</span> {{ (variable as ExtendedEnvironmentVariable).type }}
                 </div>
               </div>
             </td>
@@ -361,8 +513,8 @@ const extractServerNameFromTechnical = (method: any): string => {
               <div v-if="variable.description" class="text-sm/6 text-gray-900">
                 {{ variable.description }}
               </div>
-              <div v-if="variable.placeholder" class="mt-1 text-xs/5 text-gray-500">
-                {{ t('mcpCatalog.form.capabilities.environmentVariables.placeholder.label') }}: {{ variable.placeholder }}
+              <div v-if="(variable as ExtendedEnvironmentVariable).placeholder" class="mt-1 text-xs/5 text-gray-500">
+                {{ t('mcpCatalog.form.capabilities.environmentVariables.placeholder.label') }}: {{ (variable as ExtendedEnvironmentVariable).placeholder }}
               </div>
             </td>
             <td class="py-5 text-right">

@@ -272,8 +272,8 @@ onUnmounted(() => {
   <DashboardLayout :title="t('credentials.title')">
     <div class="space-y-6">
       <!-- Header -->
-      <div class="flex items-center justify-between">
-        <div>
+      <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div class="flex-1">
           <p class="text-muted-foreground">{{ t('credentials.description') }}</p>
         </div>
         <Button
@@ -281,7 +281,7 @@ onUnmounted(() => {
           @click="handleAddCredential"
           :loading="isCreating"
           :loading-text="t('credentials.actions.creating')"
-          class="flex items-center gap-2"
+          class="flex items-center justify-center gap-2"
         >
           <Plus class="h-4 w-4" />
           {{ t('credentials.addButton') }}
@@ -313,7 +313,7 @@ onUnmounted(() => {
       <div v-else class="space-y-4">
         <!-- Search Input with Button -->
         <div class="flex items-center py-4">
-          <div class="flex max-w-sm">
+          <div class="flex w-full sm:max-w-sm">
             <Input
               :placeholder="t('credentials.search.placeholder')"
               v-model="searchQuery"

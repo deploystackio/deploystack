@@ -361,7 +361,7 @@ export default async function githubAuthRoutes(fastify: FastifyInstance) {
         try {
           const { TeamService } = await import('../../services/teamService');
           const username = githubUser.login || `gh_user_${newUserId}`;
-          await TeamService.createDefaultTeamForUser(newUserId, username);
+          await TeamService.createDefaultTeamForUser(newUserId, username, fastify.log);
         } catch (teamError) {
           // Don't fail login if team creation fails
           fastify.log.warn(teamError, 'Failed to create default team for GitHub user');

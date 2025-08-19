@@ -25,7 +25,7 @@ const accountSections = computed((): AccountSection[] => {
     {
       id: 'profile',
       name: 'Profile',
-      href: '/user/account/profile',
+      href: '/user/profile',
     },
   ]
   
@@ -34,7 +34,7 @@ const accountSections = computed((): AccountSection[] => {
     sections.push({
       id: 'security',
       name: 'Security',
-      href: '/user/account/security',
+      href: '/user/security',
     })
   }
   

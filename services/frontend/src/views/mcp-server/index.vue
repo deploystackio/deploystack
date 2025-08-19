@@ -249,21 +249,21 @@ onUnmounted(() => {
   <DashboardLayout :title="t('mcpInstallations.title')">
     <div class="space-y-6">
       <!-- Header -->
-      <div class="flex items-center justify-between">
-        <div>
+      <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div class="flex-1">
           <p class="text-muted-foreground">{{ t('mcpInstallations.description') }}</p>
         </div>
-        <div v-if="selectedTeam" class="flex items-center gap-3">
+        <div v-if="selectedTeam" class="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
           <Button
             @click="handleOpenConfigModal"
             variant="outline"
-            class="flex items-center gap-2 bg-black text-white border-black hover:bg-black/90 hover:border-black hover:text-white"
+            class="flex items-center justify-center gap-2 bg-black text-white border-black hover:bg-black/90 hover:border-black hover:text-white"
           >
             {{ t('gatewayConfig.button.getConfiguration') }}
           </Button>
           <Button
             @click="handleInstallServer"
-            class="flex items-center gap-2"
+            class="flex items-center justify-center gap-2"
           >
             <Plus class="h-4 w-4" />
             {{ t('mcpInstallations.actions.install') }}

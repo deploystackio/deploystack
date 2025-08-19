@@ -165,6 +165,29 @@ watch(() => selectedGroup.value, (newGroup) => {
   }
 }, { immediate: true, deep: true })
 
+// Utility function to remove trailing slash from URLs
+function removeTrailingSlash(url: string): string {
+  if (!url || url === '/') return url
+  return url.endsWith('/') ? url.slice(0, -1) : url
+}
+
+// Check if a setting is the frontend base URL setting
+function isFrontendBaseUrlSetting(setting: Setting | undefined): boolean {
+  if (!setting) return false
+  
+  // Check by description
+  if (setting.description?.toLowerCase().includes('base url for the application frontend')) {
+    return true
+  }
+  
+  // Check by common key patterns
+  const key = setting.key?.toLowerCase()
+  return key === 'frontend_base_url' || 
+         key === 'frontend_url' || 
+         key === 'app_frontend_url' ||
+         key === 'base_frontend_url'
+}
+
 // Form submission
 async function handleSubmit(event: Event) {
   event.preventDefault()
@@ -183,6 +206,11 @@ async function handleSubmit(event: Event) {
       typedValue = Number(value)
     } else {
       typedValue = String(value)
+      
+      // Apply URL transformation for frontend base URL setting
+      if (isFrontendBaseUrlSetting(setting)) {
+        typedValue = removeTrailingSlash(typedValue)
+      }
     }
 
     return {
@@ -265,12 +293,36 @@ async function handleSubmit(event: Event) {
 
 <template>
   <DashboardLayout :title="t('globalSettings.title')">
-    <div class="hidden space-y-6 pb-16 md:block">
-      <div class="flex flex-col space-y-8 lg:flex-row lg:space-x-12 lg:space-y-0">
-        <aside class="lg:w-1/5">
+    <!-- Mobile Navigation - Show tabs on small screens -->
+    <div class="block md:hidden mb-6">
+      <nav class="flex space-x-1 p-1 bg-muted/50 rounded-lg overflow-x-auto">
+        <Button
+          v-for="group in settingGroups"
+          :key="group.id"
+          as-child
+          variant="ghost"
+          :class="[
+            'flex-shrink-0 px-3 py-2 text-sm whitespace-nowrap',
+            currentGroupId === group.id && 'bg-background shadow-sm'
+          ]"
+        >
+          <router-link :to="`/admin/settings/${group.id}`">
+            {{ group.name }}
+          </router-link>
+        </Button>
+      </nav>
+    </div>
+    
+    <!-- Main Content -->
+    <div class="space-y-6 pb-16">
+      <div class="flex flex-col space-y-8 md:flex-row md:space-x-12 md:space-y-0">
+        <!-- Desktop Sidebar Navigation -->
+        <aside class="hidden md:block md:w-1/5">
           <GlobalSettingsSidebarNav :groups="settingGroups" />
         </aside>
-        <div class="flex-1 lg:max-w-3xl">
+        
+        <!-- Content Area -->
+        <div class="flex-1 md:max-w-3xl">
 
           <div v-if="isLoading" class="text-muted-foreground">{{ t('globalSettings.loading') }}</div>
           <div v-else-if="error" class="text-red-500">{{ t('globalSettings.errors.loadSettings') }}: {{ error }}</div>
@@ -288,16 +340,9 @@ async function handleSubmit(event: Event) {
             />
 
             <!-- Fallback: Standard Form (for groups without custom components) -->
-            <Card v-else>
-              <CardHeader>
-                <CardTitle class="text-xl">
-                  {{ selectedGroup.name }}
-                </CardTitle>
-                <CardDescription v-if="selectedGroup.description">
-                  {{ selectedGroup.description }}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
+            <div v-else>
+              <!-- Mobile: Form without Card wrapper -->
+              <div class="md:hidden">
                 <form v-if="selectedGroup.settings && selectedGroup.settings.length > 0" class="space-y-6" @submit="handleSubmit">
                   <div v-for="setting in selectedGroup.settings" :key="setting.key" class="space-y-2">
                     <Label :for="`setting-${setting.key}`">{{ setting.description || setting.key }}</Label>
@@ -334,12 +379,13 @@ async function handleSubmit(event: Event) {
                     <p v-if="setting.is_encrypted" class="text-xs text-muted-foreground">{{ t('globalSettings.form.encryptedValue') }}</p>
                   </div>
 
-          <Button 
-            type="submit"
-            :loading="isSubmitting"
-          >
-            {{ t('globalSettings.form.saveChanges') }}
-          </Button>
+                  <Button 
+                    type="submit"
+                    :loading="isSubmitting"
+                    class="w-full sm:w-auto"
+                  >
+                    {{ t('globalSettings.form.saveChanges') }}
+                  </Button>
                 </form>
                 <div v-else-if="selectedGroup && (!selectedGroup.settings || selectedGroup.settings.length === 0)">
                   <p class="text-sm text-muted-foreground">{{ t('globalSettings.form.noSettings') }}</p>
@@ -347,8 +393,71 @@ async function handleSubmit(event: Event) {
                 <div v-else>
                   <p class="text-sm text-muted-foreground">{{ t('globalSettings.form.groupNotFound') }}</p>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+
+              <!-- Desktop: Form with Card wrapper -->
+              <Card class="hidden md:block">
+                <CardHeader>
+                  <CardTitle class="text-xl">
+                    {{ selectedGroup.name }}
+                  </CardTitle>
+                  <CardDescription v-if="selectedGroup.description">
+                    {{ selectedGroup.description }}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <form v-if="selectedGroup.settings && selectedGroup.settings.length > 0" class="space-y-6" @submit="handleSubmit">
+                    <div v-for="setting in selectedGroup.settings" :key="setting.key" class="space-y-2">
+                      <Label :for="`setting-${setting.key}-desktop`">{{ setting.description || setting.key }}</Label>
+
+                      <!-- String Input (text or password) -->
+                      <Input
+                        v-if="setting.type === 'string'"
+                        :id="`setting-${setting.key}-desktop`"
+                        :type="setting.is_encrypted ? 'password' : 'text'"
+                        v-model="formValues[setting.key] as string"
+                        class="w-full"
+                      />
+
+                      <!-- Number Input -->
+                      <Input
+                        v-else-if="setting.type === 'number'"
+                        :id="`setting-${setting.key}-desktop`"
+                        type="number"
+                        v-model.number="formValues[setting.key] as number"
+                        class="w-full"
+                      />
+
+                      <!-- Boolean Toggle Switch -->
+                      <div v-else-if="setting.type === 'boolean'">
+                        <Switch
+                          :id="`setting-${setting.key}-desktop`"
+                          :model-value="formValues[setting.key] as boolean"
+                          @update:model-value="(value: boolean) => {
+                            formValues[setting.key] = value
+                          }"
+                        />
+                      </div>
+
+                      <p v-if="setting.is_encrypted" class="text-xs text-muted-foreground">{{ t('globalSettings.form.encryptedValue') }}</p>
+                    </div>
+
+                    <Button 
+                      type="submit"
+                      :loading="isSubmitting"
+                    >
+                      {{ t('globalSettings.form.saveChanges') }}
+                    </Button>
+                  </form>
+                  <div v-else-if="selectedGroup && (!selectedGroup.settings || selectedGroup.settings.length === 0)">
+                    <p class="text-sm text-muted-foreground">{{ t('globalSettings.form.noSettings') }}</p>
+                  </div>
+                  <div v-else>
+                    <p class="text-sm text-muted-foreground">{{ t('globalSettings.form.groupNotFound') }}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </div>
 
           <div v-else-if="!currentGroupId && settingGroups.length > 0">

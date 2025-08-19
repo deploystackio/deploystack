@@ -125,18 +125,8 @@ const displayEnvironmentVariables = computed(() => {
   }
 })
 
-const displayDefaultConfig = computed(() => {
-  if (!server.value?.default_config) return null
-  // Handle both object and JSON string formats
-  if (typeof server.value.default_config === 'object') {
-    return server.value.default_config
-  }
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return JSON.parse(server.value.default_config as any)
-  } catch {
-    return null
-  }
+const displayTransportType = computed(() => {
+  return server.value?.transport_type || 'stdio'
 })
 
 const displayDependencies = computed(() => {
@@ -214,7 +204,7 @@ const installServer = () => {
           <ArrowLeft class="h-4 w-4 mr-2" />
           {{ t('mcpInstallations.view.backToServers') }}
         </Button>
-        
+
         <Button
           v-if="server"
           @click="installServer"
@@ -537,16 +527,13 @@ const installServer = () => {
               </dd>
             </div>
 
-            <!-- Default Configuration -->
+            <!-- Transport Type -->
             <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
-              <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpInstallations.view.fields.defaultConfig') }}</dt>
+              <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpInstallations.view.fields.transportType') }}</dt>
               <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
-                <div v-if="displayDefaultConfig && Object.keys(displayDefaultConfig).length > 0" class="bg-gray-50 rounded-md p-4">
-                  <pre class="text-xs text-gray-800 whitespace-pre-wrap font-mono">{{ JSON.stringify(displayDefaultConfig, null, 2) }}</pre>
-                </div>
-                <div v-else class="text-sm text-gray-500 italic">
-                  {{ t('mcpInstallations.view.values.notProvided') }}
-                </div>
+                <Badge variant="outline" class="font-mono">
+                  {{ displayTransportType }}
+                </Badge>
               </dd>
             </div>
 

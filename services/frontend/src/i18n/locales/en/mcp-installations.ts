@@ -12,6 +12,13 @@ export default {
     description: 'Get started by installing your first MCP server from our catalog'
   },
 
+  featured: {
+    title: 'Featured MCP Servers',
+    description: 'Discover our curated selection of high-quality MCP servers',
+    loading: 'Loading featured servers...',
+    noServers: 'No featured servers available at the moment',
+  },
+
   status: {
     active: 'Active',
     error: 'Error',
@@ -218,7 +225,7 @@ export default {
       resources: 'Available Resources',
       prompts: 'Available Prompts',
       environmentVariables: 'Environment Variables',
-      defaultConfig: 'Default Configuration',
+      transportType: 'Transport Type',
       dependencies: 'Dependencies',
       systemInfo: 'System Information'
     },
@@ -276,13 +283,13 @@ export default {
         cloud: 'cloud'
       }
     },
-    
+
     environmentVariables: {
       title: 'Environment Variables',
       description: 'Configuration variables for this installation',
       table: {
         name: 'Variable Name',
-        properties: 'Properties', 
+        properties: 'Properties',
         details: 'Details',
         value: 'Current Value',
         actions: 'Actions',

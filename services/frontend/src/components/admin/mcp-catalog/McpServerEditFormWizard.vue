@@ -1,3 +1,16 @@
+<!--
+ * STORAGE-FIRST ARCHITECTURE
+ *
+ * This wizard component uses a pure storage-based architecture where:
+ * - All form data is stored in localStorage via the event bus
+ * - Components read/write directly to storage, not through v-model props
+ * - Real-time synchronization across all wizard steps
+ * - No intermediate state management or prop passing
+ *
+ * v-model bindings are FORBIDDEN in this component.
+ * Use storage-first patterns exclusively.
+ -->
+
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -151,6 +164,37 @@ const submitError = ref<string | null>(null)
 const isFetchingGitHub = ref(false)
 const githubFetchError = ref<string | null>(null)
 
+// Initialize storage with form data for edit mode
+const initializeStorageWithData = (data: McpServerFormData) => {
+  // Initialize all storage keys that the storage-first components expect
+  eventBus.setState('edit_basic_data', data.basic)
+  eventBus.setState('edit_repository_data', data.repository)
+  eventBus.setState('edit_technical_data', data.technical)
+  eventBus.setState('edit_capabilities_data', data.capabilities)
+
+  // Initialize Claude Desktop config if available
+  if (data.technical.installation_methods && data.technical.installation_methods.length > 0) {
+    const method = data.technical.installation_methods[0]
+    if (method.client === 'claude-desktop') {
+      const claudeConfig = {
+        mcpServers: {
+          [data.basic.name || 'server']: {
+            command: method.command,
+            args: method.args,
+            env: method.env || {}
+          }
+        }
+      }
+      eventBus.setState('edit_claude_config', JSON.stringify(claudeConfig, null, 2))
+    }
+  }
+
+  // Initialize environment variables
+  if (data.capabilities.environment_variables) {
+    eventBus.setState('capabilities_env_vars', data.capabilities.environment_variables)
+  }
+}
+
 // Form data with proper initialization
 const formData = ref<McpServerFormData>({
   basic: {
@@ -163,7 +207,8 @@ const formData = ref<McpServerFormData>({
     organization: '',
     license: '',
     tags: [],
-    featured: false
+    featured: false,
+    auto_install_new_default_team: false
   },
   repository: {
     github_url: '',
@@ -175,14 +220,14 @@ const formData = ref<McpServerFormData>({
     runtime: '',
     runtime_min_version: '',
     installation_methods: [],
-    dependencies: ''
+    dependencies: '',
+    transport_type: 'auto'
   },
   capabilities: {
     tools: [],
     resources: [],
     prompts: [],
-    environment_variables: [],
-    default_config: ''
+    environment_variables: []
   },
   github: {
     github_url: '',
@@ -207,6 +252,12 @@ watch(
         capabilities: newInitialData.capabilities ? newInitialData.capabilities : formData.value.capabilities,
         github: { ...formData.value.github, ...newInitialData.github },
         review: { ...formData.value.review, ...newInitialData.review }
+      }
+
+      // CRITICAL: Initialize storage with the initial data for edit mode
+      // This ensures all storage-first components have the data they need
+      if (props.mode === 'edit') {
+        initializeStorageWithData(formData.value)
       }
     }
   },
@@ -340,13 +391,14 @@ const autoPopulateFromGitHub = (githubData: any) => {
       name: githubData.name || '',
       description: githubData.description || '',
       long_description: githubData.readme_content || githubData.description || '',
-      category_id: formData.value.basic.category_id, // Keep user selection
+      category_id: '',
       author_name: githubData.owner?.login || githubData.author_name || '',
       author_contact: githubData.owner?.email || githubData.author_contact || '',
       organization: githubData.owner?.type === 'Organization' ? githubData.owner.login : (githubData.organization || ''),
       license: githubData.license?.spdx_id || githubData.license || '',
       tags: githubData.topics || githubData.tags || [],
-      featured: formData.value.basic.featured // Keep user selection for featured status
+      featured: false,
+      auto_install_new_default_team: false
     },
     repository: {
       github_url: githubData.html_url || githubData.github_url || formData.value.github.github_url,
@@ -355,17 +407,17 @@ const autoPopulateFromGitHub = (githubData: any) => {
     },
     technical: {
       language: githubData.language || '',
-      runtime: detectRuntime(githubData.language || ''),
-      runtime_min_version: githubData.runtime_min_version || '',
-      installation_methods: githubData.installation_methods || parseInstallationMethods(githubData),
-      dependencies: githubData.dependencies ? JSON.stringify(githubData.dependencies, null, 2) : ''
+      runtime: 'node',
+      runtime_min_version: githubData.runtime_min_version || '18.0.0',
+      installation_methods: githubData.installation_methods || [],
+      dependencies: githubData.dependencies || '',
+      transport_type: githubData.transport_type || 'auto'
     },
     capabilities: {
-      tools: githubData.mcp_tools || githubData.tools || [],
-      resources: githubData.mcp_resources || githubData.resources || [],
-      prompts: githubData.mcp_prompts || githubData.prompts || [],
-      environment_variables: githubData.mcp_env_vars || githubData.environment_variables || [],
-      default_config: githubData.mcp_config ? JSON.stringify(githubData.mcp_config, null, 2) : (githubData.default_config || '')
+      tools: githubData.tools || [],
+      resources: githubData.resources || [],
+      prompts: githubData.prompts || [],
+      environment_variables: githubData.environment_variables || []
     },
     github: {
       github_url: githubData.html_url || githubData.github_url || formData.value.github.github_url,
@@ -374,43 +426,6 @@ const autoPopulateFromGitHub = (githubData: any) => {
       repo_data: githubData
     }
   }
-}
-
-// Helper functions
-const detectRuntime = (language: string): string => {
-  const runtimeMap: Record<string, string> = {
-    'JavaScript': 'node',
-    'TypeScript': 'node',
-    'Python': 'python',
-    'Go': 'go',
-    'Rust': 'rust',
-    'Java': 'java',
-    'C#': 'dotnet',
-    'Ruby': 'ruby',
-    'PHP': 'php'
-  }
-  return runtimeMap[language] || ''
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const parseInstallationMethods = (githubData: any): string[] => {
-  const methods: string[] = []
-
-  // Check for common package files
-  if (githubData.has_package_json || githubData.language === 'JavaScript' || githubData.language === 'TypeScript') {
-    methods.push('npm')
-  }
-  if (githubData.has_requirements_txt || githubData.has_pyproject_toml || githubData.language === 'Python') {
-    methods.push('pip')
-  }
-  if (githubData.has_dockerfile) {
-    methods.push('docker')
-  }
-  if (githubData.has_go_mod || githubData.language === 'Go') {
-    methods.push('go')
-  }
-
-  return methods.length > 0 ? methods : ['manual']
 }
 
 // Draft management functions with proper typing
@@ -439,7 +454,7 @@ const saveDraft = () => {
   }
 
   eventBus.setState(FORM_DRAFTS_KEY, drafts)
-  
+
   // Emit specific events for real-time updates
   eventBus.emit('mcp-edit-draft-updated', {
     serverId: props.serverId,
@@ -479,7 +494,7 @@ const clearDraft = () => {
   if (drafts[props.serverId]) {
     delete drafts[props.serverId]
     eventBus.setState(FORM_DRAFTS_KEY, drafts)
-    
+
     eventBus.emit('mcp-edit-draft-cleared', {
       serverId: props.serverId
     })
@@ -495,7 +510,7 @@ const cleanupExpiredDrafts = () => {
     const draft = drafts[serverId]
     if (draft && draft.lastModified) {
       const draftAge = Date.now() - new Date(draft.lastModified).getTime()
-      
+
       if (draftAge >= maxAge) {
         delete drafts[serverId]
         hasChanges = true
@@ -531,12 +546,34 @@ const submitForm = async () => {
     isSubmitting.value = true
     submitError.value = null
 
-    // Get fresh data from actual storage keys being used
+    // Get fresh data from ALL storage keys being used by components
+    const freshBasicData = eventBus.getState('edit_basic_data')
+    const freshRepositoryData = eventBus.getState('edit_repository_data')
+    const freshTechnicalData = eventBus.getState('edit_technical_data')
+    const freshCapabilitiesData = eventBus.getState('edit_capabilities_data')
     const freshClaudeConfig = eventBus.getState<string>('edit_claude_config')
     const freshCapabilitiesEnvVars = eventBus.getState('capabilities_env_vars')
 
-    // Start with current form data
+
+    // Start with current form data as base
     const finalFormData = { ...formData.value }
+
+    // Update with fresh data from storage (this is what the user actually edited)
+    if (freshBasicData) {
+      finalFormData.basic = { ...finalFormData.basic, ...freshBasicData }
+    }
+
+    if (freshRepositoryData) {
+      finalFormData.repository = { ...finalFormData.repository, ...freshRepositoryData }
+    }
+
+    if (freshTechnicalData) {
+      finalFormData.technical = { ...finalFormData.technical, ...freshTechnicalData }
+    }
+
+    if (freshCapabilitiesData) {
+      finalFormData.capabilities = { ...finalFormData.capabilities, ...freshCapabilitiesData }
+    }
 
     // Update technical data from Claude Desktop config if available
     if (freshClaudeConfig && freshClaudeConfig.trim()) {
@@ -546,7 +583,7 @@ const submitForm = async () => {
           const serverKeys = Object.keys(parsed.mcpServers)
           if (serverKeys.length === 1) {
             const serverConfig = parsed.mcpServers[serverKeys[0]]
-            
+
             finalFormData.technical = {
               ...finalFormData.technical,
               installation_methods: [{
@@ -556,11 +593,10 @@ const submitForm = async () => {
                 env: serverConfig.env || {}
               }]
             }
-
           }
         }
-      } catch {
-        // Failed to parse Claude config
+      } catch (error) {
+        console.error('Failed to parse Claude config:', error)
       }
     }
 
@@ -570,15 +606,14 @@ const submitForm = async () => {
         ...finalFormData.capabilities,
         environment_variables: freshCapabilitiesEnvVars
       }
-
     }
-
 
 
     // Emit the fresh form data to parent component
     emit('submit', finalFormData)
 
   } catch (error) {
+    console.error('Form submission error:', error)
     submitError.value = error instanceof Error ? error.message : 'Failed to submit form'
   } finally {
     isSubmitting.value = false
@@ -589,15 +624,15 @@ const submitForm = async () => {
 onMounted(() => {
   // Clean up expired drafts on mount
   cleanupExpiredDrafts()
-  
+
   // In edit mode, check for existing draft and clear it before loading initial data
   if (props.mode === 'edit' && props.serverId) {
     clearDraft() // Clear any existing draft for this server
   }
-  
+
   // Try to load draft (mainly for create mode or if user refreshed page)
   const draftLoaded = loadDraft()
-  
+
   // If no draft was loaded and we have initial data, use it
   if (!draftLoaded && props.initialData) {
     // The initialData watcher will handle this
@@ -639,7 +674,23 @@ onUnmounted(() => {
         :is="currentStepData.component"
         v-if="currentStepData.key === 'capabilities'"
         :form-data="formData"
-        @update:form-data="(newFormData) => formData = newFormData"
+        @update:form-data="(newFormData: McpServerFormData) => formData = newFormData"
+      />
+      <component
+        :is="currentStepData.component"
+        v-else-if="currentStepData.key === 'basic'"
+        v-model="formData[currentStepData.key]"
+        :form-data="formData"
+        :mode="props.mode"
+        @update:modelValue="(newValue: any) => formData[currentStepData.key] = newValue"
+        @update:formData="(newFormData: any) => formData = newFormData"
+      />
+      <component
+        :is="currentStepData.component"
+        v-else-if="currentStepData.key === 'technical'"
+        :form-data="formData"
+        :mode="props.mode"
+        @update:formData="(newFormData: any) => formData = newFormData"
       />
       <component
         :is="currentStepData.component"

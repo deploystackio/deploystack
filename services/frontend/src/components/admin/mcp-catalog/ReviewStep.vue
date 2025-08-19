@@ -23,7 +23,7 @@ const eventBus = useEventBus()
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const freshBasicData = ref<any>(null)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const freshRepositoryData = ref<any>(null) 
+const freshRepositoryData = ref<any>(null)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const freshTechnicalData = ref<any>(null)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -38,7 +38,7 @@ onMounted(() => {
   freshRepositoryData.value = eventBus.getState('edit_repository_data')
   freshTechnicalData.value = eventBus.getState('edit_technical_data')
   freshCapabilitiesData.value = eventBus.getState('edit_capabilities_data')
-  
+
   // Get the stored Claude Desktop config
   const storedConfig = eventBus.getState<string>('edit_claude_config', '') || ''
   claudeConfig.value = storedConfig
@@ -110,6 +110,18 @@ const formatJson = (jsonString: string) => {
         <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.review.fields.featuredServer') }}</dt>
         <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
           <Badge v-if="getBasicData().featured" variant="default" class="text-xs">
+            {{ t('mcpCatalog.edit.values.yes') }}
+          </Badge>
+          <span v-else class="text-sm text-muted-foreground">
+            {{ t('mcpCatalog.edit.values.no') }}
+          </span>
+        </dd>
+      </div>
+
+      <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+        <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.review.fields.autoInstall') }}</dt>
+        <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
+          <Badge v-if="getBasicData().auto_install_new_default_team" variant="default" class="text-xs">
             {{ t('mcpCatalog.edit.values.yes') }}
           </Badge>
           <span v-else class="text-sm text-muted-foreground">
@@ -226,6 +238,15 @@ const formatJson = (jsonString: string) => {
         </dd>
       </div>
 
+      <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+        <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.review.fields.transportType') }}</dt>
+        <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
+          <Badge variant="outline" class="font-mono">
+            {{ getTechnicalData().transport_type || 'auto' }}
+          </Badge>
+        </dd>
+      </div>
+
       <div v-if="getTechnicalData().dependencies" class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
         <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.review.fields.dependencies') }}</dt>
         <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
@@ -309,12 +330,6 @@ const formatJson = (jsonString: string) => {
         </dd>
       </div>
 
-      <div v-if="getCapabilitiesData().default_config" class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
-        <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.review.fields.defaultConfiguration') }}</dt>
-        <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
-          <pre class="text-xs bg-muted p-3 rounded overflow-x-auto">{{ formatJson(getCapabilitiesData().default_config) }}</pre>
-        </dd>
-      </div>
     </dl>
   </div>
 </template>

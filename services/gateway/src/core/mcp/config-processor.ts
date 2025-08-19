@@ -72,7 +72,8 @@ export function processMCPInstallations(
       args,
       env,
       runtime: installation.server.runtime,
-      installation_type: installation.installation_type
+      installation_type: installation.installation_type,
+      transport_type: installation.server.transport_type
     };
   });
 

@@ -48,7 +48,7 @@ const sidebarNavItems = computed((): NavItem[] => {
 </script>
 
 <template>
-  <nav class="flex space-x-2 lg:flex-col lg:space-x-0 lg:space-y-1">
+  <nav class="flex space-x-2 md:flex-col md:space-x-0 md:space-y-1">
     <Button
       v-for="item in sidebarNavItems"
       :key="item.title"

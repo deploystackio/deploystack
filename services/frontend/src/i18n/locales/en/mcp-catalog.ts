@@ -190,6 +190,22 @@ export default {
       featured: {
         label: 'Featured Server',
         description: 'Featured servers are highlighted in the catalog and appear at the top of search results. This helps users discover high-quality or recommended MCP servers.'
+      },
+      autoInstall: {
+        label: 'Auto Install for New Default Teams',
+        description: 'When enabled, this server will be automatically installed in the default team for all new users who register for DeployStack. This helps provide new users with immediate access to useful MCP servers.'
+      },
+      transportType: {
+        label: 'Transport Type',
+        placeholder: 'Select transport type',
+        description: 'Choose how this MCP server communicates. Select "Extract from Claude Desktop Configuration" to automatically detect the transport type from your configuration, or manually select a transport type.',
+        editDescription: 'Select the transport type for this MCP server. The transport type determines how the server communicates with clients.',
+        options: {
+          auto: 'Extract from Claude Desktop Configuration',
+          stdio: 'stdio (Standard Input/Output)',
+          http: 'http (HTTP Transport)',
+          sse: 'sse (Server-Sent Events)'
+        }
       }
     },
 
@@ -249,6 +265,18 @@ export default {
         label: 'Dependencies',
         placeholder: 'List any external dependencies',
         description: 'External libraries or services required'
+      },
+      transportType: {
+        label: 'Transport Type',
+        placeholder: 'Select transport type',
+        description: 'Choose how this MCP server communicates with clients',
+        editDescription: 'Select the transport type for this MCP server. The transport type determines how the server communicates with clients.',
+        options: {
+          auto: 'Auto (Extract from Configuration)',
+          stdio: 'stdio (Standard Input/Output)',
+          http: 'http (HTTP Transport)',
+          sse: 'sse (Server-Sent Events)'
+        }
       },
       claudeConfig: {
         label: 'Claude Desktop Configuration',
@@ -402,6 +430,7 @@ export default {
         detailedDescription: 'Detailed Description',
         category: 'Category',
         featuredServer: 'Featured Server',
+        autoInstall: 'Auto Install for New Default Teams',
         author: 'Author',
         contact: 'Contact',
         organization: 'Organization',
@@ -415,11 +444,11 @@ export default {
         minimumVersion: 'Minimum Version',
         claudeDesktopConfiguration: 'Claude Desktop Configuration',
         dependencies: 'Dependencies',
+        transportType: 'Transport Type',
         tools: 'Tools',
         resources: 'Resources',
         prompts: 'Prompts',
-        environmentVariables: 'Environment Variables',
-        defaultConfiguration: 'Default Configuration'
+        environmentVariables: 'Environment Variables'
       },
       values: {
         notSpecified: 'Not specified',
@@ -513,6 +542,7 @@ export default {
       resources: 'Available Resources',
       prompts: 'Available Prompts',
       environmentVariables: 'Environment Variables',
+      transportType: 'Transport Type',
       defaultConfig: 'Default Configuration',
       dependencies: 'Dependencies',
       systemInfo: 'System Information'
@@ -539,7 +569,16 @@ export default {
       updated: 'Updated:',
       lastSync: 'Last Sync:',
       serverId: 'Server ID:',
-      slug: 'Slug:'
+      slug: 'Slug:',
+      transportType: {
+        notSpecified: 'Not specified',
+        stdio: 'stdio',
+        http: 'http',
+        sse: 'sse',
+        stdioDescription: '(Standard Input/Output)',
+        httpDescription: '(HTTP Transport)',
+        sseDescription: '(Server-Sent Events)'
+      }
     },
 
     deleteDialog: {

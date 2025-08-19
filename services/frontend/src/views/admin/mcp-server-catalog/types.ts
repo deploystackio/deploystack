@@ -23,13 +23,14 @@ export interface McpServer {
   author_contact?: string
   organization?: string
   license?: string
-  default_config?: Record<string, any>
+  transport_type?: 'stdio' | 'http' | 'sse'
   environment_variables?: EnvironmentVariable[]
   dependencies?: Record<string, any>
   category_id?: string
   tags?: string[]
   status: 'active' | 'deprecated' | 'maintenance'
   featured: boolean
+  auto_install_new_default_team: boolean
   created_at: string
   updated_at: string
   last_sync_at?: string
@@ -91,12 +92,13 @@ export interface CreateMcpServerRequest {
   author_contact?: string
   organization?: string
   license?: string
-  default_config?: Record<string, any>
+  transport_type?: 'stdio' | 'http' | 'sse'
   environment_variables?: EnvironmentVariable[]
   dependencies?: Record<string, any>
   category_id?: string
   tags?: string[]
   featured?: boolean
+  auto_install_new_default_team?: boolean
   // NEW: Claude Desktop configuration for automatic extraction
   claude_desktop_config?: Record<string, any>
 }
@@ -119,13 +121,14 @@ export interface UpdateMcpServerRequest {
   author_contact?: string
   organization?: string
   license?: string
-  default_config?: Record<string, any>
+  transport_type?: 'stdio' | 'http' | 'sse'
   environment_variables?: EnvironmentVariable[]
   dependencies?: Record<string, any>
   category_id?: string
   tags?: string[]
   status?: 'active' | 'deprecated' | 'maintenance'
   featured?: boolean
+  auto_install_new_default_team?: boolean
 }
 
 export interface McpServerFilters {
@@ -150,6 +153,7 @@ export interface BasicInfoFormData {
   license: string
   tags: string[]
   featured: boolean
+  auto_install_new_default_team: boolean
 }
 
 export interface RepositoryFormData {
@@ -164,6 +168,7 @@ export interface TechnicalFormData {
   runtime_min_version: string
   installation_methods: InstallationMethod[]
   dependencies: string
+  transport_type: string
 }
 
 export interface CapabilitiesFormData {
@@ -171,7 +176,6 @@ export interface CapabilitiesFormData {
   resources: McpResource[]
   prompts: McpPrompt[]
   environment_variables: EnvironmentVariable[]
-  default_config: string
 }
 
 export interface GitHubFormData {
@@ -242,4 +246,11 @@ export const STATUS_OPTIONS = [
   { value: 'active', label: 'Active' },
   { value: 'deprecated', label: 'Deprecated' },
   { value: 'maintenance', label: 'Maintenance' }
+]
+
+export const TRANSPORT_TYPE_OPTIONS = [
+  { value: 'auto', label: 'Extract from Claude Desktop Configuration' },
+  { value: 'stdio', label: 'stdio (Standard Input/Output)' },
+  { value: 'http', label: 'http (HTTP Transport)' },
+  { value: 'sse', label: 'sse (Server-Sent Events)' }
 ]

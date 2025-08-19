@@ -3,6 +3,7 @@ import { eq, and, count } from 'drizzle-orm';
 import { getDb, getSchema } from '../db/index';
 import { generateId } from 'lucia';
 import { GlobalSettings } from '../global-settings/helpers';
+import type { FastifyBaseLogger } from 'fastify';
 
 export interface Team {
   id: string;
@@ -63,6 +64,12 @@ export interface UserTeamWithRole {
   is_admin: boolean;
   is_owner: boolean;
   member_count: number;
+}
+
+interface AutoInstallServerInfo {
+  id: string;
+  name: string;
+  slug: string;
 }
 
 export class TeamService {
@@ -365,17 +372,154 @@ export class TeamService {
 
   /**
    * Create a team automatically for a new user (called during registration)
+   * Also auto-installs MCP servers marked for auto-installation
    */
-  static async createDefaultTeamForUser(userId: string, username: string): Promise<Team> {
-    return this.createTeam({
+  static async createDefaultTeamForUser(userId: string, username: string, logger?: FastifyBaseLogger): Promise<Team> {
+    // First create the team
+    const team = await this.createTeam({
       name: username,
       owner_id: userId,
       description: `${username}'s team`,
       is_default: true,
     });
+
+    // Auto-install MCP servers marked for new default teams
+    try {
+      await this.autoInstallMcpServersForDefaultTeam(team.id, userId, logger);
+    } catch (error) {
+      // Log error but don't fail team creation
+      if (logger) {
+        logger.warn({
+          error,
+          teamId: team.id,
+          userId,
+          operation: 'auto_install_mcp_servers'
+        }, 'Failed to auto-install MCP servers for new default team');
+      }
+    }
+
+    return team;
   }
 
-  // ===== NEW TEAM MEMBER MANAGEMENT METHODS =====
+  /**
+   * Auto-install MCP servers marked for new default teams
+   */
+  private static async autoInstallMcpServersForDefaultTeam(
+    teamId: string, 
+    userId: string, 
+    logger?: FastifyBaseLogger
+  ): Promise<void> {
+    const { db, schema } = this.getDbAndSchema();
+
+    if (logger) {
+      logger.debug({
+        operation: 'auto_install_mcp_servers',
+        teamId,
+        userId
+      }, 'Starting auto-installation of MCP servers for new default team');
+    }
+
+    // Query for global MCP servers marked for auto-installation
+    const autoInstallServers: AutoInstallServerInfo[] = await (db as any)
+      .select({
+        id: schema.mcpServers.id,
+        name: schema.mcpServers.name,
+        slug: schema.mcpServers.slug
+      })
+      .from(schema.mcpServers)
+      .where(
+        and(
+          eq(schema.mcpServers.auto_install_new_default_team, true),
+          eq(schema.mcpServers.visibility, 'global'),
+          eq(schema.mcpServers.status, 'active')
+        )
+      );
+
+    if (autoInstallServers.length === 0) {
+      if (logger) {
+        logger.debug({
+          operation: 'auto_install_mcp_servers',
+          teamId,
+          userId
+        }, 'No MCP servers marked for auto-installation found');
+      }
+      return;
+    }
+
+    if (logger) {
+      logger.info({
+        operation: 'auto_install_mcp_servers',
+        teamId,
+        userId,
+        serverCount: autoInstallServers.length,
+        serverNames: autoInstallServers.map((s: AutoInstallServerInfo) => s.name)
+      }, `Found ${autoInstallServers.length} MCP servers marked for auto-installation`);
+    }
+
+    // Import McpInstallationService dynamically to avoid circular dependencies
+    const { McpInstallationService } = await import('./mcpInstallationService');
+    const installationService = new McpInstallationService(db, logger || console as any);
+
+    let successCount = 0;
+    let errorCount = 0;
+
+    // Install each server
+    for (const server of autoInstallServers) {
+      try {
+        const installationName = server.name; // Use server name as installation name
+        
+        await installationService.createInstallation(
+          teamId,
+          userId,
+          {
+            server_id: server.id,
+            installation_name: installationName,
+            installation_type: 'local'
+            // user_environment_variables will be empty initially
+          }
+        );
+
+        successCount++;
+        
+        if (logger) {
+          logger.debug({
+            operation: 'auto_install_mcp_servers',
+            teamId,
+            userId,
+            serverId: server.id,
+            serverName: server.name,
+            installationName
+          }, `Successfully auto-installed MCP server: ${server.name}`);
+        }
+      } catch (error) {
+        errorCount++;
+        
+        if (logger) {
+          logger.warn({
+            error,
+            operation: 'auto_install_mcp_servers',
+            teamId,
+            userId,
+            serverId: server.id,
+            serverName: server.name
+          }, `Failed to auto-install MCP server: ${server.name}`);
+        }
+      }
+    }
+
+    if (logger) {
+      logger.info({
+        operation: 'auto_install_mcp_servers',
+        teamId,
+        userId,
+        totalServers: autoInstallServers.length,
+        successCount,
+        errorCount
+      }, `Auto-installation completed: ${successCount} successful, ${errorCount} failed`);
+    }
+  }
+
+  // ===== TEAM MEMBER MANAGEMENT METHODS =====
 
   /**
    * Get team member count

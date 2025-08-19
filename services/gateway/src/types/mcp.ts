@@ -29,8 +29,7 @@ export interface MCPInstallation {
     installation_methods: any[];
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     environment_variables: any[];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    default_config: any | null;
+    transport_type: 'stdio' | 'http' | 'sse';
   };
 }
 
@@ -50,6 +49,7 @@ export interface MCPServerConfig {
   env: Record<string, string>;
   runtime: string;
   installation_type: 'local' | 'cloud';
+  transport_type: 'stdio' | 'http' | 'sse';
 }
 
 // Team MCP Configuration stored securely

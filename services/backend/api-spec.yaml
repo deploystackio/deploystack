@@ -9130,6 +9130,13 @@ paths:
                   - deprecated
                   - maintenance
               featured:
+                description: "Filter by featured status: true for featured servers, false for
+                  non-featured servers"
+                type: string
+                enum:
+                  - "true"
+                  - "false"
+              auto_install_new_default_team:
                 type: boolean
               search:
                 type: string
@@ -9255,6 +9262,8 @@ paths:
                                   - maintenance
                               featured:
                                 type: boolean
+                              auto_install_new_default_team:
+                                type: boolean
                               created_at:
                                 type: string
                               updated_at:
@@ -9289,6 +9298,7 @@ paths:
                               - tags
                               - status
                               - featured
+                              - auto_install_new_default_team
                               - created_at
                               - updated_at
                               - last_sync_at
@@ -9506,6 +9516,8 @@ paths:
                             - maintenance
                         featured:
                           type: boolean
+                        auto_install_new_default_team:
+                          type: boolean
                         created_at:
                           type: string
                         updated_at:
@@ -9544,6 +9556,7 @@ paths:
                         - tags
                         - status
                         - featured
+                        - auto_install_new_default_team
                         - created_at
                         - updated_at
                         - last_sync_at
@@ -9630,21 +9643,25 @@ paths:
           in: query
           name: q
           required: true
+          description: Search query string
         - schema:
             type: string
           in: query
           name: category_id
           required: false
+          description: Filter by category ID
         - schema:
             type: string
           in: query
           name: language
           required: false
+          description: Filter by programming language
         - schema:
             type: string
           in: query
           name: runtime
           required: false
+          description: Filter by runtime environment
         - schema:
             type: string
             enum:
@@ -9654,6 +9671,7 @@ paths:
           in: query
           name: status
           required: false
+          description: Filter by server status
         - schema:
             type: string
             enum:
@@ -9662,18 +9680,22 @@ paths:
           in: query
           name: featured
           required: false
+          description: "Filter by featured status: true for featured servers, false for
+            non-featured servers"
         - schema:
             type: string
             pattern: ^\d+$
           in: query
           name: limit
           required: false
+          description: Limit must be a number between 1 and 100
         - schema:
             type: string
             pattern: ^\d+$
           in: query
           name: offset
           required: false
+          description: Offset must be non-negative
       security:
         - cookieAuth: []
       responses:
@@ -9806,6 +9828,8 @@ paths:
                                   - maintenance
                               featured:
                                 type: boolean
+                              auto_install_new_default_team:
+                                type: boolean
                               created_at:
                                 type: string
                               updated_at:
@@ -9844,6 +9868,7 @@ paths:
                               - tags
                               - status
                               - featured
+                              - auto_install_new_default_team
                               - created_at
                               - updated_at
                               - last_sync_at
@@ -10105,6 +10130,8 @@ paths:
                     type: string
                 featured:
                   type: boolean
+                auto_install_new_default_team:
+                  type: boolean
               required:
                 - name
                 - description
@@ -10240,6 +10267,8 @@ paths:
                             - maintenance
                         featured:
                           type: boolean
+                        auto_install_new_default_team:
+                          type: boolean
                         created_at:
                           type: string
                         updated_at:
@@ -10278,6 +10307,7 @@ paths:
                         - tags
                         - status
                         - featured
+                        - auto_install_new_default_team
                         - created_at
                         - updated_at
                         - last_sync_at
@@ -10539,6 +10569,8 @@ paths:
                             - maintenance
                         featured:
                           type: boolean
+                        auto_install_new_default_team:
+                          type: boolean
                         created_at:
                           type: string
                         updated_at:
@@ -10577,6 +10609,7 @@ paths:
                         - tags
                         - status
                         - featured
+                        - auto_install_new_default_team
                         - created_at
                         - updated_at
                         - last_sync_at

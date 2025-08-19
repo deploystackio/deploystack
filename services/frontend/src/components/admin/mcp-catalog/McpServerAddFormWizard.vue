@@ -59,6 +59,8 @@ interface McpServerAddFormData {
     license: string
     tags: string[]
     featured: boolean
+    auto_install_new_default_team: boolean
+    transport_type: string
   }
 }
 
@@ -173,7 +175,9 @@ const formData = ref<McpServerAddFormData>({
     organization: '',
     license: '',
     tags: [],
-    featured: false
+    featured: false,
+    auto_install_new_default_team: false,
+    transport_type: 'auto'
   }
 })
 
@@ -185,20 +189,20 @@ const compatibleFormData = computed((): McpServerFormData => ({
     git_branch: formData.value.github.git_branch,
     homepage_url: ''
   },
-  technical: {
-    language: '',
-    runtime: '',
-    runtime_min_version: '',
-    installation_methods: [],
-    dependencies: ''
-  },
-  capabilities: {
-    tools: [],
-    resources: [],
-    prompts: [],
-    environment_variables: [],
-    default_config: ''
-  },
+      technical: {
+        language: '',
+        runtime: 'node',
+        runtime_min_version: '18.0.0',
+        installation_methods: [],
+        dependencies: '',
+        transport_type: 'auto'
+      },
+      capabilities: {
+        tools: [],
+        resources: [],
+        prompts: [],
+        environment_variables: []
+      },
   github: formData.value.github,
   review: {}
 }))
@@ -345,7 +349,11 @@ const autoPopulateFromGitHub = (githubData: any) => {
     author_contact: githubData.owner?.email || githubData.author_contact || '',
     organization: githubData.owner?.type === 'Organization' ? githubData.owner.login : (githubData.organization || ''),
     license: githubData.license?.spdx_id || githubData.license || '',
-    tags: githubData.topics || githubData.tags || []
+    tags: githubData.topics || githubData.tags || [],
+    // Keep existing values for these properties
+    featured: formData.value.basic.featured,
+    auto_install_new_default_team: formData.value.basic.auto_install_new_default_team,
+    transport_type: formData.value.basic.transport_type
   }
 }
 

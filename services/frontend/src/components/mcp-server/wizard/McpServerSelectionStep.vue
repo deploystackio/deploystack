@@ -6,6 +6,7 @@ import { Loader2, ChevronDown, PackagePlus, AlertTriangle } from 'lucide-vue-nex
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import McpServerCard from '@/components/mcp-server/McpServerCard.vue'
+import FeaturedMcpServers from '@/components/mcp-server/FeaturedMcpServers.vue'
 import { McpCatalogService } from '@/services/mcpCatalogService'
 import { McpCategoriesService } from '@/services/mcpCategoriesService'
 import type { McpServerSearchParams, McpServerSearchResponse } from '@/types/mcp-catalog'
@@ -298,8 +299,18 @@ onMounted(() => {
     </div>
 
     <!-- Empty State (when no search performed) -->
-    <div v-else-if="!hasSearched && !isLoading" class="mt-14 text-center py-8">
-      <p class="text-gray-500">{{ t('mcpInstallations.wizard.server.emptyStateMessage') }}</p>
+    <div v-else-if="!hasSearched && !isLoading" class="mt-14 space-y-8">
+      <div class="text-center py-8">
+        <p class="text-gray-500">{{ t('mcpInstallations.wizard.server.emptyStateMessage') }}</p>
+      </div>
+
+      <!-- Featured MCP Servers -->
+      <div class="max-w-7xl">
+        <FeaturedMcpServers
+          :compact="true"
+          @server-selected="handleInstallClick"
+        />
+      </div>
     </div>
   </div>
 </template>

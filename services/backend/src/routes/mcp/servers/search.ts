@@ -42,6 +42,7 @@ const searchServersResponseSchema = z.object({
       tags: z.array(z.string()).nullable(),
       status: z.enum(['active', 'deprecated', 'maintenance']),
       featured: z.boolean(),
+      auto_install_new_default_team: z.boolean(),
       created_at: z.string(),
       updated_at: z.string(),
       last_sync_at: z.string().nullable()
@@ -79,19 +80,19 @@ export default async function searchServers(server: FastifyInstance) {
       security: [{ cookieAuth: [] }],
       // Plain JSON Schema for Fastify validation
       querystring: {
-      type: 'object',
-      properties: {
-      q: { type: 'string', minLength: 1, maxLength: 255 },
-      category_id: { type: 'string' },
-      language: { type: 'string' },
-      runtime: { type: 'string' },
-      status: { type: 'string', enum: ['active', 'deprecated', 'maintenance'] },
-      featured: { type: 'string', enum: ['true', 'false'] },
-      limit: { type: 'string', pattern: '^\\d+$' },
-      offset: { type: 'string', pattern: '^\\d+$' }
-      },
-      required: ['q'],
-      additionalProperties: false
+        type: 'object',
+        properties: {
+          q: { type: 'string', minLength: 1, maxLength: 255, description: 'Search query string' },
+          category_id: { type: 'string', description: 'Filter by category ID' },
+          language: { type: 'string', description: 'Filter by programming language' },
+          runtime: { type: 'string', description: 'Filter by runtime environment' },
+          status: { type: 'string', enum: ['active', 'deprecated', 'maintenance'], description: 'Filter by server status' },
+          featured: { type: 'string', enum: ['true', 'false'], description: 'Filter by featured status: true for featured servers, false for non-featured servers' },
+          limit: { type: 'string', pattern: '^\\d+$', description: 'Limit must be a number between 1 and 100' },
+          offset: { type: 'string', pattern: '^\\d+$', description: 'Offset must be non-negative' }
+        },
+        required: ['q'],
+        additionalProperties: false
       },
       response: {
         200: createSchema(searchServersResponseSchema),

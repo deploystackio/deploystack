@@ -41,7 +41,8 @@ const createGlobalServerRequestSchema = z.object({
   dependencies: z.record(z.string(), z.any()).optional(),
   category_id: z.string().optional(),
   tags: z.array(z.string()).optional(),
-  featured: z.boolean().default(false)
+  featured: z.boolean().default(false),
+  auto_install_new_default_team: z.boolean().default(false)
 });
 
 // Response schema for successful creation
@@ -77,6 +78,7 @@ const createGlobalServerResponseSchema = z.object({
     tags: z.array(z.string()).nullable(),
     status: z.enum(['active', 'deprecated', 'maintenance']),
     featured: z.boolean(),
+    auto_install_new_default_team: z.boolean(),
     created_at: z.string(),
     updated_at: z.string(),
     last_sync_at: z.string().nullable()
@@ -175,7 +177,8 @@ export default async function createGlobalServer(server: FastifyInstance) {
           dependencies: { type: 'object' },
           category_id: { type: 'string' },
           tags: { type: 'array', items: { type: 'string' } },
-          featured: { type: 'boolean' }
+          featured: { type: 'boolean' },
+          auto_install_new_default_team: { type: 'boolean' }
         },
         required: ['name', 'description', 'language', 'runtime', 'claude_desktop_config'],
         additionalProperties: false
@@ -207,7 +210,8 @@ export default async function createGlobalServer(server: FastifyInstance) {
       serverName: requestData.name,
       language: requestData.language,
       runtime: requestData.runtime,
-      featured: requestData.featured
+      featured: requestData.featured,
+        auto_install_new_default_team: requestData.auto_install_new_default_team
     }, 'Creating global MCP server');
 
     try {
@@ -258,7 +262,8 @@ export default async function createGlobalServer(server: FastifyInstance) {
         dependencies: requestData.dependencies,
         category_id: requestData.category_id,
         tags: requestData.tags,
-        featured: requestData.featured
+        featured: requestData.featured,
+        auto_install_new_default_team: requestData.auto_install_new_default_team
       };
 
       const newServer = await mcpService.createServer(
@@ -274,7 +279,8 @@ export default async function createGlobalServer(server: FastifyInstance) {
         serverId: newServer.id,
         serverSlug: newServer.slug,
         serverName: newServer.name,
-        featured: newServer.featured
+        featured: newServer.featured,
+        auto_install_new_default_team: newServer.auto_install_new_default_team
       }, 'Global MCP server created successfully');
 
       // Parse JSON fields for response with proper null checks and error handling
@@ -325,6 +331,7 @@ export default async function createGlobalServer(server: FastifyInstance) {
           tags: newServer.tags ? JSON.parse(newServer.tags) : null,
           status: newServer.status,
           featured: newServer.featured,
+          auto_install_new_default_team: newServer.auto_install_new_default_team,
           created_at: newServer.created_at.toISOString(),
           updated_at: newServer.updated_at.toISOString(),
           last_sync_at: newServer.last_sync_at?.toISOString() || null

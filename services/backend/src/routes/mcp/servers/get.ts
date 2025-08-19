@@ -44,6 +44,7 @@ const getServerResponseSchema = z.object({
     tags: z.array(z.string()).nullable(),
     status: z.enum(['active', 'deprecated', 'maintenance']),
     featured: z.boolean(),
+    auto_install_new_default_team: z.boolean(),
     created_at: z.string(),
     updated_at: z.string(),
     last_sync_at: z.string().nullable()

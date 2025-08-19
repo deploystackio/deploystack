@@ -166,7 +166,8 @@ const convertServerToFormData = (server: McpServer): Partial<McpServerFormData> 
       organization: server.organization || '',
       license: server.license || '',
       tags: parsedTags,
-      featured: Boolean(server.featured)
+      featured: Boolean(server.featured),
+      auto_install_new_default_team: Boolean(server.auto_install_new_default_team),
     },
     repository: {
       github_url: server.github_url || '',
@@ -178,14 +179,14 @@ const convertServerToFormData = (server: McpServer): Partial<McpServerFormData> 
       runtime: server.runtime || '',
       runtime_min_version: server.runtime_min_version || '',
       installation_methods: convertedInstallationMethods,
-      dependencies: server.dependencies ? JSON.stringify(server.dependencies, null, 2) : ''
+      dependencies: server.dependencies ? JSON.stringify(server.dependencies, null, 2) : '',
+      transport_type: server.transport_type || 'auto'
     },
     capabilities: {
       tools: parsedTools,
       resources: parsedResources,
       prompts: parsedPrompts,
-      environment_variables: parsedEnvironmentVariables,
-      default_config: server.default_config ? JSON.stringify(server.default_config, null, 2) : ''
+      environment_variables: parsedEnvironmentVariables
     },
     github: {
       github_url: server.github_url || '',
@@ -211,6 +212,7 @@ const handleSubmit = async (formData: McpServerFormData) => {
     license: formData.basic.license || undefined,
     tags: formData.basic.tags.length > 0 ? formData.basic.tags : undefined,
     featured: formData.basic.featured,
+    auto_install_new_default_team: formData.basic.auto_install_new_default_team,
 
     // Repository (use GitHub data if available, fallback to repository data)
     github_url: formData.github.github_url || formData.repository.github_url || undefined,
@@ -229,7 +231,7 @@ const handleSubmit = async (formData: McpServerFormData) => {
     resources: formData.capabilities.resources.length > 0 ? formData.capabilities.resources : undefined,
     prompts: formData.capabilities.prompts.length > 0 ? formData.capabilities.prompts : undefined,
     environment_variables: formData.capabilities.environment_variables.length > 0 ? formData.capabilities.environment_variables : undefined,
-    default_config: formData.capabilities.default_config ? JSON.parse(formData.capabilities.default_config) : undefined
+    transport_type: formData.technical.transport_type !== 'auto' ? formData.technical.transport_type as 'stdio' | 'http' | 'sse' : undefined
   }
 
   // Submit to API

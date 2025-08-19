@@ -43,9 +43,7 @@ export function testMCPProcessing(): void {
             description: 'BrightData API token'
           }
         ],
-        default_config: {
-          timeout: 30000
-        }
+        transport_type: 'stdio'
       }
     },
     {
@@ -81,7 +79,7 @@ export function testMCPProcessing(): void {
             default_value: '/tmp'
           }
         ],
-        default_config: null
+        transport_type: 'stdio'
       }
     },
     // Invalid installation (missing server name)
@@ -104,7 +102,7 @@ export function testMCPProcessing(): void {
         runtime: 'node',
         installation_methods: [],
         environment_variables: [],
-        default_config: null
+        transport_type: 'stdio'
       }
     }
   ];

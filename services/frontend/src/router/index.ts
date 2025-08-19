@@ -72,14 +72,27 @@ const routes = [
     meta: { requiresSetup: true },
   },
   {
-    path: '/user/account',
-    redirect: '/user/account/profile'
+    path: '/user',
+    name: 'User',
+    component: () => import('../views/user/index.vue'),
+    meta: { requiresSetup: true },
   },
   {
-    path: '/user/account/:section',
-    name: 'UserAccount',
-    component: () => import('../views/user/Account.vue'),
+    path: '/user/profile',
+    name: 'UserProfile',
+    component: () => import('../views/user/Profile.vue'),
     meta: { requiresSetup: true },
+  },
+  {
+    path: '/user/security',
+    name: 'UserSecurity',
+    component: () => import('../views/user/Security.vue'),
+    meta: { requiresSetup: true },
+  },
+  // Legacy redirect for old URLs
+  {
+    path: '/user/account',
+    redirect: '/user/profile'
   },
   {
     path: '/mcp-server',

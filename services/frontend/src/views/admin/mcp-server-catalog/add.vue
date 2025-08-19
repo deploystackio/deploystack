@@ -32,6 +32,9 @@ interface McpServerAddFormData {
     organization: string
     license: string
     tags: string[]
+    featured: boolean
+    auto_install_new_default_team: boolean
+    transport_type: string
   }
 }
 
@@ -100,9 +103,13 @@ const handleSubmit = async (formData: McpServerAddFormData) => {
       // Claude Desktop configuration (for future backend use)
       claude_desktop_config: formData.claudeConfig.claude_desktop_config,
 
+      // Transport type (only send if not auto-extraction)
+      transport_type: formData.basic.transport_type !== 'auto' ? formData.basic.transport_type as 'stdio' | 'http' | 'sse' : undefined,
+
       // Server settings
       visibility: 'global',
-      featured: false
+      featured: formData.basic.featured,
+      auto_install_new_default_team: formData.basic.auto_install_new_default_team
     }
 
     // Submit to API
@@ -122,7 +129,7 @@ const handleSubmit = async (formData: McpServerAddFormData) => {
     toast.error(t('mcpCatalog.messages.createError'), {
       description: errorMessage
     })
-    
+
     // Re-throw error to let the wizard handle it and reset loading state
     throw error
   }

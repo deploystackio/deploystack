@@ -80,9 +80,9 @@ function getSetting(key: string) {
 <template>
   <div class="space-y-6">
     <!-- Configuration Form -->
-    <Card>
-      <CardContent class="pt-6">
-        <form @submit.prevent="handleSave" class="space-y-6">
+    <div class="md:hidden">
+      <!-- Mobile: Form without Card wrapper -->
+      <form @submit.prevent="handleSave" class="space-y-6">
           <!-- App ID Field -->
           <div class="space-y-2">
             <Label for="app-id">
@@ -165,7 +165,7 @@ function getSetting(key: string) {
 
           <!-- Connection Test Section -->
           <div class="space-y-4">
-            <div class="flex items-center justify-between">
+            <div class="flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
               <div>
                 <h4 class="font-medium flex items-center space-x-2">
                   <TestTube class="h-4 w-4" />
@@ -182,6 +182,7 @@ function getSetting(key: string) {
                 :loading="isTestingConnection"
                 variant="outline"
                 size="sm"
+                class="w-full sm:w-auto"
               >
                 <TestTube class="h-4 w-4 mr-2" />
                 {{ t('githubApp.connectionTest.button.test') }}
@@ -219,7 +220,7 @@ function getSetting(key: string) {
           <Separator />
 
           <!-- Save Button -->
-          <div class="flex items-center justify-between">
+          <div class="flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
             <div class="flex items-center space-x-2">
               <Badge v-if="hasChanges" variant="outline">
                 {{ t('githubApp.form.unsavedChanges') }}
@@ -229,13 +230,172 @@ function getSetting(key: string) {
               type="submit"
               :disabled="!hasChanges"
               :loading="isSaving"
-              class="min-w-[120px]"
+              class="min-w-[120px] w-full sm:w-auto"
             >
               {{ t('githubApp.form.saveChanges') }}
             </Button>
           </div>
         </form>
-      </CardContent>
-    </Card>
-  </div>
+      </div>
+
+      <!-- Desktop: Form with Card wrapper -->
+      <Card class="hidden md:block">
+        <CardContent class="pt-6">
+          <form @submit.prevent="handleSave" class="space-y-6">
+            <!-- App ID Field -->
+            <div class="space-y-2">
+              <Label for="app-id-desktop">
+                {{ getSetting('github.app.app_id')?.description || t('githubApp.fields.appId.label') }}
+              </Label>
+              <Input
+                id="app-id-desktop"
+                :model-value="String(formValues['github.app.app_id'] || '')"
+                @update:model-value="(value) => updateField('github.app.app_id', value)"
+                :placeholder="t('githubApp.fields.appId.placeholder')"
+                :class="{ 'border-destructive': getFieldError('github.app.app_id') }"
+              />
+              <p v-if="getFieldError('github.app.app_id')" class="text-sm text-destructive">
+                {{ getFieldError('github.app.app_id') }}
+              </p>
+              <p class="text-xs text-muted-foreground">
+                {{ t('githubApp.fields.appId.description') }}
+              </p>
+            </div>
+
+            <!-- Private Key Field -->
+            <div class="space-y-2">
+              <Label for="private-key-desktop">
+                {{ getSetting('github.app.private_key_base64')?.description || t('githubApp.fields.privateKey.label') }}
+              </Label>
+              <Input
+                id="private-key-desktop"
+                type="password"
+                :model-value="String(formValues['github.app.private_key_base64'] || '')"
+                @update:model-value="(value) => updateField('github.app.private_key_base64', value)"
+                :placeholder="t('githubApp.fields.privateKey.placeholder')"
+                :class="{ 'border-destructive': getFieldError('github.app.private_key_base64') }"
+              />
+              <p v-if="getFieldError('github.app.private_key_base64')" class="text-sm text-destructive">
+                {{ getFieldError('github.app.private_key_base64') }}
+              </p>
+              <p class="text-xs text-muted-foreground">
+                {{ t('githubApp.fields.privateKey.description') }}
+              </p>
+            </div>
+
+            <!-- Installation ID Field -->
+            <div class="space-y-2">
+              <Label for="installation-id-desktop">
+                {{ getSetting('github.app.installation_id')?.description || t('githubApp.fields.installationId.label') }}
+              </Label>
+              <Input
+                id="installation-id-desktop"
+                :model-value="String(formValues['github.app.installation_id'] || '')"
+                @update:model-value="(value) => updateField('github.app.installation_id', value)"
+                :placeholder="t('githubApp.fields.installationId.placeholder')"
+                :class="{ 'border-destructive': getFieldError('github.app.installation_id') }"
+              />
+              <p v-if="getFieldError('github.app.installation_id')" class="text-sm text-destructive">
+                {{ getFieldError('github.app.installation_id') }}
+              </p>
+              <p class="text-xs text-muted-foreground">
+                {{ t('githubApp.fields.installationId.description') }}
+              </p>
+            </div>
+
+            <!-- Enable Toggle -->
+            <div class="space-y-2">
+              <div class="flex items-center space-x-2">
+                <Switch
+                  id="enabled-desktop"
+                  :model-value="Boolean(formValues['github.app.enabled'])"
+                  @update:model-value="(value) => updateField('github.app.enabled', value)"
+                />
+                <Label for="enabled-desktop">
+                  {{ getSetting('github.app.enabled')?.description || t('githubApp.fields.enabled.label') }}
+                </Label>
+              </div>
+              <p class="text-xs text-muted-foreground">
+                {{ t('githubApp.fields.enabled.description') }}
+              </p>
+            </div>
+
+            <Separator />
+
+            <!-- Connection Test Section -->
+            <div class="space-y-4">
+              <div class="flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
+                <div>
+                  <h4 class="font-medium flex items-center space-x-2">
+                    <TestTube class="h-4 w-4" />
+                    <span>{{ t('githubApp.connectionTest.title') }}</span>
+                  </h4>
+                  <p class="text-sm text-muted-foreground">
+                    {{ t('githubApp.connectionTest.description') }}
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  @click="handleTestConnection"
+                  :disabled="!canTestConnection"
+                  :loading="isTestingConnection"
+                  variant="outline"
+                  size="sm"
+                  class="w-full sm:w-auto"
+                >
+                  <TestTube class="h-4 w-4 mr-2" />
+                  {{ t('githubApp.connectionTest.button.test') }}
+                </Button>
+              </div>
+
+              <!-- Connection Status -->
+              <Alert v-if="lastTestResult" :variant="getAlertVariant(lastTestResult)">
+                <component
+                  :is="lastTestResult.success ? CheckCircle : XCircle"
+                  class="h-4 w-4"
+                />
+                <AlertTitle>
+                  {{ lastTestResult.success ? t('githubApp.connectionTest.status.success') : t('githubApp.connectionTest.status.failed') }}
+                </AlertTitle>
+                <AlertDescription>
+                  {{ getStatusMessage(lastTestResult) }}
+                </AlertDescription>
+              </Alert>
+
+              <!-- Test Requirements -->
+              <div v-if="!canTestConnection" class="flex items-start space-x-2 p-3 bg-muted rounded-lg">
+                <Info class="h-4 w-4 text-muted-foreground mt-0.5" />
+                <div class="text-sm text-muted-foreground">
+                  <p class="font-medium">{{ t('githubApp.connectionTest.requirements.title') }}</p>
+                  <ul class="list-disc list-inside mt-1 space-y-1">
+                    <li>{{ t('githubApp.connectionTest.requirements.appId') }}</li>
+                    <li>{{ t('githubApp.connectionTest.requirements.privateKey') }}</li>
+                    <li>{{ t('githubApp.connectionTest.requirements.installationId') }}</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            <!-- Save Button -->
+            <div class="flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
+              <div class="flex items-center space-x-2">
+                <Badge v-if="hasChanges" variant="outline">
+                  {{ t('githubApp.form.unsavedChanges') }}
+                </Badge>
+              </div>
+              <Button
+                type="submit"
+                :disabled="!hasChanges"
+                :loading="isSaving"
+                class="min-w-[120px] w-full sm:w-auto"
+              >
+                {{ t('githubApp.form.saveChanges') }}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
 </template>

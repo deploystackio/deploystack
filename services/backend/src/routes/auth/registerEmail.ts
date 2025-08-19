@@ -300,7 +300,7 @@ export default async function registerEmailRoute(server: FastifyInstance) {
 
         // Create default team for the user
         try {
-          const team = await TeamService.createDefaultTeamForUser(userId, username);
+          const team = await TeamService.createDefaultTeamForUser(userId, username, server.log);
           server.log.info(`Default team created successfully for user ${userId}: ${team.id}`);
         } catch (teamError) {
           server.log.error(teamError, `Failed to create default team for user ${userId}:`);

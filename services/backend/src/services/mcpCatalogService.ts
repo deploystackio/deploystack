@@ -37,6 +37,7 @@ export interface McpServer {
   tags?: string; // JSON
   status: 'active' | 'deprecated' | 'maintenance';
   featured: boolean;
+  auto_install_new_default_team: boolean;
   created_at: Date;
   updated_at: Date;
   last_sync_at?: Date;
@@ -67,6 +68,7 @@ export interface CreateMcpServerRequest {
   category_id?: string;
   tags?: string[];
   featured?: boolean;
+  auto_install_new_default_team?: boolean;
 }
 
 export interface UpdateMcpServerRequest {
@@ -94,6 +96,7 @@ export interface UpdateMcpServerRequest {
   tags?: string[];
   status?: 'active' | 'deprecated' | 'maintenance';
   featured?: boolean;
+  auto_install_new_default_team?: boolean;
 }
 
 export interface McpServerFilters {
@@ -347,6 +350,7 @@ export class McpCatalogService {
       tags: githubInfo.tags ? JSON.stringify(githubInfo.tags) : (data.tags ? JSON.stringify(data.tags) : null),
       status: 'active',
       featured: userRole === 'global_admin' ? (data.featured || false) : false,
+      auto_install_new_default_team: userRole === 'global_admin' ? (data.auto_install_new_default_team || false) : false,
       created_at: now,
       updated_at: now,
       last_sync_at: data.github_url ? now : null
@@ -420,6 +424,11 @@ export class McpCatalogService {
     // Only global_admin can set featured flag
     if (data.featured !== undefined && userRole === 'global_admin') {
       updateData.featured = data.featured;
+    }
+    
+    // Only global_admin can set auto_install_new_default_team flag
+    if (data.auto_install_new_default_team !== undefined && userRole === 'global_admin') {
+      updateData.auto_install_new_default_team = data.auto_install_new_default_team;
     }
     
     await this.db.update(mcpServers).set(updateData).where(eq(mcpServers.id, serverId));

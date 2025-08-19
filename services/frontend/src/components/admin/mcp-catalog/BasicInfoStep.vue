@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -17,21 +17,37 @@ import { Switch } from '@/components/ui/switch'
 import { X, Plus, CheckCircle } from 'lucide-vue-next'
 import type { BasicInfoFormData, McpCategory } from '@/views/admin/mcp-server-catalog/types'
 import { McpCategoriesCache } from '@/services/mcpCatalogService'
-import { ref, onMounted } from 'vue'
+import { useEventBus } from '@/composables/useEventBus'
 
 interface Props {
-  modelValue: BasicInfoFormData
   /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-  formData: any
+  formData?: any
+  mode?: 'create' | 'edit'
 }
 
-interface Emits {
-  (e: 'update:modelValue', value: BasicInfoFormData): void
-}
-
-const props = defineProps<Props>()
-const emit = defineEmits<Emits>()
+const props = withDefaults(defineProps<Props>(), {
+  mode: 'create'
+})
 const { t } = useI18n()
+const eventBus = useEventBus()
+
+// Storage key for basic info data
+const STORAGE_KEY = 'edit_basic_data'
+
+// Local reactive data - storage-first approach
+const localData = ref<BasicInfoFormData>({
+  name: '',
+  description: '',
+  long_description: '',
+  category_id: '',
+  author_name: '',
+  author_contact: '',
+  organization: '',
+  license: '',
+  tags: [],
+  featured: false,
+  auto_install_new_default_team: false
+})
 
 // Categories
 const categories = ref<McpCategory[]>([])
@@ -40,29 +56,34 @@ const categoriesLoading = ref(true)
 // New tag input
 const newTag = ref('')
 
-// Computed model
-const localValue = computed({
-  get: () => props.modelValue,
-  set: (value) => emit('update:modelValue', value)
-})
-
-// Specific computed for featured field to handle boolean updates properly
-const featuredValue = computed({
-  get: () => props.modelValue.featured,
-  set: (value: boolean) => {
-    const updatedValue = {
-      ...props.modelValue,
-      featured: value
-    }
-    emit('update:modelValue', updatedValue)
-  }
-})
-
 // Check if data was auto-populated from GitHub
 const isAutoPopulated = computed(() => {
-  return props.formData.github?.auto_populated || false
+  return props.formData?.github?.auto_populated || false
 })
 
+// Load data from storage
+const loadFromStorage = () => {
+  const storedData = eventBus.getState<BasicInfoFormData>(STORAGE_KEY)
+  if (storedData) {
+    localData.value = { ...localData.value, ...storedData }
+  }
+}
+
+// Flag to prevent recursive updates
+let isUpdatingFromStorage = false
+
+// Save data to storage
+const saveToStorage = () => {
+  if (!isUpdatingFromStorage) {
+    eventBus.setState(STORAGE_KEY, localData.value)
+  }
+}
+
+// Update field and save to storage
+const updateField = <K extends keyof BasicInfoFormData>(field: K, value: BasicInfoFormData[K]) => {
+  localData.value[field] = value
+  saveToStorage()
+}
 
 // Load categories
 const loadCategories = async () => {
@@ -78,20 +99,14 @@ const loadCategories = async () => {
 
 // Tag management
 const addTag = () => {
-  if (newTag.value.trim() && !localValue.value.tags.includes(newTag.value.trim())) {
-    localValue.value = {
-      ...localValue.value,
-      tags: [...localValue.value.tags, newTag.value.trim()]
-    }
+  if (newTag.value.trim() && !localData.value.tags.includes(newTag.value.trim())) {
+    updateField('tags', [...localData.value.tags, newTag.value.trim()])
     newTag.value = ''
   }
 }
 
 const removeTag = (tagToRemove: string) => {
-  localValue.value = {
-    ...localValue.value,
-    tags: localValue.value.tags.filter(tag => tag !== tagToRemove)
-  }
+  updateField('tags', localData.value.tags.filter(tag => tag !== tagToRemove))
 }
 
 const handleTagKeydown = (event: KeyboardEvent) => {
@@ -101,8 +116,33 @@ const handleTagKeydown = (event: KeyboardEvent) => {
   }
 }
 
+// Listen for storage changes from other components
+/* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+const handleStorageChange = (data: { key: string; newValue: any }) => {
+  if (data.key === STORAGE_KEY && data.newValue) {
+    isUpdatingFromStorage = true
+    localData.value = { ...localData.value, ...data.newValue }
+    // Reset flag after Vue's next tick to allow the watcher to run
+    setTimeout(() => {
+      isUpdatingFromStorage = false
+    }, 0)
+  }
+}
+
+// Watch for changes in localData and save to storage
+watch(localData, saveToStorage, { deep: true })
+
 onMounted(() => {
   loadCategories()
+  loadFromStorage()
+
+  // Listen for storage changes
+  eventBus.on('storage-changed', handleStorageChange)
+})
+
+onUnmounted(() => {
+  // Clean up event listeners
+  eventBus.off('storage-changed', handleStorageChange)
 })
 </script>
 
@@ -132,7 +172,8 @@ onMounted(() => {
           <dd class="mt-1 sm:col-span-2 sm:mt-0">
             <Input
               id="name"
-              v-model="localValue.name"
+              :model-value="localData.name"
+              @update:model-value="(value) => updateField('name', String(value))"
               :placeholder="t('mcpCatalog.form.basic.name.placeholder')"
               required
             />
@@ -146,7 +187,11 @@ onMounted(() => {
         <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
           <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.basic.category.label') }}</dt>
           <dd class="mt-1 sm:col-span-2 sm:mt-0">
-            <Select v-model="localValue.category_id" :disabled="categoriesLoading">
+            <Select
+              :model-value="localData.category_id"
+              @update:model-value="(value) => updateField('category_id', String(value || ''))"
+              :disabled="categoriesLoading"
+            >
               <SelectTrigger>
                 <SelectValue
                   :placeholder="categoriesLoading
@@ -176,7 +221,8 @@ onMounted(() => {
           <dd class="mt-1 sm:col-span-2 sm:mt-0">
             <Textarea
               id="description"
-              v-model="localValue.description"
+              :model-value="localData.description"
+              @update:model-value="(value) => updateField('description', String(value))"
               :placeholder="t('mcpCatalog.form.basic.description.placeholder')"
               rows="3"
               required
@@ -193,7 +239,8 @@ onMounted(() => {
           <dd class="mt-1 sm:col-span-2 sm:mt-0">
             <Textarea
               id="long_description"
-              v-model="localValue.long_description"
+              :model-value="localData.long_description"
+              @update:model-value="(value) => updateField('long_description', String(value))"
               :placeholder="t('mcpCatalog.form.basic.longDescription.placeholder')"
               rows="5"
             />
@@ -210,14 +257,35 @@ onMounted(() => {
             <div class="flex items-center space-x-3">
               <Switch
                 id="featured"
-                v-model="featuredValue"
+                :model-value="localData.featured"
+                @update:model-value="(value) => updateField('featured', value)"
               />
               <span class="text-sm text-gray-700">
-                {{ featuredValue ? 'Yes' : 'No' }}
+                {{ localData.featured ? 'Yes' : 'No' }}
               </span>
             </div>
             <p class="text-xs text-muted-foreground mt-1">
               {{ t('mcpCatalog.form.basic.featured.description') }}
+            </p>
+          </dd>
+        </div>
+
+        <!-- Auto Install for New Default Teams -->
+        <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+          <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.basic.autoInstall.label') }}</dt>
+          <dd class="mt-1 sm:col-span-2 sm:mt-0">
+            <div class="flex items-center space-x-3">
+              <Switch
+                id="auto_install_new_default_team"
+                :model-value="localData.auto_install_new_default_team"
+                @update:model-value="(value) => updateField('auto_install_new_default_team', value)"
+              />
+              <span class="text-sm text-gray-700">
+                {{ localData.auto_install_new_default_team ? 'Yes' : 'No' }}
+              </span>
+            </div>
+            <p class="text-xs text-muted-foreground mt-1">
+              {{ t('mcpCatalog.form.basic.autoInstall.description') }}
             </p>
           </dd>
         </div>
@@ -228,7 +296,8 @@ onMounted(() => {
           <dd class="mt-1 sm:col-span-2 sm:mt-0">
             <Input
               id="author_name"
-              v-model="localValue.author_name"
+              :model-value="localData.author_name"
+              @update:model-value="(value) => updateField('author_name', String(value))"
               :placeholder="t('mcpCatalog.form.basic.author.placeholder')"
             />
             <p class="text-xs text-muted-foreground mt-1">
@@ -243,7 +312,8 @@ onMounted(() => {
           <dd class="mt-1 sm:col-span-2 sm:mt-0">
             <Input
               id="author_contact"
-              v-model="localValue.author_contact"
+              :model-value="localData.author_contact"
+              @update:model-value="(value) => updateField('author_contact', String(value))"
               :placeholder="t('mcpCatalog.form.basic.contact.placeholder')"
             />
             <p class="text-xs text-muted-foreground mt-1">
@@ -258,7 +328,8 @@ onMounted(() => {
           <dd class="mt-1 sm:col-span-2 sm:mt-0">
             <Input
               id="organization"
-              v-model="localValue.organization"
+              :model-value="localData.organization"
+              @update:model-value="(value) => updateField('organization', String(value))"
               :placeholder="t('mcpCatalog.form.basic.organization.placeholder')"
             />
             <p class="text-xs text-muted-foreground mt-1">
@@ -273,7 +344,8 @@ onMounted(() => {
           <dd class="mt-1 sm:col-span-2 sm:mt-0">
             <Input
               id="license"
-              v-model="localValue.license"
+              :model-value="localData.license"
+              @update:model-value="(value) => updateField('license', String(value))"
               :placeholder="t('mcpCatalog.form.basic.license.placeholder')"
             />
             <p class="text-xs text-muted-foreground mt-1">
@@ -287,9 +359,9 @@ onMounted(() => {
           <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.basic.tags.label') }}</dt>
           <dd class="mt-1 sm:col-span-2 sm:mt-0">
             <!-- Existing Tags -->
-            <div v-if="localValue.tags.length > 0" class="flex flex-wrap gap-2 mb-3">
+            <div v-if="localData.tags.length > 0" class="flex flex-wrap gap-2 mb-3">
               <Badge
-                v-for="tag in localValue.tags"
+                v-for="tag in localData.tags"
                 :key="tag"
                 variant="secondary"
                 class="flex items-center gap-1"
@@ -330,6 +402,7 @@ onMounted(() => {
             </p>
           </dd>
         </div>
+
       </dl>
     </div>
   </div>

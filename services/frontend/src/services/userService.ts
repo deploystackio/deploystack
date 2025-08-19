@@ -309,4 +309,79 @@ export class UserService {
       throw error;
     }
   }
+
+  /**
+   * Update user profile information
+   */
+  static async updateProfile(userId: string, profileData: {
+    first_name?: string;
+    last_name?: string;
+    email?: string;
+    username?: string;
+  }): Promise<{ success: boolean; user: User; error?: string }> {
+    try {
+      const apiUrl = this.getApiUrl();
+      const response = await fetch(`${apiUrl}/api/users/${userId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(profileData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || `Failed to update profile: ${response.statusText} (status: ${response.status})`);
+      }
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to update profile due to an API error.');
+      }
+
+      // Clear cache to force fresh data on next request
+      this.clearCache();
+
+      return data;
+    } catch (error) {
+      console.error('Update profile error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Change password for email users
+   */
+  static async changePassword(currentPassword: string, newPassword: string): Promise<{ success: boolean; message?: string; error?: string }> {
+    try {
+      const apiUrl = this.getApiUrl();
+      const response = await fetch(`${apiUrl}/api/auth/email/change-password`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          current_password: currentPassword,
+          new_password: newPassword,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || `Failed to change password: ${response.statusText} (status: ${response.status})`);
+      }
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to change password due to an API error.');
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Change password error:', error);
+      throw error;
+    }
+  }
 }

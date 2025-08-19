@@ -196,6 +196,7 @@ export const mcpServers = sqliteTable('mcpServers', {
   tags: text('tags'), // JSON array: ["browser", "automation", "testing"]
   status: text('status').notNull().default('active'), // 'active', 'deprecated', 'maintenance'
   featured: integer('featured', { mode: 'boolean' }).notNull().default(false),
+  auto_install_new_default_team: integer('auto_install_new_default_team', { mode: 'boolean' }).notNull().default(false),
   
   // Timestamps
   created_at: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),

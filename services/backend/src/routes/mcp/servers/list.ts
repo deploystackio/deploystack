@@ -13,7 +13,8 @@ const querySchemaDoc = z.object({
   language: z.string().optional(),
   runtime: z.string().optional(),
   status: z.enum(['active', 'deprecated', 'maintenance']).optional(),
-  featured: z.boolean().optional(),
+  featured: z.enum(['true', 'false']).optional().describe('Filter by featured status: true for featured servers, false for non-featured servers'),
+  auto_install_new_default_team: z.boolean().optional(),
   search: z.string().optional(),
   // Pagination parameters
   limit: z.string().regex(/^\d+$/).optional().describe('Limit must be a number between 1 and 100'),
@@ -47,6 +48,7 @@ const serverSchema = z.object({
   tags: z.string().nullable(), // JSON string
   status: z.enum(['active', 'deprecated', 'maintenance']),
   featured: z.boolean(),
+  auto_install_new_default_team: z.boolean(),
   created_at: z.string(),
   updated_at: z.string(),
   last_sync_at: z.string().nullable()
@@ -111,17 +113,47 @@ export default async function listServers(server: FastifyInstance) {
         teamIds = [];
       }
 
+      // Parse query parameters for filtering
+      /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+      const query = request.query as any;
+      
+      // Build filters object
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const filters: any = {};
+      
+      if (query.category_id) {
+        filters.category_id = query.category_id;
+      }
+      
+      if (query.language) {
+        filters.language = query.language;
+      }
+      
+      if (query.runtime) {
+        filters.runtime = query.runtime;
+      }
+      
+      if (query.status) {
+        filters.status = query.status;
+      }
+      
+      if (query.featured) {
+        filters.featured = query.featured === 'true';
+      }
+      
+      if (query.search) {
+        filters.search = query.search;
+      }
+
       // Get servers using the service (which handles permission filtering)
       const allServers = await catalogService.getServersForUser(
         request.user!.id,
         userRole,
         teamIds,
-        {} // No filters for now
+        filters
       );
 
-      // Parse query parameters for pagination
-      /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-      const query = request.query as any;
+      // Parse pagination parameters
       const limit = parseInt(query.limit) || 20;
       const offset = parseInt(query.offset) || 0;
       
@@ -135,7 +167,8 @@ export default async function listServers(server: FastifyInstance) {
         totalResults: total,
         returnedResults: paginatedServers.length,
         userRole,
-        teamCount: teamIds.length
+        teamCount: teamIds.length,
+        appliedFilters: filters
       }, 'MCP server list completed');
 
       // Format dates for response (same as search endpoint)

@@ -179,7 +179,7 @@ describe('Register Email Route', () => {
       expect(mockHash).toHaveBeenCalledWith('password123', expect.any(Object));
       expect(mockGenerateId).toHaveBeenCalledWith(15); // User ID
       expect(mockGenerateId).toHaveBeenCalledWith(40); // Session ID
-      expect(mockTeamService.createDefaultTeamForUser).toHaveBeenCalledWith('user-id-123', 'testuser');
+      expect(mockTeamService.createDefaultTeamForUser).toHaveBeenCalledWith('user-id-123', 'testuser', mockFastify.log);
       expect(mockReply.setCookie).toHaveBeenCalled();
       expect(mockReply.status).toHaveBeenCalledWith(201);
       expect(mockReply.send).toHaveBeenCalledWith(

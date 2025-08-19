@@ -5,9 +5,14 @@ import { useEventBus } from '@/composables/useEventBus'
 import { Textarea } from '@/components/ui/textarea'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
-
 import { Badge } from '@/components/ui/badge'
-
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card'
 import { AlertCircle, CheckCircle } from 'lucide-vue-next'
 import type {
@@ -15,21 +20,33 @@ import type {
 } from '@/views/admin/mcp-server-catalog/types'
 
 interface Props {
-  modelValue: TechnicalFormData
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  formData: any
+  formData?: any
+  mode?: 'create' | 'edit'
 }
 
-interface Emits {
-  (e: 'update:modelValue', value: TechnicalFormData): void
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (e: 'update:formData', value: any): void
-}
-
-const props = defineProps<Props>()
-const emit = defineEmits<Emits>()
+const props = withDefaults(defineProps<Props>(), {
+  mode: 'create'
+})
 const { t } = useI18n()
 const eventBus = useEventBus()
+
+// Storage keys
+const STORAGE_KEY = 'edit_technical_data'
+const CLAUDE_CONFIG_KEY = 'edit_claude_config'
+
+// Check if we're in edit mode
+const isEditMode = computed(() => props.mode === 'edit')
+
+// Local reactive data - storage-first approach
+const localData = ref<TechnicalFormData>({
+  language: '',
+  runtime: '',
+  runtime_min_version: '',
+  installation_methods: [],
+  dependencies: '',
+  transport_type: isEditMode.value ? 'stdio' : 'auto'
+})
 
 // Local state for Claude Desktop config
 const jsonInput = ref('')
@@ -41,8 +58,45 @@ const extractedArgs = ref<string[]>([])
 const extractedEnvVars = ref<string[]>([])
 const isUpdatingFromStorage = ref(false)
 
-// Storage key for persistence
-const STORAGE_KEY = 'edit_claude_config'
+// Load data from storage
+const loadFromStorage = () => {
+  const storedData = eventBus.getState<TechnicalFormData>(STORAGE_KEY)
+  if (storedData) {
+    localData.value = { ...localData.value, ...storedData }
+  }
+}
+
+// Flag to prevent recursive updates
+let isUpdatingFromStorageFlag = false
+
+// Save data to storage
+const saveToStorage = () => {
+  if (!isUpdatingFromStorageFlag) {
+    eventBus.setState(STORAGE_KEY, localData.value)
+  }
+}
+
+// Update field and save to storage
+const updateField = <K extends keyof TechnicalFormData>(field: K, value: TechnicalFormData[K]) => {
+  localData.value[field] = value
+  saveToStorage()
+}
+
+// Listen for storage changes from other components
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const handleStorageChange = (data: { key: string; newValue: any }) => {
+  if (data.key === STORAGE_KEY && data.newValue) {
+    isUpdatingFromStorageFlag = true
+    localData.value = { ...localData.value, ...data.newValue }
+    // Reset flag after Vue's next tick to allow the watcher to run
+    setTimeout(() => {
+      isUpdatingFromStorageFlag = false
+    }, 0)
+  }
+}
+
+// Watch for changes in localData and save to storage
+watch(localData, saveToStorage, { deep: true })
 
 // Example configuration for hover card
 const exampleConfig = `{
@@ -62,6 +116,9 @@ const exampleConfig = `{
 
 // Initialize from storage or convert from existing data
 onMounted(() => {
+  // Load technical data from storage
+  loadFromStorage()
+
   // Always load the latest config from storage first
   loadLatestConfigFromStorage()
 
@@ -70,12 +127,13 @@ onMounted(() => {
 
   // Listen for storage changes to immediately sync
   eventBus.on('storage-changed', handleStorageChanged)
+  eventBus.on('storage-changed', handleStorageChange)
 })
 
 // Handle storage changes for immediate sync
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const handleStorageChanged = (data: { key: string; oldValue: any; newValue: any }) => {
-  if (data.key === STORAGE_KEY && data.newValue && data.newValue !== jsonInput.value) {
+  if (data.key === CLAUDE_CONFIG_KEY && data.newValue && data.newValue !== jsonInput.value) {
     isUpdatingFromStorage.value = true
     jsonInput.value = data.newValue
     isUpdatingFromStorage.value = false
@@ -84,7 +142,7 @@ const handleStorageChanged = (data: { key: string; oldValue: any; newValue: any 
 
 // Load the latest configuration from storage
 const loadLatestConfigFromStorage = () => {
-  const storedConfig = eventBus.getState<string>(STORAGE_KEY)
+  const storedConfig = eventBus.getState<string>(CLAUDE_CONFIG_KEY)
 
   if (storedConfig && storedConfig.trim()) {
     isUpdatingFromStorage.value = true
@@ -97,9 +155,9 @@ const loadLatestConfigFromStorage = () => {
 
 // Convert existing installation_methods to Claude Desktop JSON format
 const convertExistingDataToJson = () => {
-  if (props.modelValue.installation_methods && props.modelValue.installation_methods.length > 0) {
+  if (localData.value.installation_methods && localData.value.installation_methods.length > 0) {
     // Find the first valid installation method (skip git clone templates)
-    const validMethod = props.modelValue.installation_methods.find(method =>
+    const validMethod = localData.value.installation_methods.find(method =>
       method.command &&
       method.command !== 'git clone <repository_url>' &&
       !method.command.includes('<repository_url>')
@@ -212,7 +270,7 @@ const validateJson = (jsonString: string) => {
 watch(jsonInput, (newValue) => {
   // Don't save to storage if we're updating from storage (prevent recursion)
   if (!isUpdatingFromStorage.value) {
-    eventBus.setState(STORAGE_KEY, newValue)
+    eventBus.setState(CLAUDE_CONFIG_KEY, newValue)
   }
 
   const validation = validateJson(newValue)
@@ -237,29 +295,37 @@ watch(jsonInput, (newValue) => {
     }]
 
     // Update the technical form data
-    emit('update:modelValue', {
-      ...props.modelValue,
-      installation_methods: installationMethods
-    })
+    updateField('installation_methods', installationMethods)
 
     // Also update the capabilities section with environment variables
     if (validation.envVars && validation.envVars.length > 0) {
-      const envVariables = validation.envVars.map(envVar => ({
-        name: envVar,
-        description: t('mcpCatalog.form.technical.claudeConfig.autoDescription'),
-        required: true,
-        type: 'password' // Default to password type for security
-      }))
+      // Get existing environment variables from database/capabilities storage
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const existingCapabilitiesData = eventBus.getState<any>('edit_capabilities_data')
+      const existingEnvVars = existingCapabilitiesData?.environment_variables || []
 
-      const updatedFormData = {
-        ...props.formData,
-        capabilities: {
-          ...props.formData.capabilities,
-          environment_variables: envVariables
+      // Smart merge: preserve existing env var properties, add new ones with defaults
+      const envVariables = validation.envVars.map(envVar => {
+        // Check if this env var already exists in database
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const existing = existingEnvVars.find((existing: any) => existing.name === envVar)
+
+        if (existing) {
+          // Keep existing properties (required, type, description, etc.), just ensure name is correct
+          return { ...existing, name: envVar }
+        } else {
+          // New env var - use defaults
+          return {
+            name: envVar,
+            description: t('mcpCatalog.form.technical.claudeConfig.autoDescription'),
+            required: true,
+            type: 'password' // Default to password type for security
+          }
         }
-      }
+      })
 
-      emit('update:formData', updatedFormData)
+      // Save environment variables to capabilities storage
+      eventBus.setState('capabilities_env_vars', envVariables)
     }
   } else {
     validationError.value = validation.error || t('mcpCatalog.form.technical.claudeConfig.validation.invalidJson')
@@ -309,9 +375,10 @@ const statusColor = computed(() => {
 // Clean up storage on unmount
 onUnmounted(() => {
   // DON'T clear the storage - we need it for CapabilitiesStep to update
-  // eventBus.clearState(STORAGE_KEY)
+  // eventBus.clearState(CLAUDE_CONFIG_KEY)
   eventBus.off('mcp-form-step-changed', handleStepChanged)
   eventBus.off('storage-changed', handleStorageChanged)
+  eventBus.off('storage-changed', handleStorageChange)
 })
 </script>
 
@@ -327,6 +394,41 @@ onUnmounted(() => {
   <!-- Structured Form Fields -->
   <div class="mt-6 border-t border-gray-100">
     <dl class="divide-y divide-gray-100">
+      <!-- Transport Type -->
+      <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+        <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.technical.transportType.label') }}</dt>
+        <dd class="mt-1 sm:col-span-2 sm:mt-0">
+          <Select
+            :model-value="localData.transport_type"
+            @update:model-value="(value) => updateField('transport_type', String(value || 'auto'))"
+          >
+            <SelectTrigger>
+              <SelectValue :placeholder="t('mcpCatalog.form.technical.transportType.placeholder')" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem v-if="!isEditMode" value="auto">
+                {{ t('mcpCatalog.form.technical.transportType.options.auto') }}
+              </SelectItem>
+              <SelectItem value="stdio">
+                {{ t('mcpCatalog.form.technical.transportType.options.stdio') }}
+              </SelectItem>
+              <SelectItem value="http">
+                {{ t('mcpCatalog.form.technical.transportType.options.http') }}
+              </SelectItem>
+              <SelectItem value="sse">
+                {{ t('mcpCatalog.form.technical.transportType.options.sse') }}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+          <p class="text-xs text-muted-foreground mt-1">
+            {{ isEditMode ?
+              t('mcpCatalog.form.technical.transportType.editDescription') :
+              t('mcpCatalog.form.technical.transportType.description')
+            }}
+          </p>
+        </dd>
+      </div>
+
       <!-- Claude Desktop Configuration -->
       <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
         <dt class="text-sm/6 font-medium text-gray-900">

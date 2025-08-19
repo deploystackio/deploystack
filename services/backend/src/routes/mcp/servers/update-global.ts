@@ -56,7 +56,8 @@ const updateGlobalServerRequestSchema = z.object({
   category_id: z.string().optional(),
   tags: z.array(z.string()).optional(),
   status: z.enum(['active', 'deprecated', 'maintenance']).optional(),
-  featured: z.boolean().optional()
+  featured: z.boolean().optional(),
+  auto_install_new_default_team: z.boolean().optional()
 });
 
 // Response schema for successful update
@@ -92,6 +93,7 @@ const updateGlobalServerResponseSchema = z.object({
     tags: z.array(z.string()).nullable(),
     status: z.enum(['active', 'deprecated', 'maintenance']),
     featured: z.boolean(),
+    auto_install_new_default_team: z.boolean(),
     created_at: z.string(),
     updated_at: z.string(),
     last_sync_at: z.string().nullable()
@@ -314,6 +316,7 @@ export default async function updateGlobalServer(server: FastifyInstance) {
         tags: safeJsonParse(updatedServer.tags, null),
         status: updatedServer.status,
         featured: updatedServer.featured,
+        auto_install_new_default_team: updatedServer.auto_install_new_default_team,
         created_at: formatDate(updatedServer.created_at),
         updated_at: formatDate(updatedServer.updated_at),
         last_sync_at: formatDate(updatedServer.last_sync_at)

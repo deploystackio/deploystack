@@ -153,18 +153,8 @@ const displayEnvironmentVariables = computed(() => {
   }
 })
 
-const displayDefaultConfig = computed(() => {
-  if (!server.value?.default_config) return null
-  // Handle both object and JSON string formats
-  if (typeof server.value.default_config === 'object') {
-    return server.value.default_config
-  }
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return JSON.parse(server.value.default_config as any)
-  } catch {
-    return null
-  }
+const displayTransportType = computed(() => {
+  return server.value?.transport_type || t('mcpCatalog.edit.values.transportType.notSpecified')
 })
 
 const displayDependencies = computed(() => {
@@ -336,6 +326,19 @@ const goBack = () => {
               <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.basic.featured.label') }}</dt>
               <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
                 <Badge v-if="server.featured" variant="default">
+                  {{ t('mcpCatalog.edit.values.yes') }}
+                </Badge>
+                <span v-else class="text-muted-foreground">
+                  {{ t('mcpCatalog.edit.values.no') }}
+                </span>
+              </dd>
+            </div>
+
+            <!-- Auto Install for New Default Teams -->
+            <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+              <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.basic.autoInstall.label') }}</dt>
+              <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
+                <Badge v-if="server.auto_install_new_default_team" variant="default">
                   {{ t('mcpCatalog.edit.values.yes') }}
                 </Badge>
                 <span v-else class="text-muted-foreground">
@@ -615,15 +618,34 @@ const goBack = () => {
               </dd>
             </div>
 
-            <!-- Default Configuration -->
+            <!-- Transport Type -->
             <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
-              <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.edit.fields.defaultConfig') }}</dt>
+              <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.edit.fields.transportType') }}</dt>
               <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
-                <div v-if="displayDefaultConfig && Object.keys(displayDefaultConfig).length > 0" class="bg-gray-50 rounded-md p-4">
-                  <pre class="text-xs text-gray-800 whitespace-pre-wrap font-mono">{{ JSON.stringify(displayDefaultConfig, null, 2) }}</pre>
-                </div>
-                <div v-else class="text-sm text-gray-500 italic">
-                  {{ t('mcpCatalog.edit.values.notProvided') }}
+                <div class="flex items-center gap-2">
+                  <Badge
+                    variant="outline"
+                    :class="{
+                      'bg-blue-50 text-blue-700 border-blue-200': displayTransportType === 'stdio',
+                      'bg-green-50 text-green-700 border-green-200': displayTransportType === 'http',
+                      'bg-yellow-50 text-yellow-700 border-yellow-200': displayTransportType === 'sse',
+                      'bg-gray-50 text-gray-600 border-gray-200': displayTransportType === t('mcpCatalog.edit.values.transportType.notSpecified')
+                    }"
+                  >
+                    {{ displayTransportType === 'stdio' ? t('mcpCatalog.edit.values.transportType.stdio') :
+                       displayTransportType === 'http' ? t('mcpCatalog.edit.values.transportType.http') :
+                       displayTransportType === 'sse' ? t('mcpCatalog.edit.values.transportType.sse') :
+                       t('mcpCatalog.edit.values.transportType.notSpecified') }}
+                  </Badge>
+                  <span v-if="displayTransportType === 'stdio'" class="text-xs text-muted-foreground">
+                    {{ t('mcpCatalog.edit.values.transportType.stdioDescription') }}
+                  </span>
+                  <span v-else-if="displayTransportType === 'http'" class="text-xs text-muted-foreground">
+                    {{ t('mcpCatalog.edit.values.transportType.httpDescription') }}
+                  </span>
+                  <span v-else-if="displayTransportType === 'sse'" class="text-xs text-muted-foreground">
+                    {{ t('mcpCatalog.edit.values.transportType.sseDescription') }}
+                  </span>
                 </div>
               </dd>
             </div>

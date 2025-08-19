@@ -226,6 +226,31 @@ export default {
       dangerZone: {
         title: 'Danger Zone',
         description: 'Permanently delete this team. This action cannot be undone.',
+        defaultTeamProtection: 'This is your default team and cannot be deleted. Your default team provides a permanent workspace for your personal deployments.',
+        insufficientPermissions: 'You do not have permission to delete this team. Only team owners can delete teams.',
+        deleteTeamTitle: 'Delete Team',
+        deleteTeamDescription: 'Permanently delete this team and all associated resources. This action cannot be undone.',
+        willDelete: {
+          title: 'This will permanently delete:',
+          servers: 'All MCP server configurations and deployments',
+          credentials: 'All cloud provider credentials and API keys',
+          variables: 'All global environment variables',
+          history: 'Complete deployment history and logs',
+          members: 'All team member associations'
+        },
+        prerequisites: {
+          title: 'Before you can delete this team:',
+          stopServers: 'Stop and remove all running MCP servers',
+          removeConfigs: 'Remove all server configurations',
+          noActiveDeployments: 'Ensure no active deployments are running'
+        },
+        safetyInfo: {
+          title: 'Important Safety Information',
+          immediate: 'Team deletion is immediate and cannot be undone',
+          dataLoss: 'All data will be permanently lost',
+          noBackups: 'No backups or recovery options are available',
+          memberAccess: 'Team members will lose access immediately'
+        },
         deleteButton: 'Delete Team'
       },
       deleteDialog: {
