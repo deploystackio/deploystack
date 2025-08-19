@@ -205,7 +205,16 @@ const openEditModal = (index: number) => {
   modalMode.value = 'edit'
   editingIndex.value = index
   const variable = environmentVariables.value[index]
-  formDataLocal.value = { ...variable }
+  if (variable) {
+    formDataLocal.value = {
+      name: variable.name || '',
+      description: variable.description || '',
+      required: variable.required || false,
+      type: (variable as ExtendedEnvironmentVariable).type || 'text',
+      validation: (variable as ExtendedEnvironmentVariable).validation || '',
+      placeholder: (variable as ExtendedEnvironmentVariable).placeholder || ''
+    }
+  }
   formErrors.value = {}
   isModalOpen.value = true
 }
@@ -354,6 +363,7 @@ const updateClaudeDesktopConfigInStorage = (envVars: EnvironmentVariable[]) => {
     }
 
     const serverKey = serverKeys[0]
+    if (!serverKey) return
     const serverConfig = parsed.mcpServers[serverKey]
 
     // Build new env vars object

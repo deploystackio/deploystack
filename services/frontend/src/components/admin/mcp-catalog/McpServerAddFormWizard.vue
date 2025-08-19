@@ -136,6 +136,9 @@ const progressTitle = computed(() => {
   }
 
   const currentStepData = steps[currentStep.value]
+  if (!currentStepData) {
+    return t('mcpCatalog.form.steps.configuring')
+  }
   return `${currentStepData.label} - ${t('mcpCatalog.form.steps.configuring')}`
 })
 
@@ -242,13 +245,15 @@ const goToStep = (stepIndex: number) => {
   if (stepIndex >= 0 && stepIndex < currentStep.value) {
     const oldStep = currentStep.value
     currentStep.value = stepIndex
-    emit('stepChanged', { step: stepIndex, stepKey: steps[stepIndex].key })
+    const stepData = steps[stepIndex]
+    if (!stepData) return
+    emit('stepChanged', { step: stepIndex, stepKey: stepData.key })
 
     // Emit event bus event for other components
     eventBus.emit('mcp-form-step-changed', {
       from: oldStep,
       to: stepIndex,
-      stepKey: steps[stepIndex].key
+      stepKey: stepData.key
     })
   }
 }
@@ -265,13 +270,15 @@ const nextStep = () => {
   if (canGoNext.value) {
     const oldStep = currentStep.value
     currentStep.value++
-    emit('stepChanged', { step: currentStep.value, stepKey: steps[currentStep.value].key })
+    const stepData = steps[currentStep.value]
+    if (!stepData) return
+    emit('stepChanged', { step: currentStep.value, stepKey: stepData.key })
 
     // Emit event bus event
     eventBus.emit('mcp-form-step-changed', {
       from: oldStep,
       to: currentStep.value,
-      stepKey: steps[currentStep.value].key
+      stepKey: stepData.key
     })
   }
 }
@@ -280,13 +287,15 @@ const previousStep = () => {
   if (canGoPrevious.value) {
     const oldStep = currentStep.value
     currentStep.value--
-    emit('stepChanged', { step: currentStep.value, stepKey: steps[currentStep.value].key })
+    const stepData = steps[currentStep.value]
+    if (!stepData) return
+    emit('stepChanged', { step: currentStep.value, stepKey: stepData.key })
 
     // Emit event bus event
     eventBus.emit('mcp-form-step-changed', {
       from: oldStep,
       to: currentStep.value,
-      stepKey: steps[currentStep.value].key
+      stepKey: stepData.key
     })
   }
 }

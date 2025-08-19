@@ -63,7 +63,10 @@ async function loadSupportedClients() {
     supportedClients.value = clients
     // Set first client as default if no client is selected
     if (!selectedClient.value && clients.length > 0) {
-      selectedClient.value = clients[0]
+      const firstClient = clients[0]
+      if (firstClient) {
+        selectedClient.value = firstClient
+      }
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Failed to load supported clients'

@@ -52,7 +52,12 @@ const handleSubmit = async (formData: McpServerAddFormData) => {
     const claudeConfig = formData.claudeConfig.claude_desktop_config as any
     const serverKeys = Object.keys(claudeConfig.mcpServers || {})
     const serverKey = serverKeys[0]
-    const serverConfig = claudeConfig.mcpServers?.[serverKey] || {}
+
+    if (!serverKey) {
+      throw new Error('No server configuration found in Claude Desktop config')
+    }
+
+    const serverConfig = claudeConfig.mcpServers[serverKey] || {}
 
     // Create installation methods from Claude config
     const installationMethods = [{

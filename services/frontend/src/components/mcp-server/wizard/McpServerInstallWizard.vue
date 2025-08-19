@@ -144,7 +144,7 @@ const canProceedFromEnvironment = computed(() => {
   if (!formData.value.server.server_id) {
     return false
   }
-  
+
   // Use the validation state from the EnvironmentVariablesStep component
   return environmentValidation.value.isValid
 })
@@ -166,7 +166,7 @@ const nextStep = () => {
   // Mark environment step as touched when user tries to proceed from it
   if (currentStep.value === 1) {
     environmentStepTouched.value = true
-    
+
     // Check validation before proceeding
     if (!environmentValidation.value.isValid) {
       // Show error toast for missing required fields
@@ -222,14 +222,18 @@ const initializeTeamContext = async () => {
         } else {
           // Stored team not found, fallback to default team
           const defaultTeam = userTeams.find(team => team.is_default) || userTeams[0]
-          currentTeamId.value = defaultTeam.id
-          eventBus.setState('selected_team_id', defaultTeam.id)
+          if (defaultTeam) {
+            currentTeamId.value = defaultTeam.id
+            eventBus.setState('selected_team_id', defaultTeam.id)
+          }
         }
       } else {
         // No stored team, use default team
         const defaultTeam = userTeams.find(team => team.is_default) || userTeams[0]
-        currentTeamId.value = defaultTeam.id
-        eventBus.setState('selected_team_id', defaultTeam.id)
+        if (defaultTeam) {
+          currentTeamId.value = defaultTeam.id
+          eventBus.setState('selected_team_id', defaultTeam.id)
+        }
       }
     }
   } catch (error) {

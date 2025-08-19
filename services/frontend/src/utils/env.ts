@@ -16,7 +16,8 @@ declare global {
 export function getEnv(key: string): string {
   // First check runtime values (window.RUNTIME_ENV from Docker)
   if (window.RUNTIME_ENV && key in window.RUNTIME_ENV) {
-    return window.RUNTIME_ENV[key];
+    const value = window.RUNTIME_ENV[key];
+    return value || '';
   }
 
   // Then check build-time values (import.meta.env from Vite)

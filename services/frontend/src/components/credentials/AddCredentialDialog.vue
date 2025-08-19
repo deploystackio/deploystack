@@ -143,7 +143,7 @@ const validateField = (fieldKey: string, value: string) => {
   }
 
   if (errors.length > 0) {
-    validationErrors.value[fieldKey] = errors[0]
+    validationErrors.value[fieldKey] = errors[0] || ''
   } else {
     delete validationErrors.value[fieldKey]
   }
@@ -159,7 +159,7 @@ const validateCredentialName = () => {
   }
 
   if (errors.length > 0) {
-    validationErrors.value['name'] = errors[0]
+    validationErrors.value['name'] = errors[0] || ''
   } else {
     delete validationErrors.value['name']
   }
@@ -228,7 +228,10 @@ watch(selectedProviderId, (newProviderId) => {
 // Watch for field changes to validate
 watch(credentialFields, (newFields) => {
   Object.keys(newFields).forEach(fieldKey => {
-    validateField(fieldKey, newFields[fieldKey])
+    const fieldValue = newFields[fieldKey]
+    if (fieldValue !== undefined) {
+      validateField(fieldKey, fieldValue)
+    }
   })
 }, { deep: true })
 

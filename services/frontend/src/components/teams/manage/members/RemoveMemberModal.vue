@@ -14,22 +14,9 @@ import {
 import { Users } from 'lucide-vue-next'
 import { getEnv } from '@/utils/env'
 import { toast } from 'vue-sonner'
+import type { TeamMember } from '@/types/team'
 
 const { t } = useI18n()
-
-// Team member interface
-interface TeamMember {
-  id: string
-  user_id: string
-  role: 'team_admin' | 'team_user'
-  joined_at: string
-  username?: string
-  email: string
-  first_name?: string | null
-  last_name?: string | null
-  is_admin: boolean
-  is_owner: boolean
-}
 
 interface Props {
   open: boolean
@@ -57,7 +44,7 @@ const getApiUrl = () => {
 }
 
 // Helper function to get display name
-const getDisplayName = (member: TeamMember): string => {
+const getDisplayName = (member: TeamMember | null): string => {
   if (!member) {
     return t('teams.manage.members.removeModal.messages.unknownUser')
   }
@@ -72,7 +59,7 @@ const getDisplayName = (member: TeamMember): string => {
     return member.username
   }
   // Fallback to email prefix if no other name is available
-  return member.email.split('@')[0]
+  return (member.email || '').split('@')[0] || t('teams.manage.members.removeModal.messages.unknownUser')
 }
 
 // Get role label
@@ -80,7 +67,7 @@ const getRoleLabel = (member: TeamMember) => {
   if (member.is_owner) {
     return t('teams.manage.members.roles.owner')
   }
-  
+
   switch (member.role) {
     case 'team_admin':
       return t('teams.manage.members.roles.admin')

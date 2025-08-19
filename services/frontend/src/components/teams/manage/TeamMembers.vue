@@ -7,6 +7,7 @@ import RemoveMemberModal from './members/RemoveMemberModal.vue'
 import EditRoleModal from './members/EditRoleModal.vue'
 import type { Team } from '@/services/teamService'
 import { getEnv } from '@/utils/env'
+import type { TeamMember, DisplayMember } from '@/types/team'
 
 const { t } = useI18n()
 
@@ -16,28 +17,6 @@ interface Props {
 }
 
 const props = defineProps<Props>()
-
-// Team member interface based on API response - user data is flattened
-interface TeamMember {
-  id: string
-  user_id: string
-  role: 'team_admin' | 'team_user'
-  joined_at: string
-  username?: string
-  email: string
-  first_name?: string | null
-  last_name?: string | null
-  is_admin: boolean
-  is_owner: boolean
-}
-
-interface DisplayMember {
-  id: string
-  name: string
-  email: string
-  role: string
-  joinedAt: string
-}
 
 // Modal states
 const isAddMemberModalOpen = ref(false)
@@ -72,11 +51,11 @@ const findTeamMemberByDisplayId = async (displayMemberId: string): Promise<TeamM
     }
 
     const data = await response.json()
-    
+
     if (data.success && Array.isArray(data.data)) {
       return data.data.find((tm: TeamMember) => tm.user_id === displayMemberId) || null
     }
-    
+
     return null
   } catch (error) {
     console.error('Error fetching team member:', error)

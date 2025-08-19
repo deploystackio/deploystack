@@ -102,6 +102,9 @@ const validateJson = (jsonString: string) => {
     }
 
     const serverKey = serverKeys[0]
+    if (!serverKey) {
+      return { isValid: false, error: t('mcpCatalog.form.claudeConfig.validation.noServers') }
+    }
     const serverConfig = parsed.mcpServers[serverKey]
 
     // Validate server configuration structure

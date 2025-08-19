@@ -141,14 +141,18 @@ const fetchTeams = async (forceRefresh = false) => {
         } else {
           // Stored team not found, fallback to default team
           const defaultTeam = userTeams.find(team => team.is_default) || userTeams[0]
-          selectedTeam.value = defaultTeam
-          eventBus.setState('selected_team_id', defaultTeam.id)
+          if (defaultTeam) {
+            selectedTeam.value = defaultTeam
+            eventBus.setState('selected_team_id', defaultTeam.id)
+          }
         }
       } else {
         // No stored team, use default team
         const defaultTeam = userTeams.find(team => team.is_default) || userTeams[0]
-        selectedTeam.value = defaultTeam
-        eventBus.setState('selected_team_id', defaultTeam.id)
+        if (defaultTeam) {
+          selectedTeam.value = defaultTeam
+          eventBus.setState('selected_team_id', defaultTeam.id)
+        }
       }
     }
   } catch (error) { console.error('Error fetching teams:', error); teamsError.value = error instanceof Error ? error.message : 'Failed to load teams'; } finally { teamsLoading.value = false; }

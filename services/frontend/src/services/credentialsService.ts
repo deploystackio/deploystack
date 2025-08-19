@@ -384,11 +384,13 @@ export class CredentialsService {
 
     Object.keys(formattedFields).forEach(key => {
       const field = formattedFields[key]
-      if (field.secret && field.value) {
+      if (field && field.secret && field.value) {
         // Replace secret values with placeholder
         formattedFields[key] = {
           ...field,
-          value: '••••••••'
+          value: '••••••••',
+          hasValue: true,
+          secret: true
         }
       }
     })

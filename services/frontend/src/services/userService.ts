@@ -4,12 +4,12 @@ import { TeamService } from './teamService';
 export interface User {
   id: string;
   email: string;
-  username?: string;
-  role_id: string;
-  first_name?: string;
-  last_name?: string;
-  auth_type: string;
-  github_id?: string;
+  username: string;
+  role_id: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  auth_type: string | null;
+  github_id: string | null;
   role?: {
     id: string;
     name: string;

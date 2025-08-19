@@ -99,9 +99,11 @@ function handleSettingsUpdated(updatedSettings: Setting[]) {
 
   // Update the local state
   const groupIndex = settingGroups.value.findIndex(g => g.id === selectedGroup.value?.id)
-  if (groupIndex !== -1) {
+  if (groupIndex !== -1 && selectedGroup.value) {
     const updatedGroup = {
       ...settingGroups.value[groupIndex],
+      id: selectedGroup.value.id,
+      name: selectedGroup.value.name,
       settings: updatedSettings
     }
 
@@ -174,16 +176,16 @@ function removeTrailingSlash(url: string): string {
 // Check if a setting is the frontend base URL setting
 function isFrontendBaseUrlSetting(setting: Setting | undefined): boolean {
   if (!setting) return false
-  
+
   // Check by description
   if (setting.description?.toLowerCase().includes('base url for the application frontend')) {
     return true
   }
-  
+
   // Check by common key patterns
   const key = setting.key?.toLowerCase()
-  return key === 'frontend_base_url' || 
-         key === 'frontend_url' || 
+  return key === 'frontend_base_url' ||
+         key === 'frontend_url' ||
          key === 'app_frontend_url' ||
          key === 'base_frontend_url'
 }
@@ -206,7 +208,7 @@ async function handleSubmit(event: Event) {
       typedValue = Number(value)
     } else {
       typedValue = String(value)
-      
+
       // Apply URL transformation for frontend base URL setting
       if (isFrontendBaseUrlSetting(setting)) {
         typedValue = removeTrailingSlash(typedValue)
@@ -224,7 +226,7 @@ async function handleSubmit(event: Event) {
   })
 
   isSubmitting.value = true
-  
+
   try {
     if (!apiUrl) {
       throw new Error(t('globalSettings.errors.savingConfigNotSet'))
@@ -251,7 +253,7 @@ async function handleSubmit(event: Event) {
     if (!result.success) {
       throw new Error(result.message || t('globalSettings.errors.saveFailed'))
     }
-    
+
     // Show success message with Sonner toast
     toast.success(t('globalSettings.alerts.successTitle'), {
       description: t('globalSettings.alerts.saveSuccess')
@@ -259,7 +261,7 @@ async function handleSubmit(event: Event) {
 
     // Update local state
     const groupIndex = settingGroups.value.findIndex(g => g.id === selectedGroup.value?.id)
-    if (groupIndex !== -1) {
+    if (groupIndex !== -1 && selectedGroup.value) {
       const updatedSettings = selectedGroup.value.settings?.map(setting => ({
         ...setting,
         value: String(formValues.value[setting.key])
@@ -267,6 +269,8 @@ async function handleSubmit(event: Event) {
 
       const updatedGroup = {
         ...settingGroups.value[groupIndex],
+        id: selectedGroup.value.id,
+        name: selectedGroup.value.name,
         settings: updatedSettings
       }
 
@@ -312,7 +316,7 @@ async function handleSubmit(event: Event) {
         </Button>
       </nav>
     </div>
-    
+
     <!-- Main Content -->
     <div class="space-y-6 pb-16">
       <div class="flex flex-col space-y-8 md:flex-row md:space-x-12 md:space-y-0">
@@ -320,7 +324,7 @@ async function handleSubmit(event: Event) {
         <aside class="hidden md:block md:w-1/5">
           <GlobalSettingsSidebarNav :groups="settingGroups" />
         </aside>
-        
+
         <!-- Content Area -->
         <div class="flex-1 md:max-w-3xl">
 
@@ -379,7 +383,7 @@ async function handleSubmit(event: Event) {
                     <p v-if="setting.is_encrypted" class="text-xs text-muted-foreground">{{ t('globalSettings.form.encryptedValue') }}</p>
                   </div>
 
-                  <Button 
+                  <Button
                     type="submit"
                     :loading="isSubmitting"
                     class="w-full sm:w-auto"
@@ -442,7 +446,7 @@ async function handleSubmit(event: Event) {
                       <p v-if="setting.is_encrypted" class="text-xs text-muted-foreground">{{ t('globalSettings.form.encryptedValue') }}</p>
                     </div>
 
-                    <Button 
+                    <Button
                       type="submit"
                       :loading="isSubmitting"
                     >

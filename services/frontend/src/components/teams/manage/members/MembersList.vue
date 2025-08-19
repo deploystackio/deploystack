@@ -8,30 +8,9 @@ import MemberRow from './MemberRow.vue'
 import type { Team } from '@/services/teamService'
 import { UserService, type User } from '@/services/userService'
 import { getEnv } from '@/utils/env'
+import type { TeamMember, DisplayMember } from '@/types/team'
 
 const { t } = useI18n()
-
-// Team member interface based on API response - user data is flattened
-interface TeamMember {
-  id: string
-  user_id: string
-  role: 'team_admin' | 'team_user'
-  joined_at: string
-  username?: string
-  email: string
-  first_name?: string | null
-  last_name?: string | null
-  is_admin: boolean
-  is_owner: boolean
-}
-
-interface DisplayMember {
-  id: string
-  name: string
-  email: string
-  role: string
-  joinedAt: string
-}
 
 interface Props {
   team: Team
@@ -72,11 +51,8 @@ const getDisplayName = (user: User | TeamMember): string => {
   if (user.first_name) {
     return user.first_name
   }
-  if (user.username) {
-    return user.username
-  }
-  // Fallback to email prefix if no other name is available
-  return user.email.split('@')[0]
+  // Skip username check and go directly to email fallback
+  return (user.email || '').split('@')[0] || 'Unknown'
 }
 
 // Create unified members list for display

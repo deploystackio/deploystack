@@ -146,6 +146,9 @@ const progressTitle = computed(() => {
   }
 
   const currentStepData = steps[currentStep.value]
+  if (!currentStepData) {
+    return t('mcpCatalog.form.steps.configuring')
+  }
   return `${currentStepData.label} - ${t('mcpCatalog.form.steps.configuring')}`
 })
 
@@ -175,12 +178,12 @@ const initializeStorageWithData = (data: McpServerFormData) => {
   // Initialize Claude Desktop config if available
   if (data.technical.installation_methods && data.technical.installation_methods.length > 0) {
     const method = data.technical.installation_methods[0]
-    if (method.client === 'claude-desktop') {
+    if (method && method.client === 'claude-desktop') {
       const claudeConfig = {
         mcpServers: {
           [data.basic.name || 'server']: {
-            command: method.command,
-            args: method.args,
+            command: method.command || '',
+            args: method.args || [],
             env: method.env || {}
           }
         }
@@ -265,7 +268,7 @@ watch(
 )
 
 // Computed properties
-const currentStepData = computed(() => steps[currentStep.value])
+const currentStepData = computed(() => steps[currentStep.value] || null)
 const isFirstStep = computed(() => currentStep.value === 0)
 const isLastStep = computed(() => currentStep.value === steps.length - 1)
 const canGoNext = computed(() => !isLastStep.value)
@@ -289,13 +292,15 @@ const goToStep = (stepIndex: number) => {
   if (stepIndex >= 0 && stepIndex < currentStep.value) {
     const oldStep = currentStep.value
     currentStep.value = stepIndex
-    emit('stepChanged', { step: stepIndex, stepKey: steps[stepIndex].key })
+    const stepData = steps[stepIndex]
+    if (!stepData) return
+    emit('stepChanged', { step: stepIndex, stepKey: stepData.key })
 
     // Emit event bus event for other components
     eventBus.emit('mcp-form-step-changed', {
       from: oldStep,
       to: stepIndex,
-      stepKey: steps[stepIndex].key
+      stepKey: stepData.key
     })
   }
 }
@@ -312,13 +317,15 @@ const nextStep = () => {
   if (canGoNext.value) {
     const oldStep = currentStep.value
     currentStep.value++
-    emit('stepChanged', { step: currentStep.value, stepKey: steps[currentStep.value].key })
+    const stepData = steps[currentStep.value]
+    if (!stepData) return
+    emit('stepChanged', { step: currentStep.value, stepKey: stepData.key })
 
     // Emit event bus event
     eventBus.emit('mcp-form-step-changed', {
       from: oldStep,
       to: currentStep.value,
-      stepKey: steps[currentStep.value].key
+      stepKey: stepData.key
     })
   }
 }
@@ -327,13 +334,15 @@ const previousStep = () => {
   if (canGoPrevious.value) {
     const oldStep = currentStep.value
     currentStep.value--
-    emit('stepChanged', { step: currentStep.value, stepKey: steps[currentStep.value].key })
+    const stepData = steps[currentStep.value]
+    if (!stepData) return
+    emit('stepChanged', { step: currentStep.value, stepKey: stepData.key })
 
     // Emit event bus event
     eventBus.emit('mcp-form-step-changed', {
       from: oldStep,
       to: currentStep.value,
-      stepKey: steps[currentStep.value].key
+      stepKey: stepData.key
     })
   }
 }
@@ -582,7 +591,9 @@ const submitForm = async () => {
         if (parsed.mcpServers) {
           const serverKeys = Object.keys(parsed.mcpServers)
           if (serverKeys.length === 1) {
-            const serverConfig = parsed.mcpServers[serverKeys[0]]
+            const serverKey = serverKeys[0]
+            if (!serverKey) return
+            const serverConfig = parsed.mcpServers[serverKey]
 
             finalFormData.technical = {
               ...finalFormData.technical,
@@ -671,33 +682,33 @@ onUnmounted(() => {
     <!-- Step Content -->
     <ContentWrapper>
       <component
-        :is="currentStepData.component"
-        v-if="currentStepData.key === 'capabilities'"
+        :is="currentStepData?.component"
+        v-if="currentStepData?.key === 'capabilities'"
         :form-data="formData"
         @update:form-data="(newFormData: McpServerFormData) => formData = newFormData"
       />
       <component
-        :is="currentStepData.component"
-        v-else-if="currentStepData.key === 'basic'"
+        :is="currentStepData?.component"
+        v-else-if="currentStepData?.key === 'basic'"
         v-model="formData[currentStepData.key]"
         :form-data="formData"
         :mode="props.mode"
-        @update:modelValue="(newValue: any) => formData[currentStepData.key] = newValue"
+        @update:modelValue="(newValue: any) => currentStepData && (formData[currentStepData.key] = newValue)"
         @update:formData="(newFormData: any) => formData = newFormData"
       />
       <component
-        :is="currentStepData.component"
-        v-else-if="currentStepData.key === 'technical'"
+        :is="currentStepData?.component"
+        v-else-if="currentStepData?.key === 'technical'"
         :form-data="formData"
         :mode="props.mode"
         @update:formData="(newFormData: any) => formData = newFormData"
       />
       <component
-        :is="currentStepData.component"
-        v-else
+        :is="currentStepData?.component"
+        v-else-if="currentStepData"
         v-model="formData[currentStepData.key]"
         :form-data="formData"
-        @update:modelValue="(newValue: any) => formData[currentStepData.key] = newValue"
+        @update:modelValue="(newValue: any) => currentStepData && (formData[currentStepData.key] = newValue)"
         @update:formData="(newFormData: any) => formData = newFormData"
       />
     </ContentWrapper>

@@ -90,7 +90,7 @@ const openEditModal = (variable: any) => {
   if (!props.canEdit) {
     return
   }
-  
+
   editingVariable.value = variable
   editingValue.value = variable.currentValue
   showPassword.value = false
@@ -151,6 +151,9 @@ const handleSubmit = async () => {
     }
 
     const currentTeam = teams[0] // Use first team for now
+    if (!currentTeam) {
+      throw new Error('No team available')
+    }
 
     // Create updated environment variables object
     const updatedEnvVars = {
@@ -267,9 +270,9 @@ const modalTitle = computed(() => {
                     <TooltipProvider v-if="!canEdit">
                       <Tooltip>
                         <TooltipTrigger as-child>
-                          <Button 
-                            variant="ghost" 
-                            class="h-8 w-8 p-0 cursor-not-allowed opacity-50" 
+                          <Button
+                            variant="ghost"
+                            class="h-8 w-8 p-0 cursor-not-allowed opacity-50"
                             disabled
                           >
                             <span class="sr-only">{{ t('mcpInstallations.details.environmentVariables.table.editDisabled') }}</span>
@@ -281,7 +284,7 @@ const modalTitle = computed(() => {
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
-                    
+
                     <DropdownMenu v-else>
                       <DropdownMenuTrigger as-child>
                         <Button variant="ghost" class="h-8 w-8 p-0">
