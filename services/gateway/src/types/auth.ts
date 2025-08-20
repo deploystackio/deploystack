@@ -13,6 +13,8 @@ export interface StoredCredentials {
     id: string;
     name: string;
   };
+  // Device information
+  deviceId?: string;
 }
 
 export interface UserInfo {

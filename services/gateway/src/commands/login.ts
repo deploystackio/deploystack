@@ -7,6 +7,7 @@ import { DeployStackAPI } from '../core/auth/api-client';
 import { MCPConfigService } from '../core/mcp';
 import { AuthenticationError } from '../types/auth';
 import { ServerStartService } from '../services/server-start-service';
+import { detectDeviceInfo } from '../utils/device-detection';
 
 export function registerLoginCommand(program: Command) {
   program
@@ -43,10 +44,33 @@ export function registerLoginCommand(program: Command) {
           timeout: 120000 // 2 minutes
         });
 
-        spinner = ora('Storing credentials securely...').start();
+        spinner = ora('Registering device...').start();
 
-        // Store credentials
-        await storage.storeCredentials(authResult.credentials);
+        // NEW: Automatic device registration
+        try {
+          const api = new DeployStackAPI(authResult.credentials, options.url);
+          const deviceInfo = await detectDeviceInfo();
+          const device = await api.registerOrUpdateDevice(deviceInfo);
+          
+          spinner.text = 'Storing credentials securely...';
+          
+          // Store credentials with device context
+          await storage.storeCredentials({
+            ...authResult.credentials,
+            deviceId: device.id
+          });
+
+          console.log(chalk.green(`📱 Device registered: ${device.device_name}`));
+        } catch (deviceError) {
+          // If device registration fails, continue without it
+          spinner.text = 'Storing credentials securely...';
+          await storage.storeCredentials(authResult.credentials);
+          
+          console.log(chalk.yellow('⚠️  Device registration failed - continuing without device context'));
+          if (deviceError instanceof Error) {
+            console.log(chalk.gray(`   Device Error: ${deviceError.message}`));
+          }
+        }
 
         // Set default team as selected team and download MCP config
         spinner.text = 'Setting up default team...';

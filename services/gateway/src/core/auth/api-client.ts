@@ -3,6 +3,7 @@ import fetch from 'node-fetch';
 import { StoredCredentials, UserInfo, TokenInfo, Team, AuthError, AuthenticationError } from '../../types/auth';
 import { MCPInstallationsResponse } from '../../types/mcp';
 import { buildAuthConfig } from '../../utils/auth-config';
+import { Device, DeviceInfo } from '../../utils/device-detection';
 
 export class DeployStackAPI {
   private credentials: StoredCredentials;
@@ -96,6 +97,162 @@ export class DeployStackAPI {
     const endpoint = `${this.baseUrl}/api/teams/${teamId}/mcp/installations/${installationId}/user-configs`;
     const response = await this.makeRequest(endpoint);
     return response;
+  }
+
+  /**
+   * Get device by hardware ID
+   * @param hardwareId Hardware fingerprint
+   * @returns Device if found, null otherwise
+   */
+  async getDeviceByHardwareId(hardwareId: string): Promise<Device | null> {
+    try {
+      const endpoint = `${this.baseUrl}/api/users/me/devices`;
+      const response = await this.makeRequest(endpoint);
+      
+      if (response.success && response.devices) {
+        const device = response.devices.find((d: Device) => d.hardware_id === hardwareId);
+        return device || null;
+      }
+      
+      return null;
+    } catch {
+      // If we get a 404 or other error, assume no device found
+      return null;
+    }
+  }
+
+  /**
+   * Create a new device
+   * @param deviceInfo Device information
+   * @returns Created device
+   */
+  async createDevice(deviceInfo: DeviceInfo): Promise<Device> {
+    const endpoint = `${this.baseUrl}/api/users/me/devices`;
+    const deviceData = {
+      device_name: deviceInfo.hostname, // Default to hostname
+      hostname: deviceInfo.hostname,
+      hardware_id: deviceInfo.hardware_id,
+      os_type: deviceInfo.os_type,
+      os_version: deviceInfo.os_version,
+      arch: deviceInfo.arch,
+      node_version: deviceInfo.node_version,
+      user_agent: deviceInfo.user_agent,
+      last_login_at: new Date().toISOString(),
+      last_activity_at: new Date().toISOString()
+    };
+
+    const response = await this.makeRequest(endpoint, {
+      method: 'POST',
+      body: JSON.stringify(deviceData)
+    });
+
+    if (response.success && response.device) {
+      return response.device;
+    }
+
+    throw new AuthenticationError(
+      AuthError.NETWORK_ERROR,
+      'Failed to create device'
+    );
+  }
+
+  /**
+   * Update an existing device
+   * @param deviceId Device ID
+   * @param updates Device updates
+   * @returns Updated device
+   */
+  async updateDevice(deviceId: string, updates: { device_name?: string }): Promise<Device> {
+    const endpoint = `${this.baseUrl}/api/users/me/devices/${deviceId}`;
+    
+    // The backend only accepts device_name updates via PUT
+    const updateData = {
+      device_name: updates.device_name || 'Updated Device'
+    };
+
+    const response = await this.makeRequest(endpoint, {
+      method: 'PUT',
+      body: JSON.stringify(updateData)
+    });
+
+    if (response.success && response.device) {
+      return response.device;
+    }
+
+    throw new AuthenticationError(
+      AuthError.NETWORK_ERROR,
+      'Failed to update device'
+    );
+  }
+  /**
+   * Update device activity (internal method)
+   * This would be called during login to update last_login_at
+   * For now, we'll just update the device name to trigger an update
+   * @param deviceId Device ID
+   * @returns Updated device
+   */
+  async updateDeviceActivity(deviceId: string): Promise<Device> {
+    // Since the backend only supports device_name updates,
+    // we'll just update with the current name to trigger last update timestamp
+    const endpoint = `${this.baseUrl}/api/users/me/devices/${deviceId}`;
+    
+    // Get current device first to preserve the name
+    const currentDevice = await this.getDeviceById(deviceId);
+    
+    const updateData = {
+      device_name: currentDevice.device_name
+    };
+
+    const response = await this.makeRequest(endpoint, {
+      method: 'PUT',
+      body: JSON.stringify(updateData)
+    });
+
+    if (response.success && response.device) {
+      return response.device;
+    }
+
+    throw new AuthenticationError(
+      AuthError.NETWORK_ERROR,
+      'Failed to update device activity'
+    );
+  }
+
+  /**
+   * Get device by ID
+   * @param deviceId Device ID
+   * @returns Device
+   */
+  async getDeviceById(deviceId: string): Promise<Device> {
+    const endpoint = `${this.baseUrl}/api/users/me/devices/${deviceId}`;
+    const response = await this.makeRequest(endpoint);
+    
+    if (response.success && response.device) {
+      return response.device;
+    }
+
+    throw new AuthenticationError(
+      AuthError.NETWORK_ERROR,
+      'Device not found'
+    );
+  }
+
+  /**
+   * Register or update a device (convenience method)
+   * @param deviceInfo Device information
+   * @returns Device (created or updated)
+   */
+  async registerOrUpdateDevice(deviceInfo: DeviceInfo): Promise<Device> {
+    // First, try to find existing device by hardware ID
+    const existingDevice = await this.getDeviceByHardwareId(deviceInfo.hardware_id);
+    
+    if (existingDevice) {
+      // Update existing device activity (this will update the timestamp)
+      return await this.updateDeviceActivity(existingDevice.id);
+    } else {
+      // Create new device
+      return await this.createDevice(deviceInfo);
+    }
   }
 
   /**
