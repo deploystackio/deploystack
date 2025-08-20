@@ -204,7 +204,8 @@ const compatibleFormData = computed((): McpServerFormData => ({
         tools: [],
         resources: [],
         prompts: [],
-        environment_variables: []
+        environment_variables: [],
+        args: []
       },
   github: formData.value.github,
   review: {}

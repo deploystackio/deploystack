@@ -186,7 +186,8 @@ const convertServerToFormData = (server: McpServer): Partial<McpServerFormData> 
       tools: parsedTools,
       resources: parsedResources,
       prompts: parsedPrompts,
-      environment_variables: parsedEnvironmentVariables
+      environment_variables: parsedEnvironmentVariables,
+      args: parseJsonField(server.args, [])
     },
     github: {
       github_url: server.github_url || '',

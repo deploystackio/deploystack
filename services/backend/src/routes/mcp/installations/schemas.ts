@@ -99,10 +99,15 @@ export const CREATE_INSTALLATION_REQUEST_SCHEMA = {
       enum: ['local', 'cloud'],
       description: 'Installation type (defaults to local)'
     },
-    user_environment_variables: { 
+    team_args: {
+      type: 'array',
+      items: { type: 'string' },
+      description: 'Team-level shared command line arguments'
+    },
+    team_env: { 
       type: 'object',
       additionalProperties: { type: 'string' },
-      description: 'Custom environment variables for this installation'
+      description: 'Team-level shared environment variables'
     }
   },
   required: ['server_id', 'installation_name'],
@@ -117,10 +122,15 @@ export const UPDATE_INSTALLATION_REQUEST_SCHEMA = {
       minLength: 1,
       description: 'Updated installation name'
     },
-    user_environment_variables: {
+    team_args: {
+      type: 'array',
+      items: { type: 'string' },
+      description: 'Updated team-level shared command line arguments'
+    },
+    team_env: {
       type: 'object',
       additionalProperties: { type: 'string' },
-      description: 'Updated environment variables'
+      description: 'Updated team-level shared environment variables'
     }
   },
   additionalProperties: false
@@ -136,6 +146,19 @@ export const UPDATE_ENVIRONMENT_VARS_REQUEST_SCHEMA = {
     }
   },
   required: ['environment_variables'],
+  additionalProperties: false
+} as const;
+
+export const UPDATE_ARGS_REQUEST_SCHEMA = {
+  type: 'object',
+  properties: {
+    args: {
+      type: 'array',
+      items: { type: 'string' },
+      description: 'Command line arguments to update'
+    }
+  },
+  required: ['args'],
   additionalProperties: false
 } as const;
 
@@ -198,6 +221,12 @@ export const SERVER_DETAILS_SCHEMA = {
       nullable: true,
       description: 'Server environment variables'
     },
+    args: {
+      type: 'array',
+      items: {},
+      nullable: true,
+      description: 'Server command line arguments'
+    },
     installation_methods: { 
       type: 'array', 
       items: {},
@@ -231,7 +260,7 @@ export const INSTALLATION_ENTITY_SCHEMA = {
       type: 'string',
       description: 'MCP server ID that was installed'
     },
-    user_id: { 
+    created_by: { 
       type: 'string',
       description: 'User ID who created this installation'
     },
@@ -244,10 +273,17 @@ export const INSTALLATION_ENTITY_SCHEMA = {
       enum: ['local', 'cloud'],
       description: 'Installation type'
     },
-    user_environment_variables: {
+    team_args: {
+      type: 'array',
+      items: { type: 'string' },
+      nullable: true,
+      description: 'Team-level shared command line arguments'
+    },
+    team_env: {
       type: 'object',
       additionalProperties: { type: 'string' },
-      description: 'Custom environment variables'
+      nullable: true,
+      description: 'Team-level shared environment variables'
     },
     created_at: { 
       type: 'string',
@@ -270,7 +306,7 @@ export const INSTALLATION_ENTITY_SCHEMA = {
       description: 'Optional server details if included'
     }
   },
-  required: ['id', 'team_id', 'server_id', 'user_id', 'installation_name', 'installation_type', 'created_at', 'updated_at', 'last_used_at']
+  required: ['id', 'team_id', 'server_id', 'created_by', 'installation_name', 'installation_type', 'created_at', 'updated_at', 'last_used_at']
 } as const;
 
 // =============================================================================
@@ -410,16 +446,22 @@ export interface CreateInstallationRequest {
   server_id: string;
   installation_name: string;
   installation_type?: 'local' | 'cloud';
-  user_environment_variables?: Record<string, string>;
+  team_args?: string[];
+  team_env?: Record<string, string>;
 }
 
 export interface UpdateInstallationRequest {
   installation_name?: string;
-  user_environment_variables?: Record<string, string>;
+  team_args?: string[];
+  team_env?: Record<string, string>;
 }
 
 export interface UpdateEnvironmentVariablesRequest {
   environment_variables: Record<string, string>;
+}
+
+export interface UpdateArgsRequest {
+  args: string[];
 }
 
 export interface ServerDetails {
@@ -434,6 +476,7 @@ export interface ServerDetails {
   status: 'active' | 'deprecated' | 'maintenance';
   tags: string[] | null;
   environment_variables: any[] | null; // eslint-disable-line @typescript-eslint/no-explicit-any
+  args: any[] | null; // eslint-disable-line @typescript-eslint/no-explicit-any
   installation_methods: any[]; // eslint-disable-line @typescript-eslint/no-explicit-any
   category_id: string | null;
   transport_type: 'stdio' | 'http' | 'sse';
@@ -443,10 +486,11 @@ export interface InstallationData {
   id: string;
   team_id: string;
   server_id: string;
-  user_id: string;
+  created_by: string;
   installation_name: string;
   installation_type: 'local' | 'cloud';
-  user_environment_variables?: Record<string, string>;
+  team_args?: string[] | null;
+  team_env?: Record<string, string> | null;
   created_at: Date;
   updated_at: Date;
   last_used_at: Date | null;
@@ -457,10 +501,11 @@ export interface InstallationResponse {
   id: string;
   team_id: string;
   server_id: string;
-  user_id: string;
+  created_by: string;
   installation_name: string;
   installation_type: 'local' | 'cloud';
-  user_environment_variables?: Record<string, string>;
+  team_args?: string[] | null;
+  team_env?: Record<string, string> | null;
   created_at: string;
   updated_at: string;
   last_used_at: string | null;

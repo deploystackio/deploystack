@@ -11,10 +11,11 @@ export interface McpInstallation {
   id: string;
   team_id: string;
   server_id: string;
-  user_id: string;
+  created_by: string;
   installation_name: string;
   installation_type: 'local' | 'cloud';
-  user_environment_variables?: Record<string, string>; // Decrypted for response
+  team_args?: string[] | null; // Team-level shared arguments
+  team_env?: Record<string, string> | null; // Team-level shared environment variables (decrypted for response)
   created_at: Date;
   updated_at: Date;
   last_used_at?: Date;
@@ -26,7 +27,13 @@ export interface McpInstallation {
     github_url: string | null;
     runtime: string;
     installation_methods: any[];
-    environment_variables: any[];
+    // Three-tier schema fields
+    template_args: any[] | null;
+    template_env: Record<string, string> | null;
+    team_args_schema: any[] | null;
+    team_env_schema: any[] | null;
+    user_args_schema: any[] | null;
+    user_env_schema: any[] | null;
     transport_type: 'stdio' | 'http' | 'sse';
   };
 }
@@ -35,12 +42,14 @@ export interface CreateMcpInstallationRequest {
   server_id: string;
   installation_name: string;
   installation_type?: 'local' | 'cloud';
-  user_environment_variables?: Record<string, string>;
+  team_args?: string[];
+  team_env?: Record<string, string>;
 }
 
 export interface UpdateMcpInstallationRequest {
   installation_name?: string;
-  user_environment_variables?: Record<string, string>;
+  team_args?: string[];
+  team_env?: Record<string, string>;
 }
 
 export interface ClientConfig {
@@ -80,24 +89,26 @@ export class McpInstallationService {
 
     return installations.map((row: any) => ({
       ...row.installation,
-      user_environment_variables: row.installation.user_environment_variables 
-        ? this.decryptEnvironmentVariables(row.installation.user_environment_variables)
-        : undefined,
+      team_args: row.installation.team_args 
+        ? this.parseJsonField(row.installation.team_args, [])
+        : null,
+      team_env: row.installation.team_env 
+        ? this.decryptEnvironmentVariables(row.installation.team_env)
+        : null,
       server: row.server ? {
         id: row.server.id,
         name: row.server.name,
         description: row.server.description,
         github_url: row.server.github_url,
-        homepage_url: row.server.homepage_url,
-        author_name: row.server.author_name,
-        language: row.server.language,
         runtime: row.server.runtime,
-        status: row.server.status,
-        tags: this.parseJsonField(row.server.tags, []),
-        environment_variables: this.parseJsonField(row.server.environment_variables, []),
         installation_methods: this.parseJsonField(row.server.installation_methods, []),
-        transport_type: row.server.transport_type,
-        category_id: row.server.category_id
+        template_args: this.parseJsonField(row.server.template_args, []),
+        template_env: this.parseJsonField(row.server.template_env, {}),
+        team_args_schema: this.parseJsonField(row.server.team_args_schema, []),
+        team_env_schema: this.parseJsonField(row.server.team_env_schema, []),
+        user_args_schema: this.parseJsonField(row.server.user_args_schema, []),
+        user_env_schema: this.parseJsonField(row.server.user_env_schema, []),
+        transport_type: row.server.transport_type
       } : undefined
     }));
   }
@@ -137,23 +148,26 @@ export class McpInstallationService {
 
     return {
       ...installation,
-      user_environment_variables: installation.user_environment_variables 
-        ? this.decryptEnvironmentVariables(installation.user_environment_variables)
-        : undefined,
+      team_args: installation.team_args 
+        ? this.parseJsonField(installation.team_args, [])
+        : null,
+      team_env: installation.team_env 
+        ? this.decryptEnvironmentVariables(installation.team_env)
+        : null,
       server: server ? {
         id: server.id,
         name: server.name,
         description: server.description,
         github_url: server.github_url,
-        homepage_url: server.homepage_url,
-        author_name: server.author_name,
-        language: server.language,
         runtime: server.runtime,
-        status: server.status,
-        tags: this.parseJsonField(server.tags, []),
-        environment_variables: this.parseJsonField(server.environment_variables, []),
-        transport_type: server.transport_type,
-        category_id: server.category_id
+        installation_methods: this.parseJsonField(server.installation_methods, []),
+        template_args: this.parseJsonField(server.template_args, []),
+        template_env: this.parseJsonField(server.template_env, {}),
+        team_args_schema: this.parseJsonField(server.team_args_schema, []),
+        team_env_schema: this.parseJsonField(server.team_env_schema, []),
+        user_args_schema: this.parseJsonField(server.user_args_schema, []),
+        user_env_schema: this.parseJsonField(server.user_env_schema, []),
+        transport_type: server.transport_type
       } : undefined
     };
   }
@@ -198,11 +212,11 @@ export class McpInstallationService {
       throw new Error('Server not found');
     }
 
-    // Validate environment variables against server schema
-    if (data.user_environment_variables) {
+    // Validate team environment variables against server schema
+    if (data.team_env) {
       this.validateEnvironmentVariables(
-        data.user_environment_variables,
-        this.parseJsonField(server[0].environment_variables, [])
+        data.team_env,
+        this.parseJsonField(server[0].team_env_schema, [])
       );
     }
 
@@ -213,11 +227,14 @@ export class McpInstallationService {
       id: installationId,
       team_id: teamId,
       server_id: data.server_id,
-      user_id: userId,
+      created_by: userId,
       installation_name: data.installation_name,
       installation_type: data.installation_type || 'local',
-      user_environment_variables: data.user_environment_variables 
-        ? this.encryptEnvironmentVariables(data.user_environment_variables)
+      team_args: data.team_args 
+        ? JSON.stringify(data.team_args)
+        : null,
+      team_env: data.team_env 
+        ? this.encryptEnvironmentVariables(data.team_env)
         : null,
       created_at: now,
       updated_at: now,
@@ -286,17 +303,23 @@ export class McpInstallationService {
       updateData.installation_name = data.installation_name;
     }
 
-    if (data.user_environment_variables !== undefined) {
+    if (data.team_env !== undefined) {
       // Validate against server schema
-      if (existing.server?.environment_variables) {
+      if (existing.server?.team_env_schema) {
         this.validateEnvironmentVariables(
-          data.user_environment_variables,
-          existing.server.environment_variables
+          data.team_env,
+          existing.server.team_env_schema
         );
       }
 
-      updateData.user_environment_variables = data.user_environment_variables
-        ? this.encryptEnvironmentVariables(data.user_environment_variables)
+      updateData.team_env = data.team_env
+        ? this.encryptEnvironmentVariables(data.team_env)
+        : null;
+    }
+
+    if (data.team_args !== undefined) {
+      updateData.team_args = data.team_args
+        ? JSON.stringify(data.team_args)
         : null;
     }
 
@@ -373,10 +396,10 @@ export class McpInstallationService {
       throw new Error('Server does not support Claude Desktop installation');
     }
 
-    // Merge template with user environment variables
+    // Merge template with team environment variables
     const mergedEnv = { ...claudeDesktopMethod.env };
-    if (installation.user_environment_variables) {
-      Object.assign(mergedEnv, installation.user_environment_variables);
+    if (installation.team_env) {
+      Object.assign(mergedEnv, installation.team_env);
     }
 
     const baseConfig = {

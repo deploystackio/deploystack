@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -17,9 +17,9 @@ import { Switch } from '@/components/ui/switch'
 import { X, Plus, CheckCircle } from 'lucide-vue-next'
 import type { BasicInfoFormData, McpCategory } from '@/views/admin/mcp-server-catalog/types'
 import { McpCategoriesCache } from '@/services/mcpCatalogService'
-import { useEventBus } from '@/composables/useEventBus'
 
 interface Props {
+  modelValue: BasicInfoFormData
   /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
   formData?: any
   mode?: 'create' | 'edit'
@@ -28,25 +28,17 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   mode: 'create'
 })
+
+const emit = defineEmits<{
+  'update:modelValue': [value: BasicInfoFormData]
+}>()
+
 const { t } = useI18n()
-const eventBus = useEventBus()
 
-// Storage key for basic info data
-const STORAGE_KEY = 'edit_basic_data'
-
-// Local reactive data - storage-first approach
-const localData = ref<BasicInfoFormData>({
-  name: '',
-  description: '',
-  long_description: '',
-  category_id: '',
-  author_name: '',
-  author_contact: '',
-  organization: '',
-  license: '',
-  tags: [],
-  featured: false,
-  auto_install_new_default_team: false
+// Use v-model pattern instead of storage-first approach
+const localData = computed({
+  get: () => props.modelValue,
+  set: (value: BasicInfoFormData) => emit('update:modelValue', value)
 })
 
 // Categories
@@ -61,28 +53,12 @@ const isAutoPopulated = computed(() => {
   return props.formData?.github?.auto_populated || false
 })
 
-// Load data from storage
-const loadFromStorage = () => {
-  const storedData = eventBus.getState<BasicInfoFormData>(STORAGE_KEY)
-  if (storedData) {
-    localData.value = { ...localData.value, ...storedData }
-  }
-}
-
-// Flag to prevent recursive updates
-let isUpdatingFromStorage = false
-
-// Save data to storage
-const saveToStorage = () => {
-  if (!isUpdatingFromStorage) {
-    eventBus.setState(STORAGE_KEY, localData.value)
-  }
-}
-
-// Update field and save to storage
+// Update field using v-model pattern
 const updateField = <K extends keyof BasicInfoFormData>(field: K, value: BasicInfoFormData[K]) => {
-  localData.value[field] = value
-  saveToStorage()
+  localData.value = {
+    ...localData.value,
+    [field]: value
+  }
 }
 
 // Load categories
@@ -116,33 +92,8 @@ const handleTagKeydown = (event: KeyboardEvent) => {
   }
 }
 
-// Listen for storage changes from other components
-/* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-const handleStorageChange = (data: { key: string; newValue: any }) => {
-  if (data.key === STORAGE_KEY && data.newValue) {
-    isUpdatingFromStorage = true
-    localData.value = { ...localData.value, ...data.newValue }
-    // Reset flag after Vue's next tick to allow the watcher to run
-    setTimeout(() => {
-      isUpdatingFromStorage = false
-    }, 0)
-  }
-}
-
-// Watch for changes in localData and save to storage
-watch(localData, saveToStorage, { deep: true })
-
 onMounted(() => {
   loadCategories()
-  loadFromStorage()
-
-  // Listen for storage changes
-  eventBus.on('storage-changed', handleStorageChange)
-})
-
-onUnmounted(() => {
-  // Clean up event listeners
-  eventBus.off('storage-changed', handleStorageChange)
 })
 </script>
 

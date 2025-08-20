@@ -74,7 +74,13 @@ const createGlobalServerResponseSchema = z.object({
     organization: z.string().nullable(),
     license: z.string().nullable(),
     transport_type: z.enum(['stdio', 'http', 'sse']),
-    environment_variables: z.array(z.any()).nullable(),
+    // Three-tier configuration schema
+    template_args: z.array(z.any()).nullable(),
+    template_env: z.record(z.string(), z.any()).nullable(),
+    team_args_schema: z.array(z.any()).nullable(),
+    team_env_schema: z.array(z.any()).nullable(),
+    user_args_schema: z.array(z.any()).nullable(),
+    user_env_schema: z.array(z.any()).nullable(),
     dependencies: z.record(z.string(), z.any()).nullable(),
     category_id: z.string().nullable(),
     tags: z.array(z.string()).nullable(),
@@ -227,7 +233,7 @@ export default async function createGlobalServer(server: FastifyInstance) {
         claudeConfig: requestData.claude_desktop_config
       }, 'Extracting MCP configuration data from Claude Desktop config');
       
-      const { installation_methods, environment_variables, transport_type: extractedTransportType } = extractMcpConfigData(requestData.claude_desktop_config);
+      const { installation_methods, environment_variables, args, transport_type: extractedTransportType } = extractMcpConfigData(requestData.claude_desktop_config);
       
       request.log.debug({
         operation: 'create_global_mcp_server',
@@ -239,34 +245,41 @@ export default async function createGlobalServer(server: FastifyInstance) {
         }
       }, 'Successfully extracted MCP configuration data');
       
-      // Prepare server data with extracted configuration
-      const serverData = {
-        name: requestData.name,
-        description: requestData.description,
-        long_description: requestData.long_description,
-        github_url: requestData.github_url,
-        git_branch: requestData.git_branch,
-        homepage_url: requestData.homepage_url,
-        language: requestData.language,
-        runtime: requestData.runtime,
-        runtime_min_version: requestData.runtime_min_version,
-        installation_methods,
-        tools: requestData.tools || [],
-        resources: requestData.resources,
-        prompts: requestData.prompts,
-        visibility: 'global' as const,
-        author_name: requestData.author_name,
-        author_contact: requestData.author_contact,
-        organization: requestData.organization,
-        license: requestData.license,
-        transport_type: requestData.transport_type || extractedTransportType,
-        environment_variables,
-        dependencies: requestData.dependencies,
-        category_id: requestData.category_id,
-        tags: requestData.tags,
-        featured: requestData.featured,
-        auto_install_new_default_team: requestData.auto_install_new_default_team
-      };
+        // Prepare server data with extracted configuration using three-tier schema
+        const serverData = {
+          name: requestData.name,
+          description: requestData.description,
+          long_description: requestData.long_description,
+          github_url: requestData.github_url,
+          git_branch: requestData.git_branch,
+          homepage_url: requestData.homepage_url,
+          language: requestData.language,
+          runtime: requestData.runtime,
+          runtime_min_version: requestData.runtime_min_version,
+          installation_methods,
+          tools: requestData.tools || [],
+          resources: requestData.resources,
+          prompts: requestData.prompts,
+          visibility: 'global' as const,
+          author_name: requestData.author_name,
+          author_contact: requestData.author_contact,
+          organization: requestData.organization,
+          license: requestData.license,
+          transport_type: requestData.transport_type || extractedTransportType,
+          // Three-tier configuration schema - for now, put extracted data in template fields
+          // TODO: Implement smart detection to separate template vs team vs user settings
+          template_args: args || undefined,
+          template_env: environment_variables || undefined,
+          team_args_schema: undefined, // Will be defined later when implementing smart detection
+          team_env_schema: undefined,
+          user_args_schema: undefined,
+          user_env_schema: undefined,
+          dependencies: requestData.dependencies,
+          category_id: requestData.category_id,
+          tags: requestData.tags,
+          featured: requestData.featured,
+          auto_install_new_default_team: requestData.auto_install_new_default_team
+        };
 
       const newServer = await mcpService.createServer(
         request.user!.id,
@@ -343,7 +356,8 @@ export default async function createGlobalServer(server: FastifyInstance) {
             resources: newServer.resources,
             prompts: newServer.prompts,
             transport_type: newServer.transport_type,
-            environment_variables: newServer.environment_variables,
+            template_args: newServer.template_args,
+            template_env: newServer.template_env,
             dependencies: newServer.dependencies,
             tags: newServer.tags
           }
@@ -373,7 +387,13 @@ export default async function createGlobalServer(server: FastifyInstance) {
           organization: newServer.organization || null,
           license: newServer.license || null,
           transport_type: newServer.transport_type,
-          environment_variables: newServer.environment_variables ? JSON.parse(newServer.environment_variables) : null,
+          // Three-tier configuration schema
+          template_args: newServer.template_args ? JSON.parse(newServer.template_args) : null,
+          template_env: newServer.template_env ? JSON.parse(newServer.template_env) : null,
+          team_args_schema: newServer.team_args_schema ? JSON.parse(newServer.team_args_schema) : null,
+          team_env_schema: newServer.team_env_schema ? JSON.parse(newServer.team_env_schema) : null,
+          user_args_schema: newServer.user_args_schema ? JSON.parse(newServer.user_args_schema) : null,
+          user_env_schema: newServer.user_env_schema ? JSON.parse(newServer.user_env_schema) : null,
           dependencies: newServer.dependencies ? JSON.parse(newServer.dependencies) : null,
           category_id: newServer.category_id || null,
           tags: newServer.tags ? JSON.parse(newServer.tags) : null,
@@ -417,7 +437,8 @@ export default async function createGlobalServer(server: FastifyInstance) {
             resources: newServer.resources,
             prompts: newServer.prompts,
             transport_type: newServer.transport_type,
-            environment_variables: newServer.environment_variables,
+            template_args: newServer.template_args,
+            template_env: newServer.template_env,
             dependencies: newServer.dependencies,
             tags: newServer.tags
           }

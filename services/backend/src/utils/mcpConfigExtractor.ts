@@ -42,7 +42,7 @@ export function extractTransportTypeFromClaudeConfig(claudeConfig: ClaudeDesktop
 /**
  * Extract complete MCP configuration data from Claude Desktop config
  * @param claudeConfig - The claude desktop configuration object
- * @returns Object containing installation_methods, environment_variables, and transport_type
+ * @returns Object containing installation_methods, environment_variables, args, and transport_type
  */
 export function extractMcpConfigData(claudeConfig: ClaudeDesktopConfig) {
   const serverKey = Object.keys(claudeConfig.mcpServers)[0];
@@ -66,8 +66,18 @@ export function extractMcpConfigData(claudeConfig: ClaudeDesktopConfig) {
     placeholder: serverConfig.env![envKey]
   }));
   
+  // Extract args metadata - define schema for each argument
+  const args = serverConfig.args.map((arg, index) => ({
+    name: `arg_${index}`,
+    description: `Command argument: ${arg}`,
+    default_value: arg,
+    required: true,
+    type: "string",
+    position: index
+  }));
+  
   // Extract transport_type
   const transport_type = extractTransportTypeFromClaudeConfig(claudeConfig);
   
-  return { installation_methods, environment_variables, transport_type };
+  return { installation_methods, environment_variables, args, transport_type };
 }

@@ -74,6 +74,20 @@ const handleSubmit = async (formData: McpServerAddFormData) => {
       required: true
     }))
 
+    // Create args template from Claude config
+    const argsTemplate = (serverConfig.args || []).map((arg: string, index: number) => {
+      // Extract meaningful name from flag-style args (--debug, --port, etc.)
+      const isFlag = arg.startsWith('-')
+      const argName = isFlag ? arg.replace(/^-+/, '').split('=')[0] : `arg_${index + 1}`
+      
+      return {
+        name: argName,
+        description: `Command line argument: ${arg}`,
+        default_value: arg,
+        required: true
+      }
+    })
+
     // Convert form data to current API request format (until backend is updated)
     const requestData: CreateMcpServerRequest = {
       // Basic info
@@ -97,6 +111,7 @@ const handleSubmit = async (formData: McpServerAddFormData) => {
       runtime_min_version: '18.0.0',
       installation_methods: installationMethods,
       environment_variables: environmentVariables,
+      args: argsTemplate,
 
       tools: [],
 

@@ -28,6 +28,7 @@ vi.mock('../../../../src/routes/mcp/github/sync-repo');
 vi.mock('../../../../src/routes/mcp/github/get-repo-info');
 
 vi.mock('../../../../src/routes/mcp/installations');
+vi.mock('../../../../src/routes/mcp/user-configurations');
 
 // Import mocked modules
 import listCategories from '../../../../src/routes/mcp/categories/list';
@@ -55,6 +56,7 @@ import syncRepo from '../../../../src/routes/mcp/github/sync-repo';
 import getRepoInfo from '../../../../src/routes/mcp/github/get-repo-info';
 
 import installationsRoutes from '../../../../src/routes/mcp/installations';
+import userConfigurationsRoutes from '../../../../src/routes/mcp/user-configurations';
 
 // Type the mocked functions
 const mockListCategories = listCategories as MockedFunction<typeof listCategories>;
@@ -82,6 +84,7 @@ const mockSyncRepo = syncRepo as MockedFunction<typeof syncRepo>;
 const mockGetRepoInfo = getRepoInfo as MockedFunction<typeof getRepoInfo>;
 
 const mockInstallationsRoutes = installationsRoutes as MockedFunction<typeof installationsRoutes>;
+const mockUserConfigurationsRoutes = userConfigurationsRoutes as MockedFunction<typeof userConfigurationsRoutes>;
 
 describe('MCP Routes Registration', () => {
   let mockFastify: Partial<FastifyInstance>;
@@ -127,14 +130,15 @@ describe('MCP Routes Registration', () => {
     mockGetRepoInfo.mockResolvedValue(undefined);
 
     mockInstallationsRoutes.mockResolvedValue(undefined);
+    mockUserConfigurationsRoutes.mockResolvedValue(undefined);
   });
 
   describe('Route Registration', () => {
     it('should register all MCP route modules', async () => {
       await mcpRoutes(mockFastify as FastifyInstance);
 
-      // Verify that all 20 routes are registered
-      expect(mockFastify.register).toHaveBeenCalledTimes(20);
+      // Verify that all 21 routes are registered
+      expect(mockFastify.register).toHaveBeenCalledTimes(21);
     });
 
     it('should register all category routes', async () => {
@@ -190,6 +194,12 @@ describe('MCP Routes Registration', () => {
       await mcpRoutes(mockFastify as FastifyInstance);
 
       expect(mockFastify.register).toHaveBeenCalledWith(installationsRoutes);
+    });
+
+    it('should register user configurations routes', async () => {
+      await mcpRoutes(mockFastify as FastifyInstance);
+
+      expect(mockFastify.register).toHaveBeenCalledWith(userConfigurationsRoutes);
     });
   });
 
@@ -261,13 +271,22 @@ describe('MCP Routes Registration', () => {
       expect(registerCalls[18][0]).toBe(getRepoInfo);
     });
 
-    it('should register installations routes last', async () => {
+    it('should register installations routes correctly', async () => {
       await mcpRoutes(mockFastify as FastifyInstance);
 
       const registerCalls = (mockFastify.register as any).mock.calls;
       
-      // Check that installations route is at position 19 (last)
+      // Check that installations route is at position 19
       expect(registerCalls[19][0]).toBe(installationsRoutes);
+    });
+
+    it('should register user configurations routes last', async () => {
+      await mcpRoutes(mockFastify as FastifyInstance);
+
+      const registerCalls = (mockFastify.register as any).mock.calls;
+      
+      // Check that user configurations route is at position 20 (last)
+      expect(registerCalls[20][0]).toBe(userConfigurationsRoutes);
     });
   });
 
@@ -321,6 +340,7 @@ describe('MCP Routes Registration', () => {
       expect(getRepoInfo).toBeDefined();
 
       expect(installationsRoutes).toBeDefined();
+      expect(userConfigurationsRoutes).toBeDefined();
     });
 
     it('should call each route module with the fastify instance', async () => {

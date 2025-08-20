@@ -110,6 +110,9 @@ Our roadmap is designed to build the essential infrastructure for using MCP secu
 
 ### Phase 3: Enterprise Governance (Current Focus)
 
+- **[Done]** Auto-install MCP servers for new users with admin-controlled defaults.
+- **[Done]** Featured MCP servers filtering for improved tool discovery.
+- **[Done]** Global Event Bus System (Phase 2) - event-driven architecture with plugin integration.
 - **[To Do]** Build out Audit Logging features in the cloud UI.
 - **[To Do]** Develop Analytics dashboards for tool usage and performance.
 - **[To Do]** Add `deploystack logs` command for real-time gateway activity monitoring.

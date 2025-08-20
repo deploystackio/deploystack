@@ -6,7 +6,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { AlertCircle, CheckCircle, Copy } from 'lucide-vue-next'
+import { AlertCircle, CheckCircle } from 'lucide-vue-next'
 
 // Props and emits
 interface Props {
@@ -31,52 +31,18 @@ const extractedServerName = ref<string>('')
 const extractedCommand = ref<string>('')
 const extractedEnvVars = ref<string[]>([])
 
-// Example configurations
-const examples = computed(() => [
-  {
-    title: t('mcpCatalog.form.claudeConfig.examples.brightData.title'),
-    description: t('mcpCatalog.form.claudeConfig.examples.brightData.description'),
-    config: `{
+// Static example configuration
+const staticExample = `{
   "mcpServers": {
-    "bright-data": {
+    "sequential-thinking": {
       "command": "npx",
-      "args": ["@brightdata/mcp"],
-      "env": {
-        "API_TOKEN": "<your-bright-data-api-token>"
-      }
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-sequential-thinking"
+      ]
     }
   }
 }`
-  },
-  {
-    title: t('mcpCatalog.form.claudeConfig.examples.filesystem.title'),
-    description: t('mcpCatalog.form.claudeConfig.examples.filesystem.description'),
-    config: `{
-  "mcpServers": {
-    "filesystem": {
-      "command": "npx",
-      "args": ["@modelcontextprotocol/server-filesystem", "/path/to/directory"],
-      "env": {}
-    }
-  }
-}`
-  },
-  {
-    title: t('mcpCatalog.form.claudeConfig.examples.postgres.title'),
-    description: t('mcpCatalog.form.claudeConfig.examples.postgres.description'),
-    config: `{
-  "mcpServers": {
-    "postgres": {
-      "command": "npx",
-      "args": ["@modelcontextprotocol/server-postgres"],
-      "env": {
-        "POSTGRES_CONNECTION_STRING": "postgresql://username:password@localhost:5432/database"
-      }
-    }
-  }
-}`
-  }
-])
 
 // Validation function
 const validateJson = (jsonString: string) => {
@@ -166,11 +132,6 @@ watch(jsonInput, (newValue) => {
 }, { immediate: true })
 
 // Helper functions
-const copyExample = (config: string) => {
-  jsonInput.value = config
-  navigator.clipboard.writeText(config)
-}
-
 const formatJson = () => {
   try {
     const parsed = JSON.parse(jsonInput.value)
@@ -264,29 +225,18 @@ const statusColor = computed(() => {
       </CardContent>
     </Card>
 
-    <!-- Examples -->
+    <!-- Example -->
     <div class="space-y-4">
       <h4 class="text-sm font-medium">{{ t('mcpCatalog.form.claudeConfig.examples.title') }}</h4>
-      <div class="grid gap-4 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
-        <Card v-for="example in examples" :key="example.title" class="cursor-pointer hover:bg-muted/50">
-          <CardHeader class="pb-2">
-            <div class="flex items-center justify-between">
-              <CardTitle class="text-sm">{{ example.title }}</CardTitle>
-              <button
-                @click="copyExample(example.config)"
-                class="p-1 hover:bg-background rounded"
-                :title="t('mcpCatalog.form.claudeConfig.examples.copyExample')"
-              >
-                <Copy class="h-3 w-3" />
-              </button>
-            </div>
-            <CardDescription class="text-xs">{{ example.description }}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <pre class="text-xs bg-muted p-2 rounded overflow-x-auto">{{ example.config }}</pre>
-          </CardContent>
-        </Card>
-      </div>
+      <Card>
+        <CardHeader class="pb-2">
+          <CardTitle class="text-sm">Configuration Example</CardTitle>
+          <CardDescription class="text-xs">Basic MCP server configuration structure</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <pre class="text-xs bg-muted p-2 rounded overflow-x-auto">{{ staticExample }}</pre>
+        </CardContent>
+      </Card>
     </div>
 
   </div>

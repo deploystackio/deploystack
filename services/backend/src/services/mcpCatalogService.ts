@@ -31,7 +31,13 @@ export interface McpServer {
   organization?: string;
   license?: string;
   transport_type: 'stdio' | 'http' | 'sse';
-  environment_variables?: string; // JSON
+  // Three-tier configuration schema
+  template_args?: string; // JSON: Fixed args that never change
+  template_env?: string; // JSON: Fixed env vars that never change
+  team_args_schema?: string; // JSON: Schema for team-level args
+  team_env_schema?: string; // JSON: Schema for team-level env vars
+  user_args_schema?: string; // JSON: Schema for user-level args
+  user_env_schema?: string; // JSON: Schema for user-level env vars
   dependencies?: string; // JSON
   category_id?: string;
   tags?: string; // JSON
@@ -63,7 +69,13 @@ export interface CreateMcpServerRequest {
   organization?: string;
   license?: string;
   transport_type?: 'stdio' | 'http' | 'sse'; // MCP transport type
-  environment_variables?: any[]; // Will be JSON stringified - auto-extracted from Claude Desktop config
+  // Three-tier configuration schema
+  template_args?: any[]; // Fixed args that never change (e.g., ["-y", "@modelcontextprotocol/server-filesystem"])
+  template_env?: any; // Fixed env vars that never change (e.g., {"FIXED_VAR": "fixed_value"})
+  team_args_schema?: any[]; // Schema for team-level args (e.g., [{name: "api_key", type: "string", required: true}])
+  team_env_schema?: any[]; // Schema for team-level env vars
+  user_args_schema?: any[]; // Schema for user-level args (e.g., [{name: "local_path", type: "string", required: true}])
+  user_env_schema?: any[]; // Schema for user-level env vars
   dependencies?: any; // Will be JSON stringified
   category_id?: string;
   tags?: string[];
@@ -90,7 +102,13 @@ export interface UpdateMcpServerRequest {
   organization?: string;
   license?: string;
   transport_type?: 'stdio' | 'http' | 'sse';
-  environment_variables?: any[];
+  // Three-tier configuration schema
+  template_args?: any[];
+  template_env?: any;
+  team_args_schema?: any[];
+  team_env_schema?: any[];
+  user_args_schema?: any[];
+  user_env_schema?: any[];
   dependencies?: any;
   category_id?: string;
   tags?: string[];
@@ -344,7 +362,13 @@ export class McpCatalogService {
       organization: data.organization,
       license: githubInfo.license || data.license,
       transport_type: data.transport_type || 'stdio',
-      environment_variables: data.environment_variables ? JSON.stringify(data.environment_variables) : null,
+      // Three-tier configuration schema
+      template_args: data.template_args ? JSON.stringify(data.template_args) : null,
+      template_env: data.template_env ? JSON.stringify(data.template_env) : null,
+      team_args_schema: data.team_args_schema ? JSON.stringify(data.team_args_schema) : null,
+      team_env_schema: data.team_env_schema ? JSON.stringify(data.team_env_schema) : null,
+      user_args_schema: data.user_args_schema ? JSON.stringify(data.user_args_schema) : null,
+      user_env_schema: data.user_env_schema ? JSON.stringify(data.user_env_schema) : null,
       dependencies: data.dependencies ? JSON.stringify(data.dependencies) : null,
       category_id: data.category_id,
       tags: githubInfo.tags ? JSON.stringify(githubInfo.tags) : (data.tags ? JSON.stringify(data.tags) : null),
@@ -415,7 +439,13 @@ export class McpCatalogService {
     if (data.organization !== undefined) updateData.organization = data.organization;
     if (data.license !== undefined) updateData.license = data.license;
     if (data.transport_type !== undefined) updateData.transport_type = data.transport_type;
-    if (data.environment_variables !== undefined) updateData.environment_variables = data.environment_variables ? JSON.stringify(data.environment_variables) : null;
+    // Three-tier configuration schema
+    if (data.template_args !== undefined) updateData.template_args = data.template_args ? JSON.stringify(data.template_args) : null;
+    if (data.template_env !== undefined) updateData.template_env = data.template_env ? JSON.stringify(data.template_env) : null;
+    if (data.team_args_schema !== undefined) updateData.team_args_schema = data.team_args_schema ? JSON.stringify(data.team_args_schema) : null;
+    if (data.team_env_schema !== undefined) updateData.team_env_schema = data.team_env_schema ? JSON.stringify(data.team_env_schema) : null;
+    if (data.user_args_schema !== undefined) updateData.user_args_schema = data.user_args_schema ? JSON.stringify(data.user_args_schema) : null;
+    if (data.user_env_schema !== undefined) updateData.user_env_schema = data.user_env_schema ? JSON.stringify(data.user_env_schema) : null;
     if (data.dependencies !== undefined) updateData.dependencies = data.dependencies ? JSON.stringify(data.dependencies) : null;
     if (data.category_id !== undefined) updateData.category_id = data.category_id;
     if (data.tags !== undefined) updateData.tags = data.tags ? JSON.stringify(data.tags) : null;
@@ -499,7 +529,13 @@ export class McpCatalogService {
     parsed.tools = parseJsonField('tools', parsed.tools, []);
     parsed.resources = parseJsonField('resources', parsed.resources, null);
     parsed.prompts = parseJsonField('prompts', parsed.prompts, null);
-    parsed.environment_variables = parseJsonField('environment_variables', parsed.environment_variables, null);
+    // Three-tier configuration schema
+    parsed.template_args = parseJsonField('template_args', parsed.template_args, null);
+    parsed.template_env = parseJsonField('template_env', parsed.template_env, null);
+    parsed.team_args_schema = parseJsonField('team_args_schema', parsed.team_args_schema, null);
+    parsed.team_env_schema = parseJsonField('team_env_schema', parsed.team_env_schema, null);
+    parsed.user_args_schema = parseJsonField('user_args_schema', parsed.user_args_schema, null);
+    parsed.user_env_schema = parseJsonField('user_env_schema', parsed.user_env_schema, null);
     // transport_type is a simple string field, no parsing needed
     parsed.dependencies = parseJsonField('dependencies', parsed.dependencies, null);
     parsed.tags = parseJsonField('tags', parsed.tags, null);

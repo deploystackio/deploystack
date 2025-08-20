@@ -211,7 +211,6 @@ describe('MCP Servers - Update Global', () => {
         organization: null,
         license: null,
         default_config: null,
-        environment_variables: null,
         dependencies: null,
         category_id: null,
         tags: null,
@@ -220,7 +219,15 @@ describe('MCP Servers - Update Global', () => {
         transport_type: null,
         created_at: '2024-01-01T00:00:00.000Z',
         updated_at: '2024-01-02T00:00:00.000Z',
-        last_sync_at: null
+        last_sync_at: null,
+        // New three-tier configuration fields
+        template_args: null,
+        template_env: null,
+        team_args_schema: null,
+        team_env_schema: null,
+        user_args_schema: null,
+        user_env_schema: null,
+        auto_install_new_default_team: undefined
       };
 
       mockMcpService.getServerById.mockResolvedValue(existingServer);
@@ -266,7 +273,13 @@ describe('MCP Servers - Update Global', () => {
           author_contact: null,
           organization: null,
           license: null,
-          environment_variables: null,
+          // Three-tier configuration schema
+          template_args: null,
+          template_env: null,
+          team_args_schema: null,
+          team_env_schema: null,
+          user_args_schema: null,
+          user_env_schema: null,
           dependencies: null,
           category_id: null,
           tags: null,
@@ -275,7 +288,8 @@ describe('MCP Servers - Update Global', () => {
           transport_type: null,
           created_at: '2024-01-01T00:00:00.000Z',
           updated_at: '2024-01-02T00:00:00.000Z',
-          last_sync_at: null
+          last_sync_at: null,
+          auto_install_new_default_team: undefined
         }
       });
     });
@@ -382,7 +396,6 @@ describe('MCP Servers - Update Global', () => {
         organization: null,
         license: null,
         default_config: null,
-        environment_variables: null,
         dependencies: null,
         category_id: null,
         tags: null,
@@ -391,7 +404,15 @@ describe('MCP Servers - Update Global', () => {
         transport_type: null,
         created_at: '2024-01-01T00:00:00.000Z',
         updated_at: '2024-01-02T00:00:00.000Z',
-        last_sync_at: null
+        last_sync_at: null,
+        // New three-tier configuration fields (null)
+        template_args: null,
+        template_env: null,
+        team_args_schema: null,
+        team_env_schema: null,
+        user_args_schema: null,
+        user_env_schema: null,
+        auto_install_new_default_team: undefined
       };
 
       mockMcpService.getServerById.mockResolvedValue(existingServer);
@@ -447,7 +468,6 @@ describe('MCP Servers - Update Global', () => {
         organization: 'Test Organization',
         license: 'MIT',
         default_config: { key: 'value' },
-        environment_variables: [{ name: 'TEST_VAR', description: 'Test variable', required: false }],
         dependencies: { dep1: '^1.0.0' },
         category_id: 'category-1',
         tags: ['tag1', 'tag2'],
@@ -456,7 +476,15 @@ describe('MCP Servers - Update Global', () => {
         transport_type: null,
         created_at: '2024-01-01T00:00:00.000Z',
         updated_at: '2024-01-02T00:00:00.000Z',
-        last_sync_at: '2024-01-03T00:00:00.000Z'
+        last_sync_at: '2024-01-03T00:00:00.000Z',
+        // New three-tier configuration fields
+        template_args: null,
+        template_env: null,
+        team_args_schema: null,
+        team_env_schema: null,
+        user_args_schema: null,
+        user_env_schema: null,
+        auto_install_new_default_team: undefined
       };
 
       mockMcpService.getServerById.mockResolvedValue(existingServer);
@@ -521,7 +549,13 @@ describe('MCP Servers - Update Global', () => {
           author_contact: 'author@example.com',
           organization: 'Test Organization',
           license: 'MIT',
-          environment_variables: [{ name: 'TEST_VAR', description: 'Test variable', required: false }],
+          // Three-tier configuration schema
+          template_args: null,
+          template_env: null,
+          team_args_schema: null,
+          team_env_schema: null,
+          user_args_schema: null,
+          user_env_schema: null,
           dependencies: { dep1: '^1.0.0' },
           category_id: 'category-1',
           tags: ['tag1', 'tag2'],
@@ -530,7 +564,8 @@ describe('MCP Servers - Update Global', () => {
           transport_type: null,
           created_at: '2024-01-01T00:00:00.000Z',
           updated_at: '2024-01-02T00:00:00.000Z',
-          last_sync_at: '2024-01-03T00:00:00.000Z'
+          last_sync_at: '2024-01-03T00:00:00.000Z',
+          auto_install_new_default_team: undefined
         }
       });
     });
@@ -567,7 +602,6 @@ describe('MCP Servers - Update Global', () => {
         organization: null,
         license: null,
         default_config: { key: 'value' },
-        environment_variables: [{ name: 'TEST_VAR' }],
         dependencies: { dep1: '^1.0.0' },
         category_id: null,
         tags: ['tag1', 'tag2'],
@@ -576,7 +610,15 @@ describe('MCP Servers - Update Global', () => {
         transport_type: null,
         created_at: '2024-01-01T00:00:00.000Z',
         updated_at: '2024-01-02T00:00:00.000Z',
-        last_sync_at: '2024-01-03T00:00:00.000Z'
+        last_sync_at: '2024-01-03T00:00:00.000Z',
+        // New three-tier configuration fields
+        template_args: [{ name: 'test_arg' }],
+        template_env: { TEST_VAR: 'value' },
+        team_args_schema: [{ name: 'team_arg' }],
+        team_env_schema: [{ name: 'team_env' }],
+        user_args_schema: [{ name: 'user_arg' }],
+        user_env_schema: [{ name: 'user_env' }],
+        auto_install_new_default_team: undefined
       };
 
       mockMcpService.getServerById.mockResolvedValue(existingServer);
@@ -592,7 +634,13 @@ describe('MCP Servers - Update Global', () => {
       expect(server.tools).toEqual([{ name: 'test-tool' }]);
       expect(server.resources).toEqual([{ name: 'test-resource' }]);
       expect(server.prompts).toEqual([{ name: 'test-prompt' }]);
-      expect(server.environment_variables).toEqual([{ name: 'TEST_VAR' }]);
+      // Check new three-tier configuration fields
+      expect(server.template_args).toEqual([{ name: 'test_arg' }]);
+      expect(server.template_env).toEqual({ TEST_VAR: 'value' });
+      expect(server.team_args_schema).toEqual([{ name: 'team_arg' }]);
+      expect(server.team_env_schema).toEqual([{ name: 'team_env' }]);
+      expect(server.user_args_schema).toEqual([{ name: 'user_arg' }]);
+      expect(server.user_env_schema).toEqual([{ name: 'user_env' }]);
       expect(server.dependencies).toEqual({ dep1: '^1.0.0' });
       expect(server.tags).toEqual(['tag1', 'tag2']);
       expect(server.created_at).toBe('2024-01-01T00:00:00.000Z');
@@ -632,7 +680,6 @@ describe('MCP Servers - Update Global', () => {
         organization: null,
         license: null,
         default_config: null,
-        environment_variables: null,
         dependencies: null,
         category_id: null,
         tags: null,
@@ -641,7 +688,15 @@ describe('MCP Servers - Update Global', () => {
         transport_type: null,
         created_at: '2024-01-01T00:00:00.000Z',
         updated_at: '2024-01-02T00:00:00.000Z',
-        last_sync_at: null
+        last_sync_at: null,
+        // New three-tier configuration fields
+        template_args: null,
+        template_env: null,
+        team_args_schema: null,
+        team_env_schema: null,
+        user_args_schema: null,
+        user_env_schema: null,
+        auto_install_new_default_team: undefined
       };
 
       mockMcpService.getServerById.mockResolvedValue(existingServer);
@@ -657,7 +712,13 @@ describe('MCP Servers - Update Global', () => {
       expect(server.tools).toEqual([]);
       expect(server.resources).toBeNull();
       expect(server.prompts).toBeNull();
-      expect(server.environment_variables).toBeNull();
+      // Check new three-tier configuration fields are null
+      expect(server.template_args).toBeNull();
+      expect(server.template_env).toBeNull();
+      expect(server.team_args_schema).toBeNull();
+      expect(server.team_env_schema).toBeNull();
+      expect(server.user_args_schema).toBeNull();
+      expect(server.user_env_schema).toBeNull();
       expect(server.dependencies).toBeNull();
       expect(server.tags).toBeNull();
       expect(server.last_sync_at).toBeNull();
@@ -1042,7 +1103,6 @@ describe('MCP Servers - Update Global', () => {
         organization: null,
         license: null,
         default_config: null,
-        environment_variables: null,
         dependencies: null,
         category_id: null,
         tags: null,
@@ -1050,7 +1110,15 @@ describe('MCP Servers - Update Global', () => {
         featured: false,
         created_at: new Date('2024-01-01'),
         updated_at: new Date('2024-01-02'),
-        last_sync_at: null
+        last_sync_at: null,
+        // New three-tier configuration fields
+        template_args: null,
+        template_env: null,
+        team_args_schema: null,
+        team_env_schema: null,
+        user_args_schema: null,
+        user_env_schema: null,
+        auto_install_new_default_team: undefined
       };
 
       mockMcpService.getServerById.mockResolvedValue(existingServer);
@@ -1116,7 +1184,6 @@ describe('MCP Servers - Update Global', () => {
           organization: null,
           license: null,
           default_config: null,
-          environment_variables: null,
           dependencies: null,
           category_id: null,
           tags: null,
@@ -1125,7 +1192,15 @@ describe('MCP Servers - Update Global', () => {
           transport_type: null,
           created_at: '2024-01-01T00:00:00.000Z',
           updated_at: '2024-01-02T00:00:00.000Z',
-          last_sync_at: null
+          last_sync_at: null,
+          // New three-tier configuration fields
+          template_args: null,
+          template_env: null,
+          team_args_schema: null,
+          team_env_schema: null,
+          user_args_schema: null,
+          user_env_schema: null,
+          auto_install_new_default_team: undefined
         };
 
         mockMcpService.getServerById.mockResolvedValue(existingServer);
@@ -1193,7 +1268,6 @@ describe('MCP Servers - Update Global', () => {
         organization: null,
         license: null,
         default_config: null,
-        environment_variables: null,
         dependencies: null,
         category_id: null,
         tags: null,
@@ -1201,7 +1275,15 @@ describe('MCP Servers - Update Global', () => {
         featured: false,
         created_at: new Date('2024-01-01'),
         updated_at: new Date('2024-01-02'),
-        last_sync_at: null
+        last_sync_at: null,
+        // New three-tier configuration fields
+        template_args: null,
+        template_env: null,
+        team_args_schema: null,
+        team_env_schema: null,
+        user_args_schema: null,
+        user_env_schema: null,
+        auto_install_new_default_team: undefined
       };
 
       mockMcpService.getServerById.mockResolvedValue(existingServer);
@@ -1250,8 +1332,11 @@ describe('MCP Servers - Update Global', () => {
               long_description: null, github_url: null, git_branch: null, homepage_url: null, language: 'javascript', runtime: 'node',
               runtime_min_version: null, installation_methods: [], tools: [], resources: null, prompts: null, visibility: 'global',
               owner_team_id: null, created_by: 'user-1', author_name: null, author_contact: null, organization: null, license: null,
-              default_config: null, environment_variables: null, dependencies: null, category_id: null, tags: null, status: 'active',
-              featured: false, transport_type: null, created_at: '2024-01-01T00:00:00.000Z', updated_at: '2024-01-02T00:00:00.000Z', last_sync_at: null
+              default_config: null, dependencies: null, category_id: null, tags: null, status: 'active',
+              featured: false, transport_type: null, created_at: '2024-01-01T00:00:00.000Z', updated_at: '2024-01-02T00:00:00.000Z', last_sync_at: null,
+              // New three-tier configuration fields
+              template_args: null, template_env: null, team_args_schema: null, team_env_schema: null,
+              user_args_schema: null, user_env_schema: null, auto_install_new_default_team: undefined
             };
             mockMcpService.getServerById.mockResolvedValue(existingServer);
             mockMcpService.updateServer.mockResolvedValue(updatedServer);

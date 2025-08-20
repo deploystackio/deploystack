@@ -230,7 +230,8 @@ const formData = ref<McpServerFormData>({
     tools: [],
     resources: [],
     prompts: [],
-    environment_variables: []
+    environment_variables: [],
+    args: []
   },
   github: {
     github_url: '',
@@ -426,7 +427,8 @@ const autoPopulateFromGitHub = (githubData: any) => {
       tools: githubData.tools || [],
       resources: githubData.resources || [],
       prompts: githubData.prompts || [],
-      environment_variables: githubData.environment_variables || []
+      environment_variables: githubData.environment_variables || [],
+      args: githubData.args || []
     },
     github: {
       github_url: githubData.html_url || githubData.github_url || formData.value.github.github_url,

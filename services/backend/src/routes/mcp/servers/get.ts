@@ -39,6 +39,7 @@ const getServerResponseSchema = z.object({
     license: z.string().nullable(),
     transport_type: z.enum(['stdio', 'http', 'sse']),
     environment_variables: z.array(z.any()).nullable(),
+    args: z.array(z.any()).nullable(),
     dependencies: z.record(z.string(), z.any()).nullable(),
     category_id: z.string().nullable(),
     tags: z.array(z.string()).nullable(),

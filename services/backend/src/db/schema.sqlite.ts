@@ -186,9 +186,25 @@ export const mcpServers = sqliteTable('mcpServers', {
   organization: text('organization'), // Microsoft, NoopStudios
   license: text('license'), // Apache-2.0, MIT
   
-  // Deployment & Configuration
+  // Deployment & Configuration - THREE-TIER ARCHITECTURE
   transport_type: text('transport_type', { enum: ['stdio', 'http', 'sse'] }).notNull().default('stdio'), // MCP transport type
-  environment_variables: text('environment_variables'), // JSON array of required env vars
+  
+  // Template Level (Fixed - never changes)
+  template_args: text('template_args'), // JSON: ["-y", "@modelcontextprotocol/server-filesystem"]
+  template_env: text('template_env'), // JSON: {"FIXED_VAR": "fixed_value"}
+  
+  // Team Level Schema (what teams can configure)
+  team_args_schema: text('team_args_schema'), // JSON: [{name, type, required, description}]
+  team_env_schema: text('team_env_schema'), // JSON: [{name, type, required, description}]
+  
+  // User Level Schema (what individual users can configure)
+  user_args_schema: text('user_args_schema'), // JSON: [{name, type, required, description, min_items, max_items}]
+  user_env_schema: text('user_env_schema'), // JSON: [{name, type, required, description}]
+  
+  // Legacy fields - REMOVED (zero backward compatibility)
+  // environment_variables: text('environment_variables'), // REMOVED
+  // args: text('args'), // REMOVED
+  
   dependencies: text('dependencies'), // JSON of dependencies
   
   // Metadata & Status
@@ -224,21 +240,26 @@ export const mcpServerVersions = sqliteTable('mcpServerVersions', {
   latestIdx: index('mcp_server_versions_latest_idx').on(table.is_latest),
 }));
 
-// MCP Server Installations - User installations of MCP servers within teams
+// MCP Server Installations - Team installations of MCP servers (Tier 2)
 export const mcpServerInstallations = sqliteTable('mcpServerInstallations', {
   id: text('id').primaryKey(),
   
   // References
   team_id: text('team_id').notNull().references(() => teams.id, { onDelete: 'cascade' }),
   server_id: text('server_id').notNull().references(() => mcpServers.id, { onDelete: 'cascade' }),
-  user_id: text('user_id').notNull().references(() => authUser.id),
+  created_by: text('created_by').notNull().references(() => authUser.id), // User who created the team installation
   
   // Installation details
-  installation_name: text('installation_name').notNull(), // User-friendly name like "My Bright Data"
+  installation_name: text('installation_name').notNull(), // User-friendly name like "DevOps Team Filesystem"
   installation_type: text('installation_type').notNull().default('local'), // 'local' or 'cloud'
   
-  // User's actual environment variables (encrypted JSON)
-  user_environment_variables: text('user_environment_variables'), // JSON: {"API_TOKEN": "actual-user-token"}
+  // Team-level shared configurations (Tier 2)
+  team_args: text('team_args'), // JSON: ["shared-config-value"] - team-wide argument values
+  team_env: text('team_env'), // JSON: {"SHARED_API_KEY": "team-secret"} - team-wide environment variables
+  
+  // Legacy fields - REMOVED (zero backward compatibility)
+  // user_environment_variables: text('user_environment_variables'), // REMOVED - moved to mcpUserConfigurations
+  // user_args: text('user_args'), // REMOVED - moved to mcpUserConfigurations
   
   // Metadata
   created_at: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
@@ -247,7 +268,34 @@ export const mcpServerInstallations = sqliteTable('mcpServerInstallations', {
 }, (table) => ({
   teamInstallationNameIdx: index('mcp_installations_team_name_idx').on(table.team_id, table.installation_name),
   teamServerIdx: index('mcp_installations_team_server_idx').on(table.team_id, table.server_id),
-  userIdx: index('mcp_installations_user_idx').on(table.user_id),
+  createdByIdx: index('mcp_installations_created_by_idx').on(table.created_by),
+}));
+
+// MCP User Configurations - Individual user configurations per team installation (Tier 3)
+export const mcpUserConfigurations = sqliteTable('mcpUserConfigurations', {
+  id: text('id').primaryKey(),
+  
+  // References
+  installation_id: text('installation_id').notNull().references(() => mcpServerInstallations.id, { onDelete: 'cascade' }),
+  user_id: text('user_id').notNull().references(() => authUser.id, { onDelete: 'cascade' }),
+  
+  // Device/Environment identification (optional)
+  device_name: text('device_name'), // "MacBook Pro", "Work PC", "Home Desktop", etc.
+  
+  // User-specific configurations (Tier 3)
+  user_args: text('user_args'), // JSON: ["/Users/john/Desktop", "/Users/john/Projects"] - variable length arrays
+  user_env: text('user_env'), // JSON: {"MEMORY_FILE_PATH": "/Users/john/memory.json", "DEBUG_MODE": "true"}
+  
+  // Metadata
+  created_at: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  updated_at: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  last_used_at: integer('last_used_at', { mode: 'timestamp' }),
+}, (table) => ({
+  installationUserIdx: index('mcp_user_configs_installation_user_idx').on(table.installation_id, table.user_id),
+  userIdx: index('mcp_user_configs_user_idx').on(table.user_id),
+  installationIdx: index('mcp_user_configs_installation_idx').on(table.installation_id),
+  // Unique constraint: one configuration per user per installation (optionally per device)
+  uniqueUserInstallation: index('mcp_user_configs_unique_user_installation').on(table.installation_id, table.user_id, table.device_name),
 }));
 
 // OAuth2 Authorization Codes for PKCE flow

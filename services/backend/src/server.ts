@@ -135,6 +135,22 @@ export async function initializeDatabaseDependentServices(
         server.log.warn('⚠️ Continuing without OAuth2 cleanup service due to error');
       }
 
+      // Initialize MCP User Configuration Service
+      try {
+        server.log.debug('🔄 Initializing MCP User Configuration Service...');
+        const { initializeMcpUserConfigurationService } = await import('./services/mcpUserConfigurationService');
+        initializeMcpUserConfigurationService(dbInstance, server.log);
+        server.log.debug('✅ MCP User Configuration Service initialized');
+      } catch (mcpServiceError) {
+        server.log.error({
+          error: mcpServiceError,
+          message: mcpServiceError instanceof Error ? mcpServiceError.message : 'Unknown error',
+          stack: mcpServiceError instanceof Error ? mcpServiceError.stack : 'No stack trace'
+        }, '❌ MCP User Configuration Service failed to initialize:');
+        // Don't throw - continue with startup but log the error
+        server.log.warn('⚠️ Continuing without MCP User Configuration Service due to error');
+      }
+
       // Initialize global settings with comprehensive debugging
       try {
         server.log.debug('🔄 Starting global settings initialization...');
@@ -338,7 +354,7 @@ export const createServer = async () => {
     paths: [
       process.env.PLUGINS_PATH || (isDevelopment 
         ? path.join(process.cwd(), 'src', 'plugins')
-        : path.join(__dirname, 'plugins')),
+        : path.join(__dirname, '..', 'plugins')),
     ],
     plugins: {}
   })

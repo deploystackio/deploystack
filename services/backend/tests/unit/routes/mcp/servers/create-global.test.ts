@@ -214,7 +214,12 @@ describe('MCP Servers - Create Global', () => {
         organization: null,
         license: null,
         transport_type: 'stdio',
-        environment_variables: null,
+        template_args: null,
+        template_env: null,
+        team_args_schema: null,
+        user_args_schema: null,
+        team_env_schema: null,
+        user_env_schema: null,
         dependencies: null,
         category_id: null,
         tags: null,
@@ -351,7 +356,12 @@ describe('MCP Servers - Create Global', () => {
         organization: 'Test Organization',
         license: 'MIT',
         transport_type: 'stdio',
-        environment_variables: '[{"name": "TEST_VAR", "description": "Test variable", "required": true, "default_value": "test"}]',
+        template_args: '["-y", "@modelcontextprotocol/server-complex"]',
+        template_env: null,
+        team_args_schema: null,
+        user_args_schema: '[{"name": "directory_paths", "type": "repeatable_directory_paths", "description": "Directories to allow access", "user_configurable": true}]',
+        team_env_schema: null,
+        user_env_schema: '[{"name": "TEST_VAR", "type": "string", "description": "Test variable", "required": true, "default_value": "test", "user_configurable": true}]',
         dependencies: '{"lodash": "^4.17.21", "express": "^4.18.0"}',
         category_id: 'category-123',
         tags: '["testing", "example", "complex"]',
@@ -394,8 +404,9 @@ describe('MCP Servers - Create Global', () => {
           prompts: [
             { name: 'test-prompt', description: 'A test prompt' }
           ],
-          environment_variables: [
-            { name: 'TEST_VAR', description: 'Test variable', required: true, default_value: 'test' }
+          template_args: ['-y', '@modelcontextprotocol/server-complex'],
+          user_env_schema: [
+            { name: 'TEST_VAR', type: 'string', description: 'Test variable', required: true, default_value: 'test', user_configurable: true }
           ],
           dependencies: { lodash: '^4.17.21', express: '^4.18.0' },
           tags: ['testing', 'example', 'complex'],
@@ -429,7 +440,12 @@ describe('MCP Servers - Create Global', () => {
         organization: null,
         license: null,
         transport_type: 'stdio',
-        environment_variables: '[{"name": "JSON_VAR"}]',
+        template_args: '["-y", "@modelcontextprotocol/server-json"]',
+        template_env: null,
+        team_args_schema: null,
+        user_args_schema: '[{"name": "directory_paths", "type": "repeatable_directory_paths", "description": "Directories to allow access", "user_configurable": true}]',
+        team_env_schema: null,
+        user_env_schema: '[{"name": "JSON_VAR", "type": "string", "description": "JSON test variable", "user_configurable": true}]',
         dependencies: '{"dep1": "^1.0.0"}',
         category_id: null,
         tags: '["json", "test"]',
@@ -455,7 +471,7 @@ describe('MCP Servers - Create Global', () => {
       expect(server.resources).toEqual([{ name: 'json-resource' }]);
       expect(server.prompts).toEqual([{ name: 'json-prompt' }]);
       expect(server.transport_type).toEqual('stdio');
-      expect(server.environment_variables).toEqual([{ name: 'JSON_VAR' }]);
+      expect(server.user_env_schema).toEqual([{ name: 'JSON_VAR', type: 'string', description: 'JSON test variable', user_configurable: true }]);
       expect(server.dependencies).toEqual({ dep1: '^1.0.0' });
       expect(server.tags).toEqual(['json', 'test']);
       expect(server.created_at).toBe('2024-01-01T00:00:00.000Z');
@@ -488,7 +504,12 @@ describe('MCP Servers - Create Global', () => {
         organization: null,
         license: null,
         transport_type: 'stdio',
-        environment_variables: null,
+        template_args: null,
+        template_env: null,
+        team_args_schema: null,
+        user_args_schema: null,
+        team_env_schema: null,
+        user_env_schema: null,
         dependencies: null,
         category_id: null,
         tags: null,
@@ -514,7 +535,7 @@ describe('MCP Servers - Create Global', () => {
       expect(server.resources).toBeNull();
       expect(server.prompts).toBeNull();
       expect(server.transport_type).toEqual('stdio');
-      expect(server.environment_variables).toBeNull();
+      expect(server.user_env_schema).toBeNull();
       expect(server.dependencies).toBeNull();
       expect(server.tags).toBeNull();
       expect(server.last_sync_at).toBeNull();
@@ -834,8 +855,12 @@ describe('MCP Servers - Create Global', () => {
         author_contact: null,
         organization: null,
         license: null,
-        default_config: null,
-        environment_variables: null,
+        template_args: null,
+        template_env: null,
+        team_args_schema: null,
+        user_args_schema: null,
+        team_env_schema: null,
+        user_env_schema: null,
         dependencies: null,
         category_id: null,
         tags: null,
@@ -1022,7 +1047,12 @@ describe('MCP Servers - Create Global', () => {
           organization: null,
           license: null,
           transport_type: 'stdio',
-          environment_variables: null,
+          template_args: null,
+          template_env: null,
+          team_args_schema: null,
+          user_args_schema: null,
+          team_env_schema: null,
+          user_env_schema: null,
           dependencies: null,
           category_id: null,
           tags: null,

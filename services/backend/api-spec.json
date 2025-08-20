@@ -13699,6 +13699,17 @@
                               }
                             ]
                           },
+                          "args": {
+                            "anyOf": [
+                              {
+                                "type": "array",
+                                "items": {}
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
                           "dependencies": {
                             "anyOf": [
                               {
@@ -13792,6 +13803,7 @@
                           "license",
                           "transport_type",
                           "environment_variables",
+                          "args",
                           "dependencies",
                           "category_id",
                           "tags",
@@ -14202,6 +14214,17 @@
                                     }
                                   ]
                                 },
+                                "args": {
+                                  "anyOf": [
+                                    {
+                                      "type": "array",
+                                      "items": {}
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
                                 "dependencies": {
                                   "anyOf": [
                                     {
@@ -14295,6 +14318,7 @@
                                 "license",
                                 "transport_type",
                                 "environment_variables",
+                                "args",
                                 "dependencies",
                                 "category_id",
                                 "tags",
@@ -14895,7 +14919,65 @@
                               "sse"
                             ]
                           },
-                          "environment_variables": {
+                          "template_args": {
+                            "anyOf": [
+                              {
+                                "type": "array",
+                                "items": {}
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "template_env": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "propertyNames": {
+                                  "type": "string"
+                                },
+                                "additionalProperties": {}
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "team_args_schema": {
+                            "anyOf": [
+                              {
+                                "type": "array",
+                                "items": {}
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "team_env_schema": {
+                            "anyOf": [
+                              {
+                                "type": "array",
+                                "items": {}
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "user_args_schema": {
+                            "anyOf": [
+                              {
+                                "type": "array",
+                                "items": {}
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "user_env_schema": {
                             "anyOf": [
                               {
                                 "type": "array",
@@ -14998,7 +15080,12 @@
                           "organization",
                           "license",
                           "transport_type",
-                          "environment_variables",
+                          "template_args",
+                          "template_env",
+                          "team_args_schema",
+                          "team_env_schema",
+                          "user_args_schema",
+                          "user_env_schema",
                           "dependencies",
                           "category_id",
                           "tags",
@@ -15387,7 +15474,65 @@
                               "sse"
                             ]
                           },
-                          "environment_variables": {
+                          "template_args": {
+                            "anyOf": [
+                              {
+                                "type": "array",
+                                "items": {}
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "template_env": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "propertyNames": {
+                                  "type": "string"
+                                },
+                                "additionalProperties": {}
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "team_args_schema": {
+                            "anyOf": [
+                              {
+                                "type": "array",
+                                "items": {}
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "team_env_schema": {
+                            "anyOf": [
+                              {
+                                "type": "array",
+                                "items": {}
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "user_args_schema": {
+                            "anyOf": [
+                              {
+                                "type": "array",
+                                "items": {}
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "user_env_schema": {
                             "anyOf": [
                               {
                                 "type": "array",
@@ -15490,7 +15635,12 @@
                           "organization",
                           "license",
                           "transport_type",
-                          "environment_variables",
+                          "template_args",
+                          "template_env",
+                          "team_args_schema",
+                          "team_env_schema",
+                          "user_args_schema",
+                          "user_env_schema",
                           "dependencies",
                           "category_id",
                           "tags",
@@ -16285,12 +16435,19 @@
                     ],
                     "description": "Installation type (defaults to local)"
                   },
-                  "user_environment_variables": {
+                  "team_args": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Team-level shared command line arguments"
+                  },
+                  "team_env": {
                     "type": "object",
                     "additionalProperties": {
                       "type": "string"
                     },
-                    "description": "Custom environment variables for this installation"
+                    "description": "Team-level shared environment variables"
                   }
                 },
                 "required": [
@@ -16350,7 +16507,7 @@
                           "type": "string",
                           "description": "MCP server ID that was installed"
                         },
-                        "user_id": {
+                        "created_by": {
                           "type": "string",
                           "description": "User ID who created this installation"
                         },
@@ -16366,12 +16523,21 @@
                           ],
                           "description": "Installation type"
                         },
-                        "user_environment_variables": {
+                        "team_args": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "nullable": true,
+                          "description": "Team-level shared command line arguments"
+                        },
+                        "team_env": {
                           "type": "object",
                           "additionalProperties": {
                             "type": "string"
                           },
-                          "description": "Custom environment variables"
+                          "nullable": true,
+                          "description": "Team-level shared environment variables"
                         },
                         "created_at": {
                           "type": "string",
@@ -16450,6 +16616,12 @@
                               "nullable": true,
                               "description": "Server environment variables"
                             },
+                            "args": {
+                              "type": "array",
+                              "items": {},
+                              "nullable": true,
+                              "description": "Server command line arguments"
+                            },
                             "installation_methods": {
                               "type": "array",
                               "items": {},
@@ -16477,7 +16649,7 @@
                         "id",
                         "team_id",
                         "server_id",
-                        "user_id",
+                        "created_by",
                         "installation_name",
                         "installation_type",
                         "created_at",
@@ -16709,7 +16881,7 @@
                             "type": "string",
                             "description": "MCP server ID that was installed"
                           },
-                          "user_id": {
+                          "created_by": {
                             "type": "string",
                             "description": "User ID who created this installation"
                           },
@@ -16725,12 +16897,21 @@
                             ],
                             "description": "Installation type"
                           },
-                          "user_environment_variables": {
+                          "team_args": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            },
+                            "nullable": true,
+                            "description": "Team-level shared command line arguments"
+                          },
+                          "team_env": {
                             "type": "object",
                             "additionalProperties": {
                               "type": "string"
                             },
-                            "description": "Custom environment variables"
+                            "nullable": true,
+                            "description": "Team-level shared environment variables"
                           },
                           "created_at": {
                             "type": "string",
@@ -16809,6 +16990,12 @@
                                 "nullable": true,
                                 "description": "Server environment variables"
                               },
+                              "args": {
+                                "type": "array",
+                                "items": {},
+                                "nullable": true,
+                                "description": "Server command line arguments"
+                              },
                               "installation_methods": {
                                 "type": "array",
                                 "items": {},
@@ -16836,7 +17023,7 @@
                           "id",
                           "team_id",
                           "server_id",
-                          "user_id",
+                          "created_by",
                           "installation_name",
                           "installation_type",
                           "created_at",
@@ -17053,7 +17240,7 @@
                           "type": "string",
                           "description": "MCP server ID that was installed"
                         },
-                        "user_id": {
+                        "created_by": {
                           "type": "string",
                           "description": "User ID who created this installation"
                         },
@@ -17069,12 +17256,21 @@
                           ],
                           "description": "Installation type"
                         },
-                        "user_environment_variables": {
+                        "team_args": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "nullable": true,
+                          "description": "Team-level shared command line arguments"
+                        },
+                        "team_env": {
                           "type": "object",
                           "additionalProperties": {
                             "type": "string"
                           },
-                          "description": "Custom environment variables"
+                          "nullable": true,
+                          "description": "Team-level shared environment variables"
                         },
                         "created_at": {
                           "type": "string",
@@ -17153,6 +17349,12 @@
                               "nullable": true,
                               "description": "Server environment variables"
                             },
+                            "args": {
+                              "type": "array",
+                              "items": {},
+                              "nullable": true,
+                              "description": "Server command line arguments"
+                            },
                             "installation_methods": {
                               "type": "array",
                               "items": {},
@@ -17180,7 +17382,7 @@
                         "id",
                         "team_id",
                         "server_id",
-                        "user_id",
+                        "created_by",
                         "installation_name",
                         "installation_type",
                         "created_at",
@@ -17347,12 +17549,19 @@
                     "minLength": 1,
                     "description": "Updated installation name"
                   },
-                  "user_environment_variables": {
+                  "team_args": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Updated team-level shared command line arguments"
+                  },
+                  "team_env": {
                     "type": "object",
                     "additionalProperties": {
                       "type": "string"
                     },
-                    "description": "Updated environment variables"
+                    "description": "Updated team-level shared environment variables"
                   }
                 },
                 "additionalProperties": false
@@ -17417,7 +17626,7 @@
                           "type": "string",
                           "description": "MCP server ID that was installed"
                         },
-                        "user_id": {
+                        "created_by": {
                           "type": "string",
                           "description": "User ID who created this installation"
                         },
@@ -17433,12 +17642,21 @@
                           ],
                           "description": "Installation type"
                         },
-                        "user_environment_variables": {
+                        "team_args": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "nullable": true,
+                          "description": "Team-level shared command line arguments"
+                        },
+                        "team_env": {
                           "type": "object",
                           "additionalProperties": {
                             "type": "string"
                           },
-                          "description": "Custom environment variables"
+                          "nullable": true,
+                          "description": "Team-level shared environment variables"
                         },
                         "created_at": {
                           "type": "string",
@@ -17517,6 +17735,12 @@
                               "nullable": true,
                               "description": "Server environment variables"
                             },
+                            "args": {
+                              "type": "array",
+                              "items": {},
+                              "nullable": true,
+                              "description": "Server command line arguments"
+                            },
                             "installation_methods": {
                               "type": "array",
                               "items": {},
@@ -17544,7 +17768,7 @@
                         "id",
                         "team_id",
                         "server_id",
-                        "user_id",
+                        "created_by",
                         "installation_name",
                         "installation_type",
                         "created_at",
@@ -17994,7 +18218,7 @@
                           "type": "string",
                           "description": "MCP server ID that was installed"
                         },
-                        "user_id": {
+                        "created_by": {
                           "type": "string",
                           "description": "User ID who created this installation"
                         },
@@ -18010,12 +18234,21 @@
                           ],
                           "description": "Installation type"
                         },
-                        "user_environment_variables": {
+                        "team_args": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "nullable": true,
+                          "description": "Team-level shared command line arguments"
+                        },
+                        "team_env": {
                           "type": "object",
                           "additionalProperties": {
                             "type": "string"
                           },
-                          "description": "Custom environment variables"
+                          "nullable": true,
+                          "description": "Team-level shared environment variables"
                         },
                         "created_at": {
                           "type": "string",
@@ -18094,6 +18327,12 @@
                               "nullable": true,
                               "description": "Server environment variables"
                             },
+                            "args": {
+                              "type": "array",
+                              "items": {},
+                              "nullable": true,
+                              "description": "Server command line arguments"
+                            },
                             "installation_methods": {
                               "type": "array",
                               "items": {},
@@ -18121,7 +18360,7 @@
                         "id",
                         "team_id",
                         "server_id",
-                        "user_id",
+                        "created_by",
                         "installation_name",
                         "installation_type",
                         "created_at",
@@ -18140,6 +18379,391 @@
                     "message"
                   ],
                   "description": "Environment variables updated successfully"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - Invalid input or validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates the operation failed"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Bad Request - Invalid input or validation error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required or invalid token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates the operation failed"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Unauthorized - Authentication required or invalid token"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Insufficient permissions or scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates the operation failed"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Forbidden - Insufficient permissions or scope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found - Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates the operation failed"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Not Found - Resource not found"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates the operation failed"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Internal Server Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teams/{teamId}/mcp/installations/{installationId}/args": {
+      "patch": {
+        "summary": "Update MCP installation command line arguments",
+        "tags": [
+          "MCP Installations"
+        ],
+        "description": "Updates the command line arguments for an existing MCP server installation. This endpoint specifically handles args updates only. Requires Content-Type: application/json header when sending request body. Supports both cookie-based authentication (for web users) and OAuth2 Bearer token authentication (for CLI users). Requires mcp:read scope for OAuth2 access.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "args": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Command line arguments to update"
+                  }
+                },
+                "required": [
+                  "args"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": true
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "teamId",
+            "required": true,
+            "description": "Team ID that owns the installation"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "installationId",
+            "required": true,
+            "description": "Installation ID"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Command line arguments updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "Unique installation ID"
+                        },
+                        "team_id": {
+                          "type": "string",
+                          "description": "Team ID that owns this installation"
+                        },
+                        "server_id": {
+                          "type": "string",
+                          "description": "MCP server ID that was installed"
+                        },
+                        "created_by": {
+                          "type": "string",
+                          "description": "User ID who created this installation"
+                        },
+                        "installation_name": {
+                          "type": "string",
+                          "description": "Custom name for this installation"
+                        },
+                        "installation_type": {
+                          "type": "string",
+                          "enum": [
+                            "local",
+                            "cloud"
+                          ],
+                          "description": "Installation type"
+                        },
+                        "team_args": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "nullable": true,
+                          "description": "Team-level shared command line arguments"
+                        },
+                        "team_env": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "nullable": true,
+                          "description": "Team-level shared environment variables"
+                        },
+                        "created_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "description": "Installation creation timestamp"
+                        },
+                        "updated_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "description": "Last update timestamp"
+                        },
+                        "last_used_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": true,
+                          "description": "Last usage timestamp"
+                        },
+                        "server": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "description": "Server ID"
+                            },
+                            "name": {
+                              "type": "string",
+                              "description": "Server name"
+                            },
+                            "description": {
+                              "type": "string",
+                              "description": "Server description"
+                            },
+                            "github_url": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "GitHub repository URL"
+                            },
+                            "homepage_url": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "Homepage URL"
+                            },
+                            "author_name": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "Author name"
+                            },
+                            "language": {
+                              "type": "string",
+                              "description": "Programming language"
+                            },
+                            "runtime": {
+                              "type": "string",
+                              "description": "Runtime environment"
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "active",
+                                "deprecated",
+                                "maintenance"
+                              ],
+                              "description": "Server status"
+                            },
+                            "tags": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              },
+                              "nullable": true,
+                              "description": "Server tags"
+                            },
+                            "environment_variables": {
+                              "type": "array",
+                              "items": {},
+                              "nullable": true,
+                              "description": "Server environment variables"
+                            },
+                            "args": {
+                              "type": "array",
+                              "items": {},
+                              "nullable": true,
+                              "description": "Server command line arguments"
+                            },
+                            "installation_methods": {
+                              "type": "array",
+                              "items": {},
+                              "description": "Installation methods"
+                            },
+                            "category_id": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "Category ID"
+                            },
+                            "transport_type": {
+                              "type": "string",
+                              "enum": [
+                                "stdio",
+                                "http",
+                                "sse"
+                              ],
+                              "description": "MCP transport type"
+                            }
+                          },
+                          "description": "Optional server details if included"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "team_id",
+                        "server_id",
+                        "created_by",
+                        "installation_name",
+                        "installation_type",
+                        "created_at",
+                        "updated_at",
+                        "last_used_at"
+                      ]
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Success message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data",
+                    "message"
+                  ],
+                  "description": "Command line arguments updated successfully"
                 }
               }
             }
@@ -18479,6 +19103,1859 @@
                     "success",
                     "error"
                   ],
+                  "description": "Internal Server Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teams/{teamId}/mcp/installations/{installationId}/user-configs": {
+      "post": {
+        "summary": "Create user configuration for MCP installation",
+        "tags": [
+          "MCP User Configurations"
+        ],
+        "description": "Creates a new user-specific configuration for an MCP server installation. This allows individual users to customize arguments and environment variables for their personal use. Requires Content-Type: application/json header when sending request body. Supports both cookie-based authentication (for web users) and OAuth2 Bearer token authentication (for CLI users). Requires mcp:read scope for OAuth2 access.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "device_name": {
+                    "type": "string",
+                    "description": "Optional device name (e.g., \"MacBook Pro\", \"Work PC\")"
+                  },
+                  "user_args": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "User-specific command line arguments"
+                  },
+                  "user_env": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "User-specific environment variables"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "teamId",
+            "required": true,
+            "description": "Team ID"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "installationId",
+            "required": true,
+            "description": "Installation ID"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "User configuration created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "User configuration ID"
+                        },
+                        "installation_id": {
+                          "type": "string",
+                          "description": "Installation ID"
+                        },
+                        "user_id": {
+                          "type": "string",
+                          "description": "User ID"
+                        },
+                        "device_name": {
+                          "type": "string",
+                          "description": "Device name"
+                        },
+                        "user_args": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "description": "User-specific command line arguments"
+                        },
+                        "user_env": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "description": "User-specific environment variables"
+                        },
+                        "created_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "description": "Creation timestamp"
+                        },
+                        "updated_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "description": "Last update timestamp"
+                        },
+                        "last_used_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "description": "Last used timestamp"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "installation_id",
+                        "user_id",
+                        "created_at",
+                        "updated_at"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Success message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "additionalProperties": false,
+                  "description": "User configuration created successfully"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Bad Request"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Unauthorized"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Forbidden"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Not Found"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Internal Server Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "List user configurations for MCP installation",
+        "tags": [
+          "MCP User Configurations"
+        ],
+        "description": "Retrieves all user-specific configurations for an MCP server installation belonging to the authenticated user. No Content-Type header required for this GET request. Supports both cookie-based authentication (for web users) and OAuth2 Bearer token authentication (for CLI users). Requires mcp:read scope for OAuth2 access.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "teamId",
+            "required": true,
+            "description": "Team ID"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "installationId",
+            "required": true,
+            "description": "Installation ID"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User configurations retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": true
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "User configuration ID"
+                          },
+                          "installation_id": {
+                            "type": "string",
+                            "description": "Installation ID"
+                          },
+                          "user_id": {
+                            "type": "string",
+                            "description": "User ID"
+                          },
+                          "device_name": {
+                            "type": "string",
+                            "description": "Device name"
+                          },
+                          "user_args": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            },
+                            "description": "User-specific command line arguments"
+                          },
+                          "user_env": {
+                            "type": "object",
+                            "additionalProperties": {
+                              "type": "string"
+                            },
+                            "description": "User-specific environment variables"
+                          },
+                          "created_at": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Creation timestamp"
+                          },
+                          "updated_at": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Last update timestamp"
+                          },
+                          "last_used_at": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Last used timestamp"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "installation_id",
+                          "user_id",
+                          "created_at",
+                          "updated_at"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Success message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "additionalProperties": false,
+                  "description": "User configurations retrieved successfully"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Bad Request"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Unauthorized"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Forbidden"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Not Found"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Internal Server Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teams/{teamId}/mcp/installations/{installationId}/user-configs/{configId}": {
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "teamId",
+            "required": true,
+            "description": "Team ID"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "installationId",
+            "required": true,
+            "description": "Installation ID"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "configId",
+            "required": true,
+            "description": "User configuration ID"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "User configuration ID"
+                        },
+                        "installation_id": {
+                          "type": "string",
+                          "description": "Installation ID"
+                        },
+                        "user_id": {
+                          "type": "string",
+                          "description": "User ID"
+                        },
+                        "device_name": {
+                          "type": "string",
+                          "description": "Device name"
+                        },
+                        "user_args": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "description": "User-specific command line arguments"
+                        },
+                        "user_env": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "description": "User-specific environment variables"
+                        },
+                        "created_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "description": "Creation timestamp"
+                        },
+                        "updated_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "description": "Last update timestamp"
+                        },
+                        "last_used_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "description": "Last used timestamp"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "installation_id",
+                        "user_id",
+                        "created_at",
+                        "updated_at"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Success message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Bad Request"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Unauthorized"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Forbidden"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Not Found"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Internal Server Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "device_name": {
+                    "type": "string",
+                    "description": "Optional device name (e.g., \"MacBook Pro\", \"Work PC\")"
+                  },
+                  "user_args": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "User-specific command line arguments"
+                  },
+                  "user_env": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "User-specific environment variables"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "teamId",
+            "required": true,
+            "description": "Team ID"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "installationId",
+            "required": true,
+            "description": "Installation ID"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "configId",
+            "required": true,
+            "description": "User configuration ID"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "User configuration ID"
+                        },
+                        "installation_id": {
+                          "type": "string",
+                          "description": "Installation ID"
+                        },
+                        "user_id": {
+                          "type": "string",
+                          "description": "User ID"
+                        },
+                        "device_name": {
+                          "type": "string",
+                          "description": "Device name"
+                        },
+                        "user_args": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "description": "User-specific command line arguments"
+                        },
+                        "user_env": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "description": "User-specific environment variables"
+                        },
+                        "created_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "description": "Creation timestamp"
+                        },
+                        "updated_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "description": "Last update timestamp"
+                        },
+                        "last_used_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "description": "Last used timestamp"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "installation_id",
+                        "user_id",
+                        "created_at",
+                        "updated_at"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Success message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Bad Request"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Unauthorized"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Forbidden"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Not Found"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Internal Server Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "teamId",
+            "required": true,
+            "description": "Team ID"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "installationId",
+            "required": true,
+            "description": "Installation ID"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "configId",
+            "required": true,
+            "description": "User configuration ID"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Success message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Bad Request"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Unauthorized"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Forbidden"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Not Found"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Internal Server Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teams/{teamId}/mcp/installations/{installationId}/user-configs/{configId}/args": {
+      "patch": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "args": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "User-specific command line arguments"
+                  }
+                },
+                "required": [
+                  "args"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": true
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "teamId",
+            "required": true,
+            "description": "Team ID"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "installationId",
+            "required": true,
+            "description": "Installation ID"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "configId",
+            "required": true,
+            "description": "User configuration ID"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "User configuration ID"
+                        },
+                        "installation_id": {
+                          "type": "string",
+                          "description": "Installation ID"
+                        },
+                        "user_id": {
+                          "type": "string",
+                          "description": "User ID"
+                        },
+                        "device_name": {
+                          "type": "string",
+                          "description": "Device name"
+                        },
+                        "user_args": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "description": "User-specific command line arguments"
+                        },
+                        "user_env": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "description": "User-specific environment variables"
+                        },
+                        "created_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "description": "Creation timestamp"
+                        },
+                        "updated_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "description": "Last update timestamp"
+                        },
+                        "last_used_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "description": "Last used timestamp"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "installation_id",
+                        "user_id",
+                        "created_at",
+                        "updated_at"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Success message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Bad Request"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Unauthorized"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Forbidden"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Not Found"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Internal Server Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teams/{teamId}/mcp/installations/{installationId}/user-configs/{configId}/env": {
+      "patch": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "env": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "User-specific environment variables"
+                  }
+                },
+                "required": [
+                  "env"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": true
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "teamId",
+            "required": true,
+            "description": "Team ID"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "installationId",
+            "required": true,
+            "description": "Installation ID"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "configId",
+            "required": true,
+            "description": "User configuration ID"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "User configuration ID"
+                        },
+                        "installation_id": {
+                          "type": "string",
+                          "description": "Installation ID"
+                        },
+                        "user_id": {
+                          "type": "string",
+                          "description": "User ID"
+                        },
+                        "device_name": {
+                          "type": "string",
+                          "description": "Device name"
+                        },
+                        "user_args": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "description": "User-specific command line arguments"
+                        },
+                        "user_env": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "description": "User-specific environment variables"
+                        },
+                        "created_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "description": "Creation timestamp"
+                        },
+                        "updated_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "description": "Last update timestamp"
+                        },
+                        "last_used_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "description": "Last used timestamp"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "installation_id",
+                        "user_id",
+                        "created_at",
+                        "updated_at"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Success message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Bad Request"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Unauthorized"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Forbidden"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Not Found"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "additionalProperties": false,
                   "description": "Internal Server Error"
                 }
               }

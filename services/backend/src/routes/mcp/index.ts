@@ -26,6 +26,7 @@ import syncRepo from './github/sync-repo';
 import getRepoInfo from './github/get-repo-info';
 
 import installationsRoutes from './installations';
+import userConfigurationsRoutes from './user-configurations';
 
 export default async function mcpRoutes(server: FastifyInstance) {
   // Categories routes (global_admin only)
@@ -61,4 +62,7 @@ export default async function mcpRoutes(server: FastifyInstance) {
   
   // MCP Server Installations
   await server.register(installationsRoutes);
+  
+  // User Configurations
+  await server.register(userConfigurationsRoutes);
 }

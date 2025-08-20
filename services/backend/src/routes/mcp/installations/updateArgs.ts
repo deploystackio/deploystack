@@ -5,23 +5,23 @@ import { McpInstallationService } from '../../../services/mcpInstallationService
 import { getDb } from '../../../db';
 import {
   TEAM_AND_INSTALLATION_PARAMS_SCHEMA,
-  UPDATE_ENVIRONMENT_VARS_REQUEST_SCHEMA,
+  UPDATE_ARGS_REQUEST_SCHEMA,
   INSTALLATION_UPDATE_SUCCESS_RESPONSE_SCHEMA,
   COMMON_ERROR_RESPONSES,
   DUAL_AUTH_SECURITY,
   formatInstallationResponse,
   type TeamAndInstallationParams,
-  type UpdateEnvironmentVariablesRequest,
+  type UpdateArgsRequest,
   type InstallationData,
   type InstallationUpdateSuccessResponse,
   type ErrorResponse
 } from './schemas';
 
-export default async function updateEnvironmentVariablesRoute(server: FastifyInstance) {
+export default async function updateArgsRoute(server: FastifyInstance) {
   server.patch<{
     Params: TeamAndInstallationParams;
-    Body: UpdateEnvironmentVariablesRequest;
-  }>('/teams/:teamId/mcp/installations/:installationId/environment-variables', {
+    Body: UpdateArgsRequest;
+  }>('/teams/:teamId/mcp/installations/:installationId/args', {
     preValidation: [
       requireAuthenticationAny(),
       requireOAuthScope('mcp:read'),
@@ -29,18 +29,18 @@ export default async function updateEnvironmentVariablesRoute(server: FastifyIns
     ],
     schema: {
       tags: ['MCP Installations'],
-      summary: 'Update MCP installation environment variables',
-      description: 'Updates the environment variables for an existing MCP server installation. This endpoint specifically handles environment variable updates only. Requires Content-Type: application/json header when sending request body. Supports both cookie-based authentication (for web users) and OAuth2 Bearer token authentication (for CLI users). Requires mcp:read scope for OAuth2 access.',
+      summary: 'Update MCP installation command line arguments',
+      description: 'Updates the command line arguments for an existing MCP server installation. This endpoint specifically handles args updates only. Requires Content-Type: application/json header when sending request body. Supports both cookie-based authentication (for web users) and OAuth2 Bearer token authentication (for CLI users). Requires mcp:read scope for OAuth2 access.',
       security: DUAL_AUTH_SECURITY,
       
       // Fastify validation schema
       params: TEAM_AND_INSTALLATION_PARAMS_SCHEMA,
-      body: UPDATE_ENVIRONMENT_VARS_REQUEST_SCHEMA,
+      body: UPDATE_ARGS_REQUEST_SCHEMA,
       
       response: {
         200: {
           ...INSTALLATION_UPDATE_SUCCESS_RESPONSE_SCHEMA,
-          description: 'Environment variables updated successfully'
+          description: 'Command line arguments updated successfully'
         },
         ...COMMON_ERROR_RESPONSES
       }
@@ -59,36 +59,36 @@ export default async function updateEnvironmentVariablesRoute(server: FastifyIns
       endpoint: request.url
     }, 'Authentication method determined for MCP installation operation');
     
-    const { environment_variables } = request.body as UpdateEnvironmentVariablesRequest;
+    const { args } = request.body as UpdateArgsRequest;
 
     request.log.info({
-      operation: 'update_mcp_installation_environment_variables',
+      operation: 'update_mcp_installation_args',
       teamId,
       installationId,
       userId,
       authType,
-      environmentVariableCount: Object.keys(environment_variables).length
-    }, 'Updating MCP installation environment variables');
+      argsCount: args.length
+    }, 'Updating MCP installation command line arguments');
 
     try {
       const db = getDb();
       const installationService = new McpInstallationService(db, request.log);
       
-      // Update only the environment variables
+      // Update only the command line arguments
       const updatedInstallation = await installationService.updateInstallation(
         installationId,
         teamId,
         userId,
-        { team_env: environment_variables }
+        { team_args: args }
       );
 
       if (!updatedInstallation) {
         request.log.warn({
-          operation: 'update_mcp_installation_environment_variables',
+          operation: 'update_mcp_installation_args',
           teamId,
           installationId,
           userId
-        }, 'MCP installation not found for environment variables update');
+        }, 'MCP installation not found for args update');
 
         const errorResponse: ErrorResponse = {
           success: false,
@@ -99,29 +99,29 @@ export default async function updateEnvironmentVariablesRoute(server: FastifyIns
       }
 
       request.log.info({
-        operation: 'update_mcp_installation_environment_variables',
+        operation: 'update_mcp_installation_args',
         teamId,
         installationId,
         userId,
         authType
-      }, 'Successfully updated MCP installation environment variables');
+      }, 'Successfully updated MCP installation command line arguments');
 
       const successResponse: InstallationUpdateSuccessResponse = {
         success: true,
         data: formatInstallationResponse(updatedInstallation as InstallationData),
-        message: 'Environment variables updated successfully'
+        message: 'Command line arguments updated successfully'
       };
       const jsonString = JSON.stringify(successResponse);
       return reply.status(200).type('application/json').send(jsonString);
 
     } catch (error) {
       request.log.error({
-        operation: 'update_mcp_installation_environment_variables',
+        operation: 'update_mcp_installation_args',
         error,
         teamId,
         installationId,
         userId
-      }, 'Failed to update MCP installation environment variables');
+      }, 'Failed to update MCP installation command line arguments');
 
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       

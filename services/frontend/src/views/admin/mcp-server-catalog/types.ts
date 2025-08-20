@@ -25,6 +25,7 @@ export interface McpServer {
   license?: string
   transport_type?: 'stdio' | 'http' | 'sse'
   environment_variables?: EnvironmentVariable[]
+  args?: Argument[]
   dependencies?: Record<string, any>
   category_id?: string
   tags?: string[]
@@ -73,6 +74,13 @@ export interface EnvironmentVariable {
   required: boolean
 }
 
+export interface Argument {
+  name: string
+  description: string
+  default_value?: string
+  required: boolean
+}
+
 export interface CreateMcpServerRequest {
   name: string
   description: string
@@ -94,6 +102,7 @@ export interface CreateMcpServerRequest {
   license?: string
   transport_type?: 'stdio' | 'http' | 'sse'
   environment_variables?: EnvironmentVariable[]
+  args?: Argument[]
   dependencies?: Record<string, any>
   category_id?: string
   tags?: string[]
@@ -123,6 +132,7 @@ export interface UpdateMcpServerRequest {
   license?: string
   transport_type?: 'stdio' | 'http' | 'sse'
   environment_variables?: EnvironmentVariable[]
+  args?: Argument[]
   dependencies?: Record<string, any>
   category_id?: string
   tags?: string[]
@@ -176,6 +186,7 @@ export interface CapabilitiesFormData {
   resources: McpResource[]
   prompts: McpPrompt[]
   environment_variables: EnvironmentVariable[]
+  args: Argument[]
 }
 
 export interface GitHubFormData {

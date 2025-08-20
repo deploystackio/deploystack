@@ -52,7 +52,8 @@ const localData = ref<CapabilitiesFormData>({
   tools: [],
   resources: [],
   prompts: [],
-  environment_variables: []
+  environment_variables: [],
+  args: []
 })
 
 // Flag to prevent recursive updates
