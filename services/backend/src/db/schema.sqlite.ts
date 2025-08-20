@@ -279,8 +279,8 @@ export const mcpUserConfigurations = sqliteTable('mcpUserConfigurations', {
   installation_id: text('installation_id').notNull().references(() => mcpServerInstallations.id, { onDelete: 'cascade' }),
   user_id: text('user_id').notNull().references(() => authUser.id, { onDelete: 'cascade' }),
   
-  // Device/Environment identification (optional)
-  device_name: text('device_name'), // "MacBook Pro", "Work PC", "Home Desktop", etc.
+  // UPDATED: Replace device_name with device_id reference
+  device_id: text('device_id').notNull().references(() => devices.id, { onDelete: 'cascade' }),
   
   // User-specific configurations (Tier 3)
   user_args: text('user_args'), // JSON: ["/Users/john/Desktop", "/Users/john/Projects"] - variable length arrays
@@ -291,11 +291,12 @@ export const mcpUserConfigurations = sqliteTable('mcpUserConfigurations', {
   updated_at: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
   last_used_at: integer('last_used_at', { mode: 'timestamp' }),
 }, (table) => ({
-  installationUserIdx: index('mcp_user_configs_installation_user_idx').on(table.installation_id, table.user_id),
+  installationUserDeviceIdx: index('mcp_user_configs_installation_user_device_idx').on(table.installation_id, table.user_id, table.device_id),
+  deviceIdx: index('mcp_user_configs_device_idx').on(table.device_id),
   userIdx: index('mcp_user_configs_user_idx').on(table.user_id),
   installationIdx: index('mcp_user_configs_installation_idx').on(table.installation_id),
-  // Unique constraint: one configuration per user per installation (optionally per device)
-  uniqueUserInstallation: index('mcp_user_configs_unique_user_installation').on(table.installation_id, table.user_id, table.device_name),
+  // UPDATED: Unique constraint now includes device_id instead of device_name
+  uniqueUserInstallationDevice: index('mcp_user_configs_unique_user_installation_device').on(table.installation_id, table.user_id, table.device_id),
 }));
 
 // OAuth2 Authorization Codes for PKCE flow
@@ -335,6 +336,42 @@ export const oauthRefreshTokens = sqliteTable('oauth_refresh_tokens', {
   created_at: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
   expires_at: integer('expires_at', { mode: 'timestamp' }).notNull(),
 });
+
+// Device Management System - Enterprise-grade device tracking and security
+export const devices = sqliteTable('devices', {
+  id: text('id').primaryKey(),
+  user_id: text('user_id').notNull().references(() => authUser.id, { onDelete: 'cascade' }),
+  
+  // Device Identification
+  device_name: text('device_name').notNull(), // User-friendly name (default: hostname)
+  hostname: text('hostname'), // System hostname
+  hardware_id: text('hardware_id').unique(), // Unique hardware fingerprint
+  
+  // Device Metadata
+  os_type: text('os_type'), // 'macOS', 'Windows', 'Linux'
+  os_version: text('os_version'), // '14.1.1', 'Windows 11', etc.
+  arch: text('arch'), // 'arm64', 'x64'
+  node_version: text('node_version'), // Node.js version for compatibility
+  
+  // Network and Security
+  last_ip: text('last_ip'), // Last known IP address
+  user_agent: text('user_agent'), // Browser/CLI user agent string
+  
+  // Status and Lifecycle
+  is_active: integer('is_active', { mode: 'boolean' }).notNull().default(true),
+  is_trusted: integer('is_trusted', { mode: 'boolean' }).notNull().default(true),
+  last_login_at: integer('last_login_at', { mode: 'timestamp' }),
+  last_activity_at: integer('last_activity_at', { mode: 'timestamp' }),
+  
+  // Metadata
+  created_at: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  updated_at: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+}, (table) => ({
+  userDeviceIdx: index('devices_user_idx').on(table.user_id),
+  hardwareIdIdx: index('devices_hardware_id_idx').on(table.hardware_id),
+  activeIdx: index('devices_active_idx').on(table.is_active),
+  lastActivityIdx: index('devices_last_activity_idx').on(table.last_activity_at),
+}));
 
 // Plugin table definitions - populated dynamically by the plugin system
 // This object will hold definitions for plugin tables, to be populated dynamically.

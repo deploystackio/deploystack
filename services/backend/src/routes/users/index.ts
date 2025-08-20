@@ -10,6 +10,7 @@ import getCurrentUserRoute from './getCurrentUser';
 import getCurrentUserTeamsRoute from './getCurrentUserTeams';
 import getUserTeamsRoute from './getUserTeams';
 import preferencesRoutes from './preferences';
+import userDevicesRoute from './me/devices';
 
 export default async function usersRoute(server: FastifyInstance) {
   // Register individual user route handlers
@@ -26,4 +27,7 @@ export default async function usersRoute(server: FastifyInstance) {
   
   // Register preferences routes
   await server.register(preferencesRoutes);
+  
+  // Register device management routes
+  await server.register(userDevicesRoute);
 }

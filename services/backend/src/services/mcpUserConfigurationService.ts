@@ -10,7 +10,7 @@ export interface McpUserConfiguration {
   id: string;
   installation_id: string;
   user_id: string;
-  device_name?: string;
+  device_id?: string;
   user_args?: string[];
   user_env?: Record<string, string>;
   created_at: Date;
@@ -33,13 +33,13 @@ export interface McpUserConfiguration {
 }
 
 export interface CreateUserConfigRequest {
-  device_name?: string;
+  device_id?: string;
   user_args?: string[];
   user_env?: Record<string, string>;
 }
 
 export interface UpdateUserConfigRequest {
-  device_name?: string;
+  device_id?: string;
   user_args?: string[];
   user_env?: Record<string, string>;
 }
@@ -195,7 +195,7 @@ export class McpUserConfigurationService {
       installationId,
       userId,
       teamId,
-      deviceName: data.device_name
+      deviceId: data.device_id
     }, 'Creating user configuration');
 
     // Verify installation exists and user has access
@@ -218,8 +218,8 @@ export class McpUserConfigurationService {
       throw new Error('Installation not found or access denied');
     }
 
-    // Check for existing configuration with same device name (if provided)
-    if (data.device_name) {
+    // Check for existing configuration with same device ID (if provided)
+    if (data.device_id) {
       const existingConfig = await this.db
         .select()
         .from(mcpUserConfigurations)
@@ -227,13 +227,13 @@ export class McpUserConfigurationService {
           and(
             eq(mcpUserConfigurations.installation_id, installationId),
             eq(mcpUserConfigurations.user_id, userId),
-            eq(mcpUserConfigurations.device_name, data.device_name)
+            eq(mcpUserConfigurations.device_id, data.device_id)
           )
         )
         .limit(1);
 
       if (existingConfig.length > 0) {
-        throw new Error('A configuration with this device name already exists for this installation');
+        throw new Error('A configuration with this device ID already exists for this installation');
       }
     }
 
@@ -255,7 +255,7 @@ export class McpUserConfigurationService {
       id: configId,
       installation_id: installationId,
       user_id: userId,
-      device_name: data.device_name || null,
+      device_id: data.device_id || null,
       user_args: data.user_args ? JSON.stringify(data.user_args) : null,
       user_env: data.user_env ? JSON.stringify(data.user_env) : null,
       created_at: now,
@@ -310,8 +310,8 @@ export class McpUserConfigurationService {
       }
     }
 
-    // Check for device name conflicts if changing device name
-    if (data.device_name !== undefined && data.device_name !== existing.device_name) {
+    // Check for device ID conflicts if changing device ID
+    if (data.device_id !== undefined && data.device_id !== existing.device_id) {
       const conflictingConfig = await this.db
         .select()
         .from(mcpUserConfigurations)
@@ -319,7 +319,7 @@ export class McpUserConfigurationService {
           and(
             eq(mcpUserConfigurations.installation_id, existing.installation_id),
             eq(mcpUserConfigurations.user_id, userId),
-            eq(mcpUserConfigurations.device_name, data.device_name),
+            eq(mcpUserConfigurations.device_id, data.device_id),
             // Exclude current configuration
             eq(mcpUserConfigurations.id, configId)
           )
@@ -327,7 +327,7 @@ export class McpUserConfigurationService {
         .limit(1);
 
       if (conflictingConfig.length > 0) {
-        throw new Error('A configuration with this device name already exists for this installation');
+        throw new Error('A configuration with this device ID already exists for this installation');
       }
     }
 
@@ -335,8 +335,8 @@ export class McpUserConfigurationService {
       updated_at: new Date()
     };
 
-    if (data.device_name !== undefined) {
-      updateData.device_name = data.device_name || null;
+    if (data.device_id !== undefined) {
+      updateData.device_id = data.device_id || null;
     }
 
     if (data.user_args !== undefined) {

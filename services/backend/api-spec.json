@@ -4574,6 +4574,783 @@
         }
       }
     },
+    "/api/devices": {
+      "get": {
+        "summary": "List my devices",
+        "tags": [
+          "User Devices"
+        ],
+        "description": "Retrieves all devices registered to the authenticated user, ordered by last activity.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved user devices",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "devices": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "Unique device identifier"
+                          },
+                          "user_id": {
+                            "type": "string",
+                            "description": "User ID who owns the device"
+                          },
+                          "device_name": {
+                            "type": "string",
+                            "description": "User-friendly device name"
+                          },
+                          "hostname": {
+                            "type": "string",
+                            "nullable": true,
+                            "description": "System hostname"
+                          },
+                          "hardware_id": {
+                            "type": "string",
+                            "nullable": true,
+                            "description": "Hardware fingerprint"
+                          },
+                          "os_type": {
+                            "type": "string",
+                            "nullable": true,
+                            "description": "Operating system type"
+                          },
+                          "os_version": {
+                            "type": "string",
+                            "nullable": true,
+                            "description": "Operating system version"
+                          },
+                          "arch": {
+                            "type": "string",
+                            "nullable": true,
+                            "description": "System architecture"
+                          },
+                          "node_version": {
+                            "type": "string",
+                            "nullable": true,
+                            "description": "Node.js version"
+                          },
+                          "last_ip": {
+                            "type": "string",
+                            "nullable": true,
+                            "description": "Last known IP address"
+                          },
+                          "user_agent": {
+                            "type": "string",
+                            "nullable": true,
+                            "description": "User agent string"
+                          },
+                          "is_active": {
+                            "type": "boolean",
+                            "description": "Whether device is active"
+                          },
+                          "is_trusted": {
+                            "type": "boolean",
+                            "description": "Whether device is trusted"
+                          },
+                          "last_login_at": {
+                            "type": "string",
+                            "format": "date-time",
+                            "nullable": true,
+                            "description": "Last login timestamp"
+                          },
+                          "last_activity_at": {
+                            "type": "string",
+                            "format": "date-time",
+                            "nullable": true,
+                            "description": "Last activity timestamp"
+                          },
+                          "created_at": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Device creation timestamp"
+                          },
+                          "updated_at": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Last update timestamp"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "user_id",
+                          "device_name",
+                          "is_active",
+                          "is_trusted",
+                          "created_at",
+                          "updated_at"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "devices"
+                  ],
+                  "description": "Successfully retrieved user devices"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Unauthorized"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Internal Server Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/devices/{deviceId}": {
+      "get": {
+        "summary": "Get device details",
+        "tags": [
+          "User Devices"
+        ],
+        "description": "Retrieves detailed information about a specific device owned by the authenticated user.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "deviceId",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved device details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "device": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "Unique device identifier"
+                        },
+                        "user_id": {
+                          "type": "string",
+                          "description": "User ID who owns the device"
+                        },
+                        "device_name": {
+                          "type": "string",
+                          "description": "User-friendly device name"
+                        },
+                        "hostname": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "System hostname"
+                        },
+                        "hardware_id": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Hardware fingerprint"
+                        },
+                        "os_type": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Operating system type"
+                        },
+                        "os_version": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Operating system version"
+                        },
+                        "arch": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "System architecture"
+                        },
+                        "node_version": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Node.js version"
+                        },
+                        "last_ip": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Last known IP address"
+                        },
+                        "user_agent": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "User agent string"
+                        },
+                        "is_active": {
+                          "type": "boolean",
+                          "description": "Whether device is active"
+                        },
+                        "is_trusted": {
+                          "type": "boolean",
+                          "description": "Whether device is trusted"
+                        },
+                        "last_login_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": true,
+                          "description": "Last login timestamp"
+                        },
+                        "last_activity_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": true,
+                          "description": "Last activity timestamp"
+                        },
+                        "created_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "description": "Device creation timestamp"
+                        },
+                        "updated_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "description": "Last update timestamp"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "user_id",
+                        "device_name",
+                        "is_active",
+                        "is_trusted",
+                        "created_at",
+                        "updated_at"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "device"
+                  ],
+                  "description": "Successfully retrieved device details"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Unauthorized"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Device not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Device not found"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Internal Server Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update device",
+        "tags": [
+          "User Devices"
+        ],
+        "description": "Updates device information such as the device name. Requires Content-Type: application/json header when sending request body.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "device_name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100,
+                    "description": "New device name"
+                  }
+                },
+                "required": [
+                  "device_name"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": true
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "deviceId",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully updated device",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "device": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "Unique device identifier"
+                        },
+                        "user_id": {
+                          "type": "string",
+                          "description": "User ID who owns the device"
+                        },
+                        "device_name": {
+                          "type": "string",
+                          "description": "User-friendly device name"
+                        },
+                        "hostname": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "System hostname"
+                        },
+                        "hardware_id": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Hardware fingerprint"
+                        },
+                        "os_type": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Operating system type"
+                        },
+                        "os_version": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Operating system version"
+                        },
+                        "arch": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "System architecture"
+                        },
+                        "node_version": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Node.js version"
+                        },
+                        "last_ip": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Last known IP address"
+                        },
+                        "user_agent": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "User agent string"
+                        },
+                        "is_active": {
+                          "type": "boolean",
+                          "description": "Whether device is active"
+                        },
+                        "is_trusted": {
+                          "type": "boolean",
+                          "description": "Whether device is trusted"
+                        },
+                        "last_login_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": true,
+                          "description": "Last login timestamp"
+                        },
+                        "last_activity_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": true,
+                          "description": "Last activity timestamp"
+                        },
+                        "created_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "description": "Device creation timestamp"
+                        },
+                        "updated_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "description": "Last update timestamp"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "user_id",
+                        "device_name",
+                        "is_active",
+                        "is_trusted",
+                        "created_at",
+                        "updated_at"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "device"
+                  ],
+                  "description": "Successfully updated device"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Bad Request"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Unauthorized"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Device not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Device not found"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Internal Server Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Remove device",
+        "tags": [
+          "User Devices"
+        ],
+        "description": "Removes a device from the user account. This will deactivate the device and prevent it from accessing MCP configurations.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "deviceId",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully removed device",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "message"
+                  ],
+                  "description": "Successfully removed device"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Unauthorized"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Device not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Device not found"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Internal Server Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/settings": {
       "get": {
         "summary": "List all global settings",
