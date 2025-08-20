@@ -20,13 +20,13 @@ export default async function listUserConfigsRoute(server: FastifyInstance) {
   }>('/teams/:teamId/mcp/installations/:installationId/user-configs', {
     preValidation: [
       requireAuthenticationAny(),
-      requireOAuthScope('mcp:read'),
+      requireOAuthScope('mcp:user-configs:read'),
       requireTeamPermission('mcp.installations.view')
     ],
     schema: {
       tags: ['MCP User Configurations'],
       summary: 'List user configurations for MCP installation',
-      description: 'Retrieves all user-specific configurations for an MCP server installation belonging to the authenticated user. No Content-Type header required for this GET request. Supports both cookie-based authentication (for web users) and OAuth2 Bearer token authentication (for CLI users). Requires mcp:read scope for OAuth2 access.',
+      description: 'Retrieves all user-specific configurations for an MCP server installation belonging to the authenticated user. No Content-Type header required for this GET request. Supports both cookie-based authentication (for web users) and OAuth2 Bearer token authentication (for CLI users). Requires mcp:user-configs:read scope for OAuth2 access.',
       security: DUAL_AUTH_SECURITY,
       
       // Fastify validation schema

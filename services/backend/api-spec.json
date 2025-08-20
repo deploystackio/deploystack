@@ -19400,7 +19400,7 @@
         "tags": [
           "MCP User Configurations"
         ],
-        "description": "Retrieves all user-specific configurations for an MCP server installation belonging to the authenticated user. No Content-Type header required for this GET request. Supports both cookie-based authentication (for web users) and OAuth2 Bearer token authentication (for CLI users). Requires mcp:read scope for OAuth2 access.",
+        "description": "Retrieves all user-specific configurations for an MCP server installation belonging to the authenticated user. No Content-Type header required for this GET request. Supports both cookie-based authentication (for web users) and OAuth2 Bearer token authentication (for CLI users). Requires mcp:user-configs:read scope for OAuth2 access.",
         "parameters": [
           {
             "schema": {
@@ -19654,6 +19654,11 @@
     },
     "/api/teams/{teamId}/mcp/installations/{installationId}/user-configs/{configId}": {
       "get": {
+        "summary": "Get user configuration by ID",
+        "tags": [
+          "MCP User Configurations"
+        ],
+        "description": "Retrieves a specific user configuration for an MCP server installation. No Content-Type header required for this GET request. Supports both cookie-based authentication (for web users) and OAuth2 Bearer token authentication (for CLI users). Requires mcp:user-configs:read scope for OAuth2 access.",
         "parameters": [
           {
             "schema": {
@@ -19696,7 +19701,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Default Response",
+            "description": "User configuration retrieved successfully",
             "content": {
               "application/json": {
                 "schema": {
@@ -19773,7 +19778,8 @@
                     "success",
                     "data"
                   ],
-                  "additionalProperties": false
+                  "additionalProperties": false,
+                  "description": "User configuration retrieved successfully"
                 }
               }
             }

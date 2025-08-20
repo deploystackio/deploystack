@@ -64,6 +64,7 @@ export class AuthorizationService {
     const allowedScopes = [
       'mcp:read',
       'mcp:categories:read',
+      'mcp:user-configs:read',
       'account:read',
       'user:read',
       'teams:read',
