@@ -3154,7 +3154,7 @@ paths:
                   - success
                   - error
                 description: Internal server error
-  /api/me/devices:
+  /api/users/me/devices:
     get:
       summary: List my devices
       tags:
@@ -3287,7 +3287,7 @@ paths:
                   - success
                   - error
                 description: Internal Server Error
-  /api/me/devices/{deviceId}:
+  /api/users/me/devices/{deviceId}:
     get:
       summary: Get device details
       tags:

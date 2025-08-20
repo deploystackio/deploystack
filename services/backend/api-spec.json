@@ -4574,7 +4574,7 @@
         }
       }
     },
-    "/api/me/devices": {
+    "/api/users/me/devices": {
       "get": {
         "summary": "List my devices",
         "tags": [
@@ -4757,7 +4757,7 @@
         }
       }
     },
-    "/api/me/devices/{deviceId}": {
+    "/api/users/me/devices/{deviceId}": {
       "get": {
         "summary": "Get device details",
         "tags": [

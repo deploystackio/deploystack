@@ -114,7 +114,7 @@ export default async function userDevicesRoute(server: FastifyInstance) {
   const deviceService = new DeviceService(server.db);
 
   // GET /api/users/me/devices - List user's devices
-  server.get('/me/devices', {
+  server.get('/users/me/devices', {
     preValidation: requireAuthentication(),
     schema: {
       tags: ['User Devices'],
@@ -158,7 +158,7 @@ export default async function userDevicesRoute(server: FastifyInstance) {
   });
 
   // GET /api/users/me/devices/:deviceId - Get specific device
-  server.get('/me/devices/:deviceId', {
+  server.get('/users/me/devices/:deviceId', {
     preValidation: requireAuthentication(),
     schema: {
       tags: ['User Devices'],
@@ -225,7 +225,7 @@ export default async function userDevicesRoute(server: FastifyInstance) {
   });
 
   // PUT /api/users/me/devices/:deviceId - Update device
-  server.put('/me/devices/:deviceId', {
+  server.put('/users/me/devices/:deviceId', {
     preValidation: requireAuthentication(),
     schema: {
       tags: ['User Devices'],
@@ -308,7 +308,7 @@ export default async function userDevicesRoute(server: FastifyInstance) {
   });
 
   // DELETE /api/users/me/devices/:deviceId - Remove device
-  server.delete('/me/devices/:deviceId', {
+  server.delete('/users/me/devices/:deviceId', {
     preValidation: requireAuthentication(),
     schema: {
       tags: ['User Devices'],
