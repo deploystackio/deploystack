@@ -232,6 +232,7 @@ export class ServerStartService {
             team_id: targetTeamId,
             team_name: targetTeamName,
             installations: [],
+            user_configurations: [],
             servers: [],
             last_updated: new Date().toISOString()
           };
@@ -242,6 +243,7 @@ export class ServerStartService {
           team_id: targetTeamId,
           team_name: targetTeamName,
           installations: [],
+          user_configurations: [],
           servers: [],
           last_updated: new Date().toISOString()
         };

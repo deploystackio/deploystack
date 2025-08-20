@@ -60,7 +60,25 @@ export class MCPConfigService {
       const installations = response.data || [];
       
       if (showSpinner && spinner) {
-        spinner.text = `Processing ${installations.length} MCP installation${installations.length === 1 ? '' : 's'}...`;
+        spinner.text = `Downloading user configurations for ${installations.length} installation${installations.length === 1 ? '' : 's'}...`;
+      }
+
+      // Download user configurations for each installation
+      const allUserConfigurations = [];
+      for (const installation of installations) {
+        try {
+          const userConfigResponse = await apiClient.getUserConfigurations(teamId, installation.id);
+          if (userConfigResponse.success && userConfigResponse.data) {
+            allUserConfigurations.push(...userConfigResponse.data);
+          }
+        } catch (error) {
+          // Log warning but continue - user configs are optional
+          console.log(chalk.yellow(`⚠️  Could not fetch user configurations for installation ${installation.installation_name}: ${error instanceof Error ? error.message : String(error)}`));
+        }
+      }
+
+      if (showSpinner && spinner) {
+        spinner.text = `Processing ${installations.length} installation${installations.length === 1 ? '' : 's'} with ${allUserConfigurations.length} user configuration${allUserConfigurations.length === 1 ? '' : 's'}...`;
       }
 
       // Filter and validate installations
@@ -71,8 +89,8 @@ export class MCPConfigService {
         console.log(chalk.yellow(`⚠️  Skipped ${invalidCount} invalid installation${invalidCount === 1 ? '' : 's'}`));
       }
 
-      // Process installations into server configurations
-      const config = processMCPInstallations(teamId, teamName || `Team ${teamId}`, validInstallations);
+      // Process installations into server configurations with three-tier architecture
+      const config = processMCPInstallations(teamId, teamName || `Team ${teamId}`, validInstallations, allUserConfigurations);
 
       if (showSpinner && spinner) {
         spinner.text = 'Storing MCP configuration securely...';

@@ -1,25 +1,26 @@
-import { MCPInstallation, MCPServerConfig, TeamMCPConfig } from '../../types/mcp';
+import { MCPInstallation, MCPServerConfig, TeamMCPConfig, MCPUserConfiguration } from '../../types/mcp';
 
 /**
- * Process MCP installations into server configurations for the Gateway
+ * Process MCP installations into server configurations for the Gateway (Three-tier architecture)
  * @param teamId Team ID
  * @param teamName Team name
  * @param installations Raw MCP installations from API
+ * @param userConfigurations User configurations from API
  * @returns Processed team MCP configuration
  */
 export function processMCPInstallations(
   teamId: string,
   teamName: string,
-  installations: MCPInstallation[]
+  installations: MCPInstallation[],
+  userConfigurations: MCPUserConfiguration[] = []
 ): TeamMCPConfig {
   const servers: MCPServerConfig[] = installations.map(installation => {
-    // Process installation methods to extract command and args
+    // Process installation methods to extract template command and args
     const installationMethods = installation.server.installation_methods || [];
-    let command = 'npx';
-    let args: string[] = [];
+    let templateCommand = 'npx';
+    let templateArgs: string[] = [];
 
-
-    // Find the claude-desktop installation method
+    // Find the claude-desktop installation method for template args
     const claudeDesktopMethod = installationMethods.find(
       /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
       (method: any) => method.client === 'claude-desktop'
@@ -27,33 +28,43 @@ export function processMCPInstallations(
 
     if (claudeDesktopMethod) {
       // Use the installation method data directly
-      command = claudeDesktopMethod.command || 'npx';
-      args = claudeDesktopMethod.args || [];
+      templateCommand = claudeDesktopMethod.command || 'npx';
+      templateArgs = claudeDesktopMethod.args || [];
     } else {
       // Fallback logic for servers without proper installation_methods
       const runtime = installation.server.runtime;
       
       if (runtime === 'node' || runtime === 'nodejs') {
-        command = 'npx';
-        args = [installation.server.name];
+        templateCommand = 'npx';
+        templateArgs = [installation.server.name];
       } else if (runtime === 'python') {
-        command = 'python';
-        args = ['-m', installation.server.name];
+        templateCommand = 'python';
+        templateArgs = ['-m', installation.server.name];
       } else if (runtime === 'go') {
-        command = installation.server.name;
-        args = [];
+        templateCommand = installation.server.name;
+        templateArgs = [];
       } else {
         // Final fallback
-        command = 'npx';
-        args = [installation.server.name];
+        templateCommand = 'npx';
+        templateArgs = [installation.server.name];
       }
     }
 
-    // Merge environment variables from server definition and user customization
+    // Find user configuration for this installation (use first one for now)
+    const userConfig = userConfigurations.find(config => config.installation_id === installation.id);
+
+    // Three-tier assembly: Template + Team + User
+    const finalArgs = [
+      ...templateArgs,                           // Template args (fixed)
+      ...(installation.team_args || []),        // Team args (shared)
+      ...(userConfig?.user_args || [])          // User args (personal)
+    ];
+
+    // Three-tier environment assembly: Template + Team + User
     const serverEnvVars = installation.server.environment_variables || [];
     const env: Record<string, string> = {};
 
-    // Add server-defined environment variables (if they have default values)
+    // Add server-defined environment variables (template level)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     serverEnvVars.forEach((envVar: any) => {
       if (envVar.name && envVar.default_value) {
@@ -61,15 +72,18 @@ export function processMCPInstallations(
       }
     });
 
-    // Override with user-provided environment variables
-    Object.assign(env, installation.user_environment_variables || {});
+    // Add team-level environment variables
+    Object.assign(env, installation.team_env || {});
+
+    // Add user-level environment variables
+    Object.assign(env, userConfig?.user_env || {});
 
     return {
       id: installation.id,
       name: installation.server.name,
       installation_name: installation.installation_name,
-      command,
-      args,
+      command: templateCommand,
+      args: finalArgs,
       env,
       runtime: installation.server.runtime,
       installation_type: installation.installation_type,
@@ -81,6 +95,7 @@ export function processMCPInstallations(
     team_id: teamId,
     team_name: teamName,
     installations,
+    user_configurations: userConfigurations,
     servers,
     last_updated: new Date().toISOString()
   };

@@ -8,17 +8,17 @@ import { processMCPInstallations, validateMCPInstallation, filterValidInstallati
 export function testMCPProcessing(): void {
   console.log('🧪 Testing MCP configuration processing...');
 
-  // Sample MCP installation data based on API spec
+  // Sample MCP installation data based on API spec (three-tier architecture)
   const sampleInstallations: MCPInstallation[] = [
     {
       id: 'inst-001',
       team_id: 'team-123',
       server_id: 'server-001',
-      user_id: 'user-001',
+      created_by: 'user-001',
       installation_name: 'Bright Data MCP',
       installation_type: 'local',
-      user_environment_variables: {
-        'API_TOKEN': 'test-token-123',
+      team_args: ['--api-token', 'team-token-123'],
+      team_env: {
         'API_URL': 'https://brightdata.example.com'
       },
       created_at: '2024-01-01T00:00:00Z',
@@ -50,10 +50,11 @@ export function testMCPProcessing(): void {
       id: 'inst-002',
       team_id: 'team-123',
       server_id: 'server-002',
-      user_id: 'user-001',
+      created_by: 'user-001',
       installation_name: 'Python File Manager',
       installation_type: 'local',
-      user_environment_variables: {
+      team_args: null,
+      team_env: {
         'BASE_PATH': '/home/user/files'
       },
       created_at: '2024-01-01T00:00:00Z',
@@ -87,10 +88,11 @@ export function testMCPProcessing(): void {
       id: 'inst-003',
       team_id: 'team-123',
       server_id: 'server-003',
-      user_id: 'user-001',
+      created_by: 'user-001',
       installation_name: 'Invalid Server',
       installation_type: 'local',
-      user_environment_variables: {},
+      team_args: null,
+      team_env: null,
       created_at: '2024-01-01T00:00:00Z',
       updated_at: '2024-01-01T00:00:00Z',
       last_used_at: null,

@@ -24,6 +24,7 @@ export const DEFAULT_AUTH_CONFIG: AuthConfig = {
   scopes: [
     'mcp:read',
     'mcp:categories:read',
+    'mcp:user-configs:read',
     'account:read',
     'user:read',
     'teams:read',
@@ -55,6 +56,7 @@ export function buildAuthConfig(baseUrl: string): AuthConfig {
 export const SCOPE_DESCRIPTIONS: Record<string, string> = {
   'mcp:read': 'Access your MCP server installations and configurations',
   'mcp:categories:read': 'Read MCP server categories and organization',
+  'mcp:user-configs:read': 'Access your personal MCP server configurations and device-specific settings',
   'account:read': 'Read your account information',
   'user:read': 'Read your user profile information',
   'teams:read': 'Read your team memberships and information',

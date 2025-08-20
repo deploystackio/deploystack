@@ -87,6 +87,18 @@ export class DeployStackAPI {
   }
 
   /**
+   * Get user configurations for an MCP installation
+   * @param teamId Team ID
+   * @param installationId Installation ID
+   * @returns User configurations response
+   */
+  async getUserConfigurations(teamId: string, installationId: string): Promise<any> {
+    const endpoint = `${this.baseUrl}/api/teams/${teamId}/mcp/installations/${installationId}/user-configs`;
+    const response = await this.makeRequest(endpoint);
+    return response;
+  }
+
+  /**
    * Make an authenticated API request
    * @param endpoint API endpoint URL
    * @param options Request options
