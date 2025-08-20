@@ -113,6 +113,9 @@ Our roadmap is designed to build the essential infrastructure for using MCP secu
 - **[Done]** Auto-install MCP servers for new users with admin-controlled defaults.
 - **[Done]** Featured MCP servers filtering for improved tool discovery.
 - **[Done]** Global Event Bus System (Phase 2) - event-driven architecture with plugin integration.
+- **[Done]** Three-Tier MCP Configuration Architecture - complete database schema redesign separating template, team, and user-level configurations.
+- **[Done]** Multi-User Configuration Management - support for multiple users within teams, each with personalized device-specific configurations.
+- **[Done]** Advanced MCP Argument & Environment Variable Handling - comprehensive service layer with schema validation and runtime configuration assembly.
 - **[To Do]** Build out Audit Logging features in the cloud UI.
 - **[To Do]** Develop Analytics dashboards for tool usage and performance.
 - **[To Do]** Add `deploystack logs` command for real-time gateway activity monitoring.
