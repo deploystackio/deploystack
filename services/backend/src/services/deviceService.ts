@@ -4,6 +4,7 @@ import { devices } from '../db/schema.sqlite';
 import { nanoid } from 'nanoid';
 import crypto from 'crypto';
 import os from 'os';
+import type { FastifyBaseLogger } from 'fastify';
 
 // TypeScript interfaces for type safety
 export interface DeviceInfo {
@@ -251,7 +252,7 @@ export class DeviceService {
   /**
    * Revoke device access (mark as inactive and untrusted)
    */
-  async revokeDevice(deviceId: string, revokedBy: string, reason?: string): Promise<void> {
+  async revokeDevice(deviceId: string, revokedBy: string, logger: FastifyBaseLogger, reason?: string): Promise<void> {
     const now = new Date();
 
     await this.db
@@ -263,8 +264,13 @@ export class DeviceService {
       })
       .where(eq(devices.id, deviceId));
 
-    // TODO: Log security event
-    console.log(`Device ${deviceId} revoked by ${revokedBy}${reason ? `: ${reason}` : ''}`);
+    // Log security event with structured logging
+    logger.warn({
+      operation: 'device_revoked',
+      deviceId,
+      revokedBy,
+      reason: reason || null
+    }, `Device ${deviceId} revoked by ${revokedBy}${reason ? `: ${reason}` : ''}`);
   }
 
   /**
