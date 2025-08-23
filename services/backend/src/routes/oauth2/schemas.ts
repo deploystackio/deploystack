@@ -346,6 +346,104 @@ export interface OAuth2Client {
 }
 
 // =============================================================================
+// DEVICE INFORMATION SCHEMAS
+// =============================================================================
+
+/**
+ * Device information schema for OAuth2 token requests
+ * Used by: token.ts for device registration during login
+ */
+export const DEVICE_INFO_SCHEMA = {
+  type: 'object',
+  properties: {
+    device_name: {
+      type: 'string',
+      minLength: 1,
+      maxLength: 100,
+      description: 'User-friendly device name (defaults to hostname)'
+    },
+    hostname: {
+      type: 'string',
+      description: 'System hostname'
+    },
+    hardware_id: {
+      type: 'string',
+      minLength: 1,
+      description: 'Unique hardware fingerprint'
+    },
+    os_type: {
+      type: 'string',
+      description: 'Operating system type (e.g., macOS, Windows, Linux)'
+    },
+    os_version: {
+      type: 'string',
+      description: 'Operating system version'
+    },
+    arch: {
+      type: 'string',
+      description: 'System architecture (e.g., arm64, x64)'
+    },
+    node_version: {
+      type: 'string',
+      description: 'Node.js version for compatibility'
+    },
+    user_agent: {
+      type: 'string',
+      description: 'User agent string from CLI'
+    }
+  },
+  required: ['device_name', 'hostname', 'hardware_id'],
+  additionalProperties: false
+} as const;
+
+/**
+ * Device response schema for OAuth2 token responses
+ * Used by: token.ts for returning device information
+ */
+export const DEVICE_RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    id: {
+      type: 'string',
+      description: 'Unique device identifier'
+    },
+    device_name: {
+      type: 'string',
+      description: 'User-friendly device name'
+    },
+    hostname: {
+      type: 'string',
+      nullable: true,
+      description: 'System hostname'
+    },
+    hardware_id: {
+      type: 'string',
+      nullable: true,
+      description: 'Hardware fingerprint'
+    },
+    os_type: {
+      type: 'string',
+      nullable: true,
+      description: 'Operating system type'
+    },
+    is_active: {
+      type: 'boolean',
+      description: 'Whether device is active'
+    },
+    is_trusted: {
+      type: 'boolean',
+      description: 'Whether device is trusted'
+    },
+    created_at: {
+      type: 'string',
+      format: 'date-time',
+      description: 'Device creation timestamp'
+    }
+  },
+  required: ['id', 'device_name', 'is_active', 'is_trusted', 'created_at']
+} as const;
+
+// =============================================================================
 // OAUTH2 SCOPE DEFINITIONS
 // =============================================================================
 

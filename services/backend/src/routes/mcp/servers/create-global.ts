@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { type FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { createSchema } from 'zod-openapi';
@@ -323,6 +324,7 @@ export default async function createGlobalServer(server: FastifyInstance) {
           request.log.debug('Detected incomplete installation_methods, falling back to claude_desktop_config extraction');
           // Fall back to extracting from claude_desktop_config if available
           if (requestData.claude_desktop_config) {
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
             const { installation_methods, environment_variables, args, transport_type: extractedTransportType } = extractMcpConfigData(requestData.claude_desktop_config);
             finalInstallationMethods = installation_methods;
             finalTransportType = requestData.transport_type || extractedTransportType;
@@ -460,7 +462,7 @@ export default async function createGlobalServer(server: FastifyInstance) {
           logger: request.log,
           user: {
             id: request.user!.id,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+             
             email: (request.user as any).email,
             roleId: 'global_admin'
           },
@@ -484,7 +486,7 @@ export default async function createGlobalServer(server: FastifyInstance) {
             },
             createdBy: {
               id: request.user!.id,
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+               
               email: (request.user as any).email
             },
             metadata: {
@@ -606,7 +608,7 @@ export default async function createGlobalServer(server: FastifyInstance) {
         const jsonString = JSON.stringify(errorResponse);
         return reply.status(500).type('application/json').send(jsonString);
       }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     } catch (error: any) {
       request.log.error({
         operation: 'create_global_mcp_server',
