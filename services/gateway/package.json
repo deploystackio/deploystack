@@ -28,7 +28,7 @@
     "@zowe/secrets-for-zowe-sdk": "^8.0.0",
     "open": "^10.2.0",
     "ora": "^8.2.0",
-    "inquirer": "^12.9.1",
+    "inquirer": "^12.9.3",
     "node-fetch": "^3.3.0",
     "cli-table3": "^0.6.3",
     "fastify": "^5.1.0",
