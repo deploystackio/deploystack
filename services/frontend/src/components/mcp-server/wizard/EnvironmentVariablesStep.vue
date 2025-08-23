@@ -15,18 +15,31 @@ interface EnvironmentVariable {
   visible_to_users?: boolean
 }
 
+interface ArgumentSchema {
+  name: string
+  type?: string
+  description?: string
+  placeholder?: string
+  required?: boolean
+  locked?: boolean
+  default_team_locked?: boolean
+}
+
 interface ServerData {
   id: string
   name: string
   description?: string
   author_name?: string
   category_id?: string
+  team_args_schema?: string | ArgumentSchema[]
   team_env_schema?: string | EnvironmentVariable[]
+  user_args_schema?: string | ArgumentSchema[]
   user_env_schema?: string | EnvironmentVariable[]
   [key: string]: unknown
 }
 
 const modelValue = defineModel<{
+  team_args: string[]
   team_env: Record<string, string>
   user_env: Record<string, string>
 }>({ required: true })
@@ -55,17 +68,43 @@ const parseEnvSchema = (schema: string | EnvironmentVariable[] | undefined): Env
   }
 }
 
+const parseArgsSchema = (schema: string | ArgumentSchema[] | undefined): ArgumentSchema[] => {
+  if (!schema) return []
+
+  try {
+    const parsed = typeof schema === 'string' ? JSON.parse(schema) : schema
+    return Array.isArray(parsed) ? parsed : []
+  } catch (error) {
+    console.error('Error parsing arguments schema:', error)
+    return []
+  }
+}
+
+const teamArgsSchema = computed(() => parseArgsSchema(props.serverData?.team_args_schema))
 const teamEnvSchema = computed(() => parseEnvSchema(props.serverData?.team_env_schema))
+const userArgsSchema = computed(() => parseArgsSchema(props.serverData?.user_args_schema))
 const userEnvSchema = computed(() => parseEnvSchema(props.serverData?.user_env_schema))
 
+const hasTeamArgs = computed(() => teamArgsSchema.value.length > 0)
 const hasTeamEnvVars = computed(() => teamEnvSchema.value.length > 0)
+const hasUserArgs = computed(() => userArgsSchema.value.length > 0)
 const hasUserEnvVars = computed(() => userEnvSchema.value.length > 0)
-const hasAnyEnvVars = computed(() => hasTeamEnvVars.value || hasUserEnvVars.value)
+const hasUserConfiguration = computed(() => hasUserArgs.value || hasUserEnvVars.value)
+const hasAnyConfiguration = computed(() => hasTeamArgs.value || hasTeamEnvVars.value || hasUserConfiguration.value)
 
-const validateTeamEnvVars = () => {
+const validateConfiguration = () => {
   const missingFields: string[] = []
   let isValid = true
 
+  // Validate team arguments
+  teamArgsSchema.value.forEach((arg, index) => {
+    if (arg.required && !modelValue.value.team_args[index]?.trim()) {
+      missingFields.push(arg.name)
+      isValid = false
+    }
+  })
+
+  // Validate team environment variables
   teamEnvSchema.value.forEach((envVar) => {
     if (envVar.required && !modelValue.value.team_env[envVar.name]?.trim()) {
       missingFields.push(envVar.name)
@@ -77,17 +116,28 @@ const validateTeamEnvVars = () => {
   return isValid
 }
 
+watch(() => modelValue.value.team_args, () => {
+  validateConfiguration()
+}, { deep: true })
+
 watch(() => modelValue.value.team_env, () => {
-  validateTeamEnvVars()
+  validateConfiguration()
 }, { deep: true })
 
 watch(() => props.serverData, (newData) => {
   if (newData) {
+    const newTeamArgs: string[] = []
     const newTeamEnv: Record<string, string> = {}
     const newUserEnv: Record<string, string> = {}
 
+    const argsSchema = parseArgsSchema(newData.team_args_schema)
     const teamSchema = parseEnvSchema(newData.team_env_schema)
     const userSchema = parseEnvSchema(newData.user_env_schema)
+
+    // Initialize team arguments array
+    argsSchema.forEach((arg, index) => {
+      newTeamArgs[index] = modelValue.value.team_args?.[index] || ''
+    })
 
     teamSchema.forEach((env) => {
       newTeamEnv[env.name] = modelValue.value.team_env?.[env.name] || ''
@@ -98,11 +148,12 @@ watch(() => props.serverData, (newData) => {
     })
 
     modelValue.value = {
+      team_args: newTeamArgs,
       team_env: newTeamEnv,
       user_env: newUserEnv
     }
 
-    validateTeamEnvVars()
+    validateConfiguration()
   }
 }, { immediate: true })
 
@@ -135,7 +186,57 @@ const isTextarea = (envVar: EnvironmentVariable) => {
       :show-details-button="false"
     />
 
-    <div v-if="hasAnyEnvVars" class="space-y-8">
+    <div v-if="hasAnyConfiguration" class="space-y-8">
+      <!-- Team Arguments Section -->
+      <div v-if="hasTeamArgs" class="bg-blue-50 p-4">
+        <div class="mb-4">
+          <h3 class="text-lg font-medium text-gray-900">
+            {{ t('mcpInstallations.teamConfiguration.sections.teamArgs.title') }}
+          </h3>
+          <span class="text-sm text-gray-500">
+            {{ teamArgsSchema.length }} {{ teamArgsSchema.length === 1 ? t('mcpInstallations.teamConfiguration.sections.teamArgs.counter.single') : t('mcpInstallations.teamConfiguration.sections.teamArgs.counter.plural') }}
+          </span>
+        </div>
+        <p class="text-sm text-gray-600 mb-6">
+          {{ t('mcpInstallations.teamConfiguration.sections.teamArgs.description') }}
+        </p>
+
+        <div class="space-y-4">
+          <div v-for="(arg, index) in teamArgsSchema" :key="`arg_${index}`" class="space-y-2">
+            <div class="flex items-center gap-2">
+              <Label :for="`team_arg_${index}`" class="flex items-center gap-2">
+                {{ arg.name }}
+                <span v-if="arg.required" class="text-xs text-gray-500">
+                  {{ t('mcpInstallations.teamConfiguration.userEnvDetails.required') }}
+                </span>
+                <span v-else class="text-xs text-gray-500">
+                  {{ t('mcpInstallations.teamConfiguration.userEnvDetails.optional') }}
+                </span>
+              </Label>
+            </div>
+
+            <div v-if="arg.description" class="text-sm text-gray-600">
+              {{ arg.description }}
+            </div>
+
+            <div class="relative">
+              <Input
+                :id="`team_arg_${index}`"
+                type="text"
+                v-model="modelValue.team_args[index]"
+                :placeholder="arg.placeholder || t('mcpInstallations.teamConfiguration.editModal.form.placeholders.enterValue')"
+                :required="arg.required"
+              />
+            </div>
+
+            <div v-if="arg.type" class="text-xs text-gray-500">
+              {{ t('mcpInstallations.teamConfiguration.userEnvDetails.typeLabel') }} <code class="bg-gray-100 px-1 rounded">{{ arg.type }}</code>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Team Environment Variables Section -->
       <div v-if="hasTeamEnvVars" class="bg-gray-50 p-4">
         <div class="mb-4">
           <h3 class="text-lg font-medium text-gray-900">
@@ -197,13 +298,14 @@ const isTextarea = (envVar: EnvironmentVariable) => {
         </div>
       </div>
 
-      <div v-if="hasUserEnvVars" class="bg-gray-50 p-4">
+      <!-- User Configuration Section -->
+      <div v-if="hasUserConfiguration" class="bg-gray-50 p-4">
         <div class="mb-4">
           <h3 class="text-lg font-medium text-gray-900">
-            {{ t('mcpInstallations.teamConfiguration.sections.userEnv.title') }}
+            {{ t('mcpInstallations.teamConfiguration.sections.userConfig.title') }}
           </h3>
           <span class="text-sm text-gray-500">
-            {{ userEnvSchema.length }} {{ userEnvSchema.length === 1 ? t('mcpInstallations.teamConfiguration.sections.teamEnv.counter.single') : t('mcpInstallations.teamConfiguration.sections.teamEnv.counter.plural') }}
+            {{ (userArgsSchema.length + userEnvSchema.length) }} {{ (userArgsSchema.length + userEnvSchema.length) === 1 ? t('mcpInstallations.teamConfiguration.sections.userConfig.counter.single') : t('mcpInstallations.teamConfiguration.sections.userConfig.counter.plural') }}
           </span>
         </div>
 
@@ -215,24 +317,57 @@ const isTextarea = (envVar: EnvironmentVariable) => {
         </div>
 
         <div class="space-y-4">
-          <div v-for="envVar in userEnvSchema" :key="envVar.name" class="bg-white p-4">
-            <div class="flex items-center gap-2 mb-2">
-              <span class="font-medium text-gray-900 font-mono">{{ envVar.name }}</span>
-              <span v-if="envVar.required" class="text-xs text-gray-500">
-                {{ t('mcpInstallations.teamConfiguration.userEnvDetails.required') }}
-              </span>
-              <span v-else class="text-xs text-gray-500">
-                {{ t('mcpInstallations.teamConfiguration.userEnvDetails.optional') }}
-              </span>
-            </div>
+          <!-- User Arguments -->
+          <div v-if="hasUserArgs" class="space-y-3">
+            <h4 class="text-sm font-semibold text-gray-900 border-b border-gray-200 pb-2">
+              {{ t('mcpInstallations.teamConfiguration.sections.userArgs.title') }}
+            </h4>
+            <div v-for="(arg, index) in userArgsSchema" :key="`user_arg_${index}`" class="bg-white p-4 rounded-lg border">
+              <div class="flex items-center gap-2 mb-2">
+                <span class="font-medium text-gray-900 font-mono">{{ arg.name }}</span>
+                <span v-if="arg.required" class="text-xs text-gray-500">
+                  {{ t('mcpInstallations.teamConfiguration.userEnvDetails.required') }}
+                </span>
+                <span v-else class="text-xs text-gray-500">
+                  {{ t('mcpInstallations.teamConfiguration.userEnvDetails.optional') }}
+                </span>
+              </div>
 
-            <div v-if="envVar.description" class="text-sm text-gray-600 mb-2">
-              {{ envVar.description }}
-            </div>
+              <div v-if="arg.description" class="text-sm text-gray-600 mb-2">
+                {{ arg.description }}
+              </div>
 
-            <div class="flex items-center gap-4 text-xs text-gray-500">
-              <span>{{ t('mcpInstallations.teamConfiguration.userEnvDetails.typeLabel') }} <code class="bg-gray-100 px-1 rounded">{{ envVar.type || 'string' }}</code></span>
-              <span v-if="envVar.placeholder">{{ t('mcpInstallations.teamConfiguration.userEnvDetails.placeholderLabel') }} "{{ envVar.placeholder }}"</span>
+              <div class="flex items-center gap-4 text-xs text-gray-500">
+                <span>{{ t('mcpInstallations.teamConfiguration.userEnvDetails.typeLabel') }} <code class="bg-gray-100 px-1 rounded">{{ arg.type || 'string' }}</code></span>
+                <span v-if="arg.placeholder">{{ t('mcpInstallations.teamConfiguration.userEnvDetails.placeholderLabel') }} "{{ arg.placeholder }}"</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- User Environment Variables -->
+          <div v-if="hasUserEnvVars" class="space-y-3">
+            <h4 class="text-sm font-semibold text-gray-900 border-b border-gray-200 pb-2">
+              {{ t('mcpInstallations.teamConfiguration.sections.userEnv.title') }}
+            </h4>
+            <div v-for="envVar in userEnvSchema" :key="envVar.name" class="bg-white p-4 rounded-lg border">
+              <div class="flex items-center gap-2 mb-2">
+                <span class="font-medium text-gray-900 font-mono">{{ envVar.name }}</span>
+                <span v-if="envVar.required" class="text-xs text-gray-500">
+                  {{ t('mcpInstallations.teamConfiguration.userEnvDetails.required') }}
+                </span>
+                <span v-else class="text-xs text-gray-500">
+                  {{ t('mcpInstallations.teamConfiguration.userEnvDetails.optional') }}
+                </span>
+              </div>
+
+              <div v-if="envVar.description" class="text-sm text-gray-600 mb-2">
+                {{ envVar.description }}
+              </div>
+
+              <div class="flex items-center gap-4 text-xs text-gray-500">
+                <span>{{ t('mcpInstallations.teamConfiguration.userEnvDetails.typeLabel') }} <code class="bg-gray-100 px-1 rounded">{{ envVar.type || 'string' }}</code></span>
+                <span v-if="envVar.placeholder">{{ t('mcpInstallations.teamConfiguration.userEnvDetails.placeholderLabel') }} "{{ envVar.placeholder }}"</span>
+              </div>
             </div>
           </div>
         </div>

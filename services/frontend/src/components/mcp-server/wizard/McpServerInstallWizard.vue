@@ -43,6 +43,7 @@ interface InstallationFormData {
     server_data?: any
   }
   environment: {
+    team_args: string[]
     team_env: Record<string, string>
     user_env: Record<string, string>
   }
@@ -123,6 +124,7 @@ const formData = ref<InstallationFormData>({
     server_id: ''
   },
   environment: {
+    team_args: [],
     team_env: {},
     user_env: {}
   },
@@ -261,6 +263,7 @@ const submitInstallation = async () => {
     const installationData = {
       server_id: formData.value.server.server_id,
       installation_type: formData.value.platform.installation_type,
+      team_args: formData.value.environment.team_args,
       team_env: formData.value.environment.team_env,
       user_environment_variables: formData.value.environment.user_env,
       installation_name: formData.value.server.server_data?.name || 'Unknown Server'
@@ -293,6 +296,7 @@ const handleServerSelected = (serverData: any) => {
   formData.value.server.server_data = serverData
 
   // Reset environment variables when server changes
+  formData.value.environment.team_args = []
   formData.value.environment.team_env = {}
   formData.value.environment.user_env = {}
 
@@ -303,6 +307,21 @@ const handleServerSelected = (serverData: any) => {
   environmentValidation.value = {
     isValid: true, // Will be updated by the component
     missingFields: []
+  }
+
+  // Pre-populate team arguments with empty values from new schema
+  if (serverData.team_args_schema) {
+    try {
+      const teamArgsSchema = typeof serverData.team_args_schema === 'string'
+        ? JSON.parse(serverData.team_args_schema)
+        : serverData.team_args_schema
+
+      if (Array.isArray(teamArgsSchema)) {
+        formData.value.environment.team_args = new Array(teamArgsSchema.length).fill('')
+      }
+    } catch (error) {
+      console.error('Error parsing team_args_schema:', error)
+    }
   }
 
   // Pre-populate team and user environment variables with empty values from new schema
@@ -405,7 +424,7 @@ onMounted(async () => {
     currentStep.value = 0
     formData.value = {
       server: { server_id: '' },
-      environment: { team_env: {}, user_env: {} },
+      environment: { team_args: [], team_env: {}, user_env: {} },
       platform: { installation_type: 'local' }
     }
   })

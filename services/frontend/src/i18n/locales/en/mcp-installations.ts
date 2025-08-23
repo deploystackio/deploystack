@@ -276,6 +276,18 @@ export default {
           plural: 'variables'
         }
       },
+      userConfig: {
+        title: 'User Configuration',
+        description: 'Configuration that will be set by individual users after installation',
+        counter: {
+          single: 'configuration',
+          plural: 'configurations'
+        }
+      },
+      userArgs: {
+        title: 'User Arguments',
+        description: 'Command line arguments that individual users will configure'
+      },
       userEnv: {
         title: 'User Environment Variables',
         description: 'These variables will be configured by individual users after installation. Each team member will set their own values for these variables.',

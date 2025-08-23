@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /* eslint-disable @typescript-eslint/no-explicit-any */
- 
+
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { toast } from 'vue-sonner'
@@ -89,6 +89,16 @@ const teamEnvSchema = computed(() => {
   }
 })
 
+const userArgsSchema = computed(() => {
+  const schema = props.installation.server?.user_args_schema || serverData.value?.user_args_schema
+  if (!schema) return []
+  try {
+    return Array.isArray(schema) ? schema : JSON.parse(schema)
+  } catch {
+    return []
+  }
+})
+
 const userEnvSchema = computed(() => {
   const schema = props.installation.server?.user_env_schema || serverData.value?.user_env_schema
   if (!schema) return []
@@ -135,7 +145,7 @@ const userEnvWithData = computed(() => {
 
 // Check if there's any team configuration
 const hasTeamConfiguration = computed(() => {
-  return teamArgsSchema.value.length > 0 || teamEnvSchema.value.length > 0 || userEnvSchema.value.length > 0
+  return teamArgsSchema.value.length > 0 || teamEnvSchema.value.length > 0 || userArgsSchema.value.length > 0 || userEnvSchema.value.length > 0
 })
 
 // Modal functions
@@ -275,8 +285,8 @@ const modalTitle = computed(() => {
             <p class="text-xs text-gray-500">{{ t('mcpInstallations.teamConfiguration.sections.teamArgs.description') }}</p>
           </div>
 
-          <ul role="list" class="divide-y divide-gray-100">
-            <li v-for="arg in teamArgsWithData" :key="arg.index" class="flex items-center justify-between gap-x-6 py-5">
+          <ul role="list" class="space-y-3">
+            <li v-for="arg in teamArgsWithData" :key="arg.index" class="flex items-center justify-between gap-x-6 py-5 bg-muted/50 rounded-lg px-4">
               <div class="min-w-0 flex-1">
                 <div class="flex items-start gap-x-3">
                   <p class="text-sm/6 font-semibold text-gray-900 font-mono">
@@ -398,7 +408,63 @@ const modalTitle = computed(() => {
         </div>
 
         <!-- Separator -->
-        <hr v-if="teamEnvSchema.length > 0 && userEnvSchema.length > 0" class="my-8 border-gray-200" />
+        <hr v-if="(teamArgsSchema.length > 0 || teamEnvSchema.length > 0) && (userArgsSchema.length > 0 || userEnvSchema.length > 0)" class="my-8 border-gray-200" />
+
+        <!-- User Arguments Section (Read-only Info) -->
+        <div v-if="userArgsSchema.length > 0">
+          <div class="mb-4">
+            <h4 class="text-sm font-semibold text-gray-900">{{ t('mcpInstallations.teamConfiguration.sections.userArgs.title') }}</h4>
+            <p class="text-xs text-gray-500">
+              {{ t('mcpInstallations.teamConfiguration.sections.userArgs.description') }}
+            </p>
+          </div>
+
+          <ul role="list" class="space-y-3">
+            <li v-for="(arg, index) in userArgsSchema" :key="`user_arg_${index}`" class="flex items-center justify-between gap-x-6 py-5 bg-muted/50 rounded-lg px-4">
+              <div class="min-w-0 flex-1">
+                <div class="flex items-start gap-x-3">
+                  <p class="text-sm/6 font-semibold text-gray-900 font-mono">
+                    {{ arg.name }}
+                  </p>
+                </div>
+                <div class="mt-1 text-xs/5 text-gray-700">
+                  <span class="font-medium text-gray-800">{{ t('mcpInstallations.teamConfiguration.table.labels.required') }}</span>
+                  <span class="ml-1">{{ arg.required ? t('common.labels.yes') : t('common.labels.no') }}</span>
+                </div>
+              </div>
+
+              <div class="flex-1 min-w-0">
+                <div class="space-y-1 text-xs/5 text-gray-700">
+                  <div>
+                    <span class="font-medium text-gray-800">{{ t('mcpInstallations.teamConfiguration.table.labels.type') }}</span>
+                    <span class="ml-1">{{ arg.type || t('mcpInstallations.teamConfiguration.table.labels.defaultType') }}</span>
+                  </div>
+                  <div v-if="arg.description">
+                    <span class="font-medium text-gray-800">{{ t('mcpInstallations.teamConfiguration.table.labels.description') }}</span>
+                    <span class="ml-1">{{ arg.description }}</span>
+                  </div>
+                  <div>
+                    <span class="font-medium text-gray-800">{{ t('mcpInstallations.teamConfiguration.table.labels.value') }}</span>
+                    <span class="ml-1 font-mono">
+                      {{ t('mcpInstallations.teamConfiguration.sections.userEnv.userConfigured') }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="flex flex-none items-center gap-x-4">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled
+                  class="cursor-not-allowed opacity-50"
+                >
+                  {{ t('mcpInstallations.teamConfiguration.table.actions.editValue') }}
+                </Button>
+              </div>
+            </li>
+          </ul>
+        </div>
 
         <!-- User Environment Variables Section (Read-only Info) -->
         <div v-if="userEnvSchema.length > 0">
