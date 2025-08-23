@@ -4,6 +4,7 @@ import { generateCodeVerifier, generateCodeChallenge, generateState } from '../.
 import { buildAuthConfig } from '../../utils/auth-config';
 import { CallbackServer } from './callback-server';
 import { BrowserManager } from './browser';
+import { detectDeviceInfo } from '../../utils/device-detection';
 import {
   AuthenticationResult,
   AuthenticationOptions,
@@ -158,19 +159,31 @@ export class OAuth2Client {
     codeVerifier: string;
   }): Promise<TokenResponse> {
     try {
+      // Detect device information for automatic registration
+      const deviceInfo = await detectDeviceInfo();
+      
+      // Add device_name field required by backend schema
+      const deviceInfoWithName = {
+        device_name: deviceInfo.hostname, // Use hostname as default device name
+        ...deviceInfo
+      };
+      
+      const requestBody = {
+        grant_type: 'authorization_code',
+        code: params.code,
+        redirect_uri: this.config.redirectUri,
+        client_id: this.config.clientId,
+        code_verifier: params.codeVerifier,
+        device_info: deviceInfoWithName
+      };
+
       const response = await fetch(this.config.tokenUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'User-Agent': 'DeployStack-Gateway-CLI/0.2.0'
         },
-        body: JSON.stringify({
-          grant_type: 'authorization_code',
-          code: params.code,
-          redirect_uri: this.config.redirectUri,
-          client_id: this.config.clientId,
-          code_verifier: params.codeVerifier
-        })
+        body: JSON.stringify(requestBody)
       });
 
       if (!response.ok) {
@@ -182,7 +195,14 @@ export class OAuth2Client {
         );
       }
 
-      return await response.json() as TokenResponse;
+      const tokenResponse = await response.json() as TokenResponse;
+      
+      // Log device registration success if device info is included in response
+      if (tokenResponse.device) {
+        console.log(chalk.green(`📱 Device registered: ${tokenResponse.device.device_name}`));
+      }
+
+      return tokenResponse;
     } catch (error) {
       if (error instanceof AuthenticationError) {
         throw error;

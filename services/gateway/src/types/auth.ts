@@ -1,3 +1,5 @@
+import { Device } from '../utils/device-detection';
+
 export interface StoredCredentials {
   accessToken: string;
   refreshToken: string;
@@ -33,6 +35,7 @@ export interface TokenResponse {
   expires_in: number;
   refresh_token: string;
   scope: string;
+  device?: Device;
 }
 
 export interface TokenInfo {
