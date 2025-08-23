@@ -42,43 +42,38 @@ export function useDeviceDetail() {
     
     return [
       {
-        label: 'Device ID',
+        label: t('devices.detail.fields.deviceId'),
         value: device.value.id,
         icon: 'Monitor'
       },
       {
-        label: 'Hostname',
-        value: device.value.hostname || 'Unknown',
+        label: t('devices.detail.fields.hostname'),
+        value: device.value.hostname || t('devices.detail.fields.unknown'),
         icon: 'Globe'
       },
       {
-        label: 'Operating System',
+        label: t('devices.detail.fields.operatingSystem'),
         value: `${getOSDisplayName(device.value.os_type)} ${device.value.os_version || ''}`.trim(),
         icon: 'HardDrive'
       },
       {
-        label: 'Architecture',
-        value: device.value.arch || 'Unknown',
+        label: t('devices.detail.fields.architecture'),
+        value: device.value.arch || t('devices.detail.fields.unknown'),
         icon: 'Cpu'
       },
       {
-        label: 'Node.js Version',
-        value: device.value.node_version || 'Unknown',
+        label: t('devices.detail.fields.nodeVersion'),
+        value: device.value.node_version || t('devices.detail.fields.unknown'),
         icon: 'Cpu'
       },
       {
-        label: 'Last IP Address',
-        value: device.value.last_ip || 'Unknown',
-        icon: 'Globe'
-      },
-      {
-        label: 'Hardware ID',
-        value: device.value.hardware_id || 'Unknown',
+        label: t('devices.detail.fields.hardwareId'),
+        value: device.value.hardware_id || t('devices.detail.fields.unknown'),
         icon: 'Monitor'
       },
       {
-        label: 'User Agent',
-        value: device.value.user_agent || 'Unknown',
+        label: t('devices.detail.fields.userAgent'),
+        value: device.value.user_agent || t('devices.detail.fields.unknown'),
         icon: 'Globe'
       }
     ]
@@ -89,22 +84,22 @@ export function useDeviceDetail() {
     
     return [
       {
-        label: 'Device Registered',
+        label: t('devices.detail.fields.deviceRegistered'),
         value: device.value.created_at,
         icon: 'Calendar'
       },
       {
-        label: 'Last Updated',
+        label: t('devices.detail.fields.lastUpdated'),
         value: device.value.updated_at,
         icon: 'Calendar'
       },
       {
-        label: 'Last Login',
+        label: t('devices.detail.fields.lastLogin'),
         value: device.value.last_login_at,
         icon: 'Calendar'
       },
       {
-        label: 'Last Activity',
+        label: t('devices.detail.fields.lastActivity'),
         value: device.value.last_activity_at,
         icon: 'Calendar'
       }

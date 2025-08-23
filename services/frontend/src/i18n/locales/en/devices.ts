@@ -69,8 +69,8 @@ export default {
   
   // Dialogs
   editDialog: {
-    title: 'Edit Device',
-    description: 'Update your device name and settings',
+    title: 'Edit Device Friendly Name',
+    description: 'Update your device friendly name',
     fields: {
       deviceName: {
         label: 'Device Name',
@@ -118,5 +118,35 @@ export default {
     title: 'No devices registered',
     description: 'You have no registered devices. Devices are automatically registered when you login with the DeployStack CLI.',
     action: 'Learn about device management'
+  },
+
+  // Device detail view
+  detail: {
+    title: 'Device Details',
+    backToDevices: 'Back to Devices',
+    loadingMessage: 'Loading device details...',
+    loadError: 'Failed to load device',
+    systemInformation: {
+      title: 'System Information',
+      description: 'Hardware and system details for this device'
+    },
+    activityInformation: {
+      title: 'Activity Information',
+      description: 'Registration and usage timestamps for this device'
+    },
+    fields: {
+      deviceId: 'Device ID',
+      hostname: 'Hostname',
+      operatingSystem: 'Operating System',
+      architecture: 'Architecture',
+      nodeVersion: 'Node.js Version',
+      hardwareId: 'Hardware ID',
+      userAgent: 'User Agent',
+      deviceRegistered: 'Device Registered',
+      lastUpdated: 'Last Updated',
+      lastLogin: 'Last Login',
+      lastActivity: 'Last Activity',
+      unknown: 'Unknown'
+    }
   }
 }

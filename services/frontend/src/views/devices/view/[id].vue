@@ -3,7 +3,6 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import DashboardLayout from '@/components/DashboardLayout.vue'
@@ -11,8 +10,6 @@ import ContentWrapper from '@/components/ContentWrapper.vue'
 import {
   ArrowLeft,
   Monitor,
-  Shield,
-  ShieldOff,
   Calendar,
   Globe,
   Cpu,
@@ -57,20 +54,20 @@ onMounted(async () => {
   try {
     await fetchDevice(deviceId.value)
   } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Failed to load device'
+    error.value = err instanceof Error ? err.message : t('devices.detail.loadError')
   }
 })
 </script>
 
 <template>
-  <DashboardLayout :title="device?.device_name || 'Device Details'">
+  <DashboardLayout :title="device?.device_name || t('devices.detail.title')">
     <ContentWrapper>
       <div class="space-y-6">
       <!-- Back Navigation -->
       <div class="flex items-center gap-4">
         <Button variant="ghost" @click="handleBack" class="flex items-center gap-2">
           <ArrowLeft class="h-4 w-4" />
-          Back to Devices
+          {{ t('devices.detail.backToDevices') }}
         </Button>
       </div>
 
@@ -83,7 +80,7 @@ onMounted(async () => {
       <!-- Loading State -->
       <div v-if="isLoading" class="flex items-center justify-center h-32">
         <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        <span class="ml-3">Loading device details...</span>
+        <span class="ml-3">{{ t('devices.detail.loadingMessage') }}</span>
       </div>
 
       <!-- Device Details -->
@@ -100,18 +97,6 @@ onMounted(async () => {
               <span v-if="device.arch"> • {{ device.arch }}</span>
             </p>
           </div>
-          <div class="flex items-center gap-2">
-            <Badge :variant="device.is_active ? 'default' : 'secondary'">
-              {{ device.is_active ? t('devices.status.active') : t('devices.status.inactive') }}
-            </Badge>
-            <div class="flex items-center gap-1">
-              <Shield v-if="device.is_trusted" class="h-4 w-4 text-green-600" />
-              <ShieldOff v-else class="h-4 w-4 text-yellow-600" />
-              <Badge variant="outline">
-                {{ device.is_trusted ? t('devices.status.trusted') : t('devices.status.untrusted') }}
-              </Badge>
-            </div>
-          </div>
         </div>
 
         <!-- Device Information Cards -->
@@ -121,10 +106,10 @@ onMounted(async () => {
             <CardHeader>
               <CardTitle class="flex items-center gap-2">
                 <Monitor class="h-5 w-5" />
-                System Information
+                {{ t('devices.detail.systemInformation.title') }}
               </CardTitle>
               <CardDescription>
-                Hardware and system details for this device
+                {{ t('devices.detail.systemInformation.description') }}
               </CardDescription>
             </CardHeader>
             <CardContent class="space-y-4">
@@ -146,10 +131,10 @@ onMounted(async () => {
             <CardHeader>
               <CardTitle class="flex items-center gap-2">
                 <Calendar class="h-5 w-5" />
-                Activity Information
+                {{ t('devices.detail.activityInformation.title') }}
               </CardTitle>
               <CardDescription>
-                Registration and usage timestamps for this device
+                {{ t('devices.detail.activityInformation.description') }}
               </CardDescription>
             </CardHeader>
             <CardContent class="space-y-4">
@@ -164,43 +149,11 @@ onMounted(async () => {
           </Card>
         </div>
 
-        <!-- Security Status -->
-        <Card>
-          <CardHeader>
-            <CardTitle class="flex items-center gap-2">
-              <Shield class="h-5 w-5" />
-              Security Status
-            </CardTitle>
-            <CardDescription>
-              Trust status and security information for this device
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div class="flex items-center gap-4">
-              <div class="flex items-center gap-2">
-                <Shield v-if="device.is_trusted" class="h-5 w-5 text-green-600" />
-                <ShieldOff v-else class="h-5 w-5 text-yellow-600" />
-                <div>
-                  <div class="font-medium">
-                    {{ device.is_trusted ? 'Trusted Device' : 'Untrusted Device' }}
-                  </div>
-                  <div class="text-sm text-muted-foreground">
-                    {{ device.is_trusted
-                      ? 'This device is marked as trusted and has full access to your MCP configurations'
-                      : 'This device requires additional verification for sensitive operations'
-                    }}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
         <!-- Actions -->
         <div class="flex items-center gap-4 pt-4 border-t">
           <Button variant="destructive" class="flex items-center gap-2">
             <Trash2 class="h-4 w-4" />
-            Remove Device
+            {{ t('devices.actions.removeDevice') }}
           </Button>
         </div>
       </div>

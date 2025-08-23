@@ -25,7 +25,6 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import DashboardLayout from '@/components/DashboardLayout.vue'
@@ -34,10 +33,7 @@ import {
   MoreHorizontal,
   Edit,
   Trash2,
-  Shield,
-  ShieldOff,
   Monitor,
-  CheckCircle,
   Laptop
 } from 'lucide-vue-next'
 import { useDevices } from '@/composables/useDevices'
@@ -140,14 +136,6 @@ onMounted(() => {
                 <Monitor class="h-4 w-4" />
                 <span>{{ deviceStats.total }} {{ t('devices.stats.total') }}</span>
               </div>
-              <div class="flex items-center gap-1">
-                <CheckCircle class="h-4 w-4 text-green-600" />
-                <span>{{ deviceStats.active }} {{ t('devices.stats.active') }}</span>
-              </div>
-              <div class="flex items-center gap-1">
-                <Shield class="h-4 w-4 text-blue-600" />
-                <span>{{ deviceStats.trusted }} {{ t('devices.stats.trusted') }}</span>
-              </div>
             </div>
           </div>
         </div>
@@ -160,15 +148,13 @@ onMounted(() => {
                 <TableHead>{{ t('devices.table.columns.deviceName') }}</TableHead>
                 <TableHead>{{ t('devices.table.columns.operatingSystem') }}</TableHead>
                 <TableHead>{{ t('devices.table.columns.lastActivity') }}</TableHead>
-                <TableHead>{{ t('devices.table.columns.status') }}</TableHead>
-                <TableHead>{{ t('devices.table.columns.trustStatus') }}</TableHead>
                 <TableHead class="w-[100px]">{{ t('devices.table.columns.actions') }}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               <!-- Loading state -->
               <TableRow v-if="isLoading">
-                <TableCell :colspan="6" class="h-24 text-center">
+                <TableCell :colspan="4" class="h-24 text-center">
                   <div class="flex items-center justify-center">
                     <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
                     <span class="ml-2">Loading devices...</span>
@@ -178,7 +164,7 @@ onMounted(() => {
 
               <!-- Empty State -->
               <TableRow v-else-if="sortedDevices.length === 0">
-                <TableCell :colspan="6" class="h-32 text-center">
+                <TableCell :colspan="4" class="h-32 text-center">
                   <div class="flex flex-col items-center justify-center space-y-2">
                     <Laptop class="h-12 w-12 text-muted-foreground" />
                     <div class="text-lg font-medium">{{ t('devices.emptyState.title') }}</div>
@@ -210,18 +196,6 @@ onMounted(() => {
                 </TableCell>
                 <TableCell class="text-sm text-muted-foreground">
                   {{ device.lastActivityDisplay }}
-                </TableCell>
-                <TableCell>
-                  <Badge :variant="device.statusBadgeVariant">
-                    {{ device.is_active ? t('devices.status.active') : t('devices.status.inactive') }}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <div class="flex items-center gap-1">
-                    <Shield v-if="device.is_trusted" class="h-4 w-4 text-green-600" />
-                    <ShieldOff v-else class="h-4 w-4 text-yellow-600" />
-                    <span class="text-sm">{{ device.trustStatusDisplay }}</span>
-                  </div>
                 </TableCell>
                 <TableCell>
                   <DropdownMenu>
