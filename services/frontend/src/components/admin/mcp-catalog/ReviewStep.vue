@@ -53,10 +53,11 @@ const loadFreshData = () => {
 }
 
 // Storage change handler
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const handleStorageChange = (data: { key: string; oldValue: any; newValue: any }) => {
   // Reload data when any of our storage keys change
-  if (data.key === 'edit_basic_data' || 
-      data.key === 'edit_repository_data' || 
+  if (data.key === 'edit_basic_data' ||
+      data.key === 'edit_repository_data' ||
       data.key === 'edit_technical_data' ||
       data.key === 'edit_claude_config') {
     loadFreshData()
@@ -66,7 +67,7 @@ const handleStorageChange = (data: { key: string; oldValue: any; newValue: any }
 onMounted(() => {
   // Load initial data
   loadFreshData()
-  
+
   // Listen for storage changes
   eventBus.on('storage-changed', handleStorageChange)
 })

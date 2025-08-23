@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { Button } from '@/components/ui/button'
@@ -78,7 +78,7 @@ async function loadInstallation(installationId: string): Promise<{ team: Team; i
       installation, 
       userRole: selectedTeam.role || 'team_user'
     }
-  } catch (error) {
+  } catch {
     return null
   }
 }

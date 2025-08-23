@@ -20,6 +20,7 @@ import registerMessages from './register'
 import loginMessages from './login'
 import gatewayConfigMessages from './gatewayConfig'
 import userAccountMessages from './userAccount'
+import devicesMessages from './devices'
 
 export default {
   ...commonMessages,
@@ -43,5 +44,6 @@ export default {
   login: loginMessages,
   gatewayConfig: gatewayConfigMessages,
   userAccount: userAccountMessages,
+  devices: devicesMessages,
   common: commonMessages
 }

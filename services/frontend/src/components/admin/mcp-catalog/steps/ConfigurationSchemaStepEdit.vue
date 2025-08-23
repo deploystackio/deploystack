@@ -1,8 +1,8 @@
 <!--
  * EDIT MODE CONFIGURATION SCHEMA STEP
- * 
+ *
  * This component follows the EDIT wizard storage-first architecture:
- * - Uses event bus and localStorage exclusively 
+ * - Uses event bus and localStorage exclusively
  * - No v-model or props for data management
  * - Storage-first patterns throughout
  * - Reads/writes data directly to/from storage
@@ -264,47 +264,47 @@ const assembleSchemaAndSave = () => {
   localData.value.forEach(item => {
     if (item.type === 'arg') {
       if (item.category === 'template') {
-        schema.template_args!.push({ 
-          value: item.value || '', 
-          locked: item.locked, 
-          description: item.description 
+        schema.template_args!.push({
+          value: item.value || '',
+          locked: item.locked,
+          description: item.description
         })
       } else if (item.category === 'team') {
-        schema.team_args_schema!.push({ 
-          name: item.name, 
-          type: item.dataType, 
-          description: item.description, 
-          required: item.required, 
-          locked: item.locked, 
-          default_team_locked: item.default_team_locked 
+        schema.team_args_schema!.push({
+          name: item.name,
+          type: item.dataType,
+          description: item.description,
+          required: item.required,
+          locked: item.locked,
+          default_team_locked: item.default_team_locked
         })
       } else if (item.category === 'user') {
-        schema.user_args_schema!.push({ 
-          name: item.name, 
-          type: item.dataType, 
-          description: item.description, 
-          required: item.required, 
-          locked: item.locked 
+        schema.user_args_schema!.push({
+          name: item.name,
+          type: item.dataType,
+          description: item.description,
+          required: item.required,
+          locked: item.locked
         })
       }
     } else if (item.type === 'env') {
       if (item.category === 'team') {
-        schema.team_env_schema!.push({ 
-          name: item.name, 
-          type: item.dataType, 
-          description: item.description, 
-          required: item.required, 
-          locked: item.locked, 
-          default_team_locked: item.default_team_locked, 
-          visible_to_users: item.visible_to_users 
+        schema.team_env_schema!.push({
+          name: item.name,
+          type: item.dataType,
+          description: item.description,
+          required: item.required,
+          locked: item.locked,
+          default_team_locked: item.default_team_locked,
+          visible_to_users: item.visible_to_users
         })
       } else if (item.category === 'user') {
-        schema.user_env_schema!.push({ 
-          name: item.name, 
-          type: item.dataType, 
-          description: item.description, 
-          required: item.required, 
-          locked: item.locked 
+        schema.user_env_schema!.push({
+          name: item.name,
+          type: item.dataType,
+          description: item.description,
+          required: item.required,
+          locked: item.locked
         })
       }
     }
@@ -312,13 +312,6 @@ const assembleSchemaAndSave = () => {
 
   if (!isUpdatingFromStorage.value) {
     eventBus.setState(STORAGE_KEY, schema)
-  }
-}
-
-// Save data to storage
-const saveToStorage = () => {
-  if (!isUpdatingFromStorage.value) {
-    assembleSchemaAndSave()
   }
 }
 
@@ -387,7 +380,7 @@ const validateForm = () => {
   } else {
     // Check for duplicates
     const isDuplicate = localData.value.some((item, index) =>
-      item.name === formDataLocal.value.name && 
+      item.name === formDataLocal.value.name &&
       item.type === formDataLocal.value.type &&
       index !== editingIndex.value
     )
@@ -409,7 +402,7 @@ const handleSubmit = () => {
   if (!validateForm()) return
 
   const updatedData = [...localData.value]
-  const newItem = { 
+  const newItem = {
     ...formDataLocal.value,
     id: formDataLocal.value.id || `${formDataLocal.value.type}_${Date.now()}`
   }
@@ -441,7 +434,7 @@ const updateData = (newData: ConfigItem[]) => {
 
 // Get category info for display with safe fallback
 const getCategoryInfo = (category: string) => {
-  const allOptions = [...argCategoryOptions, 
+  const allOptions = [...argCategoryOptions,
     { value: 'team', label: computed(() => t('mcpCatalog.form.configurationSchema.categories.team')), icon: Users, color: 'green' },
     { value: 'user', label: computed(() => t('mcpCatalog.form.configurationSchema.categories.user')), icon: User, color: 'purple' },
   ]
@@ -499,10 +492,10 @@ const availableCategoryOptions = computed(() => {
 // Fresh data loading on step entry
 const refreshDataOnStepEntry = () => {
   loadFromStorageSchema()
-  
+
   // Load persisted environment variables from TechnicalStep
   const extractedEnvVars = eventBus.getState<string[]>('technical_extracted_env_vars_edit')
-  
+
   if (extractedEnvVars && extractedEnvVars.length > 0) {
     handleTechnicalEnvVarsUpdate({ envVars: extractedEnvVars })
   }
@@ -522,10 +515,10 @@ const handleStepChange = (data: { to: number; stepKey: string }) => {
 const handleTechnicalEnvVarsUpdate = (data: { envVars: string[] }) => {
   // Get current environment variables to avoid duplicates
   const currentEnvNames = environmentItems.value.map(item => item.name)
-  
+
   // Add new environment variables that don't already exist
   const newItems: ConfigItem[] = []
-  
+
   data.envVars.forEach(envVarName => {
     if (!currentEnvNames.includes(envVarName)) {
       newItems.push({
@@ -542,7 +535,7 @@ const handleTechnicalEnvVarsUpdate = (data: { envVars: string[] }) => {
       })
     }
   })
-  
+
   // Add new items to existing data
   if (newItems.length > 0) {
     const updatedData = [...localData.value, ...newItems]
@@ -553,13 +546,13 @@ const handleTechnicalEnvVarsUpdate = (data: { envVars: string[] }) => {
 onMounted(() => {
   // Initialize with current storage data
   loadFromStorageSchema()
-  
+
   // Listen for step changes
   eventBus.on('mcp-form-step-changed', handleStepChange)
-  
+
   // Listen for environment variables updates from TechnicalStep
   eventBus.on('technical-env-vars-updated', handleTechnicalEnvVarsUpdate)
-  
+
   // Load persisted env vars immediately on mount
   const extractedEnvVars = eventBus.getState<string[]>('technical_extracted_env_vars_edit')
   if (extractedEnvVars && extractedEnvVars.length > 0) {
@@ -610,7 +603,7 @@ onUnmounted(() => {
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(item, index) in argumentItems" :key="item.id">
+            <tr v-for="(item) in argumentItems" :key="item.id">
               <td class="relative py-5 pr-6">
                 <div class="flex gap-x-6">
                   <div class="flex-auto">
@@ -692,7 +685,7 @@ onUnmounted(() => {
     </div>
 
     <!-- Environment Variables Section - Now using shared component -->
-    <ConfigurationSchemaEnvironmentSection 
+    <ConfigurationSchemaEnvironmentSection
       :items="environmentItems"
       :get-category-info="getCategoryInfo"
       @add="handleEnvAdd"

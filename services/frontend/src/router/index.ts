@@ -137,6 +137,18 @@ const routes = [
     meta: { requiresSetup: true },
   },
   {
+    path: '/devices',
+    name: 'Devices',
+    component: () => import('../views/devices/index.vue'),
+    meta: { requiresSetup: true },
+  },
+  {
+    path: '/devices/view/:id',
+    name: 'DeviceView',
+    component: () => import('../views/devices/view/[id].vue'),
+    meta: { requiresSetup: true },
+  },
+  {
     path: '/teams',
     name: 'Teams',
     component: () => import('../views/teams/index.vue'),

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter, useRoute } from 'vue-router'
@@ -226,22 +227,22 @@ const handleSubmit = async (formData: McpServerFormData) => {
 
   // CRITICAL FIX: Synchronize environment variables from installation_methods to team_env_schema
   let finalConfigurationSchema = { ...formData.configuration_schema }
-  
+
   // Extract environment variables from installation_methods
   if (formData.technical.installation_methods && formData.technical.installation_methods.length > 0) {
     const firstMethod = formData.technical.installation_methods[0]
     if (firstMethod && firstMethod.env) {
       const envVarsFromInstallation = Object.keys(firstMethod.env)
-      
+
       // Get existing team_env_schema and user_env_schema or initialize empty arrays
       const existingTeamEnvSchema = finalConfigurationSchema.team_env_schema || []
       const existingUserEnvSchema = finalConfigurationSchema.user_env_schema || []
-      
+
       // Get ALL existing environment variable names from both team and user schemas
       const existingTeamEnvNames = existingTeamEnvSchema.map(item => item.name)
       const existingUserEnvNames = existingUserEnvSchema.map(item => item.name)
       const allExistingEnvNames = [...existingTeamEnvNames, ...existingUserEnvNames]
-      
+
       // Add missing environment variables to team_env_schema (only if not in team OR user schema)
       const newEnvSchemaItems: any[] = []
       envVarsFromInstallation.forEach(envVarName => {
@@ -260,7 +261,7 @@ const handleSubmit = async (formData: McpServerFormData) => {
           console.log('Edit[id].vue: Env var already exists in configuration schema:', envVarName)
         }
       })
-      
+
       // Update the final configuration schema
       if (newEnvSchemaItems.length > 0) {
         finalConfigurationSchema = {

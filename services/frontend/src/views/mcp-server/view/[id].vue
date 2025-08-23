@@ -120,6 +120,7 @@ const displayEnvironmentVariables = computed(() => {
     if (typeof server.value.user_env_schema === 'object') {
       return server.value.user_env_schema
     }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return JSON.parse(server.value.user_env_schema as any)
   } catch {
     return null

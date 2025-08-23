@@ -1,11 +1,11 @@
 <script setup lang="ts">
+ 
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { toast } from 'vue-sonner'
-import { Settings, Edit, Eye, EyeOff } from 'lucide-vue-next'
+import { Settings, Eye, EyeOff } from 'lucide-vue-next'
 import { McpInstallationService } from '@/services/mcpInstallationService'
 import { McpCatalogService } from '@/services/mcpCatalogService'
-import { TeamService } from '@/services/teamService'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'

@@ -41,7 +41,8 @@ import {
   Users,
   UserRoundPen,
   FileSliders,
-  FolderTree
+  FolderTree,
+  Monitor
 } from 'lucide-vue-next'
 
 // Define props, including variant
@@ -100,6 +101,11 @@ const navigationItems = [
     title: t('sidebar.navigation.credentials'),
     icon: Key,
     url: '/credentials',
+  },
+  {
+    title: t('sidebar.navigation.devices'),
+    icon: Monitor,
+    url: '/devices',
   },
 ]
 
