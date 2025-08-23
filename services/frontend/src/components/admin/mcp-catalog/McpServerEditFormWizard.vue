@@ -167,20 +167,18 @@ const submitError = ref<string | null>(null)
 const isFetchingGitHub = ref(false)
 const githubFetchError = ref<string | null>(null)
 
-// Initialize storage with form data for edit mode - BUT PRESERVE USER EDITS
+// Initialize storage with form data for edit mode - FORCE FRESH DATA LOADING
 const initializeStorageWithData = (data: McpServerFormData) => {
-  // Initialize all storage keys that the storage-first components expect
+  // Always overwrite storage with fresh data in edit mode
+  // This ensures we load fresh data from database, not old corrupted cache
   eventBus.setState('edit_basic_data', data.basic)
   eventBus.setState('edit_repository_data', data.repository)
   eventBus.setState('edit_technical_data', data.technical)
 
-  // CRITICAL: Only initialize configuration_schema if user hasn't made edits yet
-  const existingConfigSchema = eventBus.getState('edit_configuration_schema')
-  if (data.configuration_schema && !existingConfigSchema) {
-    // Only set if no existing edits
+  // FORCE FRESH CONFIGURATION SCHEMA - always overwrite in edit mode
+  if (data.configuration_schema) {
     eventBus.setState('edit_configuration_schema', data.configuration_schema)
   }
-  // If existingConfigSchema exists, DON'T overwrite it - keep user's edits!
 
   // Initialize Claude Desktop config if available
   if (data.technical.installation_methods && data.technical.installation_methods.length > 0) {

@@ -164,6 +164,7 @@ const typeOptions = [
   { value: 'boolean', label: computed(() => t('mcpCatalog.form.configurationSchema.dataTypes.boolean')) },
 ]
 
+
 // Load data from existing schema in storage
 const loadFromStorageSchema = () => {
   const storedSchema = eventBus.getState<ConfigurationSchema>(STORAGE_KEY)
@@ -171,7 +172,7 @@ const loadFromStorageSchema = () => {
 
   const items: ConfigItem[] = []
 
-  // Convert template args
+  // Convert template args - these should display the actual argument values
   ;(storedSchema.template_args || []).forEach((arg, index) => {
     items.push({
       id: `template_arg_${index}`,
@@ -179,7 +180,7 @@ const loadFromStorageSchema = () => {
       category: 'template',
       name: arg.value, // Use the actual value as the name
       value: arg.value, // Keep value for reference
-      description: arg.description || '',
+      description: arg.description || `Static argument: ${arg.value}`,
       dataType: 'string',
       required: true,
       locked: arg.locked,
@@ -187,14 +188,14 @@ const loadFromStorageSchema = () => {
     })
   })
 
-  // Convert team args schema
+  // Convert team args schema - these should display the actual argument values
   ;(storedSchema.team_args_schema || []).forEach((arg, index) => {
     items.push({
       id: `team_arg_${index}`,
       type: 'arg',
       category: 'team',
-      name: arg.name,
-      description: arg.description || '',
+      name: arg.name, // This should be the actual argument value like "@upstash/context7-mcp"
+      description: arg.description || `Team-configurable argument: ${arg.name}`,
       dataType: arg.type || 'string',
       required: arg.required || false,
       locked: arg.locked || false,
@@ -202,7 +203,7 @@ const loadFromStorageSchema = () => {
     })
   })
 
-  // Convert user args schema
+  // Convert user args schema (these are manually added, not from original parsing)
   ;(storedSchema.user_args_schema || []).forEach((arg, index) => {
     items.push({
       id: `user_arg_${index}`,
@@ -568,7 +569,6 @@ onUnmounted(() => {
 
 <template>
   <div class="space-y-6">
-
     <!-- Arguments Section -->
     <div class="space-y-4">
       <div>

@@ -178,9 +178,63 @@ const typeOptions = [
   { value: 'boolean', label: computed(() => t('mcpCatalog.form.configurationSchema.dataTypes.boolean')) },
 ]
 
-// Smart default logic
-const isStaticTemplateArg = (arg: string): boolean => {
-  return arg.startsWith('-') || arg.includes('@modelcontextprotocol')
+// Placeholder detection for team-configurable values (still needed for env vars)
+const isPlaceholderValue = (value: string): boolean => {
+  const placeholderPatterns = [
+    /^YOUR_[A-Z_]+$/,           // YOUR_API_KEY, YOUR_TOKEN
+    /^[A-Z_]+_KEY$/,            // API_KEY, ACCESS_KEY
+    /^[A-Z_]+_TOKEN$/,          // AUTH_TOKEN, ACCESS_TOKEN
+    /^[A-Z_]+_SECRET$/,         // CLIENT_SECRET, API_SECRET
+    /^<[^>]+>$/,                // <API_KEY>, <YOUR_TOKEN>
+    /^\{[^}]+\}$/,              // {API_KEY}, {YOUR_TOKEN}
+    /^\$\{[^}]+\}$/,            // ${API_KEY}, ${YOUR_TOKEN}
+    /^REPLACE_WITH_/,           // REPLACE_WITH_YOUR_KEY
+    /^CHANGE_ME/,               // CHANGE_ME, CHANGE_ME_API_KEY
+  ]
+  return placeholderPatterns.some(pattern => pattern.test(value))
+}
+
+// Simple args parsing - first 2 are template, rest are team configurable
+const parseArgsIntelligently = (rawArgs: string[]): ConfigItem[] => {
+  const items: ConfigItem[] = []
+
+  rawArgs.forEach((arg, index) => {
+    // Skip if arg is undefined
+    if (!arg) return
+
+    // First 2 arguments are always template (static)
+    if (index < 2) {
+      items.push({
+        id: `template_arg_${index}`,
+        type: 'arg',
+        category: 'template',
+        name: arg,
+        value: arg,
+        description: `Static argument: ${arg}`,
+        dataType: 'string',
+        required: true,
+        locked: true,
+        default_team_locked: false,
+      })
+    }
+    // All other arguments are team configurable
+    else {
+      items.push({
+        id: `team_arg_${index}`,
+        type: 'arg',
+        category: 'team',
+        name: arg,
+        value: undefined,
+        description: `Team-configurable argument: ${arg}`,
+        dataType: 'string',
+        required: true,
+        locked: false,
+        default_team_locked: true,
+      })
+    }
+  })
+
+  return items
 }
 
 // Parse and categorize items from Claude Desktop config
@@ -193,38 +247,29 @@ const parseFromClaudeConfig = () => {
 
   const items: ConfigItem[] = []
 
-  // Process args
+  // Process args with intelligent parsing
   const rawArgs = serverConfig.args || []
-  rawArgs.forEach((arg, index) => {
-    items.push({
-      id: `arg_${index}`,
-      type: 'arg',
-      category: isStaticTemplateArg(arg) ? 'template' : 'user',
-      name: `arg_${index}`,
-      value: arg,
-      description: '',
-      dataType: 'string',
-      required: true,
-      locked: false,
-      default_team_locked: false,
-    })
-  })
+  const argItems = parseArgsIntelligently(rawArgs)
+  items.push(...argItems)
 
   // Process envs
   const rawEnvs = serverConfig.env || {}
   Object.entries(rawEnvs).forEach(([key, value]) => {
+    const isPlaceholder = isPlaceholderValue(value)
     items.push({
       id: `env_${key}`,
       type: 'env',
-      category: 'team',
+      category: isPlaceholder ? 'team' : 'user',
       name: key,
       value: value,
-      description: '',
+      description: isPlaceholder
+        ? `Team-configurable environment variable (placeholder: ${value})`
+        : `User-configurable environment variable`,
       dataType: 'string',
       required: true,
       locked: false,
-      default_team_locked: true,
-      visible_to_users: false,
+      default_team_locked: isPlaceholder,
+      visible_to_users: !isPlaceholder,
     })
   })
 

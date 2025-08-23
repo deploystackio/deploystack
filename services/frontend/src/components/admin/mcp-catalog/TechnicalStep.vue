@@ -61,7 +61,7 @@ const isUpdatingFromStorage = ref(false)
 // Load data from storage
 const loadFromStorage = () => {
   const storedData = eventBus.getState<TechnicalFormData>(STORAGE_KEY)
-  
+
   if (storedData) {
     localData.value = { ...localData.value, ...storedData }
   } else if (props.formData?.technical) {
@@ -312,7 +312,7 @@ watch(jsonInput, (newValue) => {
     eventBus.emit('technical-env-vars-updated', {
       envVars: validation.envVars || []
     })
-    
+
     // ALSO store in persistent storage for ConfigurationSchemaStep to load later
     eventBus.setState('technical_extracted_env_vars_edit', validation.envVars || [])
 
@@ -329,7 +329,7 @@ watch(jsonInput, (newValue) => {
       env: serverConfig.env || {}
     }]
 
-    // Update the technical form data
+    // Update installation_methods
     updateField('installation_methods', installationMethods)
 
     // Also update the capabilities section with environment variables
@@ -396,6 +396,7 @@ const handleStepChanged = (data: { from: number; to: number; stepKey: string }) 
       loadLatestConfigFromStorage()
     }, 50)
   }
+
 }
 
 // Computed properties

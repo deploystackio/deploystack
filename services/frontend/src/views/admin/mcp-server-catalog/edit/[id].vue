@@ -41,12 +41,37 @@ const goToCatalog = () => {
   router.push('/admin/mcp-server-catalog')
 }
 
+// Clear all edit-related storage to ensure fresh data loading
+const clearEditStorage = () => {
+  // Clear all edit-related storage keys
+  const editStorageKeys = [
+    'edit_basic_data',
+    'edit_repository_data',
+    'edit_technical_data',
+    'edit_configuration_schema',
+    'edit_claude_config',
+    'technical_extracted_env_vars_edit',
+    'mcp_edit_drafts'
+  ]
+
+  editStorageKeys.forEach(key => {
+    eventBus.clearState(key)
+  })
+
+  // Also clear localStorage directly to ensure complete cleanup
+  editStorageKeys.forEach(key => {
+    localStorage.removeItem(key)
+  })
+}
+
 // Load server data
 const loadServerData = async () => {
   try {
     isLoading.value = true
     isRetrying.value = true
     loadError.value = null
+
+    clearEditStorage()
 
     const server = await McpCatalogService.getServerById(serverId)
     serverData.value = server
@@ -64,7 +89,7 @@ const loadServerData = async () => {
 }
 
 // Helper function to parse JSON fields with proper error handling
- 
+
 const parseJsonField = (fieldValue: any, defaultValue: any) => {
   if (!fieldValue || fieldValue === '' || (typeof fieldValue === 'string' && fieldValue.trim() === '')) {
     return defaultValue
@@ -83,7 +108,7 @@ const parseJsonField = (fieldValue: any, defaultValue: any) => {
 // Convert server data to form data format
 const convertServerToFormData = (server: McpServer): Partial<McpServerFormData> => {
   // Convert installation methods to new format
-   
+
   const convertedInstallationMethods = (server.installation_methods || []).map((method: any) => {
     // Handle old format: {type, command, description}
     if (method.type && method.command && !method.client) {
@@ -107,7 +132,7 @@ const convertServerToFormData = (server: McpServer): Partial<McpServerFormData> 
       args: method.args || [],
       env: method.env || {}
     }
-   
+
   }).filter((method: any) =>
     // Filter out git clone template entries and any invalid entries
     method.command &&
