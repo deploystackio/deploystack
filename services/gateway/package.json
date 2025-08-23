@@ -24,7 +24,7 @@
   "license": "SEE LICENSE IN ../../LICENSE",
   "dependencies": {
     "commander": "^14.0.0",
-    "chalk": "^4.1.2",
+    "chalk": "^5.6.0",
     "@zowe/secrets-for-zowe-sdk": "^8.0.0",
     "open": "^10.2.0",
     "ora": "^8.2.0",
