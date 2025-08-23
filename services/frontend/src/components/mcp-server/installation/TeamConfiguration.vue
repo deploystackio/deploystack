@@ -1,4 +1,5 @@
 <script setup lang="ts">
+/* eslint-disable @typescript-eslint/no-explicit-any */
  
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'

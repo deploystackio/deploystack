@@ -1,13 +1,11 @@
 <!--
  * SHARED ENVIRONMENT VARIABLES CONFIGURATION SECTION
- * 
+ *
  * This component extracts ONLY the duplicated template code for environment variables.
  * No logic duplication - just the UI template that was identical in both components.
  -->
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import { useI18n } from 'vue-i18n'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -34,19 +32,18 @@ interface Props {
   items: EnvItem[]
   getCategoryInfo: (category: string) => {
     label: string
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     icon: any
     color: string
   }
 }
 
-const props = defineProps<Props>()
+defineProps<Props>()
 const emit = defineEmits<{
   'add': []
   'edit': [index: number]
   'delete': [index: number]
 }>()
-
-const { t } = useI18n()
 </script>
 
 <template>

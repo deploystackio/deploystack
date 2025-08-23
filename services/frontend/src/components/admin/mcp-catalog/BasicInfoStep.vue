@@ -3,7 +3,7 @@
  *
  * This component uses storage-first architecture where:
  * - All form data is stored in localStorage via the event bus
- * - Component reads/writes directly to storage, not through v-model props  
+ * - Component reads/writes directly to storage, not through v-model props
  * - Real-time synchronization across all wizard steps
  * - No v-model props or emit patterns
  *
@@ -137,14 +137,8 @@ const handleTagKeydown = (event: KeyboardEvent) => {
   }
 }
 
-// Debug function to check storage state
-const debugStorageState = () => {
-  const currentData = eventBus.getState<BasicInfoFormData>(STORAGE_KEY)
-  console.log('[BasicInfoStep] Current storage state:', currentData)
-  console.log('[BasicInfoStep] Featured value:', currentData?.featured)
-}
-
 // Storage change handler
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const handleStorageChange = (data: { key: string; oldValue: any; newValue: any }) => {
   if (data.key === STORAGE_KEY) {
     // Storage changed externally, update local reactive data
@@ -155,13 +149,13 @@ const handleStorageChange = (data: { key: string; oldValue: any; newValue: any }
 // Lifecycle
 onMounted(() => {
   loadCategories()
-  
+
   // Load initial data from storage
   loadFromStorage()
-  
+
   // Listen for storage changes from other components
   eventBus.on('storage-changed', handleStorageChange)
-  
+
   // Initialize from props in edit mode if storage is empty
   if (props.mode === 'edit' && props.modelValue) {
     const currentData = eventBus.getState<BasicInfoFormData>(STORAGE_KEY)

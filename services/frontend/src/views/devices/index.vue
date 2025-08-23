@@ -30,11 +30,11 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import DashboardLayout from '@/components/DashboardLayout.vue'
 import ContentWrapper from '@/components/ContentWrapper.vue'
-import { 
-  MoreHorizontal, 
-  Edit, 
-  Trash2, 
-  Shield, 
+import {
+  MoreHorizontal,
+  Edit,
+  Trash2,
+  Shield,
   ShieldOff,
   Monitor,
   CheckCircle,
@@ -80,29 +80,29 @@ function handleRemove(device: Device) {
 
 async function handleSaveEdit() {
   if (!editingDevice.value || !editDeviceName.value.trim()) return
-  
+
   try {
     await updateDevice(editingDevice.value.id, {
       device_name: editDeviceName.value.trim()
     })
-    
+
     editDialogOpen.value = false
     editingDevice.value = null
     editDeviceName.value = ''
-  } catch (error) {
+  } catch {
     // Error handled in composable
   }
 }
 
 async function handleConfirmRemove() {
   if (!removingDevice.value) return
-  
+
   try {
     await removeDevice(removingDevice.value.id)
-    
+
     removeDialogOpen.value = false
     removingDevice.value = null
-  } catch (error) {
+  } catch {
     // Error handled in composable
   }
 }
@@ -188,14 +188,14 @@ onMounted(() => {
                   </div>
                 </TableCell>
               </TableRow>
-              
+
               <!-- Device Rows -->
               <TableRow v-for="device in sortedDevices" :key="device.id">
                 <TableCell class="font-medium">
                   <div class="flex items-center gap-2">
                     <Monitor class="h-4 w-4 text-muted-foreground" />
-                    <router-link 
-                      :to="`/devices/view/${device.id}`" 
+                    <router-link
+                      :to="`/devices/view/${device.id}`"
                       class="hover:underline hover:text-primary cursor-pointer"
                     >
                       {{ device.device_name }}
@@ -276,16 +276,16 @@ onMounted(() => {
           </div>
 
           <AlertDialogFooter>
-            <Button 
-              type="button" 
-              variant="outline" 
+            <Button
+              type="button"
+              variant="outline"
               @click="handleCancelEdit"
               :disabled="isUpdating"
             >
               {{ t('devices.editDialog.buttons.cancel') }}
             </Button>
-            <Button 
-              @click="handleSaveEdit" 
+            <Button
+              @click="handleSaveEdit"
               :loading="isUpdating"
               :loading-text="t('devices.editDialog.buttons.saving')"
               :disabled="!editDeviceName.trim()"
@@ -305,7 +305,7 @@ onMounted(() => {
               {{ t('devices.removeDialog.description', { deviceName: removingDevice?.device_name || '' }) }}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          
+
           <div class="text-sm text-muted-foreground">
             {{ t('devices.removeDialog.warning') }}
           </div>

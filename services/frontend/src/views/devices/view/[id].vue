@@ -8,17 +8,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import DashboardLayout from '@/components/DashboardLayout.vue'
 import ContentWrapper from '@/components/ContentWrapper.vue'
-import { 
-  ArrowLeft, 
-  Monitor, 
-  Shield, 
+import {
+  ArrowLeft,
+  Monitor,
+  Shield,
   ShieldOff,
   Calendar,
   Globe,
   Cpu,
   HardDrive,
   AlertCircle,
-  Edit,
   Trash2
 } from 'lucide-vue-next'
 import { useDeviceDetail } from '@/composables/useDeviceDetail'
@@ -186,7 +185,7 @@ onMounted(async () => {
                     {{ device.is_trusted ? 'Trusted Device' : 'Untrusted Device' }}
                   </div>
                   <div class="text-sm text-muted-foreground">
-                    {{ device.is_trusted 
+                    {{ device.is_trusted
                       ? 'This device is marked as trusted and has full access to your MCP configurations'
                       : 'This device requires additional verification for sensitive operations'
                     }}

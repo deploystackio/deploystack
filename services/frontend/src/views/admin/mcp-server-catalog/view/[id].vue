@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import CategoryDisplay from '@/components/mcp-server/CategoryDisplay.vue'
 import ContentWrapper from '@/components/ContentWrapper.vue'
-import { ArrowLeft, Github, ExternalLink, Package, Code, Settings, Calendar, Tag, Trash2, AlertTriangle, Edit, Terminal, Users, User, Lock, Unlock } from 'lucide-vue-next'
+import { ArrowLeft, Github, ExternalLink, Package, Settings, Calendar, Tag, Trash2, AlertTriangle, Edit, Terminal, Users, User, Lock, Unlock } from 'lucide-vue-next'
 import DashboardLayout from '@/components/DashboardLayout.vue'
 
 import { McpCatalogService } from '@/services/mcpCatalogService'
@@ -78,48 +78,6 @@ const displayTags = computed(() => {
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return JSON.parse(server.value.tags as any)
-  } catch {
-    return []
-  }
-})
-
-const displayTools = computed(() => {
-  if (!server.value?.tools) return []
-  // Handle both array and JSON string formats
-  if (Array.isArray(server.value.tools)) {
-    return server.value.tools
-  }
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return JSON.parse(server.value.tools as any)
-  } catch {
-    return []
-  }
-})
-
-const displayResources = computed(() => {
-  if (!server.value?.resources) return []
-  // Handle both array and JSON string formats
-  if (Array.isArray(server.value.resources)) {
-    return server.value.resources
-  }
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return JSON.parse(server.value.resources as any)
-  } catch {
-    return []
-  }
-})
-
-const displayPrompts = computed(() => {
-  if (!server.value?.prompts) return []
-  // Handle both array and JSON string formats
-  if (Array.isArray(server.value.prompts)) {
-    return server.value.prompts
-  }
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return JSON.parse(server.value.prompts as any)
   } catch {
     return []
   }

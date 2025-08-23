@@ -1,5 +1,6 @@
 <script setup lang="ts">
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter, useRoute } from 'vue-router'
@@ -63,7 +64,7 @@ const loadServerData = async () => {
 }
 
 // Helper function to parse JSON fields with proper error handling
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 const parseJsonField = (fieldValue: any, defaultValue: any) => {
   if (!fieldValue || fieldValue === '' || (typeof fieldValue === 'string' && fieldValue.trim() === '')) {
     return defaultValue
@@ -79,42 +80,10 @@ const parseJsonField = (fieldValue: any, defaultValue: any) => {
   }
 }
 
-// Helper function to parse environment variables with robust handling
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const parseEnvironmentVariables = (envVars: any): any[] => {
-  // Handle null/undefined (service returns null as fallback)
-  if (!envVars || envVars === null || envVars === undefined) return []
-
-  // Handle arrays (expected format from API)
-  if (Array.isArray(envVars)) {
-    return envVars
-  }
-
-  // Handle JSON strings (legacy format)
-  if (typeof envVars === 'string') {
-    try {
-      const parsed = JSON.parse(envVars)
-      return Array.isArray(parsed) ? parsed : []
-    } catch {
-      return []
-    }
-  }
-
-  // Handle objects (in case service parsing changes)
-  if (typeof envVars === 'object') {
-    // If it's an object with array-like properties, try to convert
-    if (Object.keys(envVars).every(key => !isNaN(Number(key)))) {
-      return Object.values(envVars)
-    }
-  }
-
-  return []
-}
-
 // Convert server data to form data format
 const convertServerToFormData = (server: McpServer): Partial<McpServerFormData> => {
   // Convert installation methods to new format
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   const convertedInstallationMethods = (server.installation_methods || []).map((method: any) => {
     // Handle old format: {type, command, description}
     if (method.type && method.command && !method.client) {
@@ -138,7 +107,7 @@ const convertServerToFormData = (server: McpServer): Partial<McpServerFormData> 
       args: method.args || [],
       env: method.env || {}
     }
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   }).filter((method: any) =>
     // Filter out git clone template entries and any invalid entries
     method.command &&
@@ -148,11 +117,6 @@ const convertServerToFormData = (server: McpServer): Partial<McpServerFormData> 
 
   // Parse tags with proper handling
   const parsedTags = parseJsonField(server.tags, [])
-
-  // Parse tools, resources, and prompts with proper handling
-  const parsedTools = parseJsonField(server.tools, [])
-  const parsedResources = parseJsonField(server.resources, [])
-  const parsedPrompts = parseJsonField(server.prompts, [])
 
   // Convert three-tier schema fields from API response
   const parseSchemaField = (field: any, defaultValue: any) => {

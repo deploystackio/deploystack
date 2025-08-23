@@ -1,4 +1,5 @@
 <script setup lang="ts">
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Button } from '@/components/ui/button'
@@ -27,7 +28,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 // Emits
 const emit = defineEmits<{
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   submit: [formData: any] // Use any to avoid circular type dependencies, parent view defines the final type
   cancel: []
   stepChanged: [data: { step: number; stepKey: string }]
@@ -43,7 +44,7 @@ interface McpServerAddFormData {
     github_url: string
     git_branch: string
     auto_populated: boolean
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     repo_data?: any
   }
   claudeConfig: {
@@ -262,7 +263,7 @@ const goToStep = (stepIndex: number) => {
 }
 
 // Handle step click from ProgressBars
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 const handleStepClick = (step: any, index: number) => {
   if (step.clickable) {
     goToStep(index)
@@ -342,7 +343,7 @@ const handleGitHubStepNext = async () => {
 }
 
 // Auto-population function for GitHub data
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 const autoPopulateFromGitHub = (githubData: any) => {
   // Update GitHub data
   formData.value.github = {
