@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { Button } from '@/components/ui/button'
@@ -7,7 +7,7 @@ import { ArrowLeft, Info, Settings, Shield } from 'lucide-vue-next'
 import { DsTabs, DsTabsItem } from '@/components/ui/ds-tabs'
 import DashboardLayout from '@/components/DashboardLayout.vue'
 import ContentWrapper from '@/components/ContentWrapper.vue'
-import { InstallationInfo, EnvironmentVariables, DangerZone } from '@/components/mcp-server/installation'
+import { InstallationInfo, TeamConfiguration, DangerZone } from '@/components/mcp-server/installation'
 import { McpInstallationService } from '@/services/mcpInstallationService'
 import { TeamService, type Team } from '@/services/teamService'
 import { useEventBus } from '@/composables/useEventBus'
@@ -27,14 +27,35 @@ const activeTab = ref('information')
 
 const installationId = route.params.id as string
 
-// Get team context from event bus storage and load installation
-async function loadInstallationWithTeamContext(installationId: string): Promise<{ team: Team; installation: McpInstallation; userRole: 'team_admin' | 'team_user' } | null> {
-  try {
-    // Get selected team from storage
-    const selectedTeamId = eventBus.getState<string>('selected_team_id')
 
+
+// Load installation using current selected team from event bus
+async function loadInstallation(installationId: string): Promise<{ team: Team; installation: McpInstallation; userRole: 'team_admin' | 'team_user' } | null> {
+  try {
+    // Get selected team from event bus storage
+    const selectedTeamId = eventBus.getState<string>('selected_team_id')
+    
     if (!selectedTeamId) {
-      console.warn('No team selected in storage')
+      // Fallback: try to find which team owns this installation
+      const userTeams = await TeamService.getUserTeams()
+      
+      for (const team of userTeams) {
+        try {
+          const installation = await McpInstallationService.getInstallationById(team.id, installationId)
+          if (installation) {
+            // Set this team as selected in storage
+            eventBus.setState('selected_team_id', team.id)
+            return { 
+              team, 
+              installation, 
+              userRole: team.role || 'team_user'
+            }
+          }
+        } catch {
+          continue
+        }
+      }
+      
       return null
     }
 
@@ -43,7 +64,6 @@ async function loadInstallationWithTeamContext(installationId: string): Promise<
     const selectedTeam = userTeams.find(team => team.id === selectedTeamId)
 
     if (!selectedTeam) {
-      console.warn('Selected team not found in user teams')
       return null
     }
 
@@ -53,42 +73,34 @@ async function loadInstallationWithTeamContext(installationId: string): Promise<
     if (!installation) {
       return null
     }
-
-    // Get user's role in this specific team
-    const userRole = selectedTeam.role || 'team_user' // Fallback to team_user if role not available
-    return { team: selectedTeam, installation, userRole }
+    return { 
+      team: selectedTeam, 
+      installation, 
+      userRole: selectedTeam.role || 'team_user'
+    }
   } catch (error) {
-    console.error('Error loading installation with team context:', error)
     return null
   }
 }
 
 // Load installation on component mount
 onMounted(async () => {
-  try {
-    isLoading.value = true
-    const result = await loadInstallationWithTeamContext(installationId)
-
-    if (result) {
-      installation.value = result.installation
-      currentTeam.value = result.team
-      userTeamRole.value = result.userRole
-      error.value = null
-    } else {
-      error.value = 'Installation not found in the selected team or no team selected'
-      installation.value = null
-      currentTeam.value = null
-      userTeamRole.value = null
+  await loadAndSetInstallation()
+  
+  // Listen for team selection changes
+  eventBus.on('storage-changed', (data) => {
+    if (data.key === 'selected_team_id') {
+      handleTeamChanged()
     }
-  } catch (err) {
-    error.value = err instanceof Error ? err.message : 'An unknown error occurred'
-    installation.value = null
-    currentTeam.value = null
-    userTeamRole.value = null
-  } finally {
-    isLoading.value = false
-  }
+  })
 })
+
+onUnmounted(() => {
+  // Clean up event listeners
+  eventBus.off('storage-changed', handleTeamChanged)
+})
+
+
 
 // Computed properties for display
 const pageTitle = computed(() => {
@@ -119,8 +131,39 @@ const handleInstallationUpdated = (updatedInstallation: McpInstallation) => {
   // Update the local installation data
   installation.value = updatedInstallation
 
-  // Emit general installations updated event for other components that might need to refresh
+  // Emit event for other components that might need to refresh
   eventBus.emit('mcp-installations-updated')
+}
+
+// Listen for team changes from event bus
+const handleTeamChanged = async () => {
+  await loadAndSetInstallation()
+}
+
+const loadAndSetInstallation = async () => {
+  try {
+    isLoading.value = true
+    const result = await loadInstallation(installationId)
+
+    if (result) {
+      installation.value = result.installation
+      currentTeam.value = result.team
+      userTeamRole.value = result.userRole
+      error.value = null
+    } else {
+      error.value = 'Installation not found in the selected team or no team selected'
+      installation.value = null
+      currentTeam.value = null
+      userTeamRole.value = null
+    }
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : 'An unknown error occurred'
+    installation.value = null
+    currentTeam.value = null
+    userTeamRole.value = null
+  } finally {
+    isLoading.value = false
+  }
 }
 </script>
 
@@ -149,14 +192,15 @@ const handleInstallationUpdated = (updatedInstallation: McpInstallation) => {
       </div>
 
       <!-- Installation Details with Tabs -->
-      <div v-else-if="installation">
+      <div v-else-if="installation && currentTeam">
+
         <DsTabs v-model="activeTab">
           <DsTabsItem value="information" label="Installation Info">
             <Info class="h-4 w-4" />
           </DsTabsItem>
           <DsTabsItem
             value="environment"
-            label="Environment Variables"
+            label="Team Configuration"
             :badge="environmentVariablesCount > 0 ? environmentVariablesCount : undefined"
           >
             <Settings class="h-4 w-4" />
@@ -172,9 +216,10 @@ const handleInstallationUpdated = (updatedInstallation: McpInstallation) => {
             v-if="activeTab === 'information'"
             :installation="installation"
           />
-          <EnvironmentVariables
+          <TeamConfiguration
             v-if="activeTab === 'environment'"
             :installation="installation"
+            :team-id="currentTeam.id"
             :can-edit="canEditInstallation"
             :user-role="userTeamRole"
             @installation-updated="handleInstallationUpdated"
@@ -182,6 +227,7 @@ const handleInstallationUpdated = (updatedInstallation: McpInstallation) => {
           <DangerZone
             v-if="activeTab === 'danger-zone'"
             :installation="installation"
+            :team-id="currentTeam.id"
             :can-edit="canEditInstallation"
             :user-role="userTeamRole"
           />

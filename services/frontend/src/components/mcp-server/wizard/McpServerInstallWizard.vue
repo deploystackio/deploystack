@@ -43,7 +43,8 @@ interface InstallationFormData {
     server_data?: any
   }
   environment: {
-    user_environment_variables: Record<string, string>
+    team_env: Record<string, string>
+    user_env: Record<string, string>
   }
   platform: {
     installation_type: string
@@ -122,7 +123,8 @@ const formData = ref<InstallationFormData>({
     server_id: ''
   },
   environment: {
-    user_environment_variables: {}
+    team_env: {},
+    user_env: {}
   },
   platform: {
     installation_type: 'local'
@@ -193,7 +195,8 @@ const previousStep = () => {
       // Going back to server selection - clear server data
       formData.value.server.server_id = ''
       formData.value.server.server_data = undefined
-      formData.value.environment.user_environment_variables = {}
+      formData.value.environment.team_env = {}
+      formData.value.environment.user_env = {}
       environmentStepTouched.value = false
     } else if (currentStep.value === 1) {
       // Going back to environment step - clear platform data
@@ -258,7 +261,8 @@ const submitInstallation = async () => {
     const installationData = {
       server_id: formData.value.server.server_id,
       installation_type: formData.value.platform.installation_type,
-      user_environment_variables: formData.value.environment.user_environment_variables,
+      team_env: formData.value.environment.team_env,
+      user_environment_variables: formData.value.environment.user_env,
       installation_name: formData.value.server.server_data?.name || 'Unknown Server'
     }
 
@@ -289,7 +293,8 @@ const handleServerSelected = (serverData: any) => {
   formData.value.server.server_data = serverData
 
   // Reset environment variables when server changes
-  formData.value.environment.user_environment_variables = {}
+  formData.value.environment.team_env = {}
+  formData.value.environment.user_env = {}
 
   // Reset touched state when server changes
   environmentStepTouched.value = false
@@ -300,11 +305,37 @@ const handleServerSelected = (serverData: any) => {
     missingFields: []
   }
 
-  // Pre-populate environment variables with empty values
-  if (serverData.environment_variables) {
-    serverData.environment_variables.forEach((env: any) => {
-      formData.value.environment.user_environment_variables[env.name] = ''
-    })
+  // Pre-populate team and user environment variables with empty values from new schema
+  if (serverData.team_env_schema) {
+    try {
+      const teamEnvSchema = typeof serverData.team_env_schema === 'string'
+        ? JSON.parse(serverData.team_env_schema)
+        : serverData.team_env_schema
+
+      if (Array.isArray(teamEnvSchema)) {
+        teamEnvSchema.forEach((env: any) => {
+          formData.value.environment.team_env[env.name] = ''
+        })
+      }
+    } catch (error) {
+      console.error('Error parsing team_env_schema:', error)
+    }
+  }
+
+  if (serverData.user_env_schema) {
+    try {
+      const userEnvSchema = typeof serverData.user_env_schema === 'string'
+        ? JSON.parse(serverData.user_env_schema)
+        : serverData.user_env_schema
+
+      if (Array.isArray(userEnvSchema)) {
+        userEnvSchema.forEach((env: any) => {
+          formData.value.environment.user_env[env.name] = ''
+        })
+      }
+    } catch (error) {
+      console.error('Error parsing user_env_schema:', error)
+    }
   }
 }
 
@@ -331,11 +362,21 @@ const handleQueryParameters = async () => {
         formData.value.server.server_id = serverId
         formData.value.server.server_data = serverData
 
-        // Pre-populate environment variables with empty values
-        if (serverData.environment_variables) {
-          serverData.environment_variables.forEach((env: any) => {
-            formData.value.environment.user_environment_variables[env.name] = ''
-          })
+        // Pre-populate environment variables with empty values from new schema
+        if (serverData.user_env_schema) {
+          try {
+            const userEnvSchema = typeof serverData.user_env_schema === 'string'
+              ? JSON.parse(serverData.user_env_schema)
+              : serverData.user_env_schema
+
+            if (Array.isArray(userEnvSchema)) {
+              userEnvSchema.forEach((env: any) => {
+                formData.value.environment.user_env[env.name] = ''
+              })
+            }
+          } catch (error) {
+            console.error('Error parsing user_env_schema:', error)
+          }
         }
 
         // Set initial step if specified
@@ -364,10 +405,9 @@ onMounted(async () => {
     currentStep.value = 0
     formData.value = {
       server: { server_id: '' },
-      environment: { user_environment_variables: {} },
+      environment: { team_env: {}, user_env: {} },
       platform: { installation_type: 'local' }
     }
-
   })
 })
 </script>
@@ -399,7 +439,7 @@ onMounted(async () => {
       <!-- Environment Variables Step -->
       <EnvironmentVariablesStep
         v-else-if="currentStep === 1"
-        v-model="formData.environment.user_environment_variables"
+        v-model="formData.environment"
         :server-data="formData.server.server_data"
         @validation-change="handleValidationChange"
       />

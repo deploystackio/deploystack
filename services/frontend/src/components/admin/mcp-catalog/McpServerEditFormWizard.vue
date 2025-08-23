@@ -17,13 +17,13 @@ import { useI18n } from 'vue-i18n'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { ProgressBars } from '@/components/ui/progress-bars'
-import { FileText, Github, Code, Zap, CheckCircle } from 'lucide-vue-next'
+import { FileText, Github, Code, Settings, CheckCircle } from 'lucide-vue-next'
 import { McpCatalogService } from '@/services/mcpCatalogService'
 import { useEventBus } from '@/composables/useEventBus'
 import ContentWrapper from '@/components/ContentWrapper.vue'
 import BasicInfoStep from '@/components/admin/mcp-catalog/BasicInfoStep.vue'
 import TechnicalStep from '@/components/admin/mcp-catalog/TechnicalStep.vue'
-import CapabilitiesStep from '@/components/admin/mcp-catalog/CapabilitiesStep.vue'
+import ConfigurationSchemaStepEdit from '@/components/admin/mcp-catalog/steps/ConfigurationSchemaStepEdit.vue'
 import GitHubRepositoryStep from '@/components/admin/mcp-catalog/GitHubRepositoryStep.vue'
 import ReviewStep from '@/components/admin/mcp-catalog/ReviewStep.vue'
 import type {
@@ -82,10 +82,10 @@ const steps = [
     component: TechnicalStep
   },
   {
-    key: 'capabilities' as const,
-    label: t('mcpCatalog.form.steps.capabilities'),
-    icon: Zap,
-    component: CapabilitiesStep
+    key: 'configurationSchema' as const,
+    label: t('mcpCatalog.form.steps.configurationSchema'),
+    icon: Settings,
+    component: ConfigurationSchemaStepEdit
   },
   {
     key: 'review' as const,
@@ -167,13 +167,20 @@ const submitError = ref<string | null>(null)
 const isFetchingGitHub = ref(false)
 const githubFetchError = ref<string | null>(null)
 
-// Initialize storage with form data for edit mode
+// Initialize storage with form data for edit mode - BUT PRESERVE USER EDITS
 const initializeStorageWithData = (data: McpServerFormData) => {
   // Initialize all storage keys that the storage-first components expect
   eventBus.setState('edit_basic_data', data.basic)
   eventBus.setState('edit_repository_data', data.repository)
   eventBus.setState('edit_technical_data', data.technical)
-  eventBus.setState('edit_capabilities_data', data.capabilities)
+
+  // CRITICAL: Only initialize configuration_schema if user hasn't made edits yet
+  const existingConfigSchema = eventBus.getState('edit_configuration_schema')
+  if (data.configuration_schema && !existingConfigSchema) {
+    // Only set if no existing edits
+    eventBus.setState('edit_configuration_schema', data.configuration_schema)
+  }
+  // If existingConfigSchema exists, DON'T overwrite it - keep user's edits!
 
   // Initialize Claude Desktop config if available
   if (data.technical.installation_methods && data.technical.installation_methods.length > 0) {
@@ -190,11 +197,6 @@ const initializeStorageWithData = (data: McpServerFormData) => {
       }
       eventBus.setState('edit_claude_config', JSON.stringify(claudeConfig, null, 2))
     }
-  }
-
-  // Initialize environment variables
-  if (data.capabilities.environment_variables) {
-    eventBus.setState('capabilities_env_vars', data.capabilities.environment_variables)
   }
 }
 
@@ -226,13 +228,7 @@ const formData = ref<McpServerFormData>({
     dependencies: '',
     transport_type: 'auto'
   },
-  capabilities: {
-    tools: [],
-    resources: [],
-    prompts: [],
-    environment_variables: [],
-    args: []
-  },
+  configuration_schema: {},
   github: {
     github_url: '',
     git_branch: 'main',
@@ -247,13 +243,12 @@ watch(
   (newInitialData) => {
     if (newInitialData) {
       // In edit mode, use deep merge to ensure nested objects are properly merged
-      // For capabilities, we need to completely replace the default empty arrays with API data
       formData.value = {
         ...formData.value,
         basic: { ...formData.value.basic, ...newInitialData.basic },
         repository: { ...formData.value.repository, ...newInitialData.repository },
         technical: { ...formData.value.technical, ...newInitialData.technical },
-        capabilities: newInitialData.capabilities ? newInitialData.capabilities : formData.value.capabilities,
+        configuration_schema: newInitialData.configuration_schema ? newInitialData.configuration_schema : formData.value.configuration_schema,
         github: { ...formData.value.github, ...newInitialData.github },
         review: { ...formData.value.review, ...newInitialData.review }
       }
@@ -423,13 +418,7 @@ const autoPopulateFromGitHub = (githubData: any) => {
       dependencies: githubData.dependencies || '',
       transport_type: githubData.transport_type || 'auto'
     },
-    capabilities: {
-      tools: githubData.tools || [],
-      resources: githubData.resources || [],
-      prompts: githubData.prompts || [],
-      environment_variables: githubData.environment_variables || [],
-      args: githubData.args || []
-    },
+    configuration_schema: githubData.configuration_schema || {},
     github: {
       github_url: githubData.html_url || githubData.github_url || formData.value.github.github_url,
       git_branch: githubData.default_branch || 'main',
@@ -561,9 +550,10 @@ const submitForm = async () => {
     const freshBasicData = eventBus.getState('edit_basic_data')
     const freshRepositoryData = eventBus.getState('edit_repository_data')
     const freshTechnicalData = eventBus.getState('edit_technical_data')
-    const freshCapabilitiesData = eventBus.getState('edit_capabilities_data')
+    const freshConfigurationSchema = eventBus.getState('edit_configuration_schema')
+
     const freshClaudeConfig = eventBus.getState<string>('edit_claude_config')
-    const freshCapabilitiesEnvVars = eventBus.getState('capabilities_env_vars')
+
 
 
     // Start with current form data as base
@@ -582,9 +572,11 @@ const submitForm = async () => {
       finalFormData.technical = { ...finalFormData.technical, ...freshTechnicalData }
     }
 
-    if (freshCapabilitiesData) {
-      finalFormData.capabilities = { ...finalFormData.capabilities, ...freshCapabilitiesData }
+    if (freshConfigurationSchema) {
+      finalFormData.configuration_schema = freshConfigurationSchema
     }
+
+
 
     // Update technical data from Claude Desktop config if available
     if (freshClaudeConfig && freshClaudeConfig.trim()) {
@@ -613,13 +605,7 @@ const submitForm = async () => {
       }
     }
 
-    // Update capabilities data from environment variables if available
-    if (freshCapabilitiesEnvVars && Array.isArray(freshCapabilitiesEnvVars)) {
-      finalFormData.capabilities = {
-        ...finalFormData.capabilities,
-        environment_variables: freshCapabilitiesEnvVars
-      }
-    }
+
 
 
     // Emit the fresh form data to parent component
@@ -685,17 +671,11 @@ onUnmounted(() => {
     <ContentWrapper>
       <component
         :is="currentStepData?.component"
-        v-if="currentStepData?.key === 'capabilities'"
-        :form-data="formData"
-        @update:form-data="(newFormData: McpServerFormData) => formData = newFormData"
-      />
-      <component
-        :is="currentStepData?.component"
-        v-else-if="currentStepData?.key === 'basic'"
+        v-if="currentStepData?.key === 'basic'"
         v-model="formData[currentStepData.key]"
         :form-data="formData"
         :mode="props.mode"
-        @update:modelValue="(newValue: any) => currentStepData && (formData[currentStepData.key] = newValue)"
+        @update:modelValue="(newValue: any) => { if (currentStepData?.key && currentStepData.key !== 'configurationSchema') { (formData as any)[currentStepData.key] = newValue } }"
         @update:formData="(newFormData: any) => formData = newFormData"
       />
       <component
@@ -705,12 +685,15 @@ onUnmounted(() => {
         :mode="props.mode"
         @update:formData="(newFormData: any) => formData = newFormData"
       />
+      <ConfigurationSchemaStepEdit
+        v-else-if="currentStepData?.key === 'configurationSchema'"
+      />
       <component
         :is="currentStepData?.component"
         v-else-if="currentStepData"
         v-model="formData[currentStepData.key]"
         :form-data="formData"
-        @update:modelValue="(newValue: any) => currentStepData && (formData[currentStepData.key] = newValue)"
+        @update:modelValue="(newValue: any) => { if (currentStepData?.key && currentStepData.key !== 'configurationSchema') { (formData as any)[currentStepData.key] = newValue } }"
         @update:formData="(newFormData: any) => formData = newFormData"
       />
     </ContentWrapper>

@@ -44,6 +44,8 @@ const serverSchema = z.object({
   organization: z.string().nullable(),
   license: z.string().nullable(),
   transport_type: z.enum(['stdio', 'http', 'sse']),
+  // Three-tier configuration schema fields are available in the service layer,
+  // but not included in the list view for brevity. The get endpoint has the full details.
   category_id: z.string().nullable(),
   tags: z.string().nullable(), // JSON string
   status: z.enum(['active', 'deprecated', 'maintenance']),

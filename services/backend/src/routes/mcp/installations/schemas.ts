@@ -139,13 +139,13 @@ export const UPDATE_INSTALLATION_REQUEST_SCHEMA = {
 export const UPDATE_ENVIRONMENT_VARS_REQUEST_SCHEMA = {
   type: 'object',
   properties: {
-    environment_variables: {
+    team_env: {
       type: 'object',
       additionalProperties: { type: 'string' },
-      description: 'Environment variables to update'
+      description: 'Team-level environment variables to update'
     }
   },
-  required: ['environment_variables'],
+  required: ['team_env'],
   additionalProperties: false
 } as const;
 
@@ -457,7 +457,7 @@ export interface UpdateInstallationRequest {
 }
 
 export interface UpdateEnvironmentVariablesRequest {
-  environment_variables: Record<string, string>;
+  team_env: Record<string, string>;
 }
 
 export interface UpdateArgsRequest {

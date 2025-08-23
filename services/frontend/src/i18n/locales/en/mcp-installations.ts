@@ -212,6 +212,7 @@ export default {
 
     fields: {
       name: 'Name',
+      repository: 'Repository',
       description: 'Description',
       longDescription: 'Long Description',
       category: 'Category',
@@ -250,6 +251,125 @@ export default {
       lastSync: 'Last Sync:',
       serverId: 'Server ID:',
       slug: 'Slug:'
+    }
+  },
+
+  teamConfiguration: {
+    title: 'Team Configuration',
+    description: 'Configure shared team settings for arguments and environment variables that all team members will inherit.',
+    loading: 'Loading server configuration...',
+
+    sections: {
+      teamArgs: {
+        title: 'Team Arguments',
+        description: 'Command line arguments shared across the team',
+        counter: {
+          single: 'argument',
+          plural: 'arguments'
+        }
+      },
+      teamEnv: {
+        title: 'Team Environment Variables',
+        description: 'Environment variables shared across the team',
+        counter: {
+          single: 'variable',
+          plural: 'variables'
+        }
+      },
+      userEnv: {
+        title: 'User Environment Variables',
+        description: 'These variables will be configured by individual users after installation. Each team member will set their own values for these variables.',
+        infoNote: 'Information only:',
+        individualConfig: 'These variables will be configured by individual users after installation.',
+        perMemberConfig: 'Each team member will set their own values for these variables.',
+        userConfigured: 'User configured'
+      }
+    },
+
+    table: {
+      headers: {
+        argument: 'Argument',
+        variable: 'Variable',
+        properties: 'Properties',
+        details: 'Details',
+        value: 'Value',
+        actions: 'Actions'
+      },
+      values: {
+        required: 'Required',
+        type: 'Type',
+        placeholder: 'Placeholder',
+        notSet: 'Not set',
+        hiddenFromUsers: 'Hidden from users',
+        argumentNumber: 'Argument {number}'
+      },
+      labels: {
+        required: 'Required:',
+        type: 'Type:',
+        description: 'Description:',
+        value: 'Value:',
+        hiddenFromUsers: 'Hidden from users:',
+        defaultType: 'string'
+      },
+      actions: {
+        openMenu: 'Open menu for {item}',
+        editValue: 'Edit Value',
+        editDisabled: 'Edit disabled',
+        editDisabledTooltip: 'Only team administrators can edit team configuration'
+      }
+    },
+
+    editModal: {
+      titleArg: 'Edit Team Argument {number}',
+      titleEnv: 'Edit Team Environment Variable: {name}',
+      description: 'Configure the team-level value that all team members will inherit.',
+
+      form: {
+        labels: {
+          argument: 'Argument:',
+          variable: 'Variable:',
+          teamValue: 'Team Value'
+        },
+        placeholders: {
+          enterValue: 'Enter team value...'
+        },
+        buttons: {
+          cancel: 'Cancel',
+          save: 'Save',
+          saving: 'Saving...'
+        },
+        actions: {
+          showValue: 'Show value',
+          hideValue: 'Hide value'
+        }
+      },
+
+      validation: {
+        required: 'This field is required'
+      },
+
+      errors: {
+        noTeamFound: 'No team found',
+        noTeamAvailable: 'No team available',
+        updateFailed: 'Failed to update configuration. Please try again.'
+      },
+
+      success: {
+        updated: 'Updated {item}',
+        description: 'Team configuration has been updated successfully'
+      }
+    },
+
+    emptyState: {
+      title: 'No Team Configuration',
+      description: 'This MCP server doesn\'t have any team-configurable arguments or environment variables.'
+    },
+
+    userEnvDetails: {
+      required: '(Required)',
+      optional: '(Optional)',
+      typeLabel: 'Type:',
+      placeholderLabel: 'Placeholder:'
     }
   },
 
@@ -330,6 +450,7 @@ export default {
       uninstall: {
         label: 'Uninstall MCP Server',
         description: 'Permanently remove this MCP server installation from your team. This action cannot be undone.',
+        warning: 'Uninstalling will permanently remove this MCP server from your team workspace. All team configurations and settings will be lost and cannot be recovered.',
         button: 'Uninstall Server',
         disabledTooltip: 'Only team administrators can uninstall MCP servers',
         modal: {

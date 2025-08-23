@@ -24,8 +24,15 @@ export interface McpServer {
   organization?: string
   license?: string
   transport_type?: 'stdio' | 'http' | 'sse'
-  environment_variables?: EnvironmentVariable[]
-  args?: Argument[]
+  
+  // New three-tier schema fields
+  template_args?: TemplateArg[] | string
+  template_env?: TemplateEnvVar[] | string
+  team_args_schema?: TeamArgsSchema[] | string
+  team_env_schema?: TeamEnvSchema[] | string
+  user_args_schema?: UserArgsSchema[] | string
+  user_env_schema?: UserEnvSchema[] | string
+  
   dependencies?: Record<string, any>
   category_id?: string
   tags?: string[]
@@ -74,11 +81,58 @@ export interface EnvironmentVariable {
   required: boolean
 }
 
-export interface Argument {
+
+
+// New three-tier schema type definitions
+export interface TemplateArg {
+  value: string
+  locked: boolean
+  description?: string
+}
+
+export interface TemplateEnvVar {
   name: string
-  description: string
-  default_value?: string
+  value: string
+  locked: boolean
+  description?: string
+}
+
+export interface TeamArgsSchema {
+  name: string
+  type: 'string' | 'number' | 'boolean'
+  description?: string
   required: boolean
+  locked: boolean
+  default_value?: string
+}
+
+export interface TeamEnvSchema {
+  name: string
+  type: 'string' | 'number' | 'boolean'
+  description?: string
+  required: boolean
+  locked: boolean
+  default_team_locked?: boolean
+  visible_to_users?: boolean
+  default_value?: string
+}
+
+export interface UserArgsSchema {
+  name: string
+  type: 'string' | 'number' | 'boolean'
+  description?: string
+  required: boolean
+  locked: boolean
+  default_value?: string
+}
+
+export interface UserEnvSchema {
+  name: string
+  type: 'string' | 'number' | 'boolean'
+  description?: string
+  required: boolean
+  locked: boolean
+  default_value?: string
 }
 
 export interface CreateMcpServerRequest {
@@ -101,8 +155,15 @@ export interface CreateMcpServerRequest {
   organization?: string
   license?: string
   transport_type?: 'stdio' | 'http' | 'sse'
-  environment_variables?: EnvironmentVariable[]
-  args?: Argument[]
+  
+  // New three-tier schema fields
+  template_args?: TemplateArg[]
+  template_env?: TemplateEnvVar[]
+  team_args_schema?: TeamArgsSchema[]
+  team_env_schema?: TeamEnvSchema[]
+  user_args_schema?: UserArgsSchema[]
+  user_env_schema?: UserEnvSchema[]
+  
   dependencies?: Record<string, any>
   category_id?: string
   tags?: string[]
@@ -131,8 +192,15 @@ export interface UpdateMcpServerRequest {
   organization?: string
   license?: string
   transport_type?: 'stdio' | 'http' | 'sse'
-  environment_variables?: EnvironmentVariable[]
-  args?: Argument[]
+  
+  // New three-tier schema fields
+  template_args?: TemplateArg[]
+  template_env?: TemplateEnvVar[]
+  team_args_schema?: TeamArgsSchema[]
+  team_env_schema?: TeamEnvSchema[]
+  user_args_schema?: UserArgsSchema[]
+  user_env_schema?: UserEnvSchema[]
+  
   dependencies?: Record<string, any>
   category_id?: string
   tags?: string[]
@@ -181,13 +249,7 @@ export interface TechnicalFormData {
   transport_type: string
 }
 
-export interface CapabilitiesFormData {
-  tools: McpTool[]
-  resources: McpResource[]
-  prompts: McpPrompt[]
-  environment_variables: EnvironmentVariable[]
-  args: Argument[]
-}
+
 
 export interface GitHubFormData {
   github_url: string
@@ -198,11 +260,20 @@ export interface GitHubFormData {
 
 export type ReviewFormData = object
 
+export interface ConfigurationSchemaFormData {
+  template_args?: TemplateArg[]
+  template_env?: TemplateEnvVar[]
+  team_args_schema?: TeamArgsSchema[]
+  team_env_schema?: TeamEnvSchema[]
+  user_args_schema?: UserArgsSchema[]
+  user_env_schema?: UserEnvSchema[]
+}
+
 export interface McpServerFormData {
   basic: BasicInfoFormData
   repository: RepositoryFormData
   technical: TechnicalFormData
-  capabilities: CapabilitiesFormData
+  configuration_schema: ConfigurationSchemaFormData
   github: GitHubFormData
   review: ReviewFormData
 }
@@ -211,9 +282,15 @@ export interface McpServerFormData {
 export interface FormStep {
   key: keyof McpServerFormData
   label: string
-
   icon: any
+  component: any
+}
 
+// Extended FormStep for wizard with additional keys  
+export interface ExtendedFormStep {
+  key: keyof McpServerFormData | 'configurationSchema'
+  label: string
+  icon: any
   component: any
 }
 

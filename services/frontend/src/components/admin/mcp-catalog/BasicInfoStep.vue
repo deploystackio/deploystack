@@ -1,5 +1,17 @@
+<!--
+ * STORAGE-FIRST ARCHITECTURE
+ *
+ * This component uses storage-first architecture where:
+ * - All form data is stored in localStorage via the event bus
+ * - Component reads/writes directly to storage, not through v-model props  
+ * - Real-time synchronization across all wizard steps
+ * - No v-model props or emit patterns
+ *
+ * Storage key: 'edit_basic_data'
+ -->
+
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -17,9 +29,10 @@ import { Switch } from '@/components/ui/switch'
 import { X, Plus, CheckCircle } from 'lucide-vue-next'
 import type { BasicInfoFormData, McpCategory } from '@/views/admin/mcp-server-catalog/types'
 import { McpCategoriesCache } from '@/services/mcpCatalogService'
+import { useEventBus } from '@/composables/useEventBus'
 
 interface Props {
-  modelValue: BasicInfoFormData
+  modelValue?: BasicInfoFormData  // Keep for backward compatibility but don't use
   /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
   formData?: any
   mode?: 'create' | 'edit'
@@ -29,17 +42,47 @@ const props = withDefaults(defineProps<Props>(), {
   mode: 'create'
 })
 
+// Emits kept for backward compatibility but not used in storage-first
 const emit = defineEmits<{
   'update:modelValue': [value: BasicInfoFormData]
 }>()
 
 const { t } = useI18n()
+const eventBus = useEventBus()
 
-// Use v-model pattern instead of storage-first approach
-const localData = computed({
-  get: () => props.modelValue,
-  set: (value: BasicInfoFormData) => emit('update:modelValue', value)
-})
+// Storage key for this step
+const STORAGE_KEY = 'edit_basic_data'
+
+// Default form data structure
+const defaultData: BasicInfoFormData = {
+  name: '',
+  description: '',
+  long_description: '',
+  category_id: '',
+  author_name: '',
+  author_contact: '',
+  organization: '',
+  license: '',
+  tags: [],
+  featured: false,
+  auto_install_new_default_team: false
+}
+
+// Storage-first reactive data - using ref instead of computed for better reactivity
+const localData = ref<BasicInfoFormData>(defaultData)
+
+// Function to load data from storage
+const loadFromStorage = () => {
+  const storedData = eventBus.getState<BasicInfoFormData>(STORAGE_KEY, defaultData)
+  localData.value = storedData || defaultData
+}
+
+// Function to save data to storage
+const saveToStorage = (data: BasicInfoFormData) => {
+  eventBus.setState(STORAGE_KEY, data)
+  // Emit for backward compatibility
+  emit('update:modelValue', data)
+}
 
 // Categories
 const categories = ref<McpCategory[]>([])
@@ -53,12 +96,14 @@ const isAutoPopulated = computed(() => {
   return props.formData?.github?.auto_populated || false
 })
 
-// Update field using v-model pattern
+// Update field using storage-first pattern
 const updateField = <K extends keyof BasicInfoFormData>(field: K, value: BasicInfoFormData[K]) => {
-  localData.value = {
+  const newData = {
     ...localData.value,
     [field]: value
   }
+  localData.value = newData
+  saveToStorage(newData)
 }
 
 // Load categories
@@ -92,8 +137,44 @@ const handleTagKeydown = (event: KeyboardEvent) => {
   }
 }
 
+// Debug function to check storage state
+const debugStorageState = () => {
+  const currentData = eventBus.getState<BasicInfoFormData>(STORAGE_KEY)
+  console.log('[BasicInfoStep] Current storage state:', currentData)
+  console.log('[BasicInfoStep] Featured value:', currentData?.featured)
+}
+
+// Storage change handler
+const handleStorageChange = (data: { key: string; oldValue: any; newValue: any }) => {
+  if (data.key === STORAGE_KEY) {
+    // Storage changed externally, update local reactive data
+    loadFromStorage()
+  }
+}
+
+// Lifecycle
 onMounted(() => {
   loadCategories()
+  
+  // Load initial data from storage
+  loadFromStorage()
+  
+  // Listen for storage changes from other components
+  eventBus.on('storage-changed', handleStorageChange)
+  
+  // Initialize from props in edit mode if storage is empty
+  if (props.mode === 'edit' && props.modelValue) {
+    const currentData = eventBus.getState<BasicInfoFormData>(STORAGE_KEY)
+    if (!currentData || Object.keys(currentData).length === 0) {
+      localData.value = props.modelValue
+      saveToStorage(props.modelValue)
+    }
+  }
+})
+
+onUnmounted(() => {
+  // Clean up event listeners
+  eventBus.off('storage-changed', handleStorageChange)
 })
 </script>
 

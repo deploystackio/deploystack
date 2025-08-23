@@ -4,13 +4,74 @@ import { createSchema } from 'zod-openapi';
 import { requireGlobalAdmin } from '../../../middleware/roleMiddleware';
 import { McpCatalogService } from '../../../services/mcpCatalogService';
 import { getDb } from '../../../db';
-import { claudeDesktopConfigSchema, extractTransportTypeFromClaudeConfig } from '../../../utils/mcpConfigExtractor';
 import { EVENT_NAMES } from '../../../events';
 import type { EventContext } from '../../../events/types';
 
 // Path parameters schema
 const updateGlobalServerParamsSchema = z.object({
   id: z.string().min(1, 'Server ID is required')
+});
+
+// Schemas for the three-tier configuration (optional for updates)
+const templateArgSchema = z.object({
+  value: z.string(),
+  locked: z.boolean(),
+  description: z.string().optional()
+});
+
+const templateEnvSchema = z.object({
+  name: z.string(),
+  value: z.string().nullable(),
+  locked: z.boolean(),
+  description: z.string().optional()
+});
+
+const teamArgSchema = z.object({
+  name: z.string(),
+  type: z.string(),
+  description: z.string(),
+  required: z.boolean(),
+  locked: z.boolean(),
+  default_team_locked: z.boolean(),
+  min_items: z.number().optional(),
+  max_items: z.number().optional()
+});
+
+const teamEnvSchema = z.object({
+  name: z.string(),
+  type: z.string(),
+  description: z.string(),
+  required: z.boolean(),
+  locked: z.boolean(),
+  default_team_locked: z.boolean(),
+  visible_to_users: z.boolean()
+});
+
+const userArgSchema = z.object({
+  name: z.string(),
+  type: z.string(),
+  description: z.string(),
+  required: z.boolean(),
+  locked: z.boolean(),
+  min_items: z.number().optional(),
+  max_items: z.number().optional()
+});
+
+const userEnvSchema = z.object({
+  name: z.string(),
+  type: z.string(),
+  description: z.string(),
+  required: z.boolean(),
+  locked: z.boolean()
+});
+
+const configurationSchema = z.object({
+  template_args: z.array(templateArgSchema).optional(),
+  template_env: z.array(templateEnvSchema).optional(),
+  team_args_schema: z.array(teamArgSchema).optional(),
+  team_env_schema: z.array(teamEnvSchema).optional(),
+  user_args_schema: z.array(userArgSchema).optional(),
+  user_env_schema: z.array(userEnvSchema).optional()
 });
 
 // Request schema for updating global MCP servers (all fields optional)
@@ -24,16 +85,11 @@ const updateGlobalServerRequestSchema = z.object({
   language: z.string().min(1, 'Language cannot be empty').optional(),
   runtime: z.string().min(1, 'Runtime cannot be empty').optional(),
   runtime_min_version: z.string().optional(),
-  installation_methods: z.array(z.object({
-    type: z.string().min(1, 'Installation method type is required'),
-    command: z.string().optional(),
-    image: z.string().optional(),
-    description: z.string().optional()
-  })).min(1, 'At least one installation method is required').optional(),
+  installation_methods: z.array(z.any()).optional(),
   tools: z.array(z.object({
     name: z.string().min(1, 'Tool name is required'),
     description: z.string().min(1, 'Tool description is required')
-  })).min(1, 'At least one tool is required').optional(),
+  })).optional(),
   resources: z.array(z.object({
     type: z.string().min(1, 'Resource type is required'),
     description: z.string().min(1, 'Resource description is required')
@@ -46,15 +102,8 @@ const updateGlobalServerRequestSchema = z.object({
   author_contact: z.string().optional(),
   organization: z.string().optional(),
   license: z.string().optional(),
-  claude_desktop_config: claudeDesktopConfigSchema.optional(),
   transport_type: z.enum(['stdio', 'http', 'sse']).optional(),
-  // Three-tier configuration schema
-  template_args: z.array(z.any()).optional(),
-  template_env: z.record(z.string(), z.any()).optional(),
-  team_args_schema: z.array(z.any()).optional(),
-  team_env_schema: z.array(z.any()).optional(),
-  user_args_schema: z.array(z.any()).optional(),
-  user_env_schema: z.array(z.any()).optional(),
+  configuration_schema: configurationSchema.optional(),
   dependencies: z.record(z.string(), z.any()).optional(),
   category_id: z.string().optional(),
   tags: z.array(z.string()).optional(),
@@ -202,19 +251,12 @@ export default async function updateGlobalServer(server: FastifyInstance) {
         });
       }
 
-      // Extract transport_type from claude_desktop_config if provided but transport_type is not
-      let finalUpdateData = { ...updateData };
-      if (updateData.claude_desktop_config && !updateData.transport_type) {
-        const extractedTransportType = extractTransportTypeFromClaudeConfig(updateData.claude_desktop_config);
-        finalUpdateData.transport_type = extractedTransportType;
-        
-        request.log.debug({
-          operation: 'update_global_mcp_server',
-          userId: request.user?.id,
-          serverId,
-          extractedTransportType
-        }, 'Extracted transport_type from claude_desktop_config');
-      }
+      // Map the nested configuration_schema to the top-level fields for the service
+      const { configuration_schema, ...restOfUpdateData } = updateData;
+      const finalUpdateData = {
+        ...restOfUpdateData,
+        ...configuration_schema
+      };
 
       request.log.info({
         operation: 'update_global_mcp_server',

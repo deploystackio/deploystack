@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 import { Badge } from '@/components/ui/badge'
 import { useI18n } from 'vue-i18n'
 import { useEventBus } from '@/composables/useEventBus'
@@ -26,18 +26,17 @@ const freshBasicData = ref<any>(null)
 const freshRepositoryData = ref<any>(null)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const freshTechnicalData = ref<any>(null)
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const freshCapabilitiesData = ref<any>(null)
+
 const claudeConfig = ref<string>('')
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const parsedConfig = ref<any>(null)
 
-onMounted(() => {
+// Function to load fresh data from storage
+const loadFreshData = () => {
   // Get fresh data from storage for all form sections
   freshBasicData.value = eventBus.getState('edit_basic_data')
   freshRepositoryData.value = eventBus.getState('edit_repository_data')
   freshTechnicalData.value = eventBus.getState('edit_technical_data')
-  freshCapabilitiesData.value = eventBus.getState('edit_capabilities_data')
 
   // Get the stored Claude Desktop config
   const storedConfig = eventBus.getState<string>('edit_claude_config', '') || ''
@@ -51,13 +50,37 @@ onMounted(() => {
   } catch {
     // Invalid JSON, will show raw text
   }
+}
+
+// Storage change handler
+const handleStorageChange = (data: { key: string; oldValue: any; newValue: any }) => {
+  // Reload data when any of our storage keys change
+  if (data.key === 'edit_basic_data' || 
+      data.key === 'edit_repository_data' || 
+      data.key === 'edit_technical_data' ||
+      data.key === 'edit_claude_config') {
+    loadFreshData()
+  }
+}
+
+onMounted(() => {
+  // Load initial data
+  loadFreshData()
+  
+  // Listen for storage changes
+  eventBus.on('storage-changed', handleStorageChange)
+})
+
+onUnmounted(() => {
+  // Clean up event listeners
+  eventBus.off('storage-changed', handleStorageChange)
 })
 
 // Helper functions to get fresh data with fallback to props
 const getBasicData = () => freshBasicData.value || props.formData.basic
 const getRepositoryData = () => freshRepositoryData.value || props.formData.repository
 const getTechnicalData = () => freshTechnicalData.value || props.formData.technical
-const getCapabilitiesData = () => freshCapabilitiesData.value || props.formData.capabilities
+
 
 const formatJson = (jsonString: string) => {
   if (!jsonString) return 'None'
@@ -256,80 +279,5 @@ const formatJson = (jsonString: string) => {
     </dl>
   </div>
 
-  <!-- Capabilities Section -->
-  <div class="px-4 sm:px-0 mt-8">
-    <h3 class="text-base/7 font-semibold text-gray-900">{{ t('mcpCatalog.form.review.sections.capabilities') }}</h3>
-    <p class="mt-1 max-w-2xl text-sm/6 text-gray-500">{{ t('mcpCatalog.form.review.descriptions.capabilities') }}</p>
-  </div>
 
-  <div class="mt-6 border-t border-gray-100">
-    <dl class="divide-y divide-gray-100">
-      <div v-if="getCapabilitiesData().tools && getCapabilitiesData().tools.length > 0" class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
-        <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.review.fields.tools') }} ({{ getCapabilitiesData().tools.length }})</dt>
-        <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
-          <div class="space-y-2">
-            <div
-              v-for="(tool, index) in getCapabilitiesData().tools"
-              :key="index"
-              class="text-sm"
-            >
-              <span class="font-medium">{{ tool.name }}</span>
-              <span v-if="tool.description" class="text-muted-foreground"> - {{ tool.description }}</span>
-            </div>
-          </div>
-        </dd>
-      </div>
-
-      <div v-if="getCapabilitiesData().resources && getCapabilitiesData().resources.length > 0" class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
-        <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.review.fields.resources') }} ({{ getCapabilitiesData().resources.length }})</dt>
-        <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
-          <div class="space-y-2">
-            <div
-              v-for="(resource, index) in getCapabilitiesData().resources"
-              :key="index"
-              class="text-sm"
-            >
-              <span class="font-medium">{{ resource.type }}</span>
-              <span v-if="resource.description" class="text-muted-foreground"> - {{ resource.description }}</span>
-            </div>
-          </div>
-        </dd>
-      </div>
-
-      <div v-if="getCapabilitiesData().prompts && getCapabilitiesData().prompts.length > 0" class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
-        <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.review.fields.prompts') }} ({{ getCapabilitiesData().prompts.length }})</dt>
-        <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
-          <div class="space-y-2">
-            <div
-              v-for="(prompt, index) in getCapabilitiesData().prompts"
-              :key="index"
-              class="text-sm"
-            >
-              <span class="font-medium">{{ prompt.name }}</span>
-              <span v-if="prompt.description" class="text-muted-foreground"> - {{ prompt.description }}</span>
-            </div>
-          </div>
-        </dd>
-      </div>
-
-      <div v-if="getCapabilitiesData().environment_variables && getCapabilitiesData().environment_variables.length > 0" class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
-        <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.review.fields.environmentVariables') }} ({{ getCapabilitiesData().environment_variables.length }})</dt>
-        <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
-          <div class="space-y-2">
-            <div
-              v-for="(envVar, index) in getCapabilitiesData().environment_variables"
-              :key="index"
-              class="flex items-center gap-2 text-sm"
-            >
-              <code class="text-xs bg-muted px-2 py-1 rounded">{{ envVar.name }}</code>
-              <Badge v-if="envVar.required" variant="destructive" class="text-xs">{{ t('mcpCatalog.form.review.values.required') }}</Badge>
-              <Badge v-else variant="secondary" class="text-xs">{{ t('mcpCatalog.form.review.values.optional') }}</Badge>
-              <span v-if="envVar.description" class="text-muted-foreground">{{ envVar.description }}</span>
-            </div>
-          </div>
-        </dd>
-      </div>
-
-    </dl>
-  </div>
 </template>

@@ -5,12 +5,21 @@ export interface McpServer {
   language: string
   runtime: string
   status: 'active' | 'deprecated' | 'maintenance'
-  author_name?: string
-  homepage_url?: string
-  github_url?: string
-  tags?: string[]
+  author_name?: string | null
+  homepage_url?: string | null
+  github_url?: string | null
+  tags?: string[] | null
   environment_variables?: EnvironmentVariable[]
   category_id?: string
+  transport_type: 'stdio' | 'http' | 'sse'
+  installation_methods: any[]
+  // Three-tier configuration schema fields
+  template_args?: any[] | null
+  template_env?: Record<string, string> | null
+  team_args_schema?: any[] | null
+  team_env_schema?: any[] | null
+  user_args_schema?: any[] | null
+  user_env_schema?: any[] | null
 }
 
 export interface EnvironmentVariable {
@@ -29,6 +38,8 @@ export interface McpInstallation {
   server: McpServer
   installation_type: 'local' | 'cloud'
   user_environment_variables: Record<string, string>
+  team_args?: string[]
+  team_env?: Record<string, string>
   team_id: string
   user_id: string
   created_at: string

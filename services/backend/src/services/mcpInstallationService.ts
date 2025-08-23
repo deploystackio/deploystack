@@ -24,8 +24,13 @@ export interface McpInstallation {
     id: string;
     name: string;
     description: string;
-    github_url: string | null;
+    language: string; // Required in DB
     runtime: string;
+    status: string; // Required in DB with default 'active'
+    author_name: string | null; // Optional in DB
+    homepage_url: string | null; // Optional in DB
+    github_url: string | null; // Optional in DB
+    tags: string[] | null; // Optional in DB
     installation_methods: any[];
     // Three-tier schema fields
     template_args: any[] | null;
@@ -99,8 +104,13 @@ export class McpInstallationService {
         id: row.server.id,
         name: row.server.name,
         description: row.server.description,
-        github_url: row.server.github_url,
+        language: row.server.language,
         runtime: row.server.runtime,
+        status: row.server.status,
+        author_name: row.server.author_name,
+        homepage_url: row.server.homepage_url,
+        github_url: row.server.github_url,
+        tags: this.parseJsonField(row.server.tags, []),
         installation_methods: this.parseJsonField(row.server.installation_methods, []),
         template_args: this.parseJsonField(row.server.template_args, []),
         template_env: this.parseJsonField(row.server.template_env, {}),
@@ -158,8 +168,13 @@ export class McpInstallationService {
         id: server.id,
         name: server.name,
         description: server.description,
-        github_url: server.github_url,
+        language: server.language,
         runtime: server.runtime,
+        status: server.status,
+        author_name: server.author_name,
+        homepage_url: server.homepage_url,
+        github_url: server.github_url,
+        tags: this.parseJsonField(server.tags, []),
         installation_methods: this.parseJsonField(server.installation_methods, []),
         template_args: this.parseJsonField(server.template_args, []),
         template_env: this.parseJsonField(server.template_env, {}),

@@ -308,6 +308,16 @@ watch(jsonInput, (newValue) => {
     extractedArgs.value = validation.args || []
     extractedEnvVars.value = validation.envVars || []
 
+    // Emit event for ConfigurationSchemaStep to sync environment variables
+    eventBus.emit('technical-env-vars-updated', {
+      envVars: validation.envVars || []
+    })
+    
+    // ALSO store in persistent storage for ConfigurationSchemaStep to load later
+    eventBus.setState('technical_extracted_env_vars_edit', validation.envVars || [])
+
+
+
     // Convert back to installation_methods format for form compatibility
     const serverName = validation.serverName!
     const serverConfig = validation.parsed.mcpServers[serverName]

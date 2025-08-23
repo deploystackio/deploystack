@@ -7,9 +7,9 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import CategoryDisplay from '@/components/mcp-server/CategoryDisplay.vue'
 import ContentWrapper from '@/components/ContentWrapper.vue'
-import { ArrowLeft, Github, ExternalLink, Package, Code, Settings, Calendar, Tag, Trash2, AlertTriangle, Edit } from 'lucide-vue-next'
+import { ArrowLeft, Github, ExternalLink, Package, Code, Settings, Calendar, Tag, Trash2, AlertTriangle, Edit, Terminal, Users, User, Lock, Unlock } from 'lucide-vue-next'
 import DashboardLayout from '@/components/DashboardLayout.vue'
-import EnvironmentVariablesDisplay from '@/components/admin/mcp-catalog/EnvironmentVariablesDisplay.vue'
+
 import { McpCatalogService } from '@/services/mcpCatalogService'
 import type { McpServer } from '../types'
 import {
@@ -139,17 +139,47 @@ const displayInstallationMethods = computed(() => {
   }
 })
 
-const displayEnvironmentVariables = computed(() => {
-  if (!server.value?.environment_variables) return null
-  // Handle both object and JSON string formats
-  if (typeof server.value.environment_variables === 'object') {
-    return server.value.environment_variables
+
+
+const displayTemplateArgs = computed(() => {
+  if (!server.value?.template_args) return []
+  // Handle both array and JSON string formats
+  if (Array.isArray(server.value.template_args)) {
+    return server.value.template_args
   }
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return JSON.parse(server.value.environment_variables as any)
+    return JSON.parse(server.value.template_args as any)
   } catch {
-    return null
+    return []
+  }
+})
+
+const displayTeamEnvSchema = computed(() => {
+  if (!server.value?.team_env_schema) return []
+  // Handle both array and JSON string formats
+  if (Array.isArray(server.value.team_env_schema)) {
+    return server.value.team_env_schema
+  }
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return JSON.parse(server.value.team_env_schema as any)
+  } catch {
+    return []
+  }
+})
+
+const displayUserEnvSchema = computed(() => {
+  if (!server.value?.user_env_schema) return []
+  // Handle both array and JSON string formats
+  if (Array.isArray(server.value.user_env_schema)) {
+    return server.value.user_env_schema
+  }
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return JSON.parse(server.value.user_env_schema as any)
+  } catch {
+    return []
   }
 })
 
@@ -455,86 +485,7 @@ const goBack = () => {
           </dl>
         </div>
 
-        <!-- Capabilities Section -->
-        <div v-if="displayTools.length > 0 || displayResources.length > 0 || displayPrompts.length > 0" class="px-4 sm:px-0 mt-8">
-          <h3 class="text-base/7 font-semibold text-gray-900">{{ t('mcpCatalog.edit.fields.capabilities') }}</h3>
-          <p class="mt-1 max-w-2xl text-sm/6 text-gray-500">Tools, resources, and prompts provided by this server</p>
-        </div>
-        <div v-if="displayTools.length > 0 || displayResources.length > 0 || displayPrompts.length > 0" class="mt-6 border-t border-gray-100">
-          <dl class="divide-y divide-gray-100">
-            <!-- Tools -->
-            <div v-if="displayTools.length > 0" class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
-              <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.edit.fields.tools') }}</dt>
-              <dd class="mt-2 text-sm text-gray-900 sm:col-span-2 sm:mt-0">
-                <ul role="list" class="divide-y divide-gray-100 rounded-md border border-gray-200">
-                  <li
-                    v-for="(tool, index) in displayTools"
-                    :key="index"
-                    class="flex items-center justify-between py-4 pr-5 pl-4 text-sm/6"
-                  >
-                    <div class="flex w-0 flex-1 items-center">
-                      <Settings class="size-5 shrink-0 text-gray-400" aria-hidden="true" />
-                      <div class="ml-4 flex min-w-0 flex-1 gap-2">
-                        <div class="flex flex-col">
-                          <span class="truncate font-medium">{{ tool.name || 'Tool' }}</span>
-                          <span v-if="tool.description" class="truncate text-xs text-gray-500">{{ tool.description }}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </li>
-                </ul>
-              </dd>
-            </div>
 
-            <!-- Resources -->
-            <div v-if="displayResources.length > 0" class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
-              <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.edit.fields.resources') }}</dt>
-              <dd class="mt-2 text-sm text-gray-900 sm:col-span-2 sm:mt-0">
-                <ul role="list" class="divide-y divide-gray-100 rounded-md border border-gray-200">
-                  <li
-                    v-for="(resource, index) in displayResources"
-                    :key="index"
-                    class="flex items-center justify-between py-4 pr-5 pl-4 text-sm/6"
-                  >
-                    <div class="flex w-0 flex-1 items-center">
-                      <Code class="size-5 shrink-0 text-gray-400" aria-hidden="true" />
-                      <div class="ml-4 flex min-w-0 flex-1 gap-2">
-                        <div class="flex flex-col">
-                          <span class="truncate font-medium">{{ resource.name || 'Resource' }}</span>
-                          <span v-if="resource.description" class="truncate text-xs text-gray-500">{{ resource.description }}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </li>
-                </ul>
-              </dd>
-            </div>
-
-            <!-- Prompts -->
-            <div v-if="displayPrompts.length > 0" class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
-              <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.edit.fields.prompts') }}</dt>
-              <dd class="mt-2 text-sm text-gray-900 sm:col-span-2 sm:mt-0">
-                <ul role="list" class="divide-y divide-gray-100 rounded-md border border-gray-200">
-                  <li
-                    v-for="(prompt, index) in displayPrompts"
-                    :key="index"
-                    class="flex items-center justify-between py-4 pr-5 pl-4 text-sm/6"
-                  >
-                    <div class="flex w-0 flex-1 items-center">
-                      <Code class="size-5 shrink-0 text-gray-400" aria-hidden="true" />
-                      <div class="ml-4 flex min-w-0 flex-1 gap-2">
-                        <div class="flex flex-col">
-                          <span class="truncate font-medium">{{ prompt.name || 'Prompt' }}</span>
-                          <span v-if="prompt.description" class="truncate text-xs text-gray-500">{{ prompt.description }}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </li>
-                </ul>
-              </dd>
-            </div>
-          </dl>
-        </div>
 
         <!-- Installation & Configuration Section -->
         <div class="px-4 sm:px-0 mt-8">
@@ -607,16 +558,102 @@ const goBack = () => {
               </dd>
             </div>
 
-            <!-- Environment Variables -->
-            <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
-              <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.edit.fields.environmentVariables') }}</dt>
+            <!-- Template Args -->
+            <div v-if="displayTemplateArgs.length > 0" class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+              <dt class="text-sm/6 font-medium text-gray-900">Args</dt>
               <dd class="mt-2 text-sm text-gray-900 sm:col-span-2 sm:mt-0">
-                <EnvironmentVariablesDisplay
-                  :environment-variables="displayEnvironmentVariables"
-                  mode="view"
-                />
+                <ul role="list" class="divide-y divide-gray-100 rounded-md border border-gray-200">
+                  <li
+                    v-for="(arg, index) in displayTemplateArgs"
+                    :key="index"
+                    class="flex items-center justify-between py-4 pr-5 pl-4 text-sm/6"
+                  >
+                    <div class="flex w-0 flex-1 items-center">
+                      <Terminal class="size-5 shrink-0 text-gray-400" aria-hidden="true" />
+                      <div class="ml-4 flex min-w-0 flex-1 gap-2">
+                        <div class="flex flex-col">
+                          <div class="flex items-center gap-2">
+                            <code class="bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs font-mono">{{ arg.value || arg }}</code>
+                            <Lock v-if="arg.locked" class="h-3 w-3 text-red-500" title="Locked by global admin" />
+                            <Unlock v-else class="h-3 w-3 text-green-500" title="Configurable" />
+                          </div>
+                          <span v-if="arg.description" class="truncate text-xs text-gray-500 mt-1">{{ arg.description }}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+                </ul>
               </dd>
             </div>
+
+            <!-- Team Environment Variables -->
+            <div v-if="displayTeamEnvSchema.length > 0" class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+              <dt class="text-sm/6 font-medium text-gray-900">Team Environment Variables</dt>
+              <dd class="mt-2 text-sm text-gray-900 sm:col-span-2 sm:mt-0">
+                <ul role="list" class="divide-y divide-gray-100 rounded-md border border-gray-200">
+                  <li
+                    v-for="(envVar, index) in displayTeamEnvSchema"
+                    :key="index"
+                    class="flex items-center justify-between py-4 pr-5 pl-4 text-sm/6"
+                  >
+                    <div class="flex w-0 flex-1 items-center">
+                      <Users class="size-5 shrink-0 text-gray-400" aria-hidden="true" />
+                      <div class="ml-4 flex min-w-0 flex-1 gap-2">
+                        <div class="flex flex-col">
+                          <div class="flex items-center gap-2">
+                            <code class="bg-green-50 text-green-700 px-2 py-1 rounded text-xs font-mono">{{ envVar.name }}</code>
+                            <Badge v-if="envVar.required" variant="default" class="text-xs">Required</Badge>
+                            <Badge v-else variant="secondary" class="text-xs">Optional</Badge>
+                            <Lock v-if="envVar.locked" class="h-3 w-3 text-red-500" title="Locked by global admin" />
+                            <Unlock v-else class="h-3 w-3 text-green-500" title="Team configurable" />
+                          </div>
+                          <div class="flex items-center gap-2 mt-1">
+                            <span class="text-xs text-gray-500">Type: {{ envVar.type }}</span>
+                            <span v-if="!envVar.visible_to_users" class="text-xs text-orange-600">(Hidden from users)</span>
+                          </div>
+                          <span v-if="envVar.description" class="truncate text-xs text-gray-500 mt-1">{{ envVar.description }}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+                </ul>
+              </dd>
+            </div>
+
+            <!-- User Environment Variables -->
+            <div v-if="displayUserEnvSchema.length > 0" class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+              <dt class="text-sm/6 font-medium text-gray-900">User Environment Variables</dt>
+              <dd class="mt-2 text-sm text-gray-900 sm:col-span-2 sm:mt-0">
+                <ul role="list" class="divide-y divide-gray-100 rounded-md border border-gray-200">
+                  <li
+                    v-for="(envVar, index) in displayUserEnvSchema"
+                    :key="index"
+                    class="flex items-center justify-between py-4 pr-5 pl-4 text-sm/6"
+                  >
+                    <div class="flex w-0 flex-1 items-center">
+                      <User class="size-5 shrink-0 text-gray-400" aria-hidden="true" />
+                      <div class="ml-4 flex min-w-0 flex-1 gap-2">
+                        <div class="flex flex-col">
+                          <div class="flex items-center gap-2">
+                            <code class="bg-purple-50 text-purple-700 px-2 py-1 rounded text-xs font-mono">{{ envVar.name }}</code>
+                            <Badge v-if="envVar.required" variant="default" class="text-xs">Required</Badge>
+                            <Badge v-else variant="secondary" class="text-xs">Optional</Badge>
+                            <Lock v-if="envVar.locked" class="h-3 w-3 text-red-500" title="Locked by team admin" />
+                            <Unlock v-else class="h-3 w-3 text-green-500" title="User configurable" />
+                          </div>
+                          <div class="flex items-center gap-2 mt-1">
+                            <span class="text-xs text-gray-500">Type: {{ envVar.type }}</span>
+                          </div>
+                          <span v-if="envVar.description" class="truncate text-xs text-gray-500 mt-1">{{ envVar.description }}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+                </ul>
+              </dd>
+            </div>
+
+
 
             <!-- Transport Type -->
             <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
@@ -664,6 +701,7 @@ const goBack = () => {
             </div>
           </dl>
         </div>
+
 
         <!-- System Information Section -->
         <div class="px-4 sm:px-0 mt-8">

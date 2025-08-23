@@ -10,6 +10,7 @@ import { useEventBus } from '@/composables/useEventBus'
 import ContentWrapper from '@/components/ContentWrapper.vue'
 import GitHubRepositoryStep from '@/components/admin/mcp-catalog/GitHubRepositoryStep.vue'
 import ClaudeDesktopConfigStep from '@/components/admin/mcp-catalog/ClaudeDesktopConfigStep.vue'
+import ConfigurationSchemaStepAdd from '@/components/admin/mcp-catalog/steps/ConfigurationSchemaStepAdd.vue'
 import BasicInfoStep from '@/components/admin/mcp-catalog/BasicInfoStep.vue'
 import type { McpServerFormData } from '@/views/admin/mcp-server-catalog/types'
 
@@ -26,7 +27,8 @@ const props = withDefaults(defineProps<Props>(), {
 
 // Emits
 const emit = defineEmits<{
-  submit: [formData: McpServerAddFormData]
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  submit: [formData: any] // Use any to avoid circular type dependencies, parent view defines the final type
   cancel: []
   stepChanged: [data: { step: number; stepKey: string }]
   githubDataPopulated: [githubData: Record<string, unknown>]
@@ -48,6 +50,7 @@ interface McpServerAddFormData {
     claude_desktop_config: object
     raw_json: string
   }
+  configuration_schema: object,
   basic: {
     name: string
     description: string
@@ -77,6 +80,12 @@ const steps = [
     label: t('mcpCatalog.form.steps.claudeConfig'),
     icon: Settings,
     component: ClaudeDesktopConfigStep
+  },
+  {
+    key: 'configurationSchema' as const,
+    label: t('mcpCatalog.form.steps.configurationSchema'),
+    icon: Settings, // You might want to change this icon
+    component: ConfigurationSchemaStepAdd
   },
   {
     key: 'basic' as const,
@@ -114,13 +123,11 @@ const progressSteps = computed(() => {
 // Calculate progress percentage
 const progressPercentage = computed(() => {
   // Progress should match visual step positions:
-  // Step 1 (index 0): 0% progress
-  // Step 2 (index 1): 50% progress (middle)
-  // Step 3 (index 2): 100% progress (right)
-  if (currentStep.value === 0) return 0
-  if (currentStep.value === 1) return 50
-  if (currentStep.value === 2) return 100
-  return 0
+// Step 1 (index 0): 0%
+// Step 2 (index 1): 33%
+// Step 3 (index 2): 66%
+// Step 4 (index 3): 100%
+return (currentStep.value / (steps.length - 1)) * 100
 })
 
 // Progress title based on current step
@@ -168,6 +175,7 @@ const formData = ref<McpServerAddFormData>({
     claude_desktop_config: {},
     raw_json: ''
   },
+  configuration_schema: {},
   basic: {
     name: '',
     description: '',
@@ -192,21 +200,15 @@ const compatibleFormData = computed((): McpServerFormData => ({
     git_branch: formData.value.github.git_branch,
     homepage_url: ''
   },
-      technical: {
-        language: '',
-        runtime: 'node',
-        runtime_min_version: '18.0.0',
-        installation_methods: [],
-        dependencies: '',
-        transport_type: 'auto'
-      },
-      capabilities: {
-        tools: [],
-        resources: [],
-        prompts: [],
-        environment_variables: [],
-        args: []
-      },
+  technical: {
+    language: '',
+    runtime: 'node',
+    runtime_min_version: '18.0.0',
+    installation_methods: [],
+    dependencies: '',
+    transport_type: 'auto'
+  },
+  configuration_schema: formData.value.configuration_schema,
   github: formData.value.github,
   review: {}
 }))
@@ -373,8 +375,75 @@ const submitForm = async () => {
     isSubmitting.value = true
     submitError.value = null
 
-    // Emit the form data to parent component and wait for completion
-    await emit('submit', formData.value)
+    // Extract data from Claude Desktop config for proper installation_methods
+    const claudeConfig = formData.value.claudeConfig.claude_desktop_config as any;
+    let extractedInstallationMethods: any[] = [];
+    let extractedTransportType = 'stdio';
+    let extractedTools: any[] = [];
+
+    if (claudeConfig && claudeConfig.mcpServers) {
+      const serverKey = Object.keys(claudeConfig.mcpServers)[0];
+      const serverConfig = serverKey ? claudeConfig.mcpServers[serverKey] : null;
+
+      if (serverConfig) {
+        // Create proper Claude Desktop installation method
+        extractedInstallationMethods = [{
+          client: "claude-desktop",
+          command: serverConfig.command,
+          args: serverConfig.args || [],
+          env: serverConfig.env || {}
+        }];
+
+        // Determine transport type from command
+        const command = serverConfig.command?.toLowerCase() || '';
+        const stdioCommands = ['npx', 'node', 'python', 'python3', 'pip', 'poetry', 'cargo', 'go', 'java', 'dotnet'];
+        extractedTransportType = stdioCommands.some(cmd => command.includes(cmd)) ? 'stdio' : 'stdio';
+
+        // Extract tools from configuration schema or create default
+        extractedTools = [{
+          name: formData.value.basic.name || 'MCP Tool',
+          description: formData.value.basic.description || 'MCP Server Tool'
+        }];
+      }
+    }
+
+    // Construct the final payload for the backend API
+    const finalPayload = {
+      // Basic Info
+      name: formData.value.basic.name,
+      description: formData.value.basic.description,
+      long_description: formData.value.basic.long_description,
+      category_id: formData.value.basic.category_id,
+      author_name: formData.value.basic.author_name,
+      author_contact: formData.value.basic.author_contact,
+      organization: formData.value.basic.organization,
+      license: formData.value.basic.license,
+      tags: formData.value.basic.tags,
+      featured: formData.value.basic.featured,
+      auto_install_new_default_team: formData.value.basic.auto_install_new_default_team,
+
+      // GitHub Info
+      github_url: formData.value.github.github_url,
+      git_branch: formData.value.github.git_branch,
+
+      // From auto-population or manual entry
+      homepage_url: formData.value.github.repo_data?.homepage,
+
+      // New Configuration Schema (ADR-007)
+      configuration_schema: formData.value.configuration_schema,
+
+      // Also send Claude Desktop config for backend fallback
+      claude_desktop_config: formData.value.claudeConfig.claude_desktop_config,
+
+      // Properly extracted fields
+      language: 'typescript', // TODO: Could be extracted from repo data
+      runtime: 'node',        // TODO: Could be extracted from repo data
+      transport_type: extractedTransportType,
+      installation_methods: extractedInstallationMethods,
+      tools: extractedTools,
+    };
+
+    await emit('submit', finalPayload)
 
   } catch (error) {
     submitError.value = error instanceof Error ? error.message : 'Failed to submit form'
@@ -443,9 +512,16 @@ onUnmounted(() => {
         v-model="formData.claudeConfig"
       />
 
+      <!-- Configuration Schema Step -->
+      <ConfigurationSchemaStepAdd
+        v-else-if="currentStep === 2"
+        v-model="formData.configuration_schema"
+        :claudeConfig="formData.claudeConfig"
+      />
+
       <!-- Basic Info Step -->
       <BasicInfoStep
-        v-else-if="currentStep === 2"
+        v-else-if="currentStep === 3"
         v-model="formData.basic"
         :form-data="compatibleFormData"
       />
@@ -482,11 +558,11 @@ onUnmounted(() => {
           {{ t('mcpCatalog.form.navigation.next') }}
         </Button>
 
-        <!-- Normal next button for Claude config step -->
+        <!-- Normal next button for Claude config and new Schema step -->
         <Button
-          v-else-if="currentStep === 1"
+          v-else-if="currentStep === 1 || currentStep === 2"
           @click="nextStep"
-          :disabled="!canProceedFromClaudeConfig"
+          :disabled="currentStep === 1 && !canProceedFromClaudeConfig"
         >
           {{ t('mcpCatalog.form.navigation.next') }}
         </Button>

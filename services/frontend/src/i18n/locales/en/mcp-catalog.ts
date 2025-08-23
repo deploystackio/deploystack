@@ -50,6 +50,7 @@ export default {
     steps: {
       github: 'GitHub Repository',
       claudeConfig: 'Claude Desktop Config',
+      configurationSchema: 'Configuration Schema',
       basic: 'Basic Info',
       configuring: 'Step in progress',
       repository: 'Repository',
@@ -125,6 +126,115 @@ export default {
         missingCommand: 'Server must have a "command" field',
         missingArgs: 'Server must have an "args" array',
         invalidEnv: 'Server "env" must be an object if provided'
+      }
+    },
+
+    configurationSchema: {
+      title: 'Configuration Schema',
+      description: 'Categorize arguments and environment variables into Template, Team, or User configurations.',
+      arguments: {
+        title: 'Arguments Configuration',
+        description: 'Configure command-line arguments for this MCP server',
+        addButton: 'Add Argument',
+        emptyState: {
+          title: 'No arguments configured',
+          description: 'Command-line arguments control how your MCP server is launched.'
+        }
+      },
+      environment: {
+        title: 'Environment Variables Configuration',
+        description: 'Configure environment variables for this MCP server',
+        addButton: 'Add Environment Variable',
+        emptyState: {
+          title: 'No environment variables configured',
+          description: 'Environment variables provide configuration and credentials to your MCP server.'
+        }
+      },
+      table: {
+        columns: {
+          name: 'Name',
+          properties: 'Properties',
+          details: 'Details',
+          actions: 'Actions'
+        },
+        properties: {
+          type: 'Type:',
+          required: 'Required:',
+          locked: 'Locked',
+          visibleToUsers: 'Visible to Users:',
+          yes: 'Yes'
+        },
+        actions: {
+          openMenu: 'Open menu',
+          edit: 'Edit',
+          delete: 'Delete'
+        }
+      },
+      categories: {
+        template: 'Template (Static)',
+        team: 'Team Configurable',
+        user: 'User Configurable'
+      },
+      dataTypes: {
+        string: 'String',
+        number: 'Number',
+        boolean: 'Boolean'
+      },
+      modal: {
+        add: {
+          argument: 'Add Argument',
+          environment: 'Add Environment Variable'
+        },
+        edit: {
+          argument: 'Edit Argument',
+          environment: 'Edit Environment Variable'
+        },
+        description: 'Configure how this {type} should be managed across your organization.',
+        types: {
+          argument: 'argument',
+          environment: 'environment variable'
+        },
+        fields: {
+          name: {
+            label: 'Name',
+            placeholders: {
+              argument: 'arg_name',
+              environment: 'ENV_VAR_NAME'
+            }
+          },
+          value: {
+            label: 'Value',
+            placeholder: 'Example: --verbose or package-name'
+          },
+          category: {
+            label: 'Category',
+            placeholder: 'Select category...'
+          },
+          dataType: {
+            label: 'Data Type',
+            placeholder: 'Select type...'
+          },
+          description: {
+            label: 'Description',
+            placeholder: 'Describe what this configuration does...'
+          },
+          options: {
+            required: 'Required',
+            locked: 'Locked',
+            defaultTeamLocked: 'Default Team Locked',
+            visibleToUsers: 'Visible to Users'
+          }
+        },
+        actions: {
+          cancel: 'Cancel',
+          add: 'Add',
+          update: 'Update'
+        },
+        validation: {
+          nameRequired: 'Name is required',
+          nameExists: 'Name already exists for this type',
+          valueRequired: 'Value is required for template arguments'
+        }
       }
     },
 
@@ -553,7 +663,8 @@ export default {
       transportType: 'Transport Type',
       defaultConfig: 'Default Configuration',
       dependencies: 'Dependencies',
-      systemInfo: 'System Information'
+      systemInfo: 'System Information',
+      capabilities: 'Capabilities'
     },
 
     values: {

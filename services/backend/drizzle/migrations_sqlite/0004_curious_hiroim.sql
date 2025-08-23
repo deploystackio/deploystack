@@ -1,1 +1,0 @@
-ALTER TABLE `mcpServers` ADD `auto_install_new_default_team` integer DEFAULT false NOT NULL;

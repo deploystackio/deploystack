@@ -132,6 +132,62 @@ export class McpInstallationService {
   }
 
   /**
+   * Update team arguments for an installation
+   */
+  static async updateTeamArgs(
+    teamId: string,
+    installationId: string,
+    teamArgs: string[]
+  ): Promise<McpInstallation> {
+    const response = await fetch(`${this.baseUrl}/api/teams/${teamId}/mcp/installations/${installationId}`, {
+      method: 'PUT',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        team_args: teamArgs
+      }),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.message || `Failed to update team arguments: ${response.status}`)
+    }
+
+    const data = await response.json()
+    return data.data || data
+  }
+
+  /**
+   * Update team environment variables for an installation
+   */
+  static async updateTeamEnv(
+    teamId: string,
+    installationId: string,
+    teamEnv: Record<string, string>
+  ): Promise<McpInstallation> {
+    const response = await fetch(`${this.baseUrl}/api/teams/${teamId}/mcp/installations/${installationId}`, {
+      method: 'PUT',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        team_env: teamEnv
+      }),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.message || `Failed to update team environment variables: ${response.status}`)
+    }
+
+    const data = await response.json()
+    return data.data || data
+  }
+
+  /**
    * Get installation configuration for a specific client (claude-desktop, vscode, cursor)
    */
   static async getInstallationConfig(

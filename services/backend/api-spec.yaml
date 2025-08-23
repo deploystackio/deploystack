@@ -10036,15 +10036,17 @@ paths:
                             - stdio
                             - http
                             - sse
-                        environment_variables:
+                        template_args:
                           anyOf:
                             - type: array
                               items: {}
                             - type: "null"
-                        args:
+                        template_env:
                           anyOf:
-                            - type: array
-                              items: {}
+                            - type: object
+                              propertyNames:
+                                type: string
+                              additionalProperties: {}
                             - type: "null"
                         dependencies:
                           anyOf:
@@ -10105,8 +10107,8 @@ paths:
                         - organization
                         - license
                         - transport_type
-                        - environment_variables
-                        - args
+                        - template_args
+                        - template_env
                         - dependencies
                         - category_id
                         - tags
@@ -10354,16 +10356,6 @@ paths:
                                   - stdio
                                   - http
                                   - sse
-                              environment_variables:
-                                anyOf:
-                                  - type: array
-                                    items: {}
-                                  - type: "null"
-                              args:
-                                anyOf:
-                                  - type: array
-                                    items: {}
-                                  - type: "null"
                               dependencies:
                                 anyOf:
                                   - type: object
@@ -10423,8 +10415,6 @@ paths:
                               - organization
                               - license
                               - transport_type
-                              - environment_variables
-                              - args
                               - dependencies
                               - category_id
                               - tags
@@ -10591,6 +10581,25 @@ paths:
                     - stdio
                     - http
                     - sse
+                configuration_schema:
+                  type: object
+                installation_methods:
+                  type: array
+                tools:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                        minLength: 1
+                      description:
+                        type: string
+                        minLength: 1
+                    required:
+                      - name
+                      - description
+                    additionalProperties: false
                 claude_desktop_config:
                   type: object
                   properties:
@@ -10617,21 +10626,6 @@ paths:
                   required:
                     - mcpServers
                   additionalProperties: false
-                tools:
-                  type: array
-                  items:
-                    type: object
-                    properties:
-                      name:
-                        type: string
-                        minLength: 1
-                      description:
-                        type: string
-                        minLength: 1
-                    required:
-                      - name
-                      - description
-                    additionalProperties: false
                 long_description:
                   type: string
                 github_url:
@@ -10699,7 +10693,6 @@ paths:
                 - description
                 - language
                 - runtime
-                - claude_desktop_config
               additionalProperties: false
         required: true
       security:
@@ -13007,13 +13000,13 @@ paths:
             schema:
               type: object
               properties:
-                environment_variables:
+                team_env:
                   type: object
                   additionalProperties:
                     type: string
-                  description: Environment variables to update
+                  description: Team-level environment variables to update
               required:
-                - environment_variables
+                - team_env
               additionalProperties: false
         required: true
       parameters:

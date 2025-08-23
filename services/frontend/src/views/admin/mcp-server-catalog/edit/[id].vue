@@ -153,7 +153,28 @@ const convertServerToFormData = (server: McpServer): Partial<McpServerFormData> 
   const parsedResources = parseJsonField(server.resources, [])
   const parsedPrompts = parseJsonField(server.prompts, [])
 
-  const parsedEnvironmentVariables = parseEnvironmentVariables(server.environment_variables)
+  // Convert three-tier schema fields from API response
+  const parseSchemaField = (field: any, defaultValue: any) => {
+    if (!field) return defaultValue
+    if (Array.isArray(field)) return field
+    if (typeof field === 'string') {
+      try {
+        return JSON.parse(field)
+      } catch {
+        return defaultValue
+      }
+    }
+    return defaultValue
+  }
+
+  const configurationSchema = {
+    template_args: parseSchemaField(server.template_args, []),
+    template_env: parseSchemaField(server.template_env, []),
+    team_args_schema: parseSchemaField(server.team_args_schema, []),
+    team_env_schema: parseSchemaField(server.team_env_schema, []),
+    user_args_schema: parseSchemaField(server.user_args_schema, []),
+    user_env_schema: parseSchemaField(server.user_env_schema, [])
+  }
 
   return {
     basic: {
@@ -182,13 +203,7 @@ const convertServerToFormData = (server: McpServer): Partial<McpServerFormData> 
       dependencies: server.dependencies ? JSON.stringify(server.dependencies, null, 2) : '',
       transport_type: server.transport_type || 'auto'
     },
-    capabilities: {
-      tools: parsedTools,
-      resources: parsedResources,
-      prompts: parsedPrompts,
-      environment_variables: parsedEnvironmentVariables,
-      args: parseJsonField(server.args, [])
-    },
+    configuration_schema: configurationSchema,
     github: {
       github_url: server.github_url || '',
       git_branch: server.git_branch || 'main',
@@ -200,6 +215,63 @@ const convertServerToFormData = (server: McpServer): Partial<McpServerFormData> 
 
 // Handle form submission
 const handleSubmit = async (formData: McpServerFormData) => {
+  // Get the original server data for tools/resources/prompts
+  const server = serverData.value
+  if (!server) return
+
+  // Parse tools, resources, and prompts from server data
+  const parsedTools = parseJsonField(server.tools, [])
+  const parsedResources = parseJsonField(server.resources, [])
+  const parsedPrompts = parseJsonField(server.prompts, [])
+
+  // CRITICAL FIX: Synchronize environment variables from installation_methods to team_env_schema
+  let finalConfigurationSchema = { ...formData.configuration_schema }
+  
+  // Extract environment variables from installation_methods
+  if (formData.technical.installation_methods && formData.technical.installation_methods.length > 0) {
+    const firstMethod = formData.technical.installation_methods[0]
+    if (firstMethod && firstMethod.env) {
+      const envVarsFromInstallation = Object.keys(firstMethod.env)
+      
+      // Get existing team_env_schema and user_env_schema or initialize empty arrays
+      const existingTeamEnvSchema = finalConfigurationSchema.team_env_schema || []
+      const existingUserEnvSchema = finalConfigurationSchema.user_env_schema || []
+      
+      // Get ALL existing environment variable names from both team and user schemas
+      const existingTeamEnvNames = existingTeamEnvSchema.map(item => item.name)
+      const existingUserEnvNames = existingUserEnvSchema.map(item => item.name)
+      const allExistingEnvNames = [...existingTeamEnvNames, ...existingUserEnvNames]
+      
+      // Add missing environment variables to team_env_schema (only if not in team OR user schema)
+      const newEnvSchemaItems: any[] = []
+      envVarsFromInstallation.forEach(envVarName => {
+        if (!allExistingEnvNames.includes(envVarName)) {
+          console.log('Edit[id].vue: Auto-adding missing env var to team_env_schema:', envVarName)
+          newEnvSchemaItems.push({
+            name: envVarName,
+            type: 'string',
+            description: 'Automatically detected from Claude Desktop configuration',
+            required: false,
+            locked: false,
+            default_team_locked: false,
+            visible_to_users: true
+          })
+        } else {
+          console.log('Edit[id].vue: Env var already exists in configuration schema:', envVarName)
+        }
+      })
+      
+      // Update the final configuration schema
+      if (newEnvSchemaItems.length > 0) {
+        finalConfigurationSchema = {
+          ...finalConfigurationSchema,
+          team_env_schema: [...existingTeamEnvSchema, ...newEnvSchemaItems]
+        }
+        console.log('Edit[id].vue: Updated team_env_schema with', newEnvSchemaItems.length, 'new items')
+      }
+    }
+  }
+
   // Convert form data to API request format
   const requestData: UpdateMcpServerRequest = {
     // Basic info
@@ -227,11 +299,18 @@ const handleSubmit = async (formData: McpServerFormData) => {
     installation_methods: formData.technical.installation_methods,
     dependencies: formData.technical.dependencies ? JSON.parse(formData.technical.dependencies) : undefined,
 
-    // Capabilities
-    tools: formData.capabilities.tools,
-    resources: formData.capabilities.resources.length > 0 ? formData.capabilities.resources : undefined,
-    prompts: formData.capabilities.prompts.length > 0 ? formData.capabilities.prompts : undefined,
-    environment_variables: formData.capabilities.environment_variables.length > 0 ? formData.capabilities.environment_variables : undefined,
+    // UPDATED: Use the synchronized configuration schema
+    template_args: finalConfigurationSchema.template_args,
+    template_env: finalConfigurationSchema.template_env,
+    team_args_schema: finalConfigurationSchema.team_args_schema,
+    team_env_schema: finalConfigurationSchema.team_env_schema,
+    user_args_schema: finalConfigurationSchema.user_args_schema,
+    user_env_schema: finalConfigurationSchema.user_env_schema,
+
+    // Tools, resources, and prompts (from server data)
+    tools: parsedTools,
+    resources: parsedResources.length > 0 ? parsedResources : undefined,
+    prompts: parsedPrompts.length > 0 ? parsedPrompts : undefined,
     transport_type: formData.technical.transport_type !== 'auto' ? formData.technical.transport_type as 'stdio' | 'http' | 'sse' : undefined
   }
 

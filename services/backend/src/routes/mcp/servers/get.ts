@@ -38,8 +38,11 @@ const getServerResponseSchema = z.object({
     organization: z.string().nullable(),
     license: z.string().nullable(),
     transport_type: z.enum(['stdio', 'http', 'sse']),
-    environment_variables: z.array(z.any()).nullable(),
-    args: z.array(z.any()).nullable(),
+    // Three-tier configuration schema (template values only for general users)
+    template_args: z.array(z.any()).nullable(),
+    template_env: z.record(z.string(), z.any()).nullable(),
+    // team_args_schema, user_args_schema etc. are admin-only fields
+    // and are not exposed on this general-purpose endpoint.
     dependencies: z.record(z.string(), z.any()).nullable(),
     category_id: z.string().nullable(),
     tags: z.array(z.string()).nullable(),

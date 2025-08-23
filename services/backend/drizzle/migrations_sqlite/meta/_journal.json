@@ -5,57 +5,8 @@
     {
       "idx": 0,
       "version": "6",
-      "when": 1753099079649,
-      "tag": "0000_brave_maddog",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "6",
-      "when": 1753599144579,
-      "tag": "0001_goofy_exodus",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "6",
-      "when": 1755263482940,
-      "tag": "0002_parallel_rick_jones",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "6",
-      "when": 1755442429424,
-      "tag": "0003_brief_sabra",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "6",
-      "when": 1755610560089,
-      "tag": "0004_curious_hiroim",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "6",
-      "when": 1755697335244,
-      "tag": "0005_overrated_vector",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "6",
-      "when": 1755703437633,
-      "tag": "0006_short_blink",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "6",
-      "when": 1755718246974,
-      "tag": "0007_young_marvel_apes",
+      "when": 1755777299634,
+      "tag": "0000_nebulous_talkback",
       "breakpoints": true
     }
   ]

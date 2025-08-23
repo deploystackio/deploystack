@@ -370,7 +370,7 @@ export class McpCatalogService {
       user_args_schema: data.user_args_schema ? JSON.stringify(data.user_args_schema) : null,
       user_env_schema: data.user_env_schema ? JSON.stringify(data.user_env_schema) : null,
       dependencies: data.dependencies ? JSON.stringify(data.dependencies) : null,
-      category_id: data.category_id,
+      category_id: data.category_id || null, // Ensure empty string becomes null
       tags: githubInfo.tags ? JSON.stringify(githubInfo.tags) : (data.tags ? JSON.stringify(data.tags) : null),
       status: 'active',
       featured: userRole === 'global_admin' ? (data.featured || false) : false,

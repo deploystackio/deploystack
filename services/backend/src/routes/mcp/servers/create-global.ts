@@ -8,19 +8,87 @@ import { claudeDesktopConfigSchema, extractMcpConfigData } from '../../../utils/
 import { EVENT_NAMES } from '../../../events';
 import type { EventContext } from '../../../events/types';
 
-// Request schema for creating global MCP servers
+// Schemas for the three-tier configuration
+const templateArgSchema = z.object({
+  value: z.string(),
+  locked: z.boolean(),
+  description: z.string().optional()
+});
+
+const templateEnvSchema = z.object({
+  name: z.string(),
+  value: z.string().nullable(),
+  locked: z.boolean(),
+  description: z.string().optional()
+});
+
+const teamArgSchema = z.object({
+  name: z.string(),
+  type: z.string(),
+  description: z.string(),
+  required: z.boolean(),
+  locked: z.boolean(),
+  default_team_locked: z.boolean(),
+  min_items: z.number().optional(),
+  max_items: z.number().optional()
+});
+
+const teamEnvSchema = z.object({
+  name: z.string(),
+  type: z.string(),
+  description: z.string(),
+  required: z.boolean(),
+  locked: z.boolean(),
+  default_team_locked: z.boolean(),
+  visible_to_users: z.boolean()
+});
+
+const userArgSchema = z.object({
+  name: z.string(),
+  type: z.string(),
+  description: z.string(),
+  required: z.boolean(),
+  locked: z.boolean(),
+  min_items: z.number().optional(),
+  max_items: z.number().optional()
+});
+
+const userEnvSchema = z.object({
+  name: z.string(),
+  type: z.string(),
+  description: z.string(),
+  required: z.boolean(),
+  locked: z.boolean()
+});
+
+const configurationSchema = z.object({
+  template_args: z.array(templateArgSchema).optional(),
+  template_env: z.array(templateEnvSchema).optional(),
+  team_args_schema: z.array(teamArgSchema).optional(),
+  team_env_schema: z.array(teamEnvSchema).optional(),
+  user_args_schema: z.array(userArgSchema).optional(),
+  user_env_schema: z.array(userEnvSchema).optional()
+});
+
+// Request schema for creating global MCP servers (supports both old and new formats)
 const createGlobalServerRequestSchema = z.object({
   // Required fields
   name: z.string().min(1, 'Name is required').max(255, 'Name must be 255 characters or less'),
   description: z.string().min(1, 'Description is required'),
   language: z.string().min(1, 'Language is required'),
   runtime: z.string().min(1, 'Runtime is required'),
-  claude_desktop_config: claudeDesktopConfigSchema,
+  
+  // New format (ADR-007) - optional for backward compatibility
+  configuration_schema: configurationSchema.optional(),
   transport_type: z.enum(['stdio', 'http', 'sse']).optional(),
+  installation_methods: z.array(z.any()).optional(),
   tools: z.array(z.object({
     name: z.string().min(1, 'Tool name is required'),
     description: z.string().min(1, 'Tool description is required')
   })).optional(),
+  
+  // Old format (backward compatibility) - optional
+  claude_desktop_config: claudeDesktopConfigSchema.optional(),
   
   // Optional fields
   long_description: z.string().optional(),
@@ -45,7 +113,10 @@ const createGlobalServerRequestSchema = z.object({
   tags: z.array(z.string()).optional(),
   featured: z.boolean().default(false),
   auto_install_new_default_team: z.boolean().default(false)
-});
+}).refine(
+  (data) => data.configuration_schema || data.claude_desktop_config,
+  { message: "Either configuration_schema (new format) or claude_desktop_config (old format) must be provided" }
+);
 
 // Response schema for successful creation
 const createGlobalServerResponseSchema = z.object({
@@ -117,6 +188,20 @@ export default async function createGlobalServer(server: FastifyInstance) {
           language: { type: 'string', minLength: 1 },
           runtime: { type: 'string', minLength: 1 },
           transport_type: { type: 'string', enum: ['stdio', 'http', 'sse'] },
+          configuration_schema: { type: 'object' }, // New format
+          installation_methods: { type: 'array' },
+          tools: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                name: { type: 'string', minLength: 1 },
+                description: { type: 'string', minLength: 1 }
+              },
+              required: ['name', 'description'],
+              additionalProperties: false
+            }
+          },
           claude_desktop_config: {
             type: 'object',
             properties: {
@@ -136,18 +221,6 @@ export default async function createGlobalServer(server: FastifyInstance) {
             },
             required: ['mcpServers'],
             additionalProperties: false
-          },
-          tools: {
-            type: 'array',
-            items: {
-              type: 'object',
-              properties: {
-                name: { type: 'string', minLength: 1 },
-                description: { type: 'string', minLength: 1 }
-              },
-              required: ['name', 'description'],
-              additionalProperties: false
-            }
           },
           long_description: { type: 'string' },
           github_url: { type: 'string', format: 'uri' },
@@ -188,7 +261,7 @@ export default async function createGlobalServer(server: FastifyInstance) {
           featured: { type: 'boolean' },
           auto_install_new_default_team: { type: 'boolean' }
         },
-        required: ['name', 'description', 'language', 'runtime', 'claude_desktop_config'],
+        required: ['name', 'description', 'language', 'runtime'],
         additionalProperties: false
       },
       // createSchema() for OpenAPI documentation
@@ -226,60 +299,142 @@ export default async function createGlobalServer(server: FastifyInstance) {
       const db = getDb();
       const mcpService = new McpCatalogService(db, request.log);
       
-      // Extract MCP configuration data from Claude Desktop config
-      request.log.debug({
-        operation: 'create_global_mcp_server',
-        userId: request.user?.id,
-        claudeConfig: requestData.claude_desktop_config
-      }, 'Extracting MCP configuration data from Claude Desktop config');
-      
-      const { installation_methods, environment_variables, args, transport_type: extractedTransportType } = extractMcpConfigData(requestData.claude_desktop_config);
-      
-      request.log.debug({
-        operation: 'create_global_mcp_server',
-        userId: request.user?.id,
-        extractedData: {
-          installation_methods,
-          environment_variables,
-          extractedTransportType
+      // Determine which format is being used and extract/convert data accordingly
+      let finalInstallationMethods: any[];
+      let finalTransportType: 'stdio' | 'http' | 'sse';
+      let finalTools: any[];
+      let finalTemplateArgs: any[] | undefined;
+      let finalTemplateEnv: any[] | undefined;
+      let finalTeamArgsSchema: any[] | undefined;
+      let finalTeamEnvSchema: any[] | undefined;
+      let finalUserArgsSchema: any[] | undefined;
+      let finalUserEnvSchema: any[] | undefined;
+
+      if (requestData.configuration_schema) {
+        // New format (ADR-007) - but check if installation_methods is incomplete
+        request.log.debug('Using new configuration_schema format');
+        
+        // Check if installation_methods looks incomplete (frontend TODO issue)
+        const hasIncompleteInstallationMethods = requestData.installation_methods && 
+          requestData.installation_methods.length > 0 && 
+          requestData.installation_methods[0].command === 'npx ...';
+        
+        if (hasIncompleteInstallationMethods) {
+          request.log.debug('Detected incomplete installation_methods, falling back to claude_desktop_config extraction');
+          // Fall back to extracting from claude_desktop_config if available
+          if (requestData.claude_desktop_config) {
+            const { installation_methods, environment_variables, args, transport_type: extractedTransportType } = extractMcpConfigData(requestData.claude_desktop_config);
+            finalInstallationMethods = installation_methods;
+            finalTransportType = requestData.transport_type || extractedTransportType;
+            
+            // Also extract environment variables for template_env
+            finalTemplateEnv = environment_variables?.map(env => ({
+              name: env.name,
+              value: env.placeholder || null,
+              locked: true,
+              description: env.description
+            }));
+          } else {
+            finalInstallationMethods = requestData.installation_methods || [];
+            finalTransportType = requestData.transport_type || 'stdio';
+            finalTemplateEnv = requestData.configuration_schema.template_env;
+          }
+        } else {
+          finalInstallationMethods = requestData.installation_methods || [];
+          finalTransportType = requestData.transport_type || 'stdio';
+          finalTemplateEnv = requestData.configuration_schema.template_env;
         }
-      }, 'Successfully extracted MCP configuration data');
-      
-        // Prepare server data with extracted configuration using three-tier schema
-        const serverData = {
-          name: requestData.name,
-          description: requestData.description,
-          long_description: requestData.long_description,
-          github_url: requestData.github_url,
-          git_branch: requestData.git_branch,
-          homepage_url: requestData.homepage_url,
-          language: requestData.language,
-          runtime: requestData.runtime,
-          runtime_min_version: requestData.runtime_min_version,
-          installation_methods,
-          tools: requestData.tools || [],
-          resources: requestData.resources,
-          prompts: requestData.prompts,
-          visibility: 'global' as const,
-          author_name: requestData.author_name,
-          author_contact: requestData.author_contact,
-          organization: requestData.organization,
-          license: requestData.license,
-          transport_type: requestData.transport_type || extractedTransportType,
-          // Three-tier configuration schema - for now, put extracted data in template fields
-          // TODO: Implement smart detection to separate template vs team vs user settings
-          template_args: args || undefined,
-          template_env: environment_variables || undefined,
-          team_args_schema: undefined, // Will be defined later when implementing smart detection
-          team_env_schema: undefined,
-          user_args_schema: undefined,
-          user_env_schema: undefined,
-          dependencies: requestData.dependencies,
-          category_id: requestData.category_id,
-          tags: requestData.tags,
-          featured: requestData.featured,
-          auto_install_new_default_team: requestData.auto_install_new_default_team
-        };
+        
+        finalTools = requestData.tools || [];
+        finalTemplateArgs = requestData.configuration_schema.template_args;
+        finalTeamArgsSchema = requestData.configuration_schema.team_args_schema;
+        finalTeamEnvSchema = requestData.configuration_schema.team_env_schema;
+        finalUserArgsSchema = requestData.configuration_schema.user_args_schema;
+        finalUserEnvSchema = requestData.configuration_schema.user_env_schema;
+      } else if (requestData.claude_desktop_config) {
+        // Old format - extract and convert data
+        request.log.debug('Using old claude_desktop_config format, extracting data');
+        
+        const { installation_methods, environment_variables, args, transport_type: extractedTransportType } = extractMcpConfigData(requestData.claude_desktop_config);
+        
+        finalInstallationMethods = installation_methods;
+        finalTransportType = requestData.transport_type || extractedTransportType;
+        finalTools = requestData.tools || [];
+        
+        // Convert old format to new three-tier schema
+        // For now, put everything in template level (locked)
+        finalTemplateArgs = args?.map(arg => ({
+          value: arg.default_value,
+          locked: true,
+          description: arg.description
+        }));
+        
+        // Convert environment variables to template_env array format
+        finalTemplateEnv = environment_variables?.map(env => ({
+          name: env.name,
+          value: env.placeholder || null,
+          locked: true,
+          description: env.description
+        }));
+        
+        // Leave team/user schemas empty for old format
+        finalTeamArgsSchema = undefined;
+        finalTeamEnvSchema = undefined;
+        finalUserArgsSchema = undefined;
+        finalUserEnvSchema = undefined;
+      } else {
+        throw new Error('Either configuration_schema or claude_desktop_config must be provided');
+      }
+
+      // Convert template_env array format to object format for database storage
+      let templateEnvForDb: Record<string, any> | undefined;
+      if (finalTemplateEnv && finalTemplateEnv.length > 0) {
+        templateEnvForDb = {};
+        finalTemplateEnv.forEach(env => {
+          if (env.name) {
+            templateEnvForDb![env.name] = {
+              value: env.value,
+              locked: env.locked,
+              description: env.description
+            };
+          }
+        });
+      }
+
+      // Prepare server data with the processed configuration
+      const serverData = {
+        name: requestData.name,
+        description: requestData.description,
+        long_description: requestData.long_description,
+        github_url: requestData.github_url,
+        git_branch: requestData.git_branch,
+        homepage_url: requestData.homepage_url,
+        language: requestData.language,
+        runtime: requestData.runtime,
+        runtime_min_version: requestData.runtime_min_version,
+        installation_methods: finalInstallationMethods,
+        tools: finalTools,
+        resources: requestData.resources,
+        prompts: requestData.prompts,
+        visibility: 'global' as const,
+        author_name: requestData.author_name,
+        author_contact: requestData.author_contact,
+        organization: requestData.organization,
+        license: requestData.license,
+        transport_type: finalTransportType,
+        // Three-tier configuration schema
+        template_args: finalTemplateArgs,
+        template_env: templateEnvForDb, // Use converted object format
+        team_args_schema: finalTeamArgsSchema,
+        team_env_schema: finalTeamEnvSchema,
+        user_args_schema: finalUserArgsSchema,
+        user_env_schema: finalUserEnvSchema,
+        dependencies: requestData.dependencies,
+        category_id: requestData.category_id,
+        tags: requestData.tags,
+        featured: requestData.featured,
+        auto_install_new_default_team: requestData.auto_install_new_default_team
+      };
 
       const newServer = await mcpService.createServer(
         request.user!.id,

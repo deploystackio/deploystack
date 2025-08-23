@@ -59,7 +59,7 @@ export default async function updateEnvironmentVariablesRoute(server: FastifyIns
       endpoint: request.url
     }, 'Authentication method determined for MCP installation operation');
     
-    const { environment_variables } = request.body as UpdateEnvironmentVariablesRequest;
+    const { team_env } = request.body as UpdateEnvironmentVariablesRequest;
 
     request.log.info({
       operation: 'update_mcp_installation_environment_variables',
@@ -67,7 +67,7 @@ export default async function updateEnvironmentVariablesRoute(server: FastifyIns
       installationId,
       userId,
       authType,
-      environmentVariableCount: Object.keys(environment_variables).length
+      environmentVariableCount: Object.keys(team_env).length
     }, 'Updating MCP installation environment variables');
 
     try {
@@ -79,7 +79,7 @@ export default async function updateEnvironmentVariablesRoute(server: FastifyIns
         installationId,
         teamId,
         userId,
-        { team_env: environment_variables }
+        { team_env }
       );
 
       if (!updatedInstallation) {

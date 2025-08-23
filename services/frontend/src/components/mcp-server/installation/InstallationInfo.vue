@@ -35,7 +35,9 @@ const getStatusVariant = (status: string) => {
 }
 
 // Get language badge color
-const getLanguageBadgeClass = (language: string) => {
+const getLanguageBadgeClass = (language: string | undefined) => {
+  if (!language) return 'bg-gray-100 text-gray-800'
+
   const colors: Record<string, string> = {
     typescript: 'bg-blue-100 text-blue-800',
     javascript: 'bg-yellow-100 text-yellow-800',
@@ -107,7 +109,7 @@ const formatDate = (dateString: string) => {
                   variant="outline"
                   :class="getLanguageBadgeClass(server.language)"
                 >
-                  {{ server.language }}
+                  {{ server.language || 'Unknown' }}
                 </Badge>
               </div>
               <div><span class="font-medium">{{ t('mcpInstallations.details.installationDetails.fields.runtime') }}</span> {{ server.runtime }}</div>

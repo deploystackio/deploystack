@@ -112,14 +112,15 @@ const displayInstallationMethods = computed(() => {
 })
 
 const displayEnvironmentVariables = computed(() => {
-  if (!server.value?.environment_variables) return null
-  // Handle both object and JSON string formats
-  if (typeof server.value.environment_variables === 'object') {
-    return server.value.environment_variables
-  }
+  // Use new three-tier schema instead of old environment_variables
+  if (!server.value?.user_env_schema) return null
+  
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return JSON.parse(server.value.environment_variables as any)
+    // Handle both object and JSON string formats
+    if (typeof server.value.user_env_schema === 'object') {
+      return server.value.user_env_schema
+    }
+    return JSON.parse(server.value.user_env_schema as any)
   } catch {
     return null
   }

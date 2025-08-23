@@ -14465,7 +14465,7 @@
                               "sse"
                             ]
                           },
-                          "environment_variables": {
+                          "template_args": {
                             "anyOf": [
                               {
                                 "type": "array",
@@ -14476,11 +14476,14 @@
                               }
                             ]
                           },
-                          "args": {
+                          "template_env": {
                             "anyOf": [
                               {
-                                "type": "array",
-                                "items": {}
+                                "type": "object",
+                                "propertyNames": {
+                                  "type": "string"
+                                },
+                                "additionalProperties": {}
                               },
                               {
                                 "type": "null"
@@ -14579,8 +14582,8 @@
                           "organization",
                           "license",
                           "transport_type",
-                          "environment_variables",
-                          "args",
+                          "template_args",
+                          "template_env",
                           "dependencies",
                           "category_id",
                           "tags",
@@ -14980,28 +14983,6 @@
                                     "sse"
                                   ]
                                 },
-                                "environment_variables": {
-                                  "anyOf": [
-                                    {
-                                      "type": "array",
-                                      "items": {}
-                                    },
-                                    {
-                                      "type": "null"
-                                    }
-                                  ]
-                                },
-                                "args": {
-                                  "anyOf": [
-                                    {
-                                      "type": "array",
-                                      "items": {}
-                                    },
-                                    {
-                                      "type": "null"
-                                    }
-                                  ]
-                                },
                                 "dependencies": {
                                   "anyOf": [
                                     {
@@ -15094,8 +15075,6 @@
                                 "organization",
                                 "license",
                                 "transport_type",
-                                "environment_variables",
-                                "args",
                                 "dependencies",
                                 "category_id",
                                 "tags",
@@ -15348,6 +15327,33 @@
                       "sse"
                     ]
                   },
+                  "configuration_schema": {
+                    "type": "object"
+                  },
+                  "installation_methods": {
+                    "type": "array"
+                  },
+                  "tools": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "description": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      },
+                      "required": [
+                        "name",
+                        "description"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
                   "claude_desktop_config": {
                     "type": "object",
                     "properties": {
@@ -15385,27 +15391,6 @@
                       "mcpServers"
                     ],
                     "additionalProperties": false
-                  },
-                  "tools": {
-                    "type": "array",
-                    "items": {
-                      "type": "object",
-                      "properties": {
-                        "name": {
-                          "type": "string",
-                          "minLength": 1
-                        },
-                        "description": {
-                          "type": "string",
-                          "minLength": 1
-                        }
-                      },
-                      "required": [
-                        "name",
-                        "description"
-                      ],
-                      "additionalProperties": false
-                    }
                   },
                   "long_description": {
                     "type": "string"
@@ -15501,8 +15486,7 @@
                   "name",
                   "description",
                   "language",
-                  "runtime",
-                  "claude_desktop_config"
+                  "runtime"
                 ],
                 "additionalProperties": false
               }
@@ -18921,16 +18905,16 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "environment_variables": {
+                  "team_env": {
                     "type": "object",
                     "additionalProperties": {
                       "type": "string"
                     },
-                    "description": "Environment variables to update"
+                    "description": "Team-level environment variables to update"
                   }
                 },
                 "required": [
-                  "environment_variables"
+                  "team_env"
                 ],
                 "additionalProperties": false
               }

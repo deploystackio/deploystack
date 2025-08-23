@@ -22,12 +22,11 @@ import {
 } from '@/components/ui/tooltip'
 import { Trash2, Lock } from 'lucide-vue-next'
 import { McpInstallationService } from '@/services/mcpInstallationService'
-import { TeamService } from '@/services/teamService'
-import { useEventBus } from '@/composables/useEventBus'
 import type { McpInstallation } from '@/types/mcp-installations'
 
 interface Props {
   installation: McpInstallation
+  teamId: string
   canEdit?: boolean
   userRole?: 'team_admin' | 'team_user' | null
 }
@@ -38,29 +37,10 @@ const props = withDefaults(defineProps<Props>(), {
 })
 const { t } = useI18n()
 const router = useRouter()
-const eventBus = useEventBus()
 
 const showUninstallModal = ref(false)
 const isUninstalling = ref(false)
 const error = ref<string | null>(null)
-
-// Find which team owns the installation
-async function findInstallationTeam(installationId: string): Promise<string | null> {
-  try {
-    const userTeams = await TeamService.getUserTeams()
-    for (const team of userTeams) {
-      try {
-        await McpInstallationService.getInstallationById(team.id, installationId)
-        return team.id
-      } catch {
-        continue
-      }
-    }
-    return null
-  } catch {
-    return null
-  }
-}
 
 async function handleUninstall() {
   if (isUninstalling.value) return
@@ -69,14 +49,8 @@ async function handleUninstall() {
     isUninstalling.value = true
     error.value = null
 
-    // Find the team that owns this installation
-    const teamId = await findInstallationTeam(props.installation.id)
-    if (!teamId) {
-      throw new Error('Could not find team for this installation')
-    }
-
-    // Remove the installation
-    await McpInstallationService.removeInstallation(teamId, props.installation.id)
+    // Remove the installation using the provided team ID
+    await McpInstallationService.removeInstallation(props.teamId, props.installation.id)
 
     // Close modal
     showUninstallModal.value = false
@@ -85,9 +59,6 @@ async function handleUninstall() {
     toast.success(t('mcpInstallations.notifications.uninstallSuccess'), {
       description: t('mcpInstallations.removal.notifications.success')
     })
-
-    // Emit event for other components to update
-    eventBus.emit('mcp-installations-updated')
 
     // Navigate back to MCP servers list
     router.push('/mcp-server')
@@ -140,6 +111,9 @@ function closeUninstallModal() {
         {{ t('mcpInstallations.details.dangerZone.uninstall.label') }}
       </dt>
       <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
+        <p class="text-sm text-gray-600 mb-4">
+          {{ t('mcpInstallations.details.dangerZone.uninstall.warning') }}
+        </p>
         <div class="flex items-center justify-between">
           <div>
             <TooltipProvider v-if="!canEdit">

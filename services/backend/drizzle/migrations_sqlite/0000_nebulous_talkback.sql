@@ -30,6 +30,32 @@ CREATE TABLE `authUser` (
 --> statement-breakpoint
 CREATE UNIQUE INDEX `authUser_email_unique` ON `authUser` (`email`);--> statement-breakpoint
 CREATE UNIQUE INDEX `authUser_github_id_unique` ON `authUser` (`github_id`);--> statement-breakpoint
+CREATE TABLE `devices` (
+	`id` text PRIMARY KEY NOT NULL,
+	`user_id` text NOT NULL,
+	`device_name` text NOT NULL,
+	`hostname` text,
+	`hardware_id` text,
+	`os_type` text,
+	`os_version` text,
+	`arch` text,
+	`node_version` text,
+	`last_ip` text,
+	`user_agent` text,
+	`is_active` integer DEFAULT true NOT NULL,
+	`is_trusted` integer DEFAULT true NOT NULL,
+	`last_login_at` integer,
+	`last_activity_at` integer,
+	`created_at` integer NOT NULL,
+	`updated_at` integer NOT NULL,
+	FOREIGN KEY (`user_id`) REFERENCES `authUser`(`id`) ON UPDATE no action ON DELETE cascade
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `devices_hardware_id_unique` ON `devices` (`hardware_id`);--> statement-breakpoint
+CREATE INDEX `devices_user_idx` ON `devices` (`user_id`);--> statement-breakpoint
+CREATE INDEX `devices_hardware_id_idx` ON `devices` (`hardware_id`);--> statement-breakpoint
+CREATE INDEX `devices_active_idx` ON `devices` (`is_active`);--> statement-breakpoint
+CREATE INDEX `devices_last_activity_idx` ON `devices` (`last_activity_at`);--> statement-breakpoint
 CREATE TABLE `emailVerificationTokens` (
 	`id` text PRIMARY KEY NOT NULL,
 	`user_id` text NOT NULL,
@@ -75,21 +101,22 @@ CREATE TABLE `mcpServerInstallations` (
 	`id` text PRIMARY KEY NOT NULL,
 	`team_id` text NOT NULL,
 	`server_id` text NOT NULL,
-	`user_id` text NOT NULL,
+	`created_by` text NOT NULL,
 	`installation_name` text NOT NULL,
 	`installation_type` text DEFAULT 'local' NOT NULL,
-	`user_environment_variables` text,
+	`team_args` text,
+	`team_env` text,
 	`created_at` integer NOT NULL,
 	`updated_at` integer NOT NULL,
 	`last_used_at` integer,
 	FOREIGN KEY (`team_id`) REFERENCES `teams`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`server_id`) REFERENCES `mcpServers`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`user_id`) REFERENCES `authUser`(`id`) ON UPDATE no action ON DELETE no action
+	FOREIGN KEY (`created_by`) REFERENCES `authUser`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
 CREATE INDEX `mcp_installations_team_name_idx` ON `mcpServerInstallations` (`team_id`,`installation_name`);--> statement-breakpoint
 CREATE INDEX `mcp_installations_team_server_idx` ON `mcpServerInstallations` (`team_id`,`server_id`);--> statement-breakpoint
-CREATE INDEX `mcp_installations_user_idx` ON `mcpServerInstallations` (`user_id`);--> statement-breakpoint
+CREATE INDEX `mcp_installations_created_by_idx` ON `mcpServerInstallations` (`created_by`);--> statement-breakpoint
 CREATE TABLE `mcpServerVersions` (
 	`id` text PRIMARY KEY NOT NULL,
 	`server_id` text NOT NULL,
@@ -127,13 +154,19 @@ CREATE TABLE `mcpServers` (
 	`author_contact` text,
 	`organization` text,
 	`license` text,
-	`default_config` text,
-	`environment_variables` text,
+	`transport_type` text DEFAULT 'stdio' NOT NULL,
+	`template_args` text,
+	`template_env` text,
+	`team_args_schema` text,
+	`team_env_schema` text,
+	`user_args_schema` text,
+	`user_env_schema` text,
 	`dependencies` text,
 	`category_id` text,
 	`tags` text,
 	`status` text DEFAULT 'active' NOT NULL,
 	`featured` integer DEFAULT false NOT NULL,
+	`auto_install_new_default_team` integer DEFAULT false NOT NULL,
 	`created_at` integer NOT NULL,
 	`updated_at` integer NOT NULL,
 	`last_sync_at` integer,
@@ -147,6 +180,67 @@ CREATE INDEX `mcp_servers_visibility_idx` ON `mcpServers` (`visibility`);--> sta
 CREATE INDEX `mcp_servers_category_idx` ON `mcpServers` (`category_id`);--> statement-breakpoint
 CREATE INDEX `mcp_servers_status_idx` ON `mcpServers` (`status`);--> statement-breakpoint
 CREATE INDEX `mcp_servers_owner_team_idx` ON `mcpServers` (`owner_team_id`);--> statement-breakpoint
+CREATE TABLE `mcpUserConfigurations` (
+	`id` text PRIMARY KEY NOT NULL,
+	`installation_id` text NOT NULL,
+	`user_id` text NOT NULL,
+	`device_id` text NOT NULL,
+	`user_args` text,
+	`user_env` text,
+	`created_at` integer NOT NULL,
+	`updated_at` integer NOT NULL,
+	`last_used_at` integer,
+	FOREIGN KEY (`installation_id`) REFERENCES `mcpServerInstallations`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`user_id`) REFERENCES `authUser`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`device_id`) REFERENCES `devices`(`id`) ON UPDATE no action ON DELETE cascade
+);
+--> statement-breakpoint
+CREATE INDEX `mcp_user_configs_installation_user_device_idx` ON `mcpUserConfigurations` (`installation_id`,`user_id`,`device_id`);--> statement-breakpoint
+CREATE INDEX `mcp_user_configs_device_idx` ON `mcpUserConfigurations` (`device_id`);--> statement-breakpoint
+CREATE INDEX `mcp_user_configs_user_idx` ON `mcpUserConfigurations` (`user_id`);--> statement-breakpoint
+CREATE INDEX `mcp_user_configs_installation_idx` ON `mcpUserConfigurations` (`installation_id`);--> statement-breakpoint
+CREATE INDEX `mcp_user_configs_unique_user_installation_device` ON `mcpUserConfigurations` (`installation_id`,`user_id`,`device_id`);--> statement-breakpoint
+CREATE TABLE `oauth_access_tokens` (
+	`id` text PRIMARY KEY NOT NULL,
+	`user_id` text NOT NULL,
+	`client_id` text NOT NULL,
+	`scope` text NOT NULL,
+	`token_hash` text NOT NULL,
+	`created_at` integer NOT NULL,
+	`expires_at` integer NOT NULL,
+	FOREIGN KEY (`user_id`) REFERENCES `authUser`(`id`) ON UPDATE no action ON DELETE cascade
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `oauth_access_tokens_token_hash_unique` ON `oauth_access_tokens` (`token_hash`);--> statement-breakpoint
+CREATE TABLE `oauth_authorization_codes` (
+	`id` text PRIMARY KEY NOT NULL,
+	`user_id` text NOT NULL,
+	`client_id` text NOT NULL,
+	`redirect_uri` text NOT NULL,
+	`scope` text NOT NULL,
+	`state` text NOT NULL,
+	`code_challenge` text NOT NULL,
+	`code_challenge_method` text NOT NULL,
+	`code` text NOT NULL,
+	`used` integer DEFAULT false NOT NULL,
+	`created_at` integer NOT NULL,
+	`expires_at` integer NOT NULL,
+	FOREIGN KEY (`user_id`) REFERENCES `authUser`(`id`) ON UPDATE no action ON DELETE cascade
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `oauth_authorization_codes_code_unique` ON `oauth_authorization_codes` (`code`);--> statement-breakpoint
+CREATE TABLE `oauth_refresh_tokens` (
+	`id` text PRIMARY KEY NOT NULL,
+	`user_id` text NOT NULL,
+	`client_id` text NOT NULL,
+	`token_hash` text NOT NULL,
+	`used` integer DEFAULT false NOT NULL,
+	`created_at` integer NOT NULL,
+	`expires_at` integer NOT NULL,
+	FOREIGN KEY (`user_id`) REFERENCES `authUser`(`id`) ON UPDATE no action ON DELETE cascade
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `oauth_refresh_tokens_token_hash_unique` ON `oauth_refresh_tokens` (`token_hash`);--> statement-breakpoint
 CREATE TABLE `passwordResetTokens` (
 	`id` text PRIMARY KEY NOT NULL,
 	`user_id` text NOT NULL,
@@ -204,6 +298,20 @@ CREATE TABLE `teams` (
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `teams_slug_unique` ON `teams` (`slug`);--> statement-breakpoint
+CREATE TABLE `userPreferences` (
+	`id` text PRIMARY KEY NOT NULL,
+	`user_id` text NOT NULL,
+	`preference_key` text NOT NULL,
+	`preference_value` text NOT NULL,
+	`created_at` integer NOT NULL,
+	`updated_at` integer NOT NULL,
+	FOREIGN KEY (`user_id`) REFERENCES `authUser`(`id`) ON UPDATE no action ON DELETE cascade
+);
+--> statement-breakpoint
+CREATE INDEX `user_preferences_user_key_idx` ON `userPreferences` (`user_id`,`preference_key`);--> statement-breakpoint
+CREATE INDEX `user_preferences_user_idx` ON `userPreferences` (`user_id`);--> statement-breakpoint
+CREATE INDEX `user_preferences_key_idx` ON `userPreferences` (`preference_key`);--> statement-breakpoint
+CREATE INDEX `user_preferences_unique_user_key` ON `userPreferences` (`user_id`,`preference_key`);
 
 -- Insert default roles (permissions will be synced by RoleSyncService on server startup)
 INSERT INTO `roles` (`id`, `name`, `description`, `permissions`, `is_system_role`, `created_at`, `updated_at`) VALUES 

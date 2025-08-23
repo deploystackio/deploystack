@@ -24,7 +24,7 @@ const props = withDefaults(defineProps<Props>(), {
 const maxWidthClasses = computed(() => {
   const maxWidthMap = {
     'sm': 'max-w-xl lg:max-w-2xl',
-    'md': 'max-w-2xl lg:max-w-3xl', 
+    'md': 'max-w-2xl lg:max-w-3xl',
     'lg': 'max-w-2xl lg:max-w-4xl',
     'xl': 'max-w-4xl lg:max-w-6xl',
     '2xl': 'max-w-6xl lg:max-w-7xl'
@@ -44,8 +44,8 @@ const paddingClasses = computed(() => {
 
 // Compute container classes
 const containerClasses = computed(() => {
-  const baseClasses = props.background 
-    ? 'bg-muted/50 rounded-lg sm:rounded-lg' 
+  const baseClasses = props.background
+    ? 'bg-muted/50 rounded-lg sm:rounded-lg'
     : ''
   return baseClasses
 })
@@ -57,12 +57,12 @@ const containerClasses = computed(() => {
       <div class="mx-auto max-w-7xl sm:px-2 lg:px-8">
         <div :class="['mx-auto px-4 lg:px-0', maxWidthClasses]">
           <!-- White Card wrapper (default) -->
-          <Card v-if="!noCard" class="bg-white shadow-sm">
+          <Card v-if="!noCard" class="bg-white shadow-sm py-3">
             <CardContent class="p-6">
               <slot />
             </CardContent>
           </Card>
-          
+
           <!-- Direct content (when noCard is true) -->
           <slot v-else />
         </div>

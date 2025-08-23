@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "948807b5-26e0-49e2-aecc-35dd18a543db",
+  "id": "bb53df0f-553b-4a78-a48a-a835a0745bd3",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "authKey": {
@@ -184,13 +184,6 @@
         }
       },
       "indexes": {
-        "authUser_username_unique": {
-          "name": "authUser_username_unique",
-          "columns": [
-            "username"
-          ],
-          "isUnique": true
-        },
         "authUser_email_unique": {
           "name": "authUser_email_unique",
           "columns": [
@@ -218,6 +211,187 @@
             "id"
           ],
           "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "devices": {
+      "name": "devices",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "device_name": {
+          "name": "device_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "hostname": {
+          "name": "hostname",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "hardware_id": {
+          "name": "hardware_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "os_type": {
+          "name": "os_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "os_version": {
+          "name": "os_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "arch": {
+          "name": "arch",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "node_version": {
+          "name": "node_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "last_ip": {
+          "name": "last_ip",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "user_agent": {
+          "name": "user_agent",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": true
+        },
+        "is_trusted": {
+          "name": "is_trusted",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": true
+        },
+        "last_login_at": {
+          "name": "last_login_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "last_activity_at": {
+          "name": "last_activity_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "devices_hardware_id_unique": {
+          "name": "devices_hardware_id_unique",
+          "columns": [
+            "hardware_id"
+          ],
+          "isUnique": true
+        },
+        "devices_user_idx": {
+          "name": "devices_user_idx",
+          "columns": [
+            "user_id"
+          ],
+          "isUnique": false
+        },
+        "devices_hardware_id_idx": {
+          "name": "devices_hardware_id_idx",
+          "columns": [
+            "hardware_id"
+          ],
+          "isUnique": false
+        },
+        "devices_active_idx": {
+          "name": "devices_active_idx",
+          "columns": [
+            "is_active"
+          ],
+          "isUnique": false
+        },
+        "devices_last_activity_idx": {
+          "name": "devices_last_activity_idx",
+          "columns": [
+            "last_activity_at"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "devices_user_id_authUser_id_fk": {
+          "name": "devices_user_id_authUser_id_fk",
+          "tableFrom": "devices",
+          "tableTo": "authUser",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
@@ -511,8 +685,8 @@
           "notNull": true,
           "autoincrement": false
         },
-        "user_id": {
-          "name": "user_id",
+        "created_by": {
+          "name": "created_by",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
@@ -533,8 +707,15 @@
           "autoincrement": false,
           "default": "'local'"
         },
-        "user_environment_variables": {
-          "name": "user_environment_variables",
+        "team_args": {
+          "name": "team_args",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "team_env": {
+          "name": "team_env",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
@@ -579,10 +760,10 @@
           ],
           "isUnique": false
         },
-        "mcp_installations_user_idx": {
-          "name": "mcp_installations_user_idx",
+        "mcp_installations_created_by_idx": {
+          "name": "mcp_installations_created_by_idx",
           "columns": [
-            "user_id"
+            "created_by"
           ],
           "isUnique": false
         }
@@ -614,12 +795,12 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "mcpServerInstallations_user_id_authUser_id_fk": {
-          "name": "mcpServerInstallations_user_id_authUser_id_fk",
+        "mcpServerInstallations_created_by_authUser_id_fk": {
+          "name": "mcpServerInstallations_created_by_authUser_id_fk",
           "tableFrom": "mcpServerInstallations",
           "tableTo": "authUser",
           "columnsFrom": [
-            "user_id"
+            "created_by"
           ],
           "columnsTo": [
             "id"
@@ -888,15 +1069,51 @@
           "notNull": false,
           "autoincrement": false
         },
-        "default_config": {
-          "name": "default_config",
+        "transport_type": {
+          "name": "transport_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'stdio'"
+        },
+        "template_args": {
+          "name": "template_args",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
         },
-        "environment_variables": {
-          "name": "environment_variables",
+        "template_env": {
+          "name": "template_env",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "team_args_schema": {
+          "name": "team_args_schema",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "team_env_schema": {
+          "name": "team_env_schema",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "user_args_schema": {
+          "name": "user_args_schema",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "user_env_schema": {
+          "name": "user_env_schema",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
@@ -933,6 +1150,14 @@
         },
         "featured": {
           "name": "featured",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "auto_install_new_default_team": {
+          "name": "auto_install_new_default_team",
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
@@ -1036,6 +1261,439 @@
             "id"
           ],
           "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "mcpUserConfigurations": {
+      "name": "mcpUserConfigurations",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "installation_id": {
+          "name": "installation_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "device_id": {
+          "name": "device_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "user_args": {
+          "name": "user_args",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "user_env": {
+          "name": "user_env",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "last_used_at": {
+          "name": "last_used_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "mcp_user_configs_installation_user_device_idx": {
+          "name": "mcp_user_configs_installation_user_device_idx",
+          "columns": [
+            "installation_id",
+            "user_id",
+            "device_id"
+          ],
+          "isUnique": false
+        },
+        "mcp_user_configs_device_idx": {
+          "name": "mcp_user_configs_device_idx",
+          "columns": [
+            "device_id"
+          ],
+          "isUnique": false
+        },
+        "mcp_user_configs_user_idx": {
+          "name": "mcp_user_configs_user_idx",
+          "columns": [
+            "user_id"
+          ],
+          "isUnique": false
+        },
+        "mcp_user_configs_installation_idx": {
+          "name": "mcp_user_configs_installation_idx",
+          "columns": [
+            "installation_id"
+          ],
+          "isUnique": false
+        },
+        "mcp_user_configs_unique_user_installation_device": {
+          "name": "mcp_user_configs_unique_user_installation_device",
+          "columns": [
+            "installation_id",
+            "user_id",
+            "device_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "mcpUserConfigurations_installation_id_mcpServerInstallations_id_fk": {
+          "name": "mcpUserConfigurations_installation_id_mcpServerInstallations_id_fk",
+          "tableFrom": "mcpUserConfigurations",
+          "tableTo": "mcpServerInstallations",
+          "columnsFrom": [
+            "installation_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "mcpUserConfigurations_user_id_authUser_id_fk": {
+          "name": "mcpUserConfigurations_user_id_authUser_id_fk",
+          "tableFrom": "mcpUserConfigurations",
+          "tableTo": "authUser",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "mcpUserConfigurations_device_id_devices_id_fk": {
+          "name": "mcpUserConfigurations_device_id_devices_id_fk",
+          "tableFrom": "mcpUserConfigurations",
+          "tableTo": "devices",
+          "columnsFrom": [
+            "device_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "oauth_access_tokens": {
+      "name": "oauth_access_tokens",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "client_id": {
+          "name": "client_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "scope": {
+          "name": "scope",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "token_hash": {
+          "name": "token_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "oauth_access_tokens_token_hash_unique": {
+          "name": "oauth_access_tokens_token_hash_unique",
+          "columns": [
+            "token_hash"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "oauth_access_tokens_user_id_authUser_id_fk": {
+          "name": "oauth_access_tokens_user_id_authUser_id_fk",
+          "tableFrom": "oauth_access_tokens",
+          "tableTo": "authUser",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "oauth_authorization_codes": {
+      "name": "oauth_authorization_codes",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "client_id": {
+          "name": "client_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "redirect_uri": {
+          "name": "redirect_uri",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "scope": {
+          "name": "scope",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "state": {
+          "name": "state",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "code_challenge": {
+          "name": "code_challenge",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "code_challenge_method": {
+          "name": "code_challenge_method",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "code": {
+          "name": "code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "used": {
+          "name": "used",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "oauth_authorization_codes_code_unique": {
+          "name": "oauth_authorization_codes_code_unique",
+          "columns": [
+            "code"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "oauth_authorization_codes_user_id_authUser_id_fk": {
+          "name": "oauth_authorization_codes_user_id_authUser_id_fk",
+          "tableFrom": "oauth_authorization_codes",
+          "tableTo": "authUser",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "oauth_refresh_tokens": {
+      "name": "oauth_refresh_tokens",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "client_id": {
+          "name": "client_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "token_hash": {
+          "name": "token_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "used": {
+          "name": "used",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "oauth_refresh_tokens_token_hash_unique": {
+          "name": "oauth_refresh_tokens_token_hash_unique",
+          "columns": [
+            "token_hash"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "oauth_refresh_tokens_user_id_authUser_id_fk": {
+          "name": "oauth_refresh_tokens_user_id_authUser_id_fk",
+          "tableFrom": "oauth_refresh_tokens",
+          "tableTo": "authUser",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
@@ -1419,6 +2077,103 @@
           "tableTo": "authUser",
           "columnsFrom": [
             "owner_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "userPreferences": {
+      "name": "userPreferences",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "preference_key": {
+          "name": "preference_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "preference_value": {
+          "name": "preference_value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "user_preferences_user_key_idx": {
+          "name": "user_preferences_user_key_idx",
+          "columns": [
+            "user_id",
+            "preference_key"
+          ],
+          "isUnique": false
+        },
+        "user_preferences_user_idx": {
+          "name": "user_preferences_user_idx",
+          "columns": [
+            "user_id"
+          ],
+          "isUnique": false
+        },
+        "user_preferences_key_idx": {
+          "name": "user_preferences_key_idx",
+          "columns": [
+            "preference_key"
+          ],
+          "isUnique": false
+        },
+        "user_preferences_unique_user_key": {
+          "name": "user_preferences_unique_user_key",
+          "columns": [
+            "user_id",
+            "preference_key"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "userPreferences_user_id_authUser_id_fk": {
+          "name": "userPreferences_user_id_authUser_id_fk",
+          "tableFrom": "userPreferences",
+          "tableTo": "authUser",
+          "columnsFrom": [
+            "user_id"
           ],
           "columnsTo": [
             "id"
