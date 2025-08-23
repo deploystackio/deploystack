@@ -61,7 +61,7 @@
     "drizzle-kit": "^0.31.4",
     "eslint": "^9.33.0",
     "fs-extra": "^11.3.1",
-    "jest": "^30.0.4",
+    "jest": "^30.0.5",
     "node-loader": "^2.1.0",
     "nodemon": "^3.1.10",
     "release-it": "^19.0.4",
