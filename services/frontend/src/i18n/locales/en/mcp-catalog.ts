@@ -202,6 +202,10 @@ export default {
               environment: 'ENV_VAR_NAME'
             }
           },
+          argument: {
+            label: 'Argument',
+            placeholder: 'e.g., --api-key, -y, package-name'
+          },
           value: {
             label: 'Value',
             placeholder: 'Example: --verbose or package-name'

@@ -513,10 +513,6 @@ const validateForm = () => {
     }
   }
 
-  if (formDataLocal.value.category === 'template' && formDataLocal.value.type === 'arg' && !formDataLocal.value.value?.trim()) {
-    errors.value = t('mcpCatalog.form.configurationSchema.modal.validation.valueRequired')
-  }
-
   formErrors.value = errors
   return Object.keys(errors).length === 0
 }
@@ -783,35 +779,21 @@ watch(localData, () => {
         </AlertDialogHeader>
 
         <form @submit.prevent="handleSubmit" class="space-y-4">
-          <!-- Name -->
+          <!-- Argument/Environment Variable Name -->
           <div class="space-y-2">
-            <Label for="item-name">{{ $t('mcpCatalog.form.configurationSchema.modal.fields.name.label') }}</Label>
+            <Label for="item-name">
+              {{ formDataLocal.type === 'arg' ? $t('mcpCatalog.form.configurationSchema.modal.fields.argument.label') : $t('mcpCatalog.form.configurationSchema.modal.fields.name.label') }}
+            </Label>
             <Input
               id="item-name"
               v-model="formDataLocal.name"
-              :placeholder="$t(`mcpCatalog.form.configurationSchema.modal.fields.name.placeholders.${formDataLocal.type === 'arg' ? 'argument' : 'environment'}`)"
+              :placeholder="formDataLocal.type === 'arg' ? $t('mcpCatalog.form.configurationSchema.modal.fields.argument.placeholder') : $t('mcpCatalog.form.configurationSchema.modal.fields.name.placeholders.environment')"
               :class="{ 'border-destructive': formErrors.name }"
               class="font-mono"
               required
             />
             <div v-if="formErrors.name" class="text-sm text-destructive">
               {{ formErrors.name }}
-            </div>
-          </div>
-
-          <!-- Value (for template args only) -->
-          <div v-if="formDataLocal.type === 'arg' && formDataLocal.category === 'template'" class="space-y-2">
-            <Label for="item-value">{{ $t('mcpCatalog.form.configurationSchema.modal.fields.value.label') }}</Label>
-            <Input
-              id="item-value"
-              v-model="formDataLocal.value"
-              :placeholder="$t('mcpCatalog.form.configurationSchema.modal.fields.value.placeholder')"
-              :class="{ 'border-destructive': formErrors.value }"
-              class="font-mono"
-              required
-            />
-            <div v-if="formErrors.value" class="text-sm text-destructive">
-              {{ formErrors.value }}
             </div>
           </div>
 
