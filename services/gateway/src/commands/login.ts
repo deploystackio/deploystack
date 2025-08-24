@@ -7,6 +7,7 @@ import { DeployStackAPI } from '../core/auth/api-client';
 import { MCPConfigService } from '../core/mcp';
 import { AuthenticationError } from '../types/auth';
 import { ServerStartService } from '../services/server-start-service';
+import { detectDeviceInfo } from '../utils/device-detection';
 
 export function registerLoginCommand(program: Command) {
   program
@@ -61,11 +62,18 @@ export function registerLoginCommand(program: Command) {
           if (defaultTeam) {
             await storage.updateSelectedTeam(defaultTeam.id, defaultTeam.name);
             
-            // Download MCP configuration for the default team
-            spinner.text = 'Downloading MCP server configurations...';
+            // Detect device and download merged MCP configurations using new gateway endpoint
+            spinner.text = 'Detecting device and downloading MCP configurations...';
             const mcpService = new MCPConfigService();
             try {
-              await mcpService.downloadAndStoreMCPConfig(defaultTeam.id, defaultTeam.name, api, false);
+              // Detect current device information
+              const deviceInfo = await detectDeviceInfo();
+              
+              // Register or update device with backend
+              const device = await api.registerOrUpdateDevice(deviceInfo);
+              
+              // Download merged configurations using the new gateway endpoint
+              const gatewayConfig = await mcpService.downloadGatewayMCPConfig(device.id, api, false);
               
               // Auto-start the gateway server after successful MCP config download
               spinner.text = 'Starting gateway server...';

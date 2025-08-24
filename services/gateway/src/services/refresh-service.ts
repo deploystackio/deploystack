@@ -7,6 +7,7 @@ import { MCPConfigService } from '../core/mcp';
 import { ServerRestartService } from './server-restart-service';
 import { AuthenticationError } from '../types/auth';
 import { TeamMCPConfig, MCPServerConfig } from '../types/mcp';
+import { detectDeviceInfo } from '../utils/device-detection';
 
 export interface RefreshOptions {
   url?: string;
@@ -55,40 +56,79 @@ export class RefreshService {
       const backendUrl = options.url || credentials.baseUrl || 'https://cloud.deploystack.io';
       const api = new DeployStackAPI(credentials, backendUrl);
 
-      console.log(chalk.blue(`🔄 Refreshing MCP configuration for team: ${chalk.cyan(credentials.selectedTeam.name)}`));
+      console.log(chalk.blue(`🔄 Refreshing MCP configuration using new gateway endpoint`));
       
-      // Step 1: Get current configuration for comparison
-      const oldConfig = await this.mcpService.getMCPConfig(credentials.selectedTeam.id);
-      
-      // Step 2: Download new configuration
-      spinner = ora('Downloading latest MCP configuration...').start();
+      // Step 1: Detect device and get device ID
+      spinner = ora('Detecting device and downloading latest MCP configurations...').start();
       
       try {
-        const newConfig = await this.mcpService.downloadAndStoreMCPConfig(
-          credentials.selectedTeam.id,
-          credentials.selectedTeam.name,
-          api,
-          false
-        );
+        // Detect current device information
+        const deviceInfo = await detectDeviceInfo();
         
-        spinner.succeed(`MCP configuration refreshed (${newConfig.servers.length} server${newConfig.servers.length === 1 ? '' : 's'})`);
-        console.log(chalk.green('✅ MCP configuration has been refreshed'));
+        // Download merged configurations using the new gateway endpoint
+        // Backend will automatically find device by hardware_id
+        const gatewayConfig = await this.mcpService.downloadGatewayMCPConfig(deviceInfo.hardware_id, api, false);
         
-        // Step 3: Detect changes and prompt for restart if needed
-        const changes = this.detectConfigurationChanges(oldConfig, newConfig);
+        const readyServers = gatewayConfig.servers.filter(s => s.status === 'ready');
+        const invalidServers = gatewayConfig.servers.filter(s => s.status === 'invalid');
         
-        if (changes.hasChanges) {
-          await this.handleConfigurationChanges(changes);
+        spinner.succeed(`Gateway MCP configurations refreshed (${readyServers.length} ready, ${invalidServers.length} invalid)`);
+        console.log(chalk.green('✅ MCP configuration has been refreshed using new three-tier system'));
+        
+        if (invalidServers.length > 0) {
+          console.log(chalk.yellow(`\n⚠️  ${invalidServers.length} server${invalidServers.length === 1 ? '' : 's'} marked as invalid:`));
+          invalidServers.forEach(server => {
+            console.log(chalk.gray(`   • ${server.name} - Missing required user configurations`));
+          });
+          console.log(chalk.gray(`💡 Configure these servers in the web UI to make them available`));
+        }
+        
+        // Step 2: Check if gateway restart is needed
+        const isRunning = this.restartService.isServerRunning();
+        
+        if (isRunning) {
+          console.log(chalk.yellow('\n⚠️  Gateway restart required for changes to take effect.'));
+          
+          // Prompt user for restart
+          const { shouldRestart } = await inquirer.prompt([
+            {
+              type: 'confirm',
+              name: 'shouldRestart',
+              message: 'Do you want to restart the DeployStack Gateway now?',
+              default: true
+            }
+          ]);
+
+          if (shouldRestart) {
+            console.log(chalk.blue('\n🔄 Restarting gateway with updated configuration...'));
+            
+            try {
+              const result = await this.restartService.restartGatewayServer();
+              
+              if (result.restarted) {
+                console.log(chalk.green('✅ Gateway restarted successfully with new configuration'));
+                
+                if (result.mcpServersStarted !== undefined) {
+                  console.log(chalk.blue(`🤖 Ready to serve ${result.mcpServersStarted} MCP server${result.mcpServersStarted === 1 ? '' : 's'}`));
+                }
+              }
+            } catch (error) {
+              console.log(chalk.red(`❌ Failed to restart gateway: ${error instanceof Error ? error.message : String(error)}`));
+              console.log(chalk.gray('💡 You can restart manually with "deploystack restart"'));
+            }
+          } else {
+            console.log(chalk.gray('💡 Configuration updated. Restart gateway manually with "deploystack restart" when ready.'));
+          }
         } else {
-          console.log(chalk.gray('📋 No configuration changes detected'));
+          console.log(chalk.gray('💡 Gateway is not currently running. Changes will take effect when you start it.'));
         }
         
         // Show summary
         console.log(chalk.gray(`\n📊 Configuration Summary:`));
-        console.log(chalk.gray(`   Team: ${newConfig.team_name}`));
-        console.log(chalk.gray(`   Installations: ${newConfig.installations.length}`));
-        console.log(chalk.gray(`   Servers: ${newConfig.servers.length}`));
-        console.log(chalk.gray(`   Last Updated: ${new Date(newConfig.last_updated).toLocaleString()}`));
+        console.log(chalk.gray(`   Hardware ID: ${deviceInfo.hardware_id}`));
+        console.log(chalk.gray(`   Ready Servers: ${readyServers.length}`));
+        console.log(chalk.gray(`   Invalid Servers: ${invalidServers.length}`));
+        console.log(chalk.gray(`   Last Updated: ${new Date(gatewayConfig.lastUpdated).toLocaleString()}`));
         
       } catch (error) {
         spinner.fail('Failed to refresh MCP configuration');

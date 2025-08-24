@@ -100,6 +100,30 @@ export class DeployStackAPI {
   }
 
   /**
+   * Get merged MCP configurations for gateway (NEW THREE-TIER ENDPOINT)
+   * This endpoint merges Template + Team + User configurations and returns ready-to-use server configs
+   * @param deviceId Device ID for device-specific user configurations
+   * @returns Gateway MCP configurations response
+   */
+  async getGatewayMCPConfigurations(hardwareId: string): Promise<{
+    success: boolean;
+    data: {
+      servers: Array<{
+        id: string;
+        name: string;
+        command: string;
+        args: string[];
+        env: Record<string, string>;
+        status: 'ready' | 'invalid';
+      }>;
+    };
+  }> {
+    const endpoint = `${this.baseUrl}/api/gateway/me/mcp-configurations?hardware_id=${encodeURIComponent(hardwareId)}`;
+    const response = await this.makeRequest(endpoint);
+    return response;
+  }
+
+  /**
    * Get device by hardware ID
    * @param hardwareId Hardware fingerprint
    * @returns Device if found, null otherwise

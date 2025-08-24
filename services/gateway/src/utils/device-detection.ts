@@ -59,44 +59,42 @@ export async function generateHardwareFingerprint(): Promise<string> {
       .filter(iface => !iface?.internal && iface?.mac !== '00:00:00:00:00:00')
       .map(iface => iface?.mac)
       .filter(Boolean)
-      .sort();
+      .sort(); // Sort to ensure consistent ordering
 
     // Get CPU information
     const cpus = os.cpus();
     const cpuModel = cpus.length > 0 ? cpus[0].model : 'unknown';
 
-    // Create fingerprint data
+    // Create fingerprint data with consistent ordering
     const fingerprintData = {
-      macs: macAddresses,
-      hostname: os.hostname(),
-      platform: os.platform(),
       arch: os.arch(),
       cpuModel: cpuModel,
-      // Add some entropy from system info
-      totalmem: os.totalmem(),
-      homedir: os.homedir()
+      homedir: os.homedir(),
+      hostname: os.hostname(),
+      macs: macAddresses,
+      platform: os.platform(),
+      totalmem: os.totalmem()
     };
 
-    // Generate SHA256 hash
+    // Generate SHA256 hash with deterministic JSON serialization
     const fingerprint = crypto
       .createHash('sha256')
-      .update(JSON.stringify(fingerprintData))
+      .update(JSON.stringify(fingerprintData, Object.keys(fingerprintData).sort()))
       .digest('hex');
 
     // Return first 32 characters for consistency
     return fingerprint.substring(0, 32);
   } catch {
-    // Fallback fingerprint if hardware detection fails
+    // Fallback fingerprint if hardware detection fails (deterministic)
     const fallbackData = {
-      hostname: os.hostname(),
-      platform: os.platform(),
       arch: os.arch(),
-      timestamp: Date.now()
+      hostname: os.hostname(),
+      platform: os.platform()
     };
 
     const fallbackFingerprint = crypto
       .createHash('sha256')
-      .update(JSON.stringify(fallbackData))
+      .update(JSON.stringify(fallbackData, Object.keys(fallbackData).sort()))
       .digest('hex');
 
     return fallbackFingerprint.substring(0, 32);

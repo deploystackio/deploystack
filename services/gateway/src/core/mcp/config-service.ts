@@ -14,7 +14,90 @@ export class MCPConfigService {
   }
 
   /**
-   * Download and store MCP configuration for a team
+   * Download merged MCP configurations using the new gateway endpoint (THREE-TIER ARCHITECTURE)
+   * This method uses the new /api/gateway/me/mcp-configurations endpoint that merges
+   * Template + Team + User configurations and returns ready-to-use server configs
+   * @param deviceId Device ID for device-specific user configurations
+   * @param api DeployStack API client
+   * @param showSpinner Whether to show progress spinner
+   * @returns Gateway MCP configuration with ready-to-use servers
+   */
+  async downloadGatewayMCPConfig(
+    hardwareId: string,
+    api?: DeployStackAPI,
+    showSpinner: boolean = true
+  ): Promise<{
+    servers: Array<{
+      id: string;
+      name: string;
+      command: string;
+      args: string[];
+      env: Record<string, string>;
+      status: 'ready' | 'invalid';
+    }>;
+    deviceId: string;
+    lastUpdated: string;
+  }> {
+    let spinner: ReturnType<typeof ora> | null = null;
+    
+    try {
+      if (showSpinner) {
+        spinner = ora('Downloading merged MCP configurations from gateway endpoint...').start();
+      }
+
+      // Use provided API client or create one
+      let apiClient = api;
+      if (!apiClient) {
+        const credentials = await this.storage.getCredentials();
+        if (!credentials) {
+          throw new AuthenticationError(
+            AuthError.STORAGE_ERROR,
+            'No authentication found - cannot download MCP config'
+          );
+        }
+        apiClient = new DeployStackAPI(credentials, credentials.baseUrl);
+      }
+
+      // Call the new gateway endpoint that merges all three tiers
+      const response = await apiClient.getGatewayMCPConfigurations(hardwareId);
+      
+      if (!response.success) {
+        throw new AuthenticationError(
+          AuthError.NETWORK_ERROR,
+          'Failed to download merged MCP configurations from gateway endpoint'
+        );
+      }
+
+      const servers = response.data.servers || [];
+      const readyServers = servers.filter(s => s.status === 'ready');
+      const invalidServers = servers.filter(s => s.status === 'invalid');
+      
+      if (showSpinner && spinner) {
+        spinner.succeed(`Gateway MCP configurations downloaded (${readyServers.length} ready, ${invalidServers.length} invalid)`);
+      }
+
+      if (invalidServers.length > 0) {
+        console.log(chalk.yellow(`⚠️  ${invalidServers.length} server${invalidServers.length === 1 ? '' : 's'} marked as invalid (missing required user configurations)`));
+        invalidServers.forEach(server => {
+          console.log(chalk.gray(`   • ${server.name} (${server.id})`));
+        });
+      }
+
+      return {
+        servers,
+        deviceId: hardwareId,
+        lastUpdated: new Date().toISOString()
+      };
+    } catch (error) {
+      if (spinner) {
+        spinner.fail('Failed to download gateway MCP configurations');
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Download and store MCP configuration for a team (LEGACY METHOD)
    * @param teamId Team ID
    * @param teamName Team name (optional, will be set from API if not provided)
    * @param api DeployStack API client
