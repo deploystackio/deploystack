@@ -3,23 +3,24 @@
 
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { toast } from 'vue-sonner'
-import { Settings, Eye, EyeOff, Plus, Trash2, Monitor } from 'lucide-vue-next'
+import { Settings, Eye, EyeOff, AlertTriangle, Monitor } from 'lucide-vue-next'
 import { McpCatalogService } from '@/services/mcpCatalogService'
 import { McpInstallationService } from '@/services/mcpInstallationService'
-import { useDevices } from '@/composables/useDevices'
+import { DeviceService } from '@/services/deviceService'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import {
   AlertDialog,
   AlertDialogContent,
@@ -29,6 +30,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import type { McpInstallation, UserConfiguration } from '@/types/mcp-installations'
+import type { Device } from '@/views/devices/types'
 
 interface Props {
   installation: McpInstallation
@@ -58,9 +60,13 @@ const userConfigurations = ref<UserConfiguration[]>([])
 const currentUserConfig = ref<UserConfiguration | null>(null)
 const isLoadingUserConfig = ref(true)
 
-// Modal state
+// Device data
+const devices = ref<Device[]>([])
+const isLoadingDevices = ref(true)
+
+// Modal state for editing values
 const isEditModalOpen = ref(false)
-const isCreateModalOpen = ref(false)
+const editingDevice = ref<any>(null)
 const editingItem = ref<any>(null)
 const editingValue = ref('')
 const editingType = ref<'arg' | 'env'>('env')
@@ -68,9 +74,20 @@ const showPassword = ref(false)
 const isSubmitting = ref(false)
 const formErrors = ref<Record<string, string>>({})
 
-// Device management
-const { devices, fetchDevices, isLoading: isLoadingDevices } = useDevices()
-const selectedDeviceId = ref('')
+// Device API endpoint: /api/users/me/devices - to list all user devices
+
+// Load user devices using DeviceService
+const loadUserDevices = async () => {
+  try {
+    isLoadingDevices.value = true
+    devices.value = await DeviceService.getAllDevices()
+  } catch (error) {
+    console.error('Error loading user devices:', error)
+    devices.value = []
+  } finally {
+    isLoadingDevices.value = false
+  }
+}
 
 // Load server data and user configurations
 onMounted(async () => {
@@ -85,6 +102,9 @@ onMounted(async () => {
 
     // Load user configurations
     await loadUserConfigurations()
+    
+    // Load user devices
+    await loadUserDevices()
   } catch (error) {
     console.error('Error loading data:', error)
   } finally {
@@ -167,50 +187,46 @@ const hasUserConfiguration = computed(() => {
   return userArgsSchema.value.length > 0 || userEnvSchema.value.length > 0
 })
 
-// Check if user has configuration data
-const hasUserConfigData = computed(() => {
-  return currentUserConfig.value !== null
-})
-
 // Check if loading
 const isLoading = computed(() => {
-  return isLoadingServer.value || isLoadingUserConfig.value
+  return isLoadingServer.value || isLoadingUserConfig.value || isLoadingDevices.value
 })
 
-// Modal functions
-const openEditModal = (item: any, type: 'arg' | 'env') => {
-  if (!props.canEdit) return
+// Check if user has any devices
+const hasDevices = computed(() => {
+  return devices.value.length > 0
+})
 
+// Get device-specific value for an item
+const getDeviceValue = (item: any, deviceId: string, type: 'arg' | 'env') => {
+  const userConfig = userConfigurations.value.find(config => config.device_id === deviceId)
+  if (!userConfig) return ''
+  
+  if (type === 'arg') {
+    return userConfig.user_args?.[item.index] || ''
+  } else {
+    return userConfig.user_env?.[item.name] || ''
+  }
+}
+
+// Modal functions
+const openEditModal = (item: any, device: any, type: 'arg' | 'env') => {
   editingItem.value = item
+  editingDevice.value = device
   editingType.value = type
-  editingValue.value = item.currentValue
+  editingValue.value = getDeviceValue(item, device.id, type)
   showPassword.value = false
   formErrors.value = {}
   isEditModalOpen.value = true
 }
 
-const openCreateModal = async () => {
-  if (!props.canEdit) return
-
-  // Load devices when opening create modal
-  await fetchDevices()
-  selectedDeviceId.value = ''
-  formErrors.value = {}
-  isCreateModalOpen.value = true
-}
-
 const closeEditModal = () => {
   isEditModalOpen.value = false
   editingItem.value = null
+  editingDevice.value = null
   editingValue.value = ''
   editingType.value = 'env'
   showPassword.value = false
-  formErrors.value = {}
-}
-
-const closeCreateModal = () => {
-  isCreateModalOpen.value = false
-  selectedDeviceId.value = ''
   formErrors.value = {}
 }
 
@@ -242,126 +258,87 @@ const validateForm = () => {
   return Object.keys(errors).length === 0
 }
 
-const validateCreateForm = () => {
-  const errors: Record<string, string> = {}
-
-  if (!selectedDeviceId.value) {
-    errors.deviceId = t('mcpInstallations.userConfiguration.createModal.validation.deviceRequired')
-  }
-
-  formErrors.value = errors
-  return Object.keys(errors).length === 0
-}
-
 const handleEdit = async () => {
-  if (!validateForm() || !currentUserConfig.value) return
-
+  if (!validateForm()) return
+  
   isSubmitting.value = true
-
+  
   try {
-    let updatedArgs = [...currentUserArgs.value]
-    let updatedEnv = { ...currentUserEnv.value }
-
+    // Find existing user config for this device or create new one
+    let userConfig = userConfigurations.value.find(config => config.device_id === editingDevice.value.id)
+    
+    if (!userConfig) {
+      // Create new user configuration for this device
+      const initialArgs = new Array(userArgsSchema.value.length).fill('')
+      const initialEnv: Record<string, string> = {}
+      
+      userConfig = await McpInstallationService.createUserConfiguration(
+        props.teamId,
+        props.installation.id,
+        {
+          device_id: editingDevice.value.id,
+          user_args: initialArgs,
+          user_env: initialEnv
+        }
+      )
+      
+      userConfigurations.value.push(userConfig)
+    }
+    
+    // Update the specific field
+    let updatedArgs = [...(userConfig.user_args || [])]
+    let updatedEnv = { ...(userConfig.user_env || {}) }
+    
     if (editingType.value === 'arg') {
+      // Ensure array is large enough
+      while (updatedArgs.length <= editingItem.value.index) {
+        updatedArgs.push('')
+      }
       updatedArgs[editingItem.value.index] = editingValue.value
     } else {
       updatedEnv[editingItem.value.name] = editingValue.value
     }
-
-    const updatedConfig: UserConfiguration = await McpInstallationService.updateUserConfiguration(
+    
+    // Update the configuration
+    const updatedConfig = await McpInstallationService.updateUserConfiguration(
       props.teamId,
       props.installation.id,
-      currentUserConfig.value.id,
+      userConfig.id,
       {
-        device_id: currentUserConfig.value.device_id,
+        device_id: editingDevice.value.id,
         user_args: updatedArgs,
         user_env: updatedEnv
       }
     )
-
-    currentUserConfig.value = updatedConfig
+    
+    // Update local state
+    const configIndex = userConfigurations.value.findIndex(c => c.id === userConfig!.id)
+    if (configIndex >= 0) {
+      userConfigurations.value[configIndex] = updatedConfig
+    }
+    
     emit('configuration-updated', updatedConfig)
-
-    const itemName = editingType.value === 'arg'
-      ? t('mcpInstallations.userConfiguration.table.values.argumentNumber', { number: editingItem.value.index + 1 })
-      : editingItem.value.name
-
-    toast.success(t('mcpInstallations.userConfiguration.editModal.success.updated', { item: itemName }), {
-      description: t('mcpInstallations.userConfiguration.editModal.success.description')
-    })
-
+    
     closeEditModal()
   } catch (error) {
     console.error('Error updating user configuration:', error)
-    formErrors.value.general = error instanceof Error ? error.message : t('mcpInstallations.userConfiguration.editModal.errors.updateFailed')
-  } finally {
-    isSubmitting.value = false
-  }
-}
-
-const handleCreate = async () => {
-  if (!validateCreateForm()) return
-
-  isSubmitting.value = true
-
-  try {
-    // Initialize with empty arrays/objects based on schema
-    const initialArgs = new Array(userArgsSchema.value.length).fill('')
-    const initialEnv: Record<string, string> = {}
-
-    // Only include non-empty environment variables
-    userEnvSchema.value.forEach((envSchema: any) => {
-      // Don't add empty values to avoid validation errors
-      if (envSchema.required) {
-        // For required fields, we'll let the backend validation handle it
-        initialEnv[envSchema.name] = ''
-      }
-      // For optional fields, we simply don't include them if empty
-    })
-
-    // Filter out empty environment variables to avoid backend validation errors
-    const filteredEnv: Record<string, string> = {}
-    Object.entries(initialEnv).forEach(([key, value]) => {
-      if (value && value.trim() !== '') {
-        filteredEnv[key] = value
-      }
-    })
-
-    const newConfig: UserConfiguration = await McpInstallationService.createUserConfiguration(
-      props.teamId,
-      props.installation.id,
-      {
-        device_id: selectedDeviceId.value,
-        user_args: initialArgs.filter(arg => arg.trim() !== ''),
-        user_env: filteredEnv
-      }
-    )
-
-    currentUserConfig.value = newConfig
-    userConfigurations.value.push(newConfig)
-    emit('configuration-updated', newConfig)
-
-    toast.success(t('mcpInstallations.userConfiguration.createModal.success.created'), {
-      description: t('mcpInstallations.userConfiguration.createModal.success.description')
-    })
-
-    closeCreateModal()
-  } catch (error) {
-    console.error('Error creating user configuration:', error)
-    formErrors.value.general = error instanceof Error ? error.message : t('mcpInstallations.userConfiguration.createModal.errors.createFailed')
+    formErrors.value.general = error instanceof Error ? error.message : 'Failed to update configuration'
   } finally {
     isSubmitting.value = false
   }
 }
 
 const modalTitle = computed(() => {
-  if (!editingItem.value) return ''
-
-  if (editingType.value === 'arg') {
-    return t('mcpInstallations.userConfiguration.editModal.titleArg', { number: editingItem.value.index + 1 })
-  } else {
-    return t('mcpInstallations.userConfiguration.editModal.titleEnv', { name: editingItem.value.name })
-  }
+  if (!editingItem.value || !editingDevice.value) return ''
+  
+  const itemName = editingType.value === 'arg' 
+    ? t('mcpInstallations.userConfiguration.table.values.argumentNumber', { number: editingItem.value.index + 1 })
+    : editingItem.value.name
+    
+  return t('mcpInstallations.userConfiguration.editModal.title', { 
+    item: itemName, 
+    device: editingDevice.value.device_name 
+  })
 })
 </script>
 
@@ -375,12 +352,6 @@ const modalTitle = computed(() => {
             {{ t('mcpInstallations.userConfiguration.description') }}
           </p>
         </div>
-        <div v-if="hasUserConfiguration && !hasUserConfigData && props.canEdit" class="flex items-center">
-          <Button @click="openCreateModal" class="flex items-center gap-2">
-            <Plus class="h-4 w-4" />
-            {{ t('mcpInstallations.userConfiguration.actions.createConfiguration') }}
-          </Button>
-        </div>
       </div>
     </div>
 
@@ -392,19 +363,14 @@ const modalTitle = computed(() => {
 
       <!-- User Configuration Content -->
       <div v-else-if="hasUserConfiguration" class="space-y-8">
-        <!-- Configuration Status -->
-        <div v-if="hasUserConfigData" class="bg-green-50 border border-green-200 rounded-lg p-4">
-          <div class="flex items-center gap-2 text-green-800">
-            <Settings class="h-4 w-4" />
-            <span class="font-medium">{{ t('mcpInstallations.userConfiguration.status.configured') }}</span>
-            <Badge v-if="currentUserConfig?.device_name" variant="outline" class="ml-2">
-              {{ currentUserConfig.device_name }}
-            </Badge>
-          </div>
-          <p class="text-sm text-green-600 mt-1">
-            {{ t('mcpInstallations.userConfiguration.status.description') }}
-          </p>
-        </div>
+        <!-- Warning if no devices -->
+        <Alert v-if="!hasDevices" class="border-orange-200 bg-orange-50">
+          <AlertTriangle class="h-4 w-4 text-orange-600" />
+          <AlertDescription class="text-orange-800">
+            <strong>{{ t('mcpInstallations.userConfiguration.noDevices.title') }}</strong><br>
+            {{ t('mcpInstallations.userConfiguration.noDevices.description') }}
+          </AlertDescription>
+        </Alert>
 
         <!-- User Arguments Section -->
         <div v-if="userArgsSchema.length > 0">
@@ -414,56 +380,77 @@ const modalTitle = computed(() => {
           </div>
 
           <ul role="list" class="space-y-3">
-            <li v-for="arg in userArgsWithData" :key="arg.index" class="flex items-center justify-between gap-x-6 py-5 bg-muted/50 rounded-lg px-4">
-              <div class="min-w-0 flex-1">
-                <div class="flex items-start gap-x-3">
-                  <p class="text-sm/6 font-semibold text-gray-900 font-mono">
-                    {{ t('mcpInstallations.userConfiguration.table.values.argumentNumber', { number: arg.index + 1 }) }}
-                  </p>
+            <li v-for="arg in userArgsWithData" :key="arg.index" class="bg-muted/50 rounded-lg px-4 py-5">
+              <div class="flex items-center justify-between gap-x-6 mb-4">
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-start gap-x-3">
+                    <p class="text-sm/6 font-semibold text-gray-900 font-mono">
+                      {{ t('mcpInstallations.userConfiguration.table.values.argumentNumber', { number: arg.index + 1 }) }}
+                    </p>
+                  </div>
+                  <div class="mt-1 text-xs/5 text-gray-700">
+                    <span class="font-medium text-gray-800">{{ t('mcpInstallations.userConfiguration.table.labels.required') }}</span>
+                    <span class="ml-1">{{ arg.required ? t('common.labels.yes') : t('common.labels.no') }}</span>
+                  </div>
                 </div>
-                <div class="mt-1 text-xs/5 text-gray-700">
-                  <span class="font-medium text-gray-800">{{ t('mcpInstallations.userConfiguration.table.labels.required') }}</span>
-                  <span class="ml-1">{{ arg.required ? t('common.labels.yes') : t('common.labels.no') }}</span>
+
+                <div class="flex-1 min-w-0">
+                  <div class="space-y-1 text-xs/5 text-gray-700">
+                    <div v-if="arg.type">
+                      <span class="font-medium text-gray-800">{{ t('mcpInstallations.userConfiguration.table.labels.type') }}</span>
+                      <span class="ml-1">{{ arg.type }}</span>
+                    </div>
+                    <div v-if="arg.description">
+                      <span class="font-medium text-gray-800">{{ t('mcpInstallations.userConfiguration.table.labels.description') }}</span>
+                      <span class="ml-1">{{ arg.description }}</span>
+                    </div>
+                    <div>
+                      <span class="font-medium text-gray-800">{{ t('mcpInstallations.userConfiguration.table.labels.value') }}</span>
+                      <span class="ml-1 font-mono">
+                        {{ arg.currentValue || t('mcpInstallations.userConfiguration.table.values.notSet') }}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
-
-              <div class="flex-1 min-w-0">
-                <div class="space-y-1 text-xs/5 text-gray-700">
-                  <div v-if="arg.type">
-                    <span class="font-medium text-gray-800">{{ t('mcpInstallations.userConfiguration.table.labels.type') }}</span>
-                    <span class="ml-1">{{ arg.type }}</span>
-                  </div>
-                  <div v-if="arg.description">
-                    <span class="font-medium text-gray-800">{{ t('mcpInstallations.userConfiguration.table.labels.description') }}</span>
-                    <span class="ml-1">{{ arg.description }}</span>
-                  </div>
-                  <div>
-                    <span class="font-medium text-gray-800">{{ t('mcpInstallations.userConfiguration.table.labels.value') }}</span>
-                    <span class="ml-1 font-mono">
-                      {{ arg.currentValue || t('mcpInstallations.userConfiguration.table.values.notSet') }}
-                    </span>
-                  </div>
+              
+              <!-- Device-specific values table -->
+              <div v-if="hasDevices" class="w-full">
+                <h5 class="text-xs font-medium text-gray-800 mb-2">{{ t('mcpInstallations.userConfiguration.deviceTable.title') }}</h5>
+                <div class="border rounded-md bg-white">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead class="text-xs">{{ t('mcpInstallations.userConfiguration.deviceTable.deviceName') }}</TableHead>
+                        <TableHead class="text-xs">{{ t('mcpInstallations.userConfiguration.deviceTable.value') }}</TableHead>
+                        <TableHead class="text-xs w-24">{{ t('mcpInstallations.userConfiguration.deviceTable.actions') }}</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      <TableRow v-for="device in devices" :key="device.id">
+                        <TableCell class="text-xs">
+                          <div class="flex items-center gap-2">
+                            <Monitor class="h-3 w-3 text-muted-foreground" />
+                            <span>{{ device.device_name }}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell class="text-xs font-mono">
+                          {{ getDeviceValue(arg, device.id, 'arg') || t('mcpInstallations.userConfiguration.table.values.notSet') }}
+                        </TableCell>
+                        <TableCell>
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            class="h-7 text-xs"
+                            @click="openEditModal(arg, device, 'arg')"
+                          >
+                            {{ t('mcpInstallations.userConfiguration.deviceTable.changeValue') }}
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
                 </div>
-              </div>
-
-              <div class="flex flex-none items-center gap-x-4">
-                <Button
-                  v-if="canEdit && hasUserConfigData"
-                  size="sm"
-                  variant="outline"
-                  @click="openEditModal(arg, 'arg')"
-                >
-                  {{ t('mcpInstallations.userConfiguration.table.actions.editValue') }}
-                </Button>
-                <Button
-                  v-else
-                  size="sm"
-                  variant="outline"
-                  disabled
-                  class="cursor-not-allowed opacity-50"
-                >
-                  {{ t('mcpInstallations.userConfiguration.table.actions.editValue') }}
-                </Button>
               </div>
             </li>
           </ul>
@@ -477,77 +464,88 @@ const modalTitle = computed(() => {
           </div>
 
           <ul role="list" class="space-y-3">
-            <li v-for="envVar in userEnvWithData" :key="envVar.name" class="flex items-center justify-between gap-x-6 py-5 bg-muted/50 rounded-lg px-4">
-              <div class="min-w-0 flex-1">
-                <div class="flex items-start gap-x-3">
-                  <p class="text-sm/6 font-semibold text-gray-900 font-mono">
-                    {{ envVar.name }}
-                  </p>
+            <li v-for="envVar in userEnvWithData" :key="envVar.name" class="bg-muted/50 rounded-lg px-4 py-5">
+              <div class="flex items-center justify-between gap-x-6 mb-4">
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-start gap-x-3">
+                    <p class="text-sm/6 font-semibold text-gray-900 font-mono">
+                      {{ envVar.name }}
+                    </p>
+                  </div>
+                  <div class="mt-1 text-xs/5 text-gray-700">
+                    <span class="font-medium text-gray-800">{{ t('mcpInstallations.userConfiguration.table.labels.required') }}</span>
+                    <span class="ml-1">{{ envVar.required ? t('common.labels.yes') : t('common.labels.no') }}</span>
+                  </div>
                 </div>
-                <div class="mt-1 text-xs/5 text-gray-700">
-                  <span class="font-medium text-gray-800">{{ t('mcpInstallations.userConfiguration.table.labels.required') }}</span>
-                  <span class="ml-1">{{ envVar.required ? t('common.labels.yes') : t('common.labels.no') }}</span>
+
+                <div class="flex-1 min-w-0">
+                  <div class="space-y-1 text-xs/5 text-gray-700">
+                    <div>
+                      <span class="font-medium text-gray-800">{{ t('mcpInstallations.userConfiguration.table.labels.type') }}</span>
+                      <span class="ml-1">{{ envVar.type || t('mcpInstallations.userConfiguration.table.labels.defaultType') }}</span>
+                    </div>
+                    <div v-if="envVar.description">
+                      <span class="font-medium text-gray-800">{{ t('mcpInstallations.userConfiguration.table.labels.description') }}</span>
+                      <span class="ml-1">{{ envVar.description }}</span>
+                    </div>
+                    <div>
+                      <span class="font-medium text-gray-800">{{ t('mcpInstallations.userConfiguration.table.labels.value') }}</span>
+                      <span v-if="envVar.type === 'password'" class="ml-1 font-mono">
+                        {{ envVar.currentValue ? '••••••••' : t('mcpInstallations.userConfiguration.table.values.notSet') }}
+                      </span>
+                      <span v-else class="ml-1 font-mono">
+                        {{ envVar.currentValue || t('mcpInstallations.userConfiguration.table.values.notSet') }}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
-
-              <div class="flex-1 min-w-0">
-                <div class="space-y-1 text-xs/5 text-gray-700">
-                  <div>
-                    <span class="font-medium text-gray-800">{{ t('mcpInstallations.userConfiguration.table.labels.type') }}</span>
-                    <span class="ml-1">{{ envVar.type || t('mcpInstallations.userConfiguration.table.labels.defaultType') }}</span>
-                  </div>
-                  <div v-if="envVar.description">
-                    <span class="font-medium text-gray-800">{{ t('mcpInstallations.userConfiguration.table.labels.description') }}</span>
-                    <span class="ml-1">{{ envVar.description }}</span>
-                  </div>
-                  <div>
-                    <span class="font-medium text-gray-800">{{ t('mcpInstallations.userConfiguration.table.labels.value') }}</span>
-                    <span v-if="envVar.type === 'password'" class="ml-1 font-mono">
-                      {{ envVar.currentValue ? '••••••••' : t('mcpInstallations.userConfiguration.table.values.notSet') }}
-                    </span>
-                    <span v-else class="ml-1 font-mono">
-                      {{ envVar.currentValue || t('mcpInstallations.userConfiguration.table.values.notSet') }}
-                    </span>
-                  </div>
+              
+              <!-- Device-specific values table -->
+              <div v-if="hasDevices" class="w-full">
+                <h5 class="text-xs font-medium text-gray-800 mb-2">{{ t('mcpInstallations.userConfiguration.deviceTable.title') }}</h5>
+                <div class="border rounded-md bg-white">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead class="text-xs">{{ t('mcpInstallations.userConfiguration.deviceTable.deviceName') }}</TableHead>
+                        <TableHead class="text-xs">{{ t('mcpInstallations.userConfiguration.deviceTable.value') }}</TableHead>
+                        <TableHead class="text-xs w-24">{{ t('mcpInstallations.userConfiguration.deviceTable.actions') }}</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      <TableRow v-for="device in devices" :key="device.id">
+                        <TableCell class="text-xs">
+                          <div class="flex items-center gap-2">
+                            <Monitor class="h-3 w-3 text-muted-foreground" />
+                            <span>{{ device.device_name }}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell class="text-xs font-mono">
+                          <span v-if="envVar.type === 'password'">
+                            {{ getDeviceValue(envVar, device.id, 'env') ? '••••••••' : t('mcpInstallations.userConfiguration.table.values.notSet') }}
+                          </span>
+                          <span v-else>
+                            {{ getDeviceValue(envVar, device.id, 'env') || t('mcpInstallations.userConfiguration.table.values.notSet') }}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            class="h-7 text-xs"
+                            @click="openEditModal(envVar, device, 'env')"
+                          >
+                            {{ t('mcpInstallations.userConfiguration.deviceTable.changeValue') }}
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
                 </div>
-              </div>
-
-              <div class="flex flex-none items-center gap-x-4">
-                <Button
-                  v-if="canEdit && hasUserConfigData"
-                  size="sm"
-                  variant="outline"
-                  @click="openEditModal(envVar, 'env')"
-                >
-                  {{ t('mcpInstallations.userConfiguration.table.actions.editValue') }}
-                </Button>
-                <Button
-                  v-else
-                  size="sm"
-                  variant="outline"
-                  disabled
-                  class="cursor-not-allowed opacity-50"
-                >
-                  {{ t('mcpInstallations.userConfiguration.table.actions.editValue') }}
-                </Button>
               </div>
             </li>
           </ul>
-        </div>
-
-        <!-- No Configuration State -->
-        <div v-if="!hasUserConfigData" class="px-4 py-8 sm:px-0 text-center border border-dashed border-gray-300 rounded-lg">
-          <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-100 mb-4">
-            <Settings class="h-6 w-6 text-blue-600" />
-          </div>
-          <h3 class="text-sm font-medium text-gray-900 mb-2">{{ t('mcpInstallations.userConfiguration.noConfig.title') }}</h3>
-          <p class="text-sm text-gray-500 max-w-sm mx-auto mb-4">
-            {{ t('mcpInstallations.userConfiguration.noConfig.description') }}
-          </p>
-          <Button v-if="props.canEdit" @click="openCreateModal" class="flex items-center gap-2 mx-auto">
-            <Plus class="h-4 w-4" />
-            {{ t('mcpInstallations.userConfiguration.actions.createConfiguration') }}
-          </Button>
         </div>
       </div>
 
@@ -575,7 +573,7 @@ const modalTitle = computed(() => {
 
         <form @submit.prevent="handleEdit" class="space-y-4">
           <!-- Item Info -->
-          <div v-if="editingItem" class="bg-gray-50 rounded-lg p-4 space-y-2">
+          <div v-if="editingItem && editingDevice" class="bg-gray-50 rounded-lg p-4 space-y-2">
             <div class="flex items-center gap-2">
               <span class="text-sm font-medium text-gray-700">
                 {{ editingType === 'arg' ? t('mcpInstallations.userConfiguration.editModal.form.labels.argument') : t('mcpInstallations.userConfiguration.editModal.form.labels.variable') }}
@@ -586,6 +584,10 @@ const modalTitle = computed(() => {
               <Badge v-if="editingItem.required" variant="default" class="text-xs">
                 {{ t('mcpInstallations.userConfiguration.table.values.required') }}
               </Badge>
+            </div>
+            <div class="flex items-center gap-2">
+              <Monitor class="h-4 w-4 text-gray-600" />
+              <span class="text-sm text-gray-600">{{ editingDevice.device_name }}</span>
             </div>
             <div v-if="editingItem.description" class="text-sm text-gray-600">
               {{ editingItem.description }}
@@ -652,66 +654,6 @@ const modalTitle = computed(() => {
             </Button>
             <Button type="submit" :disabled="isSubmitting">
               {{ isSubmitting ? t('mcpInstallations.userConfiguration.editModal.form.buttons.saving') : t('mcpInstallations.userConfiguration.editModal.form.buttons.save') }}
-            </Button>
-          </AlertDialogFooter>
-        </form>
-      </AlertDialogContent>
-    </AlertDialog>
-
-    <!-- Create Configuration Modal -->
-    <AlertDialog :open="isCreateModalOpen" @update:open="(value) => isCreateModalOpen = value">
-      <AlertDialogContent class="sm:max-w-[425px]">
-        <AlertDialogHeader>
-          <AlertDialogTitle>{{ t('mcpInstallations.userConfiguration.createModal.title') }}</AlertDialogTitle>
-          <AlertDialogDescription>
-            {{ t('mcpInstallations.userConfiguration.createModal.description') }}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-
-        <form @submit.prevent="handleCreate" class="space-y-4">
-          <!-- General Error -->
-          <div v-if="formErrors.general" class="text-sm text-destructive">
-            {{ formErrors.general }}
-          </div>
-
-          <!-- Device Selection -->
-          <div class="space-y-2">
-            <Label for="device-select">{{ t('mcpInstallations.userConfiguration.createModal.form.labels.device') }}</Label>
-            <Select v-model="selectedDeviceId">
-              <SelectTrigger
-                id="device-select"
-                :class="{ 'border-destructive': formErrors.deviceId }"
-              >
-                <SelectValue :placeholder="isLoadingDevices ? t('mcpInstallations.userConfiguration.createModal.form.placeholders.loadingDevices') : t('mcpInstallations.userConfiguration.createModal.form.placeholders.selectDevice')" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem
-                  v-for="device in devices"
-                  :key="device.id"
-                  :value="device.id"
-                >
-                  <div class="flex items-center gap-2">
-                    <Monitor class="h-4 w-4 text-muted-foreground" />
-                    <span>{{ device.device_name }}</span>
-                    <span class="text-muted-foreground text-sm">({{ device.os_type }})</span>
-                  </div>
-                </SelectItem>
-              </SelectContent>
-            </Select>
-            <div v-if="formErrors.deviceId" class="text-sm text-destructive">
-              {{ formErrors.deviceId }}
-            </div>
-            <p class="text-xs text-gray-500">
-              {{ t('mcpInstallations.userConfiguration.createModal.form.help.device') }}
-            </p>
-          </div>
-
-          <AlertDialogFooter>
-            <Button type="button" variant="outline" @click="closeCreateModal">
-              {{ t('mcpInstallations.userConfiguration.createModal.form.buttons.cancel') }}
-            </Button>
-            <Button type="submit" :disabled="isSubmitting">
-              {{ isSubmitting ? t('mcpInstallations.userConfiguration.createModal.form.buttons.creating') : t('mcpInstallations.userConfiguration.createModal.form.buttons.create') }}
             </Button>
           </AlertDialogFooter>
         </form>

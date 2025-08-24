@@ -395,6 +395,11 @@ export default {
       description: 'Your personal configuration is set up and ready to use.'
     },
 
+    noDevices: {
+      title: 'No Devices Connected',
+      description: 'You cannot configure environment variables because no device is connected yet. After using the DeployStack CLI gateway login command, a device will be automatically created.'
+    },
+
     actions: {
       createConfiguration: 'Create Configuration'
     },
@@ -410,6 +415,14 @@ export default {
         description: 'Personal environment variables for your MCP server configuration',
         userConfigured: 'Configured'
       }
+    },
+
+    deviceTable: {
+      title: 'Device Configuration',
+      deviceName: 'Device Name',
+      value: 'Value', 
+      actions: 'Actions',
+      changeValue: 'Change Value'
     },
 
     table: {
@@ -438,6 +451,7 @@ export default {
     },
 
     editModal: {
+      title: 'Edit {item} for {device}',
       titleArg: 'Edit Argument {number}',
       titleEnv: 'Edit Environment Variable: {name}',
       description: 'Configure your personal value for this setting.',
