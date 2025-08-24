@@ -19878,7 +19878,7 @@
         "tags": [
           "MCP User Configurations"
         ],
-        "description": "Creates a new user-specific configuration for an MCP server installation. This allows individual users to customize arguments and environment variables for their personal use. Requires Content-Type: application/json header when sending request body. Supports both cookie-based authentication (for web users) and OAuth2 Bearer token authentication (for CLI users). Requires mcp:read scope for OAuth2 access.",
+        "description": "Creates a new user-specific configuration for an MCP server installation. This allows individual users to customize arguments and environment variables for their personal use. Requires Content-Type: application/json header when sending request body. Supports both cookie-based authentication (for web users) and OAuth2 Bearer token authentication (for CLI users).",
         "requestBody": {
           "content": {
             "application/json": {
@@ -21169,7 +21169,7 @@
         "tags": [
           "MCP User Configurations"
         ],
-        "description": "Updates the user-specific arguments for an MCP server installation configuration. Requires Content-Type: application/json header when sending request body. Supports both cookie-based authentication (for web users) and OAuth2 Bearer token authentication (for CLI users). Requires mcp:read scope for OAuth2 access.",
+        "description": "Updates the user-specific arguments for an MCP server installation configuration. Requires Content-Type: application/json header when sending request body. Supports both cookie-based authentication (for web users) and OAuth2 Bearer token authentication (for CLI users).",
         "requestBody": {
           "content": {
             "application/json": {
@@ -21457,7 +21457,7 @@
         "tags": [
           "MCP User Configurations"
         ],
-        "description": "Updates the user-specific environment variables for an MCP server installation configuration. Requires Content-Type: application/json header when sending request body. Supports both cookie-based authentication (for web users) and OAuth2 Bearer token authentication (for CLI users). Requires mcp:read scope for OAuth2 access.",
+        "description": "Updates the user-specific environment variables for an MCP server installation configuration. Requires Content-Type: application/json header when sending request body. Supports both cookie-based authentication (for web users) and OAuth2 Bearer token authentication (for CLI users).",
         "requestBody": {
           "content": {
             "application/json": {
@@ -23253,9 +23253,9 @@
               "type": "string"
             },
             "in": "query",
-            "name": "device_id",
+            "name": "hardware_id",
             "required": false,
-            "description": "Device ID to get device-specific user configurations"
+            "description": "Hardware ID to get device-specific user configurations"
           }
         ],
         "security": [
@@ -23350,7 +23350,7 @@
             }
           },
           "400": {
-            "description": "Bad Request - Invalid device_id or missing parameters",
+            "description": "Bad Request - Invalid hardware_id or missing parameters",
             "content": {
               "application/json": {
                 "schema": {
@@ -23370,7 +23370,7 @@
                     "error"
                   ],
                   "additionalProperties": false,
-                  "description": "Bad Request - Invalid device_id or missing parameters"
+                  "description": "Bad Request - Invalid hardware_id or missing parameters"
                 }
               }
             }

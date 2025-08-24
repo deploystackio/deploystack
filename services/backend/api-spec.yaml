@@ -13702,8 +13702,7 @@ paths:
         environment variables for their personal use. Requires Content-Type:
         application/json header when sending request body. Supports both
         cookie-based authentication (for web users) and OAuth2 Bearer token
-        authentication (for CLI users). Requires mcp:read scope for OAuth2
-        access."
+        authentication (for CLI users)."
       requestBody:
         content:
           application/json:
@@ -14604,8 +14603,7 @@ paths:
       description: "Updates the user-specific arguments for an MCP server installation
         configuration. Requires Content-Type: application/json header when
         sending request body. Supports both cookie-based authentication (for web
-        users) and OAuth2 Bearer token authentication (for CLI users). Requires
-        mcp:read scope for OAuth2 access."
+        users) and OAuth2 Bearer token authentication (for CLI users)."
       requestBody:
         content:
           application/json:
@@ -14808,7 +14806,7 @@ paths:
         installation configuration. Requires Content-Type: application/json
         header when sending request body. Supports both cookie-based
         authentication (for web users) and OAuth2 Bearer token authentication
-        (for CLI users). Requires mcp:read scope for OAuth2 access."
+        (for CLI users)."
       requestBody:
         content:
           application/json:
@@ -16067,9 +16065,9 @@ paths:
         - schema:
             type: string
           in: query
-          name: device_id
+          name: hardware_id
           required: false
-          description: Device ID to get device-specific user configurations
+          description: Hardware ID to get device-specific user configurations
       security:
         - cookieAuth: []
         - bearerAuth: []
@@ -16134,7 +16132,7 @@ paths:
                 additionalProperties: false
                 description: MCP configurations retrieved successfully
         "400":
-          description: Bad Request - Invalid device_id or missing parameters
+          description: Bad Request - Invalid hardware_id or missing parameters
           content:
             application/json:
               schema:
@@ -16150,7 +16148,7 @@ paths:
                   - success
                   - error
                 additionalProperties: false
-                description: Bad Request - Invalid device_id or missing parameters
+                description: Bad Request - Invalid hardware_id or missing parameters
         "401":
           description: Unauthorized
           content:
