@@ -64,7 +64,13 @@ export class ServerStartService {
       }
 
     } catch (error) {
-      throw new Error(`Failed to start gateway: ${error instanceof Error ? error.message : String(error)}`);
+      // Don't double-prefix the error message if it already contains "Failed to start gateway"
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes('Failed to start gateway')) {
+        throw new Error(errorMessage);
+      } else {
+        throw new Error(`Failed to start gateway: ${errorMessage}`);
+      }
     }
   }
 
@@ -86,9 +92,9 @@ export class ServerStartService {
     const stdoutLog = path.join(logDir, 'stdout.log');
     const stderrLog = path.join(logDir, 'stderr.log');
     
-    // Open log files
-    const stdout = fs.openSync(stdoutLog, 'a');
-    const stderr = fs.openSync(stderrLog, 'a');
+    // Clear and open log files (don't append to old logs)
+    const stdout = fs.openSync(stdoutLog, 'w');
+    const stderr = fs.openSync(stderrLog, 'w');
     
     // Spawn daemon process with logging
     const child = spawn(process.execPath, [scriptPath, ...args], {
@@ -149,7 +155,9 @@ export class ServerStartService {
         if (fs.existsSync(stderrLog)) {
           const stderrContent = fs.readFileSync(stderrLog, 'utf8').trim();
           if (stderrContent) {
-            errorDetails += `\nStderr: ${stderrContent.split('\n').slice(-5).join('\n')}`;
+            // The child process writes clean error messages to stderr
+            // Just use the error directly without "Stderr:" prefix
+            errorDetails = stderrContent;
           }
         }
         if (startupError) {

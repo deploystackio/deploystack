@@ -49,8 +49,16 @@ export function registerStartCommand(program: Command) {
         }
 
       } catch (error) {
-        console.error(chalk.red('❌ Failed to start gateway:'), error instanceof Error ? error.message : String(error));
-        process.exit(1);
+        // In daemon child process, write clean error to stderr without formatting
+        if (process.env.DEPLOYSTACK_DAEMON === 'true') {
+          // Write raw error message to stderr for parent process
+          process.stderr.write(error instanceof Error ? error.message : String(error));
+          process.exit(1);
+        } else {
+          // Normal interactive mode - show formatted error
+          console.error(chalk.red('❌ Failed to start gateway:'), error instanceof Error ? error.message : String(error));
+          process.exit(1);
+        }
       }
     });
 }

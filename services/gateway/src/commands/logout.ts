@@ -4,6 +4,7 @@ import ora from 'ora';
 import { CredentialStorage } from '../core/auth/storage';
 import { MCPConfigService } from '../core/mcp';
 import { AuthenticationError } from '../types/auth';
+import { ServerStopService } from '../services/server-stop-service';
 
 export function registerLogoutCommand(program: Command) {
   program
@@ -53,7 +54,28 @@ export function registerLogoutCommand(program: Command) {
           console.log(chalk.green(`✅ Successfully logged out ${userEmail}`));
         }
 
+        // Stop the gateway server if it's running
+        const stopService = new ServerStopService();
+        if (stopService.isServerRunning()) {
+          console.log(chalk.blue('🛑 Stopping gateway server...'));
+          spinner = ora('Stopping gateway server and MCP processes...').start();
+          
+          try {
+            const stopResult = await stopService.stopGatewayServer({ timeout: 15 });
+            if (stopResult.success && stopResult.wasRunning) {
+              spinner.succeed('Gateway server stopped');
+              console.log(chalk.gray('💡 All MCP servers have been stopped along with the gateway'));
+            } else {
+              spinner.succeed('Gateway server was not running');
+            }
+          } catch (error) {
+            spinner.warn('Failed to stop gateway server gracefully');
+            console.log(chalk.yellow(`⚠️  Gateway server may still be running: ${error instanceof Error ? error.message : String(error)}`));
+          }
+        }
+
         console.log(chalk.gray(`💡 Use 'deploystack login' to authenticate again`));
+        console.log(chalk.gray(`💡 Use 'deploystack start' to start the gateway server again`));
 
       } catch (error) {
         if (spinner) {
