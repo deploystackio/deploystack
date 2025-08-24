@@ -54,3 +54,27 @@ export interface InstallServerRequest {
   installation_type: 'local'
   user_environment_variables: Record<string, string>
 }
+
+export interface UserConfiguration {
+  id: string
+  installation_id: string
+  user_id: string
+  device_name?: string
+  user_args: string[]
+  user_env: Record<string, string>
+  created_at: string
+  updated_at: string
+  last_used_at?: string
+}
+
+export interface CreateUserConfigRequest {
+  device_name?: string
+  user_args: string[]
+  user_env: Record<string, string>
+}
+
+export interface UpdateUserConfigRequest {
+  device_name?: string
+  user_args: string[]
+  user_env: Record<string, string>
+}

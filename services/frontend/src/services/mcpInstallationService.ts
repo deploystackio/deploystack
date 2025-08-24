@@ -1,5 +1,11 @@
 import { getEnv } from '@/utils/env'
-import type { McpInstallation, InstallServerRequest } from '@/types/mcp-installations'
+import type { 
+  McpInstallation, 
+  InstallServerRequest, 
+  UserConfiguration,
+  CreateUserConfigRequest,
+  UpdateUserConfigRequest
+} from '@/types/mcp-installations'
 
 export class McpInstallationService {
   private static baseUrl = getEnv('VITE_DEPLOYSTACK_BACKEND_URL')
@@ -214,5 +220,145 @@ export class McpInstallationService {
 
     const data = await response.json()
     return data.data || data
+  }
+
+  // ==============================
+  // USER CONFIGURATION METHODS
+  // ==============================
+
+  /**
+   * Get all user configurations for an installation
+   */
+  static async getUserConfigurations(
+    teamId: string,
+    installationId: string
+  ): Promise<UserConfiguration[]> {
+    const response = await fetch(
+      `${this.baseUrl}/api/teams/${teamId}/mcp/installations/${installationId}/user-configs`,
+      {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
+    )
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.message || `Failed to get user configurations: ${response.status}`)
+    }
+
+    const data = await response.json()
+    return data.data || []
+  }
+
+  /**
+   * Get a specific user configuration by ID
+   */
+  static async getUserConfigurationById(
+    teamId: string,
+    installationId: string,
+    configId: string
+  ): Promise<UserConfiguration> {
+    const response = await fetch(
+      `${this.baseUrl}/api/teams/${teamId}/mcp/installations/${installationId}/user-configs/${configId}`,
+      {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
+    )
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.message || `Failed to get user configuration: ${response.status}`)
+    }
+
+    const data = await response.json()
+    return data.data
+  }
+
+  /**
+   * Create a new user configuration
+   */
+  static async createUserConfiguration(
+    teamId: string,
+    installationId: string,
+    configData: CreateUserConfigRequest
+  ): Promise<UserConfiguration> {
+    const response = await fetch(
+      `${this.baseUrl}/api/teams/${teamId}/mcp/installations/${installationId}/user-configs`,
+      {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(configData),
+      }
+    )
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.message || `Failed to create user configuration: ${response.status}`)
+    }
+
+    const data = await response.json()
+    return data.data
+  }
+
+  /**
+   * Update an existing user configuration
+   */
+  static async updateUserConfiguration(
+    teamId: string,
+    installationId: string,
+    configId: string,
+    configData: UpdateUserConfigRequest
+  ): Promise<UserConfiguration> {
+    const response = await fetch(
+      `${this.baseUrl}/api/teams/${teamId}/mcp/installations/${installationId}/user-configs/${configId}`,
+      {
+        method: 'PUT',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(configData),
+      }
+    )
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.message || `Failed to update user configuration: ${response.status}`)
+    }
+
+    const data = await response.json()
+    return data.data
+  }
+
+  /**
+   * Delete a user configuration
+   */
+  static async deleteUserConfiguration(
+    teamId: string,
+    installationId: string,
+    configId: string
+  ): Promise<void> {
+    const response = await fetch(
+      `${this.baseUrl}/api/teams/${teamId}/mcp/installations/${installationId}/user-configs/${configId}`,
+      {
+        method: 'DELETE',
+        credentials: 'include',
+      }
+    )
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.message || `Failed to delete user configuration: ${response.status}`)
+    }
   }
 }

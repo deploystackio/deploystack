@@ -385,6 +385,138 @@ export default {
     }
   },
 
+  userConfiguration: {
+    title: 'User Configuration',
+    description: 'Configure your personal settings for this MCP server installation.',
+    loading: 'Loading user configuration...',
+
+    status: {
+      configured: 'Configuration Active',
+      description: 'Your personal configuration is set up and ready to use.'
+    },
+
+    actions: {
+      createConfiguration: 'Create Configuration'
+    },
+
+    sections: {
+      userArgs: {
+        title: 'User Arguments',
+        description: 'Command line arguments for your personal configuration',
+        userConfigured: 'Configured'
+      },
+      userEnv: {
+        title: 'User Environment Variables',
+        description: 'Personal environment variables for your MCP server configuration',
+        userConfigured: 'Configured'
+      }
+    },
+
+    table: {
+      labels: {
+        required: 'Required:',
+        type: 'Type:',
+        description: 'Description:',
+        value: 'Value:',
+        status: 'Status:',
+        defaultType: 'string'
+      },
+      values: {
+        configuredIndividually: 'Configured individually by users',
+        argumentNumber: 'Argument {number}',
+        required: 'Required',
+        notSet: 'Not set'
+      },
+      actions: {
+        editValue: 'Edit Value'
+      }
+    },
+
+    noConfig: {
+      title: 'No Personal Configuration',
+      description: 'Create your personal configuration to customize this MCP server for your needs.'
+    },
+
+    editModal: {
+      titleArg: 'Edit Argument {number}',
+      titleEnv: 'Edit Environment Variable: {name}',
+      description: 'Configure your personal value for this setting.',
+
+      form: {
+        labels: {
+          argument: 'Argument:',
+          variable: 'Variable:',
+          userValue: 'Your Value'
+        },
+        placeholders: {
+          enterValue: 'Enter your value...'
+        },
+        buttons: {
+          cancel: 'Cancel',
+          save: 'Save Changes',
+          saving: 'Saving...'
+        },
+        actions: {
+          showValue: 'Show value',
+          hideValue: 'Hide value'
+        }
+      },
+
+      validation: {
+        required: 'This field is required'
+      },
+
+      errors: {
+        updateFailed: 'Failed to update configuration. Please try again.'
+      },
+
+      success: {
+        updated: 'Updated {item}',
+        description: 'Your configuration has been updated successfully'
+      }
+    },
+
+    createModal: {
+      title: 'Create Personal Configuration',
+      description: 'Set up your personal configuration for this MCP server.',
+
+      form: {
+        labels: {
+          deviceName: 'Device Name'
+        },
+        placeholders: {
+          deviceName: 'e.g., MacBook Pro, Work Laptop, Desktop PC'
+        },
+        buttons: {
+          cancel: 'Cancel',
+          create: 'Create Configuration',
+          creating: 'Creating...'
+        },
+        help: {
+          deviceName: 'Give this device a recognizable name to distinguish it from your other devices.'
+        }
+      },
+
+      validation: {
+        deviceNameRequired: 'Device name is required'
+      },
+
+      errors: {
+        createFailed: 'Failed to create configuration. Please try again.'
+      },
+
+      success: {
+        created: 'Personal configuration created successfully',
+        description: 'You can now customize your MCP server settings.'
+      }
+    },
+
+    emptyState: {
+      title: 'No User Configuration',
+      description: 'This MCP server doesn\'t have any user-configurable arguments or environment variables.'
+    }
+  },
+
   details: {
     installationDetails: {
       title: 'Installation Details',
