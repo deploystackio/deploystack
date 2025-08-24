@@ -1,6 +1,5 @@
 import { type FastifyInstance } from 'fastify';
 import { requireAuthenticationAny } from '../../../middleware/oauthMiddleware';
-import { requireTeamPermission } from '../../../middleware/roleMiddleware';
 import { McpUserConfigurationService } from '../../../services/mcpUserConfigurationService';
 import { getDb } from '../../../db';
 import {
@@ -22,13 +21,12 @@ export default async function createUserConfigRoute(server: FastifyInstance) {
     Body: CreateUserConfigRequest;
   }>('/teams/:teamId/mcp/installations/:installationId/user-configs', {
     preValidation: [
-      requireAuthenticationAny(),
-      requireTeamPermission('mcp.installations.edit')
+      requireAuthenticationAny()
     ],
     schema: {
       tags: ['MCP User Configurations'],
       summary: 'Create user configuration for MCP installation',
-      description: 'Creates a new user-specific configuration for an MCP server installation. This allows individual users to customize arguments and environment variables for their personal use. Requires Content-Type: application/json header when sending request body. Supports both cookie-based authentication (for web users) and OAuth2 Bearer token authentication (for CLI users). Requires mcp:read scope for OAuth2 access.',
+      description: 'Creates a new user-specific configuration for an MCP server installation. This allows individual users to customize arguments and environment variables for their personal use. Requires Content-Type: application/json header when sending request body. Supports both cookie-based authentication (for web users) and OAuth2 Bearer token authentication (for CLI users).',
       security: DUAL_AUTH_SECURITY,
       
       // Fastify validation schema

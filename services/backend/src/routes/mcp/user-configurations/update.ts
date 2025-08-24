@@ -1,6 +1,5 @@
 import { type FastifyInstance } from 'fastify';
-import { requireAuthenticationAny, requireOAuthScope } from '../../../middleware/oauthMiddleware';
-import { requireTeamPermission } from '../../../middleware/roleMiddleware';
+import { requireAuthenticationAny } from '../../../middleware/oauthMiddleware';
 import { McpUserConfigurationService } from '../../../services/mcpUserConfigurationService';
 import { getDb } from '../../../db';
 import {
@@ -16,9 +15,7 @@ export default async function updateUserConfigurationRoute(server: FastifyInstan
     '/teams/:teamId/mcp/installations/:installationId/user-configs/:configId',
     {
       preValidation: [
-        requireAuthenticationAny(),
-        requireOAuthScope('mcp:read'),
-        requireTeamPermission('mcp.installations.manage')
+        requireAuthenticationAny()
       ],
       schema: updateUserConfigurationSchema
     },
