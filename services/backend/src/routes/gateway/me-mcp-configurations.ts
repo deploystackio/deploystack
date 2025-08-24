@@ -2,7 +2,7 @@ import { type FastifyInstance } from 'fastify';
 import { requireAuthenticationAny, requireOAuthScope } from '../../middleware/oauthMiddleware';
 import { getDb } from '../../db';
 import { eq, and, inArray } from 'drizzle-orm';
-import { mcpServers, mcpServerInstallations, mcpUserConfigurations, teamMemberships } from '../../db/schema.sqlite';
+import { mcpServers, mcpServerInstallations, mcpUserConfigurations, teamMemberships, devices } from '../../db/schema.sqlite';
 
 // Response schemas
 const GATEWAY_MCP_SERVER_SCHEMA = {
@@ -63,7 +63,7 @@ const ERROR_RESPONSE_SCHEMA = {
 
 // TypeScript interfaces
 interface QueryParams {
-  device_id?: string;
+  hardware_id?: string;
 }
 
 interface GatewayMcpServer {
@@ -104,9 +104,9 @@ export default async function gatewayMeMcpConfigurationsRoute(server: FastifyIns
       querystring: {
         type: 'object',
         properties: {
-          device_id: {
+          hardware_id: {
             type: 'string',
-            description: 'Device ID to get device-specific user configurations'
+            description: 'Hardware ID to get device-specific user configurations'
           }
         },
         additionalProperties: false
@@ -118,7 +118,7 @@ export default async function gatewayMeMcpConfigurationsRoute(server: FastifyIns
         },
         400: {
           ...ERROR_RESPONSE_SCHEMA,
-          description: 'Bad Request - Invalid device_id or missing parameters'
+          description: 'Bad Request - Invalid hardware_id or missing parameters'
         },
         401: {
           ...ERROR_RESPONSE_SCHEMA,
@@ -137,13 +137,13 @@ export default async function gatewayMeMcpConfigurationsRoute(server: FastifyIns
   }, async (request, reply) => {
     const userId = request.user!.id;
     const query = request.query as QueryParams;
-    const deviceId = query.device_id;
+    const hardwareId = query.hardware_id;
     const authType = request.tokenPayload ? 'oauth2' : 'cookie';
 
     request.log.debug({
       operation: 'gateway_mcp_configurations',
       userId,
-      deviceId,
+      hardwareId,
       authType,
       clientId: request.tokenPayload?.clientId,
       scope: request.tokenPayload?.scope,
@@ -153,12 +153,43 @@ export default async function gatewayMeMcpConfigurationsRoute(server: FastifyIns
     request.log.info({
       operation: 'get_gateway_mcp_configurations',
       userId,
-      deviceId,
+      hardwareId,
       authType
     }, 'Getting merged MCP configurations for gateway');
 
     try {
       const db = getDb();
+
+      // Find device by hardware_id if provided
+      let deviceId: string | null = null;
+      if (hardwareId) {
+        const deviceResults = await db
+          .select({ id: devices.id })
+          .from(devices)
+          .where(
+            and(
+              eq(devices.user_id, userId),
+              eq(devices.hardware_id, hardwareId)
+            )
+          )
+          .limit(1);
+
+        if (deviceResults.length > 0) {
+          deviceId = deviceResults[0].id;
+          request.log.debug({
+            operation: 'get_gateway_mcp_configurations',
+            userId,
+            hardwareId,
+            deviceId
+          }, 'Found device by hardware_id');
+        } else {
+          request.log.warn({
+            operation: 'get_gateway_mcp_configurations',
+            userId,
+            hardwareId
+          }, 'No device found for hardware_id');
+        }
+      }
 
       // Get user's teams
       const userTeams = await db
@@ -347,6 +378,7 @@ export default async function gatewayMeMcpConfigurationsRoute(server: FastifyIns
               configStatus = 'invalid';
               request.log.warn({
                 serverId: server.id,
+                hardwareId,
                 deviceId
               }, 'User configuration required but not found');
             }
@@ -382,6 +414,7 @@ export default async function gatewayMeMcpConfigurationsRoute(server: FastifyIns
       request.log.info({
         operation: 'get_gateway_mcp_configurations',
         userId,
+        hardwareId,
         deviceId,
         authType,
         serversCount: servers.length,
@@ -403,7 +436,7 @@ export default async function gatewayMeMcpConfigurationsRoute(server: FastifyIns
         operation: 'get_gateway_mcp_configurations',
         error,
         userId,
-        deviceId
+        hardwareId
       }, 'Failed to retrieve gateway MCP configurations');
 
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
