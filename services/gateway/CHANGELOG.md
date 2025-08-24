@@ -1,5 +1,33 @@
 # Changelog
 
+## <small>0.8.1 (2025-08-24)</small>
+
+* chore(backend): release v0.30.0 ([74dc303](https://github.com/deploystackio/deploystack/commit/74dc303))
+* chore(backend): release v0.30.1 ([96d27a4](https://github.com/deploystackio/deploystack/commit/96d27a4))
+* chore(frontend): release v0.24.0 ([c001de7](https://github.com/deploystackio/deploystack/commit/c001de7))
+* chore(frontend): release v0.24.1 ([a7a51fe](https://github.com/deploystackio/deploystack/commit/a7a51fe))
+* chore(gateway): release v0.8.0 ([1b4931f](https://github.com/deploystackio/deploystack/commit/1b4931f))
+* feat(backend): implement CRUD operations for user devices ([74550da](https://github.com/deploystackio/deploystack/commit/74550da))
+* feat(backend): rename device_name to device_id in API specifications ([f66d3d6](https://github.com/deploystackio/deploystack/commit/f66d3d6))
+* feat(frontend): add success and error toasts for user configuration updates ([b021ddb](https://github.com/deploystackio/deploystack/commit/b021ddb))
+* feat(frontend): add user arguments and configuration sections ([43a5fab](https://github.com/deploystackio/deploystack/commit/43a5fab))
+* feat(frontend): add user configuration management to MCP server installation ([a709a37](https://github.com/deploystackio/deploystack/commit/a709a37))
+* feat(frontend): enhance device detail view with i18n support ([41987b5](https://github.com/deploystackio/deploystack/commit/41987b5))
+* feat(frontend): ensure fresh data loading in edit mode ([45bd18b](https://github.com/deploystackio/deploystack/commit/45bd18b))
+* feat(frontend): replace device_name with device_id in user configuration ([54bf418](https://github.com/deploystackio/deploystack/commit/54bf418))
+* feat(frontend): update argument field labels and placeholders ([c4aa090](https://github.com/deploystackio/deploystack/commit/c4aa090))
+* feat(gateway): add endpoint to retrieve merged MCP configurations ([d13cd98](https://github.com/deploystackio/deploystack/commit/d13cd98))
+* feat(gateway): implement device detection and new MCP config endpoint ([e5367c3](https://github.com/deploystackio/deploystack/commit/e5367c3))
+* feat(gateway): implement graceful and forceful server stop functionality ([bf6cbe1](https://github.com/deploystackio/deploystack/commit/bf6cbe1))
+* refactor(backend): improve user configuration validation logic ([468967d](https://github.com/deploystackio/deploystack/commit/468967d))
+* refactor(backend): remove unnecessary permissions from user config routes ([b476825](https://github.com/deploystackio/deploystack/commit/b476825))
+* refactor(backend): rename device_id to hardware_id in configurations ([12be78b](https://github.com/deploystackio/deploystack/commit/12be78b))
+* refactor(frontend): improve user configuration display and structure ([e79efc0](https://github.com/deploystackio/deploystack/commit/e79efc0))
+* refactor(frontend): separate user args and env in user configuration ([5616f7f](https://github.com/deploystackio/deploystack/commit/5616f7f))
+* refactor(gateway): streamline device registration during OAuth2 flow ([55c38c0](https://github.com/deploystackio/deploystack/commit/55c38c0))
+* fix(backend): change device removal to hard delete from database ([1335efb](https://github.com/deploystackio/deploystack/commit/1335efb))
+* fix(backend): Refactor MCP User Configuration API to use object for user_args ([fa14c5a](https://github.com/deploystackio/deploystack/commit/fa14c5a))
+
 ## 0.8.0 (2025-08-24)
 
 * feat(backend): implement CRUD operations for user devices ([74550da](https://github.com/deploystackio/deploystack/commit/74550da))
