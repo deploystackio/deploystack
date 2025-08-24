@@ -274,17 +274,11 @@ export class DeviceService {
   }
 
   /**
-   * Remove device (soft delete by marking inactive)
+   * Remove device (hard delete)
    */
   async removeDevice(deviceId: string, userId: string): Promise<void> {
-    const now = new Date();
-
     const result = await this.db
-      .update(devices)
-      .set({
-        is_active: false,
-        updated_at: now,
-      })
+      .delete(devices)
       .where(and(
         eq(devices.id, deviceId),
         eq(devices.user_id, userId)
