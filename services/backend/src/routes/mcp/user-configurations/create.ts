@@ -23,7 +23,6 @@ export default async function createUserConfigRoute(server: FastifyInstance) {
   }>('/teams/:teamId/mcp/installations/:installationId/user-configs', {
     preValidation: [
       requireAuthenticationAny(),
-      requireOAuthScope('mcp:read'),
       requireTeamPermission('mcp.installations.edit')
     ],
     schema: {

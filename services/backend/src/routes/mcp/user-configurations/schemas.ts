@@ -390,13 +390,30 @@ export interface UpdateUserEnvRouteRequest {
 // Helper function to format user config response
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function formatUserConfigResponse(config: any): UserConfigData {
+  // Helper to safely handle JSON parsing - config might already be parsed by service layer
+  const safeJsonParse = (value: any, defaultValue: any) => {
+    if (value === null || value === undefined || value === '') {
+      return defaultValue
+    }
+    // If it's already parsed (object/array), return as-is
+    if (typeof value !== 'string') {
+      return value
+    }
+    // If it's a string, try to parse it
+    try {
+      return JSON.parse(value)
+    } catch {
+      return defaultValue
+    }
+  }
+
   return {
     id: config.id,
     installation_id: config.installation_id,
     user_id: config.user_id,
     device_id: config.device_id || undefined,
-    user_args: config.user_args ? JSON.parse(config.user_args) : undefined,
-    user_env: config.user_env ? JSON.parse(config.user_env) : undefined,
+    user_args: safeJsonParse(config.user_args, undefined),
+    user_env: safeJsonParse(config.user_env, undefined),
     created_at: config.created_at.toISOString(),
     updated_at: config.updated_at.toISOString(),
     last_used_at: config.last_used_at ? config.last_used_at.toISOString() : undefined

@@ -41,7 +41,11 @@ export default async function updateUserConfigurationRoute(fastify: FastifyInsta
       } catch (error) {
         fastify.log.error({
           operation: 'update_user_configuration',
-          error,
+          error: error instanceof Error ? {
+            name: error.name,
+            message: error.message,
+            stack: error.stack
+          } : { errorType: typeof error, errorValue: error },
           teamId,
           installationId,
           configId,
@@ -66,7 +70,7 @@ export default async function updateUserConfigurationRoute(fastify: FastifyInsta
         }
 
         return reply.status(500).send({
-          error: 'Internal server error'
+          error: error instanceof Error ? error.message : 'Internal server error'
         });
       }
     }

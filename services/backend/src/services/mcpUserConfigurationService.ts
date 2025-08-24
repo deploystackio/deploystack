@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, ne } from 'drizzle-orm';
 import { mcpUserConfigurations, mcpServerInstallations, mcpServers } from '../db/schema.sqlite';
 import type { AnyDatabase } from '../db';
 import type { FastifyBaseLogger } from 'fastify';
@@ -321,7 +321,7 @@ export class McpUserConfigurationService {
             eq(mcpUserConfigurations.user_id, userId),
             eq(mcpUserConfigurations.device_id, data.device_id),
             // Exclude current configuration
-            eq(mcpUserConfigurations.id, configId)
+            ne(mcpUserConfigurations.id, configId)
           )
         )
         .limit(1);
@@ -452,12 +452,20 @@ export class McpUserConfigurationService {
 
   private validateUserEnv(userEnv: Record<string, string>, schema: any[]): void {
     // Validate user environment variables against schema
-    const requiredVars = schema.filter((envVar: any) => envVar.required);
-    
-    for (const requiredVar of requiredVars) {
-      if (!userEnv[requiredVar.name] || userEnv[requiredVar.name].trim() === '') {
-        throw new Error(`Required environment variable '${requiredVar.name}' is missing or empty`);
+    // Only validate the fields that are actually being sent, not all required fields
+    for (const [envVarName, envVarValue] of Object.entries(userEnv)) {
+      const schemaEntry = schema.find((envVar: any) => envVar.name === envVarName)
+      
+      if (schemaEntry) {
+        // If this field is required and the sent value is empty, throw error
+        if (schemaEntry.required && (!envVarValue || envVarValue.trim() === '')) {
+          throw new Error(`Required environment variable '${envVarName}' is missing or empty`)
+        }
+        
+        // Additional type validation can be added here in the future
+        // e.g., if (schemaEntry.type === 'number' && isNaN(Number(envVarValue)))
       }
+      // Note: We don't validate fields that aren't in the schema - allowing flexibility
     }
   }
 
