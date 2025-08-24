@@ -103,7 +103,7 @@ onMounted(async () => {
 
     // Load user configurations
     await loadUserConfigurations()
-    
+
     // Load user devices
     await loadUserDevices()
   } catch (error) {
@@ -170,7 +170,7 @@ const currentUserEnv = computed(() => {
 const userArgsWithData = computed(() => {
   return userArgsSchema.value.map((argSchema: any) => ({
     ...argSchema,
-    currentValue: currentUserEnv.value[argSchema.name] || ''
+    currentValue: currentUserArgs.value[argSchema.name] || ''
   }))
 })
 
@@ -201,9 +201,13 @@ const hasDevices = computed(() => {
 const getDeviceValue = (item: any, deviceId: string, type: 'arg' | 'env') => {
   const userConfig = userConfigurations.value.find(config => config.device_id === deviceId)
   if (!userConfig) return ''
-  
-  // Both args and env are stored in user_env (args are named env vars)
-  return userConfig.user_env?.[item.name] || ''
+
+  // Args and env are now properly separated
+  if (type === 'arg') {
+    return userConfig.user_args?.[item.name] || ''
+  } else {
+    return userConfig.user_env?.[item.name] || ''
+  }
 }
 
 // Modal functions
@@ -257,22 +261,22 @@ const validateForm = () => {
 
 const handleEdit = async () => {
   if (!validateForm()) return
-  
+
   isSubmitting.value = true
-  
+
   try {
     // Find existing user config for this device
     let userConfig = userConfigurations.value.find(config => config.device_id === editingDevice.value.id)
-    
+
     if (!userConfig) {
       // Create new user configuration for this device with only the specific field
       const createData: any = {
         device_id: editingDevice.value.id
       }
-      
+
       if (editingType.value === 'arg') {
-        // Create env object with the named argument (args are actually env vars)
-        createData.user_env = {
+        // Create args object with the named argument mapping
+        createData.user_args = {
           [editingItem.value.name]: editingValue.value
         }
       } else {
@@ -281,32 +285,32 @@ const handleEdit = async () => {
           [editingItem.value.name]: editingValue.value
         }
       }
-      
+
       userConfig = await McpInstallationService.createUserConfiguration(
         props.teamId,
         props.installation.id,
         createData
       )
-      
+
       userConfigurations.value.push(userConfig)
     } else {
       // Update existing configuration with only the specific field
       const updateData: any = {
         device_id: editingDevice.value.id
       }
-      
+
       if (editingType.value === 'arg') {
-        // Update only the env vars object (args are actually env vars)
-        const updatedEnv = { ...(userConfig.user_env || {}) }
-        updatedEnv[editingItem.value.name] = editingValue.value
-        updateData.user_env = updatedEnv
+        // Update only the args object
+        const updatedArgs = { ...(userConfig.user_args || {}) }
+        updatedArgs[editingItem.value.name] = editingValue.value
+        updateData.user_args = updatedArgs
       } else {
         // Update only the env vars object
         const updatedEnv = { ...(userConfig.user_env || {}) }
         updatedEnv[editingItem.value.name] = editingValue.value
         updateData.user_env = updatedEnv
       }
-      
+
       // Update the configuration
       const updatedConfig = await McpInstallationService.updateUserConfiguration(
         props.teamId,
@@ -314,18 +318,18 @@ const handleEdit = async () => {
         userConfig.id,
         updateData
       )
-      
+
       // Update local state
       const configIndex = userConfigurations.value.findIndex(c => c.id === userConfig!.id)
       if (configIndex >= 0) {
         userConfigurations.value[configIndex] = updatedConfig
       }
-      
+
       userConfig = updatedConfig
     }
-    
+
     emit('configuration-updated', userConfig)
-    
+
     // Show success toast
     toast.success(t('mcpInstallations.userConfiguration.editModal.messages.saveSuccess'), {
       description: t('mcpInstallations.userConfiguration.editModal.messages.saveSuccessDescription', {
@@ -333,16 +337,16 @@ const handleEdit = async () => {
         device: editingDevice.value.device_name
       })
     })
-    
+
     closeEditModal()
   } catch (error) {
     console.error('Error updating user configuration:', error)
-    
+
     // Show error toast
     toast.error(t('mcpInstallations.userConfiguration.editModal.messages.saveError'), {
       description: error instanceof Error ? error.message : t('mcpInstallations.userConfiguration.editModal.messages.saveErrorDescription')
     })
-    
+
     formErrors.value.general = error instanceof Error ? error.message : 'Failed to update configuration'
   } finally {
     isSubmitting.value = false
@@ -351,12 +355,12 @@ const handleEdit = async () => {
 
 const modalTitle = computed(() => {
   if (!editingItem.value || !editingDevice.value) return ''
-  
+
   const itemName = editingItem.value.name
-    
-  return t('mcpInstallations.userConfiguration.editModal.title', { 
-    item: itemName, 
-    device: editingDevice.value.device_name 
+
+  return t('mcpInstallations.userConfiguration.editModal.title', {
+    item: itemName,
+    device: editingDevice.value.device_name
   })
 })
 </script>
@@ -432,7 +436,7 @@ const modalTitle = computed(() => {
                   </div>
                 </div>
               </div>
-              
+
               <!-- Device-specific values table -->
               <div v-if="hasDevices" class="w-full">
                 <h5 class="text-xs font-medium text-gray-800 mb-2">{{ t('mcpInstallations.userConfiguration.deviceTable.title') }}</h5>
@@ -457,9 +461,9 @@ const modalTitle = computed(() => {
                           {{ getDeviceValue(arg, device.id, 'arg') || t('mcpInstallations.userConfiguration.table.values.notSet') }}
                         </TableCell>
                         <TableCell>
-                          <Button 
-                            size="sm" 
-                            variant="outline" 
+                          <Button
+                            size="sm"
+                            variant="outline"
                             class="h-7 text-xs"
                             @click="openEditModal(arg, device, 'arg')"
                           >
@@ -519,7 +523,7 @@ const modalTitle = computed(() => {
                   </div>
                 </div>
               </div>
-              
+
               <!-- Device-specific values table -->
               <div v-if="hasDevices" class="w-full">
                 <h5 class="text-xs font-medium text-gray-800 mb-2">{{ t('mcpInstallations.userConfiguration.deviceTable.title') }}</h5>
@@ -549,9 +553,9 @@ const modalTitle = computed(() => {
                           </span>
                         </TableCell>
                         <TableCell>
-                          <Button 
-                            size="sm" 
-                            variant="outline" 
+                          <Button
+                            size="sm"
+                            variant="outline"
                             class="h-7 text-xs"
                             @click="openEditModal(envVar, device, 'env')"
                           >
@@ -671,8 +675,8 @@ const modalTitle = computed(() => {
             <Button type="button" variant="outline" @click="closeEditModal">
               {{ t('mcpInstallations.userConfiguration.editModal.form.buttons.cancel') }}
             </Button>
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               :loading="isSubmitting"
               :loadingText="t('mcpInstallations.userConfiguration.editModal.form.buttons.saving')"
             >
