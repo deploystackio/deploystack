@@ -66,7 +66,7 @@ export default async function createUserConfigRoute(server: FastifyInstance) {
       installationId,
       userId,
       authType,
-      deviceName: configData.device_name,
+      deviceId: configData.device_id,
       hasArgs: !!configData.user_args,
       hasEnv: !!configData.user_env
     }, 'Creating MCP user configuration');

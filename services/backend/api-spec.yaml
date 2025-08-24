@@ -13710,9 +13710,9 @@ paths:
             schema:
               type: object
               properties:
-                device_name:
+                device_id:
                   type: string
-                  description: Optional device name (e.g., "MacBook Pro", "Work PC")
+                  description: Optional device ID for device-specific configuration
                 user_args:
                   type: array
                   items:
@@ -13765,9 +13765,9 @@ paths:
                       user_id:
                         type: string
                         description: User ID
-                      device_name:
+                      device_id:
                         type: string
-                        description: Device name
+                        description: Device ID
                       user_args:
                         type: array
                         items:
@@ -13947,9 +13947,9 @@ paths:
                         user_id:
                           type: string
                           description: User ID
-                        device_name:
+                        device_id:
                           type: string
-                          description: Device name
+                          description: Device ID
                         user_args:
                           type: array
                           items:
@@ -14135,9 +14135,9 @@ paths:
                       user_id:
                         type: string
                         description: User ID
-                      device_name:
+                      device_id:
                         type: string
-                        description: Device name
+                        description: Device ID
                       user_args:
                         type: array
                         items:
@@ -14272,9 +14272,9 @@ paths:
             schema:
               type: object
               properties:
-                device_name:
+                device_id:
                   type: string
-                  description: Optional device name (e.g., "MacBook Pro", "Work PC")
+                  description: Optional device ID for device-specific configuration
                 user_args:
                   type: array
                   items:
@@ -14334,9 +14334,9 @@ paths:
                       user_id:
                         type: string
                         description: User ID
-                      device_name:
+                      device_id:
                         type: string
-                        description: Device name
+                        description: Device ID
                       user_args:
                         type: array
                         items:
@@ -14663,9 +14663,9 @@ paths:
                       user_id:
                         type: string
                         description: User ID
-                      device_name:
+                      device_id:
                         type: string
-                        description: Device name
+                        description: Device ID
                       user_args:
                         type: array
                         items:
@@ -14858,9 +14858,9 @@ paths:
                       user_id:
                         type: string
                         description: User ID
-                      device_name:
+                      device_id:
                         type: string
-                        description: Device name
+                        description: Device ID
                       user_args:
                         type: array
                         items:

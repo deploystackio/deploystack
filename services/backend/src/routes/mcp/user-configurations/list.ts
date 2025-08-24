@@ -83,7 +83,17 @@ export default async function listUserConfigsRoute(server: FastifyInstance) {
 
       const successResponse: UserConfigListResponse = {
         success: true,
-        data: userConfigs.map(formatUserConfigResponse),
+        data: userConfigs.map(config => ({
+          id: config.id,
+          installation_id: config.installation_id,
+          user_id: config.user_id,
+          device_id: config.device_id,
+          user_args: config.user_args,
+          user_env: config.user_env,
+          created_at: config.created_at.toISOString(),
+          updated_at: config.updated_at.toISOString(),
+          last_used_at: config.last_used_at ? config.last_used_at.toISOString() : undefined
+        })),
         message: `Retrieved ${userConfigs.length} user configuration(s)`
       };
       const jsonString = JSON.stringify(successResponse);

@@ -44,9 +44,9 @@ export const TEAM_AND_INSTALLATION_PARAMS_SCHEMA = {
 export const CREATE_USER_CONFIG_REQUEST_SCHEMA = {
   type: 'object',
   properties: {
-    device_name: {
+    device_id: {
       type: 'string',
-      description: 'Optional device name (e.g., "MacBook Pro", "Work PC")'
+      description: 'Optional device ID for device-specific configuration'
     },
     user_args: {
       type: 'array',
@@ -65,9 +65,9 @@ export const CREATE_USER_CONFIG_REQUEST_SCHEMA = {
 export const UPDATE_USER_CONFIG_REQUEST_SCHEMA = {
   type: 'object',
   properties: {
-    device_name: {
+    device_id: {
       type: 'string',
-      description: 'Optional device name (e.g., "MacBook Pro", "Work PC")'
+      description: 'Optional device ID for device-specific configuration'
     },
     user_args: {
       type: 'array',
@@ -116,7 +116,7 @@ export const USER_CONFIG_RESPONSE_SCHEMA = {
     id: { type: 'string', description: 'User configuration ID' },
     installation_id: { type: 'string', description: 'Installation ID' },
     user_id: { type: 'string', description: 'User ID' },
-    device_name: { type: 'string', description: 'Device name' },
+    device_id: { type: 'string', description: 'Device ID' },
     user_args: {
       type: 'array',
       items: { type: 'string' },
@@ -224,13 +224,13 @@ export interface TeamAndInstallationParams {
 }
 
 export interface CreateUserConfigRequest {
-  device_name?: string;
+  device_id?: string;
   user_args?: string[];
   user_env?: Record<string, string>;
 }
 
 export interface UpdateUserConfigRequest {
-  device_name?: string;
+  device_id?: string;
   user_args?: string[];
   user_env?: Record<string, string>;
 }
@@ -247,7 +247,7 @@ export interface UserConfigData {
   id: string;
   installation_id: string;
   user_id: string;
-  device_name?: string;
+  device_id?: string;
   user_args?: string[];
   user_env?: Record<string, string>;
   created_at: string;
@@ -394,7 +394,7 @@ export function formatUserConfigResponse(config: any): UserConfigData {
     id: config.id,
     installation_id: config.installation_id,
     user_id: config.user_id,
-    device_name: config.device_name || undefined,
+    device_id: config.device_id || undefined,
     user_args: config.user_args ? JSON.parse(config.user_args) : undefined,
     user_env: config.user_env ? JSON.parse(config.user_env) : undefined,
     created_at: config.created_at.toISOString(),

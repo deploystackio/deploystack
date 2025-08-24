@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { eq, and, desc } from 'drizzle-orm';
-import { mcpUserConfigurations, mcpServerInstallations, mcpServers } from '../db/schema.sqlite';
+import { mcpUserConfigurations, mcpServerInstallations, mcpServers, authUser } from '../db/schema.sqlite';
 import type { AnyDatabase } from '../db';
 import type { FastifyBaseLogger } from 'fastify';
 import { nanoid } from 'nanoid';
@@ -237,16 +237,81 @@ export class McpUserConfigurationService {
       }
     }
 
-    // Validate user args and env against server schema
+    // Get user information for auto-populating environment variables
+    const userInfo = await this.db
+      .select({
+        username: authUser.username,
+        email: authUser.email
+      })
+      .from(authUser)
+      .where(eq(authUser.id, userId))
+      .limit(1);
+
+    const user = userInfo[0];
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    // Auto-populate required environment variables based on server schema
     const serverInfo = installation[0].server;
+    let processedUserEnv = data.user_env ? { ...data.user_env } : {};
+    
+    this.logger.debug({
+      operation: 'create_user_configuration_debug',
+      originalUserEnv: data.user_env,
+      processedUserEnv,
+      serverInfo: serverInfo ? 'present' : 'missing',
+      userInfo: { username: user.username, email: user.email }
+    }, 'Debug: Starting environment variable processing');
+    
     if (serverInfo) {
+      const envSchema = this.parseJsonField(serverInfo.user_env_schema, []);
+      
+      this.logger.debug({
+        operation: 'env_schema_debug',
+        envSchema
+      }, 'Debug: Environment schema parsed');
+      
+      // Auto-populate required environment variables
+      envSchema.forEach((envVar: any) => {
+        this.logger.debug({
+          operation: 'env_var_check',
+          envVarName: envVar.name,
+          required: envVar.required,
+          currentValue: processedUserEnv[envVar.name],
+          hasCurrentValue: !!processedUserEnv[envVar.name]
+        }, 'Debug: Checking environment variable');
+        
+        if (envVar.required && !processedUserEnv[envVar.name]) {
+          // Auto-populate based on variable name and description
+          if (envVar.name === 'from_user') {
+            // Use username or email for from_user field
+            processedUserEnv[envVar.name] = user.username || user.email;
+            this.logger.info({
+              operation: 'auto_populate_env_var',
+              envVarName: envVar.name,
+              value: processedUserEnv[envVar.name]
+            }, 'Auto-populated required environment variable');
+          }
+        }
+      });
+
+      this.logger.debug({
+        operation: 'final_env_debug',
+        processedUserEnv
+      }, 'Debug: Final processed environment variables');
+
+      // Validate user args and env against server schema
       if (data.user_args) {
         this.validateUserArgs(data.user_args, this.parseJsonField(serverInfo.user_args_schema, []));
       }
-      if (data.user_env) {
-        this.validateUserEnv(data.user_env, this.parseJsonField(serverInfo.user_env_schema, []));
+      if (processedUserEnv) {
+        this.validateUserEnv(processedUserEnv, envSchema);
       }
     }
+
+    // Update data with processed environment variables
+    data.user_env = processedUserEnv;
 
     const configId = nanoid();
     const now = new Date();
@@ -462,19 +527,31 @@ export class McpUserConfigurationService {
   }
 
   private parseJsonField(fieldValue: any, defaultValue: any): any {
-    if (!fieldValue || fieldValue === '' || fieldValue.trim() === '') {
+    // Handle null, undefined, or empty values
+    if (fieldValue === null || fieldValue === undefined || fieldValue === '') {
       return defaultValue;
     }
+    
+    // If it's already an object/array, return as-is
     if (typeof fieldValue !== 'string') {
       return fieldValue;
     }
+    
+    // Handle empty string after trimming
+    if (fieldValue.trim() === '') {
+      return defaultValue;
+    }
+    
     try {
-      return JSON.parse(fieldValue);
+      const parsed = JSON.parse(fieldValue);
+      return parsed;
     } catch (e) {
       this.logger.warn({
-        field: 'json_field',
+        operation: 'parse_json_field_error',
         fieldValue,
-        error: e
+        fieldType: typeof fieldValue,
+        fieldLength: fieldValue?.length,
+        error: e instanceof Error ? e.message : String(e)
       }, 'Failed to parse JSON field, using default value');
       return defaultValue;
     }
