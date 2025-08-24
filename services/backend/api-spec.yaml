@@ -13714,10 +13714,10 @@ paths:
                   type: string
                   description: Optional device ID for device-specific configuration
                 user_args:
-                  type: array
-                  items:
+                  type: object
+                  additionalProperties:
                     type: string
-                  description: User-specific command line arguments
+                  description: User argument mappings (placeholder -> actual value)
                 user_env:
                   type: object
                   additionalProperties:
@@ -13769,10 +13769,10 @@ paths:
                         type: string
                         description: Device ID
                       user_args:
-                        type: array
-                        items:
+                        type: object
+                        additionalProperties:
                           type: string
-                        description: User-specific command line arguments
+                        description: User argument mappings (placeholder -> actual value)
                       user_env:
                         type: object
                         additionalProperties:
@@ -13924,7 +13924,7 @@ paths:
         - bearerAuth: []
       responses:
         "200":
-          description: User configurations retrieved successfully
+          description: Default Response
           content:
             application/json:
               schema:
@@ -13951,10 +13951,10 @@ paths:
                           type: string
                           description: Device ID
                         user_args:
-                          type: array
-                          items:
+                          type: object
+                          additionalProperties:
                             type: string
-                          description: User-specific command line arguments
+                          description: User argument mappings (placeholder -> actual value)
                         user_env:
                           type: object
                           additionalProperties:
@@ -13986,7 +13986,6 @@ paths:
                   - success
                   - data
                 additionalProperties: false
-                description: User configurations retrieved successfully
         "400":
           description: Bad Request
           content:
@@ -14114,7 +14113,7 @@ paths:
         - bearerAuth: []
       responses:
         "200":
-          description: User configuration retrieved successfully
+          description: Default Response
           content:
             application/json:
               schema:
@@ -14139,10 +14138,10 @@ paths:
                         type: string
                         description: Device ID
                       user_args:
-                        type: array
-                        items:
+                        type: object
+                        additionalProperties:
                           type: string
-                        description: User-specific command line arguments
+                        description: User argument mappings (placeholder -> actual value)
                       user_env:
                         type: object
                         additionalProperties:
@@ -14174,7 +14173,6 @@ paths:
                   - success
                   - data
                 additionalProperties: false
-                description: User configuration retrieved successfully
         "400":
           description: Bad Request
           content:
@@ -14276,10 +14274,10 @@ paths:
                   type: string
                   description: Optional device ID for device-specific configuration
                 user_args:
-                  type: array
-                  items:
+                  type: object
+                  additionalProperties:
                     type: string
-                  description: User-specific command line arguments
+                  description: User argument mappings (placeholder -> actual value)
                 user_env:
                   type: object
                   additionalProperties:
@@ -14338,10 +14336,10 @@ paths:
                         type: string
                         description: Device ID
                       user_args:
-                        type: array
-                        items:
+                        type: object
+                        additionalProperties:
                           type: string
-                        description: User-specific command line arguments
+                        description: User argument mappings (placeholder -> actual value)
                       user_env:
                         type: object
                         additionalProperties:
@@ -14600,6 +14598,14 @@ paths:
                 description: Internal Server Error
   /api/teams/{teamId}/mcp/installations/{installationId}/user-configs/{configId}/args:
     patch:
+      summary: Update user configuration arguments
+      tags:
+        - MCP User Configurations
+      description: "Updates the user-specific arguments for an MCP server installation
+        configuration. Requires Content-Type: application/json header when
+        sending request body. Supports both cookie-based authentication (for web
+        users) and OAuth2 Bearer token authentication (for CLI users). Requires
+        mcp:read scope for OAuth2 access."
       requestBody:
         content:
           application/json:
@@ -14607,10 +14613,10 @@ paths:
               type: object
               properties:
                 args:
-                  type: array
-                  items:
+                  type: object
+                  additionalProperties:
                     type: string
-                  description: User-specific command line arguments
+                  description: User argument mappings (placeholder -> actual value)
               required:
                 - args
               additionalProperties: false
@@ -14667,10 +14673,10 @@ paths:
                         type: string
                         description: Device ID
                       user_args:
-                        type: array
-                        items:
+                        type: object
+                        additionalProperties:
                           type: string
-                        description: User-specific command line arguments
+                        description: User argument mappings (placeholder -> actual value)
                       user_env:
                         type: object
                         additionalProperties:
@@ -14795,6 +14801,14 @@ paths:
                 description: Internal Server Error
   /api/teams/{teamId}/mcp/installations/{installationId}/user-configs/{configId}/env:
     patch:
+      summary: Update user configuration environment variables
+      tags:
+        - MCP User Configurations
+      description: "Updates the user-specific environment variables for an MCP server
+        installation configuration. Requires Content-Type: application/json
+        header when sending request body. Supports both cookie-based
+        authentication (for web users) and OAuth2 Bearer token authentication
+        (for CLI users). Requires mcp:read scope for OAuth2 access."
       requestBody:
         content:
           application/json:
@@ -14862,10 +14876,10 @@ paths:
                         type: string
                         description: Device ID
                       user_args:
-                        type: array
-                        items:
+                        type: object
+                        additionalProperties:
                           type: string
-                        description: User-specific command line arguments
+                        description: User argument mappings (placeholder -> actual value)
                       user_env:
                         type: object
                         additionalProperties:

@@ -11,7 +11,7 @@ export interface McpUserConfiguration {
   installation_id: string;
   user_id: string;
   device_id?: string;
-  user_args?: string[];
+  user_args?: Record<string, string>;
   user_env?: Record<string, string>;
   created_at: Date;
   updated_at: Date;
@@ -34,13 +34,13 @@ export interface McpUserConfiguration {
 
 export interface CreateUserConfigRequest {
   device_id?: string;
-  user_args?: string[];
+  user_args?: Record<string, string>;
   user_env?: Record<string, string>;
 }
 
 export interface UpdateUserConfigRequest {
   device_id?: string;
-  user_args?: string[];
+  user_args?: Record<string, string>;
   user_env?: Record<string, string>;
 }
 
@@ -104,7 +104,7 @@ export class McpUserConfigurationService {
 
     return configurations.map((row: any) => ({
       ...row.config,
-      user_args: row.config.user_args ? this.parseJsonField(row.config.user_args, []) : undefined,
+      user_args: row.config.user_args ? this.parseJsonField(row.config.user_args, {}) : undefined,
       user_env: row.config.user_env ? this.parseJsonField(row.config.user_env, {}) : undefined,
       installation: row.installation ? {
         id: row.installation.id,
@@ -166,7 +166,7 @@ export class McpUserConfigurationService {
 
     return {
       ...config,
-      user_args: config.user_args ? this.parseJsonField(config.user_args, []) : undefined,
+      user_args: config.user_args ? this.parseJsonField(config.user_args, {}) : undefined,
       user_env: config.user_env ? this.parseJsonField(config.user_env, {}) : undefined,
       installation: installation ? {
         id: installation.id,
@@ -405,14 +405,14 @@ export class McpUserConfigurationService {
     configId: string,
     userId: string,
     teamId: string,
-    args: string[]
+    args: Record<string, string>
   ): Promise<McpUserConfiguration | null> {
     this.logger.debug({
       operation: 'update_user_args',
       configId,
       userId,
       teamId,
-      argsCount: args.length
+      argsCount: Object.keys(args).length
     }, 'Updating user configuration args');
 
     return await this.updateUserConfiguration(configId, userId, teamId, { user_args: args });
@@ -435,17 +435,24 @@ export class McpUserConfigurationService {
     return await this.updateUserConfiguration(configId, userId, teamId, { user_env: env });
   }
 
-  private validateUserArgs(userArgs: string[], schema: any[]): void {
+  private validateUserArgs(userArgs: Record<string, string>, schema: any[]): void {
     // Validate user args against schema if provided
-    // For now, we'll do basic validation - this can be enhanced based on schema structure
+    // Args are now key-value mappings (placeholder -> actual value)
     if (schema && schema.length > 0) {
-      // Check if schema defines min/max items
-      const schemaConfig = schema[0];
-      if (schemaConfig.min_items && userArgs.length < schemaConfig.min_items) {
-        throw new Error(`At least ${schemaConfig.min_items} arguments are required`);
-      }
-      if (schemaConfig.max_items && userArgs.length > schemaConfig.max_items) {
-        throw new Error(`Maximum ${schemaConfig.max_items} arguments are allowed`);
+      // Validate each argument mapping against schema
+      for (const [argName, argValue] of Object.entries(userArgs)) {
+        const schemaEntry = schema.find((arg: any) => arg.name === argName);
+        
+        if (schemaEntry) {
+          // If this field is required and the sent value is empty, throw error
+          if (schemaEntry.required && (!argValue || argValue.trim() === '')) {
+            throw new Error(`Required argument '${argName}' is missing or empty`);
+          }
+          
+          // Additional type validation can be added here in the future
+          // e.g., if (schemaEntry.type === 'number' && isNaN(Number(argValue)))
+        }
+        // Note: We don't validate fields that aren't in the schema - allowing flexibility
       }
     }
   }

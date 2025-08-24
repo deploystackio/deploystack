@@ -49,9 +49,9 @@ export const CREATE_USER_CONFIG_REQUEST_SCHEMA = {
       description: 'Optional device ID for device-specific configuration'
     },
     user_args: {
-      type: 'array',
-      items: { type: 'string' },
-      description: 'User-specific command line arguments'
+      type: 'object',
+      additionalProperties: { type: 'string' },
+      description: 'User argument mappings (placeholder -> actual value)'
     },
     user_env: {
       type: 'object',
@@ -70,9 +70,9 @@ export const UPDATE_USER_CONFIG_REQUEST_SCHEMA = {
       description: 'Optional device ID for device-specific configuration'
     },
     user_args: {
-      type: 'array',
-      items: { type: 'string' },
-      description: 'User-specific command line arguments'
+      type: 'object',
+      additionalProperties: { type: 'string' },
+      description: 'User argument mappings (placeholder -> actual value)'
     },
     user_env: {
       type: 'object',
@@ -87,9 +87,9 @@ export const UPDATE_USER_ARGS_REQUEST_SCHEMA = {
   type: 'object',
   properties: {
     args: {
-      type: 'array',
-      items: { type: 'string' },
-      description: 'User-specific command line arguments'
+      type: 'object',
+      additionalProperties: { type: 'string' },
+      description: 'User argument mappings (placeholder -> actual value)'
     }
   },
   required: ['args'],
@@ -118,9 +118,9 @@ export const USER_CONFIG_RESPONSE_SCHEMA = {
     user_id: { type: 'string', description: 'User ID' },
     device_id: { type: 'string', description: 'Device ID' },
     user_args: {
-      type: 'array',
-      items: { type: 'string' },
-      description: 'User-specific command line arguments'
+      type: 'object',
+      additionalProperties: { type: 'string' },
+      description: 'User argument mappings (placeholder -> actual value)'
     },
     user_env: {
       type: 'object',
@@ -225,18 +225,18 @@ export interface TeamAndInstallationParams {
 
 export interface CreateUserConfigRequest {
   device_id?: string;
-  user_args?: string[];
+  user_args?: Record<string, string>;
   user_env?: Record<string, string>;
 }
 
 export interface UpdateUserConfigRequest {
   device_id?: string;
-  user_args?: string[];
+  user_args?: Record<string, string>;
   user_env?: Record<string, string>;
 }
 
 export interface UpdateUserArgsRequest {
-  args: string[];
+  args: Record<string, string>;
 }
 
 export interface UpdateUserEnvRequest {
@@ -248,7 +248,7 @@ export interface UserConfigData {
   installation_id: string;
   user_id: string;
   device_id?: string;
-  user_args?: string[];
+  user_args?: Record<string, string>;
   user_env?: Record<string, string>;
   created_at: string;
   updated_at: string;
@@ -391,6 +391,7 @@ export interface UpdateUserEnvRouteRequest {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function formatUserConfigResponse(config: any): UserConfigData {
   // Helper to safely handle JSON parsing - config might already be parsed by service layer
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const safeJsonParse = (value: any, defaultValue: any) => {
     if (value === null || value === undefined || value === '') {
       return defaultValue

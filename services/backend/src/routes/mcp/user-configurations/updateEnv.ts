@@ -1,23 +1,62 @@
-import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { updateUserEnvSchema, UpdateUserEnvRouteRequest, formatUserConfigResponse } from './schemas';
-import { mcpUserConfigurationService } from '../../../services/mcpUserConfigurationService';
-import { authHook } from '../../../hooks/authHook';
+import { type FastifyInstance } from 'fastify';
+import { requireAuthenticationAny, requireOAuthScope } from '../../../middleware/oauthMiddleware';
+import { requireTeamPermission } from '../../../middleware/roleMiddleware';
+import { McpUserConfigurationService } from '../../../services/mcpUserConfigurationService';
+import { getDb } from '../../../db';
+import {
+  updateUserEnvSchema,
+  formatUserConfigResponse,
+  type UpdateUserEnvRouteRequest,
+  type UserConfigUpdateSuccessResponse,
+  type ErrorResponse
+} from './schemas';
 
-export default async function updateUserEnvRoute(fastify: FastifyInstance) {
-  fastify.patch<UpdateUserEnvRouteRequest>(
+export default async function updateUserEnvRoute(server: FastifyInstance) {
+  server.patch<UpdateUserEnvRouteRequest>(
     '/teams/:teamId/mcp/installations/:installationId/user-configs/:configId/env',
     {
-      schema: updateUserEnvSchema,
-      preHandler: [authHook]
+      preValidation: [
+        requireAuthenticationAny(),
+        requireOAuthScope('mcp:read'),
+        requireTeamPermission('mcp.installations.manage')
+      ],
+      schema: {
+        ...updateUserEnvSchema,
+        tags: ['MCP User Configurations'],
+        summary: 'Update user configuration environment variables',
+        description: 'Updates the user-specific environment variables for an MCP server installation configuration. Requires Content-Type: application/json header when sending request body. Supports both cookie-based authentication (for web users) and OAuth2 Bearer token authentication (for CLI users). Requires mcp:read scope for OAuth2 access.'
+      }
     },
-    async (request: FastifyRequest<UpdateUserEnvRouteRequest>, reply: FastifyReply) => {
+    async (request, reply) => {
       const { teamId, installationId, configId } = request.params;
       const userId = request.user!.id;
       const { env } = request.body;
+      const authType = request.tokenPayload ? 'oauth2' : 'cookie';
+
+      request.log.debug({
+        operation: 'mcp_user_config_operation',
+        userId,
+        authType,
+        clientId: request.tokenPayload?.clientId,
+        scope: request.tokenPayload?.scope,
+        endpoint: request.url
+      }, 'Authentication method determined for MCP user configuration operation');
+
+      request.log.info({
+        operation: 'update_mcp_user_config_env',
+        teamId,
+        installationId,
+        configId,
+        userId,
+        authType,
+        envVarCount: Object.keys(env).length
+      }, 'Updating MCP user configuration environment variables');
 
       try {
-        // Update the user configuration environment variables
-        const updatedConfig = await mcpUserConfigurationService.updateUserEnv(
+        const db = getDb();
+        const userConfigService = new McpUserConfigurationService(db, request.log);
+        
+        const updatedConfig = await userConfigService.updateUserEnv(
           configId,
           userId,
           teamId,
@@ -25,42 +64,71 @@ export default async function updateUserEnvRoute(fastify: FastifyInstance) {
         );
 
         if (!updatedConfig) {
-          return reply.status(404).send({
+          request.log.warn({
+            operation: 'update_mcp_user_config_env',
+            teamId,
+            installationId,
+            configId,
+            userId,
+            found: false
+          }, 'MCP user configuration not found');
+
+          const errorResponse: ErrorResponse = {
+            success: false,
             error: 'User configuration not found'
-          });
+          };
+          const jsonString = JSON.stringify(errorResponse);
+          return reply.status(404).type('application/json').send(jsonString);
         }
 
-        // Format and return the response
-        const response = formatUserConfigResponse(updatedConfig);
-        return reply.send({
+        request.log.info({
+          operation: 'update_mcp_user_config_env',
+          teamId,
+          installationId,
+          configId,
+          userId,
+          authType
+        }, 'Successfully updated MCP user configuration environment variables');
+
+        const successResponse: UserConfigUpdateSuccessResponse = {
           success: true,
-          data: response,
+          data: formatUserConfigResponse(updatedConfig),
           message: 'User configuration environment variables updated successfully'
-        });
+        };
+        const jsonString = JSON.stringify(successResponse);
+        return reply.status(200).type('application/json').send(jsonString);
 
       } catch (error) {
-        fastify.log.error({
-          operation: 'update_user_configuration_env',
+        request.log.error({
+          operation: 'update_mcp_user_config_env',
           error,
           teamId,
           installationId,
           configId,
           userId
-        }, 'Error updating user configuration env');
+        }, 'Failed to update MCP user configuration environment variables');
+        
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
         
         // Handle validation errors
         if (error instanceof Error && (
           error.message.includes('required') || 
           error.message.includes('environment variable')
         )) {
-          return reply.status(400).send({
-            error: error.message
-          });
+          const errorResponse: ErrorResponse = {
+            success: false,
+            error: errorMessage
+          };
+          const jsonString = JSON.stringify(errorResponse);
+          return reply.status(400).type('application/json').send(jsonString);
         }
 
-        return reply.status(500).send({
-          error: 'Internal server error'
-        });
+        const errorResponse: ErrorResponse = {
+          success: false,
+          error: errorMessage
+        };
+        const jsonString = JSON.stringify(errorResponse);
+        return reply.status(500).type('application/json').send(jsonString);
       }
     }
   );

@@ -1,5 +1,5 @@
 import { type FastifyInstance } from 'fastify';
-import { requireAuthenticationAny, requireOAuthScope } from '../../../middleware/oauthMiddleware';
+import { requireAuthenticationAny } from '../../../middleware/oauthMiddleware';
 import { requireTeamPermission } from '../../../middleware/roleMiddleware';
 import { McpUserConfigurationService } from '../../../services/mcpUserConfigurationService';
 import { getDb } from '../../../db';

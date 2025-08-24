@@ -4,43 +4,30 @@ import { requireTeamPermission } from '../../../middleware/roleMiddleware';
 import { McpUserConfigurationService } from '../../../services/mcpUserConfigurationService';
 import { getDb } from '../../../db';
 import {
-  TEAM_AND_INSTALLATION_AND_CONFIG_PARAMS_SCHEMA,
-  USER_CONFIG_SUCCESS_RESPONSE_SCHEMA,
-  COMMON_ERROR_RESPONSES,
-  DUAL_AUTH_SECURITY,
+  getUserConfigurationByIdSchema,
   formatUserConfigResponse,
-  type TeamAndInstallationAndConfigParams,
+  type GetUserConfigurationByIdRequest,
   type UserConfigSuccessResponse,
   type ErrorResponse
 } from './schemas';
 
 export default async function getUserConfigurationRoute(server: FastifyInstance) {
-  server.get<{
-    Params: TeamAndInstallationAndConfigParams;
-  }>('/teams/:teamId/mcp/installations/:installationId/user-configs/:configId', {
-    preValidation: [
-      requireAuthenticationAny(),
-      requireOAuthScope('mcp:user-configs:read'),
-      requireTeamPermission('mcp.installations.view')
-    ],
-    schema: {
-      tags: ['MCP User Configurations'],
-      summary: 'Get user configuration by ID',
-      description: 'Retrieves a specific user configuration for an MCP server installation. No Content-Type header required for this GET request. Supports both cookie-based authentication (for web users) and OAuth2 Bearer token authentication (for CLI users). Requires mcp:user-configs:read scope for OAuth2 access.',
-      security: DUAL_AUTH_SECURITY,
-      
-      // Fastify validation schema
-      params: TEAM_AND_INSTALLATION_AND_CONFIG_PARAMS_SCHEMA,
-      
-      response: {
-        200: {
-          ...USER_CONFIG_SUCCESS_RESPONSE_SCHEMA,
-          description: 'User configuration retrieved successfully'
-        },
-        ...COMMON_ERROR_RESPONSES
+  server.get<GetUserConfigurationByIdRequest>(
+    '/teams/:teamId/mcp/installations/:installationId/user-configs/:configId',
+    {
+      preValidation: [
+        requireAuthenticationAny(),
+        requireOAuthScope('mcp:user-configs:read'),
+        requireTeamPermission('mcp.installations.view')
+      ],
+      schema: {
+        ...getUserConfigurationByIdSchema,
+        tags: ['MCP User Configurations'],
+        summary: 'Get user configuration by ID',
+        description: 'Retrieves a specific user configuration for an MCP server installation. No Content-Type header required for this GET request. Supports both cookie-based authentication (for web users) and OAuth2 Bearer token authentication (for CLI users). Requires mcp:user-configs:read scope for OAuth2 access.'
       }
-    }
-  }, async (request, reply) => {
+    },
+    async (request, reply) => {
     const { teamId, installationId, configId } = request.params;
     const userId = request.user!.id;
     const authType = request.tokenPayload ? 'oauth2' : 'cookie';

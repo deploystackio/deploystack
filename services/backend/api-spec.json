@@ -19890,11 +19890,11 @@
                     "description": "Optional device ID for device-specific configuration"
                   },
                   "user_args": {
-                    "type": "array",
-                    "items": {
+                    "type": "object",
+                    "additionalProperties": {
                       "type": "string"
                     },
-                    "description": "User-specific command line arguments"
+                    "description": "User argument mappings (placeholder -> actual value)"
                   },
                   "user_env": {
                     "type": "object",
@@ -19971,11 +19971,11 @@
                           "description": "Device ID"
                         },
                         "user_args": {
-                          "type": "array",
-                          "items": {
+                          "type": "object",
+                          "additionalProperties": {
                             "type": "string"
                           },
-                          "description": "User-specific command line arguments"
+                          "description": "User argument mappings (placeholder -> actual value)"
                         },
                         "user_env": {
                           "type": "object",
@@ -20194,7 +20194,7 @@
         ],
         "responses": {
           "200": {
-            "description": "User configurations retrieved successfully",
+            "description": "Default Response",
             "content": {
               "application/json": {
                 "schema": {
@@ -20226,11 +20226,11 @@
                             "description": "Device ID"
                           },
                           "user_args": {
-                            "type": "array",
-                            "items": {
+                            "type": "object",
+                            "additionalProperties": {
                               "type": "string"
                             },
-                            "description": "User-specific command line arguments"
+                            "description": "User argument mappings (placeholder -> actual value)"
                           },
                           "user_env": {
                             "type": "object",
@@ -20274,8 +20274,7 @@
                     "success",
                     "data"
                   ],
-                  "additionalProperties": false,
-                  "description": "User configurations retrieved successfully"
+                  "additionalProperties": false
                 }
               }
             }
@@ -20462,7 +20461,7 @@
         ],
         "responses": {
           "200": {
-            "description": "User configuration retrieved successfully",
+            "description": "Default Response",
             "content": {
               "application/json": {
                 "schema": {
@@ -20492,11 +20491,11 @@
                           "description": "Device ID"
                         },
                         "user_args": {
-                          "type": "array",
-                          "items": {
+                          "type": "object",
+                          "additionalProperties": {
                             "type": "string"
                           },
-                          "description": "User-specific command line arguments"
+                          "description": "User argument mappings (placeholder -> actual value)"
                         },
                         "user_env": {
                           "type": "object",
@@ -20539,8 +20538,7 @@
                     "success",
                     "data"
                   ],
-                  "additionalProperties": false,
-                  "description": "User configuration retrieved successfully"
+                  "additionalProperties": false
                 }
               }
             }
@@ -20689,11 +20687,11 @@
                     "description": "Optional device ID for device-specific configuration"
                   },
                   "user_args": {
-                    "type": "array",
-                    "items": {
+                    "type": "object",
+                    "additionalProperties": {
                       "type": "string"
                     },
-                    "description": "User-specific command line arguments"
+                    "description": "User argument mappings (placeholder -> actual value)"
                   },
                   "user_env": {
                     "type": "object",
@@ -20780,11 +20778,11 @@
                           "description": "Device ID"
                         },
                         "user_args": {
-                          "type": "array",
-                          "items": {
+                          "type": "object",
+                          "additionalProperties": {
                             "type": "string"
                           },
-                          "description": "User-specific command line arguments"
+                          "description": "User argument mappings (placeholder -> actual value)"
                         },
                         "user_env": {
                           "type": "object",
@@ -21167,6 +21165,11 @@
     },
     "/api/teams/{teamId}/mcp/installations/{installationId}/user-configs/{configId}/args": {
       "patch": {
+        "summary": "Update user configuration arguments",
+        "tags": [
+          "MCP User Configurations"
+        ],
+        "description": "Updates the user-specific arguments for an MCP server installation configuration. Requires Content-Type: application/json header when sending request body. Supports both cookie-based authentication (for web users) and OAuth2 Bearer token authentication (for CLI users). Requires mcp:read scope for OAuth2 access.",
         "requestBody": {
           "content": {
             "application/json": {
@@ -21174,11 +21177,11 @@
                 "type": "object",
                 "properties": {
                   "args": {
-                    "type": "array",
-                    "items": {
+                    "type": "object",
+                    "additionalProperties": {
                       "type": "string"
                     },
-                    "description": "User-specific command line arguments"
+                    "description": "User argument mappings (placeholder -> actual value)"
                   }
                 },
                 "required": [
@@ -21262,11 +21265,11 @@
                           "description": "Device ID"
                         },
                         "user_args": {
-                          "type": "array",
-                          "items": {
+                          "type": "object",
+                          "additionalProperties": {
                             "type": "string"
                           },
-                          "description": "User-specific command line arguments"
+                          "description": "User argument mappings (placeholder -> actual value)"
                         },
                         "user_env": {
                           "type": "object",
@@ -21450,6 +21453,11 @@
     },
     "/api/teams/{teamId}/mcp/installations/{installationId}/user-configs/{configId}/env": {
       "patch": {
+        "summary": "Update user configuration environment variables",
+        "tags": [
+          "MCP User Configurations"
+        ],
+        "description": "Updates the user-specific environment variables for an MCP server installation configuration. Requires Content-Type: application/json header when sending request body. Supports both cookie-based authentication (for web users) and OAuth2 Bearer token authentication (for CLI users). Requires mcp:read scope for OAuth2 access.",
         "requestBody": {
           "content": {
             "application/json": {
@@ -21545,11 +21553,11 @@
                           "description": "Device ID"
                         },
                         "user_args": {
-                          "type": "array",
-                          "items": {
+                          "type": "object",
+                          "additionalProperties": {
                             "type": "string"
                           },
-                          "description": "User-specific command line arguments"
+                          "description": "User argument mappings (placeholder -> actual value)"
                         },
                         "user_env": {
                           "type": "object",
