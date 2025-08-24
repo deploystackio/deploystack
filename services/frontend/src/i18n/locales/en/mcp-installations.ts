@@ -482,10 +482,13 @@ export default {
 
       form: {
         labels: {
-          deviceName: 'Device Name'
+          deviceName: 'Device Name',
+          device: 'Select Device'
         },
         placeholders: {
-          deviceName: 'e.g., MacBook Pro, Work Laptop, Desktop PC'
+          deviceName: 'e.g., MacBook Pro, Work Laptop, Desktop PC',
+          selectDevice: 'Choose a device...',
+          loadingDevices: 'Loading devices...'
         },
         buttons: {
           cancel: 'Cancel',
@@ -493,12 +496,14 @@ export default {
           creating: 'Creating...'
         },
         help: {
-          deviceName: 'Give this device a recognizable name to distinguish it from your other devices.'
+          deviceName: 'Give this device a recognizable name to distinguish it from your other devices.',
+          device: 'Select the device you want to create this configuration for.'
         }
       },
 
       validation: {
-        deviceNameRequired: 'Device name is required'
+        deviceNameRequired: 'Device name is required',
+        deviceRequired: 'Please select a device'
       },
 
       errors: {

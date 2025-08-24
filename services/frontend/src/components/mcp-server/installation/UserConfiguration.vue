@@ -4,14 +4,22 @@
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { toast } from 'vue-sonner'
-import { Settings, Eye, EyeOff, Plus, Trash2 } from 'lucide-vue-next'
+import { Settings, Eye, EyeOff, Plus, Trash2, Monitor } from 'lucide-vue-next'
 import { McpCatalogService } from '@/services/mcpCatalogService'
 import { McpInstallationService } from '@/services/mcpInstallationService'
+import { useDevices } from '@/composables/useDevices'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import {
   AlertDialog,
   AlertDialogContent,
@@ -60,20 +68,21 @@ const showPassword = ref(false)
 const isSubmitting = ref(false)
 const formErrors = ref<Record<string, string>>({})
 
-// Device name for new configurations
-const deviceName = ref('')
+// Device management
+const { devices, fetchDevices, isLoading: isLoadingDevices } = useDevices()
+const selectedDeviceId = ref('')
 
 // Load server data and user configurations
 onMounted(async () => {
   try {
     isLoadingServer.value = true
     isLoadingUserConfig.value = true
-    
+
     // Load server schema data
     if (props.installation.server_id) {
       serverData.value = await McpCatalogService.getServerById(props.installation.server_id)
     }
-    
+
     // Load user configurations
     await loadUserConfigurations()
   } catch (error) {
@@ -92,7 +101,7 @@ const loadUserConfigurations = async () => {
       props.installation.id
     )
     userConfigurations.value = configs
-    
+
     // Set current config (first one for now, could be device-specific later)
     if (configs.length > 0 && configs[0]) {
       currentUserConfig.value = configs[0]
@@ -171,7 +180,7 @@ const isLoading = computed(() => {
 // Modal functions
 const openEditModal = (item: any, type: 'arg' | 'env') => {
   if (!props.canEdit) return
-  
+
   editingItem.value = item
   editingType.value = type
   editingValue.value = item.currentValue
@@ -180,10 +189,12 @@ const openEditModal = (item: any, type: 'arg' | 'env') => {
   isEditModalOpen.value = true
 }
 
-const openCreateModal = () => {
+const openCreateModal = async () => {
   if (!props.canEdit) return
-  
-  deviceName.value = ''
+
+  // Load devices when opening create modal
+  await fetchDevices()
+  selectedDeviceId.value = ''
   formErrors.value = {}
   isCreateModalOpen.value = true
 }
@@ -199,7 +210,7 @@ const closeEditModal = () => {
 
 const closeCreateModal = () => {
   isCreateModalOpen.value = false
-  deviceName.value = ''
+  selectedDeviceId.value = ''
   formErrors.value = {}
 }
 
@@ -222,63 +233,63 @@ const isTextarea = (item: any) => {
 
 const validateForm = () => {
   const errors: Record<string, string> = {}
-  
+
   if (editingItem.value?.required && !editingValue.value.trim()) {
     errors.value = t('mcpInstallations.userConfiguration.editModal.validation.required')
   }
-  
+
   formErrors.value = errors
   return Object.keys(errors).length === 0
 }
 
 const validateCreateForm = () => {
   const errors: Record<string, string> = {}
-  
-  if (!deviceName.value.trim()) {
-    errors.deviceName = t('mcpInstallations.userConfiguration.createModal.validation.deviceNameRequired')
+
+  if (!selectedDeviceId.value) {
+    errors.deviceId = t('mcpInstallations.userConfiguration.createModal.validation.deviceRequired')
   }
-  
+
   formErrors.value = errors
   return Object.keys(errors).length === 0
 }
 
 const handleEdit = async () => {
   if (!validateForm() || !currentUserConfig.value) return
-  
+
   isSubmitting.value = true
-  
+
   try {
     let updatedArgs = [...currentUserArgs.value]
     let updatedEnv = { ...currentUserEnv.value }
-    
+
     if (editingType.value === 'arg') {
       updatedArgs[editingItem.value.index] = editingValue.value
     } else {
       updatedEnv[editingItem.value.name] = editingValue.value
     }
-    
+
     const updatedConfig: UserConfiguration = await McpInstallationService.updateUserConfiguration(
       props.teamId,
       props.installation.id,
       currentUserConfig.value.id,
       {
-        device_name: currentUserConfig.value.device_name,
+        device_id: currentUserConfig.value.device_id,
         user_args: updatedArgs,
         user_env: updatedEnv
       }
     )
-    
+
     currentUserConfig.value = updatedConfig
     emit('configuration-updated', updatedConfig)
-    
-    const itemName = editingType.value === 'arg' 
+
+    const itemName = editingType.value === 'arg'
       ? t('mcpInstallations.userConfiguration.table.values.argumentNumber', { number: editingItem.value.index + 1 })
       : editingItem.value.name
-    
+
     toast.success(t('mcpInstallations.userConfiguration.editModal.success.updated', { item: itemName }), {
       description: t('mcpInstallations.userConfiguration.editModal.success.description')
     })
-    
+
     closeEditModal()
   } catch (error) {
     console.error('Error updating user configuration:', error)
@@ -290,36 +301,50 @@ const handleEdit = async () => {
 
 const handleCreate = async () => {
   if (!validateCreateForm()) return
-  
+
   isSubmitting.value = true
-  
+
   try {
     // Initialize with empty arrays/objects based on schema
     const initialArgs = new Array(userArgsSchema.value.length).fill('')
     const initialEnv: Record<string, string> = {}
-    
+
+    // Only include non-empty environment variables
     userEnvSchema.value.forEach((envSchema: any) => {
-      initialEnv[envSchema.name] = ''
+      // Don't add empty values to avoid validation errors
+      if (envSchema.required) {
+        // For required fields, we'll let the backend validation handle it
+        initialEnv[envSchema.name] = ''
+      }
+      // For optional fields, we simply don't include them if empty
     })
-    
+
+    // Filter out empty environment variables to avoid backend validation errors
+    const filteredEnv: Record<string, string> = {}
+    Object.entries(initialEnv).forEach(([key, value]) => {
+      if (value && value.trim() !== '') {
+        filteredEnv[key] = value
+      }
+    })
+
     const newConfig: UserConfiguration = await McpInstallationService.createUserConfiguration(
       props.teamId,
       props.installation.id,
       {
-        device_name: deviceName.value.trim(),
-        user_args: initialArgs,
-        user_env: initialEnv
+        device_id: selectedDeviceId.value,
+        user_args: initialArgs.filter(arg => arg.trim() !== ''),
+        user_env: filteredEnv
       }
     )
-    
+
     currentUserConfig.value = newConfig
     userConfigurations.value.push(newConfig)
     emit('configuration-updated', newConfig)
-    
+
     toast.success(t('mcpInstallations.userConfiguration.createModal.success.created'), {
       description: t('mcpInstallations.userConfiguration.createModal.success.description')
     })
-    
+
     closeCreateModal()
   } catch (error) {
     console.error('Error creating user configuration:', error)
@@ -331,7 +356,7 @@ const handleCreate = async () => {
 
 const modalTitle = computed(() => {
   if (!editingItem.value) return ''
-  
+
   if (editingType.value === 'arg') {
     return t('mcpInstallations.userConfiguration.editModal.titleArg', { number: editingItem.value.index + 1 })
   } else {
@@ -649,21 +674,35 @@ const modalTitle = computed(() => {
             {{ formErrors.general }}
           </div>
 
-          <!-- Device Name Input -->
+          <!-- Device Selection -->
           <div class="space-y-2">
-            <Label for="device-name">{{ t('mcpInstallations.userConfiguration.createModal.form.labels.deviceName') }}</Label>
-            <Input
-              id="device-name"
-              v-model="deviceName"
-              :placeholder="t('mcpInstallations.userConfiguration.createModal.form.placeholders.deviceName')"
-              :class="{ 'border-destructive': formErrors.deviceName }"
-              required
-            />
-            <div v-if="formErrors.deviceName" class="text-sm text-destructive">
-              {{ formErrors.deviceName }}
+            <Label for="device-select">{{ t('mcpInstallations.userConfiguration.createModal.form.labels.device') }}</Label>
+            <Select v-model="selectedDeviceId">
+              <SelectTrigger
+                id="device-select"
+                :class="{ 'border-destructive': formErrors.deviceId }"
+              >
+                <SelectValue :placeholder="isLoadingDevices ? t('mcpInstallations.userConfiguration.createModal.form.placeholders.loadingDevices') : t('mcpInstallations.userConfiguration.createModal.form.placeholders.selectDevice')" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem
+                  v-for="device in devices"
+                  :key="device.id"
+                  :value="device.id"
+                >
+                  <div class="flex items-center gap-2">
+                    <Monitor class="h-4 w-4 text-muted-foreground" />
+                    <span>{{ device.device_name }}</span>
+                    <span class="text-muted-foreground text-sm">({{ device.os_type }})</span>
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            <div v-if="formErrors.deviceId" class="text-sm text-destructive">
+              {{ formErrors.deviceId }}
             </div>
             <p class="text-xs text-gray-500">
-              {{ t('mcpInstallations.userConfiguration.createModal.form.help.deviceName') }}
+              {{ t('mcpInstallations.userConfiguration.createModal.form.help.device') }}
             </p>
           </div>
 

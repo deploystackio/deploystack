@@ -59,6 +59,7 @@ export interface UserConfiguration {
   id: string
   installation_id: string
   user_id: string
+  device_id: string
   device_name?: string
   user_args: string[]
   user_env: Record<string, string>
@@ -68,13 +69,13 @@ export interface UserConfiguration {
 }
 
 export interface CreateUserConfigRequest {
-  device_name?: string
+  device_id: string
   user_args: string[]
   user_env: Record<string, string>
 }
 
 export interface UpdateUserConfigRequest {
-  device_name?: string
+  device_id?: string
   user_args: string[]
   user_env: Record<string, string>
 }
