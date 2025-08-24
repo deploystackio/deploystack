@@ -484,6 +484,13 @@ export default {
         updateFailed: 'Failed to update configuration. Please try again.'
       },
 
+      messages: {
+        saveSuccess: 'Configuration saved',
+        saveSuccessDescription: 'Updated {item} for {device}',
+        saveError: 'Failed to save configuration',
+        saveErrorDescription: 'Please try again or contact support'
+      },
+
       success: {
         updated: 'Updated {item}',
         description: 'Your configuration has been updated successfully'

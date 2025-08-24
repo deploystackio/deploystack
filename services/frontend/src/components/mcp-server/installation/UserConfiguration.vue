@@ -3,6 +3,7 @@
 
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { toast } from 'vue-sonner'
 import { Settings, Eye, EyeOff, AlertTriangle, Monitor } from 'lucide-vue-next'
 import { McpCatalogService } from '@/services/mcpCatalogService'
 import { McpInstallationService } from '@/services/mcpInstallationService'
@@ -167,10 +168,9 @@ const currentUserEnv = computed(() => {
 
 // Prepare user arguments with current values
 const userArgsWithData = computed(() => {
-  return userArgsSchema.value.map((argSchema: any, index: number) => ({
+  return userArgsSchema.value.map((argSchema: any) => ({
     ...argSchema,
-    index,
-    currentValue: currentUserArgs.value[index] || ''
+    currentValue: currentUserEnv.value[argSchema.name] || ''
   }))
 })
 
@@ -202,11 +202,8 @@ const getDeviceValue = (item: any, deviceId: string, type: 'arg' | 'env') => {
   const userConfig = userConfigurations.value.find(config => config.device_id === deviceId)
   if (!userConfig) return ''
   
-  if (type === 'arg') {
-    return userConfig.user_args?.[item.index] || ''
-  } else {
-    return userConfig.user_env?.[item.name] || ''
-  }
+  // Both args and env are stored in user_env (args are named env vars)
+  return userConfig.user_env?.[item.name] || ''
 }
 
 // Modal functions
@@ -264,64 +261,88 @@ const handleEdit = async () => {
   isSubmitting.value = true
   
   try {
-    // Find existing user config for this device or create new one
+    // Find existing user config for this device
     let userConfig = userConfigurations.value.find(config => config.device_id === editingDevice.value.id)
     
     if (!userConfig) {
-      // Create new user configuration for this device
-      const initialArgs = new Array(userArgsSchema.value.length).fill('')
-      const initialEnv: Record<string, string> = {}
+      // Create new user configuration for this device with only the specific field
+      const createData: any = {
+        device_id: editingDevice.value.id
+      }
+      
+      if (editingType.value === 'arg') {
+        // Create env object with the named argument (args are actually env vars)
+        createData.user_env = {
+          [editingItem.value.name]: editingValue.value
+        }
+      } else {
+        // Create env object with only the specific variable set
+        createData.user_env = {
+          [editingItem.value.name]: editingValue.value
+        }
+      }
       
       userConfig = await McpInstallationService.createUserConfiguration(
         props.teamId,
         props.installation.id,
-        {
-          device_id: editingDevice.value.id,
-          user_args: initialArgs,
-          user_env: initialEnv
-        }
+        createData
       )
       
       userConfigurations.value.push(userConfig)
-    }
-    
-    // Update the specific field
-    let updatedArgs = [...(userConfig.user_args || [])]
-    let updatedEnv = { ...(userConfig.user_env || {}) }
-    
-    if (editingType.value === 'arg') {
-      // Ensure array is large enough
-      while (updatedArgs.length <= editingItem.value.index) {
-        updatedArgs.push('')
-      }
-      updatedArgs[editingItem.value.index] = editingValue.value
     } else {
-      updatedEnv[editingItem.value.name] = editingValue.value
-    }
-    
-    // Update the configuration
-    const updatedConfig = await McpInstallationService.updateUserConfiguration(
-      props.teamId,
-      props.installation.id,
-      userConfig.id,
-      {
-        device_id: editingDevice.value.id,
-        user_args: updatedArgs,
-        user_env: updatedEnv
+      // Update existing configuration with only the specific field
+      const updateData: any = {
+        device_id: editingDevice.value.id
       }
-    )
-    
-    // Update local state
-    const configIndex = userConfigurations.value.findIndex(c => c.id === userConfig!.id)
-    if (configIndex >= 0) {
-      userConfigurations.value[configIndex] = updatedConfig
+      
+      if (editingType.value === 'arg') {
+        // Update only the env vars object (args are actually env vars)
+        const updatedEnv = { ...(userConfig.user_env || {}) }
+        updatedEnv[editingItem.value.name] = editingValue.value
+        updateData.user_env = updatedEnv
+      } else {
+        // Update only the env vars object
+        const updatedEnv = { ...(userConfig.user_env || {}) }
+        updatedEnv[editingItem.value.name] = editingValue.value
+        updateData.user_env = updatedEnv
+      }
+      
+      // Update the configuration
+      const updatedConfig = await McpInstallationService.updateUserConfiguration(
+        props.teamId,
+        props.installation.id,
+        userConfig.id,
+        updateData
+      )
+      
+      // Update local state
+      const configIndex = userConfigurations.value.findIndex(c => c.id === userConfig!.id)
+      if (configIndex >= 0) {
+        userConfigurations.value[configIndex] = updatedConfig
+      }
+      
+      userConfig = updatedConfig
     }
     
-    emit('configuration-updated', updatedConfig)
+    emit('configuration-updated', userConfig)
+    
+    // Show success toast
+    toast.success(t('mcpInstallations.userConfiguration.editModal.messages.saveSuccess'), {
+      description: t('mcpInstallations.userConfiguration.editModal.messages.saveSuccessDescription', {
+        item: editingItem.value.name,
+        device: editingDevice.value.device_name
+      })
+    })
     
     closeEditModal()
   } catch (error) {
     console.error('Error updating user configuration:', error)
+    
+    // Show error toast
+    toast.error(t('mcpInstallations.userConfiguration.editModal.messages.saveError'), {
+      description: error instanceof Error ? error.message : t('mcpInstallations.userConfiguration.editModal.messages.saveErrorDescription')
+    })
+    
     formErrors.value.general = error instanceof Error ? error.message : 'Failed to update configuration'
   } finally {
     isSubmitting.value = false
@@ -331,9 +352,7 @@ const handleEdit = async () => {
 const modalTitle = computed(() => {
   if (!editingItem.value || !editingDevice.value) return ''
   
-  const itemName = editingType.value === 'arg' 
-    ? t('mcpInstallations.userConfiguration.table.values.argumentNumber', { number: editingItem.value.index + 1 })
-    : editingItem.value.name
+  const itemName = editingItem.value.name
     
   return t('mcpInstallations.userConfiguration.editModal.title', { 
     item: itemName, 
@@ -380,12 +399,12 @@ const modalTitle = computed(() => {
           </div>
 
           <ul role="list" class="space-y-3">
-            <li v-for="arg in userArgsWithData" :key="arg.index" class="bg-muted/50 rounded-lg px-4 py-5">
+            <li v-for="arg in userArgsWithData" :key="arg.name" class="bg-muted/50 rounded-lg px-4 py-5">
               <div class="flex items-center justify-between gap-x-6 mb-4">
                 <div class="min-w-0 flex-1">
                   <div class="flex items-start gap-x-3">
                     <p class="text-sm/6 font-semibold text-gray-900 font-mono">
-                      {{ t('mcpInstallations.userConfiguration.table.values.argumentNumber', { number: arg.index + 1 }) }}
+                      {{ arg.name }}
                     </p>
                   </div>
                   <div class="mt-1 text-xs/5 text-gray-700">
@@ -579,7 +598,7 @@ const modalTitle = computed(() => {
                 {{ editingType === 'arg' ? t('mcpInstallations.userConfiguration.editModal.form.labels.argument') : t('mcpInstallations.userConfiguration.editModal.form.labels.variable') }}
               </span>
               <code class="bg-gray-200 text-gray-800 px-2 py-1 rounded font-mono text-xs font-semibold">
-                {{ editingType === 'arg' ? t('mcpInstallations.userConfiguration.table.values.argumentNumber', { number: editingItem.index + 1 }) : editingItem.name }}
+                {{ editingItem.name }}
               </code>
               <Badge v-if="editingItem.required" variant="default" class="text-xs">
                 {{ t('mcpInstallations.userConfiguration.table.values.required') }}
@@ -652,8 +671,12 @@ const modalTitle = computed(() => {
             <Button type="button" variant="outline" @click="closeEditModal">
               {{ t('mcpInstallations.userConfiguration.editModal.form.buttons.cancel') }}
             </Button>
-            <Button type="submit" :disabled="isSubmitting">
-              {{ isSubmitting ? t('mcpInstallations.userConfiguration.editModal.form.buttons.saving') : t('mcpInstallations.userConfiguration.editModal.form.buttons.save') }}
+            <Button 
+              type="submit" 
+              :loading="isSubmitting"
+              :loadingText="t('mcpInstallations.userConfiguration.editModal.form.buttons.saving')"
+            >
+              {{ t('mcpInstallations.userConfiguration.editModal.form.buttons.save') }}
             </Button>
           </AlertDialogFooter>
         </form>
