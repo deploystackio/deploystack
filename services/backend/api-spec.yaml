@@ -16053,6 +16053,158 @@ paths:
                   - success
                   - error
                 description: Internal Server Error
+  /api/gateway/me/mcp-configurations:
+    get:
+      summary: Get merged MCP configurations for gateway
+      tags:
+        - Gateway
+      description: Retrieves all MCP server configurations for the authenticated user
+        with merged template, team, and user-specific values. Supports both
+        cookie-based authentication (for web users) and OAuth2 Bearer token
+        authentication (for CLI users). Requires mcp:read scope for OAuth2
+        access.
+      parameters:
+        - schema:
+            type: string
+          in: query
+          name: device_id
+          required: false
+          description: Device ID to get device-specific user configurations
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      responses:
+        "200":
+          description: MCP configurations retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: true
+                  data:
+                    type: object
+                    properties:
+                      servers:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                              description: Server identifier
+                            name:
+                              type: string
+                              description: Server name
+                            command:
+                              type: string
+                              description: Command to execute
+                            args:
+                              type: array
+                              items:
+                                type: string
+                              description: Command arguments with user values merged
+                            env:
+                              type: object
+                              additionalProperties:
+                                type: string
+                              description: Environment variables with user values merged
+                            status:
+                              type: string
+                              enum:
+                                - ready
+                                - invalid
+                              description: Server configuration status
+                          required:
+                            - id
+                            - name
+                            - command
+                            - args
+                            - env
+                            - status
+                          additionalProperties: false
+                    required:
+                      - servers
+                    additionalProperties: false
+                required:
+                  - success
+                  - data
+                additionalProperties: false
+                description: MCP configurations retrieved successfully
+        "400":
+          description: Bad Request - Invalid device_id or missing parameters
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - success
+                  - error
+                additionalProperties: false
+                description: Bad Request - Invalid device_id or missing parameters
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - success
+                  - error
+                additionalProperties: false
+                description: Unauthorized
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - success
+                  - error
+                additionalProperties: false
+                description: Forbidden
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - success
+                  - error
+                additionalProperties: false
+                description: Internal Server Error
   /api/auth/email/register:
     post:
       summary: User registration via email
