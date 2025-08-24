@@ -69,11 +69,21 @@ export function registerLoginCommand(program: Command) {
               // Detect current device information
               const deviceInfo = await detectDeviceInfo();
               
-              // Register or update device with backend
-              const device = await api.registerOrUpdateDevice(deviceInfo);
+              // Device registration already happened during OAuth2 token exchange
+              // No separate device API call needed - just use hardware_id directly
               
-              // Download merged configurations using the new gateway endpoint
-              const gatewayConfig = await mcpService.downloadGatewayMCPConfig(device.id, api, false);
+              // Download merged configurations using the new gateway endpoint with hardware_id
+              const gatewayConfig = await mcpService.downloadGatewayMCPConfig(deviceInfo.hardware_id, api, false);
+              
+              // Convert and store the gateway config in the format expected by local storage
+              const teamMCPConfig = mcpService.convertGatewayConfigToTeamConfig(
+                defaultTeam.id,
+                defaultTeam.name,
+                gatewayConfig
+              );
+              
+              // Store the converted configuration
+              await mcpService.storeMCPConfig(teamMCPConfig);
               
               // Auto-start the gateway server after successful MCP config download
               spinner.text = 'Starting gateway server...';

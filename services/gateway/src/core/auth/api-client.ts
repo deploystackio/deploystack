@@ -302,11 +302,14 @@ export class DeployStackAPI {
       }
 
       const contentType = response.headers.get('content-type');
+      let responseData;
       if (contentType && contentType.includes('application/json')) {
-        return await response.json();
+        responseData = await response.json();
       } else {
-        return await response.text();
+        responseData = await response.text();
       }
+      
+      return responseData;
     } catch (error) {
       if (error instanceof AuthenticationError) {
         throw error;

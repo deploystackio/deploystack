@@ -63,14 +63,15 @@ export interface MCPUserConfigurationsResponse {
 // Processed MCP Server Config for Gateway
 export interface MCPServerConfig {
   id: string;
-  name: string;
+  name?: string;
   installation_name: string;
   command: string;
   args: string[];
   env: Record<string, string>;
   runtime: string;
-  installation_type: 'local' | 'cloud';
-  transport_type: 'stdio' | 'http' | 'sse';
+  installation_type?: 'local' | 'cloud';
+  transport_type?: 'stdio' | 'http' | 'sse';
+  status?: 'ready' | 'invalid';
 }
 
 // Team MCP Configuration stored securely (Three-tier architecture)

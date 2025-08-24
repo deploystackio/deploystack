@@ -69,6 +69,16 @@ export class RefreshService {
         // Backend will automatically find device by hardware_id
         const gatewayConfig = await this.mcpService.downloadGatewayMCPConfig(deviceInfo.hardware_id, api, false);
         
+        // Convert and store the gateway config in the format expected by local storage
+        const teamMCPConfig = this.mcpService.convertGatewayConfigToTeamConfig(
+          credentials.selectedTeam.id,
+          credentials.selectedTeam.name,
+          gatewayConfig
+        );
+        
+        // Store the converted configuration
+        await this.mcpService.storeMCPConfig(teamMCPConfig);
+        
         const readyServers = gatewayConfig.servers.filter(s => s.status === 'ready');
         const invalidServers = gatewayConfig.servers.filter(s => s.status === 'invalid');
         

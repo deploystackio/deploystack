@@ -289,4 +289,104 @@ export class MCPConfigService {
       lastUpdated: config.last_updated
     };
   }
+
+  /**
+   * Convert gateway configuration to team configuration for local storage
+   * @param teamId Team ID
+   * @param teamName Team name 
+   * @param gatewayConfig Gateway configuration from new API
+   * @returns Team MCP configuration for storage
+   */
+  convertGatewayConfigToTeamConfig(
+    teamId: string,
+    teamName: string,
+    gatewayConfig: {
+      servers: Array<{
+        id: string;
+        name: string;
+        command: string;
+        args: string[];
+        env: Record<string, string>;
+        status: 'ready' | 'invalid';
+      }>;
+      deviceId: string;
+      lastUpdated: string;
+    }
+  ): TeamMCPConfig {
+    // Convert gateway servers to TeamMCPConfig format
+    const servers = gatewayConfig.servers.map(server => ({
+      id: server.id,
+      name: server.name,
+      installation_name: server.name,
+      command: server.command,
+      args: server.args,
+      env: server.env,
+      runtime: this.detectRuntime(server.command, server.args),
+      installation_type: 'local' as const,
+      transport_type: 'stdio' as const,
+      status: server.status
+    }));
+
+    // Create mock installations for compatibility (since gateway endpoint doesn't return installations)
+    const installations = gatewayConfig.servers.map(server => ({
+      id: server.id,
+      team_id: teamId,
+      server_id: server.id,
+      created_by: 'gateway-endpoint',
+      installation_name: server.name,
+      installation_type: 'local' as const,
+      team_args: server.args,
+      team_env: server.env,
+      created_at: gatewayConfig.lastUpdated,
+      updated_at: gatewayConfig.lastUpdated,
+      last_used_at: null,
+      server: {
+        id: server.id,
+        name: server.name,
+        description: `MCP server: ${server.name}`,
+        github_url: null,
+        runtime: this.detectRuntime(server.command, server.args),
+        installation_methods: [{
+          type: 'command' as const,
+          command: server.command,
+          args: server.args
+        }],
+        environment_variables: [],
+        transport_type: 'stdio' as const
+      }
+    }));
+
+    return {
+      team_id: teamId,
+      team_name: teamName,
+      installations,
+      user_configurations: [], // Empty since gateway endpoint handles user configs internally
+      servers,
+      last_updated: gatewayConfig.lastUpdated
+    };
+  }
+
+  /**
+   * Store MCP configuration (wrapper around storage)
+   * @param config Team MCP configuration to store
+   */
+  async storeMCPConfig(config: TeamMCPConfig): Promise<void> {
+    await this.storage.storeMCPConfig(config);
+  }
+
+  /**
+   * Detect runtime from command and args
+   * @param command Command string
+   * @param _args Command arguments
+   * @returns Detected runtime
+   */
+  private detectRuntime(command: string, _args: string[]): 'nodejs' | 'python' | 'binary' {
+    if (command === 'npx' || command === 'node') {
+      return 'nodejs';
+    }
+    if (command === 'python' || command === 'python3' || command === 'pip') {
+      return 'python';
+    }
+    return 'binary';
+  }
 }
