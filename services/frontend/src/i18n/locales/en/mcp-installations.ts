@@ -101,6 +101,12 @@ export default {
       noServersFound: 'No servers found matching your search',
       noServersAvailable: 'No MCP servers are currently available',
       emptyStateMessage: 'Enter a search term and click Search to find MCP servers...',
+      contributionBanner: {
+        missingServer: 'Missing an MCP server?',
+        addToCatalog: 'Add it to our catalog by submitting it to our',
+        awesomeRepo: 'awesome-mcp-server repository',
+        contribute: 'Contribute Server'
+      },
       tooManyResults: 'Too many results ({total} found). Please refine your search term to see results.',
       maxResultsReached: 'Showing first {shown} of {total} results. Use more specific search terms to narrow results.',
       allCategories: 'All Categories',

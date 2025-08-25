@@ -2,11 +2,13 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import { toast } from 'vue-sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import DashboardLayout from '@/components/DashboardLayout.vue'
 import ContentWrapper from '@/components/ContentWrapper.vue'
+import RemoveDeviceDialog from '@/components/devices/RemoveDeviceDialog.vue'
 import {
   ArrowLeft,
   Monitor,
@@ -18,6 +20,7 @@ import {
   Trash2
 } from 'lucide-vue-next'
 import { useDeviceDetail } from '@/composables/useDeviceDetail'
+import type { Device } from '../types'
 
 const route = useRoute()
 const router = useRouter()
@@ -37,15 +40,25 @@ const {
 // Computed
 const deviceId = computed(() => route.params.id as string)
 
-
-
-
+// Remove dialog state
+const removeDialogOpen = ref(false)
 
 // State for error handling (composable throws, we catch here)
 const error = ref<string | null>(null)
 
 // Event handlers
 function handleBack() {
+  router.push('/devices')
+}
+
+function handleRemoveDevice() {
+  removeDialogOpen.value = true
+}
+
+function handleDeviceRemoved(removedDevice: Device) {
+  toast.success(t('devices.removeDialog.success'), {
+    description: t('devices.removeDialog.successDescription', { deviceName: removedDevice.device_name })
+  })
   router.push('/devices')
 }
 
@@ -151,13 +164,21 @@ onMounted(async () => {
 
         <!-- Actions -->
         <div class="flex items-center gap-4 pt-4 border-t">
-          <Button variant="destructive" class="flex items-center gap-2">
+          <Button variant="destructive" class="flex items-center gap-2" @click="handleRemoveDevice">
             <Trash2 class="h-4 w-4" />
             {{ t('devices.actions.removeDevice') }}
           </Button>
         </div>
       </div>
       </div>
+
+      <!-- Remove Device Dialog -->
+      <RemoveDeviceDialog
+        :device="device"
+        :open="removeDialogOpen"
+        @update:open="removeDialogOpen = $event"
+        @device-removed="handleDeviceRemoved"
+      />
     </ContentWrapper>
   </DashboardLayout>
 </template>

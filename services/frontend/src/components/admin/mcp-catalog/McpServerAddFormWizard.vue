@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -12,7 +12,7 @@ import ContentWrapper from '@/components/ContentWrapper.vue'
 import GitHubRepositoryStep from '@/components/admin/mcp-catalog/GitHubRepositoryStep.vue'
 import ClaudeDesktopConfigStep from '@/components/admin/mcp-catalog/ClaudeDesktopConfigStep.vue'
 import ConfigurationSchemaStepAdd from '@/components/admin/mcp-catalog/steps/ConfigurationSchemaStepAdd.vue'
-import BasicInfoStep from '@/components/admin/mcp-catalog/BasicInfoStep.vue'
+import BasicInfoStepAdd from '@/components/admin/mcp-catalog/steps/BasicInfoStepAdd.vue'
 import type { McpServerFormData } from '@/views/admin/mcp-server-catalog/types'
 
 // Props interface
@@ -28,7 +28,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 // Emits
 const emit = defineEmits<{
-   
+
   submit: [formData: any] // Use any to avoid circular type dependencies, parent view defines the final type
   cancel: []
   stepChanged: [data: { step: number; stepKey: string }]
@@ -44,7 +44,7 @@ interface McpServerAddFormData {
     github_url: string
     git_branch: string
     auto_populated: boolean
-     
+
     repo_data?: any
   }
   claudeConfig: {
@@ -92,7 +92,7 @@ const steps = [
     key: 'basic' as const,
     label: t('mcpCatalog.form.steps.basic'),
     icon: FileText,
-    component: BasicInfoStep
+    component: BasicInfoStepAdd
   }
 ]
 
@@ -263,7 +263,7 @@ const goToStep = (stepIndex: number) => {
 }
 
 // Handle step click from ProgressBars
- 
+
 const handleStepClick = (step: any, index: number) => {
   if (step.clickable) {
     goToStep(index)
@@ -343,7 +343,7 @@ const handleGitHubStepNext = async () => {
 }
 
 // Auto-population function for GitHub data
- 
+
 const autoPopulateFromGitHub = (githubData: any) => {
   // Update GitHub data
   formData.value.github = {
@@ -453,28 +453,6 @@ const submitForm = async () => {
   // Note: isSubmitting will be reset by parent after successful redirect
 }
 
-// Form persistence using event bus
-const saveFormData = () => {
-  eventBus.emit('mcp-add-form-data-updated', {
-    step: currentStep.value,
-    data: formData.value
-  })
-}
-
-const loadFormData = () => {
-  // Try to load persisted form data
-  // This would be implemented with localStorage or session storage
-  // For now, we'll keep the default empty form
-}
-
-// Lifecycle
-onMounted(() => {
-  loadFormData()
-})
-
-onUnmounted(() => {
-  saveFormData()
-})
 </script>
 
 <template>
@@ -521,7 +499,7 @@ onUnmounted(() => {
       />
 
       <!-- Basic Info Step -->
-      <BasicInfoStep
+      <BasicInfoStepAdd
         v-else-if="currentStep === 3"
         v-model="formData.basic"
         :form-data="compatibleFormData"

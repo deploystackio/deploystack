@@ -72,6 +72,14 @@ export const globalSettings: GlobalSettingsModule = {
       description: 'Send welcome email to users when they verify their email or login via OAuth flows (GitHub, etc.)',
       encrypted: false,
       required: false
+    },
+    {
+      key: 'global.show_mcp_catalog_banner',
+      defaultValue: false,
+      type: 'boolean',
+      description: 'Show banner during MCP installation to inform users that adding new servers to the DeployStack catalog requires submitting a pull request to the awesome-mcp-server repository',
+      encrypted: false,
+      required: false
     }
   ]
 };

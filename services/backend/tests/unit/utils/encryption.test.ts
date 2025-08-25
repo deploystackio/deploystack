@@ -188,12 +188,18 @@ describe('encryption.ts', () => {
 
     it('should throw error for tampered encrypted data', () => {
       process.env.DEPLOYSTACK_ENCRYPTION_SECRET = 'test-secret-key';
-      const plaintext = 'Original message';
+      const plaintext = 'Original message that is longer to ensure meaningful encrypted data';
       const encrypted = encrypt(plaintext);
       
-      // Tamper with the encrypted data
+      // Get the components
       const [iv, authTag, encryptedData] = encrypted.split(':');
-      const tamperedData = iv + ':' + authTag + ':' + encryptedData.slice(0, -2) + '00';
+      
+      // Ensure we have sufficient encrypted data to tamper with
+      expect(encryptedData.length).toBeGreaterThan(4);
+      
+      // Method 1: Tamper with encrypted data by changing bytes in the middle
+      const tamperedEncrypted = encryptedData.substring(0, 4) + 'ff' + encryptedData.substring(6);
+      const tamperedData = iv + ':' + authTag + ':' + tamperedEncrypted;
       
       expect(() => decrypt(tamperedData)).toThrow('Decryption failed');
     });

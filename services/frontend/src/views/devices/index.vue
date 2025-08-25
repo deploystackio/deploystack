@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
   Table,
@@ -17,7 +17,6 @@ import {
 } from '@/components/ui/dropdown-menu'
 import {
   AlertDialog,
-  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
@@ -33,11 +32,12 @@ import {
   MoreHorizontal,
   Edit,
   Trash2,
-  Monitor,
-  Laptop
+  Monitor
 } from 'lucide-vue-next'
 import { useDevices } from '@/composables/useDevices'
 import type { Device } from './types'
+import DevicesEmptyState from '@/components/devices/DevicesEmptyState.vue'
+import RemoveDeviceDialog from '@/components/devices/RemoveDeviceDialog.vue'
 
 const { t } = useI18n()
 
@@ -47,11 +47,12 @@ const {
   deviceStats,
   isLoading,
   isUpdating,
-  isRemoving,
   fetchDevices,
-  updateDevice,
-  removeDevice
+  updateDevice
 } = useDevices()
+
+// Computed
+const hasDevices = computed(() => sortedDevices.value.length > 0)
 
 // Edit dialog state
 const editDialogOpen = ref(false)
@@ -74,6 +75,11 @@ function handleRemove(device: Device) {
   removeDialogOpen.value = true
 }
 
+function handleDeviceRemoved() {
+  removeDialogOpen.value = false
+  removingDevice.value = null
+}
+
 async function handleSaveEdit() {
   if (!editingDevice.value || !editDeviceName.value.trim()) return
 
@@ -90,28 +96,10 @@ async function handleSaveEdit() {
   }
 }
 
-async function handleConfirmRemove() {
-  if (!removingDevice.value) return
-
-  try {
-    await removeDevice(removingDevice.value.id)
-
-    removeDialogOpen.value = false
-    removingDevice.value = null
-  } catch {
-    // Error handled in composable
-  }
-}
-
 function handleCancelEdit() {
   editDialogOpen.value = false
   editingDevice.value = null
   editDeviceName.value = ''
-}
-
-function handleCancelRemove() {
-  removeDialogOpen.value = false
-  removingDevice.value = null
 }
 
 // Lifecycle
@@ -122,7 +110,19 @@ onMounted(() => {
 
 <template>
   <DashboardLayout :title="t('devices.pageTitle')">
-    <ContentWrapper>
+    <!-- Loading State (no wrapper) -->
+    <div v-if="isLoading" class="text-muted-foreground text-center py-12">
+      <div class="flex items-center justify-center">
+        <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+        <span class="ml-2">Loading devices...</span>
+      </div>
+    </div>
+
+    <!-- Empty State (no wrapper) -->
+    <DevicesEmptyState v-else-if="!hasDevices" />
+
+    <!-- Devices Content (with wrapper) -->
+    <ContentWrapper v-else>
       <div class="space-y-6">
         <!-- Header -->
         <div class="flex items-center justify-between">
@@ -152,29 +152,6 @@ onMounted(() => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              <!-- Loading state -->
-              <TableRow v-if="isLoading">
-                <TableCell :colspan="4" class="h-24 text-center">
-                  <div class="flex items-center justify-center">
-                    <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-                    <span class="ml-2">Loading devices...</span>
-                  </div>
-                </TableCell>
-              </TableRow>
-
-              <!-- Empty State -->
-              <TableRow v-else-if="sortedDevices.length === 0">
-                <TableCell :colspan="4" class="h-32 text-center">
-                  <div class="flex flex-col items-center justify-center space-y-2">
-                    <Laptop class="h-12 w-12 text-muted-foreground" />
-                    <div class="text-lg font-medium">{{ t('devices.emptyState.title') }}</div>
-                    <div class="text-sm text-muted-foreground max-w-md">
-                      {{ t('devices.emptyState.description') }}
-                    </div>
-                  </div>
-                </TableCell>
-              </TableRow>
-
               <!-- Device Rows -->
               <TableRow v-for="device in sortedDevices" :key="device.id">
                 <TableCell class="font-medium">
@@ -271,34 +248,12 @@ onMounted(() => {
       </AlertDialog>
 
       <!-- Remove Device Dialog -->
-      <AlertDialog :open="removeDialogOpen" @update:open="removeDialogOpen = $event">
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{{ t('devices.removeDialog.title') }}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {{ t('devices.removeDialog.description', { deviceName: removingDevice?.device_name || '' }) }}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-
-          <div class="text-sm text-muted-foreground">
-            {{ t('devices.removeDialog.warning') }}
-          </div>
-
-          <AlertDialogFooter>
-            <AlertDialogCancel @click="handleCancelRemove" :disabled="isRemoving">
-              {{ t('devices.removeDialog.buttons.cancel') }}
-            </AlertDialogCancel>
-            <Button
-              @click="handleConfirmRemove"
-              :loading="isRemoving"
-              :loading-text="t('devices.removeDialog.buttons.removing')"
-              class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {{ t('devices.removeDialog.buttons.remove') }}
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <RemoveDeviceDialog
+        :device="removingDevice"
+        :open="removeDialogOpen"
+        @update:open="removeDialogOpen = $event"
+        @device-removed="handleDeviceRemoved"
+      />
     </ContentWrapper>
   </DashboardLayout>
 </template>

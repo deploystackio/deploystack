@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import McpServerCard from '@/components/mcp-server/McpServerCard.vue'
 import FeaturedMcpServers from '@/components/mcp-server/FeaturedMcpServers.vue'
+import McpCatalogContributionBanner from '@/components/mcp-catalog/McpCatalogContributionBanner.vue'
 import { McpCatalogService } from '@/services/mcpCatalogService'
 import { McpCategoriesService } from '@/services/mcpCategoriesService'
 import type { McpServerSearchParams, McpServerSearchResponse } from '@/types/mcp-catalog'
@@ -286,6 +287,11 @@ onMounted(() => {
         @install="handleInstallClick"
         @details="handleDetailsClick"
       />
+      
+      <!-- MCP Catalog Contribution Banner - show at the bottom of search results -->
+      <div class="mt-8">
+        <McpCatalogContributionBanner />
+      </div>
     </div>
 
     <!-- No Results -->
@@ -295,6 +301,11 @@ onMounted(() => {
         <Button variant="outline" @click="clearSearch">
           {{ t('actions.clearSearch') }}
         </Button>
+      </div>
+      
+      <!-- MCP Catalog Contribution Banner - show when no results found -->
+      <div class="mt-8">
+        <McpCatalogContributionBanner />
       </div>
     </div>
 

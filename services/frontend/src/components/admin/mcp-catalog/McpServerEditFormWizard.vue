@@ -21,7 +21,7 @@ import { FileText, Github, Code, Settings, CheckCircle } from 'lucide-vue-next'
 import { McpCatalogService } from '@/services/mcpCatalogService'
 import { useEventBus } from '@/composables/useEventBus'
 import ContentWrapper from '@/components/ContentWrapper.vue'
-import BasicInfoStep from '@/components/admin/mcp-catalog/BasicInfoStep.vue'
+import BasicInfoStepEdit from '@/components/admin/mcp-catalog/steps/BasicInfoStepEdit.vue'
 import TechnicalStep from '@/components/admin/mcp-catalog/TechnicalStep.vue'
 import ConfigurationSchemaStepEdit from '@/components/admin/mcp-catalog/steps/ConfigurationSchemaStepEdit.vue'
 import GitHubRepositoryStep from '@/components/admin/mcp-catalog/GitHubRepositoryStep.vue'
@@ -73,7 +73,7 @@ const steps = [
     key: 'basic' as const,
     label: t('mcpCatalog.form.steps.basic'),
     icon: FileText,
-    component: BasicInfoStep
+    component: BasicInfoStepEdit
   },
   {
     key: 'technical' as const,

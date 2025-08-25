@@ -88,6 +88,8 @@ export default {
     title: 'Remove Device',
     description: 'Are you sure you want to remove "{deviceName}"? This will revoke access to all MCP configurations on this device.',
     warning: 'This action cannot be undone. The device will need to login again to regain access.',
+    success: 'Device removed successfully',
+    successDescription: '{deviceName} has been removed from your account',
     buttons: {
       cancel: 'Cancel',
       remove: 'Remove Device',
@@ -116,7 +118,9 @@ export default {
   // Empty state
   emptyState: {
     title: 'No devices registered',
-    description: 'You have no registered devices. Devices are automatically registered when you login with the DeployStack CLI.',
+    description: 'You have no registered devices. Devices are automatically registered when you login with the',
+    deployStackCli: 'DeployStack CLI',
+    descriptionEnd: '.',
     action: 'Learn about device management'
   },
 

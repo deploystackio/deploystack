@@ -38,10 +38,10 @@ const sidebarStyle = computed(() => ({
         </div>
       </header>
 
-      <Separator class="my-6" />
+      <Separator class="my-6 max-w-7xl" />
 
       <!-- Content area -->
-      <div class="flex flex-1 flex-col gap-4 p-4 pt-0">
+      <div class="flex flex-1 flex-col gap-4 p-4 pt-0 max-w-7xl">
         <slot />
       </div>
     </SidebarInset>

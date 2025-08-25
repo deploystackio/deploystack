@@ -1,5 +1,6 @@
 import { type FastifyInstance } from 'fastify';
 import { DeviceService } from '../../../../services/deviceService';
+import { getDb } from '../../../../db';
 import { requireAuthentication } from '../../../../middleware/roleMiddleware';
 import { 
   DEVICE_DETAIL_RESPONSE_SCHEMA, 
@@ -11,7 +12,8 @@ import {
 } from './schemas';
 
 export default async function getDeviceRoute(server: FastifyInstance) {
-  const deviceService = new DeviceService(server.db);
+  const db = getDb();
+  const deviceService = new DeviceService(db);
 
   server.get('/users/me/devices/:deviceId', {
     preValidation: requireAuthentication(),
