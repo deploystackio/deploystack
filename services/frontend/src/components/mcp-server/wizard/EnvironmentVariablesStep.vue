@@ -158,7 +158,11 @@ watch(() => props.serverData, (newData) => {
 }, { immediate: true })
 
 const getInputType = (envVar: EnvironmentVariable) => {
-  return envVar.type === 'password' ? 'password' : 'text'
+  return (envVar.type === 'password' || envVar.type === 'secret') ? 'password' : 'text'
+}
+
+const getArgInputType = (arg: ArgumentSchema) => {
+  return (arg.type === 'password' || arg.type === 'secret') ? 'password' : 'text'
 }
 
 const isTextarea = (envVar: EnvironmentVariable) => {
@@ -222,7 +226,7 @@ const isTextarea = (envVar: EnvironmentVariable) => {
             <div class="relative">
               <Input
                 :id="`team_arg_${index}`"
-                type="text"
+                :type="getArgInputType(arg)"
                 v-model="modelValue.team_args[index]"
                 :placeholder="arg.placeholder || t('mcpInstallations.teamConfiguration.editModal.form.placeholders.enterValue')"
                 :required="arg.required"

@@ -162,6 +162,7 @@ const typeOptions = [
   { value: 'string', label: computed(() => t('mcpCatalog.form.configurationSchema.dataTypes.string')) },
   { value: 'number', label: computed(() => t('mcpCatalog.form.configurationSchema.dataTypes.number')) },
   { value: 'boolean', label: computed(() => t('mcpCatalog.form.configurationSchema.dataTypes.boolean')) },
+  { value: 'secret', label: computed(() => t('mcpCatalog.form.configurationSchema.dataTypes.secret')) },
 ]
 
 

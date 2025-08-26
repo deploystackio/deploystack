@@ -28,7 +28,7 @@ const templateEnvSchema = z.object({
 
 const teamArgSchema = z.object({
   name: z.string(),
-  type: z.string(),
+  type: z.enum(['string', 'number', 'boolean', 'secret']),
   description: z.string(),
   required: z.boolean(),
   locked: z.boolean(),
@@ -39,7 +39,7 @@ const teamArgSchema = z.object({
 
 const teamEnvSchema = z.object({
   name: z.string(),
-  type: z.string(),
+  type: z.enum(['string', 'number', 'boolean', 'secret']),
   description: z.string(),
   required: z.boolean(),
   locked: z.boolean(),
@@ -49,7 +49,7 @@ const teamEnvSchema = z.object({
 
 const userArgSchema = z.object({
   name: z.string(),
-  type: z.string(),
+  type: z.enum(['string', 'number', 'boolean', 'secret']),
   description: z.string(),
   required: z.boolean(),
   locked: z.boolean(),
@@ -59,7 +59,7 @@ const userArgSchema = z.object({
 
 const userEnvSchema = z.object({
   name: z.string(),
-  type: z.string(),
+  type: z.enum(['string', 'number', 'boolean', 'secret']),
   description: z.string(),
   required: z.boolean(),
   locked: z.boolean()

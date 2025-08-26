@@ -34,7 +34,7 @@ import { useEventBus } from '@/composables/useEventBus'
 import {
   Server,
   // LayoutDashboard,
-  Key,
+  // Key,
   ChevronDown,
   User as UserIcon,
   LogOut,
@@ -97,11 +97,11 @@ const navigationItems = [
     icon: Server,
     url: '/mcp-server',
   },
-  {
-    title: t('sidebar.navigation.credentials'),
-    icon: Key,
-    url: '/credentials',
-  },
+  // {
+  //   title: t('sidebar.navigation.credentials'),
+  //   icon: Key,
+  //   url: '/credentials',
+  // },
   {
     title: t('sidebar.navigation.devices'),
     icon: Monitor,

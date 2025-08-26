@@ -4,6 +4,8 @@ import { mcpUserConfigurations, mcpServerInstallations, mcpServers } from '../db
 import type { AnyDatabase } from '../db';
 import type { FastifyBaseLogger } from 'fastify';
 import { nanoid } from 'nanoid';
+import { McpArgsStorage } from '../utils/mcpArgsStorage';
+import { McpEnvStorage } from '../utils/mcpEnvStorage';
 
 // Types
 export interface McpUserConfiguration {
@@ -102,24 +104,51 @@ export class McpUserConfigurationService {
       configurationsFound: configurations.length
     }, 'Retrieved user configurations');
 
-    return configurations.map((row: any) => ({
-      ...row.config,
-      user_args: row.config.user_args ? this.parseJsonField(row.config.user_args, {}) : undefined,
-      user_env: row.config.user_env ? this.parseJsonField(row.config.user_env, {}) : undefined,
-      installation: row.installation ? {
-        id: row.installation.id,
-        installation_name: row.installation.installation_name,
-        team_id: row.installation.team_id,
-        server_id: row.installation.server_id,
-        server: row.server ? {
-          id: row.server.id,
-          name: row.server.name,
-          description: row.server.description,
-          user_args_schema: this.parseJsonField(row.server.user_args_schema, []),
-          user_env_schema: this.parseJsonField(row.server.user_env_schema, [])
+    const processedConfigurations = [];
+    
+    for (const row of configurations) {
+      const userArgsSchema = this.parseJsonField(row.server?.user_args_schema, []);
+      const userEnvSchema = this.parseJsonField(row.server?.user_env_schema, []);
+
+      const userArgs = row.config.user_args 
+        ? await McpArgsStorage.retrieveUserArgs(
+            row.config.user_args,
+            userArgsSchema,
+            { maskSecrets: true },
+            this.logger
+          )
+        : undefined;
+
+      const userEnv = row.config.user_env 
+        ? await McpEnvStorage.retrieveUserEnv(
+            row.config.user_env,
+            userEnvSchema,
+            { maskSecrets: true },
+            this.logger
+          )
+        : undefined;
+
+      processedConfigurations.push({
+        ...row.config,
+        user_args: userArgs,
+        user_env: userEnv,
+        installation: row.installation ? {
+          id: row.installation.id,
+          installation_name: row.installation.installation_name,
+          team_id: row.installation.team_id,
+          server_id: row.installation.server_id,
+          server: row.server ? {
+            id: row.server.id,
+            name: row.server.name,
+            description: row.server.description,
+            user_args_schema: userArgsSchema,
+            user_env_schema: userEnvSchema
+          } : undefined
         } : undefined
-      } : undefined
-    }));
+      });
+    }
+
+    return processedConfigurations;
   }
 
   async getUserConfigurationById(
@@ -164,10 +193,31 @@ export class McpUserConfigurationService {
 
     const { config, installation, server } = result[0];
 
+    const userArgsSchema = this.parseJsonField(server?.user_args_schema, []);
+    const userEnvSchema = this.parseJsonField(server?.user_env_schema, []);
+
+    const userArgs = config.user_args 
+      ? await McpArgsStorage.retrieveUserArgs(
+          config.user_args,
+          userArgsSchema,
+          { maskSecrets: true },
+          this.logger
+        )
+      : undefined;
+
+    const userEnv = config.user_env 
+      ? await McpEnvStorage.retrieveUserEnv(
+          config.user_env,
+          userEnvSchema,
+          { maskSecrets: true },
+          this.logger
+        )
+      : undefined;
+
     return {
       ...config,
-      user_args: config.user_args ? this.parseJsonField(config.user_args, {}) : undefined,
-      user_env: config.user_env ? this.parseJsonField(config.user_env, {}) : undefined,
+      user_args: userArgs,
+      user_env: userEnv,
       installation: installation ? {
         id: installation.id,
         installation_name: installation.installation_name,
@@ -177,8 +227,8 @@ export class McpUserConfigurationService {
           id: server.id,
           name: server.name,
           description: server.description,
-          user_args_schema: this.parseJsonField(server.user_args_schema, []),
-          user_env_schema: this.parseJsonField(server.user_env_schema, [])
+          user_args_schema: userArgsSchema,
+          user_env_schema: userEnvSchema
         } : undefined
       } : undefined
     };
@@ -256,8 +306,16 @@ export class McpUserConfigurationService {
       installation_id: installationId,
       user_id: userId,
       device_id: data.device_id || null,
-      user_args: data.user_args ? JSON.stringify(data.user_args) : null,
-      user_env: data.user_env ? JSON.stringify(data.user_env) : null,
+      user_args: data.user_args ? await McpArgsStorage.storeUserArgs(
+        data.user_args, 
+        this.parseJsonField(serverInfo?.user_args_schema, []), 
+        this.logger
+      ) : null,
+      user_env: data.user_env ? await McpEnvStorage.storeUserEnv(
+        data.user_env, 
+        this.parseJsonField(serverInfo?.user_env_schema, []), 
+        this.logger
+      ) : null,
       created_at: now,
       updated_at: now,
       last_used_at: null
@@ -340,11 +398,19 @@ export class McpUserConfigurationService {
     }
 
     if (data.user_args !== undefined) {
-      updateData.user_args = data.user_args ? JSON.stringify(data.user_args) : null;
+      updateData.user_args = data.user_args ? await McpArgsStorage.storeUserArgs(
+        data.user_args, 
+        existing.installation?.server?.user_args_schema || [], 
+        this.logger
+      ) : null;
     }
 
     if (data.user_env !== undefined) {
-      updateData.user_env = data.user_env ? JSON.stringify(data.user_env) : null;
+      updateData.user_env = data.user_env ? await McpEnvStorage.storeUserEnv(
+        data.user_env, 
+        existing.installation?.server?.user_env_schema || [], 
+        this.logger
+      ) : null;
     }
 
     await this.db

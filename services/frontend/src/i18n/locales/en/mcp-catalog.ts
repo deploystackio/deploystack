@@ -178,7 +178,8 @@ export default {
       dataTypes: {
         string: 'String',
         number: 'Number',
-        boolean: 'Boolean'
+        boolean: 'Boolean',
+        secret: 'Secret'
       },
       modal: {
         add: {

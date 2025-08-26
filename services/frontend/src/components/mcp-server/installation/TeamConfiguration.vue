@@ -150,7 +150,7 @@ const togglePasswordVisibility = () => {
 }
 
 const getInputType = (item: any) => {
-  if (item.type === 'password' && !showPassword.value) {
+  if ((item.type === 'password' || item.type === 'secret') && !showPassword.value) {
     return 'password'
   }
   return 'text'
@@ -212,7 +212,9 @@ const handleSubmit = async () => {
     emit('installation-updated', updatedInstallation)
 
     // Show success toast
-    const itemName = editingType.value === 'arg' ? t('mcpInstallations.teamConfiguration.table.values.argumentNumber', { number: editingItem.value.index + 1 }) : editingItem.value.name
+    const itemName = editingType.value === 'arg' ? 
+      (editingItem.value.name || t('mcpInstallations.teamConfiguration.table.values.argumentNumber', { number: editingItem.value.index + 1 })) : 
+      editingItem.value.name
     toast.success(t('mcpInstallations.teamConfiguration.editModal.success.updated', { item: itemName }), {
       description: t('mcpInstallations.teamConfiguration.editModal.success.description')
     })
@@ -230,7 +232,8 @@ const modalTitle = computed(() => {
   if (!editingItem.value) return ''
 
   if (editingType.value === 'arg') {
-    return t('mcpInstallations.teamConfiguration.editModal.titleArg', { number: editingItem.value.index + 1 })
+    const argName = editingItem.value.name || t('mcpInstallations.teamConfiguration.table.values.argumentNumber', { number: editingItem.value.index + 1 })
+    return t('mcpInstallations.teamConfiguration.editModal.titleArg', { name: argName })
   } else {
     return t('mcpInstallations.teamConfiguration.editModal.titleEnv', { name: editingItem.value.name })
   }
@@ -266,7 +269,7 @@ const modalTitle = computed(() => {
               <div class="min-w-0 flex-1">
                 <div class="flex items-start gap-x-3">
                   <p class="text-sm/6 font-semibold text-gray-900 font-mono">
-                    {{ t('mcpInstallations.teamConfiguration.table.values.argumentNumber', { number: arg.index + 1 }) }}
+                    {{ arg.name || t('mcpInstallations.teamConfiguration.table.values.argumentNumber', { number: arg.index + 1 }) }}
                   </p>
                 </div>
                 <div class="mt-1 text-xs/5 text-gray-700">
@@ -287,7 +290,10 @@ const modalTitle = computed(() => {
                   </div>
                   <div>
                     <span class="font-medium text-gray-800">{{ t('mcpInstallations.teamConfiguration.table.labels.value') }}</span>
-                    <span class="ml-1 font-mono">
+                    <span v-if="arg.type === 'password' || arg.type === 'secret'" class="ml-1 font-mono">
+                      {{ arg.currentValue ? '••••••••' : t('mcpInstallations.teamConfiguration.table.values.notSet') }}
+                    </span>
+                    <span v-else class="ml-1 font-mono">
                       {{ arg.currentValue || t('mcpInstallations.teamConfiguration.table.values.notSet') }}
                     </span>
                   </div>
@@ -350,7 +356,7 @@ const modalTitle = computed(() => {
                   </div>
                   <div>
                     <span class="font-medium text-gray-800">{{ t('mcpInstallations.teamConfiguration.table.labels.value') }}</span>
-                    <span v-if="envVar.type === 'password'" class="ml-1 font-mono">
+                    <span v-if="envVar.type === 'password' || envVar.type === 'secret'" class="ml-1 font-mono">
                       {{ envVar.currentValue ? '••••••••' : t('mcpInstallations.teamConfiguration.table.values.notSet') }}
                     </span>
                     <span v-else class="ml-1 font-mono">
@@ -416,7 +422,7 @@ const modalTitle = computed(() => {
                 {{ editingType === 'arg' ? t('mcpInstallations.teamConfiguration.editModal.form.labels.argument') : t('mcpInstallations.teamConfiguration.editModal.form.labels.variable') }}
               </span>
               <code class="bg-gray-200 text-gray-800 px-2 py-1 rounded font-mono text-xs font-semibold">
-                {{ editingType === 'arg' ? t('mcpInstallations.teamConfiguration.table.values.argumentNumber', { number: editingItem.index + 1 }) : editingItem.name }}
+                {{ editingType === 'arg' ? (editingItem.name || t('mcpInstallations.teamConfiguration.table.values.argumentNumber', { number: editingItem.index + 1 })) : editingItem.name }}
               </code>
               <Badge v-if="editingItem.required" variant="default" class="text-xs">
                 {{ t('mcpInstallations.teamConfiguration.table.values.required') }}
@@ -461,7 +467,7 @@ const modalTitle = computed(() => {
 
               <!-- Password toggle -->
               <Button
-                v-if="editingItem?.type === 'password'"
+                v-if="editingItem?.type === 'password' || editingItem?.type === 'secret'"
                 type="button"
                 variant="ghost"
                 size="sm"

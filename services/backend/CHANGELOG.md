@@ -1,5 +1,14 @@
 # Changelog
 
+## <small>0.31.3 (2025-08-25)</small>
+
+* chore(backend): release v0.31.2 ([77608e7](https://github.com/deploystackio/deploystack/commit/77608e7))
+* feat(all): implement storage-first architecture in BasicInfoStepEdit component ([c9abb46](https://github.com/deploystackio/deploystack/commit/c9abb46))
+
+## <small>0.31.2 (2025-08-25)</small>
+
+* feat(all): implement storage-first architecture in BasicInfoStepEdit component ([c9abb46](https://github.com/deploystackio/deploystack/commit/c9abb46))
+
 ## <small>0.31.1 (2025-08-24)</small>
 
 * chore(backend): release v0.31.0 ([5f7a5da](https://github.com/deploystackio/deploystack/commit/5f7a5da))

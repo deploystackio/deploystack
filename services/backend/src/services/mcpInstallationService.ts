@@ -4,7 +4,8 @@ import { mcpServerInstallations, mcpServers } from '../db/schema.sqlite';
 import type { AnyDatabase } from '../db';
 import type { FastifyBaseLogger } from 'fastify';
 import { nanoid } from 'nanoid';
-import { encrypt, decrypt } from '../utils/encryption';
+import { McpArgsStorage } from '../utils/mcpArgsStorage';
+import { McpEnvStorage } from '../utils/mcpEnvStorage';
 
 // Types
 export interface McpInstallation {
@@ -92,35 +93,53 @@ export class McpInstallationService {
       installationsFound: installations.length
     }, 'Retrieved MCP installations for team');
 
-    return installations.map((row: any) => ({
-      ...row.installation,
-      team_args: row.installation.team_args 
-        ? this.parseJsonField(row.installation.team_args, [])
-        : null,
-      team_env: row.installation.team_env 
-        ? this.decryptEnvironmentVariables(row.installation.team_env)
-        : null,
-      server: row.server ? {
-        id: row.server.id,
-        name: row.server.name,
-        description: row.server.description,
-        language: row.server.language,
-        runtime: row.server.runtime,
-        status: row.server.status,
-        author_name: row.server.author_name,
-        homepage_url: row.server.homepage_url,
-        github_url: row.server.github_url,
-        tags: this.parseJsonField(row.server.tags, []),
-        installation_methods: this.parseJsonField(row.server.installation_methods, []),
-        template_args: this.parseJsonField(row.server.template_args, []),
-        template_env: this.parseJsonField(row.server.template_env, {}),
-        team_args_schema: this.parseJsonField(row.server.team_args_schema, []),
-        team_env_schema: this.parseJsonField(row.server.team_env_schema, []),
-        user_args_schema: this.parseJsonField(row.server.user_args_schema, []),
-        user_env_schema: this.parseJsonField(row.server.user_env_schema, []),
-        transport_type: row.server.transport_type
-      } : undefined
-    }));
+    const processedInstallations = [];
+    
+    for (const row of installations) {
+      const teamEnv = row.installation.team_env 
+        ? await this.maskEnvironmentVariables(
+            row.installation.team_env, 
+            this.parseJsonField(row.server?.team_env_schema, [])
+          )
+        : null;
+
+      const teamArgs = row.installation.team_args 
+        ? await McpArgsStorage.retrieveTeamArgs(
+            row.installation.team_args,
+            this.parseJsonField(row.server?.team_args_schema, []),
+            { maskSecrets: true, decryptSecrets: false },
+            this.logger
+          )
+        : null;
+
+      processedInstallations.push({
+        ...row.installation,
+        team_args: teamArgs,
+        team_env: teamEnv,
+        server: row.server ? {
+          id: row.server.id,
+          name: row.server.name,
+          description: row.server.description,
+          language: row.server.language,
+          runtime: row.server.runtime,
+          status: row.server.status,
+          author_name: row.server.author_name,
+          homepage_url: row.server.homepage_url,
+          github_url: row.server.github_url,
+          tags: this.parseJsonField(row.server.tags, []),
+          installation_methods: this.parseJsonField(row.server.installation_methods, []),
+          template_args: this.parseJsonField(row.server.template_args, []),
+          template_env: this.parseJsonField(row.server.template_env, {}),
+          team_args_schema: this.parseJsonField(row.server.team_args_schema, []),
+          team_env_schema: this.parseJsonField(row.server.team_env_schema, []),
+          user_args_schema: this.parseJsonField(row.server.user_args_schema, []),
+          user_env_schema: this.parseJsonField(row.server.user_env_schema, []),
+          transport_type: row.server.transport_type
+        } : undefined
+      });
+    }
+
+    return processedInstallations;
   }
 
   async getInstallationById(installationId: string, teamId: string): Promise<McpInstallation | null> {
@@ -156,13 +175,23 @@ export class McpInstallationService {
 
     const { installation, server } = result[0];
 
+    const teamArgs = installation.team_args 
+      ? await McpArgsStorage.retrieveTeamArgs(
+          installation.team_args,
+          this.parseJsonField(server?.team_args_schema, []),
+          { maskSecrets: true, decryptSecrets: false },
+          this.logger
+        )
+      : null;
+
     return {
       ...installation,
-      team_args: installation.team_args 
-        ? this.parseJsonField(installation.team_args, [])
-        : null,
+      team_args: teamArgs,
       team_env: installation.team_env 
-        ? this.decryptEnvironmentVariables(installation.team_env)
+        ? await this.maskEnvironmentVariables(
+            installation.team_env, 
+            this.parseJsonField(server?.team_env_schema, [])
+          )
         : null,
       server: server ? {
         id: server.id,
@@ -246,10 +275,16 @@ export class McpInstallationService {
       installation_name: data.installation_name,
       installation_type: data.installation_type || 'local',
       team_args: data.team_args 
-        ? JSON.stringify(data.team_args)
+        ? await this.encryptArguments(
+            data.team_args, 
+            this.parseJsonField(server[0].team_args_schema, [])
+          )
         : null,
       team_env: data.team_env 
-        ? this.encryptEnvironmentVariables(data.team_env)
+        ? await this.encryptEnvironmentVariables(
+            data.team_env, 
+            this.parseJsonField(server[0].team_env_schema, [])
+          )
         : null,
       created_at: now,
       updated_at: now,
@@ -328,13 +363,19 @@ export class McpInstallationService {
       }
 
       updateData.team_env = data.team_env
-        ? this.encryptEnvironmentVariables(data.team_env)
+        ? await this.encryptEnvironmentVariables(
+            data.team_env, 
+            existing.server?.team_env_schema || []
+          )
         : null;
     }
 
     if (data.team_args !== undefined) {
       updateData.team_args = data.team_args
-        ? JSON.stringify(data.team_args)
+        ? await this.encryptArguments(
+            data.team_args, 
+            existing.server?.team_args_schema || []
+          )
         : null;
     }
 
@@ -391,10 +432,27 @@ export class McpInstallationService {
       clientType
     }, 'Generating client configuration');
 
-    const installation = await this.getInstallationById(installationId, teamId);
-    if (!installation || !installation.server) {
+    // Get installation data directly from database to access encrypted values
+    const result = await this.db
+      .select({
+        installation: mcpServerInstallations,
+        server: mcpServers
+      })
+      .from(mcpServerInstallations)
+      .leftJoin(mcpServers, eq(mcpServerInstallations.server_id, mcpServers.id))
+      .where(
+        and(
+          eq(mcpServerInstallations.id, installationId),
+          eq(mcpServerInstallations.team_id, teamId)
+        )
+      )
+      .limit(1);
+
+    if (result.length === 0 || !result[0].server) {
       throw new Error('Installation not found');
     }
+
+    const { installation, server } = result[0];
 
     // Update last_used_at
     await this.db
@@ -403,7 +461,7 @@ export class McpInstallationService {
       .where(eq(mcpServerInstallations.id, installationId));
 
     // Get Claude Desktop config from server's installation_methods
-    const claudeDesktopMethod = installation.server.installation_methods.find(
+    const claudeDesktopMethod = this.parseJsonField(server.installation_methods, []).find(
       (method: any) => method.client === 'claude-desktop'
     );
 
@@ -411,10 +469,18 @@ export class McpInstallationService {
       throw new Error('Server does not support Claude Desktop installation');
     }
 
-    // Merge template with team environment variables
+    // For gateway config generation, we need to decrypt secrets (authorized use case)
+    const decryptedTeamEnv = installation.team_env 
+      ? await this.decryptEnvironmentVariables(
+          installation.team_env, 
+          this.parseJsonField(server.team_env_schema, [])
+        )
+      : null;
+
+    // Merge template with team environment variables (with decrypted secrets)
     const mergedEnv = { ...claudeDesktopMethod.env };
-    if (installation.team_env) {
-      Object.assign(mergedEnv, installation.team_env);
+    if (decryptedTeamEnv) {
+      Object.assign(mergedEnv, decryptedTeamEnv);
     }
 
     const baseConfig = {
@@ -493,21 +559,42 @@ export class McpInstallationService {
     }
   }
 
-  private encryptEnvironmentVariables(vars: Record<string, string>): string {
-    return encrypt(JSON.stringify(vars));
+  private async encryptArguments(
+    args: string[],
+    schema?: any[]
+  ): Promise<string> {
+    return await McpArgsStorage.storeTeamArgs(args, schema || [], this.logger);
   }
 
-  private decryptEnvironmentVariables(encryptedVars: string): Record<string, string> {
-    try {
-      const decrypted = decrypt(encryptedVars);
-      return JSON.parse(decrypted);
-    } catch (error) {
-      this.logger.error({
-        operation: 'decrypt_environment_variables',
-        error
-      }, 'Failed to decrypt environment variables');
-      return {};
-    }
+  private async encryptEnvironmentVariables(
+    vars: Record<string, string>,
+    schema?: any[]
+  ): Promise<string> {
+    return await McpEnvStorage.storeTeamEnv(vars, schema || [], this.logger);
+  }
+
+  private async decryptEnvironmentVariables(
+    encryptedVars: string,
+    schema?: any[]
+  ): Promise<Record<string, string>> {
+    return await McpEnvStorage.retrieveTeamEnv(
+      encryptedVars,
+      schema || [],
+      { maskSecrets: false, decryptSecrets: true },
+      this.logger
+    );
+  }
+
+  private async maskEnvironmentVariables(
+    encryptedVars: string,
+    schema?: any[]
+  ): Promise<Record<string, string>> {
+    return await McpEnvStorage.retrieveTeamEnv(
+      encryptedVars,
+      schema || [],
+      { maskSecrets: true, decryptSecrets: false },
+      this.logger
+    );
   }
 
   private parseJsonField(fieldValue: any, defaultValue: any): any {
