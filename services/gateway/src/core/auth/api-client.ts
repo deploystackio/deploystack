@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import fetch from 'node-fetch';
 import { StoredCredentials, UserInfo, TokenInfo, Team, AuthError, AuthenticationError } from '../../types/auth';
-import { MCPInstallationsResponse } from '../../types/mcp';
 import { buildAuthConfig } from '../../utils/auth-config';
 import { Device, DeviceInfo } from '../../utils/device-detection';
 
@@ -74,29 +73,6 @@ export class DeployStackAPI {
     const config = buildAuthConfig(this.baseUrl);
     const response = await this.makeRequest(`${config.teamsUrl}/${teamId}`);
     return (response as { team: Team }).team;
-  }
-
-  /**
-   * Get MCP installations for a team
-   * @param teamId Team ID
-   * @returns MCP installations response
-   */
-  async getTeamMCPInstallations(teamId: string): Promise<MCPInstallationsResponse> {
-    const endpoint = `${this.baseUrl}/api/teams/${teamId}/mcp/installations`;
-    const response = await this.makeRequest(endpoint);
-    return response as MCPInstallationsResponse;
-  }
-
-  /**
-   * Get user configurations for an MCP installation
-   * @param teamId Team ID
-   * @param installationId Installation ID
-   * @returns User configurations response
-   */
-  async getUserConfigurations(teamId: string, installationId: string): Promise<any> {
-    const endpoint = `${this.baseUrl}/api/teams/${teamId}/mcp/installations/${installationId}/user-configs`;
-    const response = await this.makeRequest(endpoint);
-    return response;
   }
 
   /**

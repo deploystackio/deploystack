@@ -110,12 +110,26 @@ export class TeamContextManager extends EventEmitter {
         console.log(chalk.gray('   Downloading new team\'s MCP configuration...'));
       }
 
-      newTeamConfig = await this.mcpConfigService.downloadAndStoreMCPConfig(
-        newTeamId,
-        newTeamName,
+      // Detect device info for hardware_id
+      const { detectDeviceInfo } = await import('../../utils/device-detection');
+      const deviceInfo = await detectDeviceInfo();
+
+      // Download merged configuration using new gateway endpoint
+      const gatewayConfig = await this.mcpConfigService.downloadGatewayMCPConfig(
+        deviceInfo.hardware_id,
         api,
         forceRefresh
       );
+      
+      // Convert and store the gateway config in the format expected by local storage
+      newTeamConfig = this.mcpConfigService.convertGatewayConfigToTeamConfig(
+        newTeamId,
+        newTeamName,
+        gatewayConfig
+      );
+      
+      // Store the converted configuration
+      await this.mcpConfigService.storeMCPConfig(newTeamConfig);
 
       if (showProgress) {
         console.log(chalk.green(`✅ Downloaded configuration for ${newTeamConfig.servers.length} MCP server${newTeamConfig.servers.length === 1 ? '' : 's'}`));
