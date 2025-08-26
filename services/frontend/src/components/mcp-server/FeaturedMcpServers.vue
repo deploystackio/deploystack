@@ -148,17 +148,18 @@ onMounted(() => {
                 <span class="sr-only">{{ t('mcpInstallations.view.fields.repository') }}</span>
                 <Github class="h-4 w-4 text-gray-400" aria-hidden="true" />
               </dt>
-              <dd class="text-sm/6 font-medium text-gray-900">
+              <dd class="text-sm/6 font-medium text-gray-900 min-w-0 flex-1">
                 <a
                   v-if="server.github_url"
                   :href="server.github_url"
                   target="_blank"
                   rel="noopener noreferrer"
-                  class="hover:underline"
+                  class="hover:underline truncate block"
+                  :title="server.github_url.replace('https://github.com/', '')"
                 >
                   {{ server.github_url.replace('https://github.com/', '') }}
                 </a>
-                <span v-else class="text-gray-500">{{ t('mcpInstallations.view.values.notProvided') }}</span>
+                <span v-else class="text-gray-500 truncate block">{{ t('mcpInstallations.view.values.notProvided') }}</span>
               </dd>
             </div>
             <div class="mt-4 flex w-full flex-none gap-x-4 items-center px-6">
