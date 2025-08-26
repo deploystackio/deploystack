@@ -1,5 +1,26 @@
 # Changelog
 
+## <small>0.9.1 (2025-08-26)</small>
+
+* chore(all): bump drizzle-orm from 0.44.4 to 0.44.5 ([c2fda9b](https://github.com/deploystackio/deploystack/commit/c2fda9b))
+* chore(all): bump lucide-vue-next from 0.540.0 to 0.541.0 ([88e8acc](https://github.com/deploystackio/deploystack/commit/88e8acc))
+* chore(backend): release v0.31.0 ([5f7a5da](https://github.com/deploystackio/deploystack/commit/5f7a5da))
+* chore(backend): release v0.31.1 ([a501fc8](https://github.com/deploystackio/deploystack/commit/a501fc8))
+* chore(backend): release v0.31.2 ([77608e7](https://github.com/deploystackio/deploystack/commit/77608e7))
+* chore(backend): release v0.31.3 ([8b3e696](https://github.com/deploystackio/deploystack/commit/8b3e696))
+* chore(frontend): bump lucide-vue-next in /services/frontend ([f6fd104](https://github.com/deploystackio/deploystack/commit/f6fd104))
+* chore(frontend): release v0.25.0 ([2097243](https://github.com/deploystackio/deploystack/commit/2097243))
+* chore(frontend): release v0.25.1 ([e940bef](https://github.com/deploystackio/deploystack/commit/e940bef))
+* chore(frontend): release v0.26.0 ([d09a5d1](https://github.com/deploystackio/deploystack/commit/d09a5d1))
+* chore(frontend): release v0.26.1 ([b422f45](https://github.com/deploystackio/deploystack/commit/b422f45))
+* chore(gateway): release v0.9.0 ([75cecd4](https://github.com/deploystackio/deploystack/commit/75cecd4))
+* feat(all): Add translations for 'secret' data type in mcp-catalog ([463e580](https://github.com/deploystackio/deploystack/commit/463e580))
+* feat(all): implement storage-first architecture in BasicInfoStepEdit component ([c9abb46](https://github.com/deploystackio/deploystack/commit/c9abb46))
+* feat(gateway): enhance MCP configuration refresh with change detection ([00e1276](https://github.com/deploystackio/deploystack/commit/00e1276))
+* feat(gateway): enhance team and user configuration decryption process ([6aeaad2](https://github.com/deploystackio/deploystack/commit/6aeaad2))
+* refactor(gateway): replace legacy MCP config methods with new gateway endpoint ([914a49b](https://github.com/deploystackio/deploystack/commit/914a49b))
+* fix(frontend): improve GitHub URL display and handling in featured servers ([06dfff3](https://github.com/deploystackio/deploystack/commit/06dfff3))
+
 ## 0.9.0 (2025-08-26)
 
 * chore(all): bump drizzle-orm from 0.44.4 to 0.44.5 ([c2fda9b](https://github.com/deploystackio/deploystack/commit/c2fda9b))
