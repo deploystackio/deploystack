@@ -3,6 +3,8 @@ import { requireAuthenticationAny, requireOAuthScope } from '../../middleware/oa
 import { getDb } from '../../db';
 import { eq, and, inArray } from 'drizzle-orm';
 import { mcpServers, mcpServerInstallations, mcpUserConfigurations, teamMemberships, devices } from '../../db/schema.sqlite';
+import { McpArgsStorage } from '../../utils/mcpArgsStorage';
+import { McpEnvStorage } from '../../utils/mcpEnvStorage';
 
 // Response schemas
 const GATEWAY_MCP_SERVER_SCHEMA = {
@@ -253,20 +255,27 @@ export default async function gatewayMeMcpConfigurationsRoute(server: FastifyIns
           let finalArgs = [...(claudeDesktopMethod.args || [])];
           let finalEnv = { ...(claudeDesktopMethod.env || {}) };
 
-          // Apply team configuration
+          // Apply team configuration with proper decryption
           if (installation.team_args) {
             try {
-              const teamArgs = JSON.parse(installation.team_args);
-              if (Array.isArray(teamArgs)) {
+              const teamArgsSchema = JSON.parse(server.team_args_schema || '[]');
+              const decryptedTeamArgs = await McpArgsStorage.retrieveTeamArgs(
+                installation.team_args,
+                teamArgsSchema,
+                { maskSecrets: false }, // Decrypt secrets for gateway
+                request.log
+              );
+              
+              // Apply decrypted team arguments
+              if (Array.isArray(decryptedTeamArgs) && decryptedTeamArgs.length > 0) {
                 // Replace args based on team_args_schema
-                const teamArgsSchema = JSON.parse(server.team_args_schema || '[]');
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
                 teamArgsSchema.forEach((schema: any, index: number) => {
-                  if (teamArgs[index] !== undefined) {
+                  if (decryptedTeamArgs[index] !== undefined) {
                     // Find the argument in finalArgs and replace it
                     const argIndex = finalArgs.findIndex(arg => arg === schema.name);
                     if (argIndex !== -1) {
-                      finalArgs[argIndex + 1] = teamArgs[index]; // Replace the value after the argument name
+                      finalArgs[argIndex + 1] = decryptedTeamArgs[index]; // Replace the value after the argument name
                     }
                   }
                 });
@@ -275,23 +284,28 @@ export default async function gatewayMeMcpConfigurationsRoute(server: FastifyIns
               request.log.warn({
                 serverId: server.id,
                 error: error instanceof Error ? error.message : String(error)
-              }, 'Failed to parse team_args');
+              }, 'Failed to decrypt and parse team_args');
             }
           }
 
-          // Apply team environment variables (encrypted)
+          // Apply team environment variables with proper decryption
           if (installation.team_env) {
             try {
-              // Note: team_env is encrypted, would need decryption service here
-              // For now, we'll skip team env variables
-              request.log.debug({
-                serverId: server.id
-              }, 'Team environment variables are encrypted, skipping for now');
+              const teamEnvSchema = JSON.parse(server.team_env_schema || '[]');
+              const decryptedTeamEnv = await McpEnvStorage.retrieveTeamEnv(
+                installation.team_env,
+                teamEnvSchema,
+                { maskSecrets: false }, // Decrypt secrets for gateway
+                request.log
+              );
+              
+              // Merge decrypted team environment variables
+              finalEnv = { ...finalEnv, ...decryptedTeamEnv };
             } catch (error) {
               request.log.warn({
                 serverId: server.id,
                 error: error instanceof Error ? error.message : String(error)
-              }, 'Failed to process team_env');
+              }, 'Failed to decrypt and process team_env');
             }
           }
 
@@ -317,22 +331,27 @@ export default async function gatewayMeMcpConfigurationsRoute(server: FastifyIns
           let configStatus: 'ready' | 'invalid' = 'ready';
           
           if (userConfig) {
-            // Apply user args
+            // Apply user args with proper decryption
             if (userConfig.user_args) {
               try {
-                const userArgs = JSON.parse(userConfig.user_args);
                 const userArgsSchema = JSON.parse(server.user_args_schema || '[]');
+                const decryptedUserArgs = await McpArgsStorage.retrieveUserArgs(
+                  userConfig.user_args,
+                  userArgsSchema,
+                  { maskSecrets: false }, // Decrypt secrets for gateway
+                  request.log
+                );
                 
                 // Replace user-specific arguments
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
                 userArgsSchema.forEach((schema: any) => {
-                  if (userArgs[schema.name] !== undefined) {
+                  if (decryptedUserArgs[schema.name] !== undefined) {
                     const argIndex = finalArgs.findIndex(arg => arg === schema.name);
                     if (argIndex !== -1) {
-                      finalArgs[argIndex] = userArgs[schema.name];
+                      finalArgs[argIndex] = decryptedUserArgs[schema.name];
                     } else {
                       // Add new argument if not found
-                      finalArgs.push(userArgs[schema.name]);
+                      finalArgs.push(decryptedUserArgs[schema.name]);
                     }
                   } else if (schema.required) {
                     configStatus = 'invalid';
@@ -346,21 +365,27 @@ export default async function gatewayMeMcpConfigurationsRoute(server: FastifyIns
                 request.log.warn({
                   serverId: server.id,
                   error: error instanceof Error ? error.message : String(error)
-                }, 'Failed to parse user_args');
+                }, 'Failed to decrypt and parse user_args');
                 configStatus = 'invalid';
               }
             }
 
-            // Apply user environment variables
+            // Apply user environment variables with proper decryption
             if (userConfig.user_env) {
               try {
-                const userEnv = JSON.parse(userConfig.user_env);
-                finalEnv = { ...finalEnv, ...userEnv };
+                const userEnvSchema = JSON.parse(server.user_env_schema || '[]');
+                const decryptedUserEnv = await McpEnvStorage.retrieveUserEnv(
+                  userConfig.user_env,
+                  userEnvSchema,
+                  { maskSecrets: false }, // Decrypt secrets for gateway
+                  request.log
+                );
+                finalEnv = { ...finalEnv, ...decryptedUserEnv };
               } catch (error) {
                 request.log.warn({
                   serverId: server.id,
                   error: error instanceof Error ? error.message : String(error)
-                }, 'Failed to parse user_env');
+                }, 'Failed to decrypt and parse user_env');
                 configStatus = 'invalid';
               }
             }
