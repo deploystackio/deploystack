@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.32.0 (2025-08-26)
+
+* chore(all): bump drizzle-orm from 0.44.4 to 0.44.5 ([c2fda9b](https://github.com/deploystackio/deploystack/commit/c2fda9b))
+* chore(all): bump lucide-vue-next from 0.540.0 to 0.541.0 ([88e8acc](https://github.com/deploystackio/deploystack/commit/88e8acc))
+* chore(frontend): bump lucide-vue-next in /services/frontend ([f6fd104](https://github.com/deploystackio/deploystack/commit/f6fd104))
+* chore(frontend): release v0.26.0 ([d09a5d1](https://github.com/deploystackio/deploystack/commit/d09a5d1))
+* chore(frontend): release v0.26.1 ([b422f45](https://github.com/deploystackio/deploystack/commit/b422f45))
+* chore(gateway): release v0.9.0 ([75cecd4](https://github.com/deploystackio/deploystack/commit/75cecd4))
+* chore(gateway): release v0.9.1 ([0bebfcd](https://github.com/deploystackio/deploystack/commit/0bebfcd))
+* feat(all): Add translations for 'secret' data type in mcp-catalog ([463e580](https://github.com/deploystackio/deploystack/commit/463e580))
+* feat(gateway): enhance MCP configuration refresh with change detection ([00e1276](https://github.com/deploystackio/deploystack/commit/00e1276))
+* feat(gateway): enhance team and user configuration decryption process ([6aeaad2](https://github.com/deploystackio/deploystack/commit/6aeaad2))
+* refactor(gateway): replace legacy MCP config methods with new gateway endpoint ([914a49b](https://github.com/deploystackio/deploystack/commit/914a49b))
+* fix(frontend): improve GitHub URL display and handling in featured servers ([06dfff3](https://github.com/deploystackio/deploystack/commit/06dfff3))
+
 ## <small>0.31.3 (2025-08-25)</small>
 
 * chore(backend): release v0.31.2 ([77608e7](https://github.com/deploystackio/deploystack/commit/77608e7))
