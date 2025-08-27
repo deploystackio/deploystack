@@ -4,6 +4,10 @@
   "workspaces": [
     "services/*"
   ],
+  "engines": {
+    "node": ">=24.0.0",
+    "npm": ">=10.0.0"
+  },
   "scripts": {
     "dev:frontend": "cd services/frontend && npm run dev",
     "dev:backend": "cd services/backend && npm run dev",
