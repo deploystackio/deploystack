@@ -353,9 +353,26 @@ describe('Database Service (db/index.ts)', () => {
   });
 
   describe('getDb and getSchema', () => {
-    it('should throw if not initialized', () => {
-      expect(() => getDb()).toThrow('Database not initialized. Call initializeDatabase() first.');
-      expect(() => getSchema()).toThrow('Database schema not generated. Call initializeDatabase() first.');
+    it('should return safe proxy/schema when not initialized (graceful startup)', () => {
+      // New behavior: getDb() returns a safe proxy instead of throwing
+      const db = getDb();
+      expect(db).toBeDefined();
+      expect(typeof db).toBe('object');
+      
+      // New behavior: getSchema() returns a generated schema instead of throwing
+      const schema = getSchema();
+      expect(schema).toBeDefined();
+      expect(typeof schema).toBe('object');
+    });
+
+    it('should throw helpful error when trying to use proxy database operations', () => {
+      const db = getDb();
+      
+      // The proxy should throw helpful errors when operations are attempted
+      expect(() => db.select()).toThrow('Database not available. Please complete the setup process at /setup first.');
+      expect(() => db.insert()).toThrow('Database not available. Please complete the setup process at /setup first.');
+      expect(() => db.update()).toThrow('Database not available. Please complete the setup process at /setup first.');
+      expect(() => db.delete()).toThrow('Database not available. Please complete the setup process at /setup first.');
     });
 
     // This test is removed as it has issues with state persistence between test isolation
@@ -375,11 +392,14 @@ describe('Database Service (db/index.ts)', () => {
   });
 
   describe('executeDbOperation', () => {
-    it('should throw when database is not initialized', () => {
-      const operation = vi.fn();
+    it('should throw when database operations are attempted via proxy', () => {
+      const operation = vi.fn((db, schema) => {
+        // This will trigger the proxy error when trying to use db operations
+        return db.select();
+      });
       
-      expect(() => executeDbOperation(operation)).toThrow('Database not initialized');
-      expect(operation).not.toHaveBeenCalled();
+      expect(() => executeDbOperation(operation)).toThrow('Database not available. Please complete the setup process at /setup first.');
+      expect(operation).toHaveBeenCalled(); // Operation is called but throws when using db
     });
 
     // These tests are removed as they have issues with state persistence between test isolation

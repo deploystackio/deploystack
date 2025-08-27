@@ -12,9 +12,6 @@ import {
 } from './schemas';
 
 export default async function deleteDeviceRoute(server: FastifyInstance) {
-  const db = getDb();
-  const deviceService = new DeviceService(db);
-
   server.delete('/users/me/devices/:deviceId', {
     preValidation: requireAuthentication(),
     schema: {
@@ -44,6 +41,8 @@ export default async function deleteDeviceRoute(server: FastifyInstance) {
     }
   }, async (request, reply) => {
     try {
+      const db = getDb(); // ✅ Called inside route handler when database is ready
+      const deviceService = new DeviceService(db);
       const { deviceId } = request.params as DeviceParams;
       const userId = request.user!.id;
 

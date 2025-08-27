@@ -14,9 +14,6 @@ import {
 } from './schemas';
 
 export default async function updateDeviceRoute(server: FastifyInstance) {
-  const db = getDb();
-  const deviceService = new DeviceService(db);
-
   server.put('/users/me/devices/:deviceId', {
     preValidation: requireAuthentication(),
     schema: {
@@ -59,6 +56,8 @@ export default async function updateDeviceRoute(server: FastifyInstance) {
     }
   }, async (request, reply) => {
     try {
+      const db = getDb(); // ✅ Called inside route handler when database is ready
+      const deviceService = new DeviceService(db);
       const { deviceId } = request.params as DeviceParams;
       const userId = request.user!.id;
       const updateData = request.body as UpdateDeviceRequest;

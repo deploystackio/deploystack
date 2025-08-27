@@ -465,21 +465,54 @@ export async function initializeDatabase(logger: FastifyBaseLogger): Promise<boo
 }
 
 /**
- * Get database instance
+ * Create a safe database proxy that handles operations gracefully during startup
+ */
+function createSafeDbProxy(): AnyDatabase {
+  const handler = {
+    get(target: any, prop: string) {
+      // Allow basic property access for type checking
+      if (prop === 'constructor' || prop === 'toString' || prop === 'valueOf') {
+        return target[prop];
+      }
+      
+      // For any database operation, throw a more descriptive error
+      return () => {
+        throw new Error('Database not available. Please complete the setup process at /setup first.');
+      };
+    }
+  };
+  
+  // Create a minimal proxy object that looks like a database but safely handles calls
+  const mockDb = {
+    select: () => { throw new Error('Database not available. Please complete the setup process at /setup first.'); },
+    insert: () => { throw new Error('Database not available. Please complete the setup process at /setup first.'); },
+    update: () => { throw new Error('Database not available. Please complete the setup process at /setup first.'); },
+    delete: () => { throw new Error('Database not available. Please complete the setup process at /setup first.'); },
+    $client: null
+  };
+  
+  return new Proxy(mockDb, handler) as AnyDatabase;
+}
+
+/**
+ * Get database instance with graceful startup handling
  */
 export function getDb(): AnyDatabase {
   if (!dbInstance || !isDbInitialized) {
-    throw new Error('Database not initialized. Call initializeDatabase() first.');
+    // During startup, return a safe proxy instead of throwing immediately
+    // This allows the server to start and routes to be registered
+    return createSafeDbProxy();
   }
   return dbInstance;
 }
 
 /**
- * Get database schema
+ * Get database schema with graceful startup handling
  */
 export function getSchema(): AnySchema {
   if (!dbSchema || !isDbInitialized) {
-    throw new Error('Database schema not generated. Call initializeDatabase() first.');
+    // During startup, generate a basic schema to allow server startup
+    return generateSchema();
   }
   return dbSchema;
 }

@@ -10,9 +10,6 @@ import {
 } from './schemas';
 
 export default async function listDevicesRoute(server: FastifyInstance) {
-  const db = getDb();
-  const deviceService = new DeviceService(db);
-
   server.get('/users/me/devices', {
     preValidation: requireAuthentication(),
     schema: {
@@ -37,6 +34,8 @@ export default async function listDevicesRoute(server: FastifyInstance) {
     }
   }, async (request, reply) => {
     try {
+      const db = getDb(); // ✅ Called inside route handler when database is ready
+      const deviceService = new DeviceService(db);
       const userId = request.user!.id;
       const devices = await deviceService.getDevicesByUser(userId);
 
