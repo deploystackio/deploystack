@@ -94,10 +94,10 @@ The frontend uses a dual-layer environment system that works seamlessly across d
 
 ```bash
 # Create local environment file (gitignored)
-cp .env .env.local
-
-# Edit .env.local with your settings
-vim .env.local
+cat > .env.local << EOF
+VITE_DEPLOYSTACK_BACKEND_URL=http://localhost:3000
+VITE_APP_TITLE=DeployStack
+EOF
 ```
 
 **Environment file priority** (highest to lowest):

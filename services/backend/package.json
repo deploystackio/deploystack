@@ -75,9 +75,5 @@
     "webpack": "^5.101.3",
     "webpack-cli": "^6.0.1",
     "webpack-node-externals": "^3.0.0"
-  },
-  "overrides": {
-    "glob": "^10.0.0",
-    "inflight": "npm:@isaacs/inflight@^1.0.6"
   }
 }
