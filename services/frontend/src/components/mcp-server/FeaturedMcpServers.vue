@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { Button } from '@/components/ui/button'
 import { Loader2, Github, Code } from 'lucide-vue-next'
 import { McpCatalogService } from '@/services/mcpCatalogService'
@@ -29,6 +29,7 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 const router = useRouter()
+const route = useRoute()
 
 // State
 const featuredServers = ref<McpServer[]>([])
@@ -45,6 +46,10 @@ const gridCols = computed(() => {
     return 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
   }
   return 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
+})
+
+const shouldShowBrowseAllButton = computed(() => {
+  return route.path !== '/mcp-server/add'
 })
 
 // Methods
@@ -80,6 +85,10 @@ const handleInstall = (server: McpServer) => {
       step: '2'
     }
   })
+}
+
+const handleServerClick = (server: McpServer) => {
+  router.push(`/mcp-server/view/${server.id}`)
 }
 
 const getServerLanguageBadge = (server: McpServer) => {
@@ -141,7 +150,13 @@ onMounted(() => {
         <div class="rounded-lg bg-gray-50 shadow-xs outline-1 outline-gray-900/5">
           <dl class="flex flex-wrap">
             <div class="flex-auto pt-6 pl-6">
-              <dt class="text-sm/6 font-semibold text-gray-900">{{ server.name }}</dt>
+              <dt 
+                class="text-sm/6 font-semibold text-gray-900 cursor-pointer hover:text-teal-700 transition-colors"
+                @click="handleServerClick(server)"
+                :title="`View ${server.name} details`"
+              >
+                {{ server.name }}
+              </dt>
             </div>
             <div class="mt-6 flex w-full flex-none gap-x-4 items-center border-t border-gray-900/5 px-6 pt-6">
               <dt class="flex-none">
@@ -189,7 +204,7 @@ onMounted(() => {
     </div>
 
     <!-- Show More Link -->
-    <div v-if="featuredServers.length > 0" class="text-center">
+    <div v-if="featuredServers.length > 0 && shouldShowBrowseAllButton" class="text-center">
       <Button
         variant="ghost"
         size="sm"

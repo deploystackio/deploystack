@@ -9,9 +9,12 @@ import { toast } from 'vue-sonner'
 import { useEventBus } from '@/composables/useEventBus'
 import McpInstallationsCard from '@/components/mcp-server/McpInstallationsCard.vue'
 import ClientConfigurationModal from '@/components/gateway-config/ClientConfigurationModal.vue'
+import UserWalkthroughPopover from '@/components/walkthrough/UserWalkthroughPopover.vue'
 import type { McpInstallation } from '@/types/mcp-installations'
 import { McpInstallationService } from '@/services/mcpInstallationService'
 import { TeamService, type Team } from '@/services/teamService'
+import { GlobalSettingsService } from '@/services/globalSettingsService'
+import { UserPreferencesService } from '@/services/userPreferencesService' // NEW IMPORT
 
 const { t } = useI18n()
 const router = useRouter()
@@ -21,6 +24,12 @@ const eventBus = useEventBus()
 const installations = ref<McpInstallation[]>([])
 const isLoading = ref(true)
 const error = ref<string | null>(null)
+
+// Walkthrough state
+const showUserWalkthrough = ref(false)
+const walkthroughStep = ref(1)
+const showWalkthroughStep2 = ref(false)
+const showStep2ButtonHighZIndex = ref(false)
 
 // Team context using event bus storage
 const selectedTeam = ref<Team | null>(null)
@@ -85,6 +94,40 @@ const handleTeamSelected = async (data: { teamId: string; teamName: string }) =>
   }
 }
 
+// UPDATED: Check walkthrough setting and user completion status
+const checkWalkthroughSetting = async (): Promise<void> => {
+  try {
+    // Step 1: Check if walkthrough is globally enabled
+    const globalWalkthroughEnabled = await GlobalSettingsService.shouldShowUserWalkthrough()
+    
+    if (!globalWalkthroughEnabled) {
+      console.log('Walkthrough disabled globally')
+      showUserWalkthrough.value = false
+      return
+    }
+
+    // Step 2: Check user's personal walkthrough completion status via API
+    const userPreferences = await UserPreferencesService.getUserPreferences()
+    const isWalkthroughCompleted = userPreferences.walkthrough_completed || false
+    
+    if (isWalkthroughCompleted) {
+      console.log('User has already completed the walkthrough')
+      showUserWalkthrough.value = false
+      // Also sync to local storage for consistency
+      eventBus.setState('walkthrough_completed', true)
+      return
+    }
+    
+    // Step 3: Show walkthrough only if globally enabled AND user hasn't completed it
+    showUserWalkthrough.value = true
+    console.log('Walkthrough enabled globally and user has not completed it yet')
+    
+  } catch (error) {
+    console.error('Error checking walkthrough setting:', error)
+    showUserWalkthrough.value = false
+  }
+}
+
 // Methods
 const fetchInstallations = async (): Promise<void> => {
   if (!selectedTeam.value) return
@@ -107,6 +150,11 @@ const handleInstallServer = () => {
 }
 
 const handleOpenConfigModal = () => {
+  // If walkthrough step 2 is active, finish the walkthrough
+  if (showWalkthroughStep2.value) {
+    handleWalkthroughFinish()
+  }
+
   isConfigModalOpen.value = true
 }
 
@@ -163,7 +211,74 @@ const handleNotificationShow = (data: { message: string; type: string }) => {
   }
 }
 
-/* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+
+// Walkthrough event handlers
+const handleWalkthroughNextStep = (data: { fromStep: number; toStep: number }) => {
+  console.log('Walkthrough next step:', data)
+  if (data.fromStep === 1 && data.toStep === 2) {
+    // Hide step 1
+    showUserWalkthrough.value = false
+    walkthroughStep.value = 2
+
+    // Emit step 2 active to control z-index
+    eventBus.emit('walkthrough-step2-active')
+
+    // Show step 2 after a brief delay
+    setTimeout(() => {
+      showWalkthroughStep2.value = true
+      showStep2ButtonHighZIndex.value = true
+    }, 300)
+  }
+}
+
+// UPDATED: Enhanced walkthrough finish handler with API call
+const handleWalkthroughFinish = async () => {
+  console.log('Walkthrough finished - updating user preferences')
+  
+  try {
+    // Step 1: Use specialized walkthrough completion endpoint
+    await UserPreferencesService.completeWalkthrough()
+    
+    console.log('Successfully completed walkthrough via API')
+    
+    // Step 2: Update local storage for consistency
+    eventBus.setState('walkthrough_completed', true)
+    
+    // Step 3: Hide all walkthrough UI elements
+    showUserWalkthrough.value = false
+    showWalkthroughStep2.value = false
+    showStep2ButtonHighZIndex.value = false
+    walkthroughStep.value = 1
+    
+    // Step 4: Emit completion event for any listening components
+    eventBus.emit('walkthrough-completed')
+    
+    console.log('Walkthrough completion stored in both API and local storage')
+    
+    // Optional: Show success toast
+    toast.success('Welcome tour completed!')
+    
+  } catch (error) {
+    console.error('Error updating walkthrough completion status:', error)
+    
+    // Still update local storage as fallback
+    eventBus.setState('walkthrough_completed', true)
+    
+    // Hide walkthrough UI
+    showUserWalkthrough.value = false
+    showWalkthroughStep2.value = false
+    showStep2ButtonHighZIndex.value = false
+    walkthroughStep.value = 1
+    
+    // Emit completion event
+    eventBus.emit('walkthrough-completed')
+    
+    // Show error toast
+    toast.error('Walkthrough completed, but failed to save preference')
+  }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const handleStorageChange = (data: { key: string; oldValue: any; newValue: any }) => {
   // Check if it's a pending notification
   if (data.key === 'pending_notification' && data.newValue) {
@@ -219,6 +334,14 @@ onMounted(async () => {
   // Initialize team context first
   await initializeSelectedTeam()
 
+  // Check walkthrough setting (now includes API call)
+  await checkWalkthroughSetting()
+
+  // If walkthrough should be shown, emit step 1 active
+  if (showUserWalkthrough.value) {
+    eventBus.emit('walkthrough-step1-active')
+  }
+
   // Initial fetch after team is set
   if (selectedTeam.value) {
     await fetchInstallations()
@@ -238,6 +361,10 @@ onMounted(async () => {
 
   // Listen for storage changes (for persistent notifications)
   eventBus.on('storage-changed', handleStorageChange)
+
+  // Listen for walkthrough events
+  eventBus.on('walkthrough-next-step', handleWalkthroughNextStep)
+  eventBus.on('walkthrough-finish', handleWalkthroughFinish)
 })
 
 onUnmounted(() => {
@@ -246,6 +373,8 @@ onUnmounted(() => {
   eventBus.off('mcp-installations-updated', handleInstallationsUpdate)
   eventBus.off('notification-show', handleNotificationShow)
   eventBus.off('storage-changed', handleStorageChange)
+  eventBus.off('walkthrough-next-step', handleWalkthroughNextStep)
+  eventBus.off('walkthrough-finish', handleWalkthroughFinish)
 })
 </script>
 
@@ -259,9 +388,13 @@ onUnmounted(() => {
         </div>
         <div v-if="selectedTeam" class="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
           <Button
+            id="get-configuration-button"
             @click="handleOpenConfigModal"
             variant="outline"
-            class="flex items-center justify-center gap-2 bg-black text-white border-black hover:bg-black/90 hover:border-black hover:text-white"
+            :class="[
+              'flex items-center justify-center gap-2 bg-black text-white border-black hover:bg-black/90 hover:border-black hover:text-white',
+              showStep2ButtonHighZIndex ? 'relative z-[10000]' : ''
+            ]"
           >
             {{ t('gatewayConfig.button.getConfiguration') }}
           </Button>
@@ -297,6 +430,7 @@ onUnmounted(() => {
         <McpInstallationsCard
           :installations="installations"
           :has-installations="hasInstallations"
+          :show-walkthrough="showUserWalkthrough"
           @install-server="handleInstallServer"
           @view-installation="handleViewInstallation"
           @manage-installation="handleManageInstallation"
@@ -309,6 +443,20 @@ onUnmounted(() => {
     <!-- Gateway Configuration Modal -->
     <ClientConfigurationModal
       v-model:open="isConfigModalOpen"
+    />
+
+    <!-- Walkthrough Step 1 Popover -->
+    <UserWalkthroughPopover
+      v-model:open="showUserWalkthrough"
+      :step="1"
+      target-element="last-server-item"
+    />
+
+    <!-- Walkthrough Step 2 Popover -->
+    <UserWalkthroughPopover
+      v-model:open="showWalkthroughStep2"
+      :step="2"
+      target-element="get-configuration-button"
     />
   </DashboardLayout>
 </template>

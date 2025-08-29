@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import {
@@ -23,9 +23,11 @@ import type { McpInstallation } from '@/types/mcp-installations'
 import { McpInstallationService } from '@/services/mcpInstallationService'
 import { TeamService } from '@/services/teamService'
 import CategoryDisplay from '@/components/mcp-server/CategoryDisplay.vue'
+import { useEventBus } from '@/composables/useEventBus'
 
 interface Props {
   installations: McpInstallation[]
+  showWalkthrough?: boolean
 }
 
 const props = defineProps<Props>()
@@ -38,12 +40,21 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 const router = useRouter()
+const eventBus = useEventBus()
 
 // Modal state
 const showDeleteModal = ref(false)
 const isDeleting = ref(false)
 const deleteError = ref<string | null>(null)
 const installationToDelete = ref<McpInstallation | null>(null)
+
+// Walkthrough state
+const showWalkthroughOverlay = ref(false)
+const showWalkthroughBorder = ref(false)
+const showWalkthroughHighZIndex = ref(false)
+
+// Watch for walkthrough prop changes
+// Note: Walkthrough popover is now handled by parent index.vue
 
 // Find which team owns the installation
 async function findInstallationTeam(installationId: string): Promise<{ teamId: string; installation: McpInstallation } | null> {
@@ -145,20 +156,80 @@ const cancelRemoval = () => {
   showDeleteModal.value = false
   installationToDelete.value = null
 }
+
+// Event handlers for walkthrough overlay
+const handleWalkthroughOverlayShow = () => {
+  console.log('Showing walkthrough overlay for step 1')
+  showWalkthroughOverlay.value = true
+  showWalkthroughBorder.value = true
+  showWalkthroughHighZIndex.value = true
+}
+
+const handleWalkthroughOverlayHide = () => {
+  console.log('Hiding walkthrough overlay')
+  showWalkthroughOverlay.value = false
+  showWalkthroughBorder.value = false
+  showWalkthroughHighZIndex.value = false
+}
+
+// Event handlers for step-specific z-index control
+const handleWalkthroughStep1Active = () => {
+  console.log('Step 1 active: MCP liste should be visible (high z-index)')
+  // Step 1: MCP liste should be visible (high z-index)
+  showWalkthroughHighZIndex.value = true
+  showWalkthroughBorder.value = true
+}
+
+const handleWalkthroughStep2Active = () => {
+  console.log('Step 2 active: MCP liste should be hidden under overlay (no high z-index)')
+  // Step 2: MCP liste should be hidden under overlay (no high z-index)
+  showWalkthroughHighZIndex.value = false
+  showWalkthroughBorder.value = false
+}
+
+onMounted(() => {
+  console.log('McpInstallationsList mounted - registering walkthrough event listeners')
+  // Listen for walkthrough overlay events
+  eventBus.on('walkthrough-overlay-show', handleWalkthroughOverlayShow)
+  eventBus.on('walkthrough-overlay-hide', handleWalkthroughOverlayHide)
+
+  // Listen for step-specific events
+  eventBus.on('walkthrough-step1-active', handleWalkthroughStep1Active)
+  eventBus.on('walkthrough-step2-active', handleWalkthroughStep2Active)
+})
+
+onUnmounted(() => {
+  // Clean up event listeners
+  eventBus.off('walkthrough-overlay-show', handleWalkthroughOverlayShow)
+  eventBus.off('walkthrough-overlay-hide', handleWalkthroughOverlayHide)
+  eventBus.off('walkthrough-step1-active', handleWalkthroughStep1Active)
+  eventBus.off('walkthrough-step2-active', handleWalkthroughStep2Active)
+})
 </script>
 
 <template>
+  <!-- Walkthrough Background Overlay -->
+  <div
+    v-if="showWalkthroughOverlay && sortedInstallations.length > 0"
+    class="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-[9998]"
+  />
+
   <div class="min-h-screen bg-gray-50">
     <div class="mx-auto max-w-4xl space-y-8 py-16">
       <!-- Installations List -->
-      <ul
-        v-if="sortedInstallations.length > 0"
-        role="list"
-        class="divide-y divide-gray-100 overflow-hidden bg-white shadow-sm ring-1 ring-gray-900/5 rounded-lg"
-      >
+      <div v-if="sortedInstallations.length > 0" class="relative">
+        <ul
+          role="list"
+          :class="[
+            'divide-y divide-gray-100 overflow-hidden bg-white shadow-sm ring-1 ring-gray-900/5 rounded-lg relative',
+            showWalkthroughHighZIndex ? 'z-[9999]' : '',
+            showWalkthroughBorder ? 'ring-4 ring-teal-500 ring-opacity-50' : ''
+          ]"
+        >
         <li
-          v-for="installation in sortedInstallations"
+          v-for="(installation, index) in sortedInstallations"
           :key="installation.id"
+          :id="index === sortedInstallations.length - 1 ? 'last-server-item' : undefined"
           class="relative flex justify-between gap-x-6 px-4 py-5 hover:bg-gray-50 sm:px-6"
         >
           <div class="flex min-w-0 gap-x-4">
@@ -231,9 +302,13 @@ const cancelRemoval = () => {
             </div>
 
             <ChevronRight class="size-5 flex-none text-gray-400" aria-hidden="true" />
-          </div>
-        </li>
-      </ul>
+            </div>
+            </li>
+            </ul>
+
+            <!-- Walkthrough Popover positioned relative to last server -->
+            <!-- REMOVED: Duplicate popover - handled by parent index.vue -->
+    </div>
 
       <!-- Empty State -->
       <div

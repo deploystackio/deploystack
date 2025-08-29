@@ -10043,10 +10043,28 @@ paths:
                             - type: "null"
                         template_env:
                           anyOf:
-                            - type: object
-                              propertyNames:
-                                type: string
-                              additionalProperties: {}
+                            - type: array
+                              items: {}
+                            - type: "null"
+                        team_args_schema:
+                          anyOf:
+                            - type: array
+                              items: {}
+                            - type: "null"
+                        team_env_schema:
+                          anyOf:
+                            - type: array
+                              items: {}
+                            - type: "null"
+                        user_args_schema:
+                          anyOf:
+                            - type: array
+                              items: {}
+                            - type: "null"
+                        user_env_schema:
+                          anyOf:
+                            - type: array
+                              items: {}
                             - type: "null"
                         dependencies:
                           anyOf:
@@ -10109,6 +10127,10 @@ paths:
                         - transport_type
                         - template_args
                         - template_env
+                        - team_args_schema
+                        - team_env_schema
+                        - user_args_schema
+                        - user_env_schema
                         - dependencies
                         - category_id
                         - tags

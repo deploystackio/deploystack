@@ -43,6 +43,18 @@ export type EventBusEvents = {
   'settings-group-updated': { groupId: string }
   'settings-connection-tested': { groupId: string; success: boolean; message: string }
   'storage-changed': { key: string; oldValue: any; newValue: any }
+  // Walkthrough Events
+  'walkthrough-started': void
+  'walkthrough-step-opened': { step: number }
+  'walkthrough-step-closed': { step: number }
+  'walkthrough-completed': void
+  'walkthrough-cancelled': void
+  'walkthrough-overlay-show': void
+  'walkthrough-overlay-hide': void
+  'walkthrough-next-step': { fromStep: number; toStep: number }
+  'walkthrough-finish': void
+  'walkthrough-step1-active': void
+  'walkthrough-step2-active': void
 }
 
 // Storage configuration
@@ -50,6 +62,9 @@ const STORAGE_CONFIG = {
   prefix: 'deploystack_',
   keys: {
     SELECTED_TEAM_ID: 'selected_team_id',
+    WALKTHROUGH_COMPLETED: 'walkthrough_completed',
+    TUTORIAL_COMPLETED: 'tutorial_completed',
+    ONBOARDING_SKIPPED: 'onboarding_skipped',
   }
 }
 

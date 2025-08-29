@@ -42,7 +42,7 @@ onMounted(() => {
   <!-- Only render when not loading and visible -->
   <div v-if="!isLoading && isVisible" class="bg-white">
     <div class="mx-auto max-w-7xl py-12 sm:px-6 lg:px-8">
-      <div class="relative isolate overflow-hidden bg-gradient-to-r from-emerald-600 to-emerald-950 px-6 pt-8 pb-8 sm:rounded-3xl sm:px-8 lg:flex lg:gap-x-20">
+      <div class="relative isolate overflow-hidden bg-linear-to-r from-emerald-600 to-emerald-950 px-6 pt-8 pb-8 sm:rounded-3xl sm:px-8 lg:flex lg:gap-x-20">
         <div class="mx-auto max-w-full text-left lg:mx-0 lg:flex-auto lg:flex lg:items-center lg:justify-between">
           <div class="flex-1 lg:max-w-[70%]">
             <p class="text-lg/8 text-pretty text-gray-300">

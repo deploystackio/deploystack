@@ -232,6 +232,9 @@ export default {
       resources: 'Available Resources',
       prompts: 'Available Prompts',
       environmentVariables: 'Environment Variables',
+      templateEnvironmentVariables: 'Template Environment Variables',
+      teamEnvironmentVariables: 'Team Environment Variables', 
+      userEnvironmentVariables: 'User Environment Variables',
       transportType: 'Transport Type',
       dependencies: 'Dependencies',
       systemInfo: 'System Information'
@@ -256,7 +259,16 @@ export default {
       updated: 'Updated:',
       lastSync: 'Last Sync:',
       serverId: 'Server ID:',
-      slug: 'Slug:'
+      slug: 'Slug:',
+      locked: 'Locked',
+      secret: 'Secret',
+      type: 'Type',
+      staticTemplateValue: 'Static template value',
+      lockedByGlobalAdmin: 'Locked by global admin',
+      teamConfigurable: 'Team configurable',
+      lockedByTeamAdmin: 'Locked by team admin',
+      userConfigurable: 'User configurable',
+      hiddenFromUsers: 'Hidden from users'
     }
   },
 

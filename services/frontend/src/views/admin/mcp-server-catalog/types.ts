@@ -108,7 +108,7 @@ export interface TeamArgsSchema {
 
 export interface TeamEnvSchema {
   name: string
-  type: 'string' | 'number' | 'boolean'
+  type: 'string' | 'number' | 'boolean' | 'secret'
   description?: string
   required: boolean
   locked: boolean
@@ -119,7 +119,7 @@ export interface TeamEnvSchema {
 
 export interface UserArgsSchema {
   name: string
-  type: 'string' | 'number' | 'boolean'
+  type: 'string' | 'number' | 'boolean' | 'secret'
   description?: string
   required: boolean
   locked: boolean
@@ -128,7 +128,7 @@ export interface UserArgsSchema {
 
 export interface UserEnvSchema {
   name: string
-  type: 'string' | 'number' | 'boolean'
+  type: 'string' | 'number' | 'boolean' | 'secret'
   description?: string
   required: boolean
   locked: boolean

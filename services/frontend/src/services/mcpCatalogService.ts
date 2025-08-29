@@ -82,7 +82,13 @@ export class McpCatalogService {
       prompts: safeJsonParse(server.prompts, null),
       environment_variables: safeJsonParse(server.environment_variables, null),
       default_config: safeJsonParse(server.default_config, null),
-      dependencies: safeJsonParse(server.dependencies, null)
+      dependencies: safeJsonParse(server.dependencies, null),
+      template_args: safeJsonParse(server.template_args, []),
+      template_env: safeJsonParse(server.template_env, []),
+      team_args_schema: safeJsonParse(server.team_args_schema, []),
+      team_env_schema: safeJsonParse(server.team_env_schema, []),
+      user_args_schema: safeJsonParse(server.user_args_schema, []),
+      user_env_schema: safeJsonParse(server.user_env_schema, [])
     }
   }
 
@@ -277,10 +283,10 @@ export class McpCatalogService {
    */
   static async searchServers(params: McpServerSearchParams): Promise<McpServerSearchResponse> {
     const url = new URL(`${this.baseUrl}/api/mcp/servers/search`)
-    
+
     // Required parameter
     url.searchParams.append('q', params.q)
-    
+
     // Optional parameters
     if (params.category) url.searchParams.append('category_id', params.category)
     if (params.language) url.searchParams.append('language', params.language)
@@ -304,7 +310,7 @@ export class McpCatalogService {
     }
 
     const data = await response.json()
-    
+
     return {
       servers: (data.data?.servers || []).map(this.parseServerData),
       pagination: data.data?.pagination || {

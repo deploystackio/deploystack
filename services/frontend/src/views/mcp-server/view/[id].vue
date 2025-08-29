@@ -4,9 +4,9 @@ import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, Github, ExternalLink, Star, Package, Code, Settings, Calendar, Tag, Download } from 'lucide-vue-next'
+import { ArrowLeft, Github, ExternalLink, Package, Code, Calendar, Tag, Download, Lock, Unlock, Users, User } from 'lucide-vue-next'
 import DashboardLayout from '@/components/DashboardLayout.vue'
-import EnvironmentVariablesDisplay from '@/components/admin/mcp-catalog/EnvironmentVariablesDisplay.vue'
+import ContentWrapper from '@/components/ContentWrapper.vue'
 import CategoryDisplay from '@/components/mcp-server/CategoryDisplay.vue'
 import { McpCatalogService } from '@/services/mcpCatalogService'
 import type { McpServer } from '@/views/admin/mcp-server-catalog/types'
@@ -55,20 +55,6 @@ const displayTags = computed(() => {
   }
 })
 
-const displayTools = computed(() => {
-  if (!server.value?.tools) return []
-  // Handle both array and JSON string formats
-  if (Array.isArray(server.value.tools)) {
-    return server.value.tools
-  }
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return JSON.parse(server.value.tools as any)
-  } catch {
-    return []
-  }
-})
-
 const displayResources = computed(() => {
   if (!server.value?.resources) return []
   // Handle both array and JSON string formats
@@ -111,38 +97,54 @@ const displayInstallationMethods = computed(() => {
   }
 })
 
-const displayEnvironmentVariables = computed(() => {
-  // Use new three-tier schema instead of old environment_variables
-  if (!server.value?.user_env_schema) return null
-  
+// Three-tier environment variables
+const displayTemplateEnvironment = computed(() => {
+  if (!server.value?.template_env) return []
   try {
-    // Handle both object and JSON string formats
-    if (typeof server.value.user_env_schema === 'object') {
+    // Handle both array and JSON string formats
+    if (Array.isArray(server.value.template_env)) {
+      return server.value.template_env
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const parsed = JSON.parse(server.value.template_env as any)
+    return parsed
+  } catch {
+    return []
+  }
+})
+
+const displayTeamEnvironmentSchema = computed(() => {
+  if (!server.value?.team_env_schema) return []
+  try {
+    // Handle both array and JSON string formats
+    if (Array.isArray(server.value.team_env_schema)) {
+      return server.value.team_env_schema
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const parsed = JSON.parse(server.value.team_env_schema as any)
+    return parsed
+  } catch {
+    return []
+  }
+})
+
+const displayUserEnvironmentSchema = computed(() => {
+  if (!server.value?.user_env_schema) return []
+  try {
+    // Handle both array and JSON string formats
+    if (Array.isArray(server.value.user_env_schema)) {
       return server.value.user_env_schema
     }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return JSON.parse(server.value.user_env_schema as any)
+    const parsed = JSON.parse(server.value.user_env_schema as any)
+    return parsed
   } catch {
-    return null
+    return []
   }
 })
 
 const displayTransportType = computed(() => {
   return server.value?.transport_type || 'stdio'
-})
-
-const displayDependencies = computed(() => {
-  if (!server.value?.dependencies) return null
-  // Handle both object and JSON string formats
-  if (typeof server.value.dependencies === 'object') {
-    return server.value.dependencies
-  }
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return JSON.parse(server.value.dependencies as any)
-  } catch {
-    return null
-  }
 })
 
 // Get status badge variant
@@ -228,7 +230,7 @@ const installServer = () => {
       </div>
 
       <!-- Server Details -->
-      <div v-else-if="server">
+      <ContentWrapper v-if="server">
         <div class="px-4 sm:px-0">
           <h3 class="text-base/7 font-semibold text-gray-900">{{ t('mcpInstallations.view.serverInformation') }}</h3>
           <p class="mt-1 max-w-2xl text-sm/6 text-gray-500">{{ t('mcpInstallations.view.serverDetails') }}</p>
@@ -239,13 +241,7 @@ const installServer = () => {
             <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
               <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpInstallations.view.fields.name') }}</dt>
               <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
-                <div class="flex items-center gap-2">
-                  {{ server.name }}
-                  <Badge v-if="server.featured" variant="default" class="flex items-center gap-1">
-                    <Star class="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                    {{ t('mcpInstallations.view.values.featured') }}
-                  </Badge>
-                </div>
+                {{ server.name }}
               </dd>
             </div>
 
@@ -257,8 +253,8 @@ const installServer = () => {
               </dd>
             </div>
 
-            <!-- Long Description -->
-            <div v-if="server.long_description" class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+            <!-- Long Description (only if different from short description) -->
+            <div v-if="server.long_description && server.long_description !== server.description" class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
               <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpInstallations.view.fields.longDescription') }}</dt>
               <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
                 <div class="whitespace-pre-wrap">{{ server.long_description }}</div>
@@ -446,30 +442,6 @@ const installServer = () => {
               </dd>
             </div>
 
-            <!-- Tools -->
-            <div v-if="displayTools.length > 0" class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
-              <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpInstallations.view.fields.tools') }}</dt>
-              <dd class="mt-2 text-sm text-gray-900 sm:col-span-2 sm:mt-0">
-                <ul role="list" class="divide-y divide-gray-100 rounded-md border border-gray-200">
-                  <li
-                    v-for="(tool, index) in displayTools"
-                    :key="index"
-                    class="flex items-center justify-between py-4 pr-5 pl-4 text-sm/6"
-                  >
-                    <div class="flex w-0 flex-1 items-center">
-                      <Settings class="size-5 shrink-0 text-gray-400" aria-hidden="true" />
-                      <div class="ml-4 flex min-w-0 flex-1 gap-2">
-                        <div class="flex flex-col">
-                          <span class="truncate font-medium">{{ tool.name || 'Tool' }}</span>
-                          <span v-if="tool.description" class="truncate text-xs text-gray-500">{{ tool.description }}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </li>
-                </ul>
-              </dd>
-            </div>
-
             <!-- Resources -->
             <div v-if="displayResources.length > 0" class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
               <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpInstallations.view.fields.resources') }}</dt>
@@ -518,14 +490,113 @@ const installServer = () => {
               </dd>
             </div>
 
-            <!-- Environment Variables -->
-            <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
-              <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpInstallations.view.fields.environmentVariables') }}</dt>
+            <!-- Template Environment Variables -->
+            <div v-if="displayTemplateEnvironment.length > 0" class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+              <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpInstallations.view.fields.templateEnvironmentVariables') }}</dt>
               <dd class="mt-2 text-sm text-gray-900 sm:col-span-2 sm:mt-0">
-                <EnvironmentVariablesDisplay
-                  :environment-variables="displayEnvironmentVariables"
-                  mode="view"
-                />
+                <ul role="list" class="divide-y divide-gray-100 rounded-md border border-gray-200">
+                  <li
+                    v-for="(envVar, index) in displayTemplateEnvironment"
+                    :key="index"
+                    class="flex items-center justify-between py-4 pr-5 pl-4 text-sm/6"
+                  >
+                    <div class="flex w-0 flex-1 items-center">
+                      <Lock class="size-5 shrink-0 text-red-500" aria-hidden="true" />
+                      <div class="ml-4 flex min-w-0 flex-1 gap-2">
+                        <div class="flex flex-col">
+                          <div class="flex items-center gap-2">
+                            <code class="bg-gray-50 text-gray-700 px-2 py-1 rounded text-xs font-mono">{{ envVar.name || envVar.key }}</code>
+                            <Badge variant="secondary" class="text-xs">{{ t('mcpInstallations.view.values.locked') }}</Badge>
+                          </div>
+                          <span v-if="envVar.description" class="truncate text-xs text-gray-500 mt-1">{{ envVar.description }}</span>
+                          <span v-else-if="envVar.value" class="truncate text-xs text-gray-500 mt-1">{{ envVar.value }}</span>
+                          <span v-else class="truncate text-xs text-gray-500 mt-1">{{ t('mcpInstallations.view.values.staticTemplateValue') }}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+                </ul>
+              </dd>
+            </div>
+
+            <!-- Team Environment Variables -->
+            <div v-if="displayTeamEnvironmentSchema.length > 0" class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+              <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpInstallations.view.fields.teamEnvironmentVariables') }}</dt>
+              <dd class="mt-2 text-sm text-gray-900 sm:col-span-2 sm:mt-0">
+                <ul role="list" class="divide-y divide-gray-100 rounded-md border border-gray-200">
+                  <li
+                    v-for="(envVar, index) in displayTeamEnvironmentSchema"
+                    :key="index"
+                    class="flex items-center justify-between py-4 pr-5 pl-4 text-sm/6"
+                  >
+                    <div class="flex w-0 flex-1 items-center">
+                      <Users class="size-5 shrink-0 text-gray-400" aria-hidden="true" />
+                      <div class="ml-4 flex min-w-0 flex-1 gap-2">
+                        <div class="flex flex-col">
+                          <div class="flex items-center gap-2">
+                            <code class="bg-green-50 text-green-700 px-2 py-1 rounded text-xs font-mono">{{ envVar.name }}</code>
+                            <Badge v-if="envVar.required" variant="default" class="text-xs">{{ t('common.labels.required') }}</Badge>
+                            <Badge v-else variant="secondary" class="text-xs">{{ t('common.labels.optional') }}</Badge>
+                            <Badge
+                              v-if="envVar.type === 'secret'"
+                              variant="destructive"
+                              class="text-xs"
+                            >
+                              {{ t('mcpInstallations.view.values.secret') }}
+                            </Badge>
+                            <Lock v-if="envVar.locked" class="h-3 w-3 text-red-500" :title="t('mcpInstallations.view.values.lockedByGlobalAdmin')" />
+                            <Unlock v-else class="h-3 w-3 text-green-500" :title="t('mcpInstallations.view.values.teamConfigurable')" />
+                          </div>
+                          <div class="flex items-center gap-2 mt-1">
+                            <span class="text-xs text-gray-500">{{ t('mcpInstallations.view.values.type') }}: {{ envVar.type || 'string' }}</span>
+                            <span v-if="!envVar.visible_to_users" class="text-xs text-orange-600">({{ t('mcpInstallations.view.values.hiddenFromUsers') }})</span>
+                          </div>
+                          <span v-if="envVar.description" class="truncate text-xs text-gray-500 mt-1">{{ envVar.description }}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+                </ul>
+              </dd>
+            </div>
+
+            <!-- User Environment Variables -->
+            <div v-if="displayUserEnvironmentSchema.length > 0" class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+              <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpInstallations.view.fields.userEnvironmentVariables') }}</dt>
+              <dd class="mt-2 text-sm text-gray-900 sm:col-span-2 sm:mt-0">
+                <ul role="list" class="divide-y divide-gray-100 rounded-md border border-gray-200">
+                  <li
+                    v-for="(envVar, index) in displayUserEnvironmentSchema"
+                    :key="index"
+                    class="flex items-center justify-between py-4 pr-5 pl-4 text-sm/6"
+                  >
+                    <div class="flex w-0 flex-1 items-center">
+                      <User class="size-5 shrink-0 text-gray-400" aria-hidden="true" />
+                      <div class="ml-4 flex min-w-0 flex-1 gap-2">
+                        <div class="flex flex-col">
+                          <div class="flex items-center gap-2">
+                            <code class="bg-purple-50 text-purple-700 px-2 py-1 rounded text-xs font-mono">{{ envVar.name }}</code>
+                            <Badge v-if="envVar.required" variant="default" class="text-xs">{{ t('common.labels.required') }}</Badge>
+                            <Badge v-else variant="secondary" class="text-xs">{{ t('common.labels.optional') }}</Badge>
+                            <Badge
+                              v-if="envVar.type === 'secret'"
+                              variant="destructive"
+                              class="text-xs"
+                            >
+                              {{ t('mcpInstallations.view.values.secret') }}
+                            </Badge>
+                            <Lock v-if="envVar.locked" class="h-3 w-3 text-red-500" :title="t('mcpInstallations.view.values.lockedByTeamAdmin')" />
+                            <Unlock v-else class="h-3 w-3 text-green-500" :title="t('mcpInstallations.view.values.userConfigurable')" />
+                          </div>
+                          <div class="flex items-center gap-2 mt-1">
+                            <span class="text-xs text-gray-500">{{ t('mcpInstallations.view.values.type') }}: {{ envVar.type || 'string' }}</span>
+                          </div>
+                          <span v-if="envVar.description" class="truncate text-xs text-gray-500 mt-1">{{ envVar.description }}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+                </ul>
               </dd>
             </div>
 
@@ -536,19 +607,6 @@ const installServer = () => {
                 <Badge variant="outline" class="font-mono">
                   {{ displayTransportType }}
                 </Badge>
-              </dd>
-            </div>
-
-            <!-- Dependencies -->
-            <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
-              <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpInstallations.view.fields.dependencies') }}</dt>
-              <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
-                <div v-if="displayDependencies && Object.keys(displayDependencies).length > 0" class="bg-gray-50 rounded-md p-4">
-                  <pre class="text-xs text-gray-800 whitespace-pre-wrap font-mono">{{ JSON.stringify(displayDependencies, null, 2) }}</pre>
-                </div>
-                <div v-else class="text-sm text-gray-500 italic">
-                  {{ t('mcpInstallations.view.values.notProvided') }}
-                </div>
               </dd>
             </div>
 
@@ -576,7 +634,7 @@ const installServer = () => {
             </div>
           </dl>
         </div>
-      </div>
+      </ContentWrapper>
     </div>
   </DashboardLayout>
 </template>

@@ -47,4 +47,18 @@ export class GlobalSettingsService {
       return false // Default to not showing banner on error
     }
   }
+
+  /**
+   * Get the user walkthrough visibility setting
+   */
+  static async shouldShowUserWalkthrough(): Promise<boolean> {
+    try {
+      const value = await this.getSetting('global.show_user_walkthrough')
+      // Convert string to boolean - 'true' becomes true, anything else becomes false
+      return value === 'true'
+    } catch (error) {
+      console.error('Failed to check user walkthrough setting:', error)
+      return false // Default to not showing walkthrough on error
+    }
+  }
 }

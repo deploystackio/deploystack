@@ -80,6 +80,14 @@ export const globalSettings: GlobalSettingsModule = {
       description: 'Show banner during MCP installation to inform users that adding new servers to the DeployStack catalog requires submitting a pull request to the awesome-mcp-server repository',
       encrypted: false,
       required: false
+    },
+    {
+      key: 'global.show_user_walkthrough',
+      defaultValue: false,
+      type: 'boolean',
+      description: 'Show user walkthrough flow when users log in. When enabled, users who have not completed or cancelled the walkthrough will see the walkthrough process in the frontend.',
+      encrypted: false,
+      required: false
     }
   ]
 };

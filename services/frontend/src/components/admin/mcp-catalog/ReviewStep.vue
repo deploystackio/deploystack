@@ -3,6 +3,7 @@ import { onMounted, onUnmounted, ref } from 'vue'
 import { Badge } from '@/components/ui/badge'
 import { useI18n } from 'vue-i18n'
 import { useEventBus } from '@/composables/useEventBus'
+import CategoryDisplay from '@/components/mcp-server/CategoryDisplay.vue'
 import type { ReviewFormData, McpServerFormData } from '@/views/admin/mcp-server-catalog/types'
 
 interface Props {
@@ -126,7 +127,7 @@ const formatJson = (jsonString: string) => {
       <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
         <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.review.fields.category') }}</dt>
         <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
-          {{ getBasicData().category_id || t('mcpCatalog.form.review.values.notSpecified') }}
+          <CategoryDisplay :category-id="getBasicData().category_id" />
         </dd>
       </div>
 

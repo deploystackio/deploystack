@@ -21,6 +21,7 @@ import loginMessages from './login'
 import gatewayConfigMessages from './gatewayConfig'
 import userAccountMessages from './userAccount'
 import devicesMessages from './devices'
+import walkthroughMessages from './walkthrough'
 
 export default {
   ...commonMessages,
@@ -45,5 +46,6 @@ export default {
   gatewayConfig: gatewayConfigMessages,
   userAccount: userAccountMessages,
   devices: devicesMessages,
+  walkthrough: walkthroughMessages,
   common: commonMessages
 }

@@ -11,6 +11,7 @@ import FeaturedMcpServers from './FeaturedMcpServers.vue'
 interface Props {
   installations: McpInstallation[]
   hasInstallations: boolean
+  showWalkthrough?: boolean
 }
 
 defineProps<Props>()
@@ -78,6 +79,7 @@ const handleRemoveInstallation = (installationId: string) => {
   <McpInstallationsList
     v-else
     :installations="installations"
+    :show-walkthrough="showWalkthrough"
     @view-installation="handleViewInstallation"
     @manage-installation="handleManageInstallation"
     @remove-installation="handleRemoveInstallation"
