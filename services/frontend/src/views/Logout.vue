@@ -35,12 +35,9 @@ const message = ref(t('logout.inProgressMessage'))
 onMounted(async () => {
   isLoading.value = true;
   message.value = t('logout.inProgressMessage');
-  console.log('Attempting to logout from backend...');
-
   try {
     // Use the UserService logout method which handles cache clearing
     await UserService.logout();
-    console.log('Logout successful');
     message.value = t('logout.successMessage') || t('logout.inProgressMessage');
   } catch (error) {
     console.error('Error during logout:', error);
@@ -48,7 +45,6 @@ onMounted(async () => {
   } finally {
     isLoading.value = false;
     setTimeout(() => {
-      console.log('Redirecting to login page...');
       router.push('/login');
     }, 2000); // Redirect after 2 seconds to allow user to see final message
   }

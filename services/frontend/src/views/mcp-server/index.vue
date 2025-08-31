@@ -101,7 +101,6 @@ const checkWalkthroughSetting = async (): Promise<void> => {
     const globalWalkthroughEnabled = await GlobalSettingsService.shouldShowUserWalkthrough()
     
     if (!globalWalkthroughEnabled) {
-      console.log('Walkthrough disabled globally')
       showUserWalkthrough.value = false
       return
     }
@@ -111,7 +110,6 @@ const checkWalkthroughSetting = async (): Promise<void> => {
     const isWalkthroughCompleted = userPreferences.walkthrough_completed || false
     
     if (isWalkthroughCompleted) {
-      console.log('User has already completed the walkthrough')
       showUserWalkthrough.value = false
       // Also sync to local storage for consistency
       eventBus.setState('walkthrough_completed', true)
@@ -120,7 +118,6 @@ const checkWalkthroughSetting = async (): Promise<void> => {
     
     // Step 3: Show walkthrough only if globally enabled AND user hasn't completed it
     showUserWalkthrough.value = true
-    console.log('Walkthrough enabled globally and user has not completed it yet')
     
   } catch (error) {
     console.error('Error checking walkthrough setting:', error)
@@ -214,7 +211,6 @@ const handleNotificationShow = (data: { message: string; type: string }) => {
 
 // Walkthrough event handlers
 const handleWalkthroughNextStep = (data: { fromStep: number; toStep: number }) => {
-  console.log('Walkthrough next step:', data)
   if (data.fromStep === 1 && data.toStep === 2) {
     // Hide step 1
     showUserWalkthrough.value = false
@@ -233,13 +229,9 @@ const handleWalkthroughNextStep = (data: { fromStep: number; toStep: number }) =
 
 // UPDATED: Enhanced walkthrough finish handler with API call
 const handleWalkthroughFinish = async () => {
-  console.log('Walkthrough finished - updating user preferences')
-  
   try {
-    // Step 1: Use specialized walkthrough completion endpoint
-    await UserPreferencesService.completeWalkthrough()
-    
-    console.log('Successfully completed walkthrough via API')
+    // Step 1: Use generic preference endpoint (avoids Content-Type header issue)
+    await UserPreferencesService.setUserPreference('walkthrough_completed', true)
     
     // Step 2: Update local storage for consistency
     eventBus.setState('walkthrough_completed', true)
@@ -252,8 +244,6 @@ const handleWalkthroughFinish = async () => {
     
     // Step 4: Emit completion event for any listening components
     eventBus.emit('walkthrough-completed')
-    
-    console.log('Walkthrough completion stored in both API and local storage')
     
     // Optional: Show success toast
     toast.success('Welcome tour completed!')

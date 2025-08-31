@@ -66,7 +66,6 @@ export class UserPreferencesService {
         throw new Error(data.error || 'Invalid response from server')
       }
 
-      console.log('Successfully fetched user preferences:', data.preferences)
       return data.preferences
 
     } catch (error) {
@@ -80,8 +79,6 @@ export class UserPreferencesService {
    */
   static async updateUserPreferences(updates: UpdateUserPreferencesInput): Promise<UserPreferences> {
     try {
-      console.log('Updating user preferences:', updates)
-
       const response = await fetch(`${this.baseUrl}/api/users/me/preferences`, {
         method: 'POST',
         headers: {
@@ -104,8 +101,6 @@ export class UserPreferencesService {
         throw new Error(data.error || 'Failed to update preferences')
       }
 
-      console.log('Successfully updated user preferences:', data.message)
-      
       // Return updated preferences by fetching them again
       return await this.getUserPreferences()
 
@@ -173,8 +168,6 @@ export class UserPreferencesService {
    */
   static async completeWalkthrough(): Promise<void> {
     try {
-      console.log('Marking walkthrough as completed via API')
-
       const response = await fetch(`${this.baseUrl}/api/users/me/preferences/walkthrough/complete`, {
         method: 'POST',
         headers: {
@@ -196,8 +189,6 @@ export class UserPreferencesService {
         throw new Error(data.error || 'Failed to complete walkthrough')
       }
 
-      console.log('Successfully completed walkthrough:', data.message)
-
     } catch (error) {
       console.error('Error completing walkthrough:', error)
       throw error
@@ -209,8 +200,6 @@ export class UserPreferencesService {
    */
   static async cancelWalkthrough(): Promise<void> {
     try {
-      console.log('Marking walkthrough as cancelled via API')
-
       const response = await fetch(`${this.baseUrl}/api/users/me/preferences/walkthrough/cancel`, {
         method: 'POST',
         headers: {
@@ -231,8 +220,6 @@ export class UserPreferencesService {
       if (!data.success) {
         throw new Error(data.error || 'Failed to cancel walkthrough')
       }
-
-      console.log('Successfully cancelled walkthrough:', data.message)
 
     } catch (error) {
       console.error('Error cancelling walkthrough:', error)
@@ -308,8 +295,6 @@ export class UserPreferencesService {
    */
   static async acknowledgeNotification(notificationId: string): Promise<void> {
     try {
-      console.log('Acknowledging notification:', notificationId)
-
       const response = await fetch(`${this.baseUrl}/api/users/me/preferences/notifications/acknowledge`, {
         method: 'POST',
         headers: {
@@ -333,8 +318,6 @@ export class UserPreferencesService {
       if (!data.success) {
         throw new Error(data.error || 'Failed to acknowledge notification')
       }
-
-      console.log('Successfully acknowledged notification:', data.message)
 
     } catch (error) {
       console.error('Error acknowledging notification:', error)

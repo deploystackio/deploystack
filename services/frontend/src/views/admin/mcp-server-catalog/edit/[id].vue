@@ -236,7 +236,6 @@ const handleSubmit = async (formData: McpServerFormData) => {
       const newEnvSchemaItems: any[] = []
       envVarsFromInstallation.forEach(envVarName => {
         if (!allExistingEnvNames.includes(envVarName)) {
-          console.log('Edit[id].vue: Auto-adding missing env var to team_env_schema:', envVarName)
           newEnvSchemaItems.push({
             name: envVarName,
             type: 'string',
@@ -247,7 +246,6 @@ const handleSubmit = async (formData: McpServerFormData) => {
             visible_to_users: true
           })
         } else {
-          console.log('Edit[id].vue: Env var already exists in configuration schema:', envVarName)
         }
       })
 
@@ -257,7 +255,6 @@ const handleSubmit = async (formData: McpServerFormData) => {
           ...finalConfigurationSchema,
           team_env_schema: [...existingTeamEnvSchema, ...newEnvSchemaItems]
         }
-        console.log('Edit[id].vue: Updated team_env_schema with', newEnvSchemaItems.length, 'new items')
       }
     }
   }

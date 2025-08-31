@@ -159,14 +159,12 @@ const cancelRemoval = () => {
 
 // Event handlers for walkthrough overlay
 const handleWalkthroughOverlayShow = () => {
-  console.log('Showing walkthrough overlay for step 1')
   showWalkthroughOverlay.value = true
   showWalkthroughBorder.value = true
   showWalkthroughHighZIndex.value = true
 }
 
 const handleWalkthroughOverlayHide = () => {
-  console.log('Hiding walkthrough overlay')
   showWalkthroughOverlay.value = false
   showWalkthroughBorder.value = false
   showWalkthroughHighZIndex.value = false
@@ -174,21 +172,18 @@ const handleWalkthroughOverlayHide = () => {
 
 // Event handlers for step-specific z-index control
 const handleWalkthroughStep1Active = () => {
-  console.log('Step 1 active: MCP liste should be visible (high z-index)')
   // Step 1: MCP liste should be visible (high z-index)
   showWalkthroughHighZIndex.value = true
   showWalkthroughBorder.value = true
 }
 
 const handleWalkthroughStep2Active = () => {
-  console.log('Step 2 active: MCP liste should be hidden under overlay (no high z-index)')
   // Step 2: MCP liste should be hidden under overlay (no high z-index)
   showWalkthroughHighZIndex.value = false
   showWalkthroughBorder.value = false
 }
 
 onMounted(() => {
-  console.log('McpInstallationsList mounted - registering walkthrough event listeners')
   // Listen for walkthrough overlay events
   eventBus.on('walkthrough-overlay-show', handleWalkthroughOverlayShow)
   eventBus.on('walkthrough-overlay-hide', handleWalkthroughOverlayHide)

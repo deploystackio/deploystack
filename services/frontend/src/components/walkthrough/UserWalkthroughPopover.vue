@@ -95,7 +95,6 @@ const positionTrigger = () => {
         isPositioned.value = true
         isOpen.value = true
         
-        console.log(`Successfully positioned walkthrough popover for step ${props.step}`)
       } else {
         console.warn(`Target element '${props.targetElement}' not found for walkthrough step ${props.step}`)
         return // Stop - no infinite retries
@@ -111,7 +110,6 @@ watch(() => props.open, (newValue) => {
     isPositioned.value = false
     
     // Emit walkthrough step opened event
-    console.log(`Emitting walkthrough-step-opened for step ${props.step}`)
     eventBus.emit('walkthrough-step-opened', { step: props.step })
     // Note: walkthrough-overlay-show and step-specific events are now emitted after positioning
     
@@ -121,7 +119,6 @@ watch(() => props.open, (newValue) => {
       
       // Emit overlay events AFTER positioning to ensure all components are mounted
       setTimeout(() => {
-        console.log(`Emitting walkthrough-overlay-show for step ${props.step} (after positioning)`)
         eventBus.emit('walkthrough-overlay-show')
         
         // Also emit step-specific events with proper timing
@@ -178,7 +175,6 @@ function handleNextStep() {
     closePopover()
   } else {
     // Final step - finish walkthrough
-    console.log('User clicked finish on walkthrough step 2')
     eventBus.emit('walkthrough-finish')
     closePopover()
   }

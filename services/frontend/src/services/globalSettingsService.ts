@@ -1,4 +1,5 @@
 import { getEnv } from '@/utils/env'
+import { UserPreferencesService } from './userPreferencesService'
 
 /**
  * Service for fetching global settings
@@ -50,12 +51,12 @@ export class GlobalSettingsService {
 
   /**
    * Get the user walkthrough visibility setting
+   * Uses user preferences for proper permissions (no 403 errors for normal users)
    */
   static async shouldShowUserWalkthrough(): Promise<boolean> {
     try {
-      const value = await this.getSetting('global.show_user_walkthrough')
-      // Convert string to boolean - 'true' becomes true, anything else becomes false
-      return value === 'true'
+      // Use UserPreferencesService for consistent architecture and proper permissions
+      return await UserPreferencesService.shouldShowWalkthrough()
     } catch (error) {
       console.error('Failed to check user walkthrough setting:', error)
       return false // Default to not showing walkthrough on error
