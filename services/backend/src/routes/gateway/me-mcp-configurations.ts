@@ -5,6 +5,7 @@ import { eq, and, inArray } from 'drizzle-orm';
 import { mcpServers, mcpServerInstallations, mcpUserConfigurations, teamMemberships, devices } from '../../db/schema.sqlite';
 import { McpArgsStorage } from '../../utils/mcpArgsStorage';
 import { McpEnvStorage } from '../../utils/mcpEnvStorage';
+import { trackDeviceActivity } from '../../services/deviceActivityService';
 
 // Response schemas
 const GATEWAY_MCP_SERVER_SCHEMA = {
@@ -446,6 +447,14 @@ export default async function gatewayMeMcpConfigurationsRoute(server: FastifyIns
         readyServers: servers.filter(s => s.status === 'ready').length,
         invalidServers: servers.filter(s => s.status === 'invalid').length
       }, 'Successfully retrieved gateway MCP configurations');
+
+      // Track device activity if hardware_id was provided (fire-and-forget)
+      if (hardwareId) {
+        trackDeviceActivity(db, hardwareId, request.log, {
+          updateLastIp: request.ip,
+          silent: true
+        });
+      }
 
       const successResponse: SuccessResponse = {
         success: true,
