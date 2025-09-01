@@ -14,7 +14,7 @@ export function registerLoginCommand(program: Command) {
     .command('login')
     .description('Authenticate with DeployStack cloud')
     .option('--no-browser', 'Skip automatic browser opening')
-    .option('--url <url>', 'DeployStack backend URL (for development)', 'https://cloud.deploystack.io')
+    .option('--url <url>', 'DeployStack backend URL (for development)', 'https://cloud-api.deploystack.io')
     .action(async (options) => {
       const storage = new CredentialStorage();
       const oauth = new OAuth2Client({
@@ -34,7 +34,7 @@ export function registerLoginCommand(program: Command) {
 
         console.log(chalk.blue('🔐 Starting authentication flow...'));
         
-        if (options.url !== 'https://cloud.deploystack.io') {
+        if (options.url !== 'https://cloud-api.deploystack.io') {
           console.log(chalk.yellow(`🔧 Using development server: ${options.url}`));
         }
 
@@ -146,7 +146,7 @@ export function registerLoginCommand(program: Command) {
         console.log(chalk.gray(`   deploystack mcp        - Manage MCP server configurations`));
         console.log(chalk.gray(`   deploystack start      - Start the gateway server`));
         
-        if (options.url !== 'https://cloud.deploystack.io') {
+        if (options.url !== 'https://cloud-api.deploystack.io') {
           console.log(chalk.yellow(`   ⚠️  For MCP changes, visit: ${options.url}`));
         }
 
@@ -174,7 +174,7 @@ export function registerLoginCommand(program: Command) {
               break;
             case 'NETWORK_ERROR':
               console.log(chalk.yellow('💡 Check your internet connection and try again'));
-              if (options.url !== 'https://cloud.deploystack.io') {
+              if (options.url !== 'https://cloud-api.deploystack.io') {
                 console.log(chalk.yellow(`💡 Make sure your development server is running at ${options.url}`));
               }
               break;
