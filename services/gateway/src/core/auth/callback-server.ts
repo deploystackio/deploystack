@@ -7,6 +7,8 @@ export class CallbackServer {
   private server: ReturnType<typeof createServer> | null = null;
   private port = 8976;
   private callbackPath = '/oauth/callback';
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private connections = new Set<any>();
 
   /**
    * Start the callback server and return a promise that resolves with the OAuth callback result
@@ -36,6 +38,18 @@ export class CallbackServer {
         }
       });
 
+      // Track connections for proper cleanup
+      this.server.on('connection', (socket) => {
+        this.connections.add(socket);
+        socket.on('close', () => {
+          this.connections.delete(socket);
+        });
+      });
+
+      // Configure server for quick shutdown
+      this.server.keepAliveTimeout = 1000; // 1 second
+      this.server.headersTimeout = 2000; // 2 seconds
+
       this.server.on('error', (error) => {
         clearTimeout(timeoutId);
         reject(new AuthenticationError(
@@ -57,10 +71,25 @@ export class CallbackServer {
   async stop(): Promise<void> {
     if (this.server) {
       return new Promise((resolve) => {
+        // First, destroy all active connections
+        for (const connection of this.connections) {
+          connection.destroy();
+        }
+        this.connections.clear();
+
+        // Then close the server
         this.server!.close(() => {
           this.server = null;
           resolve();
         });
+
+        // Fallback timeout as a safety net
+        setTimeout(() => {
+          if (this.server) {
+            this.server = null;
+            resolve();
+          }
+        }, 2000); // Reduced to 2 seconds since we're properly managing connections
       });
     }
   }
