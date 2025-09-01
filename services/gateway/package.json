@@ -1,6 +1,6 @@
 {
   "name": "@deploystack/gateway",
-  "version": "0.9.3",
+  "version": "0.9.5",
   "description": "The local DeployStack Gateway for secure MCP server management.",
   "main": "dist/index.js",
   "bin": {
