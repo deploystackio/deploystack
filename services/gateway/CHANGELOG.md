@@ -1,5 +1,10 @@
 # Changelog
 
+## <small>0.9.5 (2025-09-01)</small>
+
+* chore(gateway): release v0.9.4 ([4308f43](https://github.com/deploystackio/deploystack/commit/4308f43))
+* fix(gateway): manage connections and improve server shutdown process ([80dd6f9](https://github.com/deploystackio/deploystack/commit/80dd6f9))
+
 ## <small>0.9.4 (2025-09-01)</small>
 
 * fix(gateway): manage connections and improve server shutdown process ([80dd6f9](https://github.com/deploystackio/deploystack/commit/80dd6f9))
