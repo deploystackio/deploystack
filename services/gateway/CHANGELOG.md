@@ -1,5 +1,18 @@
 # Changelog
 
+## <small>0.9.3 (2025-09-01)</small>
+
+* chore: specify Node.js and npm engine requirements in package.json and add .nvmrc ([8b0b3a9](https://github.com/deploystackio/deploystack/commit/8b0b3a9))
+* chore: update package.json overrides and simplify README instructions ([0911ece](https://github.com/deploystackio/deploystack/commit/0911ece))
+* chore(all): bump vue from 3.5.18 to 3.5.20 ([d990c96](https://github.com/deploystackio/deploystack/commit/d990c96))
+* chore(backend): release v0.32.0 ([b3c7341](https://github.com/deploystackio/deploystack/commit/b3c7341))
+* chore(gateway): release v0.9.2 ([bcf55f7](https://github.com/deploystackio/deploystack/commit/bcf55f7))
+* fix(database): implement safe database proxy for graceful startup handling ([68623a2](https://github.com/deploystackio/deploystack/commit/68623a2))
+* fix(gateway): update default backend URL for login command to use cloud-api ([f71a14e](https://github.com/deploystackio/deploystack/commit/f71a14e))
+* feat(frontend): enhance user preferences handling for walkthrough ([80ff8ed](https://github.com/deploystackio/deploystack/commit/80ff8ed))
+* feat(frontend): enhance walkthrough handling with improved checks and timing ([d073cab](https://github.com/deploystackio/deploystack/commit/d073cab))
+* refactor: remove unnecessary console logs and improve user walkthrough handling ([f23f7b6](https://github.com/deploystackio/deploystack/commit/f23f7b6))
+
 ## <small>0.9.2 (2025-09-01)</small>
 
 * fix(database): implement safe database proxy for graceful startup handling ([68623a2](https://github.com/deploystackio/deploystack/commit/68623a2))
