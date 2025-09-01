@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import DashboardLayout from '@/components/DashboardLayout.vue'
@@ -14,7 +14,7 @@ import type { McpInstallation } from '@/types/mcp-installations'
 import { McpInstallationService } from '@/services/mcpInstallationService'
 import { TeamService, type Team } from '@/services/teamService'
 import { GlobalSettingsService } from '@/services/globalSettingsService'
-import { UserPreferencesService } from '@/services/userPreferencesService' // NEW IMPORT
+import { UserPreferencesService } from '@/services/userPreferencesService'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -95,14 +95,13 @@ const handleTeamSelected = async (data: { teamId: string; teamName: string }) =>
 }
 
 // UPDATED: Check walkthrough setting and user completion status
-const checkWalkthroughSetting = async (): Promise<void> => {
+const checkWalkthroughSetting = async (): Promise<boolean> => {
   try {
     // Step 1: Check if walkthrough is globally enabled
     const globalWalkthroughEnabled = await GlobalSettingsService.shouldShowUserWalkthrough()
     
     if (!globalWalkthroughEnabled) {
-      showUserWalkthrough.value = false
-      return
+      return false
     }
 
     // Step 2: Check user's personal walkthrough completion status via API
@@ -110,18 +109,17 @@ const checkWalkthroughSetting = async (): Promise<void> => {
     const isWalkthroughCompleted = userPreferences.walkthrough_completed || false
     
     if (isWalkthroughCompleted) {
-      showUserWalkthrough.value = false
       // Also sync to local storage for consistency
       eventBus.setState('walkthrough_completed', true)
-      return
+      return false
     }
     
-    // Step 3: Show walkthrough only if globally enabled AND user hasn't completed it
-    showUserWalkthrough.value = true
+    // Step 3: Return true if walkthrough should be shown
+    return true
     
   } catch (error) {
     console.error('Error checking walkthrough setting:', error)
-    showUserWalkthrough.value = false
+    return false
   }
 }
 
@@ -134,11 +132,55 @@ const fetchInstallations = async (): Promise<void> => {
     error.value = null
 
     installations.value = await McpInstallationService.getTeamInstallations(selectedTeam.value.id)
+    
+    // UPDATED: Check and show walkthrough after installations are loaded
+    await checkAndShowWalkthrough()
+    
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'An unknown error occurred'
     installations.value = []
   } finally {
     isLoading.value = false
+  }
+}
+
+// Check and show walkthrough with proper timing
+const checkAndShowWalkthrough = async (): Promise<void> => {
+  try {
+    // Only show walkthrough if there are installations to highlight
+    if (installations.value.length === 0) {
+      showUserWalkthrough.value = false
+      return
+    }
+
+    // Check if walkthrough should be shown
+    const shouldShowWalkthrough = await checkWalkthroughSetting()
+    
+    if (!shouldShowWalkthrough) {
+      showUserWalkthrough.value = false
+      return
+    }
+
+    // Wait for DOM to update with the installations list
+    await nextTick()
+    
+    // Add a small delay to ensure the list is fully rendered
+    setTimeout(() => {
+      // Verify the target element exists before showing walkthrough
+      const targetElement = document.getElementById('last-server-item')
+      if (targetElement) {
+        showUserWalkthrough.value = true
+        // Emit step 1 active after showing walkthrough
+        eventBus.emit('walkthrough-step1-active')
+      } else {
+        console.warn('Target element "last-server-item" not found, skipping walkthrough')
+        showUserWalkthrough.value = false
+      }
+    }, 100)
+    
+  } catch (error) {
+    console.error('Error checking and showing walkthrough:', error)
+    showUserWalkthrough.value = false
   }
 }
 
@@ -324,15 +366,7 @@ onMounted(async () => {
   // Initialize team context first
   await initializeSelectedTeam()
 
-  // Check walkthrough setting (now includes API call)
-  await checkWalkthroughSetting()
-
-  // If walkthrough should be shown, emit step 1 active
-  if (showUserWalkthrough.value) {
-    eventBus.emit('walkthrough-step1-active')
-  }
-
-  // Initial fetch after team is set
+  // Initial fetch after team is set (walkthrough will be handled after installations load)
   if (selectedTeam.value) {
     await fetchInstallations()
   }
