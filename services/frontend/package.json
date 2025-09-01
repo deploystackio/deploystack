@@ -45,7 +45,7 @@
     "@vue/eslint-config-typescript": "^14.6.0",
     "@vue/tsconfig": "^0.8.1",
     "autoprefixer": "^10.4.21",
-    "eslint": "^9.33.0",
+    "eslint": "^9.34.0",
     "eslint-plugin-vue": "~10.4.0",
     "jiti": "^2.5.1",
     "npm-run-all2": "^8.0.4",
