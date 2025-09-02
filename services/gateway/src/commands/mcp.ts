@@ -9,6 +9,7 @@ import { MCPConfigService } from '../core/mcp';
 import { TableFormatter } from '../utils/table';
 import { AuthenticationError } from '../types/auth';
 import { RefreshService } from '../services/refresh-service';
+import { ConfigurationChangeService } from '../services/configuration-change-service';
 
 // PID file location
 const PID_FILE = path.join(os.tmpdir(), 'deploystack-gateway.pid');
@@ -288,6 +289,84 @@ export function registerMCPCommand(program: Command) {
           console.log(chalk.gray('💡 Install MCP servers via the web interface'));
         }
 
+        // Check for remote configuration updates
+        console.log(''); // Add spacing
+        spinner = ora('Connecting to backend to check for configuration updates...').start();
+        
+        try {
+          const changeService = new ConfigurationChangeService();
+          
+          spinner.text = 'Initializing API client...';
+          // Use the same logic from RefreshService to check for changes
+          const api = await import('../core/auth/api-client').then(m => new m.DeployStackAPI(credentials, backendUrl));
+          
+          spinner.text = 'Detecting device information...';
+          const deviceInfo = await import('../utils/device-detection').then(m => m.detectDeviceInfo());
+          
+          spinner.text = 'Getting current configuration...';
+          // Get existing configuration for change detection
+          const oldConfig = await mcpService.getMCPConfig(credentials.selectedTeam.id);
+          
+          spinner.text = 'Downloading latest configuration from cloud...';
+          // Download latest configurations from cloud
+          const gatewayConfig = await mcpService.downloadGatewayMCPConfig(deviceInfo.hardware_id, api, false);
+          
+          spinner.text = 'Comparing configurations...';
+          // Convert to team config format for comparison
+          const newTeamConfig = mcpService.convertGatewayConfigToTeamConfig(
+            credentials.selectedTeam.id,
+            credentials.selectedTeam.name,
+            gatewayConfig
+          );
+          
+          // Detect changes using the reusable service
+          const changeInfo = changeService.detectConfigurationChanges(oldConfig, newTeamConfig);
+          
+          spinner.succeed('Configuration check completed');
+          
+          if (changeInfo.hasChanges) {
+            // Handle configuration changes with custom restart logic
+            await changeService.handleConfigurationChangesWithCustomRestart(changeInfo, async () => {
+              // Store the new configuration first
+              await mcpService.storeMCPConfig(newTeamConfig);
+              
+              const ServerRestartService = await import('../services/server-restart-service').then(m => m.ServerRestartService);
+              const restartService = new ServerRestartService();
+              
+              try {
+                const result = await restartService.restartGatewayServer();
+                
+                if (result.restarted) {
+                  console.log(chalk.green('✅ Gateway restarted successfully with new configuration'));
+                  
+                  if (result.mcpServersStarted !== undefined) {
+                    console.log(chalk.blue(`🤖 Ready to serve ${result.mcpServersStarted} MCP server${result.mcpServersStarted === 1 ? '' : 's'}`));
+                  }
+                }
+              } catch (restartError) {
+                console.log(chalk.red(`❌ Failed to restart gateway: ${restartError instanceof Error ? restartError.message : String(restartError)}`));
+                console.log(chalk.gray('💡 You can restart manually with "deploystack restart"'));
+              }
+            });
+            
+            // Store the configuration even if user chose not to restart
+            await mcpService.storeMCPConfig(newTeamConfig);
+          } else {
+            console.log(chalk.green('✅ Configuration is up to date'));
+          }
+          
+        } catch (refreshError) {
+          if (spinner) {
+            spinner.fail('Failed to check for configuration updates');
+          }
+          console.log(chalk.yellow('⚠️  Could not check for configuration updates'));
+          if (refreshError instanceof Error) {
+            console.log(chalk.gray(`   Error: ${refreshError.message}`));
+          }
+          console.log(chalk.gray('💡 This may be due to network connectivity or backend issues'));
+          console.log(chalk.gray('💡 Your local configuration is still available and functional'));
+        }
+
       } catch (error) {
         if (spinner) {
           spinner.fail('MCP operation failed');
@@ -332,6 +411,7 @@ function isGatewayRunning(): boolean {
     return false;
   }
 }
+
 
 /**
  * Fetch tools from running gateway server via HTTP
