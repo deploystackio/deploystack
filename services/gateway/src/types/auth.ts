@@ -1,4 +1,4 @@
-import { Device } from '../utils/device-detection';
+import { Device } from './device-cache';
 
 export interface StoredCredentials {
   accessToken: string;

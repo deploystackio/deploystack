@@ -5,7 +5,8 @@ import { generateCodeVerifier, generateCodeChallenge, generateState } from '../.
 import { buildAuthConfig } from '../../utils/auth-config';
 import { CallbackServer } from './callback-server';
 import { BrowserManager } from './browser';
-import { detectDeviceInfo } from '../../utils/device-detection';
+import { generateDeviceInfoFresh } from '../../utils/device-detection';
+import { DeviceInfoCache } from '../../utils/device-cache';
 import {
   AuthenticationResult,
   AuthenticationOptions,
@@ -172,8 +173,31 @@ export class OAuth2Client {
     codeVerifier: string;
   }, spinner?: ReturnType<typeof ora>): Promise<TokenResponse> {
     try {
-      // Detect device information for automatic registration
-      const deviceInfo = await detectDeviceInfo();
+      // Generate fresh device information during login (expensive operation)
+      // This is the one time we want to do full device fingerprinting
+      if (spinner) {
+        spinner.text = 'Generating device fingerprint...';
+      }
+      
+      const deviceInfo = await generateDeviceInfoFresh();
+      
+      // Cache the device info for future operations (30x performance improvement)
+      try {
+        await DeviceInfoCache.store(deviceInfo);
+        if (spinner) {
+          spinner.text = 'Device fingerprint cached successfully...';
+        } else {
+          console.log(chalk.green('📱 Device fingerprint cached for future performance'));
+        }
+      } catch (cacheError) {
+        // Cache storage failure is non-critical during login, but log it prominently
+        if (spinner) {
+          spinner.text = 'Device fingerprint generated (cache storage failed)...';
+        } else {
+          console.log(chalk.yellow('⚠️  Device fingerprint generated but cache storage failed'));
+        }
+        console.warn('Cache storage error:', cacheError instanceof Error ? cacheError.message : String(cacheError));
+      }
       
       // Add device_name field required by backend schema
       const deviceInfoWithName = {

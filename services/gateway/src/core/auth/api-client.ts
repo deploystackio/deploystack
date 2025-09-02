@@ -2,7 +2,7 @@
 import fetch from 'node-fetch';
 import { StoredCredentials, UserInfo, TokenInfo, Team, AuthError, AuthenticationError } from '../../types/auth';
 import { buildAuthConfig } from '../../utils/auth-config';
-import { Device, DeviceInfo } from '../../utils/device-detection';
+import { Device, DeviceInfo } from '../../types/device-cache';
 
 export class DeployStackAPI {
   private credentials: StoredCredentials;
