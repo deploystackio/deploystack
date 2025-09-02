@@ -1,4 +1,4 @@
- import { keyring } from '@zowe/secrets-for-zowe-sdk';
+import { keyring } from '@zowe/secrets-for-zowe-sdk';
 import { writeFileSync, readFileSync, existsSync, unlinkSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
@@ -34,7 +34,6 @@ export class CredentialStorage {
       // Also maintain a list of accounts for retrieval
       await this.addToAccountsList(credentials.userEmail);
       
-      console.log('✓ Credentials stored in OS keychain');
       return; // Success, no need for fallback
     } catch (error) {
       keychainError = error as Error;
@@ -365,7 +364,6 @@ export class CredentialStorage {
         JSON.stringify(config)
       );
       
-      console.log('✓ MCP config stored in OS keychain');
       return; // Success, no need for fallback
     } catch (error) {
       keychainError = error as Error;

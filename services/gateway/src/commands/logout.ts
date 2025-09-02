@@ -41,41 +41,38 @@ export function registerLogoutCommand(program: Command) {
           spinner.succeed('All credentials and configurations cleared');
           console.log(chalk.green('✅ Successfully logged out all users'));
         } else {
-          console.log(chalk.blue(`🔐 Logging out ${userEmail}...`));
-          spinner = ora('Clearing credentials and MCP configurations...').start();
+          spinner = ora(`Logging out ${userEmail}...`).start();
           
           // Clear MCP configurations for selected team
           const mcpService = new MCPConfigService();
           await mcpService.clearMCPConfig();
           
+          spinner.text = 'Clearing credentials and configurations...';
           await storage.clearCredentials(userEmail);
           
-          spinner.succeed('Credentials and configurations cleared');
-          console.log(chalk.green(`✅ Successfully logged out ${userEmail}`));
-        }
-
-        // Stop the gateway server if it's running
-        const stopService = new ServerStopService();
-        if (stopService.isServerRunning()) {
-          console.log(chalk.blue('🛑 Stopping gateway server...'));
-          spinner = ora('Stopping gateway server and MCP processes...').start();
+          spinner.text = 'Stopping gateway server...';
           
-          try {
-            const stopResult = await stopService.stopGatewayServer({ timeout: 15 });
-            if (stopResult.success && stopResult.wasRunning) {
-              spinner.succeed('Gateway server stopped');
-              console.log(chalk.gray('💡 All MCP servers have been stopped along with the gateway'));
-            } else {
-              spinner.succeed('Gateway server was not running');
+          // Stop the gateway server if it's running
+          const stopService = new ServerStopService();
+          if (stopService.isServerRunning()) {
+            try {
+              const stopResult = await stopService.stopGatewayServer({ timeout: 15 });
+              if (stopResult.success && stopResult.wasRunning) {
+                spinner.stop();
+                console.log('Gateway server stopped - you are successfully logged out');
+              } else {
+                spinner.stop();
+                console.log('You are successfully logged out');
+              }
+            } catch (error) {
+              spinner.warn('Failed to stop gateway server gracefully');
+              console.log(chalk.yellow(`⚠️  Gateway server may still be running: ${error instanceof Error ? error.message : String(error)}`));
             }
-          } catch (error) {
-            spinner.warn('Failed to stop gateway server gracefully');
-            console.log(chalk.yellow(`⚠️  Gateway server may still be running: ${error instanceof Error ? error.message : String(error)}`));
+          } else {
+            spinner.stop();
+            console.log('You are successfully logged out');
           }
         }
-
-        console.log(chalk.gray(`💡 Use 'deploystack login' to authenticate again`));
-        console.log(chalk.gray(`💡 Use 'deploystack start' to start the gateway server again`));
 
       } catch (error) {
         if (spinner) {

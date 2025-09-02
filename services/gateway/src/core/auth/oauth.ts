@@ -1,5 +1,6 @@
 import fetch from 'node-fetch';
 import chalk from 'chalk';
+import ora from 'ora';
 import { generateCodeVerifier, generateCodeChallenge, generateState } from '../../utils/pkce';
 import { buildAuthConfig } from '../../utils/auth-config';
 import { CallbackServer } from './callback-server';
@@ -32,10 +33,11 @@ export class OAuth2Client {
    * @param options Authentication options
    * @returns Authentication result with credentials and user info
    */
-  async authenticate(options: AuthenticationOptions = {}): Promise<AuthenticationResult> {
+  async authenticate(options: AuthenticationOptions & { spinner?: ReturnType<typeof ora> } = {}): Promise<AuthenticationResult> {
     const {
       openBrowser = true,
-      timeout = 120000
+      timeout = 120000,
+      spinner
     } = options;
 
     // Generate PKCE parameters
@@ -89,22 +91,32 @@ export class OAuth2Client {
         );
       }
 
-      console.log(chalk.green('✅ Authorization code received'));
-      console.log(chalk.gray('🔄 Exchanging code for tokens...'));
+      if (spinner) {
+        spinner.text = 'Processing authorization code...';
+      } else {
+        console.log(chalk.green('✅ Authorization code received'));
+        console.log(chalk.gray('🔄 Exchanging code for tokens...'));
+      }
 
       // Exchange code for tokens
       const tokenResponse = await this.exchangeCodeForTokens({
         code: callbackResult.code,
         codeVerifier
-      });
+      }, spinner);
 
-      console.log(chalk.green('✅ Tokens received'));
-      console.log(chalk.gray('👤 Fetching user information...'));
+      if (spinner) {
+        spinner.text = 'Fetching user information...';
+      } else {
+        console.log(chalk.green('✅ Tokens received'));
+        console.log(chalk.gray('👤 Fetching user information...'));
+      }
 
       // Get user information
       const userInfo = await this.getUserInfo(tokenResponse.access_token);
 
-      console.log(chalk.green('✅ User information retrieved'));
+      if (!spinner) {
+        console.log(chalk.green('✅ User information retrieved'));
+      }
 
       // Build credentials object
       const credentials: StoredCredentials = {
@@ -152,12 +164,13 @@ export class OAuth2Client {
   /**
    * Exchange authorization code for access and refresh tokens
    * @param params Code exchange parameters
+   * @param spinner Optional spinner for progress updates
    * @returns Token response
    */
   private async exchangeCodeForTokens(params: {
     code: string;
     codeVerifier: string;
-  }): Promise<TokenResponse> {
+  }, spinner?: ReturnType<typeof ora>): Promise<TokenResponse> {
     try {
       // Detect device information for automatic registration
       const deviceInfo = await detectDeviceInfo();
@@ -199,7 +212,11 @@ export class OAuth2Client {
       
       // Log device registration success if device info is included in response
       if (tokenResponse.device) {
-        console.log(chalk.green(`📱 Device registered: ${tokenResponse.device.device_name}`));
+        if (spinner) {
+          spinner.text = 'Registering device...';
+        } else {
+          console.log(chalk.green(`📱 Device registered: ${tokenResponse.device.device_name}`));
+        }
       }
 
       return tokenResponse;

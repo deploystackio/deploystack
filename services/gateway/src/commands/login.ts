@@ -39,12 +39,14 @@ export function registerLoginCommand(program: Command) {
         }
 
         // Start OAuth flow
+        spinner = ora('Processing authorization code...').start();
         const authResult = await oauth.authenticate({
           openBrowser: options.browser !== false,
-          timeout: 120000 // 2 minutes
+          timeout: 120000, // 2 minutes
+          spinner
         });
 
-        spinner = ora('Storing credentials securely...').start();
+        spinner.text = 'Storing credentials securely...';
 
         // Device registration now happens automatically during OAuth2 token exchange
         // Store credentials with device context if available from OAuth2 response
@@ -97,8 +99,8 @@ export function registerLoginCommand(program: Command) {
                 });
 
                 if (startResult.success) {
-                  spinner.succeed('Authentication complete - Gateway server is now running');
-                  console.log(chalk.green(`🚀 Gateway server started successfully`));
+                  spinner.succeed('Authentication complete');
+                  console.log(chalk.green(`Gateway server started successfully`));
                   console.log(chalk.blue(`   • Server URL: http://localhost:9095`));
                   console.log(chalk.blue(`   • SSE Endpoint: http://localhost:9095/sse`));
                   console.log(chalk.blue(`   • PID: ${startResult.pid}`));
@@ -106,7 +108,7 @@ export function registerLoginCommand(program: Command) {
                     console.log(chalk.blue(`   • MCP Servers: ${startResult.mcpServersStarted} running`));
                   }
                 } else {
-                  spinner.succeed('Credentials stored, default team selected, and MCP config downloaded');
+                  spinner.succeed('Authentication complete');
                   console.log(chalk.yellow('⚠️  Gateway server is already running - you can check status with "deploystack status"'));
                   if (startResult.pid) {
                     console.log(chalk.gray(`   Running PID: ${startResult.pid}`));
@@ -137,18 +139,14 @@ export function registerLoginCommand(program: Command) {
         spinner = null;
 
         console.log(chalk.green(`✅ Successfully authenticated as ${authResult.credentials.userEmail}`));
-        console.log(chalk.green(`🎉 You can now use the DeployStack Gateway CLI`));
+        console.log(chalk.green(`You can now use the DeployStack Gateway CLI`));
         
         // Show available commands
-        console.log(chalk.blue(`\n💡 Available commands:`));
+        console.log(chalk.blue(`\nAvailable commands:`));
         console.log(chalk.gray(`   deploystack whoami     - Show your user information`));
         console.log(chalk.gray(`   deploystack teams      - List your teams`));
         console.log(chalk.gray(`   deploystack mcp        - Manage MCP server configurations`));
         console.log(chalk.gray(`   deploystack start      - Start the gateway server`));
-        
-        if (options.url !== 'https://cloud-api.deploystack.io') {
-          console.log(chalk.yellow(`   ⚠️  For MCP changes, visit: ${options.url}`));
-        }
 
         // Exit successfully
         process.exit(0);
