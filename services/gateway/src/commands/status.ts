@@ -43,7 +43,8 @@ async function getGatewayStatus() {
       running: false,
       pid: null as number | null,
       uptime: null as number | null,
-      endpoint: null as string | null
+      endpointSSE: null as string | null,
+      endpointMessages: null as string | null
     },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     server: null as any,
@@ -83,10 +84,12 @@ async function getGatewayStatus() {
         // Determine endpoint from server status or default
         const port = 9095; // Default port
         const host = 'localhost'; // Default host
-        status.gateway.endpoint = `SSE: http://${host}:${port}/sse | Messages: http://${host}:${port}/message`;
+        status.gateway.endpointSSE = `http://${host}:${port}/sse`;
+        status.gateway.endpointMessages = `http://${host}:${port}/message`;
       } catch {
         // Server might be starting up or not responding
-        status.gateway.endpoint = 'SSE: http://localhost:9095/sse | Messages: http://localhost:9095/message (not responding)';
+        status.gateway.endpointSSE = 'http://localhost:9095/sse (not responding)';
+        status.gateway.endpointMessages = 'http://localhost:9095/message (not responding)';
       }
     }
   }
@@ -129,7 +132,7 @@ async function fetchServerStatus(): Promise<any> {
  
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function displayStatus(status: any, verbose: boolean, _compare: boolean = false): Promise<void> {
-  console.log(chalk.bold('\n📊 DeployStack Gateway Status\n'));
+  console.log(chalk.bold('\nDeployStack Gateway Status\n'));
 
   // Gateway status
   const gatewayTable = new Table({
@@ -141,14 +144,15 @@ async function displayStatus(status: any, verbose: boolean, _compare: boolean = 
     ['Status', status.gateway.running ? chalk.green('Running') : chalk.red('Stopped')],
     ['PID', status.gateway.pid || chalk.gray('N/A')],
     ['Uptime', status.gateway.uptime ? formatUptime(status.gateway.uptime) : chalk.gray('N/A')],
-    ['Endpoint', status.gateway.endpoint || chalk.gray('N/A')]
+    ['Endpoint SSE', status.gateway.endpointSSE || chalk.gray('N/A')],
+    ['Endpoint Messages', status.gateway.endpointMessages || chalk.gray('N/A')]
   );
 
   console.log(gatewayTable.toString());
 
   // Team configuration
   if (status.server?.teamConfig) {
-    console.log(chalk.bold('\n🤖 Team Configuration\n'));
+    console.log(chalk.bold('\nTeam Configuration\n'));
     
     const teamTable = new Table({
       head: [chalk.cyan('Property'), chalk.cyan('Value')],
@@ -167,7 +171,7 @@ async function displayStatus(status: any, verbose: boolean, _compare: boolean = 
 
   // MCP Processes
   if (status.processes && status.processes.length > 0) {
-    console.log(chalk.bold('\n⚙️  MCP Processes\n'));
+    console.log(chalk.bold('\nMCP Processes\n'));
     
     const processTable = new Table({
       head: [chalk.cyan('Name'), chalk.cyan('Status'), chalk.cyan('Runtime'), chalk.cyan('Uptime'), chalk.cyan('Messages'), chalk.cyan('Errors')],
