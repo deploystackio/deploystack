@@ -2,7 +2,6 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { toast } from 'vue-sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -20,7 +19,7 @@ import {
   Trash2
 } from 'lucide-vue-next'
 import { useDeviceDetail } from '@/composables/useDeviceDetail'
-import type { Device } from '../types'
+import { useDevices } from '@/composables/useDevices'
 
 const route = useRoute()
 const router = useRouter()
@@ -36,6 +35,8 @@ const {
   getOSDisplayName,
   formatTimestamp
 } = useDeviceDetail()
+
+const { removeDevice, isRemoving } = useDevices()
 
 // Computed
 const deviceId = computed(() => route.params.id as string)
@@ -55,10 +56,7 @@ function handleRemoveDevice() {
   removeDialogOpen.value = true
 }
 
-function handleDeviceRemoved(removedDevice: Device) {
-  toast.success(t('devices.removeDialog.success'), {
-    description: t('devices.removeDialog.successDescription', { deviceName: removedDevice.device_name })
-  })
+function handleDeviceRemoved() {
   router.push('/devices')
 }
 
@@ -176,6 +174,8 @@ onMounted(async () => {
       <RemoveDeviceDialog
         :device="device"
         :open="removeDialogOpen"
+        :remove-device="removeDevice"
+        :is-removing="isRemoving"
         @update:open="removeDialogOpen = $event"
         @device-removed="handleDeviceRemoved"
       />

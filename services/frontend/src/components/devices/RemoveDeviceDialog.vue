@@ -10,12 +10,13 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
-import { useDevices } from '@/composables/useDevices'
 import type { Device } from '@/views/devices/types'
 
 interface Props {
   device: Device | null
   open: boolean
+  removeDevice: (deviceId: string) => Promise<void>
+  isRemoving: boolean
 }
 
 interface Emits {
@@ -27,13 +28,12 @@ const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 
 const { t } = useI18n()
-const { isRemoving, removeDevice } = useDevices()
 
 async function handleConfirmRemove() {
   if (!props.device) return
 
   try {
-    await removeDevice(props.device.id)
+    await props.removeDevice(props.device.id)
     emit('device-removed', props.device)
     emit('update:open', false)
   } catch {
@@ -61,12 +61,12 @@ function handleCancel() {
       </div>
 
       <AlertDialogFooter>
-        <AlertDialogCancel @click="handleCancel" :disabled="isRemoving">
+        <AlertDialogCancel @click="handleCancel" :disabled="props.isRemoving">
           {{ t('devices.removeDialog.buttons.cancel') }}
         </AlertDialogCancel>
         <Button
           @click="handleConfirmRemove"
-          :loading="isRemoving"
+          :loading="props.isRemoving"
           :loading-text="t('devices.removeDialog.buttons.removing')"
           class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
         >

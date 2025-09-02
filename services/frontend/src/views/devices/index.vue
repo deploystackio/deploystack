@@ -47,8 +47,10 @@ const {
   deviceStats,
   isLoading,
   isUpdating,
+  isRemoving,
   fetchDevices,
-  updateDevice
+  updateDevice,
+  removeDevice
 } = useDevices()
 
 // Computed
@@ -251,6 +253,8 @@ onMounted(() => {
       <RemoveDeviceDialog
         :device="removingDevice"
         :open="removeDialogOpen"
+        :remove-device="removeDevice"
+        :is-removing="isRemoving"
         @update:open="removeDialogOpen = $event"
         @device-removed="handleDeviceRemoved"
       />
