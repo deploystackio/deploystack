@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.10.0 (2025-09-02)
+
+* feat(backend): implement device activity tracking service and integrate with MCP configurations rout ([481ce1e](https://github.com/deploystackio/deploystack/commit/481ce1e))
+* feat(frontend): enhance RemoveDeviceDialog to use props for device removal and loading state ([eca1091](https://github.com/deploystackio/deploystack/commit/eca1091))
+* feat(gateway): enhance login and logout commands with spinner feedback and improve console messages ([823af07](https://github.com/deploystackio/deploystack/commit/823af07))
+* feat(gateway): implement configuration change detection and handling with restart prompts ([62caf9c](https://github.com/deploystackio/deploystack/commit/62caf9c))
+* feat(gateway): mask internal backend URL in command outputs for improved user experience ([dfdfd9c](https://github.com/deploystackio/deploystack/commit/dfdfd9c))
+* feat(gateway): refactor device detection and caching system for improved performance ([d676c9a](https://github.com/deploystackio/deploystack/commit/d676c9a))
+* chore(all): bump @vueuse/core from 13.8.0 to 13.9.0 ([c32ca19](https://github.com/deploystackio/deploystack/commit/c32ca19))
+* chore(all): bump eslint from 9.33.0 to 9.34.0 ([e2f0b7c](https://github.com/deploystackio/deploystack/commit/e2f0b7c))
+* chore(all): bump inquirer from 12.9.3 to 12.9.4 ([a2e6ef8](https://github.com/deploystackio/deploystack/commit/a2e6ef8))
+* chore(all): bump nodemailer from 7.0.5 to 7.0.6 ([f2c5a3f](https://github.com/deploystackio/deploystack/commit/f2c5a3f))
+* chore(all): bump ts-loader from 9.5.2 to 9.5.4 ([4e2aeb0](https://github.com/deploystackio/deploystack/commit/4e2aeb0))
+
 ## <small>0.9.5 (2025-09-01)</small>
 
 * chore(gateway): release v0.9.4 ([4308f43](https://github.com/deploystackio/deploystack/commit/4308f43))
