@@ -10,6 +10,7 @@ import { TableFormatter } from '../utils/table';
 import { AuthenticationError } from '../types/auth';
 import { RefreshService } from '../services/refresh-service';
 import { ConfigurationChangeService } from '../services/configuration-change-service';
+import { displayBackendUrl } from '../utils/display';
 
 // PID file location
 const PID_FILE = path.join(os.tmpdir(), 'deploystack-gateway.pid');
@@ -222,7 +223,7 @@ export function registerMCPCommand(program: Command) {
         
         console.log(chalk.blue(`🤖 MCP Configuration Status`));
         console.log(chalk.gray(`🎯 Current team: ${chalk.cyan(credentials.selectedTeam.name)}`));
-        console.log(chalk.gray(` Backend: ${backendUrl}\n`));
+        console.log(chalk.gray(` Backend: ${displayBackendUrl(backendUrl)}\n`));
 
         spinner = ora('Checking MCP configuration...').start();
         

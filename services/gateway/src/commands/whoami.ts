@@ -5,6 +5,7 @@ import { DeployStackAPI } from '../core/auth/api-client';
 import { TableFormatter } from '../utils/table';
 import { SCOPE_DESCRIPTIONS } from '../utils/auth-config';
 import { AuthenticationError } from '../types/auth';
+import { displayBackendUrl } from '../utils/display';
 
 export function registerWhoamiCommand(program: Command) {
   program
@@ -51,7 +52,7 @@ export function registerWhoamiCommand(program: Command) {
           console.log(chalk.gray(`🏷️  Username: ${userInfo.preferred_username}`));
         }
         console.log(chalk.gray(`✅ Email Verified: ${userInfo.email_verified ? 'Yes' : 'No'}`));
-        console.log(chalk.gray(`🌐 Using backend: ${backendUrl}\n`));
+        console.log(chalk.gray(`🌐 Using backend: ${displayBackendUrl(backendUrl)}\n`));
 
         // Display account info in table format if accounts exist
         if (accounts.length > 0) {

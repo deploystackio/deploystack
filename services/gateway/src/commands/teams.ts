@@ -6,6 +6,7 @@ import { MCPConfigService } from '../core/mcp';
 import { TableFormatter } from '../utils/table';
 import { ToolDiscoveryManager } from '../utils/tool-discovery-manager';
 import { AuthenticationError } from '../types/auth';
+import { displayBackendUrl } from '../utils/display';
 
 export function registerTeamsCommand(program: Command) {
   program
@@ -71,7 +72,7 @@ export function registerTeamsCommand(program: Command) {
               continueOnError: true
             });
             
-            console.log(chalk.gray(`🌐 Using backend: ${backendUrl}`));
+            console.log(chalk.gray(`🌐 Using backend: ${displayBackendUrl(backendUrl)}`));
           } catch (mcpError) {
             // Team switch succeeded but MCP config failed - still show success but warn about MCP
             console.log(chalk.green(`✅ Switched to team: ${chalk.cyan(teamToSwitch.name)} (#${teamNumber})`));
@@ -79,7 +80,7 @@ export function registerTeamsCommand(program: Command) {
             if (mcpError instanceof Error) {
               console.log(chalk.gray(`   MCP Error: ${mcpError.message}`));
             }
-            console.log(chalk.gray(`🌐 Using backend: ${backendUrl}`));
+            console.log(chalk.gray(`🌐 Using backend: ${displayBackendUrl(backendUrl)}`));
           }
           return;
         }
@@ -87,7 +88,7 @@ export function registerTeamsCommand(program: Command) {
         if (teams.length === 0) {
           console.log(chalk.yellow('📭 You are not a member of any teams'));
           console.log(chalk.gray('💡 Contact your administrator to be added to a team'));
-          console.log(chalk.gray(`🌐 Using backend: ${backendUrl}`));
+          console.log(chalk.gray(`🌐 Using backend: ${displayBackendUrl(backendUrl)}`));
           return;
         }
 
@@ -101,7 +102,7 @@ export function registerTeamsCommand(program: Command) {
           console.log(chalk.yellow('⚠️  No team selected - use --switch <team-number> to select one'));
         }
         
-        console.log(chalk.gray(`🌐 Using backend: ${backendUrl}\n`));
+        console.log(chalk.gray(`🌐 Using backend: ${displayBackendUrl(backendUrl)}\n`));
 
         // Create table
         const table = TableFormatter.createTable({
