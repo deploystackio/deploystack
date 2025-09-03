@@ -1,6 +1,7 @@
 import { randomBytes } from 'crypto';
 import { ServerResponse } from 'http';
 import { logger } from '../../utils/logger';
+import { ClientStateCacheService } from '../client/client-state-cache';
 
 export interface SessionInfo {
   id: string;
@@ -19,6 +20,11 @@ export interface SessionInfo {
 export class SessionManager {
   private sessions = new Map<string, SessionInfo>();
   private readonly SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes
+  private clientStateCache: ClientStateCacheService;
+
+  constructor() {
+    this.clientStateCache = new ClientStateCacheService();
+  }
 
   /**
    * Generate a cryptographically secure session ID
@@ -41,13 +47,14 @@ export class SessionManager {
   /**
    * Create a new session with SSE stream
    */
-  createSession(sseStream: ServerResponse): string {
+  createSession(sseStream: ServerResponse, userAgent?: string, remoteAddress?: string): string {
     const sessionId = this.generateSessionId();
+    const now = Date.now();
     
     const session: SessionInfo = {
       id: sessionId,
-      createdAt: Date.now(),
-      lastActivity: Date.now(),
+      createdAt: now,
+      lastActivity: now,
       sseStream,
       mcpInitialized: false,
       requestCount: 0,
@@ -55,6 +62,24 @@ export class SessionManager {
     };
 
     this.sessions.set(sessionId, session);
+    
+    // Add to cache (fire and forget, like ToolCacheService pattern)
+    this.clientStateCache.updateClient({
+      id: sessionId,
+      type: 'SSE',
+      createdAt: now,
+      lastActivity: now,
+      requestCount: 0,
+      errorCount: 0,
+      mcpInitialized: false,
+      status: 'connected',
+      userAgent,
+      remoteAddress
+    }).then(() => {
+      logger.info(`Client cached successfully: ${sessionId}`, 'session', { sessionId });
+    }).catch(error => {
+      logger.error(`Failed to cache client ${sessionId}: ${error instanceof Error ? error.message : String(error)}`, 'session', { sessionId, error });
+    });
     
     // Schedule cleanup after timeout
     setTimeout(() => {
@@ -84,6 +109,11 @@ export class SessionManager {
     if (session) {
       session.lastActivity = Date.now();
       session.requestCount++;
+      
+      // Update cache
+      this.clientStateCache.updateClientActivity(sessionId).catch(error => {
+        logger.error(`Failed to update client activity in cache ${sessionId}: ${error instanceof Error ? error.message : String(error)}`, 'session', { sessionId });
+      });
     }
   }
 
@@ -94,6 +124,11 @@ export class SessionManager {
     const session = this.sessions.get(sessionId);
     if (session) {
       session.clientInfo = clientInfo;
+      
+      // Update cache
+      this.clientStateCache.setClientInfo(sessionId, clientInfo).catch(error => {
+        logger.error(`Failed to update client info in cache ${sessionId}: ${error instanceof Error ? error.message : String(error)}`, 'session', { sessionId });
+      });
     }
   }
 
@@ -104,6 +139,11 @@ export class SessionManager {
     const session = this.sessions.get(sessionId);
     if (session) {
       session.mcpInitialized = true;
+      
+      // Update cache
+      this.clientStateCache.setClientMcpInitialized(sessionId).catch(error => {
+        logger.error(`Failed to update MCP initialized in cache ${sessionId}: ${error instanceof Error ? error.message : String(error)}`, 'session', { sessionId });
+      });
     }
   }
 
@@ -114,6 +154,11 @@ export class SessionManager {
     const session = this.sessions.get(sessionId);
     if (session) {
       session.errorCount++;
+      
+      // Update cache
+      this.clientStateCache.incrementClientErrorCount(sessionId).catch(error => {
+        logger.error(`Failed to increment error count in cache ${sessionId}: ${error instanceof Error ? error.message : String(error)}`, 'session', { sessionId });
+      });
     }
   }
 
@@ -155,6 +200,11 @@ export class SessionManager {
     } catch {
       // Ignore cleanup errors
     }
+
+    // Mark as disconnected in cache
+    this.clientStateCache.removeClient(sessionId).catch(error => {
+      logger.error(`Failed to mark client as disconnected in cache ${sessionId}: ${error instanceof Error ? error.message : String(error)}`, 'session', { sessionId });
+    });
 
     this.sessions.delete(sessionId);
     logger.info(`Session cleaned up: ${sessionId}`, 'session', { sessionId });

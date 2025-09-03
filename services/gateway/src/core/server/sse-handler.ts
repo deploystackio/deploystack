@@ -26,7 +26,11 @@ export class SSEHandler {
     });
 
     // Create session and get ID
-    const sessionId = this.sessionManager.createSession(reply.raw);
+    const sessionId = this.sessionManager.createSession(
+      reply.raw,
+      request.headers['user-agent'],
+      request.ip
+    );
 
     // Send initial endpoint event immediately
     this.sendEndpointEvent(reply.raw, sessionId);

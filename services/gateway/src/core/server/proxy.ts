@@ -126,6 +126,23 @@ export class ProxyServer {
   getStatus() {
     const processes = this.processManager.getAllProcesses();
     
+    // Get client connection information
+    const sseSessionsStatus = {
+      activeCount: this.sessionManager.getActiveCount(),
+      sessions: this.sessionManager.getAllSessions().map(session => ({
+        id: session.id,
+        createdAt: session.createdAt,
+        lastActivity: session.lastActivity,
+        uptime: Date.now() - session.createdAt,
+        requestCount: session.requestCount,
+        errorCount: session.errorCount,
+        clientInfo: session.clientInfo,
+        mcpInitialized: session.mcpInitialized
+      }))
+    };
+
+    const streamableSessionsStatus = this.streamableHandler.getStatus();
+    
     return {
       isRunning: this.isRunning,
       teamConfig: this.teamConfig ? {
@@ -143,7 +160,11 @@ export class ProxyServer {
         messageCount: p.messageCount,
         errorCount: p.errorCount,
         lastActivity: p.lastActivity
-      }))
+      })),
+      clients: {
+        sse: sseSessionsStatus,
+        streamableHttp: streamableSessionsStatus
+      }
     };
   }
 
@@ -223,6 +244,11 @@ export class ProxyServer {
 
     this.fastify.post('/api/mcp/servers/:serverName/restart', async (request, reply) => {
       await this.handleRestartServer(request, reply);
+    });
+
+    // Tools refresh notification endpoint
+    this.fastify.post('/api/tools/refresh', async (request, reply) => {
+      await this.handleToolsRefresh(request, reply);
     });
 
     // Logs streaming endpoint - real-time log streaming via SSE
@@ -1313,6 +1339,54 @@ export class ProxyServer {
 
     } catch (error) {
       console.error(chalk.red(`[API] Error restarting server:`), error);
+      
+      reply.code(500).send({
+        error: 'Internal server error',
+        message: error instanceof Error ? error.message : String(error)
+      });
+    }
+  }
+
+  /**
+   * Handle tools refresh notification - notify all connected clients about tool changes
+   */
+  private async handleToolsRefresh(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    try {
+      const body = request.body as any;
+      const reason = body?.reason || 'manual_refresh';
+
+      console.log(chalk.blue(`[API] Tools refresh notification: ${reason}`));
+
+      // Import ClientNotificationService here to avoid circular dependencies
+      const { ClientNotificationService } = await import('../../services/client-notification-service');
+      
+      // Create notification service with current handlers
+      const notificationService = new ClientNotificationService(
+        this.sessionManager,
+        this.streamableHandler,
+        this.sseHandler
+      );
+
+      // Notify all connected clients about tool changes
+      const result = await notificationService.notifyToolsChanged();
+
+      console.log(chalk.green(`[API] Notified ${result.totalNotified} clients about tool changes`));
+      if (result.errors.length > 0) {
+        console.log(chalk.yellow(`[API] ${result.errors.length} notification errors occurred`));
+      }
+
+      reply.code(200).send({
+        success: true,
+        message: 'Tool refresh notifications sent',
+        totalNotified: result.totalNotified,
+        sseNotified: result.sseNotified,
+        streamableHttpNotified: result.streamableHttpNotified,
+        errors: result.errors.length,
+        reason
+      });
+
+    } catch (error) {
+      console.error(chalk.red(`[API] Error handling tools refresh:`), error);
       
       reply.code(500).send({
         error: 'Internal server error',

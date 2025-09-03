@@ -4,6 +4,7 @@ export { registerWhoamiCommand } from './whoami';
 export { registerTeamsCommand } from './teams';
 export { registerMCPCommand } from './mcp';
 export { registerRefreshCommand } from './refresh';
+export { registerClientsCommand } from './clients';
 export { registerStartCommand } from './start';
 export { registerRestartCommand } from './restart';
 export { registerStopCommand } from './stop';
