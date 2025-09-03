@@ -46,35 +46,35 @@ export function registerMCPCommand(program: Command) {
           
           if (isNaN(serverNumber) || serverNumber < 1) {
             console.log(chalk.red(`❌ Invalid server number "${options.tools}". Please use a positive number.`));
-            console.log(chalk.gray('💡 Use "deploystack mcp" to see available servers'));
+            console.log(chalk.gray('Use "deploystack mcp" to see available servers'));
             process.exit(1);
           }
 
           // CRITICAL: Check if gateway is running first
           if (!isGatewayRunning()) {
             console.log(chalk.red('❌ Gateway is not running'));
-            console.log(chalk.gray('💡 Use "deploystack start" to start the gateway first'));
-            console.log(chalk.gray('💡 The --tools command only works with running MCP servers'));
+            console.log(chalk.gray('Use "deploystack start" to start the gateway first'));
+            console.log(chalk.gray('The --tools command only works with running MCP servers'));
             process.exit(1);
           }
 
           // Check authentication for tools mode
           if (!await storage.isAuthenticated()) {
             console.log(chalk.red('❌ Not authenticated'));
-            console.log(chalk.gray(`💡 Run 'deploystack login' to authenticate`));
+            console.log(chalk.gray(`Run 'deploystack login' to authenticate`));
             process.exit(1);
           }
 
           const credentials = await storage.getCredentials();
           if (!credentials) {
             console.log(chalk.red('❌ No stored credentials found'));
-            console.log(chalk.gray(`💡 Run 'deploystack login' to authenticate`));
+            console.log(chalk.gray(`Run 'deploystack login' to authenticate`));
             process.exit(1);
           }
 
           if (!credentials.selectedTeam) {
             console.log(chalk.red('❌ No team selected'));
-            console.log(chalk.gray(`💡 Run 'deploystack teams --switch <team-number>' to select a team`));
+            console.log(chalk.gray(`Run 'deploystack teams --switch <team-number>' to select a team`));
             process.exit(1);
           }
 
@@ -82,7 +82,7 @@ export function registerMCPCommand(program: Command) {
           const config = await mcpService.getMCPConfig();
           if (!config || config.servers.length === 0) {
             console.log(chalk.yellow('⚠️  No MCP servers configured'));
-            console.log(chalk.gray('💡 Run "deploystack mcp --refresh" to download configuration'));
+            console.log(chalk.gray('Run "deploystack mcp --refresh" to download configuration'));
             process.exit(1);
           }
 
@@ -111,8 +111,8 @@ export function registerMCPCommand(program: Command) {
             
             if (gatewayTools.length === 0) {
               console.log(chalk.yellow('⚠️  No tools found in this MCP server'));
-              console.log(chalk.gray('💡 The server may not expose any tools or may not be running properly'));
-              console.log(chalk.gray('💡 Check "deploystack status" to see server status'));
+              console.log(chalk.gray('The server may not expose any tools or may not be running properly'));
+              console.log(chalk.gray('Check "deploystack status" to see server status'));
               return;
             }
 
@@ -121,8 +121,8 @@ export function registerMCPCommand(program: Command) {
             
           } catch (error) {
             console.error(chalk.red(`❌ Failed to communicate with running MCP server: ${error instanceof Error ? error.message : String(error)}`));
-            console.log(chalk.gray('💡 Check "deploystack status" to see if the server is running'));
-            console.log(chalk.gray('💡 Try restarting the gateway with "deploystack stop && deploystack start"'));
+            console.log(chalk.gray('Check "deploystack status" to see if the server is running'));
+            console.log(chalk.gray('Try restarting the gateway with "deploystack stop && deploystack start"'));
             process.exit(1);
           }
           
@@ -179,13 +179,13 @@ export function registerMCPCommand(program: Command) {
               });
             });
             
-            console.log(chalk.gray('\n💡 * = Required parameter'));
+            console.log(chalk.gray('\n* = Required parameter'));
           }
 
-          console.log(chalk.gray(`\n💡 Server: ${selectedServer.installation_name}`));
-          console.log(chalk.gray(`💡 Runtime: ${selectedServer.runtime}`));
-          console.log(chalk.gray(`💡 Command: ${selectedServer.command} ${selectedServer.args.join(' ')}`));
-          console.log(chalk.blue('💡 Tools retrieved from running MCP server (not spawned)'));
+          console.log(chalk.gray(`\nServer: ${selectedServer.installation_name}`));
+          console.log(chalk.gray(`Runtime: ${selectedServer.runtime}`));
+          console.log(chalk.gray(`Command: ${selectedServer.command} ${selectedServer.args.join(' ')}`));
+          console.log(chalk.blue('Tools retrieved from running MCP server (not spawned)'));
           
           return;
         }
@@ -193,21 +193,21 @@ export function registerMCPCommand(program: Command) {
         // Check authentication
         if (!await storage.isAuthenticated()) {
           console.log(chalk.red('❌ Not authenticated'));
-          console.log(chalk.gray(`💡 Run 'deploystack login' to authenticate`));
+          console.log(chalk.gray(`Run 'deploystack login' to authenticate`));
           process.exit(1);
         }
 
         const credentials = await storage.getCredentials();
         if (!credentials) {
           console.log(chalk.red('❌ No stored credentials found'));
-          console.log(chalk.gray(`💡 Run 'deploystack login' to authenticate`));
+          console.log(chalk.gray(`Run 'deploystack login' to authenticate`));
           process.exit(1);
         }
 
         // Check if team is selected
         if (!credentials.selectedTeam) {
           console.log(chalk.red('❌ No team selected'));
-          console.log(chalk.gray(`💡 Run 'deploystack teams --switch <team-number>' to select a team`));
+          console.log(chalk.gray(`Run 'deploystack teams --switch <team-number>' to select a team`));
           process.exit(1);
         }
 
@@ -235,7 +235,7 @@ export function registerMCPCommand(program: Command) {
 
         if (!hasConfig) {
           console.log(chalk.yellow('⚠️  No MCP configuration found'));
-          console.log(chalk.gray('💡 Run with --refresh to download configuration'));
+          console.log(chalk.gray('Run with --refresh to download configuration'));
           return;
         }
 
@@ -256,7 +256,7 @@ export function registerMCPCommand(program: Command) {
           console.log(`   Status: ${chalk.green('Fresh ✅')}`);
         } else {
           console.log(`   Status: ${chalk.yellow('Stale ⚠️')} (>24h old)`);
-          console.log(chalk.gray('💡 Consider running with --refresh to update'));
+          console.log(chalk.gray('Consider running with --refresh to update'));
         }
 
         // Show MCP servers table
@@ -282,12 +282,11 @@ export function registerMCPCommand(program: Command) {
             console.log(table.toString());
           }
           
-          console.log(chalk.gray('\n💡 Use this configuration with "deploystack start" to run the gateway'));
-          console.log(chalk.gray('💡 Use "deploystack mcp --refresh" to update from the cloud'));
-          console.log(chalk.gray('💡 Use "deploystack mcp --tools <server-number>" to discover available tools'));
+          console.log(chalk.gray('Use "deploystack mcp --refresh" to update from the cloud'));
+          console.log(chalk.gray('Use "deploystack mcp --tools <server-number>" to discover available tools'));
         } else {
           console.log(chalk.yellow('\n⚠️  No MCP servers configured for this team'));
-          console.log(chalk.gray('💡 Install MCP servers via the web interface'));
+          console.log(chalk.gray('Install MCP servers via the web interface'));
         }
 
         // Check for remote configuration updates
@@ -346,7 +345,7 @@ export function registerMCPCommand(program: Command) {
                 }
               } catch (restartError) {
                 console.log(chalk.red(`❌ Failed to restart gateway: ${restartError instanceof Error ? restartError.message : String(restartError)}`));
-                console.log(chalk.gray('💡 You can restart manually with "deploystack restart"'));
+                console.log(chalk.gray('You can restart manually with "deploystack restart"'));
               }
             });
             
@@ -364,8 +363,8 @@ export function registerMCPCommand(program: Command) {
           if (refreshError instanceof Error) {
             console.log(chalk.gray(`   Error: ${refreshError.message}`));
           }
-          console.log(chalk.gray('💡 This may be due to network connectivity or backend issues'));
-          console.log(chalk.gray('💡 Your local configuration is still available and functional'));
+          console.log(chalk.gray('This may be due to network connectivity or backend issues'));
+          console.log(chalk.gray('Your local configuration is still available and functional'));
         }
 
       } catch (error) {
@@ -377,9 +376,9 @@ export function registerMCPCommand(program: Command) {
           console.log(chalk.red(`❌ Failed to access MCP configuration: ${error.message}`));
           
           if (error.code === 'TOKEN_EXPIRED') {
-            console.log(chalk.gray(`💡 Run 'deploystack login' to refresh your authentication`));
+            console.log(chalk.gray(`Run 'deploystack login' to refresh your authentication`));
           } else if (error.code === 'NETWORK_ERROR') {
-            console.log(chalk.gray('💡 Check your internet connection and try again'));
+            console.log(chalk.gray('Check your internet connection and try again'));
           }
         } else {
           console.log(chalk.red(`❌ Unexpected error: ${error instanceof Error ? error.message : String(error)}`));
