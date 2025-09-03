@@ -52,7 +52,7 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           # Let release-it handle the release process properly
-          npm run release -- --ci --verbose --no-git.requireCleanWorkingDir
+          npm run release -- --ci --verbose --no-git.requireCleanWorkingDir --no-increment
       - name: Publish to NPM
         working-directory: services/gateway
         env:

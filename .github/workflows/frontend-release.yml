@@ -49,7 +49,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.APP_INSTALLATION_TOKEN }}
         run: |
           # Let release-it handle the release process properly
-          npm run release -- --ci --verbose --no-git.requireCleanWorkingDir
+          npm run release -- --ci --verbose --no-git.requireCleanWorkingDir --no-increment
         
       - name: Get version
         id: package-version
