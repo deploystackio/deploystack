@@ -1,5 +1,14 @@
 # Changelog
 
+## <small>0.11.1 (2025-09-03)</small>
+
+* chore(gateway): release v0.11.0 ([3395bc9](https://github.com/deploystackio/deploystack/commit/3395bc9))
+* feat(frontend): update page title to 'DeployStack Cloud' ([8772df7](https://github.com/deploystackio/deploystack/commit/8772df7))
+* feat(gateway): add selective restart functionality for MCP servers and enhance configuration change  ([f81f835](https://github.com/deploystackio/deploystack/commit/f81f835))
+* feat(gateway): implement MCP endpoint and enhance logging for session management ([6a3332b](https://github.com/deploystackio/deploystack/commit/6a3332b))
+* refactor(gateway): remove unnecessary hints from MCP command error messages ([b65fade](https://github.com/deploystackio/deploystack/commit/b65fade))
+* refactor(gateway): remove version string from command description ([6f2196a](https://github.com/deploystackio/deploystack/commit/6f2196a))
+
 ## 0.11.0 (2025-09-03)
 
 * feat(frontend): update page title to 'DeployStack Cloud' ([8772df7](https://github.com/deploystackio/deploystack/commit/8772df7))
