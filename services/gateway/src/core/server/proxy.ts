@@ -212,6 +212,19 @@ export class ProxyServer {
       return this.getStatus();
     });
 
+    // MCP Server Management API endpoints for selective restart
+    this.fastify.post('/api/mcp/servers', async (request, reply) => {
+      await this.handleAddServer(request, reply);
+    });
+
+    this.fastify.delete('/api/mcp/servers/:serverName', async (request, reply) => {
+      await this.handleRemoveServer(request, reply);
+    });
+
+    this.fastify.post('/api/mcp/servers/:serverName/restart', async (request, reply) => {
+      await this.handleRestartServer(request, reply);
+    });
+
     // Logs streaming endpoint - real-time log streaming via SSE
     this.fastify.get('/logs/stream', async (request, reply) => {
       await this.handleLogsStream(request, reply);
@@ -1128,6 +1141,183 @@ export class ProxyServer {
       console.log(chalk.gray(`   Servers available: ${this.teamConfig.servers.map(s => s.installation_name).join(', ')}`));
     } catch (error) {
       console.error(chalk.red('Failed to load team MCP configuration:'), error);
+    }
+  }
+
+  /**
+   * Handle adding a new MCP server (selective restart API)
+   */
+  private async handleAddServer(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    try {
+      const body = request.body as any;
+      const config = body.config as MCPServerConfig;
+
+      if (!config || !config.installation_name) {
+        reply.code(400).send({
+          error: 'Invalid request',
+          message: 'Missing server configuration'
+        });
+        return;
+      }
+
+      console.log(chalk.blue(`[API] Adding MCP server: ${config.installation_name}`));
+
+      // Check if server already exists
+      const existingProcess = this.processManager.getProcessByName(config.installation_name);
+      if (existingProcess && existingProcess.status === 'running') {
+        reply.code(409).send({
+          error: 'Server already exists',
+          message: `MCP server ${config.installation_name} is already running`
+        });
+        return;
+      }
+
+      // Spawn the new process
+      const processInfo = await this.processManager.spawnProcess(config);
+      
+      console.log(chalk.green(`[API] Successfully added MCP server: ${config.installation_name}`));
+
+      reply.code(201).send({
+        success: true,
+        message: `MCP server ${config.installation_name} added successfully`,
+        server: {
+          name: config.installation_name,
+          status: processInfo.status,
+          pid: processInfo.process.pid
+        }
+      });
+
+    } catch (error) {
+      console.error(chalk.red(`[API] Error adding server:`), error);
+      
+      reply.code(500).send({
+        error: 'Internal server error',
+        message: error instanceof Error ? error.message : String(error)
+      });
+    }
+  }
+
+  /**
+   * Handle removing an MCP server (selective restart API)
+   */
+  private async handleRemoveServer(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    try {
+      const params = request.params as any;
+      const serverName = params.serverName;
+
+      if (!serverName) {
+        reply.code(400).send({
+          error: 'Invalid request',
+          message: 'Missing server name'
+        });
+        return;
+      }
+
+      console.log(chalk.blue(`[API] Removing MCP server: ${serverName}`));
+
+      // Find the process
+      const processInfo = this.processManager.getProcessByName(serverName);
+      if (!processInfo) {
+        reply.code(404).send({
+          error: 'Server not found',
+          message: `MCP server ${serverName} not found`
+        });
+        return;
+      }
+
+      // Terminate the process
+      await this.processManager.terminateProcess(processInfo, 10000);
+      
+      console.log(chalk.green(`[API] Successfully removed MCP server: ${serverName}`));
+
+      reply.code(200).send({
+        success: true,
+        message: `MCP server ${serverName} removed successfully`
+      });
+
+    } catch (error) {
+      console.error(chalk.red(`[API] Error removing server:`), error);
+      
+      reply.code(500).send({
+        error: 'Internal server error',
+        message: error instanceof Error ? error.message : String(error)
+      });
+    }
+  }
+
+  /**
+   * Handle restarting an MCP server (selective restart API)
+   */
+  private async handleRestartServer(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    try {
+      const params = request.params as any;
+      const body = request.body as any;
+      const serverName = params.serverName;
+      const config = body.config as MCPServerConfig;
+
+      if (!serverName) {
+        reply.code(400).send({
+          error: 'Invalid request',
+          message: 'Missing server name'
+        });
+        return;
+      }
+
+      if (!config || !config.installation_name) {
+        reply.code(400).send({
+          error: 'Invalid request',
+          message: 'Missing server configuration'
+        });
+        return;
+      }
+
+      console.log(chalk.blue(`[API] Restarting MCP server: ${serverName}`));
+
+      // Find the existing process
+      const existingProcess = this.processManager.getProcessByName(serverName);
+      if (!existingProcess) {
+        // Server doesn't exist, just start it
+        const processInfo = await this.processManager.spawnProcess(config);
+        
+        console.log(chalk.green(`[API] Started MCP server: ${serverName} (was not running)`));
+
+        reply.code(200).send({
+          success: true,
+          message: `MCP server ${serverName} started successfully`,
+          server: {
+            name: config.installation_name,
+            status: processInfo.status,
+            pid: processInfo.process.pid
+          }
+        });
+        return;
+      }
+
+      // Restart the existing process
+      const processInfo = await this.processManager.restartServer(serverName, {
+        timeout: 10000,
+        showProgress: false
+      });
+      
+      console.log(chalk.green(`[API] Successfully restarted MCP server: ${serverName}`));
+
+      reply.code(200).send({
+        success: true,
+        message: `MCP server ${serverName} restarted successfully`,
+        server: {
+          name: config.installation_name,
+          status: processInfo.status,
+          pid: processInfo.process.pid
+        }
+      });
+
+    } catch (error) {
+      console.error(chalk.red(`[API] Error restarting server:`), error);
+      
+      reply.code(500).send({
+        error: 'Internal server error',
+        message: error instanceof Error ? error.message : String(error)
+      });
     }
   }
 }

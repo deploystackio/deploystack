@@ -2,6 +2,7 @@ import chalk from 'chalk';
 import inquirer from 'inquirer';
 import { TeamMCPConfig, MCPServerConfig } from '../types/mcp';
 import { ServerRestartService } from './server-restart-service';
+import { SelectiveRestartService } from './selective-restart-service';
 
 export interface ConfigurationChangeInfo {
   hasChanges: boolean;
@@ -17,9 +18,11 @@ export interface ConfigurationChangeInfo {
  */
 export class ConfigurationChangeService {
   private restartService: ServerRestartService;
+  private selectiveRestartService: SelectiveRestartService;
 
   constructor() {
     this.restartService = new ServerRestartService();
+    this.selectiveRestartService = new SelectiveRestartService();
   }
 
   /**
@@ -125,12 +128,14 @@ export class ConfigurationChangeService {
 
   /**
    * Handle configuration changes with interactive restart prompt
+   * Uses selective restart when possible, falls back to full restart
    */
-  async handleConfigurationChanges(changeInfo: ConfigurationChangeInfo): Promise<void> {
+  async handleConfigurationChanges(
+    changeInfo: ConfigurationChangeInfo,
+    newServerConfigs?: MCPServerConfig[]
+  ): Promise<void> {
     console.log(chalk.blue('\n🔄 Configuration changes detected:'));
     changeInfo.changes.forEach(change => console.log(`   ${change}`));
-
-    console.log(chalk.yellow('\n⚠️  Gateway restart required for changes to take effect.'));
 
     // Check if gateway is running
     const isRunning = this.restartService.isServerRunning();
@@ -140,7 +145,45 @@ export class ConfigurationChangeService {
       return;
     }
 
-    // Prompt user for restart
+    // Try selective restart first if we have server configs
+    if (newServerConfigs && await this.selectiveRestartService.isGatewayRunning()) {
+      console.log(chalk.blue('\nSelective restart available - only affected servers will be restarted.'));
+      
+      const { useSelectiveRestart } = await inquirer.prompt([
+        {
+          type: 'confirm',
+          name: 'useSelectiveRestart',
+          message: 'Use selective restart (faster, no interruption to unchanged servers)?',
+          default: true
+        }
+      ]);
+
+      if (useSelectiveRestart) {
+        try {
+          const result = await this.selectiveRestartService.performSelectiveRestart(
+            changeInfo,
+            newServerConfigs,
+            { showProgress: true }
+          );
+
+          if (result.success) {
+            console.log(chalk.green('\n✅ Selective restart completed successfully'));
+            console.log(chalk.gray('All changes applied without full gateway restart'));
+            return;
+          } else {
+            console.log(chalk.yellow('\nSelective restart completed with errors'));
+            console.log(chalk.gray('Falling back to full gateway restart...'));
+          }
+        } catch (error) {
+          console.log(chalk.red(`❌ Selective restart failed: ${error instanceof Error ? error.message : String(error)}`));
+          console.log(chalk.gray('Falling back to full gateway restart...'));
+        }
+      }
+    }
+
+    // Fall back to full gateway restart
+    console.log(chalk.yellow('\nFull gateway restart required for changes to take effect.'));
+
     const { shouldRestart } = await inquirer.prompt([
       {
         type: 'confirm',

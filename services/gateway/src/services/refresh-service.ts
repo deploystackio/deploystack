@@ -98,7 +98,7 @@ export class RefreshService {
         
         // Step 2: Handle configuration changes
         if (changeInfo.hasChanges) {
-          await this.changeService.handleConfigurationChanges(changeInfo);
+          await this.changeService.handleConfigurationChanges(changeInfo, teamMCPConfig.servers);
         } else {
           console.log(chalk.green('✅ No configuration changes detected - your MCP servers are up to date'));
           console.log(chalk.gray('💡 All servers are already running with the latest configuration'));
