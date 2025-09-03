@@ -40,6 +40,7 @@ export function registerStartCommand(program: Command) {
           console.log(chalk.gray(`   PID: ${result.pid}`));
           console.log(chalk.gray(`   SSE endpoint: ${result.endpoints?.sse}`));
           console.log(chalk.gray(`   Messages: ${result.endpoints?.messages}`));
+          console.log(chalk.gray(`   MCP endpoint: ${result.endpoints?.mcp}`));
           console.log(chalk.gray('   Use "deploystack status" to check status'));
           console.log(chalk.gray('   Use "deploystack stop" to stop the server'));
           

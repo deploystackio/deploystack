@@ -25,6 +25,7 @@ export interface ServerStartResult {
   endpoints?: {
     sse: string;
     messages: string;
+    mcp: string;
     health: string;
   };
   mcpServersStarted?: number;
@@ -139,6 +140,7 @@ export class ServerStartService {
         endpoints: {
           sse: `http://${host}:${port}/sse`,
           messages: `http://${host}:${port}/message`,
+          mcp: `http://${host}:${port}/mcp`,
           health: `http://${host}:${port}/health`
         }
       };
@@ -299,6 +301,7 @@ export class ServerStartService {
         endpoints: {
           sse: `http://${host}:${port}/sse`,
           messages: `http://${host}:${port}/message`,
+          mcp: `http://${host}:${port}/mcp`,
           health: `http://${host}:${port}/health`
         },
         mcpServersStarted,

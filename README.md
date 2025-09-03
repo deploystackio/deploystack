@@ -107,6 +107,7 @@ Our roadmap is designed to build the essential infrastructure for using MCP secu
 - **[Done]** Implemented secure authentication and configuration synchronization between the Gateway and the cloud.
 - **[Done]** Built the on-demand `stdio` process spawning and management logic.
 - **[Done]** Added support for multi-user teams with role-based access control.
+- **[Done]** Implemented dual transport architecture supporting both SSE and Streamable HTTP transports for maximum client compatibility.
 
 ### Phase 3: Enterprise Governance (Current Focus)
 

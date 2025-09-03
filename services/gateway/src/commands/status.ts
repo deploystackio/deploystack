@@ -44,7 +44,8 @@ async function getGatewayStatus() {
       pid: null as number | null,
       uptime: null as number | null,
       endpointSSE: null as string | null,
-      endpointMessages: null as string | null
+      endpointMessages: null as string | null,
+      endpointMcp: null as string | null
     },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     server: null as any,
@@ -86,10 +87,12 @@ async function getGatewayStatus() {
         const host = 'localhost'; // Default host
         status.gateway.endpointSSE = `http://${host}:${port}/sse`;
         status.gateway.endpointMessages = `http://${host}:${port}/message`;
+        status.gateway.endpointMcp = `http://${host}:${port}/mcp`;
       } catch {
         // Server might be starting up or not responding
         status.gateway.endpointSSE = 'http://localhost:9095/sse (not responding)';
         status.gateway.endpointMessages = 'http://localhost:9095/message (not responding)';
+        status.gateway.endpointMcp = 'http://localhost:9095/mcp (not responding)';
       }
     }
   }
@@ -144,8 +147,9 @@ async function displayStatus(status: any, verbose: boolean, _compare: boolean = 
     ['Status', status.gateway.running ? chalk.green('Running') : chalk.red('Stopped')],
     ['PID', status.gateway.pid || chalk.gray('N/A')],
     ['Uptime', status.gateway.uptime ? formatUptime(status.gateway.uptime) : chalk.gray('N/A')],
-    ['Endpoint SSE', status.gateway.endpointSSE || chalk.gray('N/A')],
-    ['Endpoint Messages', status.gateway.endpointMessages || chalk.gray('N/A')]
+    ['SSE Endpoint', status.gateway.endpointSSE || chalk.gray('N/A')],
+    ['Messages', status.gateway.endpointMessages || chalk.gray('N/A')],
+    ['MCP Endpoint', status.gateway.endpointMcp || chalk.gray('N/A')]
   );
 
   console.log(gatewayTable.toString());

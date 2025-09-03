@@ -4,7 +4,7 @@ The local secure gateway that connects developers to their team's MCP servers th
 
 ## 🔍 Features
 
-- **Dual Transport Architecture**: Supports SSE transport for VS Code compatibility with session-based messaging
+- **Dual Transport Architecture**: Supports both legacy SSE transport and modern Streamable HTTP transport for maximum MCP client compatibility
 - **Individual Tool Exposure**: Exposes individual MCP tools with namespacing (e.g., `brightdata-search_engine`) for direct use
 - **Automatic Tool Discovery**: Discovers and caches tools from all MCP servers when switching teams
 - **Fast Gateway Startup**: Instant startup using cached tools without waiting for server discovery
@@ -110,8 +110,9 @@ After logging in, the gateway automatically downloads and synchronizes your team
 
 **Gateway Endpoints:**
 
-- 📡 **SSE Connection**: `http://localhost:9095/sse` (for establishing connections)
-- 📨 **Messages**: `http://localhost:9095/message` (for JSON-RPC with session context)  
+- 📡 **SSE Connection**: `http://localhost:9095/sse` (for establishing legacy SSE connections)
+- 📨 **Messages**: `http://localhost:9095/message` (for JSON-RPC with session context)
+- 🚀 **MCP Endpoint**: `http://localhost:9095/mcp` (for modern Streamable HTTP transport)
 - 📊 **Health Check**: `http://localhost:9095/health` (for monitoring)
 - 📋 **Status**: `http://localhost:9095/status` (for detailed information)
 
@@ -293,6 +294,7 @@ deploystack start --foreground
 🚀 DeployStack Gateway listening at:
    📡 SSE endpoint: http://localhost:9095/sse
    📨 Messages: http://localhost:9095/message
+   🚀 MCP endpoint: http://localhost:9095/mcp
    📊 Health check: http://localhost:9095/health
 🤖 Ready to serve 2 MCP servers for team: kaka
 ```

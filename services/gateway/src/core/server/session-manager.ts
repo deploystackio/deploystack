@@ -1,6 +1,6 @@
 import { randomBytes } from 'crypto';
 import { ServerResponse } from 'http';
-import chalk from 'chalk';
+import { logger } from '../../utils/logger';
 
 export interface SessionInfo {
   id: string;
@@ -61,7 +61,7 @@ export class SessionManager {
       this.cleanupIfExpired(sessionId);
     }, this.SESSION_TIMEOUT);
 
-    console.log(chalk.blue(`[Session] Created: ${sessionId}`));
+    logger.info(`Session created: ${sessionId}`, 'session', { sessionId });
     return sessionId;
   }
 
@@ -135,7 +135,7 @@ export class SessionManager {
       session.sseStream.write(sseData);
       return true;
     } catch (error) {
-      console.error(chalk.red(`[Session] Failed to send to ${sessionId}:`), error);
+      logger.error(`Failed to send to session ${sessionId}: ${error instanceof Error ? error.message : String(error)}`, 'session', { sessionId, error });
       this.cleanupSession(sessionId);
       return false;
     }
@@ -157,7 +157,7 @@ export class SessionManager {
     }
 
     this.sessions.delete(sessionId);
-    console.log(chalk.gray(`[Session] Cleaned up: ${sessionId}`));
+    logger.info(`Session cleaned up: ${sessionId}`, 'session', { sessionId });
   }
 
   /**
@@ -166,7 +166,7 @@ export class SessionManager {
   private cleanupIfExpired(sessionId: string): void {
     const session = this.sessions.get(sessionId);
     if (session && Date.now() - session.lastActivity > this.SESSION_TIMEOUT) {
-      console.log(chalk.yellow(`[Session] Expired: ${sessionId}`));
+      logger.info(`Session expired: ${sessionId}`, 'session', { sessionId });
       this.cleanupSession(sessionId);
     }
   }

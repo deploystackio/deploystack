@@ -1,7 +1,7 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { ServerResponse } from 'http';
-import chalk from 'chalk';
 import { SessionManager } from './session-manager';
+import { logger } from '../../utils/logger';
 
 export class SSEHandler {
   constructor(private sessionManager: SessionManager) {}
@@ -10,7 +10,10 @@ export class SSEHandler {
    * Establish SSE connection and return session ID
    */
   async establishConnection(request: FastifyRequest, reply: FastifyReply): Promise<void> {
-    console.log(chalk.blue('[SSE] Establishing connection'));
+    logger.info('Establishing SSE connection', 'sse', {
+      userAgent: request.headers['user-agent'],
+      remoteAddress: request.ip
+    });
 
     // Set SSE headers
     reply.raw.writeHead(200, {
@@ -31,7 +34,10 @@ export class SSEHandler {
     // Set up connection cleanup handlers
     this.setupCleanupHandlers(reply.raw, sessionId);
 
-    console.log(chalk.green(`[SSE] Connection established: ${sessionId}`));
+    logger.info(`SSE connection established: ${sessionId}`, 'sse', {
+      sessionId,
+      endpointUrl: `/message?session=${sessionId}`
+    });
   }
 
   /**
@@ -42,9 +48,9 @@ export class SSEHandler {
     
     try {
       stream.write(`event: endpoint\ndata: ${endpointUrl}\n\n`);
-      console.log(chalk.gray(`[SSE] Sent endpoint event: ${endpointUrl}`));
+      logger.debug(`Sent endpoint event: ${endpointUrl}`, 'sse', { sessionId, endpointUrl });
     } catch (error) {
-      console.error(chalk.red(`[SSE] Failed to send endpoint event:`), error);
+      logger.error(`Failed to send endpoint event: ${error instanceof Error ? error.message : String(error)}`, 'sse', { sessionId, error });
     }
   }
 
@@ -53,18 +59,18 @@ export class SSEHandler {
    */
   private setupCleanupHandlers(stream: ServerResponse, sessionId: string): void {
     stream.on('close', () => {
-      console.log(chalk.yellow(`[SSE] Connection closed: ${sessionId}`));
+      logger.info(`SSE connection closed: ${sessionId}`, 'sse', { sessionId });
       this.sessionManager.cleanupSession(sessionId);
     });
 
     stream.on('error', (error) => {
-      console.error(chalk.red(`[SSE] Connection error: ${sessionId}`), error);
+      logger.error(`SSE connection error: ${sessionId}`, 'sse', { sessionId, error: error.message });
       this.sessionManager.cleanupSession(sessionId);
     });
 
     // Handle client disconnect
     stream.on('finish', () => {
-      console.log(chalk.gray(`[SSE] Connection finished: ${sessionId}`));
+      logger.debug(`SSE connection finished: ${sessionId}`, 'sse', { sessionId });
       this.sessionManager.cleanupSession(sessionId);
     });
   }
@@ -131,7 +137,7 @@ export class SSEHandler {
         }
       } catch {
         // Connection might be dead, cleanup will handle it
-        console.warn(chalk.yellow(`[SSE] Heartbeat failed for ${session.id}`));
+        logger.warn(`SSE heartbeat failed for session: ${session.id}`, 'sse', { sessionId: session.id });
       }
     }
   }
