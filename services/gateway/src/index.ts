@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
 import { Command } from 'commander';
-import { getVersionString } from './config/version';
 import {
   registerLoginCommand,
   registerLogoutCommand,
@@ -22,8 +21,7 @@ const program = new Command();
 
 program
   .name('deploystack')
-  .description('DeployStack Gateway - Local secure proxy for MCP servers')
-  .version(getVersionString());
+  .description('DeployStack Gateway - Local secure proxy for MCP servers');
 
 // Register all commands
 registerLoginCommand(program);
