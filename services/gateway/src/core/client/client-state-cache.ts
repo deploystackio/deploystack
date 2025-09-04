@@ -368,10 +368,10 @@ export class ClientStateCacheService {
     try {
       if (await fs.pathExists(this.cacheFile)) {
         await fs.remove(this.cacheFile);
-        console.log(chalk.gray(`🗑️  Client state cache cleared`));
+        console.log(chalk.gray(`Client state cache cleared`));
       }
     } catch (error) {
-      console.warn(chalk.yellow(`⚠️  Failed to clear client cache:`, error));
+      console.warn(chalk.yellow(`Failed to clear client cache:`, error));
     }
   }
 }

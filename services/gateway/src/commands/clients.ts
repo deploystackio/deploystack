@@ -6,36 +6,12 @@ export function registerClientsCommand(program: Command) {
   program
     .command('clients')
     .description('Show all connected MCP clients')
-    .option('--port <port>', 'Gateway port (default: 9095)', '9095')
-    .option('--host <host>', 'Gateway host (default: localhost)', 'localhost')
-    .action(async (options) => {
-      await showConnectedClients(options);
+    .action(async () => {
+      await showConnectedClients();
     });
 }
 
-interface ClientConnection {
-  id: string;
-  type: 'SSE' | 'Streamable HTTP';
-  clientInfo?: {
-    name: string;
-    version: string;
-  };
-  createdAt: number;
-  lastActivity: number;
-  uptime: number;
-  requestCount: number;
-  errorCount: number;
-  mcpInitialized: boolean;
-}
-
-interface ClientStatus {
-  totalConnections: number;
-  sseConnections: number;
-  streamableHttpConnections: number;
-  clients: ClientConnection[];
-}
-
-async function showConnectedClients(options: { port: string; host: string }): Promise<void> {
+async function showConnectedClients(): Promise<void> {
   try {
     const clientCache = new ClientStateCacheService();
     
@@ -147,105 +123,4 @@ function formatUptime(milliseconds: number): string {
   } else {
     return `${seconds}s`;
   }
-}
-
-/**
- * Fetch gateway status via HTTP
- */
-async function fetchGatewayStatus(gatewayUrl: string): Promise<any> {
-  const fetch = (await import('node-fetch')).default;
-  
-  // Create AbortController for timeout
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 5000);
-  
-  try {
-    const response = await fetch(`${gatewayUrl}/status`, {
-      signal: controller.signal
-    });
-    
-    clearTimeout(timeoutId);
-    
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
-    }
-    
-    return await response.json();
-  } catch (error) {
-    clearTimeout(timeoutId);
-    throw error;
-  }
-}
-
-/**
- * Extract client status from gateway status response
- */
-function extractClientStatus(gatewayStatus: any): ClientStatus {
-  const clients: ClientConnection[] = [];
-  const now = Date.now();
-
-  // Extract SSE sessions
-  if (gatewayStatus.clients?.sse?.sessions) {
-    for (const session of gatewayStatus.clients.sse.sessions) {
-      clients.push({
-        id: session.id,
-        type: 'SSE',
-        clientInfo: session.clientInfo,
-        createdAt: session.createdAt,
-        lastActivity: session.lastActivity,
-        uptime: session.uptime,
-        requestCount: session.requestCount,
-        errorCount: session.errorCount,
-        mcpInitialized: session.mcpInitialized
-      });
-    }
-  }
-
-  // Extract Streamable HTTP sessions
-  if (gatewayStatus.clients?.streamableHttp?.sessions) {
-    for (const session of gatewayStatus.clients.streamableHttp.sessions) {
-      clients.push({
-        id: session.id,
-        type: 'Streamable HTTP',
-        clientInfo: session.clientInfo,
-        createdAt: session.createdAt,
-        lastActivity: session.lastActivity,
-        uptime: session.uptime,
-        requestCount: session.requestCount,
-        errorCount: session.errorCount,
-        mcpInitialized: session.mcpInitialized
-      });
-    }
-  }
-
-  // Sort by creation time (newest first)
-  clients.sort((a, b) => b.createdAt - a.createdAt);
-  
-  return {
-    totalConnections: clients.length,
-    sseConnections: gatewayStatus.clients?.sse?.activeCount || 0,
-    streamableHttpConnections: gatewayStatus.clients?.streamableHttp?.activeSessionCount || 0,
-    clients
-  };
-}
-
-/**
- * Calculate summary statistics
- */
-function calculateSummary(status: ClientStatus): {
-  total: number;
-  sse: number;
-  streamableHttp: number;
-  initialized: number;
-  active: number;
-} {
-  const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
-
-  return {
-    total: status.totalConnections,
-    sse: status.sseConnections,
-    streamableHttp: status.streamableHttpConnections,
-    initialized: status.clients.filter(c => c.mcpInitialized).length,
-    active: status.clients.filter(c => c.lastActivity > fiveMinutesAgo).length
-  };
 }

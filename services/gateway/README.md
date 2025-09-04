@@ -368,6 +368,62 @@ deploystack status --verbose
 deploystack status --json
 ```
 
+### `deploystack clients`
+
+Show all connected MCP clients with detailed connection information.
+
+**Examples:**
+
+```bash
+# Show connected clients
+deploystack clients
+```
+
+**Features:**
+
+- **Real-time Status**: Shows currently connected MCP clients from cache
+- **Connection Types**: Displays both SSE and Streamable HTTP connections
+- **Activity Tracking**: Shows last activity time and request counts
+- **Client Information**: Displays client name, version, and user agent when available
+- **Connection Endpoints**: Lists all available gateway endpoints
+- **Cache Integration**: Uses client state cache for accurate connection tracking
+
+**Sample Output:**
+
+```text
+Connected MCP Clients
+══════════════════════════════════════════════════
+
+Summary: 2 active connections
+   • SSE connections: 1
+   • Streamable HTTP connections: 1
+   • Initialized clients: 2
+   • Active (last 5min): 2
+
+Client Details:
+
+VS Code v1.95.0
+   ID: sse_abc123
+   Type: SSE Initialized
+   Activity: 30s ago (15 requests)
+   Uptime: 2h 15m
+   User Agent: VSCode/1.95.0
+
+Cursor v0.42.0
+   ID: http_def456
+   Type: Streamable HTTP Initialized
+   Activity: 1m ago (8 requests)
+   Uptime: 45m 30s
+
+Connection Endpoints:
+   • SSE: http://localhost:9095/sse
+   • Messages: http://localhost:9095/message
+   • MCP: http://localhost:9095/mcp
+   • Health: http://localhost:9095/health
+
+Cache last updated: 1/4/2025, 9:30:15 AM
+```
+
 ## 🛠️ Troubleshooting
 
 ### Common Issues

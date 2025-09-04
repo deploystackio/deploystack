@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
+import { ClientStateCacheService } from '../core/client/client-state-cache';
 
 // PID file location
 const PID_FILE = path.join(os.tmpdir(), 'deploystack-gateway.pid');
@@ -17,6 +18,12 @@ export interface ServerStopResult {
 }
 
 export class ServerStopService {
+  private clientCacheService: ClientStateCacheService;
+
+  constructor() {
+    this.clientCacheService = new ClientStateCacheService();
+  }
+
   /**
    * Stop the DeployStack Gateway server gracefully or forcefully
    */
@@ -68,6 +75,7 @@ export class ServerStopService {
         try {
           process.kill(pid, 'SIGKILL');
           this.removePidFile();
+          await this.cleanupClientCache();
           return {
             success: true,
             message: 'Gateway server force stopped (MCP servers may not have shutdown gracefully)',
@@ -75,6 +83,7 @@ export class ServerStopService {
           };
         } catch {
           this.removePidFile();
+          await this.cleanupClientCache();
           return {
             success: true,
             message: 'Process was already stopped - cleaned up PID file',
@@ -108,6 +117,7 @@ export class ServerStopService {
               };
             } else {
               this.removePidFile();
+              await this.cleanupClientCache();
               return {
                 success: true,
                 message: `Gateway force stopped after ${timeoutSeconds}s timeout`,
@@ -116,6 +126,7 @@ export class ServerStopService {
             }
           } else {
             this.removePidFile();
+            await this.cleanupClientCache();
             return {
               success: true,
               message: 'Gateway server stopped gracefully',
@@ -125,6 +136,7 @@ export class ServerStopService {
         } catch (error) {
           if ((error as NodeJS.ErrnoException).code === 'ESRCH') {
             this.removePidFile();
+            await this.cleanupClientCache();
             return {
               success: true,
               message: 'Process was already stopped - cleaned up PID file',
@@ -201,6 +213,18 @@ export class ServerStopService {
       }
     } catch {
       // Ignore file removal errors
+    }
+  }
+
+  /**
+   * Clean up client state cache when gateway stops
+   */
+  private async cleanupClientCache(): Promise<void> {
+    try {
+      await this.clientCacheService.clearCache();
+    } catch (error) {
+      // Don't fail the stop operation if cache cleanup fails
+      console.warn('Failed to clear client cache:', error instanceof Error ? error.message : String(error));
     }
   }
 }
