@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.12.0 (2025-09-04)
+
+* feat(gateway): add 'clients' command to display connected MCP clients with detailed information ([faec3ca](https://github.com/deploystackio/deploystack/commit/faec3ca))
+* feat(gateway): add client notification functionality and tools refresh endpoint ([925cd6e](https://github.com/deploystackio/deploystack/commit/925cd6e))
+* refactor(gateway): remove tools refresh notification endpoint and client notification service ([3cdfc02](https://github.com/deploystackio/deploystack/commit/3cdfc02))
+* chore(release): update release command to include --no-increment option ([904e877](https://github.com/deploystackio/deploystack/commit/904e877))
+
 ## <small>0.11.1 (2025-09-03)</small>
 
 * chore(gateway): release v0.11.0 ([3395bc9](https://github.com/deploystackio/deploystack/commit/3395bc9))
