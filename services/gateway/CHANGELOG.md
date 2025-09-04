@@ -2,6 +2,26 @@
 
 ## 0.12.0 (2025-09-04)
 
+* chore(gateway): release v0.12.0 ([8aeac74](https://github.com/deploystackio/deploystack/commit/8aeac74))
+* chore(release): update release command to include --no-increment option ([904e877](https://github.com/deploystackio/deploystack/commit/904e877))
+* feat(gateway): add 'clients' command to display connected MCP clients with detailed information ([faec3ca](https://github.com/deploystackio/deploystack/commit/faec3ca))
+* feat(gateway): add client notification functionality and tools refresh endpoint ([925cd6e](https://github.com/deploystackio/deploystack/commit/925cd6e))
+* refactor(gateway): remove tools refresh notification endpoint and client notification service ([3cdfc02](https://github.com/deploystackio/deploystack/commit/3cdfc02))
+
+
+
+## <small>v0.11.1 (2025-09-03)</small>
+
+* chore(gateway): release v0.11.0 ([3395bc9](https://github.com/deploystackio/deploystack/commit/3395bc9))
+* chore(gateway): release v0.11.1 ([e92086b](https://github.com/deploystackio/deploystack/commit/e92086b))
+* feat(frontend): update page title to 'DeployStack Cloud' ([8772df7](https://github.com/deploystackio/deploystack/commit/8772df7))
+* feat(gateway): add selective restart functionality for MCP servers and enhance configuration change  ([f81f835](https://github.com/deploystackio/deploystack/commit/f81f835))
+* feat(gateway): implement MCP endpoint and enhance logging for session management ([6a3332b](https://github.com/deploystackio/deploystack/commit/6a3332b))
+* refactor(gateway): remove unnecessary hints from MCP command error messages ([b65fade](https://github.com/deploystackio/deploystack/commit/b65fade))
+* refactor(gateway): remove version string from command description ([6f2196a](https://github.com/deploystackio/deploystack/commit/6f2196a))
+
+## 0.12.0 (2025-09-04)
+
 * feat(gateway): add 'clients' command to display connected MCP clients with detailed information ([faec3ca](https://github.com/deploystackio/deploystack/commit/faec3ca))
 * feat(gateway): add client notification functionality and tools refresh endpoint ([925cd6e](https://github.com/deploystackio/deploystack/commit/925cd6e))
 * refactor(gateway): remove tools refresh notification endpoint and client notification service ([3cdfc02](https://github.com/deploystackio/deploystack/commit/3cdfc02))
