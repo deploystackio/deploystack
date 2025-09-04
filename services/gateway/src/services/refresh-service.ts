@@ -4,7 +4,6 @@ import { CredentialStorage } from '../core/auth/storage';
 import { DeployStackAPI } from '../core/auth/api-client';
 import { MCPConfigService } from '../core/mcp';
 import { ConfigurationChangeService } from './configuration-change-service';
-import { ClientNotificationService } from './client-notification-service';
 import { AuthenticationError } from '../types/auth';
 import { detectDeviceInfo } from '../utils/device-detection';
 
@@ -100,9 +99,6 @@ export class RefreshService {
         // Step 2: Handle configuration changes
         if (changeInfo.hasChanges) {
           await this.changeService.handleConfigurationChanges(changeInfo, teamMCPConfig.servers);
-          
-          // Step 3: Notify connected clients about tool changes
-          await this.notifyConnectedClients();
         } else {
           console.log(chalk.green('✅ No configuration changes detected - your MCP servers are up to date'));
           console.log(chalk.gray('💡 All servers are already running with the latest configuration'));
@@ -138,54 +134,6 @@ export class RefreshService {
       }
       
       process.exit(1);
-    }
-  }
-
-  /**
-   * Notify connected clients about tool changes using HTTP requests to the running gateway
-   */
-  private async notifyConnectedClients(): Promise<void> {
-    try {
-      console.log(chalk.blue('Notifying connected MCP clients about tool changes...'));
-      
-      // Try to notify the running gateway about tool changes
-      // The gateway will handle notifying all connected clients
-      const gatewayUrl = 'http://localhost:9095';
-      
-      try {
-        const fetch = (await import('node-fetch')).default;
-        const response = await fetch(`${gatewayUrl}/api/tools/refresh`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ reason: 'configuration_refresh' })
-        });
-        
-        if (response.ok) {
-          const result = await response.json() as {
-            totalNotified?: number;
-            sseNotified?: number;
-            streamableHttpNotified?: number;
-          };
-          console.log(chalk.green(`✅ Notified ${result.totalNotified || 0} connected clients`));
-          if (result.sseNotified && result.sseNotified > 0) {
-            console.log(chalk.gray(`   • SSE clients: ${result.sseNotified}`));
-          }
-          if (result.streamableHttpNotified && result.streamableHttpNotified > 0) {
-            console.log(chalk.gray(`   • Streamable HTTP clients: ${result.streamableHttpNotified}`));
-          }
-        } else {
-          throw new Error(`HTTP ${response.status}`);
-        }
-      } catch (error) {
-        // Gateway might not be running, which is fine
-        console.log(chalk.gray('💡 Gateway not running - clients will receive updated tools when they connect'));
-      }
-      
-    } catch (error) {
-      console.log(chalk.yellow(`⚠️  Failed to notify some clients: ${error instanceof Error ? error.message : String(error)}`));
-      console.log(chalk.gray('💡 Clients will still receive updated tools on their next request'));
     }
   }
 
