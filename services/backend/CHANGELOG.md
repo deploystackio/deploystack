@@ -2,6 +2,17 @@
 
 ## <small>0.32.1 (2025-09-05)</small>
 
+* chore(backend): release v0.32.1 ([1b290ef](https://github.com/deploystackio/deploystack/commit/1b290ef))
+* chore(gateway): release v0.12.0 ([3ea2abe](https://github.com/deploystackio/deploystack/commit/3ea2abe))
+* chore(gateway): release v0.12.0 ([8aeac74](https://github.com/deploystackio/deploystack/commit/8aeac74))
+* chore(release): update release command to include --no-increment option ([904e877](https://github.com/deploystackio/deploystack/commit/904e877))
+* fix(backend): add nanoid package for unique ID generation ([b687aa6](https://github.com/deploystackio/deploystack/commit/b687aa6))
+* feat(gateway): add 'clients' command to display connected MCP clients with detailed information ([faec3ca](https://github.com/deploystackio/deploystack/commit/faec3ca))
+* feat(gateway): add client notification functionality and tools refresh endpoint ([925cd6e](https://github.com/deploystackio/deploystack/commit/925cd6e))
+* refactor(gateway): remove tools refresh notification endpoint and client notification service ([3cdfc02](https://github.com/deploystackio/deploystack/commit/3cdfc02))
+
+## <small>0.32.1 (2025-09-05)</small>
+
 * fix(backend): add nanoid package for unique ID generation ([b687aa6](https://github.com/deploystackio/deploystack/commit/b687aa6))
 * fix(database): implement safe database proxy for graceful startup handling ([68623a2](https://github.com/deploystackio/deploystack/commit/68623a2))
 * fix(frontend): improve GitHub URL display and handling in featured servers ([06dfff3](https://github.com/deploystackio/deploystack/commit/06dfff3))
