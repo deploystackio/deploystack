@@ -44,6 +44,7 @@ DeployStack was built to solve these problems head-on.
    - Automatically shuts down idle processes to save resources
 
 **Before DeployStack:**
+
 ```bash
 # Manual setup nightmare
 npm install -g some-mcp-cli
@@ -52,6 +53,7 @@ some-mcp configure --api-key=xxx
 ```
 
 **After DeployStack:**
+
 ```json
 // VS Code settings.json - that's it!
 {
@@ -66,6 +68,7 @@ some-mcp configure --api-key=xxx
 ## Architecture: Two Ways to Deploy
 
 ### Global Satellites (Managed by DeployStack)
+
 - **Zero Installation**: Just add URL to VS Code
 - **Freemium Model**: Free tier with basic MCP servers
 - **Instant Access**: Pre-configured tools ready to use
@@ -73,6 +76,7 @@ some-mcp configure --api-key=xxx
 - **Example**: `https://satellite.deploystack.io/mcp`
 
 ### Team Satellites (Deploy Your Own) - (On Premise or Cloud) - (Comming Soon)
+
 - **Enterprise Security**: On-premise deployment within your network
 - **Internal Access**: Connect to company databases, APIs, file systems
 - **Complete Isolation**: Full team separation using Linux containers
@@ -81,13 +85,14 @@ some-mcp configure --api-key=xxx
 
 ### Technical Flow
 
-```
+```bash
 VS Code → HTTPS Request → DeployStack Satellite → MCP Server Process → External API
          ↓                 ↓                       ↓                   ↓
     (OAuth JWT)     (Team Permissions)      (Credential Injection)  (GitHub/etc)
 ```
 
 **Core Components:**
+
 - **Control Plane**: `cloud.deploystack.io` - web dashboard for teams, credentials, configurations
 - **Satellites**: Managed MCP infrastructure - no local processes, just HTTPS
 - **Process Manager**: On-demand MCP server spawning with X-minute idle timeout
@@ -96,20 +101,24 @@ VS Code → HTTPS Request → DeployStack Satellite → MCP Server Process → E
 ### Why Satellite vs Traditional Gateway?
 
 **Conversion Rate Data:**
+
 - **Traditional Gateway CLI**: 1% (install CLI → configure → first use)
 - **DeployStack Satellite**: 12% (register → copy URL → first use)
 
 **User Experience:**
+
 - **Gateway**: "Install our CLI tool, configure localhost, manage processes"
 - **Satellite**: "Add this URL: `https://satellite.deploystack.io/mcp`"
 
 **Why This Matters:**
+
 - **Adoption Friction Kills Everything**: Every MCP solution requiring CLI installation loses 99% of interested developers
 - **"Another Local Proxy" Fatigue**: Market saturated with similar gateway solutions requiring installation
 - **Teams Can't Scale**: Complex setups prevent MCP adoption beyond early adopters
 - **Enterprise Path**: Natural progression from managed service to on-premise deployment
 
 **Technical Benefits:**
+
 - **No Local Dependencies**: No Node.js, npm, or port management
 - **Familiar Pattern**: Works like OpenAI API, Claude API, or any SaaS
 - **Auto-scaling**: Handles traffic spikes automatically
@@ -119,6 +128,7 @@ VS Code → HTTPS Request → DeployStack Satellite → MCP Server Process → E
 ## Roadmap
 
 ### **Phase 1: Foundation** (Completed)
+
 - **[Done]** Deployed `cloud.deploystack.io` hosted version with a robust backend and frontend
 - **[Done]** Implemented a secure user and team management system with roles and permissions
 - **[Done]** Integrated OAuth for secure logins (e.g., GitHub)
@@ -126,6 +136,7 @@ VS Code → HTTPS Request → DeployStack Satellite → MCP Server Process → E
 - **[Done]** Established documentation and self-hosted Docker support
 
 ### **Phase 2: Enterprise Governance** (Completed)
+
 - **[Done]** Auto-install MCP servers for new users with admin-controlled defaults
 - **[Done]** Featured MCP servers filtering for improved tool discovery
 - **[Done]** Global Event Bus System - event-driven architecture with plugin integration
@@ -134,6 +145,7 @@ VS Code → HTTPS Request → DeployStack Satellite → MCP Server Process → E
 - **[Done]** Advanced MCP Argument & Environment Variable Handling - comprehensive service layer with schema validation and runtime configuration assembly
 
 ### **Phase 3: Satellite MVP** (Current Priority)
+
 - **[Done]** **Global Satellite Infrastructure** - managed MCP servers via HTTPS
 - **[Done]** **Zero-Installation Experience** - just add URL to VS Code
 - **[Done]** **OAuth Authentication** - seamless token-based auth
@@ -146,18 +158,21 @@ VS Code → HTTPS Request → DeployStack Satellite → MCP Server Process → E
 - **[To Do]** Deeper integration with IDEs and AI agent frameworks
 
 ### **Phase 4: Advanced Architecture** (Next)
+
 - **[Done]** **Multi-Transport Support** - SSE, Streamable HTTP, Direct HTTP protocols
 - **[To Do]** **Real-Time Command Orchestration** - instant status feedback
 - **[To Do]** **Comprehensive Monitoring** - satellite health and usage analytics
 - **[To Do]** **Enterprise Security** - audit logging and compliance features
 
 ### **Phase 5: Enterprise Team Satellites** (Future)
+
 - **[To Do]** **Team Satellites** - customer-deployed satellites for enterprise
 - **[To Do]** **Advanced Team Isolation** - Linux namespaces and cgroups
 - **[To Do]** **On-Premise Deployment** - GitHub Actions runner-style deployment  
 - **[To Do]** **Enterprise Authentication** - SSO integration (SAML, OIDC)
 
 ### **Phase 6: Ecosystem Expansion** (Future)
+
 - **[To Do]** Advanced MCP server marketplace
 - **[To Do]** Multi-region satellite deployment
 - **[To Do]** IDE integrations and developer tools
@@ -189,6 +204,7 @@ We're building the future of MCP adoption. Want to help?
 5. Submit pull request with clear description
 
 **Areas we need help:**
+
 - Satellite infrastructure and scaling
 - MCP server integrations and testing  
 - Documentation and developer experience
