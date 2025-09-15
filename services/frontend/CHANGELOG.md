@@ -2,6 +2,20 @@
 
 ## 0.27.0 (2025-09-15)
 
+* chore(all): update README to reflect completed tasks in Satellite MVP and Advanced Architecture phas ([3e0bd44](https://github.com/deploystackio/deploystack/commit/3e0bd44))
+* chore(backend): release v0.32.1 ([015153a](https://github.com/deploystackio/deploystack/commit/015153a))
+* chore(backend): release v0.32.1 ([1b290ef](https://github.com/deploystackio/deploystack/commit/1b290ef))
+* chore(backend): release v0.33.0 ([4ff5141](https://github.com/deploystackio/deploystack/commit/4ff5141))
+* chore(frontend): release v0.27.0 ([832baab](https://github.com/deploystackio/deploystack/commit/832baab))
+* docs(all): remove IDE integrations and developer tools from To Do list ([a210486](https://github.com/deploystackio/deploystack/commit/a210486))
+* docs(all): update README to improve clarity and structure with additional spacing ([857e74a](https://github.com/deploystackio/deploystack/commit/857e74a))
+* backend(fix): fixed console log ([420172d](https://github.com/deploystackio/deploystack/commit/420172d))
+* refactor(satellite): removed gateway ([ecdcb91](https://github.com/deploystackio/deploystack/commit/ecdcb91))
+* release satellite ([d7a5a10](https://github.com/deploystackio/deploystack/commit/d7a5a10))
+* fix(backend): add nanoid package for unique ID generation ([b687aa6](https://github.com/deploystackio/deploystack/commit/b687aa6))
+
+## 0.27.0 (2025-09-15)
+
 * docs(all): remove IDE integrations and developer tools from To Do list ([a210486](https://github.com/deploystackio/deploystack/commit/a210486))
 * docs(all): update README to improve clarity and structure with additional spacing ([857e74a](https://github.com/deploystackio/deploystack/commit/857e74a))
 * chore: specify Node.js and npm engine requirements in package.json and add .nvmrc ([8b0b3a9](https://github.com/deploystackio/deploystack/commit/8b0b3a9))
