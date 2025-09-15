@@ -175,7 +175,6 @@ VS Code → HTTPS Request → DeployStack Satellite → MCP Server Process → E
 
 - **[To Do]** Advanced MCP server marketplace
 - **[To Do]** Multi-region satellite deployment
-- **[To Do]** IDE integrations and developer tools
 - **[To Do]** AI agent framework integrations
 
 ## Try DeployStack
