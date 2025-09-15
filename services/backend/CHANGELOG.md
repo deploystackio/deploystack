@@ -1,5 +1,24 @@
 # Changelog
 
+## <small>0.33.1 (2025-09-15)</small>
+
+* chore(all): update README to reflect completed tasks in Satellite MVP and Advanced Architecture phas ([3e0bd44](https://github.com/deploystackio/deploystack/commit/3e0bd44))
+* chore(backend): release v0.33.0 ([4ff5141](https://github.com/deploystackio/deploystack/commit/4ff5141))
+* chore(frontend): release v0.27.0 ([91cd9d5](https://github.com/deploystackio/deploystack/commit/91cd9d5))
+* chore(frontend): release v0.27.0 ([832baab](https://github.com/deploystackio/deploystack/commit/832baab))
+* chore(satellite): release v0.2.0 ([3d552de](https://github.com/deploystackio/deploystack/commit/3d552de))
+* chore(satellite): release v0.2.0 ([8c795e1](https://github.com/deploystackio/deploystack/commit/8c795e1))
+* chore(satellite): release v0.2.1 ([a2a7295](https://github.com/deploystackio/deploystack/commit/a2a7295))
+* chore(satellite): release v0.2.1 ([a67e9ff](https://github.com/deploystackio/deploystack/commit/a67e9ff))
+* fix(all): remove unnecessary grep-or for commit logs ([1e229d4](https://github.com/deploystackio/deploystack/commit/1e229d4))
+* fix(all): remove unnecessary grep-or from commit logs in release scripts ([bcbdff7](https://github.com/deploystackio/deploystack/commit/bcbdff7))
+* docs(all): remove IDE integrations and developer tools from To Do list ([a210486](https://github.com/deploystackio/deploystack/commit/a210486))
+* docs(all): update README to improve clarity and structure with additional spacing ([857e74a](https://github.com/deploystackio/deploystack/commit/857e74a))
+* docs(satellite): update README ([c0740a1](https://github.com/deploystackio/deploystack/commit/c0740a1))
+* backend(fix): fixed console log ([420172d](https://github.com/deploystackio/deploystack/commit/420172d))
+* refactor(satellite): removed gateway ([ecdcb91](https://github.com/deploystackio/deploystack/commit/ecdcb91))
+* release satellite ([d7a5a10](https://github.com/deploystackio/deploystack/commit/d7a5a10))
+
 ## 0.33.0 (2025-09-15)
 
 * chore(all): update README to reflect completed tasks in Satellite MVP and Advanced Architecture phas ([3e0bd44](https://github.com/deploystackio/deploystack/commit/3e0bd44))
