@@ -55,6 +55,6 @@
     "typescript": "~5.9.2",
     "vite": "^7.1.4",
     "vite-plugin-vue-devtools": "^8.0.1",
-    "vue-tsc": "^3.0.5"
+    "vue-tsc": "^3.0.7"
   }
 }
