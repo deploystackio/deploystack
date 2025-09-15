@@ -1,5 +1,9 @@
 # Changelog
 
+## <small>0.2.1 (2025-09-15)</small>
+
+* fix(all): remove unnecessary grep-or from commit logs in release scripts ([bcbdff7](https://github.com/deploystackio/deploystack/commit/bcbdff7))
+
 ## 0.2.0 (2025-09-15)
 
 * chore(all): update README to reflect completed tasks in Satellite MVP and Advanced Architecture phas ([3e0bd44](https://github.com/deploystackio/deploystack/commit/3e0bd44))
