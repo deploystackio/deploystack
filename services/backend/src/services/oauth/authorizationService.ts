@@ -65,7 +65,7 @@ export class AuthorizationService {
     if (clientId.startsWith('dyn_')) {
       try {
         // Get debug info about the registered clients database
-        const debugInfo = await getRegisteredClientsDebugInfo();
+        const debugInfo = await getRegisteredClientsDebugInfo(logger!);
         
         logger?.debug({
           operation: 'validate_client',
@@ -75,7 +75,7 @@ export class AuthorizationService {
         }, 'Dynamic client validation - Database contents');
         
         // Use the imported function to check if client is registered
-        const isValid = await isClientRegistered(clientId);
+        const isValid = await isClientRegistered(clientId, logger!);
         
         logger?.debug({
           operation: 'validate_client',

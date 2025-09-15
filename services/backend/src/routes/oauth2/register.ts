@@ -1,10 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { type FastifyInstance } from 'fastify';
+import { type FastifyInstance, type FastifyBaseLogger } from 'fastify';
 import { getDb, getSchema } from '../../db';
 import { eq } from 'drizzle-orm';
 
 // Database-backed client registration functions
-export async function isClientRegistered(clientId: string): Promise<boolean> {
+export async function isClientRegistered(clientId: string, logger: FastifyBaseLogger): Promise<boolean> {
   try {
     const db = getDb();
     const schema = getSchema();
@@ -17,12 +17,16 @@ export async function isClientRegistered(clientId: string): Promise<boolean> {
     
     return result.length > 0;
   } catch (error) {
-    console.error('Error checking client registration:', error);
+    logger.error({
+      operation: 'check_client_registration',
+      clientId,
+      error: error instanceof Error ? error.message : String(error)
+    }, 'Error checking client registration');
     return false;
   }
 }
 
-export async function getRegisteredClient(clientId: string): Promise<any> {
+export async function getRegisteredClient(clientId: string, logger: FastifyBaseLogger): Promise<any> {
   try {
     const db = getDb();
     const schema = getSchema();
@@ -35,12 +39,16 @@ export async function getRegisteredClient(clientId: string): Promise<any> {
     
     return result[0] || null;
   } catch (error) {
-    console.error('Error getting registered client:', error);
+    logger.error({
+      operation: 'get_registered_client',
+      clientId,
+      error: error instanceof Error ? error.message : String(error)
+    }, 'Error getting registered client');
     return null;
   }
 }
 
-export async function getRegisteredClientsDebugInfo(): Promise<any> {
+export async function getRegisteredClientsDebugInfo(logger: FastifyBaseLogger): Promise<any> {
   try {
     const db = getDb();
     const schema = getSchema();
@@ -59,7 +67,10 @@ export async function getRegisteredClientsDebugInfo(): Promise<any> {
       }))
     };
   } catch (error) {
-    console.error('Error getting debug info:', error);
+    logger.error({
+      operation: 'get_registered_clients_debug',
+      error: error instanceof Error ? error.message : String(error)
+    }, 'Error getting debug info');
     return {
       mapSize: 0,
       allClientIds: [],
