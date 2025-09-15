@@ -2,6 +2,7 @@ import { type FastifyInstance } from 'fastify';
 import { requireAuthenticationAny, requireOAuthScope } from '../../../middleware/oauthMiddleware';
 import { requireTeamPermission } from '../../../middleware/roleMiddleware';
 import { McpInstallationService } from '../../../services/mcpInstallationService';
+import { SatelliteCommandService } from '../../../services/satelliteCommandService';
 import { getDb } from '../../../db';
 import {
   TEAM_AND_INSTALLATION_PARAMS_SCHEMA,
@@ -84,6 +85,26 @@ export default async function deleteInstallationRoute(server: FastifyInstance) {
         userId,
         authType
       }, 'MCP installation deleted successfully');
+
+      // Create satellite commands for configuration update notification
+      try {
+        const satelliteCommandService = new SatelliteCommandService(db, request.log);
+        const commands = await satelliteCommandService.notifyMcpInstallation(
+          installationId,
+          teamId,
+          userId
+        );
+        
+        request.log.info({
+          operation: 'delete_mcp_installation',
+          installationId,
+          commandsCreated: commands.length,
+          satelliteIds: commands.map(c => c.satellite_id)
+        }, 'Satellite configure commands created for MCP installation deletion');
+      } catch (commandError) {
+        request.log.error(commandError, `Failed to create satellite commands for installation deletion ${installationId}:`);
+        // Don't fail deletion if command creation fails
+      }
 
       // Emit MCP_INSTALLATION_DELETED event
       try {

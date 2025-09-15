@@ -14,9 +14,10 @@ export interface McpInstallation {
   server_id: string;
   created_by: string;
   installation_name: string;
-  installation_type: 'local' | 'cloud';
+  installation_type: 'global' | 'team';
   team_args?: string[] | null; // Team-level shared arguments
   team_env?: Record<string, string> | null; // Team-level shared environment variables (decrypted for response)
+  team_headers?: Record<string, string> | null; // Team-level shared headers (decrypted for response)
   created_at: Date;
   updated_at: Date;
   last_used_at?: Date;
@@ -47,15 +48,17 @@ export interface McpInstallation {
 export interface CreateMcpInstallationRequest {
   server_id: string;
   installation_name: string;
-  installation_type?: 'local' | 'cloud';
+  installation_type?: 'global' | 'team';
   team_args?: string[];
   team_env?: Record<string, string>;
+  team_headers?: Record<string, string>;
 }
 
 export interface UpdateMcpInstallationRequest {
   installation_name?: string;
   team_args?: string[];
   team_env?: Record<string, string>;
+  team_headers?: Record<string, string>;
 }
 
 export interface ClientConfig {
@@ -116,6 +119,9 @@ export class McpInstallationService {
         ...row.installation,
         team_args: teamArgs,
         team_env: teamEnv,
+        team_headers: row.installation.team_headers 
+          ? this.parseJsonField(row.installation.team_headers, {})
+          : null,
         server: row.server ? {
           id: row.server.id,
           name: row.server.name,
@@ -132,8 +138,10 @@ export class McpInstallationService {
           template_env: this.parseJsonField(row.server.template_env, {}),
           team_args_schema: this.parseJsonField(row.server.team_args_schema, []),
           team_env_schema: this.parseJsonField(row.server.team_env_schema, []),
+          team_headers_schema: this.parseJsonField(row.server.team_headers_schema, []),
           user_args_schema: this.parseJsonField(row.server.user_args_schema, []),
           user_env_schema: this.parseJsonField(row.server.user_env_schema, []),
+          user_headers_schema: this.parseJsonField(row.server.user_headers_schema, []),
           transport_type: row.server.transport_type
         } : undefined
       });
@@ -193,6 +201,9 @@ export class McpInstallationService {
             this.parseJsonField(server?.team_env_schema, [])
           )
         : null,
+      team_headers: installation.team_headers 
+        ? this.parseJsonField(installation.team_headers, {})
+        : null,
       server: server ? {
         id: server.id,
         name: server.name,
@@ -209,8 +220,10 @@ export class McpInstallationService {
         template_env: this.parseJsonField(server.template_env, {}),
         team_args_schema: this.parseJsonField(server.team_args_schema, []),
         team_env_schema: this.parseJsonField(server.team_env_schema, []),
+        team_headers_schema: this.parseJsonField(server.team_headers_schema, []),
         user_args_schema: this.parseJsonField(server.user_args_schema, []),
         user_env_schema: this.parseJsonField(server.user_env_schema, []),
+        user_headers_schema: this.parseJsonField(server.user_headers_schema, []),
         transport_type: server.transport_type
       } : undefined
     };
@@ -273,7 +286,7 @@ export class McpInstallationService {
       server_id: data.server_id,
       created_by: userId,
       installation_name: data.installation_name,
-      installation_type: data.installation_type || 'local',
+      installation_type: data.installation_type || 'global',
       team_args: data.team_args 
         ? await this.encryptArguments(
             data.team_args, 
@@ -285,6 +298,9 @@ export class McpInstallationService {
             data.team_env, 
             this.parseJsonField(server[0].team_env_schema, [])
           )
+        : null,
+      team_headers: data.team_headers 
+        ? JSON.stringify(data.team_headers)
         : null,
       created_at: now,
       updated_at: now,
@@ -376,6 +392,12 @@ export class McpInstallationService {
             data.team_args, 
             existing.server?.team_args_schema || []
           )
+        : null;
+    }
+
+    if (data.team_headers !== undefined) {
+      updateData.team_headers = data.team_headers
+        ? JSON.stringify(data.team_headers)
         : null;
     }
 

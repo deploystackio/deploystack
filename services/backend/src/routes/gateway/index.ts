@@ -1,11 +1,11 @@
 import { type FastifyInstance } from 'fastify';
-import getClientConfig from './config/get-client-config';
-import listClients from './config/list-clients';
 import meMcpConfigurations from './me-mcp-configurations';
 
 export default async function gatewayRoutes(server: FastifyInstance) {
-  // Register gateway configuration routes
-  await server.register(getClientConfig);
-  await server.register(listClients);
+  // Register remaining gateway route for backward compatibility during transition
   await server.register(meMcpConfigurations);
+  
+  // NOTE: Gateway config routes moved to /api/users/me/satellite/* as part of strategic pivot
+  // - /gateway/config/:client -> /users/me/satellite/config/:client
+  // - /gateway/config/clients -> /users/me/satellite/clients
 }

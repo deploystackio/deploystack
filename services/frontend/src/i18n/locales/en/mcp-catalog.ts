@@ -99,6 +99,9 @@ export default {
         title: 'Configuration Preview',
         serverName: 'Server Name',
         command: 'Command',
+        url: 'URL',
+        type: 'Type',
+        headers: 'Headers',
         environmentVariables: 'Environment Variables'
       },
       examples: {
@@ -125,7 +128,11 @@ export default {
         multipleServers: 'Only one MCP server is allowed per configuration',
         missingCommand: 'Server must have a "command" field',
         missingArgs: 'Server must have an "args" array',
-        invalidEnv: 'Server "env" must be an object if provided'
+        invalidEnv: 'Server "env" must be an object if provided',
+        invalidServerType: 'Server must be either command-based (with "command" and "args") or URL-based (with "url" and "type")',
+        invalidUrl: 'Server "url" must be a valid string',
+        invalidType: 'Server "type" must be a valid string',
+        invalidHeaders: 'Server "headers" must be an object if provided'
       }
     },
 
@@ -148,6 +155,15 @@ export default {
         emptyState: {
           title: 'No environment variables configured',
           description: 'Environment variables provide configuration and credentials to your MCP server.'
+        }
+      },
+      headers: {
+        title: 'Headers Configuration',
+        description: 'Configure HTTP headers for URL-based MCP servers',
+        addButton: 'Add Header',
+        emptyState: {
+          title: 'No headers configured',
+          description: 'HTTP headers provide authentication and configuration for URL-based MCP servers.'
         }
       },
       table: {
@@ -184,24 +200,32 @@ export default {
       modal: {
         add: {
           argument: 'Add Argument',
-          environment: 'Add Environment Variable'
+          environment: 'Add Environment Variable',
+          header: 'Add Header'
         },
         edit: {
           argument: 'Edit Argument',
-          environment: 'Edit Environment Variable'
+          environment: 'Edit Environment Variable',
+          header: 'Edit Header'
         },
         description: 'Configure how this {type} should be managed across your organization.',
         types: {
           argument: 'argument',
-          environment: 'environment variable'
+          environment: 'environment variable',
+          header: 'header'
         },
         fields: {
           name: {
             label: 'Name',
             placeholders: {
               argument: 'arg_name',
-              environment: 'ENV_VAR_NAME'
+              environment: 'ENV_VAR_NAME',
+              header: 'Header-Name'
             }
+          },
+          headerName: {
+            label: 'Header Name',
+            placeholder: 'e.g., Authorization, Content-Type'
           },
           argument: {
             label: 'Argument',

@@ -23,8 +23,10 @@ import mcpRoutes from './mcp'
 import oauth2Routes from './oauth2'
 // Import admin routes
 import adminRoutes from './admin'
-// Import gateway routes
+// Import gateway routes (transitional - config moved to satellite)
 import gatewayRoutes from './gateway'
+// Import satellite routes
+import satellitesRoutes from './satellites'
 
 // Response schema for the root health check endpoint
 const healthCheckResponseSchema = z.object({
@@ -66,8 +68,11 @@ export const registerRoutes = (server: FastifyInstance): void => {
     // Register admin routes
     await apiInstance.register(adminRoutes);
     
-    // Register gateway routes
+    // Register remaining gateway routes (transitional)
     await apiInstance.register(gatewayRoutes);
+    
+    // Register satellite routes
+    await apiInstance.register(satellitesRoutes);
   }, { prefix: '/api' });
 
 

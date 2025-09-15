@@ -1,0 +1,207 @@
+import { FastifyBaseLogger } from 'fastify';
+import { BackendClient } from './backend-client';
+import { CommandProcessor, ProcessInfo } from './command-processor';
+
+export interface SystemMetrics {
+  cpu_usage_percent: number;
+  memory_usage_mb: number;
+  disk_usage_percent: number;
+  uptime_seconds: number;
+}
+
+
+export interface HeartbeatPayload {
+  status: 'active' | 'degraded' | 'error';
+  system_metrics: SystemMetrics;
+  processes: ProcessInfo[];
+  error_count: number;
+  version: string;
+}
+
+export class HeartbeatService {
+  private interval?: NodeJS.Timeout;
+  private satelliteId: string;
+  private apiKey: string;
+  private backendClient: BackendClient;
+  private logger: FastifyBaseLogger;
+  private isRunning: boolean = false;
+  private heartbeatCount: number = 0;
+  private commandProcessor?: CommandProcessor;
+
+  constructor(satelliteId: string, apiKey: string, backendClient: BackendClient, logger: FastifyBaseLogger) {
+    this.satelliteId = satelliteId;
+    this.apiKey = apiKey;
+    this.backendClient = backendClient;
+    this.logger = logger;
+    
+    // Ensure the backend client has the API key for authenticated requests
+    this.backendClient.setApiKey(apiKey);
+  }
+
+  /**
+   * Set command processor for process reporting
+   */
+  setCommandProcessor(commandProcessor: CommandProcessor): void {
+    this.commandProcessor = commandProcessor;
+    this.logger.debug({
+      operation: 'heartbeat_command_processor_set',
+      satelliteId: this.satelliteId
+    }, 'Command processor set for heartbeat process reporting');
+  }
+
+  /**
+   * Start the heartbeat service with 30-second intervals
+   */
+  start(): void {
+    if (this.isRunning) {
+      this.logger.warn({
+        operation: 'heartbeat_already_running',
+        satelliteId: this.satelliteId
+      }, 'Heartbeat service is already running');
+      return;
+    }
+
+    this.logger.info({
+      operation: 'heartbeat_service_start',
+      satelliteId: this.satelliteId,
+      interval_seconds: 30
+    }, 'Starting heartbeat service (30s interval)');
+
+    // Send initial heartbeat immediately
+    this.sendHeartbeat();
+
+    // Set up recurring heartbeat every 30 seconds
+    this.interval = setInterval(() => {
+      this.sendHeartbeat();
+    }, 30000);
+
+    this.isRunning = true;
+  }
+
+  /**
+   * Stop the heartbeat service
+   */
+  stop(): void {
+    if (this.interval) {
+      clearInterval(this.interval);
+      this.interval = undefined;
+    }
+
+    this.isRunning = false;
+    this.logger.info({
+      operation: 'heartbeat_service_stop',
+      satelliteId: this.satelliteId,
+      total_heartbeats: this.heartbeatCount
+    }, 'Heartbeat service stopped');
+  }
+
+  /**
+   * Send a heartbeat to the backend
+   */
+  private async sendHeartbeat(): Promise<void> {
+    try {
+      this.heartbeatCount++;
+      
+      this.logger.debug({
+        operation: 'heartbeat_send_start',
+        satelliteId: this.satelliteId,
+        heartbeat_number: this.heartbeatCount
+      }, 'Sending heartbeat to backend');
+
+      // Collect system metrics
+      const systemMetrics = await this.collectSystemMetrics();
+      
+      // Get current processes from command processor
+      const processes: ProcessInfo[] = this.commandProcessor ? 
+        this.commandProcessor.getAllProcesses() : [];
+
+      // Create heartbeat payload
+      const payload: HeartbeatPayload = {
+        status: 'active',
+        system_metrics: systemMetrics,
+        processes: processes,
+        error_count: 0,
+        version: '0.1.0'
+      };
+
+      // Send heartbeat via backend client
+      const result = await this.backendClient.sendHeartbeat(this.satelliteId, payload);
+
+      if (result.success) {
+        this.logger.debug({
+          operation: 'heartbeat_send_success',
+          satelliteId: this.satelliteId,
+          heartbeat_number: this.heartbeatCount,
+          response_time_ms: result.response_time_ms
+        }, `Heartbeat sent successfully (#${this.heartbeatCount})`);
+      } else {
+        this.logger.warn({
+          operation: 'heartbeat_send_failed',
+          satelliteId: this.satelliteId,
+          heartbeat_number: this.heartbeatCount,
+          error: result.error
+        }, `Heartbeat failed: ${result.error}`);
+      }
+
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      
+      this.logger.error({
+        operation: 'heartbeat_send_exception',
+        satelliteId: this.satelliteId,
+        heartbeat_number: this.heartbeatCount,
+        error: errorMessage
+      }, `Heartbeat exception: ${errorMessage}`);
+    }
+  }
+
+  /**
+   * Collect system metrics
+   */
+  private async collectSystemMetrics(): Promise<SystemMetrics> {
+    try {
+      // Get memory usage
+      const memoryUsage = process.memoryUsage();
+      const memoryUsedMB = Math.round(memoryUsage.heapUsed / 1024 / 1024);
+
+      // Get uptime
+      const uptimeSeconds = Math.round(process.uptime());
+
+      // TODO: Implement CPU and disk usage collection
+      // For now, return basic metrics with placeholders
+      return {
+        cpu_usage_percent: 0, // TODO: Implement CPU usage monitoring
+        memory_usage_mb: memoryUsedMB,
+        disk_usage_percent: 0, // TODO: Implement disk usage monitoring
+        uptime_seconds: uptimeSeconds
+      };
+
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      
+      this.logger.error({
+        operation: 'system_metrics_collection_failed',
+        error: errorMessage
+      }, `Failed to collect system metrics: ${errorMessage}`);
+
+      // Return default metrics on error
+      return {
+        cpu_usage_percent: 0,
+        memory_usage_mb: 0,
+        disk_usage_percent: 0,
+        uptime_seconds: Math.round(process.uptime())
+      };
+    }
+  }
+
+  /**
+   * Get heartbeat service status
+   */
+  getStatus(): { isRunning: boolean; heartbeatCount: number; satelliteId: string } {
+    return {
+      isRunning: this.isRunning,
+      heartbeatCount: this.heartbeatCount,
+      satelliteId: this.satelliteId
+    };
+  }
+}

@@ -1,7 +1,7 @@
 import { getEnv } from '@/utils/env'
-import type { 
-  McpInstallation, 
-  InstallServerRequest, 
+import type {
+  McpInstallation,
+  InstallServerRequest,
   UserConfiguration,
   CreateUserConfigRequest,
   UpdateUserConfigRequest
@@ -187,6 +187,34 @@ export class McpInstallationService {
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))
       throw new Error(errorData.message || `Failed to update team environment variables: ${response.status}`)
+    }
+
+    const data = await response.json()
+    return data.data || data
+  }
+
+  /**
+   * Update team headers for an installation
+   */
+  static async updateTeamHeaders(
+    teamId: string,
+    installationId: string,
+    teamHeaders: Record<string, string>
+  ): Promise<McpInstallation> {
+    const response = await fetch(`${this.baseUrl}/api/teams/${teamId}/mcp/installations/${installationId}/headers`, {
+      method: 'PATCH',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        team_headers: teamHeaders
+      }),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.message || `Failed to update team headers: ${response.status}`)
     }
 
     const data = await response.json()

@@ -474,7 +474,7 @@ export class TeamService {
           {
             server_id: server.id,
             installation_name: installationName,
-            installation_type: 'local'
+            installation_type: 'global'
             // user_environment_variables will be empty initially
           }
         );

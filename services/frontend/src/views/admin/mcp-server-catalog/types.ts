@@ -28,10 +28,13 @@ export interface McpServer {
   // New three-tier schema fields
   template_args?: TemplateArg[] | string
   template_env?: TemplateEnvVar[] | string
+  template_headers?: TemplateHeaderVar[] | string
   team_args_schema?: TeamArgsSchema[] | string
   team_env_schema?: TeamEnvSchema[] | string
+  team_headers_schema?: TeamHeadersSchema[] | string
   user_args_schema?: UserArgsSchema[] | string
   user_env_schema?: UserEnvSchema[] | string
+  user_headers_schema?: UserHeadersSchema[] | string
   
   dependencies?: Record<string, any>
   category_id?: string
@@ -54,10 +57,14 @@ export interface McpCategory {
 }
 
 export interface InstallationMethod {
-  client: 'claude-desktop'
-  command: string
-  args: string[]
-  env: Record<string, string>
+  client: 'claude-desktop' | string
+  command?: string
+  args?: string[]
+  env?: Record<string, string>
+  // New fields for remote MCP servers
+  url?: string
+  type?: 'streamableHttp' | 'stdio' | 'http' | 'sse'
+  headers?: Record<string, string>
 }
 
 export interface McpTool {
@@ -97,6 +104,13 @@ export interface TemplateEnvVar {
   description?: string
 }
 
+export interface TemplateHeaderVar {
+  name: string
+  value: string
+  locked: boolean
+  description?: string
+}
+
 export interface TeamArgsSchema {
   name: string
   type: 'string' | 'number' | 'boolean'
@@ -117,6 +131,17 @@ export interface TeamEnvSchema {
   default_value?: string
 }
 
+export interface TeamHeadersSchema {
+  name: string
+  type: 'string' | 'number' | 'boolean' | 'secret'
+  description?: string
+  required: boolean
+  locked: boolean
+  default_team_locked?: boolean
+  visible_to_users?: boolean
+  default_value?: string
+}
+
 export interface UserArgsSchema {
   name: string
   type: 'string' | 'number' | 'boolean' | 'secret'
@@ -127,6 +152,15 @@ export interface UserArgsSchema {
 }
 
 export interface UserEnvSchema {
+  name: string
+  type: 'string' | 'number' | 'boolean' | 'secret'
+  description?: string
+  required: boolean
+  locked: boolean
+  default_value?: string
+}
+
+export interface UserHeadersSchema {
   name: string
   type: 'string' | 'number' | 'boolean' | 'secret'
   description?: string
@@ -159,10 +193,13 @@ export interface CreateMcpServerRequest {
   // New three-tier schema fields
   template_args?: TemplateArg[]
   template_env?: TemplateEnvVar[]
+  template_headers?: TemplateHeaderVar[]
   team_args_schema?: TeamArgsSchema[]
   team_env_schema?: TeamEnvSchema[]
+  team_headers_schema?: TeamHeadersSchema[]
   user_args_schema?: UserArgsSchema[]
   user_env_schema?: UserEnvSchema[]
+  user_headers_schema?: UserHeadersSchema[]
   
   dependencies?: Record<string, any>
   category_id?: string
@@ -196,10 +233,13 @@ export interface UpdateMcpServerRequest {
   // New three-tier schema fields
   template_args?: TemplateArg[]
   template_env?: TemplateEnvVar[]
+  template_headers?: TemplateHeaderVar[]
   team_args_schema?: TeamArgsSchema[]
   team_env_schema?: TeamEnvSchema[]
+  team_headers_schema?: TeamHeadersSchema[]
   user_args_schema?: UserArgsSchema[]
   user_env_schema?: UserEnvSchema[]
+  user_headers_schema?: UserHeadersSchema[]
   
   dependencies?: Record<string, any>
   category_id?: string
@@ -263,10 +303,13 @@ export type ReviewFormData = object
 export interface ConfigurationSchemaFormData {
   template_args?: TemplateArg[]
   template_env?: TemplateEnvVar[]
+  template_headers?: TemplateHeaderVar[]
   team_args_schema?: TeamArgsSchema[]
   team_env_schema?: TeamEnvSchema[]
+  team_headers_schema?: TeamHeadersSchema[]
   user_args_schema?: UserArgsSchema[]
   user_env_schema?: UserEnvSchema[]
+  user_headers_schema?: UserHeadersSchema[]
 }
 
 export interface McpServerFormData {

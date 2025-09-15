@@ -1,7 +1,7 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import { TokenService } from '../services/oauth/tokenService';
 
-// Extend FastifyRequest to include OAuth token payload
+// Extend FastifyRequest to include OAuth token payload with team context
 declare module 'fastify' {
   interface FastifyRequest {
     tokenPayload?: {
@@ -15,6 +15,10 @@ declare module 'fastify' {
       scope: string[];
       clientId: string;
       tokenId: string;
+      team_id: string;           // Team context for token
+      team_name: string;         // Team name
+      team_role: string;         // User's role in team
+      team_permissions: string[]; // Team permissions
     };
   }
 }
@@ -183,6 +187,56 @@ export function requireAnyOAuthScope(requiredScopes: string[]) {
 }
 
 /**
+ * Middleware to require team-aware OAuth2 scope (only for OAuth2 Bearer token requests)
+ * Skips validation for cookie-based authentication
+ */
+export function requireTeamOAuthScope(requiredScope: string) {
+  return async (request: FastifyRequest, reply: FastifyReply) => {
+    // Skip scope check if user authenticated via cookie (not OAuth2)
+    if (!request.tokenPayload) {
+      request.log.debug({
+        operation: 'team_oauth_scope_check',
+        userId: request.user?.id,
+        requiredScope,
+        authType: 'cookie',
+        result: 'skipped'
+      }, 'Skipping team OAuth2 scope check for cookie-based authentication');
+      return;
+    }
+
+    const userScopes = request.tokenPayload.scope;
+    
+    // Check OAuth scope (team permissions can be checked later if needed)
+    if (!userScopes.includes(requiredScope)) {
+      request.log.warn({
+        operation: 'team_oauth_scope_check',
+        userId: request.tokenPayload.user.id,
+        teamId: request.tokenPayload.team_id,
+        requiredScope,
+        userScopes,
+      }, 'Team OAuth2 scope check failed');
+
+      const errorResponse = {
+        error: 'insufficient_scope',
+        error_description: `Access token does not have required scope: ${requiredScope}`,
+        scope: requiredScope,
+        team_id: request.tokenPayload.team_id
+      };
+      const jsonString = JSON.stringify(errorResponse);
+      return reply.status(403).type('application/json').send(jsonString);
+    }
+
+    request.log.debug({
+      operation: 'team_oauth_scope_check',
+      userId: request.tokenPayload.user.id,
+      teamId: request.tokenPayload.team_id,
+      requiredScope,
+      result: 'granted',
+    }, 'Team OAuth2 scope check passed');
+  };
+}
+
+/**
  * Middleware that accepts either cookie-based auth OR OAuth2 Bearer token
  * This allows endpoints to work with both web users and CLI users
  */
@@ -224,6 +278,7 @@ export function requireAuthenticationAny() {
             userId: tokenPayload.user.id,
             authType: 'oauth2',
             clientId: tokenPayload.clientId,
+            teamId: tokenPayload.team_id,
           }, 'User authenticated via OAuth2 Bearer token');
           return; // Successfully authenticated via OAuth2
         }

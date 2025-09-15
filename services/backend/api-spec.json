@@ -4574,140 +4574,147 @@
         }
       }
     },
-    "/api/users/me/devices": {
+    "/api/me/satellite/config/{client}": {
       "get": {
-        "summary": "List my devices",
+        "summary": "Get client-specific satellite configuration",
         "tags": [
-          "User Devices"
+          "User Satellite Configuration"
         ],
-        "description": "Retrieves all devices registered to the authenticated user, ordered by last activity.",
+        "description": "Returns the appropriate configuration format for connecting the specified MCP client to the DeployStack Satellite service. Requires Content-Type: application/json header when sending request body.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "claude-desktop",
+                "cline",
+                "vscode",
+                "cursor",
+                "windsurf"
+              ]
+            },
+            "in": "path",
+            "name": "client",
+            "required": true,
+            "description": "The MCP client type"
+          }
+        ],
         "security": [
           {
             "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
           }
         ],
         "responses": {
           "200": {
-            "description": "Successfully retrieved user devices",
+            "description": "Client-specific satellite configuration",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "description": "Client-specific satellite configuration",
+                  "items": {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "enum": [
+                              "json"
+                            ]
+                          },
+                          "mcpServers": {
+                            "type": "object",
+                            "additionalProperties": {
+                              "type": "object",
+                              "properties": {
+                                "url": {
+                                  "type": "string"
+                                },
+                                "name": {
+                                  "type": "string"
+                                },
+                                "description": {
+                                  "type": "string"
+                                },
+                                "transport": {
+                                  "type": "string"
+                                },
+                                "type": {
+                                  "type": "string"
+                                }
+                              },
+                              "additionalProperties": true
+                            }
+                          }
+                        },
+                        "required": [
+                          "type",
+                          "mcpServers"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "enum": [
+                              "link"
+                            ]
+                          },
+                          "url": {
+                            "type": "string",
+                            "format": "uri"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "type",
+                          "url"
+                        ],
+                        "additionalProperties": false
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - Invalid client type",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
                   "properties": {
                     "success": {
-                      "type": "boolean"
+                      "type": "boolean",
+                      "default": false
                     },
-                    "devices": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "id": {
-                            "type": "string",
-                            "description": "Unique device identifier"
-                          },
-                          "user_id": {
-                            "type": "string",
-                            "description": "User ID who owns the device"
-                          },
-                          "device_name": {
-                            "type": "string",
-                            "description": "User-friendly device name"
-                          },
-                          "hostname": {
-                            "type": "string",
-                            "nullable": true,
-                            "description": "System hostname"
-                          },
-                          "hardware_id": {
-                            "type": "string",
-                            "nullable": true,
-                            "description": "Hardware fingerprint"
-                          },
-                          "os_type": {
-                            "type": "string",
-                            "nullable": true,
-                            "description": "Operating system type"
-                          },
-                          "os_version": {
-                            "type": "string",
-                            "nullable": true,
-                            "description": "Operating system version"
-                          },
-                          "arch": {
-                            "type": "string",
-                            "nullable": true,
-                            "description": "System architecture"
-                          },
-                          "node_version": {
-                            "type": "string",
-                            "nullable": true,
-                            "description": "Node.js version"
-                          },
-                          "last_ip": {
-                            "type": "string",
-                            "nullable": true,
-                            "description": "Last known IP address"
-                          },
-                          "user_agent": {
-                            "type": "string",
-                            "nullable": true,
-                            "description": "User agent string"
-                          },
-                          "is_active": {
-                            "type": "boolean",
-                            "description": "Whether device is active"
-                          },
-                          "is_trusted": {
-                            "type": "boolean",
-                            "description": "Whether device is trusted"
-                          },
-                          "last_login_at": {
-                            "type": "string",
-                            "format": "date-time",
-                            "nullable": true,
-                            "description": "Last login timestamp"
-                          },
-                          "last_activity_at": {
-                            "type": "string",
-                            "format": "date-time",
-                            "nullable": true,
-                            "description": "Last activity timestamp"
-                          },
-                          "created_at": {
-                            "type": "string",
-                            "format": "date-time",
-                            "description": "Device creation timestamp"
-                          },
-                          "updated_at": {
-                            "type": "string",
-                            "format": "date-time",
-                            "description": "Last update timestamp"
-                          }
-                        },
-                        "required": [
-                          "id",
-                          "user_id",
-                          "device_name",
-                          "is_active",
-                          "is_trusted",
-                          "created_at",
-                          "updated_at"
-                        ]
-                      }
+                    "error": {
+                      "type": "string"
                     }
                   },
                   "required": [
                     "success",
-                    "devices"
+                    "error"
                   ],
-                  "description": "Successfully retrieved user devices"
+                  "description": "Bad Request - Invalid client type"
                 }
               }
             }
           },
           "401": {
-            "description": "Unauthorized",
+            "description": "Unauthorized - Authentication required",
             "content": {
               "application/json": {
                 "schema": {
@@ -4725,13 +4732,13 @@
                     "success",
                     "error"
                   ],
-                  "description": "Unauthorized"
+                  "description": "Unauthorized - Authentication required"
                 }
               }
             }
           },
-          "500": {
-            "description": "Internal Server Error",
+          "403": {
+            "description": "Forbidden - Insufficient permissions",
             "content": {
               "application/json": {
                 "schema": {
@@ -4749,7 +4756,7 @@
                     "success",
                     "error"
                   ],
-                  "description": "Internal Server Error"
+                  "description": "Forbidden - Insufficient permissions"
                 }
               }
             }
@@ -4757,148 +4764,55 @@
         }
       }
     },
-    "/api/users/me/devices/{deviceId}": {
+    "/api/me/satellite/clients": {
       "get": {
-        "summary": "Get device details",
+        "summary": "List supported MCP client types",
         "tags": [
-          "User Devices"
+          "User Satellite Configuration"
         ],
-        "description": "Retrieves detailed information about a specific device owned by the authenticated user.",
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "minLength": 1
-            },
-            "in": "path",
-            "name": "deviceId",
-            "required": true
-          }
-        ],
+        "description": "Returns a list of all supported MCP client types that can be configured with the DeployStack Satellite service. No Content-Type header required for this GET request.",
         "security": [
           {
             "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
           }
         ],
         "responses": {
           "200": {
-            "description": "Successfully retrieved device details",
+            "description": "List of supported MCP client types",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "success": {
-                      "type": "boolean"
-                    },
-                    "device": {
-                      "type": "object",
-                      "properties": {
-                        "id": {
-                          "type": "string",
-                          "description": "Unique device identifier"
-                        },
-                        "user_id": {
-                          "type": "string",
-                          "description": "User ID who owns the device"
-                        },
-                        "device_name": {
-                          "type": "string",
-                          "description": "User-friendly device name"
-                        },
-                        "hostname": {
-                          "type": "string",
-                          "nullable": true,
-                          "description": "System hostname"
-                        },
-                        "hardware_id": {
-                          "type": "string",
-                          "nullable": true,
-                          "description": "Hardware fingerprint"
-                        },
-                        "os_type": {
-                          "type": "string",
-                          "nullable": true,
-                          "description": "Operating system type"
-                        },
-                        "os_version": {
-                          "type": "string",
-                          "nullable": true,
-                          "description": "Operating system version"
-                        },
-                        "arch": {
-                          "type": "string",
-                          "nullable": true,
-                          "description": "System architecture"
-                        },
-                        "node_version": {
-                          "type": "string",
-                          "nullable": true,
-                          "description": "Node.js version"
-                        },
-                        "last_ip": {
-                          "type": "string",
-                          "nullable": true,
-                          "description": "Last known IP address"
-                        },
-                        "user_agent": {
-                          "type": "string",
-                          "nullable": true,
-                          "description": "User agent string"
-                        },
-                        "is_active": {
-                          "type": "boolean",
-                          "description": "Whether device is active"
-                        },
-                        "is_trusted": {
-                          "type": "boolean",
-                          "description": "Whether device is trusted"
-                        },
-                        "last_login_at": {
-                          "type": "string",
-                          "format": "date-time",
-                          "nullable": true,
-                          "description": "Last login timestamp"
-                        },
-                        "last_activity_at": {
-                          "type": "string",
-                          "format": "date-time",
-                          "nullable": true,
-                          "description": "Last activity timestamp"
-                        },
-                        "created_at": {
-                          "type": "string",
-                          "format": "date-time",
-                          "description": "Device creation timestamp"
-                        },
-                        "updated_at": {
-                          "type": "string",
-                          "format": "date-time",
-                          "description": "Last update timestamp"
-                        }
+                    "clients": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "enum": [
+                          "claude-desktop",
+                          "cline",
+                          "vscode",
+                          "cursor",
+                          "windsurf"
+                        ]
                       },
-                      "required": [
-                        "id",
-                        "user_id",
-                        "device_name",
-                        "is_active",
-                        "is_trusted",
-                        "created_at",
-                        "updated_at"
-                      ]
+                      "description": "List of supported MCP client types"
                     }
                   },
                   "required": [
-                    "success",
-                    "device"
+                    "clients"
                   ],
-                  "description": "Successfully retrieved device details"
+                  "additionalProperties": false,
+                  "description": "List of supported MCP client types"
                 }
               }
             }
           },
           "401": {
-            "description": "Unauthorized",
+            "description": "Unauthorized - Authentication required",
             "content": {
               "application/json": {
                 "schema": {
@@ -4916,13 +4830,13 @@
                     "success",
                     "error"
                   ],
-                  "description": "Unauthorized"
+                  "description": "Unauthorized - Authentication required"
                 }
               }
             }
           },
-          "404": {
-            "description": "Device not found",
+          "403": {
+            "description": "Forbidden - Insufficient permissions",
             "content": {
               "application/json": {
                 "schema": {
@@ -4940,386 +4854,7 @@
                     "success",
                     "error"
                   ],
-                  "description": "Device not found"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "default": false
-                    },
-                    "error": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "success",
-                    "error"
-                  ],
-                  "description": "Internal Server Error"
-                }
-              }
-            }
-          }
-        }
-      },
-      "put": {
-        "summary": "Update device",
-        "tags": [
-          "User Devices"
-        ],
-        "description": "Updates device information such as the device name. Requires Content-Type: application/json header when sending request body.",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "device_name": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 100,
-                    "description": "New device name"
-                  }
-                },
-                "required": [
-                  "device_name"
-                ],
-                "additionalProperties": false
-              }
-            }
-          },
-          "required": true
-        },
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "minLength": 1
-            },
-            "in": "path",
-            "name": "deviceId",
-            "required": true
-          }
-        ],
-        "security": [
-          {
-            "cookieAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successfully updated device",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean"
-                    },
-                    "device": {
-                      "type": "object",
-                      "properties": {
-                        "id": {
-                          "type": "string",
-                          "description": "Unique device identifier"
-                        },
-                        "user_id": {
-                          "type": "string",
-                          "description": "User ID who owns the device"
-                        },
-                        "device_name": {
-                          "type": "string",
-                          "description": "User-friendly device name"
-                        },
-                        "hostname": {
-                          "type": "string",
-                          "nullable": true,
-                          "description": "System hostname"
-                        },
-                        "hardware_id": {
-                          "type": "string",
-                          "nullable": true,
-                          "description": "Hardware fingerprint"
-                        },
-                        "os_type": {
-                          "type": "string",
-                          "nullable": true,
-                          "description": "Operating system type"
-                        },
-                        "os_version": {
-                          "type": "string",
-                          "nullable": true,
-                          "description": "Operating system version"
-                        },
-                        "arch": {
-                          "type": "string",
-                          "nullable": true,
-                          "description": "System architecture"
-                        },
-                        "node_version": {
-                          "type": "string",
-                          "nullable": true,
-                          "description": "Node.js version"
-                        },
-                        "last_ip": {
-                          "type": "string",
-                          "nullable": true,
-                          "description": "Last known IP address"
-                        },
-                        "user_agent": {
-                          "type": "string",
-                          "nullable": true,
-                          "description": "User agent string"
-                        },
-                        "is_active": {
-                          "type": "boolean",
-                          "description": "Whether device is active"
-                        },
-                        "is_trusted": {
-                          "type": "boolean",
-                          "description": "Whether device is trusted"
-                        },
-                        "last_login_at": {
-                          "type": "string",
-                          "format": "date-time",
-                          "nullable": true,
-                          "description": "Last login timestamp"
-                        },
-                        "last_activity_at": {
-                          "type": "string",
-                          "format": "date-time",
-                          "nullable": true,
-                          "description": "Last activity timestamp"
-                        },
-                        "created_at": {
-                          "type": "string",
-                          "format": "date-time",
-                          "description": "Device creation timestamp"
-                        },
-                        "updated_at": {
-                          "type": "string",
-                          "format": "date-time",
-                          "description": "Last update timestamp"
-                        }
-                      },
-                      "required": [
-                        "id",
-                        "user_id",
-                        "device_name",
-                        "is_active",
-                        "is_trusted",
-                        "created_at",
-                        "updated_at"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "success",
-                    "device"
-                  ],
-                  "description": "Successfully updated device"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "default": false
-                    },
-                    "error": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "success",
-                    "error"
-                  ],
-                  "description": "Bad Request"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "default": false
-                    },
-                    "error": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "success",
-                    "error"
-                  ],
-                  "description": "Unauthorized"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Device not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "default": false
-                    },
-                    "error": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "success",
-                    "error"
-                  ],
-                  "description": "Device not found"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "default": false
-                    },
-                    "error": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "success",
-                    "error"
-                  ],
-                  "description": "Internal Server Error"
-                }
-              }
-            }
-          }
-        }
-      },
-      "delete": {
-        "summary": "Remove device",
-        "tags": [
-          "User Devices"
-        ],
-        "description": "Removes a device from the user account. This will deactivate the device and prevent it from accessing MCP configurations.",
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "minLength": 1
-            },
-            "in": "path",
-            "name": "deviceId",
-            "required": true
-          }
-        ],
-        "security": [
-          {
-            "cookieAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successfully removed device",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean"
-                    },
-                    "message": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "success",
-                    "message"
-                  ],
-                  "description": "Successfully removed device"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "default": false
-                    },
-                    "error": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "success",
-                    "error"
-                  ],
-                  "description": "Unauthorized"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Device not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "default": false
-                    },
-                    "error": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "success",
-                    "error"
-                  ],
-                  "description": "Device not found"
+                  "description": "Forbidden - Insufficient permissions"
                 }
               }
             }
@@ -14487,6 +14022,20 @@
                               }
                             ]
                           },
+                          "template_headers": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "propertyNames": {
+                                  "type": "string"
+                                },
+                                "additionalProperties": {}
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
                           "team_args_schema": {
                             "anyOf": [
                               {
@@ -14509,6 +14058,17 @@
                               }
                             ]
                           },
+                          "team_headers_schema": {
+                            "anyOf": [
+                              {
+                                "type": "array",
+                                "items": {}
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
                           "user_args_schema": {
                             "anyOf": [
                               {
@@ -14521,6 +14081,17 @@
                             ]
                           },
                           "user_env_schema": {
+                            "anyOf": [
+                              {
+                                "type": "array",
+                                "items": {}
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "user_headers_schema": {
                             "anyOf": [
                               {
                                 "type": "array",
@@ -14625,10 +14196,13 @@
                           "transport_type",
                           "template_args",
                           "template_env",
+                          "template_headers",
                           "team_args_schema",
                           "team_env_schema",
+                          "team_headers_schema",
                           "user_args_schema",
                           "user_env_schema",
+                          "user_headers_schema",
                           "dependencies",
                           "category_id",
                           "tags",
@@ -15405,30 +14979,62 @@
                       "mcpServers": {
                         "type": "object",
                         "additionalProperties": {
-                          "type": "object",
-                          "properties": {
-                            "command": {
-                              "type": "string",
-                              "minLength": 1
-                            },
-                            "args": {
-                              "type": "array",
-                              "items": {
-                                "type": "string"
-                              }
-                            },
-                            "env": {
+                          "oneOf": [
+                            {
                               "type": "object",
-                              "additionalProperties": {
-                                "type": "string"
-                              }
+                              "properties": {
+                                "command": {
+                                  "type": "string",
+                                  "minLength": 1
+                                },
+                                "args": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  }
+                                },
+                                "env": {
+                                  "type": "object",
+                                  "additionalProperties": {
+                                    "type": "string"
+                                  }
+                                }
+                              },
+                              "required": [
+                                "command",
+                                "args"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "url": {
+                                  "type": "string",
+                                  "format": "uri"
+                                },
+                                "type": {
+                                  "type": "string",
+                                  "enum": [
+                                    "streamableHttp",
+                                    "http",
+                                    "sse"
+                                  ]
+                                },
+                                "headers": {
+                                  "type": "object",
+                                  "additionalProperties": {
+                                    "type": "string"
+                                  }
+                                }
+                              },
+                              "required": [
+                                "url",
+                                "type"
+                              ],
+                              "additionalProperties": false
                             }
-                          },
-                          "required": [
-                            "command",
-                            "args"
-                          ],
-                          "additionalProperties": false
+                          ]
                         }
                       }
                     },
@@ -15726,73 +15332,40 @@
                             ]
                           },
                           "template_args": {
-                            "anyOf": [
-                              {
-                                "type": "array",
-                                "items": {}
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ]
+                            "type": "array",
+                            "items": {}
                           },
                           "template_env": {
-                            "anyOf": [
-                              {
-                                "type": "object",
-                                "propertyNames": {
-                                  "type": "string"
-                                },
-                                "additionalProperties": {}
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ]
+                            "type": "array",
+                            "items": {}
+                          },
+                          "template_headers": {
+                            "type": "array",
+                            "items": {}
                           },
                           "team_args_schema": {
-                            "anyOf": [
-                              {
-                                "type": "array",
-                                "items": {}
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ]
+                            "type": "array",
+                            "items": {}
                           },
                           "team_env_schema": {
-                            "anyOf": [
-                              {
-                                "type": "array",
-                                "items": {}
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ]
+                            "type": "array",
+                            "items": {}
+                          },
+                          "team_headers_schema": {
+                            "type": "array",
+                            "items": {}
                           },
                           "user_args_schema": {
-                            "anyOf": [
-                              {
-                                "type": "array",
-                                "items": {}
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ]
+                            "type": "array",
+                            "items": {}
                           },
                           "user_env_schema": {
-                            "anyOf": [
-                              {
-                                "type": "array",
-                                "items": {}
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ]
+                            "type": "array",
+                            "items": {}
+                          },
+                          "user_headers_schema": {
+                            "type": "array",
+                            "items": {}
                           },
                           "dependencies": {
                             "anyOf": [
@@ -15888,10 +15461,13 @@
                           "transport_type",
                           "template_args",
                           "template_env",
+                          "template_headers",
                           "team_args_schema",
                           "team_env_schema",
+                          "team_headers_schema",
                           "user_args_schema",
                           "user_env_schema",
+                          "user_headers_schema",
                           "dependencies",
                           "category_id",
                           "tags",
@@ -16305,6 +15881,20 @@
                               }
                             ]
                           },
+                          "template_headers": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "propertyNames": {
+                                  "type": "string"
+                                },
+                                "additionalProperties": {}
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
                           "team_args_schema": {
                             "anyOf": [
                               {
@@ -16327,6 +15917,17 @@
                               }
                             ]
                           },
+                          "team_headers_schema": {
+                            "anyOf": [
+                              {
+                                "type": "array",
+                                "items": {}
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
                           "user_args_schema": {
                             "anyOf": [
                               {
@@ -16339,6 +15940,17 @@
                             ]
                           },
                           "user_env_schema": {
+                            "anyOf": [
+                              {
+                                "type": "array",
+                                "items": {}
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "user_headers_schema": {
                             "anyOf": [
                               {
                                 "type": "array",
@@ -16443,10 +16055,13 @@
                           "transport_type",
                           "template_args",
                           "template_env",
+                          "template_headers",
                           "team_args_schema",
                           "team_env_schema",
+                          "team_headers_schema",
                           "user_args_schema",
                           "user_env_schema",
+                          "user_headers_schema",
                           "dependencies",
                           "category_id",
                           "tags",
@@ -17254,6 +16869,13 @@
                       "type": "string"
                     },
                     "description": "Team-level shared environment variables"
+                  },
+                  "team_headers": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Team-level shared headers"
                   }
                 },
                 "required": [
@@ -17344,6 +16966,14 @@
                           },
                           "nullable": true,
                           "description": "Team-level shared environment variables"
+                        },
+                        "team_headers": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "nullable": true,
+                          "description": "Team-level shared headers"
                         },
                         "created_at": {
                           "type": "string",
@@ -17719,6 +17349,14 @@
                             "nullable": true,
                             "description": "Team-level shared environment variables"
                           },
+                          "team_headers": {
+                            "type": "object",
+                            "additionalProperties": {
+                              "type": "string"
+                            },
+                            "nullable": true,
+                            "description": "Team-level shared headers"
+                          },
                           "created_at": {
                             "type": "string",
                             "format": "date-time",
@@ -18077,6 +17715,14 @@
                           },
                           "nullable": true,
                           "description": "Team-level shared environment variables"
+                        },
+                        "team_headers": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "nullable": true,
+                          "description": "Team-level shared headers"
                         },
                         "created_at": {
                           "type": "string",
@@ -18463,6 +18109,14 @@
                           },
                           "nullable": true,
                           "description": "Team-level shared environment variables"
+                        },
+                        "team_headers": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "nullable": true,
+                          "description": "Team-level shared headers"
                         },
                         "created_at": {
                           "type": "string",
@@ -19056,6 +18710,14 @@
                           "nullable": true,
                           "description": "Team-level shared environment variables"
                         },
+                        "team_headers": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "nullable": true,
+                          "description": "Team-level shared headers"
+                        },
                         "created_at": {
                           "type": "string",
                           "format": "date-time",
@@ -19322,6 +18984,399 @@
         }
       }
     },
+    "/api/teams/{teamId}/mcp/installations/{installationId}/headers": {
+      "patch": {
+        "summary": "Update MCP installation headers",
+        "tags": [
+          "MCP Installations"
+        ],
+        "description": "Updates the headers for an existing MCP server installation. This endpoint specifically handles headers updates only. Requires Content-Type: application/json header when sending request body. Supports both cookie-based authentication (for web users) and OAuth2 Bearer token authentication (for CLI users). Requires mcp:read scope for OAuth2 access.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "team_headers": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Team-level headers to update"
+                  }
+                },
+                "required": [
+                  "team_headers"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": true
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "teamId",
+            "required": true,
+            "description": "Team ID that owns the installation"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "installationId",
+            "required": true,
+            "description": "Installation ID"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Headers updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "Unique installation ID"
+                        },
+                        "team_id": {
+                          "type": "string",
+                          "description": "Team ID that owns this installation"
+                        },
+                        "server_id": {
+                          "type": "string",
+                          "description": "MCP server ID that was installed"
+                        },
+                        "created_by": {
+                          "type": "string",
+                          "description": "User ID who created this installation"
+                        },
+                        "installation_name": {
+                          "type": "string",
+                          "description": "Custom name for this installation"
+                        },
+                        "installation_type": {
+                          "type": "string",
+                          "enum": [
+                            "local",
+                            "cloud"
+                          ],
+                          "description": "Installation type"
+                        },
+                        "team_args": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "nullable": true,
+                          "description": "Team-level shared command line arguments"
+                        },
+                        "team_env": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "nullable": true,
+                          "description": "Team-level shared environment variables"
+                        },
+                        "team_headers": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "nullable": true,
+                          "description": "Team-level shared headers"
+                        },
+                        "created_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "description": "Installation creation timestamp"
+                        },
+                        "updated_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "description": "Last update timestamp"
+                        },
+                        "last_used_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": true,
+                          "description": "Last usage timestamp"
+                        },
+                        "server": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "description": "Server ID"
+                            },
+                            "name": {
+                              "type": "string",
+                              "description": "Server name"
+                            },
+                            "description": {
+                              "type": "string",
+                              "description": "Server description"
+                            },
+                            "github_url": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "GitHub repository URL"
+                            },
+                            "homepage_url": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "Homepage URL"
+                            },
+                            "author_name": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "Author name"
+                            },
+                            "language": {
+                              "type": "string",
+                              "description": "Programming language"
+                            },
+                            "runtime": {
+                              "type": "string",
+                              "description": "Runtime environment"
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "active",
+                                "deprecated",
+                                "maintenance"
+                              ],
+                              "description": "Server status"
+                            },
+                            "tags": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              },
+                              "nullable": true,
+                              "description": "Server tags"
+                            },
+                            "environment_variables": {
+                              "type": "array",
+                              "items": {},
+                              "nullable": true,
+                              "description": "Server environment variables"
+                            },
+                            "args": {
+                              "type": "array",
+                              "items": {},
+                              "nullable": true,
+                              "description": "Server command line arguments"
+                            },
+                            "installation_methods": {
+                              "type": "array",
+                              "items": {},
+                              "description": "Installation methods"
+                            },
+                            "category_id": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "Category ID"
+                            },
+                            "transport_type": {
+                              "type": "string",
+                              "enum": [
+                                "stdio",
+                                "http",
+                                "sse"
+                              ],
+                              "description": "MCP transport type"
+                            }
+                          },
+                          "description": "Optional server details if included"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "team_id",
+                        "server_id",
+                        "created_by",
+                        "installation_name",
+                        "installation_type",
+                        "created_at",
+                        "updated_at",
+                        "last_used_at"
+                      ]
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Success message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data",
+                    "message"
+                  ],
+                  "description": "Headers updated successfully"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - Invalid input or validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates the operation failed"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Bad Request - Invalid input or validation error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required or invalid token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates the operation failed"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Unauthorized - Authentication required or invalid token"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Insufficient permissions or scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates the operation failed"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Forbidden - Insufficient permissions or scope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found - Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates the operation failed"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Not Found - Resource not found"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates the operation failed"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Internal Server Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/teams/{teamId}/mcp/installations/{installationId}/args": {
       "patch": {
         "summary": "Update MCP installation command line arguments",
@@ -19440,6 +19495,14 @@
                           },
                           "nullable": true,
                           "description": "Team-level shared environment variables"
+                        },
+                        "team_headers": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "nullable": true,
+                          "description": "Team-level shared headers"
                         },
                         "created_at": {
                           "type": "string",
@@ -21784,7 +21847,312 @@
         }
       }
     },
+    "/api/.well-known/oauth-authorization-server": {
+      "get": {
+        "summary": "OAuth2 Authorization Server Metadata",
+        "tags": [
+          "OAuth2"
+        ],
+        "description": "RFC 8414 compliant OAuth2 authorization server metadata for MCP client discovery",
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "issuer": {
+                      "type": "string"
+                    },
+                    "authorization_endpoint": {
+                      "type": "string"
+                    },
+                    "token_endpoint": {
+                      "type": "string"
+                    },
+                    "userinfo_endpoint": {
+                      "type": "string"
+                    },
+                    "introspection_endpoint": {
+                      "type": "string"
+                    },
+                    "scopes_supported": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "response_types_supported": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "grant_types_supported": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "code_challenge_methods_supported": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "registration_endpoint": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "error_description": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/oauth2/register": {
+      "post": {
+        "summary": "OAuth 2.0 Dynamic Client Registration",
+        "tags": [
+          "OAuth2"
+        ],
+        "description": "RFC 7591 compliant dynamic client registration endpoint for MCP clients",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "client_name": {
+                    "type": "string"
+                  },
+                  "redirect_uris": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "minItems": 1
+                  },
+                  "grant_types": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "response_types": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "scope": {
+                    "type": "string"
+                  },
+                  "token_endpoint_auth_method": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "redirect_uris"
+                ],
+                "additionalProperties": true
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "client_id": {
+                      "type": "string"
+                    },
+                    "client_name": {
+                      "type": "string"
+                    },
+                    "redirect_uris": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "grant_types": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "response_types": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "scope": {
+                      "type": "string"
+                    },
+                    "token_endpoint_auth_method": {
+                      "type": "string"
+                    },
+                    "client_id_issued_at": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "error_description": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "error_description": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/oauth2/auth": {
+      "post": {
+        "summary": "OAuth2 Team Selection Submission",
+        "tags": [
+          "OAuth2"
+        ],
+        "description": "Processes team selection and generates authorization code",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "client_id": {
+                    "type": "string"
+                  },
+                  "redirect_uri": {
+                    "type": "string"
+                  },
+                  "scope": {
+                    "type": "string"
+                  },
+                  "state": {
+                    "type": "string"
+                  },
+                  "code_challenge": {
+                    "type": "string"
+                  },
+                  "code_challenge_method": {
+                    "type": "string"
+                  },
+                  "response_type": {
+                    "type": "string"
+                  },
+                  "team_id": {
+                    "type": "string"
+                  },
+                  "consent": {
+                    "type": "string",
+                    "enum": [
+                      "true",
+                      "false"
+                    ]
+                  }
+                },
+                "required": [
+                  "client_id",
+                  "redirect_uri",
+                  "scope",
+                  "state",
+                  "code_challenge",
+                  "code_challenge_method",
+                  "response_type",
+                  "team_id",
+                  "consent"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "302": {
+            "description": "Redirect to client callback or error redirect",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "description": "Redirect to client callback or error redirect"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "description": "Internal Server Error"
+                }
+              }
+            }
+          }
+        }
+      },
       "get": {
         "summary": "OAuth2 Authorization Endpoint",
         "tags": [
@@ -21864,6 +22232,15 @@
             "name": "code_challenge_method",
             "required": true,
             "description": "PKCE code challenge method, must be \"S256\""
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "team",
+            "required": false,
+            "description": "Team ID for team-scoped OAuth flow (optional, defaults to user team)"
           }
         ],
         "responses": {
@@ -21937,7 +22314,7 @@
         "tags": [
           "OAuth2"
         ],
-        "description": "Exchanges authorization code for access token using PKCE, or refreshes access token using refresh token. Requires Content-Type: application/json header when sending request body.",
+        "description": "Exchanges authorization code for access token using PKCE, or refreshes access token using refresh token. Accepts both application/json and application/x-www-form-urlencoded content types.",
         "requestBody": {
           "content": {
             "application/json": {
@@ -21972,53 +22349,6 @@
                         "type": "string",
                         "minLength": 1,
                         "description": "PKCE code verifier"
-                      },
-                      "device_info": {
-                        "type": "object",
-                        "properties": {
-                          "device_name": {
-                            "type": "string",
-                            "minLength": 1,
-                            "maxLength": 100,
-                            "description": "User-friendly device name (defaults to hostname)"
-                          },
-                          "hostname": {
-                            "type": "string",
-                            "description": "System hostname"
-                          },
-                          "hardware_id": {
-                            "type": "string",
-                            "minLength": 1,
-                            "description": "Unique hardware fingerprint"
-                          },
-                          "os_type": {
-                            "type": "string",
-                            "description": "Operating system type (e.g., macOS, Windows, Linux)"
-                          },
-                          "os_version": {
-                            "type": "string",
-                            "description": "Operating system version"
-                          },
-                          "arch": {
-                            "type": "string",
-                            "description": "System architecture (e.g., arm64, x64)"
-                          },
-                          "node_version": {
-                            "type": "string",
-                            "description": "Node.js version for compatibility"
-                          },
-                          "user_agent": {
-                            "type": "string",
-                            "description": "User agent string from CLI"
-                          }
-                        },
-                        "required": [
-                          "device_name",
-                          "hostname",
-                          "hardware_id"
-                        ],
-                        "additionalProperties": false,
-                        "description": "Optional device information for automatic device registration during login"
                       }
                     },
                     "required": [
@@ -22094,55 +22424,6 @@
                     "scope": {
                       "type": "string",
                       "description": "Space-separated list of granted scopes"
-                    },
-                    "device": {
-                      "type": "object",
-                      "properties": {
-                        "id": {
-                          "type": "string",
-                          "description": "Unique device identifier"
-                        },
-                        "device_name": {
-                          "type": "string",
-                          "description": "User-friendly device name"
-                        },
-                        "hostname": {
-                          "type": "string",
-                          "nullable": true,
-                          "description": "System hostname"
-                        },
-                        "hardware_id": {
-                          "type": "string",
-                          "nullable": true,
-                          "description": "Hardware fingerprint"
-                        },
-                        "os_type": {
-                          "type": "string",
-                          "nullable": true,
-                          "description": "Operating system type"
-                        },
-                        "is_active": {
-                          "type": "boolean",
-                          "description": "Whether device is active"
-                        },
-                        "is_trusted": {
-                          "type": "boolean",
-                          "description": "Whether device is trusted"
-                        },
-                        "created_at": {
-                          "type": "string",
-                          "format": "date-time",
-                          "description": "Device creation timestamp"
-                        }
-                      },
-                      "required": [
-                        "id",
-                        "device_name",
-                        "is_active",
-                        "is_trusted",
-                        "created_at"
-                      ],
-                      "description": "Device information if device was registered during login"
                     }
                   },
                   "required": [
@@ -22864,6 +23145,108 @@
         }
       }
     },
+    "/api/oauth2/introspect": {
+      "post": {
+        "summary": "OAuth2 Token Introspection Endpoint",
+        "tags": [
+          "OAuth2"
+        ],
+        "description": "RFC 7662 compliant token introspection for resource servers (satellites). Requires Content-Type: application/json header when sending request body.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "description": "The token to introspect"
+                  },
+                  "expected_team_id": {
+                    "type": "string",
+                    "description": "Expected team ID for validation"
+                  }
+                },
+                "required": [
+                  "token"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Token introspection response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "active": {
+                      "type": "boolean"
+                    },
+                    "scope": {
+                      "type": "string"
+                    },
+                    "client_id": {
+                      "type": "string"
+                    },
+                    "username": {
+                      "type": "string"
+                    },
+                    "sub": {
+                      "type": "string"
+                    },
+                    "aud": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "iss": {
+                      "type": "string"
+                    },
+                    "exp": {
+                      "type": "number"
+                    },
+                    "iat": {
+                      "type": "number"
+                    },
+                    "team_id": {
+                      "type": "string"
+                    },
+                    "team_name": {
+                      "type": "string"
+                    },
+                    "team_role": {
+                      "type": "string"
+                    },
+                    "team_permissions": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "error_description": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "active"
+                  ],
+                  "description": "Token introspection response"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/admin/email/test": {
       "post": {
         "summary": "Send test email",
@@ -23042,249 +23425,6 @@
         }
       }
     },
-    "/api/gateway/config/{client}": {
-      "get": {
-        "summary": "Get client-specific gateway configuration",
-        "tags": [
-          "Gateway Configuration"
-        ],
-        "description": "Returns the appropriate configuration format for connecting the specified MCP client to the local DeployStack Gateway.",
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "enum": [
-                "claude-desktop",
-                "cline",
-                "vscode",
-                "cursor",
-                "windsurf"
-              ]
-            },
-            "in": "path",
-            "name": "client",
-            "required": true,
-            "description": "The MCP client type"
-          }
-        ],
-        "security": [
-          {
-            "cookieAuth": []
-          },
-          {
-            "bearerAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Client-specific gateway configuration",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "description": "Client-specific gateway configuration",
-                  "additionalProperties": true
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request - Invalid client type",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "default": false
-                    },
-                    "error": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "success",
-                    "error"
-                  ],
-                  "description": "Bad Request - Invalid client type"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized - Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "default": false
-                    },
-                    "error": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "success",
-                    "error"
-                  ],
-                  "description": "Unauthorized - Authentication required"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden - Insufficient permissions",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "default": false
-                    },
-                    "error": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "success",
-                    "error"
-                  ],
-                  "description": "Forbidden - Insufficient permissions"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/gateway/config/clients": {
-      "get": {
-        "summary": "List supported MCP client types",
-        "tags": [
-          "Gateway Configuration"
-        ],
-        "description": "Returns a list of all supported MCP client types that can be configured with the DeployStack Gateway.",
-        "security": [
-          {
-            "cookieAuth": []
-          },
-          {
-            "bearerAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "List of supported MCP client types",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "clients": {
-                      "type": "array",
-                      "items": {
-                        "type": "string",
-                        "enum": [
-                          "claude-desktop",
-                          "cline",
-                          "vscode",
-                          "cursor",
-                          "windsurf"
-                        ]
-                      },
-                      "description": "List of supported MCP client types"
-                    }
-                  },
-                  "required": [
-                    "clients"
-                  ],
-                  "additionalProperties": false,
-                  "description": "List of supported MCP client types"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized - Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "default": false
-                    },
-                    "error": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "success",
-                    "error"
-                  ],
-                  "description": "Unauthorized - Authentication required"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden - Insufficient permissions",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "default": false
-                    },
-                    "error": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "success",
-                    "error"
-                  ],
-                  "description": "Forbidden - Insufficient permissions"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "default": false
-                    },
-                    "error": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "success",
-                    "error"
-                  ],
-                  "description": "Internal Server Error"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/gateway/me/mcp-configurations": {
       "get": {
         "summary": "Get merged MCP configurations for gateway",
@@ -23292,17 +23432,6 @@
           "Gateway"
         ],
         "description": "Retrieves all MCP server configurations for the authenticated user with merged template, team, and user-specific values. Supports both cookie-based authentication (for web users) and OAuth2 Bearer token authentication (for CLI users). Requires mcp:read scope for OAuth2 access.",
-        "parameters": [
-          {
-            "schema": {
-              "type": "string"
-            },
-            "in": "query",
-            "name": "hardware_id",
-            "required": false,
-            "description": "Hardware ID to get device-specific user configurations"
-          }
-        ],
         "security": [
           {
             "cookieAuth": []
@@ -23395,7 +23524,7 @@
             }
           },
           "400": {
-            "description": "Bad Request - Invalid hardware_id or missing parameters",
+            "description": "Bad Request - Invalid parameters",
             "content": {
               "application/json": {
                 "schema": {
@@ -23415,7 +23544,7 @@
                     "error"
                   ],
                   "additionalProperties": false,
-                  "description": "Bad Request - Invalid hardware_id or missing parameters"
+                  "description": "Bad Request - Invalid parameters"
                 }
               }
             }
@@ -23494,6 +23623,1799 @@
                   ],
                   "additionalProperties": false,
                   "description": "Internal Server Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/satellites/register": {
+      "post": {
+        "summary": "Register a new satellite",
+        "tags": [
+          "Satellites"
+        ],
+        "description": "Registers a new satellite with the backend. All satellites are registered as global and inactive by default - admin activation required. No authentication required for now. Requires Content-Type: application/json header when sending request body.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100,
+                    "description": "Human-readable satellite name (e.g., \"dev-satellite-001\")"
+                  },
+                  "capabilities": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Array of supported MCP server types"
+                  },
+                  "system_info": {
+                    "type": "object",
+                    "properties": {
+                      "os": {
+                        "type": "string"
+                      },
+                      "arch": {
+                        "type": "string"
+                      },
+                      "node_version": {
+                        "type": "string"
+                      },
+                      "memory_mb": {
+                        "type": "number"
+                      }
+                    },
+                    "description": "Hardware and OS information"
+                  }
+                },
+                "required": [
+                  "name",
+                  "capabilities"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Satellite registered successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "satellite": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "Unique satellite identifier"
+                        },
+                        "name": {
+                          "type": "string",
+                          "description": "Satellite name"
+                        },
+                        "api_key": {
+                          "type": "string",
+                          "description": "API key for authentication (store securely)"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name",
+                        "api_key"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "satellite",
+                    "message"
+                  ],
+                  "description": "Satellite registered successfully"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Bad Request - Invalid input"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict - Satellite name already exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Conflict - Satellite name already exists"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Internal Server Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/satellites/{satelliteId}/commands": {
+      "get": {
+        "summary": "Poll for pending satellite commands",
+        "tags": [
+          "Satellite Commands"
+        ],
+        "description": "Satellite polls for pending commands. Requires satellite API key authentication via Bearer token.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "in": "query",
+            "name": "last_poll",
+            "required": false,
+            "description": "ISO timestamp for optimization (only return commands newer than this)"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 10
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "description": "Maximum commands to return"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "satelliteId",
+            "required": true,
+            "description": "Unique satellite identifier"
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pending commands for satellite",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "commands": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "Command ID"
+                          },
+                          "command_type": {
+                            "type": "string",
+                            "enum": [
+                              "spawn",
+                              "kill",
+                              "restart",
+                              "configure",
+                              "health_check"
+                            ],
+                            "description": "Type of command to execute"
+                          },
+                          "priority": {
+                            "type": "string",
+                            "enum": [
+                              "immediate",
+                              "high",
+                              "normal",
+                              "low"
+                            ],
+                            "description": "Command priority level"
+                          },
+                          "payload": {
+                            "type": "object",
+                            "description": "Command data with team context"
+                          },
+                          "correlation_id": {
+                            "type": "string",
+                            "description": "Correlation ID for request tracing"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "command_type",
+                          "priority",
+                          "payload"
+                        ]
+                      }
+                    },
+                    "polling_mode": {
+                      "type": "string",
+                      "enum": [
+                        "immediate",
+                        "normal",
+                        "slow"
+                      ],
+                      "description": "Recommended polling mode based on pending commands"
+                    },
+                    "next_poll_interval": {
+                      "type": "integer",
+                      "description": "Recommended next poll interval in seconds"
+                    }
+                  },
+                  "required": [
+                    "commands",
+                    "polling_mode",
+                    "next_poll_interval"
+                  ],
+                  "description": "Pending commands for satellite"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Invalid satellite API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Unauthorized - Invalid satellite API key"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Satellite not found or access denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Forbidden - Satellite not found or access denied"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Satellite not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Satellite not found"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Internal server error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/satellites/{satelliteId}/command-result": {
+      "post": {
+        "summary": "Report command execution result",
+        "tags": [
+          "Satellite Commands"
+        ],
+        "description": "Satellite reports the result of command execution. Requires Content-Type: application/json header when sending request body.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "command_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Command ID being reported"
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "acknowledged",
+                      "executing",
+                      "completed",
+                      "failed"
+                    ],
+                    "description": "Command execution status"
+                  },
+                  "result": {
+                    "type": "object",
+                    "description": "Command execution result data (JSON object)"
+                  },
+                  "error_message": {
+                    "type": "string",
+                    "description": "Error message for failed commands"
+                  }
+                },
+                "required": [
+                  "command_id",
+                  "status"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": true
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "satelliteId",
+            "required": true,
+            "description": "Unique satellite identifier"
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Command result recorded successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "message"
+                  ],
+                  "description": "Command result recorded successfully"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - Invalid command result data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Bad Request - Invalid command result data"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Invalid satellite API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Unauthorized - Invalid satellite API key"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Command not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Command not found"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Internal server error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/satellites/{satelliteId}/heartbeat": {
+      "post": {
+        "summary": "Report satellite health and metrics",
+        "tags": [
+          "Satellite Health"
+        ],
+        "description": "Satellite reports health status and system metrics. Requires Content-Type: application/json header when sending request body.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "active",
+                      "degraded",
+                      "error"
+                    ],
+                    "description": "Current satellite status"
+                  },
+                  "system_metrics": {
+                    "type": "object",
+                    "properties": {
+                      "cpu_usage_percent": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100
+                      },
+                      "memory_usage_mb": {
+                        "type": "number",
+                        "minimum": 0
+                      },
+                      "disk_usage_percent": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100
+                      },
+                      "uptime_seconds": {
+                        "type": "number",
+                        "minimum": 0
+                      },
+                      "network_rx_bytes": {
+                        "type": "number",
+                        "minimum": 0
+                      },
+                      "network_tx_bytes": {
+                        "type": "number",
+                        "minimum": 0
+                      }
+                    },
+                    "required": [
+                      "cpu_usage_percent",
+                      "memory_usage_mb"
+                    ],
+                    "description": "System resource metrics"
+                  },
+                  "processes": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "Process ID"
+                        },
+                        "server_name": {
+                          "type": "string",
+                          "description": "MCP server name"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "pending",
+                            "starting",
+                            "running",
+                            "stopping",
+                            "stopped",
+                            "failed"
+                          ],
+                          "description": "Process status"
+                        },
+                        "health_status": {
+                          "type": "string",
+                          "enum": [
+                            "healthy",
+                            "unhealthy",
+                            "unknown"
+                          ],
+                          "description": "Process health status"
+                        },
+                        "performance_metrics": {
+                          "type": "object",
+                          "properties": {
+                            "total_requests": {
+                              "type": "number",
+                              "minimum": 0
+                            },
+                            "avg_response_time_ms": {
+                              "type": "number",
+                              "minimum": 0
+                            },
+                            "error_count": {
+                              "type": "number",
+                              "minimum": 0
+                            },
+                            "memory_usage_mb": {
+                              "type": "number",
+                              "minimum": 0
+                            }
+                          },
+                          "description": "Process performance metrics"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "server_name",
+                        "status",
+                        "health_status"
+                      ]
+                    },
+                    "description": "List of running MCP server processes"
+                  },
+                  "error_count": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Recent error count"
+                  },
+                  "version": {
+                    "type": "string",
+                    "description": "Satellite software version"
+                  }
+                },
+                "required": [
+                  "status",
+                  "system_metrics"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": true
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "satelliteId",
+            "required": true,
+            "description": "Unique satellite identifier"
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Heartbeat recorded successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "message"
+                  ],
+                  "description": "Heartbeat recorded successfully"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - Invalid heartbeat data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Bad Request - Invalid heartbeat data"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Invalid satellite API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Unauthorized - Invalid satellite API key"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Satellite not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Satellite not found"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Internal server error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/satellites/{satelliteId}/status": {
+      "get": {
+        "summary": "Get satellite status",
+        "tags": [
+          "Satellite Health"
+        ],
+        "description": "Get real-time satellite status and metrics for user interfaces.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "satelliteId",
+            "required": true,
+            "description": "Unique satellite identifier"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Satellite status information",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "satellite": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "Satellite ID"
+                        },
+                        "name": {
+                          "type": "string",
+                          "description": "Satellite name"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "active",
+                            "inactive",
+                            "maintenance",
+                            "error"
+                          ],
+                          "description": "Satellite status"
+                        },
+                        "last_heartbeat": {
+                          "type": "string",
+                          "format": "date-time",
+                          "description": "Last heartbeat timestamp"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name",
+                        "status"
+                      ]
+                    },
+                    "processes": {
+                      "type": "object",
+                      "properties": {
+                        "total": {
+                          "type": "integer",
+                          "description": "Total process count"
+                        },
+                        "healthy": {
+                          "type": "integer",
+                          "description": "Healthy process count"
+                        },
+                        "unhealthy": {
+                          "type": "integer",
+                          "description": "Unhealthy process count"
+                        }
+                      },
+                      "required": [
+                        "total",
+                        "healthy",
+                        "unhealthy"
+                      ]
+                    },
+                    "system_metrics": {
+                      "type": "object",
+                      "properties": {
+                        "cpu_usage_percent": {
+                          "type": "number"
+                        },
+                        "memory_usage_mb": {
+                          "type": "number"
+                        },
+                        "disk_usage_percent": {
+                          "type": "number"
+                        },
+                        "uptime_seconds": {
+                          "type": "number"
+                        }
+                      },
+                      "description": "Latest system metrics"
+                    }
+                  },
+                  "required": [
+                    "satellite",
+                    "processes"
+                  ],
+                  "description": "Satellite status information"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Unauthorized"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Satellite not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Satellite not found"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Internal server error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/satellites/{satelliteId}/config": {
+      "get": {
+        "summary": "Get satellite configuration",
+        "tags": [
+          "Satellite Configuration"
+        ],
+        "description": "Retrieve configuration settings for the satellite. Used by satellites to get their operational parameters.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "satelliteId",
+            "required": true,
+            "description": "Unique satellite identifier"
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Satellite configuration",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "mcp_servers": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "object",
+                        "properties": {
+                          "installation_id": {
+                            "type": "string",
+                            "description": "Installation ID from mcpServerInstallations table"
+                          },
+                          "team_id": {
+                            "type": "string",
+                            "description": "Team ID that owns this installation"
+                          },
+                          "team_slug": {
+                            "type": "string",
+                            "description": "Team slug for identification"
+                          },
+                          "server_name": {
+                            "type": "string",
+                            "description": "MCP server name (e.g., \"context7\")"
+                          },
+                          "server_slug": {
+                            "type": "string",
+                            "description": "MCP server slug"
+                          },
+                          "installation_name": {
+                            "type": "string",
+                            "description": "User-friendly installation name"
+                          },
+                          "transport_type": {
+                            "type": "string",
+                            "enum": [
+                              "stdio",
+                              "http",
+                              "sse"
+                            ],
+                            "description": "MCP transport type"
+                          },
+                          "url": {
+                            "type": "string",
+                            "description": "Server URL for HTTP/SSE transport"
+                          },
+                          "command": {
+                            "type": "string",
+                            "description": "Command to run for stdio transport"
+                          },
+                          "args": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            },
+                            "description": "Command arguments"
+                          },
+                          "env": {
+                            "type": "object",
+                            "description": "Environment variables"
+                          },
+                          "headers": {
+                            "type": "object",
+                            "description": "HTTP headers for HTTP/SSE transport"
+                          },
+                          "timeout": {
+                            "type": "integer",
+                            "description": "Timeout in milliseconds"
+                          },
+                          "enabled": {
+                            "type": "boolean",
+                            "description": "Whether this server is enabled"
+                          }
+                        },
+                        "required": [
+                          "installation_id",
+                          "team_id",
+                          "server_name",
+                          "transport_type",
+                          "enabled"
+                        ]
+                      },
+                      "description": "MCP server configurations keyed by unique process identifier"
+                    },
+                    "satellite_config": {
+                      "type": "object",
+                      "properties": {
+                        "polling_intervals": {
+                          "type": "object",
+                          "properties": {
+                            "normal": {
+                              "type": "integer",
+                              "description": "Normal polling interval in seconds"
+                            },
+                            "immediate": {
+                              "type": "integer",
+                              "description": "Immediate polling interval in seconds"
+                            },
+                            "error_backoff_max": {
+                              "type": "integer",
+                              "description": "Maximum backoff interval in seconds"
+                            }
+                          },
+                          "required": [
+                            "normal",
+                            "immediate",
+                            "error_backoff_max"
+                          ]
+                        },
+                        "resource_limits": {
+                          "type": "object",
+                          "properties": {
+                            "max_processes": {
+                              "type": "integer",
+                              "description": "Maximum number of MCP processes"
+                            },
+                            "max_memory_per_process": {
+                              "type": "string",
+                              "description": "Maximum memory per process (e.g., \"1GB\")"
+                            },
+                            "max_cpu_percent": {
+                              "type": "number",
+                              "description": "Maximum CPU usage percentage"
+                            }
+                          },
+                          "required": [
+                            "max_processes"
+                          ]
+                        },
+                        "team_settings": {
+                          "type": "object",
+                          "properties": {
+                            "allowed_servers": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              },
+                              "description": "List of allowed MCP server types"
+                            },
+                            "security_policies": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              },
+                              "description": "Security policies to enforce"
+                            },
+                            "isolation_level": {
+                              "type": "string",
+                              "enum": [
+                                "none",
+                                "process",
+                                "container"
+                              ],
+                              "description": "Process isolation level"
+                            }
+                          }
+                        },
+                        "logging": {
+                          "type": "object",
+                          "properties": {
+                            "level": {
+                              "type": "string",
+                              "enum": [
+                                "debug",
+                                "info",
+                                "warn",
+                                "error"
+                              ],
+                              "description": "Logging level"
+                            },
+                            "enable_audit": {
+                              "type": "boolean",
+                              "description": "Enable audit logging"
+                            },
+                            "retention_days": {
+                              "type": "integer",
+                              "description": "Log retention period in days"
+                            }
+                          }
+                        },
+                        "network": {
+                          "type": "object",
+                          "properties": {
+                            "timeout_seconds": {
+                              "type": "integer",
+                              "description": "Network timeout in seconds"
+                            },
+                            "retry_attempts": {
+                              "type": "integer",
+                              "description": "Number of retry attempts"
+                            },
+                            "proxy_url": {
+                              "type": "string",
+                              "description": "Proxy URL if required"
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "polling_intervals",
+                        "resource_limits"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "mcp_servers",
+                    "satellite_config"
+                  ],
+                  "description": "Satellite configuration"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Invalid satellite API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Unauthorized - Invalid satellite API key"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Satellite not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Satellite not found"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Internal server error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/satellites/manage": {
+      "get": {
+        "summary": "List all satellites",
+        "tags": [
+          "Satellite Management"
+        ],
+        "description": "Get a paginated list of all satellites with filtering options. Requires global_admin role.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "active",
+                "inactive",
+                "maintenance",
+                "error"
+              ]
+            },
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "description": "Filter by satellite status"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "global",
+                "team"
+              ]
+            },
+            "in": "query",
+            "name": "satellite_type",
+            "required": false,
+            "description": "Filter by satellite type"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "team_id",
+            "required": false,
+            "description": "Filter by team ID"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "search",
+            "required": false,
+            "description": "Search by satellite name"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "description": "Page number for pagination"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "description": "Number of items per page"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "satellites": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "satellite_type": {
+                                "type": "string",
+                                "enum": [
+                                  "global",
+                                  "team"
+                                ]
+                              },
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "active",
+                                  "inactive",
+                                  "maintenance",
+                                  "error"
+                                ]
+                              },
+                              "capabilities": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              },
+                              "last_heartbeat": {
+                                "type": [
+                                  "null",
+                                  "string"
+                                ]
+                              },
+                              "system_info": {
+                                "type": [
+                                  "null",
+                                  "object"
+                                ]
+                              },
+                              "created_at": {
+                                "type": "string"
+                              },
+                              "updated_at": {
+                                "type": "string"
+                              },
+                              "team": {
+                                "type": [
+                                  "null",
+                                  "object"
+                                ],
+                                "properties": {
+                                  "id": {
+                                    "type": "string"
+                                  },
+                                  "name": {
+                                    "type": "string"
+                                  },
+                                  "slug": {
+                                    "type": "string"
+                                  }
+                                }
+                              },
+                              "created_by_user": {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string"
+                                  },
+                                  "username": {
+                                    "type": "string"
+                                  },
+                                  "email": {
+                                    "type": "string"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "pagination": {
+                          "type": "object",
+                          "properties": {
+                            "page": {
+                              "type": "integer"
+                            },
+                            "limit": {
+                              "type": "integer"
+                            },
+                            "total": {
+                              "type": "integer"
+                            },
+                            "pages": {
+                              "type": "integer"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/satellites/manage/{satelliteId}/status": {
+      "patch": {
+        "summary": "Update satellite status",
+        "tags": [
+          "Satellite Management"
+        ],
+        "description": "Update the status of a specific satellite. Requires global_admin role.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "active",
+                      "inactive",
+                      "maintenance",
+                      "error"
+                    ],
+                    "description": "New satellite status"
+                  }
+                },
+                "required": [
+                  "status"
+                ]
+              }
+            }
+          },
+          "required": true
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "satelliteId",
+            "required": true,
+            "description": "Unique satellite identifier"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "satellite": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            },
+                            "name": {
+                              "type": "string"
+                            },
+                            "satellite_type": {
+                              "type": "string",
+                              "enum": [
+                                "global",
+                                "team"
+                              ]
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "active",
+                                "inactive",
+                                "maintenance",
+                                "error"
+                              ]
+                            },
+                            "updated_at": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  }
                 }
               }
             }

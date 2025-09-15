@@ -2,6 +2,7 @@ import { type FastifyInstance } from 'fastify';
 import { requireAuthenticationAny, requireOAuthScope } from '../../../middleware/oauthMiddleware';
 import { requireTeamPermission } from '../../../middleware/roleMiddleware';
 import { McpInstallationService } from '../../../services/mcpInstallationService';
+import { SatelliteCommandService } from '../../../services/satelliteCommandService';
 import { getDb } from '../../../db';
 import {
   TEAM_ID_PARAM_SCHEMA,
@@ -100,6 +101,26 @@ export default async function createInstallationRoute(server: FastifyInstance) {
         teamId,
         serverId: installationData.server_id
       }, 'MCP server installation created successfully');
+
+      // Create satellite commands for immediate notification (3-second response goal)
+      try {
+        const satelliteCommandService = new SatelliteCommandService(db, request.log);
+        const commands = await satelliteCommandService.notifyMcpInstallation(
+          installation.id,
+          teamId,
+          userId
+        );
+        
+        request.log.info({
+          operation: 'create_mcp_installation',
+          installationId: installation.id,
+          commandsCreated: commands.length,
+          satelliteIds: commands.map(c => c.satellite_id)
+        }, 'Satellite commands created for MCP installation');
+      } catch (commandError) {
+        request.log.error(commandError, `Failed to create satellite commands for installation ${installation.id}:`);
+        // Don't fail installation creation if command creation fails
+      }
 
       // Emit MCP_INSTALLATION_CREATED event
       try {

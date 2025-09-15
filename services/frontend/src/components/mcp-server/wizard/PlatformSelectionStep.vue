@@ -1,46 +1,51 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Cloud, Monitor } from 'lucide-vue-next'
+import { Globe, Users } from 'lucide-vue-next'
 import { Badge } from '@/components/ui/badge'
 
 // Props and model
 const modelValue = defineModel<string>({ required: true })
+
+// Set default to global immediately
+if (!modelValue.value) {
+  modelValue.value = 'global'
+}
 
 const { t } = useI18n()
 
 // Platform options
 const platforms = [
   {
-    id: 'local',
-    name: t('mcpInstallations.wizard.platform.local.name'),
-    description: t('mcpInstallations.wizard.platform.local.description'),
-    icon: Monitor,
+    id: 'global',
+    name: t('mcpInstallations.wizard.platform.global.name'),
+    description: t('mcpInstallations.wizard.platform.global.description'),
+    icon: Globe,
     available: true,
     recommended: true,
     details: [
-      t('mcpInstallations.wizard.platform.local.features.direct'),
-      t('mcpInstallations.wizard.platform.local.features.fast')
+      t('mcpInstallations.wizard.platform.global.features.instant'),
+      t('mcpInstallations.wizard.platform.global.features.managed')
     ]
   },
   {
-    id: 'cloud',
-    name: t('mcpInstallations.wizard.platform.cloud.name'),
-    description: t('mcpInstallations.wizard.platform.cloud.description'),
-    icon: Cloud,
+    id: 'team',
+    name: t('mcpInstallations.wizard.platform.team.name'),
+    description: t('mcpInstallations.wizard.platform.team.description'),
+    icon: Users,
     available: false,
     recommended: false,
     details: [
-      t('mcpInstallations.wizard.platform.cloud.features.managed'),
-      t('mcpInstallations.wizard.platform.cloud.features.scalable')
+      t('mcpInstallations.wizard.platform.team.features.secure'),
+      t('mcpInstallations.wizard.platform.team.features.private')
     ]
   }
 ]
 
-// Set default to local when component mounts
+// Ensure default is set when component mounts
 onMounted(() => {
   if (!modelValue.value) {
-    modelValue.value = 'local'
+    modelValue.value = 'global'
   }
 })
 </script>

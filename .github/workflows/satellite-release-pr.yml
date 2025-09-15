@@ -1,0 +1,164 @@
+name: Satellite Release PR
+on:
+  workflow_dispatch:
+    inputs:
+      type:
+        type: choice
+        description: Choose release type
+        options:
+          - patch
+          - minor
+          - major
+        default: patch
+      beta:
+        type: boolean
+        description: Prerelease
+        default: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  releaseIt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.APP_INSTALLATION_TOKEN }}
+      - name: git config
+        run: |
+          git config user.name "${GITHUB_ACTOR}"
+          git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
+      - name: Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      
+      - name: Install dependencies
+        run: |
+          npm ci || {
+            echo "npm ci failed, trying clean install..."
+            npm install --no-optional
+          }
+          
+      - name: Satellite Build Test
+        working-directory: services/satellite
+        run: npm run build
+
+      - name: Satellite Lint
+        working-directory: services/satellite
+        run: npm run lint
+        
+      - name: Check for console.log in satellite
+        working-directory: services/satellite
+        run: npm run check:no-console
+          
+      - name: Prepare release
+        working-directory: services/satellite
+        env:
+          GITHUB_TOKEN: ${{ secrets.APP_INSTALLATION_TOKEN }}
+          BETA_ARG: ${{ github.event.inputs.beta == 'true' && '--preRelease=beta' || '' }}
+          TYPE_ARG: ${{ github.event.inputs.type != 'patch' && format('--increment={0}', github.event.inputs.type) || '' }}
+        run: |
+          # Let release-it handle version detection and incrementing properly
+          npm run release -- $TYPE_ARG --ci --verbose --no-git.push --no-git.commit --no-git.tag --no-github $BETA_ARG
+          
+      - name: Update version.ts file
+        working-directory: services/satellite
+        run: |
+          node scripts/update-version.js
+          git add src/config/version.ts
+          
+      - name: get-npm-version
+        id: package-version
+        uses: martinbeentjes/npm-get-version-action@main
+        with:
+          path: services/satellite
+          
+      - name: Extract release notes
+        id: extract-release-notes
+        working-directory: services/satellite
+        run: |
+          VERSION=$(cat package.json | grep '"version"' | cut -d'"' -f4)
+          echo "Extracting release notes for version $VERSION"
+          
+          # Find the latest satellite tag
+          LATEST_TAG=$(git describe --tags --match=satellite-v* --abbrev=0 2>/dev/null || echo "")
+          
+          if [ -z "$LATEST_TAG" ]; then
+            echo "No previous satellite tag found, using all commits"
+            SATELLITE_COMMITS=$(git log --oneline --grep="(satellite)" --grep="(all)" --grep-or)
+          else
+            echo "Using commits since $LATEST_TAG"
+            # Get satellite and all scoped commits since last release
+            SATELLITE_COMMITS=$(git log ${LATEST_TAG}..HEAD --oneline --grep="(satellite)")
+            ALL_COMMITS=$(git log ${LATEST_TAG}..HEAD --oneline --grep="(all)")
+            
+            # Combine and format the commits
+            COMBINED_COMMITS=$(echo -e "$SATELLITE_COMMITS\n$ALL_COMMITS" | sort -u | grep -v "^$")
+          fi
+          
+          # Format commits for release notes
+          if [ -n "$COMBINED_COMMITS" ]; then
+            RELEASE_NOTES=""
+            while IFS= read -r commit; do
+              if [ -n "$commit" ]; then
+                # Extract commit hash and message
+                HASH=$(echo "$commit" | cut -d' ' -f1)
+                MESSAGE=$(echo "$commit" | cut -d' ' -f2-)
+                RELEASE_NOTES="${RELEASE_NOTES}- ${MESSAGE} ([${HASH}](https://github.com/deploystackio/deploystack/commit/${HASH}))\n"
+              fi
+            done <<< "$COMBINED_COMMITS"
+          else
+            RELEASE_NOTES="No significant changes since last release."
+          fi
+          
+          echo "release_notes<<EOF" >> $GITHUB_OUTPUT
+          echo -e "$RELEASE_NOTES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          
+          echo "Release notes extracted:"
+          echo -e "$RELEASE_NOTES"
+        
+      - name: Create pull request
+        uses: peter-evans/create-pull-request@v7
+        id: cpr
+        with:
+          token: ${{ secrets.APP_INSTALLATION_TOKEN }}
+          branch: satellite-release
+          delete-branch: true
+          commit-message: 'chore(satellite): release v${{ steps.package-version.outputs.current-version}}'
+          title: '[Satellite Release] v${{ steps.package-version.outputs.current-version}}'
+          body: |
+            ## Satellite Release v${{ steps.package-version.outputs.current-version}}
+            
+            This PR prepares a new satellite release.
+            
+            When merged, this will:
+            1. Create a release tag
+            2. Build and publish a multi-architecture Docker image to Docker Hub
+            
+            The Docker image will be available at:
+            - `deploystack/satellite:latest`
+            - `deploystack/satellite:v${{ steps.package-version.outputs.current-version}}`
+            
+            ### Supported Architectures
+            - `linux/amd64` (Intel/AMD)
+            - `linux/arm64` (Apple Silicon, AWS Graviton)
+            
+            ## Release notes:
+            ${{ steps.extract-release-notes.outputs.release_notes }}
+          labels: |
+            satellite
+            release
+            automated pr
+          draft: false
+          
+      - name: Show PR link
+        if: ${{ steps.cpr.outputs.pull-request-url }}
+        run: |
+          echo "Satellite Release v${{ steps.package-version.outputs.current-version}}' pull request - ${{ steps.cpr.outputs.pull-request-url }}"

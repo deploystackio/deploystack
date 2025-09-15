@@ -14,7 +14,7 @@ When generating commit messages, always follow this format:
 ### Required Scopes
 - `frontend` - For Vue.js frontend application changes
 - `backend` - For Fastify backend API changes  
-- `gateway` - For DeployStack Gateway application changes
+- `satellite` - For DeployStack satellite application changes
 - `shared` - For shared utilities and common code
 - `all` - For changes affecting multiple services or project-wide changes
 - `ci` - For CI/CD pipeline and workflow changes
@@ -23,7 +23,7 @@ When generating commit messages, always follow this format:
 ### Examples of Good Commit Messages
 - `feat(frontend): add user authentication flow`
 - `fix(backend): resolve database connection pooling issue`
-- `feat(gateway): implement MCP server process management`
+- `feat(satellite): implement MCP server process management`
 - `refactor(shared): extract common validation utilities`
 - `docs(all): update installation and setup instructions`
 - `chore(deps): update all dependencies to latest versions`
@@ -39,4 +39,4 @@ When generating commit messages, always follow this format:
 - Use proper error handling and validation
 - Include JSDoc comments for public APIs
 - Follow existing code patterns within each service
-- Prioritize security, especially for the gateway service
+- Prioritize security, especially for the satellite service

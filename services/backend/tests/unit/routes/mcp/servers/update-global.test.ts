@@ -223,10 +223,13 @@ describe('MCP Servers - Update Global', () => {
         // New three-tier configuration fields
         template_args: null,
         template_env: null,
+        template_headers: null,
         team_args_schema: null,
         team_env_schema: null,
+        team_headers_schema: null,
         user_args_schema: null,
         user_env_schema: null,
+        user_headers_schema: null,
         auto_install_new_default_team: undefined
       };
 
@@ -276,10 +279,13 @@ describe('MCP Servers - Update Global', () => {
           // Three-tier configuration schema
           template_args: null,
           template_env: null,
+          template_headers: null,
           team_args_schema: null,
           team_env_schema: null,
+          team_headers_schema: null,
           user_args_schema: null,
           user_env_schema: null,
+          user_headers_schema: null,
           dependencies: null,
           category_id: null,
           tags: null,
@@ -408,10 +414,13 @@ describe('MCP Servers - Update Global', () => {
         // New three-tier configuration fields (null)
         template_args: null,
         template_env: null,
+        template_headers: null,
         team_args_schema: null,
         team_env_schema: null,
+        team_headers_schema: null,
         user_args_schema: null,
         user_env_schema: null,
+        user_headers_schema: null,
         auto_install_new_default_team: undefined
       };
 
@@ -480,10 +489,13 @@ describe('MCP Servers - Update Global', () => {
         // New three-tier configuration fields
         template_args: null,
         template_env: null,
+        template_headers: null,
         team_args_schema: null,
         team_env_schema: null,
+        team_headers_schema: null,
         user_args_schema: null,
         user_env_schema: null,
+        user_headers_schema: null,
         auto_install_new_default_team: undefined
       };
 
@@ -552,10 +564,13 @@ describe('MCP Servers - Update Global', () => {
           // Three-tier configuration schema
           template_args: null,
           template_env: null,
+          template_headers: null,
           team_args_schema: null,
           team_env_schema: null,
+          team_headers_schema: null,
           user_args_schema: null,
           user_env_schema: null,
+          user_headers_schema: null,
           dependencies: { dep1: '^1.0.0' },
           category_id: 'category-1',
           tags: ['tag1', 'tag2'],
@@ -614,10 +629,13 @@ describe('MCP Servers - Update Global', () => {
         // New three-tier configuration fields
         template_args: [{ name: 'test_arg' }],
         template_env: { TEST_VAR: 'value' },
+        template_headers: [{ name: 'test_header' }],
         team_args_schema: [{ name: 'team_arg' }],
         team_env_schema: [{ name: 'team_env' }],
+        team_headers_schema: [{ name: 'team_header' }],
         user_args_schema: [{ name: 'user_arg' }],
         user_env_schema: [{ name: 'user_env' }],
+        user_headers_schema: [{ name: 'user_header' }],
         auto_install_new_default_team: undefined
       };
 
@@ -637,10 +655,13 @@ describe('MCP Servers - Update Global', () => {
       // Check new three-tier configuration fields
       expect(server.template_args).toEqual([{ name: 'test_arg' }]);
       expect(server.template_env).toEqual({ TEST_VAR: 'value' });
+      expect(server.template_headers).toEqual([{ name: 'test_header' }]);
       expect(server.team_args_schema).toEqual([{ name: 'team_arg' }]);
       expect(server.team_env_schema).toEqual([{ name: 'team_env' }]);
+      expect(server.team_headers_schema).toEqual([{ name: 'team_header' }]);
       expect(server.user_args_schema).toEqual([{ name: 'user_arg' }]);
       expect(server.user_env_schema).toEqual([{ name: 'user_env' }]);
+      expect(server.user_headers_schema).toEqual([{ name: 'user_header' }]);
       expect(server.dependencies).toEqual({ dep1: '^1.0.0' });
       expect(server.tags).toEqual(['tag1', 'tag2']);
       expect(server.created_at).toBe('2024-01-01T00:00:00.000Z');
@@ -692,10 +713,13 @@ describe('MCP Servers - Update Global', () => {
         // New three-tier configuration fields
         template_args: null,
         template_env: null,
+        template_headers: null,
         team_args_schema: null,
         team_env_schema: null,
+        team_headers_schema: null,
         user_args_schema: null,
         user_env_schema: null,
+        user_headers_schema: null,
         auto_install_new_default_team: undefined
       };
 
@@ -715,10 +739,13 @@ describe('MCP Servers - Update Global', () => {
       // Check new three-tier configuration fields are null
       expect(server.template_args).toBeNull();
       expect(server.template_env).toBeNull();
+      expect(server.template_headers).toBeNull();
       expect(server.team_args_schema).toBeNull();
       expect(server.team_env_schema).toBeNull();
+      expect(server.team_headers_schema).toBeNull();
       expect(server.user_args_schema).toBeNull();
       expect(server.user_env_schema).toBeNull();
+      expect(server.user_headers_schema).toBeNull();
       expect(server.dependencies).toBeNull();
       expect(server.tags).toBeNull();
       expect(server.last_sync_at).toBeNull();
@@ -1114,10 +1141,13 @@ describe('MCP Servers - Update Global', () => {
         // New three-tier configuration fields
         template_args: null,
         template_env: null,
+        template_headers: null,
         team_args_schema: null,
         team_env_schema: null,
+        team_headers_schema: null,
         user_args_schema: null,
         user_env_schema: null,
+        user_headers_schema: null,
         auto_install_new_default_team: undefined
       };
 
@@ -1196,10 +1226,13 @@ describe('MCP Servers - Update Global', () => {
           // New three-tier configuration fields
           template_args: null,
           template_env: null,
+          template_headers: null,
           team_args_schema: null,
           team_env_schema: null,
+          team_headers_schema: null,
           user_args_schema: null,
           user_env_schema: null,
+          user_headers_schema: null,
           auto_install_new_default_team: undefined
         };
 
@@ -1279,10 +1312,13 @@ describe('MCP Servers - Update Global', () => {
         // New three-tier configuration fields
         template_args: null,
         template_env: null,
+        template_headers: null,
         team_args_schema: null,
         team_env_schema: null,
+        team_headers_schema: null,
         user_args_schema: null,
         user_env_schema: null,
+        user_headers_schema: null,
         auto_install_new_default_team: undefined
       };
 
@@ -1335,8 +1371,8 @@ describe('MCP Servers - Update Global', () => {
               default_config: null, dependencies: null, category_id: null, tags: null, status: 'active',
               featured: false, transport_type: null, created_at: '2024-01-01T00:00:00.000Z', updated_at: '2024-01-02T00:00:00.000Z', last_sync_at: null,
               // New three-tier configuration fields
-              template_args: null, template_env: null, team_args_schema: null, team_env_schema: null,
-              user_args_schema: null, user_env_schema: null, auto_install_new_default_team: undefined
+              template_args: null, template_env: null, template_headers: null, team_args_schema: null, team_env_schema: null,
+              team_headers_schema: null, user_args_schema: null, user_env_schema: null, user_headers_schema: null, auto_install_new_default_team: undefined
             };
             mockMcpService.getServerById.mockResolvedValue(existingServer);
             mockMcpService.updateServer.mockResolvedValue(updatedServer);

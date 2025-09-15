@@ -115,7 +115,7 @@ function main() {
     
     console.log(`❌ Found ${violations.length} console statement(s) in backend source code.`);
     console.log('Please use the Fastify logger instead: server.log.info(), server.log.error(), etc.');
-    console.log('See: /Volumes/T9_1/Git/deploy.my/documentation/docs/deploystack/development/backend/logging.mdx\n');
+    console.log('See: https://docs.deploystack.io/development/backend/logging\n');
     console.log('💡 Note: console.* statements are allowed in test files, but not in source code.\n');
     console.log('Build failed due to console statements in source code.');
     

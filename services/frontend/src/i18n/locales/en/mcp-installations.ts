@@ -145,33 +145,21 @@ export default {
       recommendedChoice: 'This is the recommended choice for most users.',
       comingSoonNotice: 'Additional platform options will be available in future releases.',
 
-      local: {
-        name: 'Local Installation',
-        description: 'Install and run the MCP server directly on your local machine',
+      global: {
+        name: 'Global Satellite',
+        description: 'Run the MCP server on our managed global satellite infrastructure',
         features: {
-          direct: 'Direct access to local resources',
-          fast: 'Fastest performance',
-          secure: 'Complete control over data'
+          instant: 'Instant access with zero setup',
+          managed: 'Fully managed and maintained'
         }
       },
 
-      docker: {
-        name: 'Docker Container',
-        description: 'Run the MCP server in an isolated Docker container',
+      team: {
+        name: 'Team Satellite',
+        description: 'Deploy a private satellite behind your corporate network',
         features: {
-          isolated: 'Isolated environment',
-          portable: 'Easy to deploy anywhere',
-          scalable: 'Horizontally scalable'
-        }
-      },
-
-      cloud: {
-        name: 'Cloud Deployment',
-        description: 'Deploy the MCP server to a cloud platform',
-        features: {
-          managed: 'Fully managed infrastructure',
-          scalable: 'Auto-scaling capabilities',
-          redundant: 'High availability'
+          secure: 'Secure behind your firewall',
+          private: 'Private team infrastructure'
         }
       }
     },
@@ -587,8 +575,8 @@ export default {
       },
       values: {
         noDescription: 'No description provided',
-        local: 'local',
-        cloud: 'cloud'
+        global: 'global',
+        team: 'team'
       }
     },
 

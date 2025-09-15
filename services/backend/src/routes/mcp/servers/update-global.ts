@@ -26,6 +26,13 @@ const templateEnvSchema = z.object({
   description: z.string().optional()
 });
 
+const templateHeaderSchema = z.object({
+  name: z.string(),
+  value: z.string().nullable(),
+  locked: z.boolean(),
+  description: z.string().optional()
+});
+
 const teamArgSchema = z.object({
   name: z.string(),
   type: z.enum(['string', 'number', 'boolean', 'secret']),
@@ -38,6 +45,16 @@ const teamArgSchema = z.object({
 });
 
 const teamEnvSchema = z.object({
+  name: z.string(),
+  type: z.enum(['string', 'number', 'boolean', 'secret']),
+  description: z.string(),
+  required: z.boolean(),
+  locked: z.boolean(),
+  default_team_locked: z.boolean(),
+  visible_to_users: z.boolean()
+});
+
+const teamHeaderSchema = z.object({
   name: z.string(),
   type: z.enum(['string', 'number', 'boolean', 'secret']),
   description: z.string(),
@@ -65,13 +82,24 @@ const userEnvSchema = z.object({
   locked: z.boolean()
 });
 
+const userHeaderSchema = z.object({
+  name: z.string(),
+  type: z.enum(['string', 'number', 'boolean', 'secret']),
+  description: z.string(),
+  required: z.boolean(),
+  locked: z.boolean()
+});
+
 const configurationSchema = z.object({
   template_args: z.array(templateArgSchema).optional(),
   template_env: z.array(templateEnvSchema).optional(),
+  template_headers: z.array(templateHeaderSchema).optional(),
   team_args_schema: z.array(teamArgSchema).optional(),
   team_env_schema: z.array(teamEnvSchema).optional(),
+  team_headers_schema: z.array(teamHeaderSchema).optional(),
   user_args_schema: z.array(userArgSchema).optional(),
-  user_env_schema: z.array(userEnvSchema).optional()
+  user_env_schema: z.array(userEnvSchema).optional(),
+  user_headers_schema: z.array(userHeaderSchema).optional()
 });
 
 // Request schema for updating global MCP servers (all fields optional)
@@ -142,10 +170,13 @@ const updateGlobalServerResponseSchema = z.object({
     // Three-tier configuration schema
     template_args: z.array(z.any()).nullable(),
     template_env: z.record(z.string(), z.any()).nullable(),
+    template_headers: z.record(z.string(), z.any()).nullable(),
     team_args_schema: z.array(z.any()).nullable(),
     team_env_schema: z.array(z.any()).nullable(),
+    team_headers_schema: z.array(z.any()).nullable(),
     user_args_schema: z.array(z.any()).nullable(),
     user_env_schema: z.array(z.any()).nullable(),
+    user_headers_schema: z.array(z.any()).nullable(),
     dependencies: z.record(z.string(), z.any()).nullable(),
     category_id: z.string().nullable(),
     tags: z.array(z.string()).nullable(),
@@ -411,10 +442,13 @@ export default async function updateGlobalServer(server: FastifyInstance) {
         // Three-tier configuration schema
         template_args: safeJsonParse(updatedServer.template_args, null),
         template_env: safeJsonParse(updatedServer.template_env, null),
+        template_headers: safeJsonParse(updatedServer.template_headers, null),
         team_args_schema: safeJsonParse(updatedServer.team_args_schema, null),
         team_env_schema: safeJsonParse(updatedServer.team_env_schema, null),
+        team_headers_schema: safeJsonParse(updatedServer.team_headers_schema, null),
         user_args_schema: safeJsonParse(updatedServer.user_args_schema, null),
         user_env_schema: safeJsonParse(updatedServer.user_env_schema, null),
+        user_headers_schema: safeJsonParse(updatedServer.user_headers_schema, null),
         dependencies: safeJsonParse(updatedServer.dependencies, null),
         category_id: updatedServer.category_id || null,
         tags: safeJsonParse(updatedServer.tags, null),

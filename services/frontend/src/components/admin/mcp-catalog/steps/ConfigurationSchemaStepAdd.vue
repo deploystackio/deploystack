@@ -33,7 +33,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 
-import { Plus, Edit, Trash2, MoreHorizontal, Terminal, Users, User, Lock } from 'lucide-vue-next'
+import { Plus, Edit, Trash2, MoreHorizontal, Terminal, Users, User, Lock, Globe } from 'lucide-vue-next'
 import ConfigurationSchemaEnvironmentSection from './ConfigurationSchemaEnvironmentSection.vue'
 
 // Component props interface
@@ -45,6 +45,9 @@ interface Props {
         [key: string]: {
           args?: string[]
           env?: Record<string, string>
+          url?: string
+          type?: string
+          headers?: Record<string, string>
         }
       }
     }
@@ -62,12 +65,13 @@ const { t } = useI18n()
 // Define types for our categorized items
 type ArgCategory = 'template' | 'team' | 'user'
 type EnvCategory = 'team' | 'user'
-type ItemType = 'arg' | 'env'
+type HeaderCategory = 'team' | 'user'
+type ItemType = 'arg' | 'env' | 'header'
 
 interface ConfigItem {
   id: string
   type: ItemType
-  category: ArgCategory | EnvCategory
+  category: ArgCategory | EnvCategory | HeaderCategory
   name: string
   value?: string // For template args
   description: string
@@ -75,16 +79,19 @@ interface ConfigItem {
   required: boolean
   locked: boolean
   default_team_locked?: boolean
-  visible_to_users?: boolean // For env vars only
+  visible_to_users?: boolean // For env vars and headers
 }
 
 interface ConfigurationSchema {
   template_args?: TemplateArg[]
   template_env?: TemplateEnvVar[]
+  template_headers?: TemplateHeaderVar[]
   team_args_schema?: TeamArgsSchema[]
   team_env_schema?: TeamEnvSchema[]
+  team_headers_schema?: TeamHeadersSchema[]
   user_args_schema?: UserArgsSchema[]
   user_env_schema?: UserEnvSchema[]
+  user_headers_schema?: UserHeadersSchema[]
 }
 
 interface TemplateArg {
@@ -94,6 +101,13 @@ interface TemplateArg {
 }
 
 interface TemplateEnvVar {
+  name: string
+  value: string
+  locked: boolean
+  description?: string
+}
+
+interface TemplateHeaderVar {
   name: string
   value: string
   locked: boolean
@@ -119,6 +133,16 @@ interface TeamEnvSchema {
   visible_to_users?: boolean
 }
 
+interface TeamHeadersSchema {
+  name: string
+  type: string
+  description?: string
+  required: boolean
+  locked: boolean
+  default_team_locked?: boolean
+  visible_to_users?: boolean
+}
+
 interface UserArgsSchema {
   name: string
   type: string
@@ -128,6 +152,14 @@ interface UserArgsSchema {
 }
 
 interface UserEnvSchema {
+  name: string
+  type: string
+  description?: string
+  required: boolean
+  locked: boolean
+}
+
+interface UserHeadersSchema {
   name: string
   type: string
   description?: string
@@ -238,6 +270,38 @@ const parseArgsIntelligently = (rawArgs: string[]): ConfigItem[] => {
   return items
 }
 
+// Detect if server config is URL-based vs command-based
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const isUrlBasedServer = (serverConfig: any): boolean => {
+  return !!serverConfig.url && !!serverConfig.type
+}
+
+// Parse headers for URL-based servers
+const parseHeadersIntelligently = (rawHeaders: Record<string, string>): ConfigItem[] => {
+  const items: ConfigItem[] = []
+  
+  Object.entries(rawHeaders).forEach(([key, value]) => {
+    const isPlaceholder = isPlaceholderValue(value)
+    items.push({
+      id: `header_${key}`,
+      type: 'header',
+      category: isPlaceholder ? 'team' : 'user',
+      name: key,
+      value: value,
+      description: isPlaceholder
+        ? `Team-configurable header (placeholder: ${value})`
+        : `Header configuration`,
+      dataType: value.toLowerCase().includes('bearer') || key.toLowerCase().includes('auth') ? 'secret' : 'string',
+      required: true,
+      locked: false,
+      default_team_locked: isPlaceholder,
+      visible_to_users: !isPlaceholder,
+    })
+  })
+  
+  return items
+}
+
 // Parse and categorize items from Claude Desktop config
 const parseFromClaudeConfig = () => {
   const config = props.claudeConfig?.claude_desktop_config?.mcpServers
@@ -248,12 +312,57 @@ const parseFromClaudeConfig = () => {
 
   const items: ConfigItem[] = []
 
-  // Process args with intelligent parsing
-  const rawArgs = serverConfig.args || []
-  const argItems = parseArgsIntelligently(rawArgs)
-  items.push(...argItems)
+  // Check if this is a URL-based server or command-based server
+  if (isUrlBasedServer(serverConfig)) {
+    // Handle URL-based servers (like Context7)
+    
+    // Add URL as a template argument (static)
+    if (serverConfig.url) {
+      items.push({
+        id: 'template_url',
+        type: 'arg',
+        category: 'template',
+        name: 'url',
+        value: serverConfig.url,
+        description: `Server URL: ${serverConfig.url}`,
+        dataType: 'string',
+        required: true,
+        locked: true,
+        default_team_locked: false,
+      })
+    }
+    
+    // Add type as a template argument (static)
+    if (serverConfig.type) {
+      items.push({
+        id: 'template_type',
+        type: 'arg',
+        category: 'template',
+        name: 'type',
+        value: serverConfig.type,
+        description: `Server type: ${serverConfig.type}`,
+        dataType: 'string',
+        required: true,
+        locked: true,
+        default_team_locked: false,
+      })
+    }
+    
+    // Process headers (similar to env vars)
+    const rawHeaders = serverConfig.headers || {}
+    const headerItems = parseHeadersIntelligently(rawHeaders)
+    items.push(...headerItems)
+    
+  } else {
+    // Handle command-based servers (existing logic)
+    
+    // Process args with intelligent parsing
+    const rawArgs = serverConfig.args || []
+    const argItems = parseArgsIntelligently(rawArgs)
+    items.push(...argItems)
+  }
 
-  // Process envs
+  // Process envs (common to both types)
   const rawEnvs = serverConfig.env || {}
   Object.entries(rawEnvs).forEach(([key, value]) => {
     const isPlaceholder = isPlaceholderValue(value)
@@ -364,6 +473,52 @@ const loadFromExistingSchema = () => {
     })
   })
 
+  // Convert template headers
+  ;(schema.template_headers || []).forEach((header, index) => {
+    items.push({
+      id: `template_header_${index}`,
+      type: 'header',
+      category: 'template',
+      name: header.name,
+      value: header.value,
+      description: header.description || '',
+      dataType: 'string',
+      required: true,
+      locked: header.locked,
+      default_team_locked: false,
+    })
+  })
+
+  // Convert team headers schema
+  ;(schema.team_headers_schema || []).forEach((header, index) => {
+    items.push({
+      id: `team_header_${index}`,
+      type: 'header',
+      category: 'team',
+      name: header.name,
+      description: header.description || '',
+      dataType: header.type || 'string',
+      required: header.required || false,
+      locked: header.locked || false,
+      default_team_locked: header.default_team_locked || false,
+      visible_to_users: header.visible_to_users || false,
+    })
+  })
+
+  // Convert user headers schema
+  ;(schema.user_headers_schema || []).forEach((header, index) => {
+    items.push({
+      id: `user_header_${index}`,
+      type: 'header',
+      category: 'user',
+      name: header.name,
+      description: header.description || '',
+      dataType: header.type || 'string',
+      required: header.required || false,
+      locked: header.locked || false,
+    })
+  })
+
   isInternalUpdate.value = true
   localData.value = items
   nextTick(() => {
@@ -376,10 +531,13 @@ const assembleSchemaAndEmit = () => {
   const schema: ConfigurationSchema = {
     template_args: [],
     template_env: [],
+    template_headers: [],
     team_args_schema: [],
     team_env_schema: [],
+    team_headers_schema: [],
     user_args_schema: [],
     user_env_schema: [],
+    user_headers_schema: [],
   }
 
   localData.value.forEach(item => {
@@ -428,6 +586,33 @@ const assembleSchemaAndEmit = () => {
           locked: item.locked
         })
       }
+    } else if (item.type === 'header') {
+      if (item.category === 'template') {
+        schema.template_headers!.push({
+          name: item.name,
+          value: item.value || '',
+          locked: item.locked,
+          description: item.description
+        })
+      } else if (item.category === 'team') {
+        schema.team_headers_schema!.push({
+          name: item.name,
+          type: item.dataType,
+          description: item.description,
+          required: item.required,
+          locked: item.locked,
+          default_team_locked: item.default_team_locked,
+          visible_to_users: item.visible_to_users
+        })
+      } else if (item.category === 'user') {
+        schema.user_headers_schema!.push({
+          name: item.name,
+          type: item.dataType,
+          description: item.description,
+          required: item.required,
+          locked: item.locked
+        })
+      }
     }
   })
 
@@ -449,6 +634,10 @@ const environmentItems = computed(() => {
   return localData.value.filter(item => item.type === 'env')
 })
 
+const headerItems = computed(() => {
+  return localData.value.filter(item => item.type === 'header')
+})
+
 const isFormValid = computed(() => {
   return formDataLocal.value.name.trim() !== '' && Object.keys(formErrors.value).length === 0
 })
@@ -459,7 +648,13 @@ const openAddModal = (type: ItemType) => {
   editingIndex.value = -1
   resetForm()
   formDataLocal.value.type = type
-  formDataLocal.value.category = type === 'arg' ? 'template' : 'team'
+  if (type === 'arg') {
+    formDataLocal.value.category = 'template'
+  } else if (type === 'env') {
+    formDataLocal.value.category = 'team'
+  } else if (type === 'header') {
+    formDataLocal.value.category = 'team'
+  }
   isModalOpen.value = true
 }
 
@@ -572,16 +767,31 @@ const getCategoryInfo = (category: string) => {
 // Get modal title
 const modalTitle = computed(() => {
   const modalKey = modalMode.value === 'add' ? 'add' : 'edit'
-  const typeKey = formDataLocal.value.type === 'arg' ? 'argument' : 'environment'
+  let typeKey = 'argument'
+  if (formDataLocal.value.type === 'env') {
+    typeKey = 'environment'
+  } else if (formDataLocal.value.type === 'header') {
+    typeKey = 'header'
+  }
   return t(`mcpCatalog.form.configurationSchema.modal.${modalKey}.${typeKey}`)
 })
 
 // Get available category options for current type
 const availableCategoryOptions = computed(() => {
-  return formDataLocal.value.type === 'arg' ? argCategoryOptions : [
-    { value: 'team', label: computed(() => t('mcpCatalog.form.configurationSchema.categories.team')), icon: Users, color: 'green' },
-    { value: 'user', label: computed(() => t('mcpCatalog.form.configurationSchema.categories.user')), icon: User, color: 'purple' },
-  ]
+  if (formDataLocal.value.type === 'arg') {
+    return argCategoryOptions
+  } else if (formDataLocal.value.type === 'env') {
+    return [
+      { value: 'team', label: computed(() => t('mcpCatalog.form.configurationSchema.categories.team')), icon: Users, color: 'green' },
+      { value: 'user', label: computed(() => t('mcpCatalog.form.configurationSchema.categories.user')), icon: User, color: 'purple' },
+    ]
+  } else if (formDataLocal.value.type === 'header') {
+    return [
+      { value: 'team', label: computed(() => t('mcpCatalog.form.configurationSchema.categories.team')), icon: Users, color: 'green' },
+      { value: 'user', label: computed(() => t('mcpCatalog.form.configurationSchema.categories.user')), icon: User, color: 'purple' },
+    ]
+  }
+  return argCategoryOptions
 })
 
 // Environment Variables event handlers
@@ -602,6 +812,27 @@ const handleEnvDelete = (index: number) => {
   const envItem = envItems[index]
   if (!envItem) return
   const globalIndex = localData.value.findIndex(item => item.id === envItem.id)
+  handleDelete(globalIndex)
+}
+
+// Headers event handlers
+const handleHeaderAdd = () => {
+  openAddModal('header')
+}
+
+const handleHeaderEdit = (index: number) => {
+  const headerItems_ = headerItems.value
+  const headerItem = headerItems_[index]
+  if (!headerItem) return
+  const globalIndex = localData.value.findIndex(item => item.id === headerItem.id)
+  openEditModal(globalIndex)
+}
+
+const handleHeaderDelete = (index: number) => {
+  const headerItems_ = headerItems.value
+  const headerItem = headerItems_[index]
+  if (!headerItem) return
+  const globalIndex = localData.value.findIndex(item => item.id === headerItem.id)
   handleDelete(globalIndex)
 }
 
@@ -769,6 +1000,121 @@ watch(localData, () => {
       @delete="handleEnvDelete"
     />
 
+    <!-- Headers Configuration Section -->
+    <div class="space-y-4" v-if="headerItems.length > 0 || localData.some(item => item.type === 'header')">
+      <div>
+        <h4 class="text-md font-medium">{{ $t('mcpCatalog.form.configurationSchema.headers.title') }}</h4>
+        <p class="text-sm text-muted-foreground">
+          {{ $t('mcpCatalog.form.configurationSchema.headers.description') }}
+        </p>
+      </div>
+
+      <!-- Header with Add Button -->
+      <div class="flex items-center justify-between">
+        <div></div>
+        <Button
+          type="button"
+          @click="handleHeaderAdd"
+          class="flex items-center gap-2"
+        >
+          <Plus class="h-4 w-4" />
+          {{ $t('mcpCatalog.form.configurationSchema.headers.addButton') }}
+        </Button>
+      </div>
+
+      <!-- Headers Display with Edit Actions -->
+      <div v-if="headerItems.length > 0" class="overflow-hidden">
+        <table class="w-full text-left">
+          <thead class="sr-only">
+            <tr>
+              <th>Name</th>
+              <th class="hidden sm:table-cell">Properties</th>
+              <th class="hidden sm:table-cell">Details</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(item) in headerItems" :key="item.id">
+              <td class="relative py-5 pr-6">
+                <div class="flex gap-x-6">
+                  <div class="flex-auto">
+                    <div class="flex items-start gap-x-3">
+                      <div class="text-sm/6 font-semibold text-gray-900">
+                        {{ item.name }}
+                      </div>
+                    </div>
+                    <Badge :class="`bg-${getCategoryInfo(item.category).color}-100 text-${getCategoryInfo(item.category).color}-800 mt-1`">
+                      {{ getCategoryInfo(item.category).label }}
+                    </Badge>
+                    <div v-if="item.value && item.value !== item.name" class="mt-1 font-mono text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded inline-block">
+                      {{ item.value }}
+                    </div>
+                  </div>
+                </div>
+                <div class="absolute right-full bottom-0 h-px w-screen bg-gray-100" />
+                <div class="absolute bottom-0 left-0 h-px w-screen bg-gray-100" />
+              </td>
+              <td class="hidden py-5 pr-6 sm:table-cell">
+                <div class="space-y-1">
+                  <div class="text-xs/5 text-gray-500">
+                    <span class="font-medium">{{ $t('mcpCatalog.form.configurationSchema.table.properties.type') }}</span> {{ item.dataType }}
+                  </div>
+                  <div v-if="item.required" class="text-xs/5 text-gray-500">
+                    <span class="font-medium">{{ $t('mcpCatalog.form.configurationSchema.table.properties.required') }}</span> {{ $t('mcpCatalog.form.configurationSchema.table.properties.yes') }}
+                  </div>
+                  <div v-if="item.locked" class="text-xs/5 text-gray-500 flex items-center gap-1">
+                    <Lock class="w-3 h-3" />
+                    <span class="font-medium">{{ $t('mcpCatalog.form.configurationSchema.table.properties.locked') }}</span>
+                  </div>
+                </div>
+              </td>
+              <td class="hidden py-5 pr-6 sm:table-cell">
+                <div v-if="item.description" class="text-sm/6 text-gray-900">
+                  {{ item.description }}
+                </div>
+              </td>
+              <td class="py-5 text-right">
+                <div class="flex justify-end">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger as-child>
+                      <Button variant="ghost" class="h-8 w-8 p-0">
+                        <span class="sr-only">{{ $t('mcpCatalog.form.configurationSchema.table.actions.openMenu') }}</span>
+                        <MoreHorizontal class="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem @click="handleHeaderEdit(headerItems.findIndex(i => i.id === item.id))">
+                        <Edit class="mr-2 h-4 w-4" />
+                        {{ $t('mcpCatalog.form.configurationSchema.table.actions.edit') }}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        @click="handleHeaderDelete(headerItems.findIndex(i => i.id === item.id))"
+                        class="text-red-600 focus:text-red-600"
+                      >
+                        <Trash2 class="mr-2 h-4 w-4" />
+                        {{ $t('mcpCatalog.form.configurationSchema.table.actions.delete') }}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Headers Empty State -->
+      <div v-else class="text-center py-12">
+        <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gray-100 mb-4">
+          <Globe class="h-6 w-6 text-gray-400" />
+        </div>
+        <h3 class="text-sm font-medium text-gray-900 mb-2">{{ $t('mcpCatalog.form.configurationSchema.headers.emptyState.title') }}</h3>
+        <p class="text-sm text-gray-500 max-w-sm mx-auto">
+          {{ $t('mcpCatalog.form.configurationSchema.headers.emptyState.description') }}
+        </p>
+      </div>
+    </div>
+
     <!-- Add/Edit Modal -->
     <AlertDialog :open="isModalOpen" @update:open="(value) => isModalOpen = value">
       <AlertDialogContent class="sm:max-w-[600px]">
@@ -780,15 +1126,27 @@ watch(localData, () => {
         </AlertDialogHeader>
 
         <form @submit.prevent="handleSubmit" class="space-y-4">
-          <!-- Argument/Environment Variable Name -->
+          <!-- Argument/Environment Variable/Header Name -->
           <div class="space-y-2">
             <Label for="item-name">
-              {{ formDataLocal.type === 'arg' ? $t('mcpCatalog.form.configurationSchema.modal.fields.argument.label') : $t('mcpCatalog.form.configurationSchema.modal.fields.name.label') }}
+              {{ 
+                formDataLocal.type === 'arg' 
+                  ? $t('mcpCatalog.form.configurationSchema.modal.fields.argument.label') 
+                  : formDataLocal.type === 'env'
+                    ? $t('mcpCatalog.form.configurationSchema.modal.fields.name.label')
+                    : $t('mcpCatalog.form.configurationSchema.modal.fields.headerName.label')
+              }}
             </Label>
             <Input
               id="item-name"
               v-model="formDataLocal.name"
-              :placeholder="formDataLocal.type === 'arg' ? $t('mcpCatalog.form.configurationSchema.modal.fields.argument.placeholder') : $t('mcpCatalog.form.configurationSchema.modal.fields.name.placeholders.environment')"
+              :placeholder="
+                formDataLocal.type === 'arg' 
+                  ? $t('mcpCatalog.form.configurationSchema.modal.fields.argument.placeholder') 
+                  : formDataLocal.type === 'env'
+                    ? $t('mcpCatalog.form.configurationSchema.modal.fields.name.placeholders.environment')
+                    : $t('mcpCatalog.form.configurationSchema.modal.fields.name.placeholders.header')
+              "
               :class="{ 'border-destructive': formErrors.name }"
               class="font-mono"
               required
@@ -871,7 +1229,7 @@ watch(localData, () => {
               <Label for="item-default-team-locked">{{ $t('mcpCatalog.form.configurationSchema.modal.fields.options.defaultTeamLocked') }}</Label>
             </div>
 
-            <div class="flex items-center space-x-2" v-if="formDataLocal.type === 'env' && formDataLocal.category === 'team'">
+            <div class="flex items-center space-x-2" v-if="(formDataLocal.type === 'env' || formDataLocal.type === 'header') && formDataLocal.category === 'team'">
               <Switch
                 id="item-visible-to-users"
                 :model-value="formDataLocal.visible_to_users"

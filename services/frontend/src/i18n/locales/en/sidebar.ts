@@ -6,7 +6,6 @@ export default {
       mcpServer: 'MCP Server',
       provider: 'Provider',
       credentials: 'Credentials',
-      devices: 'Devices',
     },
     adminArea: {
       title: 'Admin Area',
@@ -14,6 +13,7 @@ export default {
       users: 'Users',
       mcpCatalog: 'MCP Catalog',
       mcpCategories: 'MCP Categories',
+      satellites: 'Satellites',
     },
     teams: {
       title: 'Teams',

@@ -45,6 +45,8 @@ export const ROLE_DEFINITIONS = {
     'preferences.view',
     'preferences.edit',
     'gateway.config:read',
+    'satellites.view',
+    'satellites.manage',
   ],
   global_user: [
     'profile.view',

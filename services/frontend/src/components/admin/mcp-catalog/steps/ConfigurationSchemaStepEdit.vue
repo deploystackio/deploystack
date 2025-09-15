@@ -36,7 +36,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 
-import { Plus, Edit, Trash2, MoreHorizontal, Terminal, Users, User, Lock } from 'lucide-vue-next'
+import { Plus, Edit, Trash2, MoreHorizontal, Terminal, Users, User, Lock, Globe } from 'lucide-vue-next'
 import ConfigurationSchemaEnvironmentSection from './ConfigurationSchemaEnvironmentSection.vue'
 
 const { t } = useI18n()
@@ -44,16 +44,18 @@ const eventBus = useEventBus()
 
 // Storage keys for edit mode
 const STORAGE_KEY = 'edit_configuration_schema'
+const TECHNICAL_STORAGE_KEY = 'edit_technical_data'
 
 // Define types for our categorized items
 type ArgCategory = 'template' | 'team' | 'user'
 type EnvCategory = 'team' | 'user'
-type ItemType = 'arg' | 'env'
+type HeaderCategory = 'template' | 'team' | 'user'
+type ItemType = 'arg' | 'env' | 'header'
 
 interface ConfigItem {
   id: string
   type: ItemType
-  category: ArgCategory | EnvCategory
+  category: ArgCategory | EnvCategory | HeaderCategory
   name: string
   value?: string // For template args
   description: string
@@ -67,10 +69,13 @@ interface ConfigItem {
 interface ConfigurationSchema {
   template_args?: TemplateArg[]
   template_env?: TemplateEnvVar[]
+  template_headers?: TemplateHeaderVar[]
   team_args_schema?: TeamArgsSchema[]
   team_env_schema?: TeamEnvSchema[]
+  team_headers_schema?: TeamHeadersSchema[]
   user_args_schema?: UserArgsSchema[]
   user_env_schema?: UserEnvSchema[]
+  user_headers_schema?: UserHeadersSchema[]
 }
 
 interface TemplateArg {
@@ -80,6 +85,13 @@ interface TemplateArg {
 }
 
 interface TemplateEnvVar {
+  name: string
+  value: string
+  locked: boolean
+  description?: string
+}
+
+interface TemplateHeaderVar {
   name: string
   value: string
   locked: boolean
@@ -105,6 +117,16 @@ interface TeamEnvSchema {
   visible_to_users?: boolean
 }
 
+interface TeamHeadersSchema {
+  name: string
+  type: string
+  description?: string
+  required: boolean
+  locked: boolean
+  default_team_locked?: boolean
+  visible_to_users?: boolean
+}
+
 interface UserArgsSchema {
   name: string
   type: string
@@ -121,11 +143,20 @@ interface UserEnvSchema {
   locked: boolean
 }
 
+interface UserHeadersSchema {
+  name: string
+  type: string
+  description?: string
+  required: boolean
+  locked: boolean
+}
+
 // Local reactive data - storage-first approach
 const localData = ref<ConfigItem[]>([])
 
 // Flag to prevent recursive updates
 const isUpdatingFromStorage = ref(false)
+
 
 // Modal state
 const isModalOpen = ref(false)
@@ -151,6 +182,12 @@ const formErrors = ref<Record<string, string>>({})
 
 // Configuration levels
 const argCategoryOptions = [
+  { value: 'template', label: computed(() => t('mcpCatalog.form.configurationSchema.categories.template')), icon: Terminal, color: 'blue' },
+  { value: 'team', label: computed(() => t('mcpCatalog.form.configurationSchema.categories.team')), icon: Users, color: 'green' },
+  { value: 'user', label: computed(() => t('mcpCatalog.form.configurationSchema.categories.user')), icon: User, color: 'purple' },
+]
+
+const headerCategoryOptions = [
   { value: 'template', label: computed(() => t('mcpCatalog.form.configurationSchema.categories.template')), icon: Terminal, color: 'blue' },
   { value: 'team', label: computed(() => t('mcpCatalog.form.configurationSchema.categories.team')), icon: Users, color: 'green' },
   { value: 'user', label: computed(() => t('mcpCatalog.form.configurationSchema.categories.user')), icon: User, color: 'purple' },
@@ -189,6 +226,22 @@ const loadFromStorageSchema = () => {
     })
   })
 
+  // Convert template headers
+  ;(storedSchema.template_headers || []).forEach((header, index) => {
+    items.push({
+      id: `template_header_${index}`,
+      type: 'header',
+      category: 'template',
+      name: header.name,
+      value: header.value,
+      description: header.description || `Static header: ${header.name}`,
+      dataType: 'string',
+      required: true,
+      locked: header.locked,
+      default_team_locked: false,
+    })
+  })
+
   // Convert team args schema - these should display the actual argument values
   ;(storedSchema.team_args_schema || []).forEach((arg, index) => {
     items.push({
@@ -204,6 +257,22 @@ const loadFromStorageSchema = () => {
     })
   })
 
+  // Convert team headers schema
+  ;(storedSchema.team_headers_schema || []).forEach((header, index) => {
+    items.push({
+      id: `team_header_${index}`,
+      type: 'header',
+      category: 'team',
+      name: header.name,
+      description: header.description || '',
+      dataType: header.type || 'string',
+      required: header.required || false,
+      locked: header.locked || false,
+      default_team_locked: header.default_team_locked || false,
+      visible_to_users: header.visible_to_users || false,
+    })
+  })
+
   // Convert user args schema (these are manually added, not from original parsing)
   ;(storedSchema.user_args_schema || []).forEach((arg, index) => {
     items.push({
@@ -215,6 +284,20 @@ const loadFromStorageSchema = () => {
       dataType: arg.type || 'string',
       required: arg.required || false,
       locked: arg.locked || false,
+    })
+  })
+
+  // Convert user headers schema
+  ;(storedSchema.user_headers_schema || []).forEach((header, index) => {
+    items.push({
+      id: `user_header_${index}`,
+      type: 'header',
+      category: 'user',
+      name: header.name,
+      description: header.description || '',
+      dataType: header.type || 'string',
+      required: header.required || false,
+      locked: header.locked || false,
     })
   })
 
@@ -248,7 +331,6 @@ const loadFromStorageSchema = () => {
     })
   })
 
-
   localData.value = items
 }
 
@@ -257,10 +339,13 @@ const assembleSchemaAndSave = () => {
   const schema: ConfigurationSchema = {
     template_args: [],
     template_env: [],
+    template_headers: [],
     team_args_schema: [],
     team_env_schema: [],
+    team_headers_schema: [],
     user_args_schema: [],
     user_env_schema: [],
+    user_headers_schema: [],
   }
 
   localData.value.forEach(item => {
@@ -309,6 +394,33 @@ const assembleSchemaAndSave = () => {
           locked: item.locked
         })
       }
+    } else if (item.type === 'header') {
+      if (item.category === 'template') {
+        schema.template_headers!.push({
+          name: item.name,
+          value: item.value || '',
+          locked: item.locked,
+          description: item.description
+        })
+      } else if (item.category === 'team') {
+        schema.team_headers_schema!.push({
+          name: item.name,
+          type: item.dataType,
+          description: item.description,
+          required: item.required,
+          locked: item.locked,
+          default_team_locked: item.default_team_locked,
+          visible_to_users: item.visible_to_users
+        })
+      } else if (item.category === 'user') {
+        schema.user_headers_schema!.push({
+          name: item.name,
+          type: item.dataType,
+          description: item.description,
+          required: item.required,
+          locked: item.locked
+        })
+      }
     }
   })
 
@@ -326,6 +438,20 @@ const environmentItems = computed(() => {
   return localData.value.filter(item => item.type === 'env')
 })
 
+const headerItems = computed(() => {
+  return localData.value.filter(item => item.type === 'header')
+})
+
+// Check if transport type supports HTTP headers
+const isHttpTransport = computed(() => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const technicalData = eventBus.getState(TECHNICAL_STORAGE_KEY) as any
+  if (!technicalData) return false
+
+  const transportType = technicalData.transport_type
+  return transportType === 'http' || transportType === 'sse' || transportType === 'streamableHttp'
+})
+
 const isFormValid = computed(() => {
   return formDataLocal.value.name.trim() !== '' && Object.keys(formErrors.value).length === 0
 })
@@ -336,7 +462,16 @@ const openAddModal = (type: ItemType) => {
   editingIndex.value = -1
   resetForm()
   formDataLocal.value.type = type
-  formDataLocal.value.category = type === 'arg' ? 'template' : 'team'
+
+  // Set default category based on type
+  if (type === 'arg') {
+    formDataLocal.value.category = 'template'
+  } else if (type === 'env') {
+    formDataLocal.value.category = 'team'
+  } else if (type === 'header') {
+    formDataLocal.value.category = 'template'
+  }
+
   isModalOpen.value = true
 }
 
@@ -405,9 +540,14 @@ const handleSubmit = () => {
     id: formDataLocal.value.id || `${formDataLocal.value.type}_${Date.now()}`
   }
 
-  // For template args, set both name and value to the same argument value
+  // For template args and headers, set both name and value to the same value
   if (newItem.type === 'arg' && newItem.category === 'template') {
     newItem.value = newItem.name
+  } else if (newItem.type === 'header' && newItem.category === 'template') {
+    // For template headers, if no value is provided, use an empty string
+    if (!newItem.value) {
+      newItem.value = ''
+    }
   }
 
   if (modalMode.value === 'add') {
@@ -459,7 +599,12 @@ const getCategoryInfo = (category: string) => {
 // Get modal title
 const modalTitle = computed(() => {
   const modalKey = modalMode.value === 'add' ? 'add' : 'edit'
-  const typeKey = formDataLocal.value.type === 'arg' ? 'argument' : 'environment'
+  let typeKey = 'argument'
+  if (formDataLocal.value.type === 'env') {
+    typeKey = 'environment'
+  } else if (formDataLocal.value.type === 'header') {
+    typeKey = 'header'
+  }
   return t(`mcpCatalog.form.configurationSchema.modal.${modalKey}.${typeKey}`)
 })
 
@@ -484,12 +629,44 @@ const handleEnvDelete = (index: number) => {
   handleDelete(globalIndex)
 }
 
+// Headers event handlers
+const handleHeaderAdd = () => {
+  if (!isHttpTransport.value) {
+    console.warn('Headers are only available for HTTP transport types')
+    return
+  }
+  openAddModal('header')
+}
+
+const handleHeaderEdit = (index: number) => {
+  const headerItems = localData.value.filter(item => item.type === 'header')
+  const headerItem = headerItems[index]
+  if (!headerItem) return
+  const globalIndex = localData.value.findIndex(item => item.id === headerItem.id)
+  openEditModal(globalIndex)
+}
+
+const handleHeaderDelete = (index: number) => {
+  const headerItems = localData.value.filter(item => item.type === 'header')
+  const headerItem = headerItems[index]
+  if (!headerItem) return
+  const globalIndex = localData.value.findIndex(item => item.id === headerItem.id)
+  handleDelete(globalIndex)
+}
+
 // Get available category options for current type
 const availableCategoryOptions = computed(() => {
-  return formDataLocal.value.type === 'arg' ? argCategoryOptions : [
-    { value: 'team', label: computed(() => t('mcpCatalog.form.configurationSchema.categories.team')), icon: Users, color: 'green' },
-    { value: 'user', label: computed(() => t('mcpCatalog.form.configurationSchema.categories.user')), icon: User, color: 'purple' },
-  ]
+  if (formDataLocal.value.type === 'arg') {
+    return argCategoryOptions
+  } else if (formDataLocal.value.type === 'env') {
+    return [
+      { value: 'team', label: computed(() => t('mcpCatalog.form.configurationSchema.categories.team')), icon: Users, color: 'green' },
+      { value: 'user', label: computed(() => t('mcpCatalog.form.configurationSchema.categories.user')), icon: User, color: 'purple' },
+    ]
+  } else if (formDataLocal.value.type === 'header' && isHttpTransport.value) {
+    return headerCategoryOptions
+  }
+  return []
 })
 
 // Fresh data loading on step entry
@@ -502,6 +679,12 @@ const refreshDataOnStepEntry = () => {
   if (extractedEnvVars && extractedEnvVars.length > 0) {
     handleTechnicalEnvVarsUpdate({ envVars: extractedEnvVars })
   }
+
+  // Load persisted headers from TechnicalStep - DISABLED
+  // const extractedHeaders = eventBus.getState<Record<string, string>>('technical_extracted_headers_edit')
+  // if (extractedHeaders && Object.keys(extractedHeaders).length > 0 && isHttpTransport.value) {
+  //   handleTechnicalHeadersUpdate({ headers: extractedHeaders })
+  // }
 }
 
 // Listen for step changes
@@ -546,6 +729,14 @@ const handleTechnicalEnvVarsUpdate = (data: { envVars: string[] }) => {
   }
 }
 
+// Handle Headers sync from TechnicalStep
+const handleTechnicalHeadersUpdate = () => {
+  // DISABLED: Don't automatically add headers from technical step
+  // Headers should be managed through the database schema only
+  // This prevents conflicts with existing team/user headers
+  return
+}
+
 onMounted(() => {
   // Initialize with current storage data
   loadFromStorageSchema()
@@ -556,21 +747,34 @@ onMounted(() => {
   // Listen for environment variables updates from TechnicalStep
   eventBus.on('technical-env-vars-updated', handleTechnicalEnvVarsUpdate)
 
+  // Listen for headers updates from TechnicalStep
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  eventBus.on('technical-headers-updated', handleTechnicalHeadersUpdate as any)
+
   // Load persisted env vars immediately on mount
   const extractedEnvVars = eventBus.getState<string[]>('technical_extracted_env_vars_edit')
   if (extractedEnvVars && extractedEnvVars.length > 0) {
     handleTechnicalEnvVarsUpdate({ envVars: extractedEnvVars })
   }
+
+  // Load persisted headers immediately on mount - DISABLED
+  // const extractedHeaders = eventBus.getState<Record<string, string>>('technical_extracted_headers_edit')
+  // if (extractedHeaders && Object.keys(extractedHeaders).length > 0 && isHttpTransport.value) {
+  //   handleTechnicalHeadersUpdate({ headers: extractedHeaders })
+  // }
 })
 
 onUnmounted(() => {
   eventBus.off('mcp-form-step-changed', handleStepChange)
   eventBus.off('technical-env-vars-updated', handleTechnicalEnvVarsUpdate)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  eventBus.off('technical-headers-updated', handleTechnicalHeadersUpdate as any)
 })
 </script>
 
 <template>
   <div class="space-y-6">
+
     <!-- Arguments Section -->
     <div class="space-y-4">
       <div>
@@ -686,6 +890,122 @@ onUnmounted(() => {
       </div>
     </div>
 
+    <!-- Headers Section -->
+    <div v-if="isHttpTransport" class="space-y-4">
+      <div>
+        <h4 class="text-md font-medium">{{ $t('mcpCatalog.form.configurationSchema.headers.title') || 'HTTP Headers' }}</h4>
+        <p class="text-sm text-muted-foreground">
+          {{ $t('mcpCatalog.form.configurationSchema.headers.description') || 'Configure HTTP headers for your MCP server endpoints.' }}
+        </p>
+      </div>
+
+
+      <!-- Header with Add Button -->
+      <div class="flex items-center justify-between">
+        <div></div>
+        <Button
+          type="button"
+          @click="handleHeaderAdd"
+          class="flex items-center gap-2"
+        >
+          <Plus class="h-4 w-4" />
+          {{ $t('mcpCatalog.form.configurationSchema.headers.addButton') || 'Add Header' }}
+        </Button>
+      </div>
+
+      <!-- Headers Display with Edit Actions -->
+      <div v-if="headerItems.length > 0" class="overflow-hidden">
+        <table class="w-full text-left">
+          <thead class="sr-only">
+            <tr>
+              <th>Name</th>
+              <th class="hidden sm:table-cell">Properties</th>
+              <th class="hidden sm:table-cell">Details</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(item) in headerItems" :key="item.id">
+              <td class="relative py-5 pr-6">
+                <div class="flex gap-x-6">
+                  <div class="flex-auto">
+                    <div class="flex items-start gap-x-3">
+                      <div class="text-sm/6 font-semibold text-gray-900">
+                        {{ item.name }}
+                      </div>
+                    </div>
+                    <Badge :class="`bg-${getCategoryInfo(item.category).color}-100 text-${getCategoryInfo(item.category).color}-800 mt-1`">
+                      {{ getCategoryInfo(item.category).label }}
+                    </Badge>
+                    <div v-if="item.value && item.category === 'template'" class="mt-1 font-mono text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded inline-block">
+                      {{ item.value }}
+                    </div>
+                  </div>
+                </div>
+                <div class="absolute right-full bottom-0 h-px w-screen bg-gray-100" />
+                <div class="absolute bottom-0 left-0 h-px w-screen bg-gray-100" />
+              </td>
+              <td class="hidden py-5 pr-6 sm:table-cell">
+                <div class="space-y-1">
+                  <div class="text-xs/5 text-gray-500">
+                    <span class="font-medium">{{ $t('mcpCatalog.form.configurationSchema.table.properties.type') }}</span> {{ item.dataType }}
+                  </div>
+                  <div v-if="item.required" class="text-xs/5 text-gray-500">
+                    <span class="font-medium">{{ $t('mcpCatalog.form.configurationSchema.table.properties.required') }}</span> {{ $t('mcpCatalog.form.configurationSchema.table.properties.yes') }}
+                  </div>
+                  <div v-if="item.locked" class="text-xs/5 text-gray-500 flex items-center gap-1">
+                    <Lock class="w-3 h-3" />
+                    <span class="font-medium">{{ $t('mcpCatalog.form.configurationSchema.table.properties.locked') }}</span>
+                  </div>
+                </div>
+              </td>
+              <td class="hidden py-5 pr-6 sm:table-cell">
+                <div v-if="item.description" class="text-sm/6 text-gray-900">
+                  {{ item.description }}
+                </div>
+              </td>
+              <td class="py-5 text-right">
+                <div class="flex justify-end">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger as-child>
+                      <Button variant="ghost" class="h-8 w-8 p-0">
+                        <span class="sr-only">{{ $t('mcpCatalog.form.configurationSchema.table.actions.openMenu') }}</span>
+                        <MoreHorizontal class="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem @click="handleHeaderEdit(headerItems.findIndex(h => h.id === item.id))">
+                        <Edit class="mr-2 h-4 w-4" />
+                        {{ $t('mcpCatalog.form.configurationSchema.table.actions.edit') }}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        @click="handleHeaderDelete(headerItems.findIndex(h => h.id === item.id))"
+                        class="text-red-600 focus:text-red-600"
+                      >
+                        <Trash2 class="mr-2 h-4 w-4" />
+                        {{ $t('mcpCatalog.form.configurationSchema.table.actions.delete') }}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Headers Empty State -->
+      <div v-else class="text-center py-12">
+        <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gray-100 mb-4">
+          <Globe class="h-6 w-6 text-gray-400" />
+        </div>
+        <h3 class="text-sm font-medium text-gray-900 mb-2">{{ $t('mcpCatalog.form.configurationSchema.headers.emptyState.title') || 'No headers configured' }}</h3>
+        <p class="text-sm text-gray-500 max-w-sm mx-auto">
+          {{ $t('mcpCatalog.form.configurationSchema.headers.emptyState.description') || 'Add HTTP headers like Authorization or custom headers for your MCP server.' }}
+        </p>
+      </div>
+    </div>
+
     <!-- Environment Variables Section - Now using shared component -->
     <ConfigurationSchemaEnvironmentSection
       :items="environmentItems"
@@ -706,13 +1026,17 @@ onUnmounted(() => {
         </AlertDialogHeader>
 
         <form @submit.prevent="handleSubmit" class="space-y-4">
-          <!-- Argument -->
+          <!-- Name Field -->
           <div class="space-y-2">
-            <Label for="item-argument">{{ formDataLocal.type === 'arg' ? 'Argument' : 'Environment Variable' }}</Label>
+            <Label for="item-name">
+              <span v-if="formDataLocal.type === 'arg'">Argument</span>
+              <span v-else-if="formDataLocal.type === 'env'">Environment Variable</span>
+              <span v-else-if="formDataLocal.type === 'header'">Header Name</span>
+            </Label>
             <Input
-              id="item-argument"
+              id="item-name"
               v-model="formDataLocal.name"
-              :placeholder="formDataLocal.type === 'arg' ? 'e.g. --api-key or -y' : 'e.g. API_KEY'"
+              :placeholder="formDataLocal.type === 'arg' ? 'e.g. --api-key or -y' : formDataLocal.type === 'env' ? 'e.g. API_KEY' : 'e.g. Authorization'"
               :class="{ 'border-destructive': formErrors.name }"
               class="font-mono"
               required
@@ -720,6 +1044,17 @@ onUnmounted(() => {
             <div v-if="formErrors.name" class="text-sm text-destructive">
               {{ formErrors.name }}
             </div>
+          </div>
+
+          <!-- Value Field (only for template category) -->
+          <div v-if="formDataLocal.category === 'template' && formDataLocal.type === 'header'" class="space-y-2">
+            <Label for="item-value">Header Value</Label>
+            <Input
+              id="item-value"
+              v-model="formDataLocal.value"
+              :placeholder="'e.g. Bearer YOUR_TOKEN'"
+              class="font-mono"
+            />
           </div>
 
           <!-- Category -->

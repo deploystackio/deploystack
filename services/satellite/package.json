@@ -1,0 +1,43 @@
+{
+  "name": "@deploystack/satellite",
+  "version": "0.1.0",
+  "description": "DeployStack Satellite - MCP Server Management Service",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "nodemon",
+    "build": "tsc && webpack --mode=production",
+    "build:dev": "tsc && webpack --mode=development",
+    "build:watch": "tsc && webpack --mode=development --watch",
+    "start": "node --env-file=.env dist/index.js",
+    "lint": "eslint --config eslint.config.ts 'src/**/*.ts' --fix",
+    "check:no-console": "node scripts/check-no-console.js",
+    "release": "release-it --config=.release-it.js"
+  },
+  "dependencies": {
+    "@fastify/http-proxy": "^10.0.0",
+    "@fastify/swagger": "^9.5.1",
+    "@fastify/swagger-ui": "^5.2.3",
+    "dotenv": "^16.4.5",
+    "fastify": "^5.4.0",
+    "pino": "^9.9.0",
+    "pino-pretty": "^13.1.1"
+  },
+  "devDependencies": {
+    "@release-it/conventional-changelog": "^10.0.1",
+    "@types/node": "^20.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.36.0",
+    "@typescript-eslint/parser": "^8.39.1",
+    "copy-webpack-plugin": "^13.0.1",
+    "eslint": "^9.34.0",
+    "node-loader": "^2.1.0",
+    "nodemon": "^3.1.10",
+    "release-it": "^19.0.4",
+    "ts-loader": "^9.5.4",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.2",
+    "typescript-eslint": "^8.42.0",
+    "webpack": "^5.101.3",
+    "webpack-cli": "^6.0.1",
+    "webpack-node-externals": "^3.0.0"
+  }
+}

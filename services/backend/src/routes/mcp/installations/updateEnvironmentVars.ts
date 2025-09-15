@@ -2,6 +2,7 @@ import { type FastifyInstance } from 'fastify';
 import { requireAuthenticationAny, requireOAuthScope } from '../../../middleware/oauthMiddleware';
 import { requireTeamPermission } from '../../../middleware/roleMiddleware';
 import { McpInstallationService } from '../../../services/mcpInstallationService';
+import { SatelliteCommandService } from '../../../services/satelliteCommandService';
 import { getDb } from '../../../db';
 import {
   TEAM_AND_INSTALLATION_PARAMS_SCHEMA,
@@ -105,6 +106,26 @@ export default async function updateEnvironmentVariablesRoute(server: FastifyIns
         userId,
         authType
       }, 'Successfully updated MCP installation environment variables');
+
+      // Create satellite commands for immediate notification (3-second response goal)
+      try {
+        const satelliteCommandService = new SatelliteCommandService(db, request.log);
+        const commands = await satelliteCommandService.notifyMcpUpdate(
+          installationId,
+          teamId,
+          userId
+        );
+        
+        request.log.info({
+          operation: 'update_mcp_installation_environment_variables',
+          installationId,
+          commandsCreated: commands.length,
+          satelliteIds: commands.map(c => c.satellite_id)
+        }, 'Satellite commands created for MCP installation environment variables update');
+      } catch (commandError) {
+        request.log.error(commandError, `Failed to create satellite commands for installation environment variables update ${installationId}:`);
+        // Don't fail update if command creation fails
+      }
 
       const successResponse: InstallationUpdateSuccessResponse = {
         success: true,

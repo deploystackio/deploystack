@@ -137,18 +137,6 @@ const routes = [
     meta: { requiresSetup: true },
   },
   {
-    path: '/devices',
-    name: 'Devices',
-    component: () => import('../views/devices/index.vue'),
-    meta: { requiresSetup: true },
-  },
-  {
-    path: '/devices/view/:id',
-    name: 'DeviceView',
-    component: () => import('../views/devices/view/[id].vue'),
-    meta: { requiresSetup: true },
-  },
-  {
     path: '/teams',
     name: 'Teams',
     component: () => import('../views/teams/index.vue'),
@@ -218,7 +206,17 @@ const routes = [
         name: 'AdminMcpCategories',
         component: () => import('../views/admin/mcp-categories/index.vue'),
       },
+      {
+        path: 'satellites',
+        name: 'AdminSatellites',
+        component: () => import('../views/admin/satellites/index.vue'),
+      },
     ],
+  },
+  {
+    path: '/unauthorized',
+    name: 'Unauthorized',
+    component: () => import('../views/Unauthorized.vue'),
   },
   {
     path: '/:pathMatch(.*)*',
@@ -321,7 +319,7 @@ router.beforeEach(async (to, from, next) => {
   if (to.meta.requiresRole) {
     // currentUser should be valid here due to the redirect above if null
     if (!currentUser || currentUser.role_id !== to.meta.requiresRole) {
-      next({ name: 'NotFound' }) // Or redirect to an 'Unauthorized' page
+      next({ name: 'Unauthorized' })
       return
     }
   }

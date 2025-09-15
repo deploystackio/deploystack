@@ -31,6 +31,15 @@ updates:
     commit-message:
       prefix: "chore(backend)"
     open-pull-requests-limit: 20
+
+  - package-ecosystem: "npm"
+    directories:
+      - "services/satellite"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "chore(satellite)"
+    open-pull-requests-limit: 20
     
   - package-ecosystem: 'github-actions'
     directory: '/'

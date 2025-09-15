@@ -1,5 +1,6 @@
 import { FastifyInstance } from 'fastify'
 import fastifyCors from '@fastify/cors'
+import fastifyFormbody from '@fastify/formbody'
 
 export const registerFastifyPlugins = async (server: FastifyInstance): Promise<void> => {
   // Build allowed origins array
@@ -10,17 +11,19 @@ export const registerFastifyPlugins = async (server: FastifyInstance): Promise<v
     'http://localhost:4173', // Vite preview
   ];
   
-  // Add frontend URL from environment variable
-  const frontendUrl = process.env.DEPLOYSTACK_FRONTEND_URL;
-  if (frontendUrl) {
+  const frontendUrl = process.env.DEPLOYSTACK_FRONTEND_URL?.trim();
+  if (frontendUrl && !defaultOrigins.includes(frontendUrl)) {
     defaultOrigins.push(frontendUrl);
   }
+  
+  // Register form body parser for OAuth2 token endpoint
+  await server.register(fastifyFormbody)
   
   // Register CORS plugin
   await server.register(fastifyCors, {
     origin: defaultOrigins,
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS']
   })
   
   // Log the allowed origins for debugging

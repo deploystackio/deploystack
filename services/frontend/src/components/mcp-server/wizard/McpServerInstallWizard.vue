@@ -45,6 +45,7 @@ interface InstallationFormData {
   environment: {
     team_args: string[]
     team_env: Record<string, string>
+    team_headers: Record<string, string>
     user_env: Record<string, string>
   }
   platform: {
@@ -126,10 +127,11 @@ const formData = ref<InstallationFormData>({
   environment: {
     team_args: [],
     team_env: {},
+    team_headers: {},
     user_env: {}
   },
   platform: {
-    installation_type: 'local'
+    installation_type: 'global'
   }
 })
 
@@ -202,7 +204,7 @@ const previousStep = () => {
       environmentStepTouched.value = false
     } else if (currentStep.value === 1) {
       // Going back to environment step - clear platform data
-      formData.value.platform.installation_type = 'local'
+      formData.value.platform.installation_type = 'global'
       formData.value.platform.platform_config = undefined
     }
   }
@@ -265,6 +267,7 @@ const submitInstallation = async () => {
       installation_type: formData.value.platform.installation_type,
       team_args: formData.value.environment.team_args,
       team_env: formData.value.environment.team_env,
+      team_headers: formData.value.environment.team_headers,
       user_environment_variables: formData.value.environment.user_env,
       installation_name: formData.value.server.server_data?.name || 'Unknown Server'
     }
@@ -424,8 +427,8 @@ onMounted(async () => {
     currentStep.value = 0
     formData.value = {
       server: { server_id: '' },
-      environment: { team_args: [], team_env: {}, user_env: {} },
-      platform: { installation_type: 'local' }
+      environment: { team_args: [], team_env: {}, team_headers: {}, user_env: {} },
+      platform: { installation_type: 'global' }
     }
   })
 })

@@ -189,17 +189,20 @@ export const mcpServers = sqliteTable('mcpServers', {
   // Deployment & Configuration - THREE-TIER ARCHITECTURE
   transport_type: text('transport_type', { enum: ['stdio', 'http', 'sse'] }).notNull().default('stdio'), // MCP transport type
   
-  // Template Level (Fixed - never changes)
-  template_args: text('template_args'), // JSON: ["-y", "@modelcontextprotocol/server-filesystem"]
-  template_env: text('template_env'), // JSON: {"FIXED_VAR": "fixed_value"}
+  // Template Level (Fixed - never changes) - All stored as arrays
+  template_args: text('template_args'), // JSON: [{"value":"-y", "locked":true, "description":"..."}]
+  template_env: text('template_env'), // JSON: [{"name":"FIXED_VAR", "value":"fixed_value", "locked":true, "description":"..."}]
+  template_headers: text('template_headers'), // JSON: [{"name":"Authorization", "value":"Bearer token", "locked":true, "description":"..."}]
   
   // Team Level Schema (what teams can configure)
   team_args_schema: text('team_args_schema'), // JSON: [{name, type, required, description}]
   team_env_schema: text('team_env_schema'), // JSON: [{name, type, required, description}]
+  team_headers_schema: text('team_headers_schema'), // JSON: [{name, type, required, description}]
   
   // User Level Schema (what individual users can configure)
   user_args_schema: text('user_args_schema'), // JSON: [{name, type, required, description, min_items, max_items}]
   user_env_schema: text('user_env_schema'), // JSON: [{name, type, required, description}]
+  user_headers_schema: text('user_headers_schema'), // JSON: [{name, type, required, description}]
   
   // Legacy fields - REMOVED (zero backward compatibility)
   // environment_variables: text('environment_variables'), // REMOVED
@@ -251,11 +254,12 @@ export const mcpServerInstallations = sqliteTable('mcpServerInstallations', {
   
   // Installation details
   installation_name: text('installation_name').notNull(), // User-friendly name like "DevOps Team Filesystem"
-  installation_type: text('installation_type').notNull().default('local'), // 'local' or 'cloud'
+  installation_type: text('installation_type').notNull().default('global'), // 'global' or 'team'
   
   // Team-level shared configurations (Tier 2)
   team_args: text('team_args'), // JSON: ["shared-config-value"] - team-wide argument values
   team_env: text('team_env'), // JSON: {"SHARED_API_KEY": "team-secret"} - team-wide environment variables
+  team_headers: text('team_headers'), // JSON: {"Authorization": "Bearer team_token"} - team-wide headers
   
   // Legacy fields - REMOVED (zero backward compatibility)
   // user_environment_variables: text('user_environment_variables'), // REMOVED - moved to mcpUserConfigurations
@@ -279,30 +283,31 @@ export const mcpUserConfigurations = sqliteTable('mcpUserConfigurations', {
   installation_id: text('installation_id').notNull().references(() => mcpServerInstallations.id, { onDelete: 'cascade' }),
   user_id: text('user_id').notNull().references(() => authUser.id, { onDelete: 'cascade' }),
   
-  // UPDATED: Replace device_name with device_id reference
-  device_id: text('device_id').notNull().references(() => devices.id, { onDelete: 'cascade' }),
+  // NOTE: No device identification needed for Satellite Service
+  // Users simply add URLs to VS Code - no device-specific configurations required
   
   // User-specific configurations (Tier 3)
   user_args: text('user_args'), // JSON: ["/Users/john/Desktop", "/Users/john/Projects"] - variable length arrays
   user_env: text('user_env'), // JSON: {"MEMORY_FILE_PATH": "/Users/john/memory.json", "DEBUG_MODE": "true"}
+  user_headers: text('user_headers'), // JSON: {"Authorization": "Bearer user_personal_token"} - user-specific headers
   
   // Metadata
   created_at: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
   updated_at: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
   last_used_at: integer('last_used_at', { mode: 'timestamp' }),
 }, (table) => ({
-  installationUserDeviceIdx: index('mcp_user_configs_installation_user_device_idx').on(table.installation_id, table.user_id, table.device_id),
-  deviceIdx: index('mcp_user_configs_device_idx').on(table.device_id),
+  installationUserIdx: index('mcp_user_configs_installation_user_idx').on(table.installation_id, table.user_id),
   userIdx: index('mcp_user_configs_user_idx').on(table.user_id),
   installationIdx: index('mcp_user_configs_installation_idx').on(table.installation_id),
-  // UPDATED: Unique constraint now includes device_id instead of device_name
-  uniqueUserInstallationDevice: index('mcp_user_configs_unique_user_installation_device').on(table.installation_id, table.user_id, table.device_id),
+  // One configuration per user per installation (no device distinction needed)
+  uniqueUserInstallation: index('mcp_user_configs_unique_user_installation').on(table.installation_id, table.user_id),
 }));
 
-// OAuth2 Authorization Codes for PKCE flow
+// OAuth2 Authorization Codes for PKCE flow (Team-Aware)
 export const oauthAuthorizationCodes = sqliteTable('oauth_authorization_codes', {
   id: text('id').primaryKey(),
   user_id: text('user_id').notNull().references(() => authUser.id, { onDelete: 'cascade' }),
+  team_id: text('team_id').notNull().references(() => teams.id, { onDelete: 'cascade' }), // Team context for OAuth flow
   client_id: text('client_id').notNull(),
   redirect_uri: text('redirect_uri').notNull(),
   scope: text('scope').notNull(),
@@ -315,10 +320,11 @@ export const oauthAuthorizationCodes = sqliteTable('oauth_authorization_codes', 
   expires_at: integer('expires_at', { mode: 'timestamp' }).notNull(),
 });
 
-// OAuth2 Access Tokens
+// OAuth2 Access Tokens (Team-Aware)
 export const oauthAccessTokens = sqliteTable('oauth_access_tokens', {
   id: text('id').primaryKey(),
   user_id: text('user_id').notNull().references(() => authUser.id, { onDelete: 'cascade' }),
+  team_id: text('team_id').notNull().references(() => teams.id, { onDelete: 'cascade' }), // Team context for token
   client_id: text('client_id').notNull(),
   scope: text('scope').notNull(),
   token_hash: text('token_hash').notNull().unique(), // Argon2 hash of the token
@@ -326,10 +332,11 @@ export const oauthAccessTokens = sqliteTable('oauth_access_tokens', {
   expires_at: integer('expires_at', { mode: 'timestamp' }).notNull(),
 });
 
-// OAuth2 Refresh Tokens
+// OAuth2 Refresh Tokens (Team-Aware)
 export const oauthRefreshTokens = sqliteTable('oauth_refresh_tokens', {
   id: text('id').primaryKey(),
   user_id: text('user_id').notNull().references(() => authUser.id, { onDelete: 'cascade' }),
+  team_id: text('team_id').notNull().references(() => teams.id, { onDelete: 'cascade' }), // Team context for refresh token
   client_id: text('client_id').notNull(),
   token_hash: text('token_hash').notNull().unique(), // Argon2 hash of the token
   used: integer('used', { mode: 'boolean' }).notNull().default(false),
@@ -337,40 +344,192 @@ export const oauthRefreshTokens = sqliteTable('oauth_refresh_tokens', {
   expires_at: integer('expires_at', { mode: 'timestamp' }).notNull(),
 });
 
-// Device Management System - Enterprise-grade device tracking and security
-export const devices = sqliteTable('devices', {
+// OAuth2 Client Management - Team-Aware MCP Clients
+export const oauthClients = sqliteTable('oauth_clients', {
   id: text('id').primaryKey(),
-  user_id: text('user_id').notNull().references(() => authUser.id, { onDelete: 'cascade' }),
-  
-  // Device Identification
-  device_name: text('device_name').notNull(), // User-friendly name (default: hostname)
-  hostname: text('hostname'), // System hostname
-  hardware_id: text('hardware_id').unique(), // Unique hardware fingerprint
-  
-  // Device Metadata
-  os_type: text('os_type'), // 'macOS', 'Windows', 'Linux'
-  os_version: text('os_version'), // '14.1.1', 'Windows 11', etc.
-  arch: text('arch'), // 'arm64', 'x64'
-  node_version: text('node_version'), // Node.js version for compatibility
-  
-  // Network and Security
-  last_ip: text('last_ip'), // Last known IP address
-  user_agent: text('user_agent'), // Browser/CLI user agent string
-  
-  // Status and Lifecycle
+  client_id: text('client_id').notNull().unique(),
+  client_secret_hash: text('client_secret_hash'), // Argon2 hash (NULL for public clients)
+  client_name: text('client_name').notNull(),
+  redirect_uris: text('redirect_uris').notNull(), // JSON array of allowed redirect URIs
+  scope: text('scope').notNull(), // Default scopes for this client
+  team_id: text('team_id').references(() => teams.id), // NULL for global clients
+  created_by_user_id: text('created_by_user_id').references(() => authUser.id),
   is_active: integer('is_active', { mode: 'boolean' }).notNull().default(true),
-  is_trusted: integer('is_trusted', { mode: 'boolean' }).notNull().default(true),
-  last_login_at: integer('last_login_at', { mode: 'timestamp' }),
-  last_activity_at: integer('last_activity_at', { mode: 'timestamp' }),
-  
-  // Metadata
   created_at: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
   updated_at: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 }, (table) => ({
-  userDeviceIdx: index('devices_user_idx').on(table.user_id),
-  hardwareIdIdx: index('devices_hardware_id_idx').on(table.hardware_id),
-  activeIdx: index('devices_active_idx').on(table.is_active),
-  lastActivityIdx: index('devices_last_activity_idx').on(table.last_activity_at),
+  clientIdIdx: index('oauth_clients_client_id_idx').on(table.client_id),
+  teamIdx: index('oauth_clients_team_idx').on(table.team_id),
+  activeIdx: index('oauth_clients_active_idx').on(table.is_active),
+}));
+
+// OAuth2 Team Consents - User consent per team per client
+export const oauthTeamConsents = sqliteTable('oauth_team_consents', {
+  id: text('id').primaryKey(),
+  user_id: text('user_id').notNull().references(() => authUser.id, { onDelete: 'cascade' }),
+  team_id: text('team_id').notNull().references(() => teams.id, { onDelete: 'cascade' }),
+  client_id: text('client_id').notNull(),
+  scope: text('scope').notNull(), // Consented scopes
+  granted_at: integer('granted_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  last_used_at: integer('last_used_at', { mode: 'timestamp' }),
+  is_active: integer('is_active', { mode: 'boolean' }).notNull().default(true),
+}, (table) => ({
+  userTeamClientIdx: index('oauth_team_consents_user_team_client_idx').on(table.user_id, table.team_id, table.client_id),
+  teamIdx: index('oauth_team_consents_team_idx').on(table.team_id),
+  clientIdx: index('oauth_team_consents_client_idx').on(table.client_id),
+  activeIdx: index('oauth_team_consents_active_idx').on(table.is_active),
+  // Unique constraint: one consent per user per team per client
+  uniqueUserTeamClient: index('oauth_team_consents_unique_user_team_client').on(table.user_id, table.team_id, table.client_id),
+}));
+
+// NOTE: Device management system removed as part of strategic pivot to Satellite Service
+// Users now simply add URLs to VS Code instead of installing CLI software
+// No need for device tracking in satellite-based architecture
+
+// Satellite Management Tables - DeployStack Satellite Communication Infrastructure
+
+// Satellite Registry - Central registry for all registered satellites
+export const satellites = sqliteTable('satellites', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(), // User-friendly name like "company-satellite-1"
+  satellite_type: text('satellite_type', { enum: ['global', 'team'] }).notNull(), // Deployment model
+  team_id: text('team_id').references(() => teams.id, { onDelete: 'cascade' }), // NULL for global satellites
+  status: text('status', { enum: ['active', 'inactive', 'maintenance', 'error'] }).notNull().default('active'),
+  capabilities: text('capabilities').notNull(), // JSON array of supported MCP server types
+  api_key_hash: text('api_key_hash').notNull(), // Argon2 hashed API key for satellite authentication
+  last_heartbeat: integer('last_heartbeat', { mode: 'timestamp' }), // Timestamp of last communication
+  system_info: text('system_info'), // JSON: Hardware and OS information
+  config: text('config'), // JSON: Satellite-specific configuration and policies
+  created_by: text('created_by').notNull().references(() => authUser.id),
+  created_at: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  updated_at: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+}, (table) => ({
+  satelliteTypeIdx: index('satellites_type_idx').on(table.satellite_type),
+  teamIdx: index('satellites_team_idx').on(table.team_id),
+  statusIdx: index('satellites_status_idx').on(table.status),
+  lastHeartbeatIdx: index('satellites_last_heartbeat_idx').on(table.last_heartbeat),
+  // Unique satellite names per team (global satellites have NULL team_id)
+  uniqueTeamName: index('satellites_unique_team_name').on(table.team_id, table.name),
+}));
+
+// Command Queue Management - Priority-based command queue for satellite orchestration
+export const satelliteCommands = sqliteTable('satelliteCommands', {
+  id: text('id').primaryKey(),
+  satellite_id: text('satellite_id').notNull().references(() => satellites.id, { onDelete: 'cascade' }),
+  command_type: text('command_type', { 
+    enum: ['spawn', 'kill', 'restart', 'configure', 'health_check'] 
+  }).notNull(),
+  priority: text('priority', { enum: ['immediate', 'high', 'normal', 'low'] }).notNull().default('normal'),
+  payload: text('payload').notNull(), // JSON command data with team context
+  status: text('status', { 
+    enum: ['pending', 'acknowledged', 'executing', 'completed', 'failed'] 
+  }).notNull().default('pending'),
+  target_team_id: text('target_team_id').references(() => teams.id), // Team context for command execution
+  correlation_id: text('correlation_id'), // For request tracing across systems
+  retry_count: integer('retry_count').notNull().default(0), // Number of retry attempts
+  max_retries: integer('max_retries').notNull().default(3), // Maximum retry attempts
+  error_message: text('error_message'), // Error details for failed commands
+  result: text('result'), // JSON result data from satellite
+  created_by: text('created_by').references(() => authUser.id), // User who initiated the command
+  created_at: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  updated_at: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+}, (table) => ({
+  satelliteStatusIdx: index('satellite_commands_satellite_status_idx').on(table.satellite_id, table.status),
+  priorityStatusIdx: index('satellite_commands_priority_status_idx').on(table.priority, table.status),
+  correlationIdx: index('satellite_commands_correlation_idx').on(table.correlation_id),
+  targetTeamIdx: index('satellite_commands_target_team_idx').on(table.target_team_id),
+}));
+
+// Process Tracking - Real-time tracking of MCP server processes running on satellites
+export const satelliteProcesses = sqliteTable('satelliteProcesses', {
+  id: text('id').primaryKey(),
+  satellite_id: text('satellite_id').notNull().references(() => satellites.id, { onDelete: 'cascade' }),
+  installation_id: text('installation_id').references(() => mcpServerInstallations.id, { onDelete: 'cascade' }), // Links to existing MCP system
+  server_name: text('server_name').notNull(), // MCP server name for identification
+  process_pid: integer('process_pid'), // Process ID on satellite system
+  local_port: integer('local_port'), // Local port for HTTP communication
+  status: text('status', { 
+    enum: ['pending', 'starting', 'running', 'stopping', 'stopped', 'failed'] 
+  }).notNull().default('pending'),
+  health_status: text('health_status', { 
+    enum: ['healthy', 'unhealthy', 'unknown'] 
+  }).notNull().default('unknown'),
+  performance_metrics: text('performance_metrics'), // JSON: CPU, memory, response time tracking
+  team_id: text('team_id').notNull().references(() => teams.id), // Denormalized team context for performance
+  error_message: text('error_message'), // Error details for failed processes
+  started_at: integer('started_at', { mode: 'timestamp' }),
+  stopped_at: integer('stopped_at', { mode: 'timestamp' }),
+  created_at: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  updated_at: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+}, (table) => ({
+  satelliteStatusIdx: index('satellite_processes_satellite_status_idx').on(table.satellite_id, table.status),
+  teamStatusIdx: index('satellite_processes_team_status_idx').on(table.team_id, table.status),
+  healthStatusIdx: index('satellite_processes_health_status_idx').on(table.health_status),
+  installationIdx: index('satellite_processes_installation_idx').on(table.installation_id),
+}));
+
+// Usage Analytics and Audit - Comprehensive usage logging for analytics and compliance
+export const satelliteUsageLogs = sqliteTable('satelliteUsageLogs', {
+  id: text('id').primaryKey(),
+  satellite_id: text('satellite_id').notNull().references(() => satellites.id, { onDelete: 'cascade' }),
+  user_id: text('user_id').references(() => authUser.id), // User attribution (may be NULL for system requests)
+  team_id: text('team_id').notNull().references(() => teams.id), // Team context
+  process_id: text('process_id').references(() => satelliteProcesses.id), // Associated process
+  request_method: text('request_method').notNull(), // HTTP method (GET, POST, etc.)
+  request_path: text('request_path').notNull(), // Request path/endpoint
+  tool_name: text('tool_name'), // MCP tool name if applicable
+  duration_ms: integer('duration_ms'), // Request duration in milliseconds
+  status_code: integer('status_code'), // HTTP status code
+  error_message: text('error_message'), // Error details for failed requests
+  request_size_bytes: integer('request_size_bytes'), // Request payload size
+  response_size_bytes: integer('response_size_bytes'), // Response payload size
+  user_agent: text('user_agent'), // Client user agent
+  ip_address: text('ip_address'), // Client IP address (if available)
+  timestamp: integer('timestamp', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  date_partition: text('date_partition').notNull(), // YYYY-MM-DD for efficient partitioning
+}, (table) => ({
+  satelliteTimestampIdx: index('satellite_usage_logs_satellite_timestamp_idx').on(table.satellite_id, table.timestamp),
+  teamTimestampIdx: index('satellite_usage_logs_team_timestamp_idx').on(table.team_id, table.timestamp),
+  userTimestampIdx: index('satellite_usage_logs_user_timestamp_idx').on(table.user_id, table.timestamp),
+  datePartitionIdx: index('satellite_usage_logs_date_partition_idx').on(table.date_partition),
+  toolNameIdx: index('satellite_usage_logs_tool_name_idx').on(table.tool_name),
+}));
+
+// Health Monitoring - Real-time health monitoring and system metrics
+export const satelliteHeartbeats = sqliteTable('satelliteHeartbeats', {
+  id: text('id').primaryKey(),
+  satellite_id: text('satellite_id').notNull().references(() => satellites.id, { onDelete: 'cascade' }),
+  status: text('status', { enum: ['active', 'degraded', 'error'] }).notNull(),
+  system_metrics: text('system_metrics').notNull(), // JSON: CPU, memory, disk, network usage
+  process_count: integer('process_count').notNull().default(0), // Number of running MCP processes
+  healthy_process_count: integer('healthy_process_count').notNull().default(0), // Number of healthy processes
+  error_count: integer('error_count').notNull().default(0), // Recent error count
+  response_time_ms: integer('response_time_ms'), // Communication latency with backend
+  uptime_seconds: integer('uptime_seconds'), // Satellite uptime
+  version: text('version'), // Satellite software version
+  timestamp: integer('timestamp', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+}, (table) => ({
+  satelliteTimestampIdx: index('satellite_heartbeats_satellite_timestamp_idx').on(table.satellite_id, table.timestamp),
+  statusIdx: index('satellite_heartbeats_status_idx').on(table.status),
+  timestampIdx: index('satellite_heartbeats_timestamp_idx').on(table.timestamp),
+}));
+
+// Dynamic OAuth2 Client Registration - RFC 7591 compliant storage
+export const dynamicOauthClients = sqliteTable('dynamic_oauth_clients', {
+  client_id: text('client_id').primaryKey(),
+  client_name: text('client_name').notNull(),
+  redirect_uris: text('redirect_uris').notNull(), // JSON array
+  grant_types: text('grant_types').notNull(), // JSON array  
+  response_types: text('response_types').notNull(), // JSON array
+  scope: text('scope').notNull(),
+  token_endpoint_auth_method: text('token_endpoint_auth_method').notNull(),
+  client_id_issued_at: integer('client_id_issued_at').notNull(),
+  expires_at: integer('expires_at'), // Optional expiration timestamp
+  created_at: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  updated_at: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+}, (table) => ({
+  expiresAtIdx: index('dynamic_oauth_clients_expires_at_idx').on(table.expires_at),
+  createdAtIdx: index('dynamic_oauth_clients_created_at_idx').on(table.created_at),
 }));
 
 // Plugin table definitions - populated dynamically by the plugin system

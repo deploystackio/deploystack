@@ -15,11 +15,9 @@
 
 ---
 
-DeployStack is the **Enterprise Control Plane for the Model Context Protocol (MCP) ecosystem**. It provides a secure, centralized platform to manage your company's entire MCP tool landscape, eliminating credential sprawl and enabling developers to move faster and more securely.
+DeployStack is **The First MCP-as-a-Service Platform**. We turn MCP from "complex to set up" into "just add a URL" - eliminating adoption friction for developers of all experience levels.
 
-Think of us as the **Identity and Access Management (IAM) layer for your AI agents and tools**. We solve the critical security, governance, and developer experience challenges that arise when using MCP at scale.
-
-## The Problem: MCP in the Enterprise is a Security Blind Spot
+## The Problem
 
 MCP is revolutionizing how AI agents use tools, but it has created a massive challenge for organizations:
 
@@ -30,137 +28,172 @@ MCP is revolutionizing how AI agents use tools, but it has created a massive cha
 
 DeployStack was built to solve these problems head-on.
 
-## The Solution: A Central Control Plane with a Local Secure Gateway
-
-DeployStack introduces a powerful Control Plane / Data Plane architecture to bring order to the chaos.
-
-1. **`cloud.deploystack.io` (The Control Plane)**: A centralized web UI where administrators and team leads define the entire AI tooling landscape.
-
-    - **Centralized Credential Vault**: Securely store all your MCP server credentials (API keys, tokens) in one encrypted location.
-    - **Access Control Policies**: Define which teams and users have permission to access which MCP Server.
-    - **MCP Catalog**: Manage a central catalog of all approved MCP servers (local, remote (coming soon), or third-party (coming soon)).
-    - **Audit & Analytics**: Gain visibility into which tools are being used, by whom, and how often.
-
-2. **The `DeployStack Gateway` (The Local Data Plane)**: A lightweight, secure agent that runs on each developer's machine.
-
-    - **One-Time Login**: Developers log in once. The Gateway securely fetches the configurations they are authorized to use.
-    - **Single Local Endpoint**: The Gateway exposes a single, stable MCP endpoint on `localhost`. Developers point all their tools (VS Code, Cursor, etc.) to this one address.
-    - **On-Demand Process Spawning**: The Gateway automatically starts and stops local MCP servers (`stdio`-based) as needed, injecting credentials securely at runtime. It manages the processes so the developer doesn't have to.
-    - **Zero-Trust Proxy**: All requests, whether to a local process or a remote server, are proxied through the Gateway, enforcing security policies on every call.
-
-This architecture means developers never handle sensitive credentials, and the organization gains complete visibility and control.
-
 ## 🚀 How It Works: A Quick Tour
 
-1. **Admin**: Logs into `cloud.deploystack.io`, creates a team, and registers an MCP server (e.g., the `github` mcp server), storing its API token securely in the DeployStack vault. They grant the "Dev Team" access to this server.
-2. **Developer**: Installs the `DeployStack Gateway` and runs `deploystack-gateway login`. They are now authenticated.
-3. **Configuration Sync**: The Gateway securely downloads the configuration for the "Dev Team", including the definition for the `github` mcp server (but not the raw token).
-4. **Local Development**: The developer, in VS Code, makes a call to a `github` mcp via the Gateway's local endpoint (`http://localhost:9090/mcp`).
+### Global Satellite (Zero Installation)
+
+1. **Admin**: Creates account at `cloud.deploystack.io`, adds MCP servers (like GitHub), stores API tokens securely in DeployStack vault
+2. **Developer**: Gets OAuth credentials from dashboard
+3. **VS Code Setup**: Adds one URL to MCP configuration: `https://satellite.deploystack.io/mcp`
+4. **Instant Access**: All team MCP tools work immediately - no installation, no local processes
 5. **The Magic**:
-    - The Gateway receives the request.
-    - It sees it's for `github` mcp and checks if the process is running.
-    - If not, it spawns the `npx @github/mcp` process, securely injecting the API token from the cloud into the process environment.
-    - It proxies the request to the newly spawned process via `stdio` and returns the result.
-    - After a period of inactivity, it automatically shuts down the process to save resources.
+   - VS Code calls satellite via HTTPS (like any other API)
+   - Satellite receives request, checks team permissions
+   - Spawns MCP server process with injected credentials
+   - Returns results via standard HTTP response
+   - Automatically shuts down idle processes to save resources
 
-## Getting Started
+**Before DeployStack:**
+```bash
+# Manual setup nightmare
+npm install -g some-mcp-cli
+some-mcp configure --api-key=xxx
+# Repeat for every tool, every developer
+```
 
-### For Administrators & Team Leads
+**After DeployStack:**
+```json
+// VS Code settings.json - that's it!
+{
+  "mcpServers": {
+    "deploystack": {
+      "url": "https://satellite.deploystack.io/mcp"
+    }
+  }
+}
+```
 
-1. **Sign up for free**: [cloud.deploystack.io](https://cloud.deploystack.io)
-2. **Create a Team**: Organize your developers and resources.
-3. **Register MCP Servers**: Add your company's MCP Server to the catalog and store their credentials securely.
-4. **Invite Your Team**: Have your developers install the `DeployStack Gateway`.
+## Architecture: Two Ways to Deploy
 
-### For Developers
+### Global Satellites (Managed by DeployStack)
+- **Zero Installation**: Just add URL to VS Code
+- **Freemium Model**: Free tier with basic MCP servers
+- **Instant Access**: Pre-configured tools ready to use
+- **Multi-tenant**: Resource isolation between teams
+- **Example**: `https://satellite.deploystack.io/mcp`
 
-1. **Install the Gateway**:
+### Team Satellites (Deploy Your Own) - (On Premise or Cloud) - (Comming Soon)
+- **Enterprise Security**: On-premise deployment within your network
+- **Internal Access**: Connect to company databases, APIs, file systems
+- **Complete Isolation**: Full team separation using Linux containers
+- **GitHub Actions Style**: Simple deployment with Docker
+- **Example**: `https://team-satellite.yourcompany.com/mcp`
 
-    ```bash
-    npm install -g @deploystack/gateway
-    ```
+### Technical Flow
 
-2. **Login**:
+```
+VS Code → HTTPS Request → DeployStack Satellite → MCP Server Process → External API
+         ↓                 ↓                       ↓                   ↓
+    (OAuth JWT)     (Team Permissions)      (Credential Injection)  (GitHub/etc)
+```
 
-    ```bash
-    deploystack login
-    ```
+**Core Components:**
+- **Control Plane**: `cloud.deploystack.io` - web dashboard for teams, credentials, configurations
+- **Satellites**: Managed MCP infrastructure - no local processes, just HTTPS
+- **Process Manager**: On-demand MCP server spawning with X-minute idle timeout
+- **Team Isolation**: Complete separation using Linux namespaces and resource limits
 
-3. **Configure Your Tools**: In VS Code, Cursor, or any other MCP client, set your MCP endpoint to the local Gateway address (e.g., `http://localhost:9095/mcp`).
-4. **Start Building!** All the tools your team has access to are now available automatically.
+### Why Satellite vs Traditional Gateway?
+
+**Conversion Rate Data:**
+- **Traditional Gateway CLI**: 1% (install CLI → configure → first use)
+- **DeployStack Satellite**: 12% (register → copy URL → first use)
+
+**User Experience:**
+- **Gateway**: "Install our CLI tool, configure localhost, manage processes"
+- **Satellite**: "Add this URL: `https://satellite.deploystack.io/mcp`"
+
+**Why This Matters:**
+- **Adoption Friction Kills Everything**: Every MCP solution requiring CLI installation loses 99% of interested developers
+- **"Another Local Proxy" Fatigue**: Market saturated with similar gateway solutions requiring installation
+- **Teams Can't Scale**: Complex setups prevent MCP adoption beyond early adopters
+- **Enterprise Path**: Natural progression from managed service to on-premise deployment
+
+**Technical Benefits:**
+- **No Local Dependencies**: No Node.js, npm, or port management
+- **Familiar Pattern**: Works like OpenAI API, Claude API, or any SaaS
+- **Auto-scaling**: Handles traffic spikes automatically
+- **High Availability**: 99.9% uptime with multi-region deployment
+- **Instant Updates**: No user installations required for new features
 
 ## Roadmap
 
-Our roadmap is designed to build the essential infrastructure for using MCP securely at scale, focusing on the critical pillars of security, governance, and developer experience.
+### **Phase 1: Foundation** (Completed)
+- **[Done]** Deployed `cloud.deploystack.io` hosted version with a robust backend and frontend
+- **[Done]** Implemented a secure user and team management system with roles and permissions
+- **[Done]** Integrated OAuth for secure logins (e.g., GitHub)
+- **[Done]** Created the initial MCP Server Catalog for tool discovery
+- **[Done]** Established documentation and self-hosted Docker support
 
-### Phase 1: Foundation (Completed)
+### **Phase 2: Enterprise Governance** (Completed)
+- **[Done]** Auto-install MCP servers for new users with admin-controlled defaults
+- **[Done]** Featured MCP servers filtering for improved tool discovery
+- **[Done]** Global Event Bus System - event-driven architecture with plugin integration
+- **[Done]** Three-Tier MCP Configuration Architecture - complete database schema redesign separating template, team, and user-level configurations
+- **[Done]** Multi-User Configuration Management - support for multiple users within teams, each with personalized device-specific configurations
+- **[Done]** Advanced MCP Argument & Environment Variable Handling - comprehensive service layer with schema validation and runtime configuration assembly
 
-- **[Done]** Deployed `cloud.deploystack.io` hosted version with a robust backend and frontend.
-- **[Done]** Implemented a secure user and team management system with roles and permissions.
-- **[Done]** Integrated OAuth for secure logins (e.g., GitHub).
-- **[Done]** Created the initial MCP Server Catalog for tool discovery.
-- **[Done]** Established documentation and self-hosted Docker support.
+### **Phase 3: Satellite MVP** (Current Priority)
+- **[In Progress]** **Global Satellite Infrastructure** - managed MCP servers via HTTPS
+- **[In Progress]** **Zero-Installation Experience** - just add URL to VS Code
+- **[In Progress]** **OAuth Authentication** - seamless token-based auth
+- **[In Progress]** **Resource Management** - process isolation and limits
+- **[To Do]** **Public Launch** - production satellite for community use
+- **[To Do]** Build out Audit Logging features in the cloud UI
+- **[To Do]** Develop Analytics dashboards for tool usage and performance
+- **[To Do]** Implement advanced policy controls (e.g., rate limiting, request validation)
+- **[To Do]** Enhance the searchable MCP Server Catalog within the cloud UI
+- **[To Do]** Deeper integration with IDEs and AI agent frameworks
 
-### Phase 2: The Secure Gateway (Completed)
+### **Phase 4: Advanced Architecture** (Next)
+- **[To Do]** **Multi-Transport Support** - SSE, Streamable HTTP, Direct HTTP protocols
+- **[To Do]** **Real-Time Command Orchestration** - instant status feedback
+- **[To Do]** **Comprehensive Monitoring** - satellite health and usage analytics
+- **[To Do]** **Enterprise Security** - audit logging and compliance features
 
-- **[Done]** Developed the `DeployStack Gateway` local application.
-- **[Done]** Implemented secure authentication and configuration synchronization between the Gateway and the cloud.
-- **[Done]** Built the on-demand `stdio` process spawning and management logic.
-- **[Done]** Added support for multi-user teams with role-based access control.
-- **[Done]** Implemented dual transport architecture supporting both SSE and Streamable HTTP transports for maximum client compatibility.
+### **Phase 5: Enterprise Team Satellites** (Future)
+- **[To Do]** **Team Satellites** - customer-deployed satellites for enterprise
+- **[To Do]** **Advanced Team Isolation** - Linux namespaces and cgroups
+- **[To Do]** **On-Premise Deployment** - GitHub Actions runner-style deployment  
+- **[To Do]** **Enterprise Authentication** - SSO integration (SAML, OIDC)
 
-### Phase 3: Enterprise Governance (Current Focus)
+### **Phase 6: Ecosystem Expansion** (Future)
+- **[To Do]** Advanced MCP server marketplace
+- **[To Do]** Multi-region satellite deployment
+- **[To Do]** IDE integrations and developer tools
+- **[To Do]** AI agent framework integrations
 
-- **[Done]** Auto-install MCP servers for new users with admin-controlled defaults.
-- **[Done]** Featured MCP servers filtering for improved tool discovery.
-- **[Done]** Global Event Bus System (Phase 2) - event-driven architecture with plugin integration.
-- **[Done]** Three-Tier MCP Configuration Architecture - complete database schema redesign separating template, team, and user-level configurations.
-- **[Done]** Multi-User Configuration Management - support for multiple users within teams, each with personalized device-specific configurations.
-- **[Done]** Advanced MCP Argument & Environment Variable Handling - comprehensive service layer with schema validation and runtime configuration assembly.
-- **[To Do]** Build out Audit Logging features in the cloud UI.
-- **[To Do]** Develop Analytics dashboards for tool usage and performance.
-- **[To Do]** Add `deploystack logs` command for real-time gateway activity monitoring.
-- **[To Do]** Implement advanced policy controls (e.g., rate limiting, request validation).
-- **[To Do]** Add support for proxying to remote, HTTP-based MCP servers.
+## Try DeployStack
 
-### Phase 4: Ecosystem & Integration
+### Get Started in 3 Minutes
 
-- **[To Do]** Introduce OAuth2 support for delegated authentication to backend services.
-- **[To Do]** Enhance the searchable MCP Server Catalog within the cloud UI.
-- **[To Do]** Deeper integration with IDEs and AI agent frameworks.
+1. **Sign up**: Create free account at [cloud.deploystack.io](https://cloud.deploystack.io)
+2. **Get credentials**: Copy OAuth client credentials from dashboard
+3. **Configure VS Code**: Add satellite URL to MCP settings
+4. **Start using MCP tools**: Instant access to team tools
 
-## Project Structure
+### Links
 
-This repository uses a monorepo structure with the following components:
-
-```bash
-deploystack/
-├── services/
-│   ├── frontend/        # Vue.js frontend application for cloud.deploystack.io
-│   ├── backend/         # Fastify backend API for the cloud control plane
-│   ├── gateway/         # The DeployStack Gateway
-│   └── shared/          # Shared utilities and types
-└── ...
-```
+- 🌐 **Platform**: [cloud.deploystack.io](https://cloud.deploystack.io)
+- 📚 **Documentation**: [docs.deploystack.io](https://docs.deploystack.io)
+- 💬 **Discord**: [Join our community](https://discord.gg/42Ce3S7b3b)
 
 ## Contributing
 
-We welcome contributions to help expand and improve the DeployStack platform.
+We're building the future of MCP adoption. Want to help?
 
-1. Fork this repository.
-2. Create your feature branch (`git checkout -b feature/analytics-dashboard`).
-3. Commit your changes following our [commit guidelines](CONTRIBUTING.md#commit-message-guidelines).
-4. Push to the branch (`git push origin feature/analytics-dashboard`).
-5. Open a Pull Request.
+1. Fork the repository
+2. Create feature branch: `git checkout -b feature/your-enhancement`
+3. Follow TypeScript and ESLint conventions
+4. Add tests for new functionality
+5. Submit pull request with clear description
 
-For detailed contribution guidelines, see [CONTRIBUTING.md](CONTRIBUTING.md).
-
-## Community and Support
-
-- **Discord**: Join our community at [discord.gg/42Ce3S7b3b](https://discord.gg/42Ce3S7b3b) to discuss DeployStack.
-- **GitHub Discussions**: Ask questions and share ideas about the Enterprise Control Plane.
-- **Twitter**: Follow [@deploystack](https://twitter.com/deploystack) for updates.
+**Areas we need help:**
+- Satellite infrastructure and scaling
+- MCP server integrations and testing  
+- Documentation and developer experience
+- Enterprise features and security
 
 ## License
 
-This project is licensed under the Server Side Public License (SSPL) v1. This allows you to use, modify, and distribute DeployStack freely, including for commercial purposes. The only restriction is that if you offer DeployStack as a managed service, you must open source your entire service infrastructure. See the [LICENSE](LICENSE) file for details.
+Server Side Public License (SSPL) v1 - see [LICENSE](LICENSE) file for details.

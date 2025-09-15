@@ -49,7 +49,7 @@ const isLoadingServer = ref(true)
 const isEditModalOpen = ref(false)
 const editingItem = ref<any>(null)
 const editingValue = ref('')
-const editingType = ref<'arg' | 'env'>('env')
+const editingType = ref<'arg' | 'env' | 'header'>('env')
 const showPassword = ref(false)
 const isSubmitting = ref(false)
 const formErrors = ref<Record<string, string>>({})
@@ -89,6 +89,16 @@ const teamEnvSchema = computed(() => {
   }
 })
 
+const teamHeadersSchema = computed(() => {
+  const schema = props.installation.server?.team_headers_schema || serverData.value?.team_headers_schema
+  if (!schema) return []
+  try {
+    return Array.isArray(schema) ? schema : JSON.parse(schema)
+  } catch {
+    return []
+  }
+})
+
 
 
 // Get current team configuration values
@@ -98,6 +108,10 @@ const currentTeamArgs = computed(() => {
 
 const currentTeamEnv = computed(() => {
   return props.installation.team_env || {}
+})
+
+const currentTeamHeaders = computed(() => {
+  return props.installation.team_headers || {}
 })
 
 // Prepare team arguments with current values
@@ -117,15 +131,21 @@ const teamEnvWithData = computed(() => {
   }))
 })
 
-
+// Prepare team headers with current values
+const teamHeadersWithData = computed(() => {
+  return teamHeadersSchema.value.map((headerSchema: any) => ({
+    ...headerSchema,
+    currentValue: currentTeamHeaders.value[headerSchema.name] || ''
+  }))
+})
 
 // Check if there's any team configuration
 const hasTeamConfiguration = computed(() => {
-  return teamArgsSchema.value.length > 0 || teamEnvSchema.value.length > 0
+  return teamArgsSchema.value.length > 0 || teamEnvSchema.value.length > 0 || teamHeadersSchema.value.length > 0
 })
 
 // Modal functions
-const openEditModal = (item: any, type: 'arg' | 'env') => {
+const openEditModal = (item: any, type: 'arg' | 'env' | 'header') => {
   if (!props.canEdit) return
 
   editingItem.value = item
@@ -191,6 +211,18 @@ const handleSubmit = async () => {
         props.installation.id,
         updatedArgs
       )
+    } else if (editingType.value === 'header') {
+      // Update team headers
+      const updatedHeaders = {
+        ...currentTeamHeaders.value,
+        [editingItem.value.name]: editingValue.value
+      }
+
+      updatedInstallation = await McpInstallationService.updateTeamHeaders(
+        props.teamId,
+        props.installation.id,
+        updatedHeaders
+      )
     } else {
       // Update team environment variables
       const updatedEnv = {
@@ -212,8 +244,8 @@ const handleSubmit = async () => {
     emit('installation-updated', updatedInstallation)
 
     // Show success toast
-    const itemName = editingType.value === 'arg' ? 
-      (editingItem.value.name || t('mcpInstallations.teamConfiguration.table.values.argumentNumber', { number: editingItem.value.index + 1 })) : 
+    const itemName = editingType.value === 'arg' ?
+      (editingItem.value.name || t('mcpInstallations.teamConfiguration.table.values.argumentNumber', { number: editingItem.value.index + 1 })) :
       editingItem.value.name
     toast.success(t('mcpInstallations.teamConfiguration.editModal.success.updated', { item: itemName }), {
       description: t('mcpInstallations.teamConfiguration.editModal.success.description')
@@ -234,6 +266,8 @@ const modalTitle = computed(() => {
   if (editingType.value === 'arg') {
     const argName = editingItem.value.name || t('mcpInstallations.teamConfiguration.table.values.argumentNumber', { number: editingItem.value.index + 1 })
     return t('mcpInstallations.teamConfiguration.editModal.titleArg', { name: argName })
+  } else if (editingType.value === 'header') {
+    return `Edit Team Header: ${editingItem.value.name}`
   } else {
     return t('mcpInstallations.teamConfiguration.editModal.titleEnv', { name: editingItem.value.name })
   }
@@ -389,6 +423,71 @@ const modalTitle = computed(() => {
           </ul>
         </div>
 
+        <!-- Team Headers Section -->
+        <div v-if="teamHeadersSchema.length > 0">
+          <div class="mb-4">
+            <h4 class="text-sm font-semibold text-gray-900">Team Headers</h4>
+            <p class="text-xs text-gray-500">Configure HTTP headers that will be shared across all team members for this MCP server installation.</p>
+          </div>
+
+          <ul role="list" class="space-y-3">
+            <li v-for="header in teamHeadersWithData" :key="header.name" class="flex items-center justify-between gap-x-6 py-5 bg-green-50 rounded-lg px-4">
+              <div class="min-w-0 flex-1">
+                <div class="flex items-start gap-x-3">
+                  <p class="text-sm/6 font-semibold text-gray-900 font-mono">
+                    {{ header.name }}
+                  </p>
+                </div>
+                <div class="mt-1 text-xs/5 text-gray-700">
+                  <span class="font-medium text-gray-800">{{ t('mcpInstallations.teamConfiguration.table.labels.required') }}</span>
+                  <span class="ml-1">{{ header.required ? t('common.labels.yes') : t('common.labels.no') }}</span>
+                </div>
+              </div>
+
+              <div class="flex-1 min-w-0">
+                <div class="space-y-1 text-xs/5 text-gray-700">
+                  <div>
+                    <span class="font-medium text-gray-800">{{ t('mcpInstallations.teamConfiguration.table.labels.type') }}</span>
+                    <span class="ml-1">{{ header.type || t('mcpInstallations.teamConfiguration.table.labels.defaultType') }}</span>
+                  </div>
+                  <div v-if="header.visible_to_users === false">
+                    <span class="font-medium text-gray-800">{{ t('mcpInstallations.teamConfiguration.table.labels.hiddenFromUsers') }}</span>
+                    <span class="ml-1">{{ t('common.labels.yes') }}</span>
+                  </div>
+                  <div>
+                    <span class="font-medium text-gray-800">{{ t('mcpInstallations.teamConfiguration.table.labels.value') }}</span>
+                    <span v-if="header.type === 'password' || header.type === 'secret'" class="ml-1 font-mono">
+                      {{ header.currentValue ? '••••••••' : t('mcpInstallations.teamConfiguration.table.values.notSet') }}
+                    </span>
+                    <span v-else class="ml-1 font-mono">
+                      {{ header.currentValue || t('mcpInstallations.teamConfiguration.table.values.notSet') }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="flex flex-none items-center gap-x-4">
+                <Button
+                  v-if="canEdit && (userRole === 'team_admin' || userRole === null)"
+                  size="sm"
+                  variant="outline"
+                  @click="openEditModal(header, 'header')"
+                >
+                  {{ t('mcpInstallations.teamConfiguration.table.actions.editValue') }}
+                </Button>
+                <Button
+                  v-else
+                  size="sm"
+                  variant="outline"
+                  disabled
+                  class="cursor-not-allowed opacity-50"
+                >
+                  {{ t('mcpInstallations.teamConfiguration.table.actions.editValue') }}
+                </Button>
+              </div>
+            </li>
+          </ul>
+        </div>
 
       </div>
 

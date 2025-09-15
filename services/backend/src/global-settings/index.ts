@@ -665,6 +665,18 @@ export class GlobalSettingsInitService {
   }
 
   /**
+   * Get the application backend URL
+   */
+  static async getBackendUrl(): Promise<string> {
+    try {
+      const setting = await GlobalSettingsService.get('global.backend_url');
+      return setting?.value || 'http://localhost:3000';
+    } catch {
+      return 'http://localhost:3000'; // Default fallback
+    }
+  }
+
+  /**
    * Check if login is enabled (all types: email, GitHub, etc.)
    */
   static async isLoginEnabled(): Promise<boolean> {

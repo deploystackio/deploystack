@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { eq, and, desc, ne } from 'drizzle-orm';
+import { eq, and, desc } from 'drizzle-orm';
 import { mcpUserConfigurations, mcpServerInstallations, mcpServers } from '../db/schema.sqlite';
 import type { AnyDatabase } from '../db';
 import type { FastifyBaseLogger } from 'fastify';
@@ -12,7 +12,6 @@ export interface McpUserConfiguration {
   id: string;
   installation_id: string;
   user_id: string;
-  device_id?: string;
   user_args?: Record<string, string>;
   user_env?: Record<string, string>;
   created_at: Date;
@@ -35,13 +34,11 @@ export interface McpUserConfiguration {
 }
 
 export interface CreateUserConfigRequest {
-  device_id?: string;
   user_args?: Record<string, string>;
   user_env?: Record<string, string>;
 }
 
 export interface UpdateUserConfigRequest {
-  device_id?: string;
   user_args?: Record<string, string>;
   user_env?: Record<string, string>;
 }
@@ -244,8 +241,7 @@ export class McpUserConfigurationService {
       operation: 'create_user_configuration',
       installationId,
       userId,
-      teamId,
-      deviceId: data.device_id
+      teamId
     }, 'Creating user configuration');
 
     // Verify installation exists and user has access
@@ -268,24 +264,7 @@ export class McpUserConfigurationService {
       throw new Error('Installation not found or access denied');
     }
 
-    // Check for existing configuration with same device ID (if provided)
-    if (data.device_id) {
-      const existingConfig = await this.db
-        .select()
-        .from(mcpUserConfigurations)
-        .where(
-          and(
-            eq(mcpUserConfigurations.installation_id, installationId),
-            eq(mcpUserConfigurations.user_id, userId),
-            eq(mcpUserConfigurations.device_id, data.device_id)
-          )
-        )
-        .limit(1);
 
-      if (existingConfig.length > 0) {
-        throw new Error('A configuration with this device ID already exists for this installation');
-      }
-    }
 
     // Validate user args and env against server schema
     const serverInfo = installation[0].server;
@@ -305,7 +284,6 @@ export class McpUserConfigurationService {
       id: configId,
       installation_id: installationId,
       user_id: userId,
-      device_id: data.device_id || null,
       user_args: data.user_args ? await McpArgsStorage.storeUserArgs(
         data.user_args, 
         this.parseJsonField(serverInfo?.user_args_schema, []), 
@@ -368,34 +346,11 @@ export class McpUserConfigurationService {
       }
     }
 
-    // Check for device ID conflicts if changing device ID
-    if (data.device_id !== undefined && data.device_id !== existing.device_id) {
-      const conflictingConfig = await this.db
-        .select()
-        .from(mcpUserConfigurations)
-        .where(
-          and(
-            eq(mcpUserConfigurations.installation_id, existing.installation_id),
-            eq(mcpUserConfigurations.user_id, userId),
-            eq(mcpUserConfigurations.device_id, data.device_id),
-            // Exclude current configuration
-            ne(mcpUserConfigurations.id, configId)
-          )
-        )
-        .limit(1);
-
-      if (conflictingConfig.length > 0) {
-        throw new Error('A configuration with this device ID already exists for this installation');
-      }
-    }
 
     const updateData: any = {
       updated_at: new Date()
     };
 
-    if (data.device_id !== undefined) {
-      updateData.device_id = data.device_id || null;
-    }
 
     if (data.user_args !== undefined) {
       updateData.user_args = data.user_args ? await McpArgsStorage.storeUserArgs(

@@ -34,10 +34,13 @@ export interface McpServer {
   // Three-tier configuration schema
   template_args?: string; // JSON: Fixed args that never change
   template_env?: string; // JSON: Fixed env vars that never change
+  template_headers?: string; // JSON: Fixed headers that never change
   team_args_schema?: string; // JSON: Schema for team-level args
   team_env_schema?: string; // JSON: Schema for team-level env vars
+  team_headers_schema?: string; // JSON: Schema for team-level headers
   user_args_schema?: string; // JSON: Schema for user-level args
   user_env_schema?: string; // JSON: Schema for user-level env vars
+  user_headers_schema?: string; // JSON: Schema for user-level headers
   dependencies?: string; // JSON
   category_id?: string;
   tags?: string; // JSON
@@ -72,10 +75,13 @@ export interface CreateMcpServerRequest {
   // Three-tier configuration schema
   template_args?: any[]; // Fixed args that never change (e.g., ["-y", "@modelcontextprotocol/server-filesystem"])
   template_env?: any; // Fixed env vars that never change (e.g., {"FIXED_VAR": "fixed_value"})
+  template_headers?: any; // Fixed headers that never change (e.g., {"Authorization": "Bearer fixed_token"})
   team_args_schema?: any[]; // Schema for team-level args (e.g., [{name: "api_key", type: "string", required: true}])
   team_env_schema?: any[]; // Schema for team-level env vars
+  team_headers_schema?: any[]; // Schema for team-level headers
   user_args_schema?: any[]; // Schema for user-level args (e.g., [{name: "local_path", type: "string", required: true}])
   user_env_schema?: any[]; // Schema for user-level env vars
+  user_headers_schema?: any[]; // Schema for user-level headers
   dependencies?: any; // Will be JSON stringified
   category_id?: string;
   tags?: string[];
@@ -105,10 +111,13 @@ export interface UpdateMcpServerRequest {
   // Three-tier configuration schema
   template_args?: any[];
   template_env?: any;
+  template_headers?: any;
   team_args_schema?: any[];
   team_env_schema?: any[];
+  team_headers_schema?: any[];
   user_args_schema?: any[];
   user_env_schema?: any[];
+  user_headers_schema?: any[];
   dependencies?: any;
   category_id?: string;
   tags?: string[];
@@ -365,10 +374,13 @@ export class McpCatalogService {
       // Three-tier configuration schema
       template_args: data.template_args ? JSON.stringify(data.template_args) : null,
       template_env: data.template_env ? JSON.stringify(data.template_env) : null,
+      template_headers: data.template_headers ? JSON.stringify(data.template_headers) : null,
       team_args_schema: data.team_args_schema ? JSON.stringify(data.team_args_schema) : null,
       team_env_schema: data.team_env_schema ? JSON.stringify(data.team_env_schema) : null,
+      team_headers_schema: data.team_headers_schema ? JSON.stringify(data.team_headers_schema) : null,
       user_args_schema: data.user_args_schema ? JSON.stringify(data.user_args_schema) : null,
       user_env_schema: data.user_env_schema ? JSON.stringify(data.user_env_schema) : null,
+      user_headers_schema: data.user_headers_schema ? JSON.stringify(data.user_headers_schema) : null,
       dependencies: data.dependencies ? JSON.stringify(data.dependencies) : null,
       category_id: data.category_id || null, // Ensure empty string becomes null
       tags: githubInfo.tags ? JSON.stringify(githubInfo.tags) : (data.tags ? JSON.stringify(data.tags) : null),
@@ -442,10 +454,13 @@ export class McpCatalogService {
     // Three-tier configuration schema
     if (data.template_args !== undefined) updateData.template_args = data.template_args ? JSON.stringify(data.template_args) : null;
     if (data.template_env !== undefined) updateData.template_env = data.template_env ? JSON.stringify(data.template_env) : null;
+    if (data.template_headers !== undefined) updateData.template_headers = data.template_headers ? JSON.stringify(data.template_headers) : null;
     if (data.team_args_schema !== undefined) updateData.team_args_schema = data.team_args_schema ? JSON.stringify(data.team_args_schema) : null;
     if (data.team_env_schema !== undefined) updateData.team_env_schema = data.team_env_schema ? JSON.stringify(data.team_env_schema) : null;
+    if (data.team_headers_schema !== undefined) updateData.team_headers_schema = data.team_headers_schema ? JSON.stringify(data.team_headers_schema) : null;
     if (data.user_args_schema !== undefined) updateData.user_args_schema = data.user_args_schema ? JSON.stringify(data.user_args_schema) : null;
     if (data.user_env_schema !== undefined) updateData.user_env_schema = data.user_env_schema ? JSON.stringify(data.user_env_schema) : null;
+    if (data.user_headers_schema !== undefined) updateData.user_headers_schema = data.user_headers_schema ? JSON.stringify(data.user_headers_schema) : null;
     if (data.dependencies !== undefined) updateData.dependencies = data.dependencies ? JSON.stringify(data.dependencies) : null;
     if (data.category_id !== undefined) updateData.category_id = data.category_id;
     if (data.tags !== undefined) updateData.tags = data.tags ? JSON.stringify(data.tags) : null;
@@ -532,10 +547,13 @@ export class McpCatalogService {
     // Three-tier configuration schema
     parsed.template_args = parseJsonField('template_args', parsed.template_args, null);
     parsed.template_env = parseJsonField('template_env', parsed.template_env, null);
+    parsed.template_headers = parseJsonField('template_headers', parsed.template_headers, null);
     parsed.team_args_schema = parseJsonField('team_args_schema', parsed.team_args_schema, null);
     parsed.team_env_schema = parseJsonField('team_env_schema', parsed.team_env_schema, null);
+    parsed.team_headers_schema = parseJsonField('team_headers_schema', parsed.team_headers_schema, null);
     parsed.user_args_schema = parseJsonField('user_args_schema', parsed.user_args_schema, null);
     parsed.user_env_schema = parseJsonField('user_env_schema', parsed.user_env_schema, null);
+    parsed.user_headers_schema = parseJsonField('user_headers_schema', parsed.user_headers_schema, null);
     // transport_type is a simple string field, no parsing needed
     parsed.dependencies = parseJsonField('dependencies', parsed.dependencies, null);
     parsed.tags = parseJsonField('tags', parsed.tags, null);

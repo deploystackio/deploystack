@@ -18,8 +18,9 @@ import {
 } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
-import { GatewayConfigService } from '@/services/gatewayConfigService'
+import { GatewayConfigService, type ClientConfigResponse, type LinkAction, type TextAction } from '@/services/satelliteConfigService'
 import { toast } from 'vue-sonner'
+import { ExternalLink } from 'lucide-vue-next'
 
 interface Props {
   open: boolean
@@ -36,6 +37,9 @@ const { t } = useI18n()
 // State
 const selectedClient = ref('')
 const configContent = ref('')
+const linkActions = ref<LinkAction[]>([])
+const textActions = ref<TextAction[]>([])
+const contentType = ref<'json' | 'text' | 'empty'>('empty')
 const isLoading = ref(false)
 const isCopying = ref(false)
 const supportedClients = ref<string[]>([])
@@ -80,12 +84,31 @@ async function loadSupportedClients() {
 async function loadConfiguration(client: string) {
   isLoading.value = true
   try {
-    const config = await GatewayConfigService.getClientConfig(client)
-    configContent.value = JSON.stringify(config, null, 2)
+    const response: ClientConfigResponse = await GatewayConfigService.getClientConfig(client)
+    
+    // Extract formatted content for display (text or JSON)
+    configContent.value = GatewayConfigService.getFormattedContent(response)
+    
+    // Extract different action types
+    linkActions.value = GatewayConfigService.getLinkActions(response)
+    textActions.value = GatewayConfigService.getTextActions(response)
+    
+    // Determine content type for UI styling
+    if (textActions.value.length > 0) {
+      contentType.value = 'text'
+    } else if (GatewayConfigService.getJsonConfig(response)) {
+      contentType.value = 'json'
+    } else {
+      contentType.value = 'empty'
+    }
+    
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Failed to load configuration'
     toast.error(errorMessage)
     configContent.value = `Error: ${errorMessage}`
+    linkActions.value = []
+    textActions.value = []
+    contentType.value = 'empty'
   } finally {
     isLoading.value = false
   }
@@ -101,7 +124,7 @@ function getClientDisplayName(client: string): string {
     return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
   }).join('')
 
-  const translationKey = `gatewayConfig.clients.${clientKey}`
+  const translationKey = `satelliteConfig.clients.${clientKey}`
   const translated = t(translationKey)
 
   // If translation returns the key itself, it means translation doesn't exist
@@ -131,13 +154,59 @@ async function handleCopyAndClose() {
     handleClose()
     // Show success toast after modal closes
     setTimeout(() => {
-      toast.success(t('gatewayConfig.messages.copySuccess'))
+      const messageKey = contentType.value === 'text' 
+        ? 'satelliteConfig.messages.copyInstructionsSuccess'
+        : 'satelliteConfig.messages.copySuccess'
+      toast.success(t(messageKey))
     }, 100)
   } catch {
     toast.error('Failed to copy configuration to clipboard')
   } finally {
     isCopying.value = false
   }
+}
+
+// Handle install button click
+function handleInstallClick(action: LinkAction) {
+  // For Cursor deeplinks, try to open directly
+  if (action.url.startsWith('cursor://')) {
+    window.location.href = action.url
+  } else {
+    // For other links, open in new tab
+    window.open(action.url, '_blank')
+  }
+  
+  toast.success(action.name || 'Installation link opened')
+}
+
+// Check if current client has install buttons
+function hasInstallButtons(): boolean {
+  return linkActions.value.length > 0
+}
+
+// Get appropriate label for the configuration content
+function getConfigLabel(): string {
+  if (contentType.value === 'text') {
+    return t('satelliteConfig.modal.instructionsLabel')
+  }
+  return t('satelliteConfig.modal.configLabel')
+}
+
+// Get appropriate copy button text
+function getCopyButtonText(): string {
+  if (contentType.value === 'text') {
+    return t('satelliteConfig.button.copyInstructionsAndClose')
+  }
+  return t('satelliteConfig.button.copyAndClose')
+}
+
+// Get CSS classes for textarea based on content type
+function getTextareaClasses(): string {
+  const baseClasses = 'min-h-[200px]'
+  if (contentType.value === 'text') {
+    return `${baseClasses} font-sans text-sm leading-relaxed`
+  }
+  return `${baseClasses} font-mono text-sm`
 }
 </script>
 
@@ -146,52 +215,21 @@ async function handleCopyAndClose() {
     <AlertDialogContent class="max-w-4xl max-h-[75vh] overflow-y-auto">
       <AlertDialogHeader class="pb-4">
         <AlertDialogTitle class="text-xl font-semibold">
-          {{ t('gatewayConfig.modal.title') }}
+          {{ t('satelliteConfig.modal.title') }}
         </AlertDialogTitle>
         <AlertDialogDescription>
-          {{ t('gatewayConfig.modal.description') }}
+          {{ t('satelliteConfig.modal.description') }}
         </AlertDialogDescription>
       </AlertDialogHeader>
 
       <div class="space-y-6">
-        <!-- Installation Step -->
-        <div class="space-y-3">
-          <label class="text-sm font-medium">First, install the DeployStack Gateway</label>
-          <div class="rounded-lg bg-gray-900 shadow-lg border border-gray-700 overflow-hidden">
-            <!-- Terminal Header -->
-            <div class="flex items-center justify-between bg-gray-800 px-4 py-2 border-b border-gray-600">
-              <div class="flex items-center space-x-2">
-                <div class="w-3 h-3 rounded-full bg-red-500"></div>
-                <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
-                <div class="w-3 h-3 rounded-full bg-green-500"></div>
-              </div>
-              <div class="text-gray-400 text-sm font-mono">
-                ~/setup
-              </div>
-              <div class="w-16"></div>
-            </div>
-
-            <!-- Terminal Body -->
-            <div class="p-4 bg-gray-900">
-              <div class="font-mono text-sm">
-                <div class="text-gray-300 mb-1">
-                  <span class="text-white">$ </span><span class="text-yellow-300">npm install -g @deploystack/gateway</span>
-                </div>
-                <div class="text-gray-300 mb-3">
-                  <span class="text-white">$ </span><span class="text-yellow-300">deploystack login</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
         <!-- Client Selection Dropdown -->
         <div class="space-y-2">
-          <label class="text-sm font-medium">{{ t('gatewayConfig.modal.clientLabel') }}</label>
+          <label class="text-sm font-medium">{{ t('satelliteConfig.modal.clientLabel') }}</label>
           <Select v-model="selectedClient" :disabled="isLoadingClients">
             <SelectTrigger class="w-full">
               <SelectValue
-                :placeholder="isLoadingClients ? 'Loading clients...' : t('gatewayConfig.modal.selectPlaceholder')"
+                :placeholder="isLoadingClients ? 'Loading clients...' : t('satelliteConfig.modal.selectPlaceholder')"
               />
             </SelectTrigger>
             <SelectContent>
@@ -206,15 +244,48 @@ async function handleCopyAndClose() {
           </Select>
         </div>
 
+        <!-- One-Click Install Buttons (shown for supported clients like Cursor) -->
+        <div v-if="hasInstallButtons()" class="space-y-3">
+          <label class="text-sm font-medium">{{ t('satelliteConfig.modal.oneClickInstall') }}</label>
+          <div class="flex flex-wrap gap-2">
+            <button
+              v-for="action in linkActions"
+              :key="action.url"
+              @click="handleInstallClick(action)"
+              class="inline-flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded"
+            >
+              <!-- Cursor install button -->
+              <img
+                v-if="action.url.includes('cursor')"
+                src="/images/provider/cursor-mcp-install-dark.svg"
+                :alt="action.name || 'Install'"
+                class="h-8 w-auto cursor-pointer"
+              />
+              <!-- Generic install button for other providers -->
+              <Button
+                v-else
+                variant="outline"
+                class="flex items-center gap-2"
+              >
+                <ExternalLink class="h-4 w-4" />
+                {{ action.name || 'Install' }}
+              </Button>
+            </button>
+          </div>
+          <p class="text-sm text-muted-foreground">
+            {{ t('satelliteConfig.modal.oneClickDescription') }}
+          </p>
+        </div>
+
         <!-- Configuration Content -->
         <div class="space-y-2">
-          <label class="text-sm font-medium">{{ t('gatewayConfig.modal.configLabel') }}</label>
+          <label class="text-sm font-medium">{{ getConfigLabel() }}</label>
           <Textarea
             v-model="configContent"
-            :placeholder="isLoading ? t('gatewayConfig.modal.loading') : t('gatewayConfig.modal.configPlaceholder')"
+            :placeholder="isLoading ? t('satelliteConfig.modal.loading') : 
+              (contentType === 'text' ? t('satelliteConfig.modal.instructionsPlaceholder') : t('satelliteConfig.modal.configPlaceholder'))"
             :disabled="isLoading"
-            rows="8"
-            class="font-mono text-sm"
+            :class="getTextareaClasses()"
             readonly
           />
         </div>
@@ -230,7 +301,7 @@ async function handleCopyAndClose() {
           loading-text="Copying..."
           :disabled="!configContent.trim() || isLoading || isLoadingClients"
         >
-          {{ t('gatewayConfig.button.copyAndClose') }}
+          {{ getCopyButtonText() }}
         </Button>
       </AlertDialogFooter>
     </AlertDialogContent>

@@ -53,9 +53,19 @@ const jsonInput = ref('')
 const validationError = ref<string | null>(null)
 const isValid = ref(false)
 const extractedServerName = ref<string>('')
+
+// For stdio servers
 const extractedCommand = ref<string>('')
 const extractedArgs = ref<string[]>([])
 const extractedEnvVars = ref<string[]>([])
+
+// For HTTP servers
+const extractedUrl = ref<string>('')
+const extractedType = ref<string>('')
+const extractedHeaders = ref<Record<string, string>>({})
+const extractedHeaderKeys = ref<string[]>([])
+const isHttpServer = ref(false)
+
 const isUpdatingFromStorage = ref(false)
 
 // Load data from storage
@@ -66,7 +76,22 @@ const loadFromStorage = () => {
     localData.value = { ...localData.value, ...storedData }
   } else if (props.formData?.technical) {
     // If no stored data but we have initial form data (edit mode), use it
-    localData.value = { ...localData.value, ...props.formData.technical }
+
+    // Parse installation_methods if it's a string (from database)
+    let installationMethods = props.formData.technical.installation_methods
+    if (typeof installationMethods === 'string') {
+      try {
+        installationMethods = JSON.parse(installationMethods)
+      } catch {
+        installationMethods = []
+      }
+    }
+
+    localData.value = {
+      ...localData.value,
+      ...props.formData.technical,
+      installation_methods: installationMethods
+    }
     // Save it to storage for consistency
     saveToStorage()
   }
@@ -178,27 +203,61 @@ const loadLatestConfigFromStorage = () => {
 // Convert existing installation_methods to Claude Desktop JSON format
 const convertExistingDataToJson = () => {
   if (localData.value.installation_methods && localData.value.installation_methods.length > 0) {
-    // Find the first valid installation method (skip git clone templates)
+    // Find the first valid installation method
     const validMethod = localData.value.installation_methods.find(method =>
-      method.command &&
-      method.command !== 'git clone <repository_url>' &&
-      !method.command.includes('<repository_url>')
+      (method.command && method.command !== 'git clone <repository_url>' && !method.command.includes('<repository_url>')) ||
+      method.url // Also accept HTTP methods
     )
 
     if (validMethod) {
       const serverName = extractServerNameFromMethod(validMethod) || 'mcp-server'
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let serverConfig: any
+
+      if (validMethod.url) {
+        // HTTP server configuration
+        serverConfig = {
+          url: validMethod.url,
+          type: validMethod.type || 'streamableHttp',
+          headers: validMethod.headers || {}
+        }
+      } else {
+        // Command-based server configuration
+        serverConfig = {
+          command: validMethod.command || 'npx',
+          args: validMethod.args || [],
+          env: validMethod.env || {}
+        }
+      }
+
       const claudeConfig = {
         mcpServers: {
-          [serverName]: {
-            command: validMethod.command || 'npx',
-            args: validMethod.args || [],
-            env: validMethod.env || {}
-          }
+          [serverName]: serverConfig
         }
       }
 
       jsonInput.value = JSON.stringify(claudeConfig, null, 2)
+    }
+  } else {
+    // Maybe the data isn't loaded yet, try to get it from props
+    if (props.formData?.technical?.installation_methods) {
+      let installationMethods = props.formData.technical.installation_methods
+
+      // Parse if it's a string
+      if (typeof installationMethods === 'string') {
+        try {
+          installationMethods = JSON.parse(installationMethods)
+        } catch {
+          return
+        }
+      }
+
+      if (installationMethods && installationMethods.length > 0) {
+        localData.value.installation_methods = installationMethods
+        // Retry conversion after updating localData
+        setTimeout(() => convertExistingDataToJson(), 50)
+      }
     }
   }
 }
@@ -206,6 +265,24 @@ const convertExistingDataToJson = () => {
 // Helper function to extract server name from installation method
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const extractServerNameFromMethod = (method: any): string => {
+  // Handle URL-based methods (HTTP servers)
+  if (method.url) {
+    try {
+      const url = new URL(method.url)
+      const hostname = url.hostname
+      // Extract meaningful name from hostname
+      if (hostname.includes('context7')) return 'context7'
+      if (hostname.includes('mcp.')) {
+        const name = hostname.replace('mcp.', '').split('.')[0]
+        return name || 'mcp-server'
+      }
+      const name = hostname.split('.')[0]
+      return name || 'mcp-server'
+    } catch {
+      return 'mcp-server'
+    }
+  }
+
   // Try to extract from package name in args
   if (method.args && method.args.length > 0) {
     for (const arg of method.args) {
@@ -235,7 +312,7 @@ const extractServerNameFromMethod = (method: any): string => {
 
 
 
-// Validation function (copied from ClaudeDesktopConfigStep)
+// Validation function for both HTTP and stdio servers
 const validateJson = (jsonString: string) => {
   try {
     if (!jsonString.trim()) {
@@ -264,27 +341,59 @@ const validateJson = (jsonString: string) => {
     }
     const serverConfig = parsed.mcpServers[serverKey]
 
-    // Validate server configuration structure
-    if (!serverConfig.command || typeof serverConfig.command !== 'string') {
-      return { isValid: false, error: t('mcpCatalog.form.technical.claudeConfig.validation.missingCommand') }
-    }
+    // Validate server configuration structure - check for HTTP or stdio
+    if (serverConfig.url) {
+      // HTTP server validation
+      if (typeof serverConfig.url !== 'string' || !serverConfig.url.startsWith('http')) {
+        return { isValid: false, error: 'Invalid URL - must be a valid HTTP/HTTPS URL' }
+      }
 
-    if (!serverConfig.args || !Array.isArray(serverConfig.args)) {
-      return { isValid: false, error: t('mcpCatalog.form.technical.claudeConfig.validation.missingArgs') }
-    }
+      // type is optional for HTTP servers
+      if (serverConfig.type && typeof serverConfig.type !== 'string') {
+        return { isValid: false, error: 'Invalid type - must be a string' }
+      }
 
-    // env is optional but if present must be an object
-    if (serverConfig.env && typeof serverConfig.env !== 'object') {
-      return { isValid: false, error: t('mcpCatalog.form.technical.claudeConfig.validation.invalidEnv') }
-    }
+      // headers is optional but if present must be an object
+      if (serverConfig.headers && typeof serverConfig.headers !== 'object') {
+        return { isValid: false, error: 'Invalid headers - must be an object' }
+      }
 
-    return {
-      isValid: true,
-      parsed,
-      serverName: serverKey,
-      command: serverConfig.command,
-      args: serverConfig.args,
-      envVars: serverConfig.env ? Object.keys(serverConfig.env) : []
+      return {
+        isValid: true,
+        parsed,
+        serverName: serverKey,
+        isHttpServer: true,
+        url: serverConfig.url,
+        type: serverConfig.type || 'streamableHttp',
+        headers: serverConfig.headers || {},
+        headerKeys: serverConfig.headers ? Object.keys(serverConfig.headers) : []
+      }
+    } else if (serverConfig.command) {
+      // Stdio server validation
+      if (typeof serverConfig.command !== 'string') {
+        return { isValid: false, error: t('mcpCatalog.form.technical.claudeConfig.validation.missingCommand') }
+      }
+
+      if (!serverConfig.args || !Array.isArray(serverConfig.args)) {
+        return { isValid: false, error: t('mcpCatalog.form.technical.claudeConfig.validation.missingArgs') }
+      }
+
+      // env is optional but if present must be an object
+      if (serverConfig.env && typeof serverConfig.env !== 'object') {
+        return { isValid: false, error: t('mcpCatalog.form.technical.claudeConfig.validation.invalidEnv') }
+      }
+
+      return {
+        isValid: true,
+        parsed,
+        serverName: serverKey,
+        isHttpServer: false,
+        command: serverConfig.command,
+        args: serverConfig.args,
+        envVars: serverConfig.env ? Object.keys(serverConfig.env) : []
+      }
+    } else {
+      return { isValid: false, error: 'Server configuration must have either "url" (for HTTP servers) or "command" (for stdio servers)' }
     }
   } catch {
     return { isValid: false, error: t('mcpCatalog.form.technical.claudeConfig.validation.invalidJson') }
@@ -304,71 +413,116 @@ watch(jsonInput, (newValue) => {
     validationError.value = null
     isValid.value = true
     extractedServerName.value = validation.serverName || ''
-    extractedCommand.value = validation.command || ''
-    extractedArgs.value = validation.args || []
-    extractedEnvVars.value = validation.envVars || []
+    isHttpServer.value = validation.isHttpServer || false
 
-    // Emit event for ConfigurationSchemaStep to sync environment variables
-    eventBus.emit('technical-env-vars-updated', {
-      envVars: validation.envVars || []
-    })
+    if (validation.isHttpServer) {
+      // HTTP server
+      extractedUrl.value = validation.url || ''
+      extractedType.value = validation.type || ''
+      extractedHeaders.value = validation.headers || {}
+      extractedHeaderKeys.value = validation.headerKeys || []
 
-    // ALSO store in persistent storage for ConfigurationSchemaStep to load later
-    eventBus.setState('technical_extracted_env_vars_edit', validation.envVars || [])
+      // Clear stdio fields
+      extractedCommand.value = ''
+      extractedArgs.value = []
+      extractedEnvVars.value = []
 
+      // Emit event for headers if any
+      if (validation.headerKeys && validation.headerKeys.length > 0) {
+        eventBus.emit('technical-headers-updated', {
+          headers: validation.headerKeys
+        })
+        eventBus.setState('technical_extracted_headers_edit', validation.headerKeys)
+      }
 
+      // Convert to installation_methods format for HTTP
+      const installationMethods = [{
+        client: 'claude-desktop' as const,
+        url: validation.url,
+        type: validation.type,
+        headers: validation.headers
+      }]
 
-    // Convert back to installation_methods format for form compatibility
-    const serverName = validation.serverName!
-    const serverConfig = validation.parsed.mcpServers[serverName]
+      updateField('installation_methods', installationMethods)
+    } else {
+      // Stdio server
+      extractedCommand.value = validation.command || ''
+      extractedArgs.value = validation.args || []
+      extractedEnvVars.value = validation.envVars || []
 
-    const installationMethods = [{
-      client: 'claude-desktop' as const,
-      command: serverConfig.command,
-      args: serverConfig.args,
-      env: serverConfig.env || {}
-    }]
+      // Clear HTTP fields
+      extractedUrl.value = ''
+      extractedType.value = ''
+      extractedHeaders.value = {}
+      extractedHeaderKeys.value = []
 
-    // Update installation_methods
-    updateField('installation_methods', installationMethods)
-
-    // Also update the capabilities section with environment variables
-    if (validation.envVars && validation.envVars.length > 0) {
-      // Get existing environment variables from database/capabilities storage
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const existingCapabilitiesData = eventBus.getState<any>('edit_capabilities_data')
-      const existingEnvVars = existingCapabilitiesData?.environment_variables || []
-
-      // Smart merge: preserve existing env var properties, add new ones with defaults
-      const envVariables = validation.envVars.map(envVar => {
-        // Check if this env var already exists in database
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const existing = existingEnvVars.find((existing: any) => existing.name === envVar)
-
-        if (existing) {
-          // Keep existing properties (required, type, description, etc.), just ensure name is correct
-          return { ...existing, name: envVar }
-        } else {
-          // New env var - use defaults
-          return {
-            name: envVar,
-            description: t('mcpCatalog.form.technical.claudeConfig.autoDescription'),
-            required: true,
-            type: 'password' // Default to password type for security
-          }
-        }
+      // Emit event for ConfigurationSchemaStep to sync environment variables
+      eventBus.emit('technical-env-vars-updated', {
+        envVars: validation.envVars || []
       })
 
-      // Save environment variables to capabilities storage
-      eventBus.setState('capabilities_env_vars', envVariables)
+      // ALSO store in persistent storage for ConfigurationSchemaStep to load later
+      eventBus.setState('technical_extracted_env_vars_edit', validation.envVars || [])
+
+      // Convert back to installation_methods format for stdio
+      const serverName = validation.serverName!
+      const serverConfig = validation.parsed.mcpServers[serverName]
+
+      const installationMethods = [{
+        client: 'claude-desktop' as const,
+        command: serverConfig.command,
+        args: serverConfig.args,
+        env: serverConfig.env || {}
+      }]
+
+      // Update installation_methods
+      updateField('installation_methods', installationMethods)
+
+      // Also update the capabilities section with environment variables
+      if (validation.envVars && validation.envVars.length > 0) {
+        // Get existing environment variables from database/capabilities storage
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const existingCapabilitiesData = eventBus.getState<any>('edit_capabilities_data')
+        const existingEnvVars = existingCapabilitiesData?.environment_variables || []
+
+        // Smart merge: preserve existing env var properties, add new ones with defaults
+        const envVariables = validation.envVars.map(envVar => {
+          // Check if this env var already exists in database
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const existing = existingEnvVars.find((existing: any) => existing.name === envVar)
+
+          if (existing) {
+            // Keep existing properties (required, type, description, etc.), just ensure name is correct
+            return { ...existing, name: envVar }
+          } else {
+            // New env var - use defaults
+            return {
+              name: envVar,
+              description: t('mcpCatalog.form.technical.claudeConfig.autoDescription'),
+              required: true,
+              type: 'password' // Default to password type for security
+            }
+          }
+        })
+
+        // Save environment variables to capabilities storage
+        eventBus.setState('capabilities_env_vars', envVariables)
+      }
     }
   } else {
     validationError.value = validation.error || t('mcpCatalog.form.technical.claudeConfig.validation.invalidJson')
     isValid.value = false
     extractedServerName.value = ''
+    isHttpServer.value = false
+
+    // Clear all extracted fields
     extractedCommand.value = ''
     extractedArgs.value = []
     extractedEnvVars.value = []
+    extractedUrl.value = ''
+    extractedType.value = ''
+    extractedHeaders.value = {}
+    extractedHeaderKeys.value = []
   }
 }, { immediate: true })
 
@@ -581,35 +735,65 @@ onUnmounted(() => {
               <Badge variant="outline">{{ extractedServerName }}</Badge>
             </div>
 
-            <!-- Command -->
-            <div class="flex items-center space-x-2">
-              <span class="text-xs text-muted-foreground font-medium">{{ t('mcpCatalog.form.technical.claudeConfig.preview.command') }}:</span>
-              <code class="text-sm bg-muted px-2 py-1 rounded font-mono">{{ extractedCommand }}</code>
-            </div>
+            <!-- HTTP Server Preview -->
+            <template v-if="isHttpServer">
+              <!-- URL -->
+              <div class="flex items-center space-x-2">
+                <span class="text-xs text-muted-foreground font-medium">URL:</span>
+                <code class="text-sm bg-muted px-2 py-1 rounded font-mono break-all">{{ extractedUrl }}</code>
+              </div>
 
-            <!-- Arguments -->
-            <div v-if="extractedArgs.length > 0" class="space-y-2">
-              <span class="text-xs text-muted-foreground font-medium">{{ t('mcpCatalog.form.technical.claudeConfig.preview.arguments') }}:</span>
-              <ul class="list-disc list-inside space-y-1 ml-2">
-                <li v-for="arg in extractedArgs" :key="arg">
-                  <Badge variant="outline" class="text-xs">
-                    {{ arg }}
-                  </Badge>
-                </li>
-              </ul>
-            </div>
+              <!-- Type -->
+              <div class="flex items-center space-x-2">
+                <span class="text-xs text-muted-foreground font-medium">Type:</span>
+                <Badge variant="secondary">{{ extractedType }}</Badge>
+              </div>
 
-            <!-- Environment Variables -->
-            <div v-if="extractedEnvVars.length > 0" class="space-y-2">
-              <span class="text-xs text-muted-foreground font-medium">{{ t('mcpCatalog.form.technical.claudeConfig.preview.environmentVariables') }}:</span>
-              <ul class="list-disc list-inside space-y-1 ml-2">
-                <li v-for="envVar in extractedEnvVars" :key="envVar">
-                  <Badge variant="secondary" class="text-xs">
-                    {{ envVar }}
-                  </Badge>
-                </li>
-              </ul>
-            </div>
+              <!-- Headers -->
+              <div v-if="extractedHeaderKeys.length > 0" class="space-y-2">
+                <span class="text-xs text-muted-foreground font-medium">Headers:</span>
+                <ul class="list-disc list-inside space-y-1 ml-2">
+                  <li v-for="headerKey in extractedHeaderKeys" :key="headerKey">
+                    <Badge variant="secondary" class="text-xs">
+                      {{ headerKey }}: {{ extractedHeaders[headerKey] || '[hidden]' }}
+                    </Badge>
+                  </li>
+                </ul>
+              </div>
+            </template>
+
+            <!-- Stdio Server Preview -->
+            <template v-else>
+              <!-- Command -->
+              <div class="flex items-center space-x-2">
+                <span class="text-xs text-muted-foreground font-medium">{{ t('mcpCatalog.form.technical.claudeConfig.preview.command') }}:</span>
+                <code class="text-sm bg-muted px-2 py-1 rounded font-mono">{{ extractedCommand }}</code>
+              </div>
+
+              <!-- Arguments -->
+              <div v-if="extractedArgs.length > 0" class="space-y-2">
+                <span class="text-xs text-muted-foreground font-medium">{{ t('mcpCatalog.form.technical.claudeConfig.preview.arguments') }}:</span>
+                <ul class="list-disc list-inside space-y-1 ml-2">
+                  <li v-for="arg in extractedArgs" :key="arg">
+                    <Badge variant="outline" class="text-xs">
+                      {{ arg }}
+                    </Badge>
+                  </li>
+                </ul>
+              </div>
+
+              <!-- Environment Variables -->
+              <div v-if="extractedEnvVars.length > 0" class="space-y-2">
+                <span class="text-xs text-muted-foreground font-medium">{{ t('mcpCatalog.form.technical.claudeConfig.preview.environmentVariables') }}:</span>
+                <ul class="list-disc list-inside space-y-1 ml-2">
+                  <li v-for="envVar in extractedEnvVars" :key="envVar">
+                    <Badge variant="secondary" class="text-xs">
+                      {{ envVar }}
+                    </Badge>
+                  </li>
+                </ul>
+              </div>
+            </template>
           </div>
 
           <p class="text-xs text-muted-foreground mt-3">

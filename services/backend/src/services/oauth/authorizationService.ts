@@ -4,6 +4,7 @@ import { eq, and, lt } from 'drizzle-orm';
 import { generateId } from 'lucia';
 import crypto from 'node:crypto';
 import type { FastifyBaseLogger } from 'fastify';
+import { isClientRegistered, getRegisteredClientsDebugInfo } from '../../routes/oauth2/register';
 
 export interface AuthorizationRequest {
   id: string;
@@ -21,6 +22,7 @@ export interface AuthorizationRequest {
 export interface AuthorizationCode {
   code: string;
   userId: string;
+  teamId: string;
   clientId: string;
   redirectUri: string;
   scope: string;
@@ -38,42 +40,187 @@ export class AuthorizationService {
   }
 
   /**
-   * Validate OAuth2 client
+   * Validate OAuth2 client - Updated for MCP clients with dynamic registration support
    */
-  static validateClient(clientId: string): boolean {
-    // For now, only support the deploystack-gateway-cli client
-    return clientId === 'deploystack-gateway-cli';
+  static async validateClient(clientId: string, logger?: FastifyBaseLogger): Promise<boolean> {
+    // Support static MCP clients: VS Code, Cursor, Claude.ai, and Cline
+    const allowedClients = [
+      'vscode_mcp_extension',
+      'cursor_mcp_client',
+      'claude_ai_mcp_client', 
+      'cline_mcp_client'
+    ];
+    
+    if (allowedClients.includes(clientId)) {
+      logger?.debug({
+        operation: 'validate_client',
+        clientId,
+        clientType: 'static',
+        isValid: true,
+      }, 'Static client validation successful');
+      return true;
+    }
+    
+    // Support dynamically registered clients (RFC 7591)
+    if (clientId.startsWith('dyn_')) {
+      try {
+        // Get debug info about the registered clients database
+        const debugInfo = await getRegisteredClientsDebugInfo();
+        
+        logger?.debug({
+          operation: 'validate_client',
+          clientId,
+          clientType: 'dynamic',
+          registeredClientsMapInfo: debugInfo,
+        }, 'Dynamic client validation - Database contents');
+        
+        // Use the imported function to check if client is registered
+        const isValid = await isClientRegistered(clientId);
+        
+        logger?.debug({
+          operation: 'validate_client',
+          clientId,
+          clientType: 'dynamic',
+          isValid,
+          mapContainsClient: debugInfo.allClientIds.includes(clientId),
+        }, 'Dynamic client validation result');
+        
+        return isValid;
+      } catch (error) {
+        logger?.error({
+          operation: 'validate_client',
+          clientId,
+          clientType: 'dynamic',
+          error: error instanceof Error ? error.message : String(error),
+        }, 'Dynamic client validation error');
+        return false;
+      }
+    }
+    
+    logger?.debug({
+      operation: 'validate_client',
+      clientId,
+      clientType: 'unknown',
+      isValid: false,
+    }, 'Client validation failed - unknown client type');
+    
+    return false;
   }
 
   /**
-   * Validate redirect URI
+   * Validate redirect URI - Updated for MCP clients
    */
   static validateRedirectUri(redirectUri: string): boolean {
-    const allowedRedirects = [
-      'http://localhost:8976/oauth/callback',
-      'http://127.0.0.1:8976/oauth/callback'
+    // Allow flexible localhost patterns for MCP clients
+    const allowedPatterns = [
+      // Legacy Gateway pattern (can be removed later)
+      /^http:\/\/(localhost|127\.0\.0\.1):8976\/oauth\/callback$/,
+      // MCP client patterns - flexible localhost ports
+      /^http:\/\/(localhost|127\.0\.0\.1):\d+\/oauth\/callback$/,
+      /^http:\/\/(localhost|127\.0\.0\.1):\d+\/auth\/callback$/,
+      // VS Code MCP extension specific patterns (from actual VS Code logs)
+      /^http:\/\/127\.0\.0\.1:\d+\/?$/,
+      /^https:\/\/vscode\.dev\/redirect$/,
+      // VS Code / Cline extension patterns
+      /^vscode:\/\/.*\/auth\/callback$/,
+      // Cursor patterns
+      /^cursor:\/\/.*\/oauth\/callback$/,
+      // Claude.ai custom connector patterns
+      /^https:\/\/claude\.ai\/mcp\/auth\/callback$/
     ];
-    return allowedRedirects.includes(redirectUri);
+    
+    return allowedPatterns.some(pattern => pattern.test(redirectUri));
   }
 
   /**
-   * Validate OAuth2 scope
+   * Validate OAuth2 scope - Updated for MCP scopes
    */
   static validateScope(scope: string): boolean {
     const requestedScopes = scope.split(' ');
     const allowedScopes = [
-      'mcp:read',
-      'mcp:categories:read',
-      'mcp:user-configs:read',
-      'account:read',
-      'user:read',
-      'teams:read',
-      'gateway:config:read',
-      'offline_access'
+      'mcp:read',           // Tool discovery within team
+      'mcp:tools:execute',  // Tool execution within team
+      'offline_access'      // Refresh tokens
     ];
     
     // Check if all requested scopes are allowed
     return requestedScopes.every(s => allowedScopes.includes(s));
+  }
+
+
+  /**
+   * Get user's teams for team selection dropdown
+   */
+  static async getUserTeams(userId: string, logger?: FastifyBaseLogger): Promise<Array<{id: string, name: string, isDefault: boolean}>> {
+    const { db, schema } = this.getDbAndSchema();
+    
+    try {
+      const teams = await (db as any)
+        .select({
+          id: schema.teams.id,
+          name: schema.teams.name,
+          isDefault: schema.teams.is_default,
+        })
+        .from(schema.teams)
+        .innerJoin(schema.teamMemberships, eq(schema.teams.id, schema.teamMemberships.team_id))
+        .where(eq(schema.teamMemberships.user_id, userId))
+        .orderBy(schema.teams.name);
+
+      logger?.debug({
+        operation: 'get_user_teams',
+        userId,
+        teamCount: teams.length,
+      }, 'Retrieved user teams for OAuth team selection');
+
+      return teams;
+    } catch (error) {
+      logger?.error({
+        operation: 'get_user_teams',
+        error,
+        userId,
+      }, 'Failed to get user teams');
+      return [];
+    }
+  }
+
+  /**
+   * Validate team access - Check if user is member of the team
+   */
+  static async validateTeamAccess(userId: string, teamId: string, logger?: FastifyBaseLogger): Promise<boolean> {
+    const { db, schema } = this.getDbAndSchema();
+    
+    try {
+      // Check if user is member of the team
+      const result = await (db as any)
+        .select()
+        .from(schema.teamMemberships)
+        .where(
+          and(
+            eq(schema.teamMemberships.user_id, userId),
+            eq(schema.teamMemberships.team_id, teamId)
+          )
+        )
+        .limit(1);
+
+      const isMember = result.length > 0;
+
+      logger?.debug({
+        operation: 'validate_team_access',
+        userId,
+        teamId,
+        isMember,
+      }, 'Team access validation completed');
+
+      return isMember;
+    } catch (error) {
+      logger?.error({
+        operation: 'validate_team_access',
+        error,
+        userId,
+        teamId,
+      }, 'Team access validation error');
+      return false;
+    }
   }
 
   /**
@@ -81,6 +228,7 @@ export class AuthorizationService {
    */
   static async storeAuthorizationRequest(
     userId: string,
+    teamId: string,
     clientId: string,
     redirectUri: string,
     scope: string,
@@ -117,6 +265,7 @@ export class AuthorizationService {
       const authRequest = {
         id: requestId,
         user_id: userId,
+        team_id: teamId,
         client_id: clientId,
         redirect_uri: redirectUri,
         scope,
@@ -350,6 +499,7 @@ export class AuthorizationService {
       return {
         code: authCode.code,
         userId: authCode.user_id,
+        teamId: authCode.team_id,
         clientId: authCode.client_id,
         redirectUri: authCode.redirect_uri,
         scope: authCode.scope,

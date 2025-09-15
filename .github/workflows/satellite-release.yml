@@ -1,0 +1,123 @@
+name: Satellite Release
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+    paths:
+      - 'services/satellite/**'
+  
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release:
+    if: github.event.pull_request.merged == true && contains(github.event.pull_request.labels.*.name, 'satellite') && contains(github.event.pull_request.labels.*.name, 'release')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.APP_INSTALLATION_TOKEN }}
+          
+      - name: git config
+        run: |
+          git config user.name "${GITHUB_ACTOR}"
+          git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
+          
+      - name: Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          
+      - name: Install dependencies
+        run: npm ci
+          
+      - name: Create Release
+        working-directory: services/satellite
+        env:
+          GITHUB_TOKEN: ${{ secrets.APP_INSTALLATION_TOKEN }}
+        run: |
+          # Let release-it handle the release process properly
+          npm run release -- --ci --verbose --no-git.requireCleanWorkingDir --no-increment
+        
+      - name: Get version
+        id: package-version
+        uses: martinbeentjes/npm-get-version-action@main
+        with:
+          path: services/satellite
+          
+      - name: Extract release notes
+        id: extract-release-notes
+        working-directory: services/satellite
+        run: |
+          VERSION=$(cat package.json | grep '"version"' | cut -d'"' -f4)
+          echo "Extracting release notes for version $VERSION"
+          
+          # Find the latest satellite tag (excluding the current one)
+          LATEST_TAG=$(git tag --list "satellite-v*" --sort=-version:refname | grep -v "satellite-v${VERSION}" | head -1)
+          
+          if [ -z "$LATEST_TAG" ]; then
+            echo "No previous satellite tag found, using all commits"
+            SATELLITE_COMMITS=$(git log --oneline --grep="(satellite)" --grep="(all)" --grep-or)
+          else
+            echo "Using commits since $LATEST_TAG"
+            # Get satellite and all scoped commits since last release
+            SATELLITE_COMMITS=$(git log ${LATEST_TAG}..HEAD --oneline --grep="(satellite)")
+            ALL_COMMITS=$(git log ${LATEST_TAG}..HEAD --oneline --grep="(all)")
+            
+            # Combine and format the commits
+            COMBINED_COMMITS=$(echo -e "$SATELLITE_COMMITS\n$ALL_COMMITS" | sort -u | grep -v "^$")
+          fi
+          
+          # Format commits for release notes
+          if [ -n "$COMBINED_COMMITS" ]; then
+            RELEASE_NOTES=""
+            while IFS= read -r commit; do
+              if [ -n "$commit" ]; then
+                # Extract commit hash and message
+                HASH=$(echo "$commit" | cut -d' ' -f1)
+                MESSAGE=$(echo "$commit" | cut -d' ' -f2-)
+                RELEASE_NOTES="${RELEASE_NOTES}- ${MESSAGE} ([${HASH}](https://github.com/deploystackio/deploystack/commit/${HASH}))\n"
+              fi
+            done <<< "$COMBINED_COMMITS"
+          else
+            RELEASE_NOTES="No significant changes since last release."
+          fi
+          
+          echo "release_notes<<EOF" >> $GITHUB_OUTPUT
+          echo -e "$RELEASE_NOTES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          
+          echo "Release notes extracted:"
+          echo -e "$RELEASE_NOTES"
+          
+      - name: Build satellite
+        working-directory: services/satellite
+        run: npm run build
+          
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./services/satellite/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            deploystack/satellite:latest
+            deploystack/satellite:v${{ steps.package-version.outputs.current-version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

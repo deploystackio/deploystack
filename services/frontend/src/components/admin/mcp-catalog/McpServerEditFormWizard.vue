@@ -173,24 +173,65 @@ const initializeStorageWithData = (data: McpServerFormData) => {
   // This ensures we load fresh data from database, not old corrupted cache
   eventBus.setState('edit_basic_data', data.basic)
   eventBus.setState('edit_repository_data', data.repository)
-  eventBus.setState('edit_technical_data', data.technical)
+
+  // Parse installation_methods if it's a string (from database)
+  const technicalData = { ...data.technical }
+  if (typeof technicalData.installation_methods === 'string') {
+    try {
+      technicalData.installation_methods = JSON.parse(technicalData.installation_methods)
+    } catch (e) {
+      console.error('Failed to parse installation_methods in initializeStorageWithData:', e)
+      technicalData.installation_methods = []
+    }
+  }
+
+  eventBus.setState('edit_technical_data', technicalData)
 
   // FORCE FRESH CONFIGURATION SCHEMA - always overwrite in edit mode
   if (data.configuration_schema) {
-    eventBus.setState('edit_configuration_schema', data.configuration_schema)
+    // Ensure all header fields are included
+    const fullConfigSchema = {
+      template_args: data.configuration_schema.template_args || [],
+      template_env: data.configuration_schema.template_env || [],
+      template_headers: data.configuration_schema.template_headers || [],
+      team_args_schema: data.configuration_schema.team_args_schema || [],
+      team_env_schema: data.configuration_schema.team_env_schema || [],
+      team_headers_schema: data.configuration_schema.team_headers_schema || [],
+      user_args_schema: data.configuration_schema.user_args_schema || [],
+      user_env_schema: data.configuration_schema.user_env_schema || [],
+      user_headers_schema: data.configuration_schema.user_headers_schema || [],
+    }
+
+    eventBus.setState('edit_configuration_schema', fullConfigSchema)
   }
 
   // Initialize Claude Desktop config if available
-  if (data.technical.installation_methods && data.technical.installation_methods.length > 0) {
-    const method = data.technical.installation_methods[0]
-    if (method && method.client === 'claude-desktop') {
+  if (technicalData.installation_methods && technicalData.installation_methods.length > 0) {
+  const method = technicalData.installation_methods[0]
+  if (method && method.client === 'claude-desktop') {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          let serverConfig: any
+
+      if (method.url) {
+        // HTTP server configuration
+        serverConfig = {
+          url: method.url,
+          type: method.type || 'streamableHttp',
+          headers: method.headers || {}
+        }
+      } else {
+        // Stdio server configuration
+        serverConfig = {
+          command: method.command || '',
+          args: method.args || [],
+          env: method.env || {},
+          headers: method.headers || {}
+        }
+      }
+
       const claudeConfig = {
         mcpServers: {
-          [data.basic.name || 'server']: {
-            command: method.command || '',
-            args: method.args || [],
-            env: method.env || {}
-          }
+          [data.basic.name || 'server']: serverConfig
         }
       }
       eventBus.setState('edit_claude_config', JSON.stringify(claudeConfig, null, 2))
@@ -593,7 +634,10 @@ const submitForm = async () => {
                 client: 'claude-desktop' as const,
                 command: serverConfig.command,
                 args: serverConfig.args,
-                env: serverConfig.env || {}
+                env: serverConfig.env || {},
+                url: serverConfig.url,
+                type: serverConfig.type,
+                headers: serverConfig.headers || {}
               }]
             }
           }

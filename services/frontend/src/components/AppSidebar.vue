@@ -42,7 +42,7 @@ import {
   UserRoundPen,
   FileSliders,
   FolderTree,
-  Monitor
+  Satellite
 } from 'lucide-vue-next'
 
 // Define props, including variant
@@ -102,11 +102,6 @@ const navigationItems = [
   //   icon: Key,
   //   url: '/credentials',
   // },
-  {
-    title: t('sidebar.navigation.devices'),
-    icon: Monitor,
-    url: '/devices',
-  },
 ]
 
 // Fetch user data logic using UserService
@@ -362,6 +357,17 @@ onUnmounted(() => {
               >
                 <FolderTree class="mr-2 h-4 w-4 shrink-0" />
                 <span>{{ t('sidebar.adminArea.mcpCategories') }}</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                @click="navigateTo('/admin/satellites')"
+                :is-active="router.currentRoute.value.path.startsWith('/admin/satellites')"
+                class="w-full justify-start"
+                :aria-current="router.currentRoute.value.path.startsWith('/admin/satellites') ? 'page' : undefined"
+              >
+                <Satellite class="mr-2 h-4 w-4 shrink-0" />
+                <span>{{ t('sidebar.adminArea.satellites') }}</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>

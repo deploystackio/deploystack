@@ -96,8 +96,8 @@ export const CREATE_INSTALLATION_REQUEST_SCHEMA = {
     },
     installation_type: { 
       type: 'string', 
-      enum: ['local', 'cloud'],
-      description: 'Installation type (defaults to local)'
+      enum: ['global', 'team'],
+      description: 'Installation type (defaults to global)'
     },
     team_args: {
       type: 'array',
@@ -108,6 +108,11 @@ export const CREATE_INSTALLATION_REQUEST_SCHEMA = {
       type: 'object',
       additionalProperties: { type: 'string' },
       description: 'Team-level shared environment variables'
+    },
+    team_headers: { 
+      type: 'object',
+      additionalProperties: { type: 'string' },
+      description: 'Team-level shared headers'
     }
   },
   required: ['server_id', 'installation_name'],
@@ -159,6 +164,19 @@ export const UPDATE_ARGS_REQUEST_SCHEMA = {
     }
   },
   required: ['args'],
+  additionalProperties: false
+} as const;
+
+export const UPDATE_HEADERS_REQUEST_SCHEMA = {
+  type: 'object',
+  properties: {
+    team_headers: {
+      type: 'object',
+      additionalProperties: { type: 'string' },
+      description: 'Team-level headers to update'
+    }
+  },
+  required: ['team_headers'],
   additionalProperties: false
 } as const;
 
@@ -270,7 +288,7 @@ export const INSTALLATION_ENTITY_SCHEMA = {
     },
     installation_type: { 
       type: 'string',
-      enum: ['local', 'cloud'],
+      enum: ['global', 'team'],
       description: 'Installation type'
     },
     team_args: {
@@ -285,7 +303,13 @@ export const INSTALLATION_ENTITY_SCHEMA = {
       nullable: true,
       description: 'Team-level shared environment variables'
     },
-    created_at: { 
+    team_headers: {
+      type: 'object',
+      additionalProperties: { type: 'string' },
+      nullable: true,
+      description: 'Team-level shared headers'
+    },
+    created_at: {
       type: 'string',
       format: 'date-time',
       description: 'Installation creation timestamp'
@@ -445,9 +469,10 @@ export interface ClientConfigParams {
 export interface CreateInstallationRequest {
   server_id: string;
   installation_name: string;
-  installation_type?: 'local' | 'cloud';
+  installation_type?: 'global' | 'team';
   team_args?: string[];
   team_env?: Record<string, string>;
+  team_headers?: Record<string, string>;
 }
 
 export interface UpdateInstallationRequest {
@@ -462,6 +487,10 @@ export interface UpdateEnvironmentVariablesRequest {
 
 export interface UpdateArgsRequest {
   args: string[];
+}
+
+export interface UpdateHeadersRequest {
+  team_headers: Record<string, string>;
 }
 
 export interface ServerDetails {
@@ -488,9 +517,10 @@ export interface InstallationData {
   server_id: string;
   created_by: string;
   installation_name: string;
-  installation_type: 'local' | 'cloud';
+  installation_type: 'global' | 'team';
   team_args?: string[] | null;
   team_env?: Record<string, string> | null;
+  team_headers?: Record<string, string> | null;
   created_at: Date;
   updated_at: Date;
   last_used_at: Date | null;
@@ -503,9 +533,10 @@ export interface InstallationResponse {
   server_id: string;
   created_by: string;
   installation_name: string;
-  installation_type: 'local' | 'cloud';
+  installation_type: 'global' | 'team';
   team_args?: string[] | null;
   team_env?: Record<string, string> | null;
+  team_headers?: Record<string, string> | null;
   created_at: string;
   updated_at: string;
   last_used_at: string | null;

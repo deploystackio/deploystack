@@ -387,18 +387,38 @@ const submitForm = async () => {
       const serverConfig = serverKey ? claudeConfig.mcpServers[serverKey] : null;
 
       if (serverConfig) {
-        // Create proper Claude Desktop installation method
+      // Create proper Claude Desktop installation method based on server type
+      if (serverConfig.url) {
+        // HTTP-based server
+        extractedInstallationMethods = [{
+          client: "claude-desktop",
+          url: serverConfig.url,
+          type: serverConfig.type,
+          headers: serverConfig.headers || {}
+        }];
+      } else if (serverConfig.command) {
+        // Command-based server
         extractedInstallationMethods = [{
           client: "claude-desktop",
           command: serverConfig.command,
           args: serverConfig.args || [],
           env: serverConfig.env || {}
         }];
+      } else {
+        extractedInstallationMethods = [];
+      }
 
-        // Determine transport type from command
-        const command = serverConfig.command?.toLowerCase() || '';
-        const stdioCommands = ['npx', 'node', 'python', 'python3', 'pip', 'poetry', 'cargo', 'go', 'java', 'dotnet'];
-        extractedTransportType = stdioCommands.some(cmd => command.includes(cmd)) ? 'stdio' : 'stdio';
+      // Determine transport type from server configuration
+      if (serverConfig.url) {
+        // HTTP-based server (has URL)
+        extractedTransportType = 'http';
+      } else if (serverConfig.command) {
+        // Command-based server (stdio)
+        extractedTransportType = 'stdio';
+      } else {
+        // Default fallback
+        extractedTransportType = 'stdio';
+      }
 
         // Extract tools from configuration schema or create default
         extractedTools = [{
@@ -436,9 +456,9 @@ const submitForm = async () => {
       // Also send Claude Desktop config for backend fallback
       claude_desktop_config: formData.value.claudeConfig.claude_desktop_config,
 
-      // Properly extracted fields
-      language: 'typescript', // TODO: Could be extracted from repo data
-      runtime: 'node',        // TODO: Could be extracted from repo data
+      // Properly extracted fields based on transport type
+      language: extractedTransportType === 'http' || extractedTransportType === 'sse' ? 'http' : 'typescript',
+      runtime: extractedTransportType === 'http' || extractedTransportType === 'sse' ? 'http' : 'node',
       transport_type: extractedTransportType,
       installation_methods: extractedInstallationMethods,
       tools: extractedTools,

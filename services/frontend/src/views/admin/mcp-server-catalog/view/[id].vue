@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import CategoryDisplay from '@/components/mcp-server/CategoryDisplay.vue'
 import ContentWrapper from '@/components/ContentWrapper.vue'
-import { ArrowLeft, Github, ExternalLink, Package, Settings, Calendar, Tag, Trash2, AlertTriangle, Edit, Terminal, Users, User, Lock, Unlock } from 'lucide-vue-next'
+import { ArrowLeft, Github, ExternalLink, Package, Settings, Calendar, Tag, Trash2, AlertTriangle, Edit, Terminal, Users, User, Lock, Unlock, Globe, Link } from 'lucide-vue-next'
 import DashboardLayout from '@/components/DashboardLayout.vue'
 
 import { McpCatalogService } from '@/services/mcpCatalogService'
@@ -141,23 +141,53 @@ const displayUserEnvSchema = computed(() => {
   }
 })
 
+const displayTeamHeadersSchema = computed(() => {
+  if (!server.value?.team_headers_schema) return []
+  // Handle both array and JSON string formats
+  if (Array.isArray(server.value.team_headers_schema)) {
+    return server.value.team_headers_schema
+  }
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return JSON.parse(server.value.team_headers_schema as any)
+  } catch {
+    return []
+  }
+})
+
+const displayUserHeadersSchema = computed(() => {
+  if (!server.value?.user_headers_schema) return []
+  // Handle both array and JSON string formats
+  if (Array.isArray(server.value.user_headers_schema)) {
+    return server.value.user_headers_schema
+  }
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return JSON.parse(server.value.user_headers_schema as any)
+  } catch {
+    return []
+  }
+})
+
+const displayTemplateHeaders = computed(() => {
+  if (!server.value?.template_headers) return []
+  // Handle both array and JSON string formats
+  if (Array.isArray(server.value.template_headers)) {
+    return server.value.template_headers
+  }
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return JSON.parse(server.value.template_headers as any)
+  } catch {
+    return []
+  }
+})
+
 const displayTransportType = computed(() => {
   return server.value?.transport_type || t('mcpCatalog.edit.values.transportType.notSpecified')
 })
 
-const displayDependencies = computed(() => {
-  if (!server.value?.dependencies) return null
-  // Handle both object and JSON string formats
-  if (typeof server.value.dependencies === 'object') {
-    return server.value.dependencies
-  }
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return JSON.parse(server.value.dependencies as any)
-  } catch {
-    return null
-  }
-})
+
 
 // Get status badge variant
 const getStatusVariant = (status: string) => {
@@ -463,51 +493,99 @@ const goBack = () => {
                     class="py-4 pr-5 pl-4 text-sm/6"
                   >
                     <div class="flex items-start gap-3">
-                      <Package class="size-5 shrink-0 text-gray-400 mt-0.5" aria-hidden="true" />
+                      <!-- Icon based on method type -->
+                      <Link v-if="method.url" class="size-5 shrink-0 text-blue-500 mt-0.5" aria-hidden="true" />
+                      <Package v-else class="size-5 shrink-0 text-gray-400 mt-0.5" aria-hidden="true" />
+
                       <div class="flex-1 space-y-3">
-                        <!-- Client and Command -->
-                        <div class="flex items-center gap-2">
-                          <span class="font-medium">{{ method.client || 'Unknown Client' }}</span>
-                          <span class="text-gray-500">•</span>
-                          <code class="bg-gray-100 px-2 py-1 rounded text-xs font-mono">{{ method.command }}</code>
-                        </div>
-
-                        <!-- Arguments -->
-                        <div v-if="method.args && method.args.length > 0" class="space-y-1">
-                          <div class="text-xs font-medium text-gray-600">Arguments:</div>
-                          <div class="flex flex-wrap gap-1">
-                            <code
-                              v-for="(arg, argIndex) in method.args"
-                              :key="argIndex"
-                              class="bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs font-mono"
-                            >
-                              {{ arg }}
-                            </code>
+                        <!-- URL-based (Remote) Method -->
+                        <div v-if="method.url" class="space-y-3">
+                          <div class="flex items-center gap-2">
+                            <span class="font-medium">{{ method.client || 'Remote MCP Server' }}</span>
+                            <span class="text-gray-500">•</span>
+                            <Badge variant="outline" class="bg-blue-50 text-blue-700 border-blue-200">
+                              {{ method.type || 'streamableHttp' }}
+                            </Badge>
                           </div>
-                        </div>
 
-                        <!-- Environment Variables -->
-                        <div v-if="method.env && Object.keys(method.env).length > 0" class="space-y-1">
-                          <div class="text-xs font-medium text-gray-600">Environment Variables:</div>
+                          <!-- URL -->
                           <div class="space-y-1">
-                            <div
-                              v-for="(value, key) in method.env"
-                              :key="key"
-                              class="flex items-center gap-2 text-xs"
-                            >
-                              <code class="bg-green-50 text-green-700 px-2 py-1 rounded font-mono">{{ key }}</code>
-                              <span class="text-gray-400">=</span>
-                              <code class="bg-gray-50 text-gray-600 px-2 py-1 rounded font-mono">{{ value }}</code>
+                            <div class="text-xs font-medium text-gray-600">Server URL:</div>
+                            <code class="bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs font-mono block w-fit">{{ method.url }}</code>
+                          </div>
+
+                          <!-- Headers -->
+                          <div v-if="method.headers && Object.keys(method.headers).length > 0" class="space-y-1">
+                            <div class="text-xs font-medium text-gray-600">Headers:</div>
+                            <div class="space-y-1">
+                              <div
+                                v-for="(value, key) in method.headers"
+                                :key="key"
+                                class="flex items-center gap-2 text-xs"
+                              >
+                                <code class="bg-purple-50 text-purple-700 px-2 py-1 rounded font-mono">{{ key }}</code>
+                                <span class="text-gray-400">:</span>
+                                <code class="bg-gray-50 text-gray-600 px-2 py-1 rounded font-mono">{{ value }}</code>
+                              </div>
                             </div>
                           </div>
+
+                          <!-- Configuration Preview -->
+                          <div class="bg-gray-50 rounded-md p-2">
+                            <div class="text-xs font-medium text-gray-600 mb-1">Configuration Preview:</div>
+                            <pre class="text-xs font-mono text-gray-800">{
+  "url": "{{ method.url }}",
+  "type": "{{ method.type || 'streamableHttp' }}"{{ method.headers && Object.keys(method.headers).length > 0 ? ',\n  "headers": ' + JSON.stringify(method.headers, null, 2).replace(/\n/g, '\n  ') : '' }}
+}</pre>
+                          </div>
                         </div>
 
-                        <!-- Full Command Preview -->
-                        <div class="bg-gray-50 rounded-md p-2">
-                          <div class="text-xs font-medium text-gray-600 mb-1">Command Preview:</div>
-                          <code class="text-xs font-mono text-gray-800">
-                            {{ method.command }}{{ method.args && method.args.length > 0 ? ' ' + method.args.join(' ') : '' }}
-                          </code>
+                        <!-- Command-based (Local) Method -->
+                        <div v-else class="space-y-3">
+                          <!-- Client and Command -->
+                          <div class="flex items-center gap-2">
+                            <span class="font-medium">{{ method.client || 'Unknown Client' }}</span>
+                            <span class="text-gray-500">•</span>
+                            <code class="bg-gray-100 px-2 py-1 rounded text-xs font-mono">{{ method.command }}</code>
+                          </div>
+
+                          <!-- Arguments -->
+                          <div v-if="method.args && method.args.length > 0" class="space-y-1">
+                            <div class="text-xs font-medium text-gray-600">Arguments:</div>
+                            <div class="flex flex-wrap gap-1">
+                              <code
+                                v-for="(arg, argIndex) in method.args"
+                                :key="argIndex"
+                                class="bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs font-mono"
+                              >
+                                {{ arg }}
+                              </code>
+                            </div>
+                          </div>
+
+                          <!-- Environment Variables -->
+                          <div v-if="method.env && Object.keys(method.env).length > 0" class="space-y-1">
+                            <div class="text-xs font-medium text-gray-600">Environment Variables:</div>
+                            <div class="space-y-1">
+                              <div
+                                v-for="(value, key) in method.env"
+                                :key="key"
+                                class="flex items-center gap-2 text-xs"
+                              >
+                                <code class="bg-green-50 text-green-700 px-2 py-1 rounded font-mono">{{ key }}</code>
+                                <span class="text-gray-400">=</span>
+                                <code class="bg-gray-50 text-gray-600 px-2 py-1 rounded font-mono">{{ value }}</code>
+                              </div>
+                            </div>
+                          </div>
+
+                          <!-- Full Command Preview -->
+                          <div class="bg-gray-50 rounded-md p-2">
+                            <div class="text-xs font-medium text-gray-600 mb-1">Command Preview:</div>
+                            <code class="text-xs font-mono text-gray-800">
+                              {{ method.command }}{{ method.args && method.args.length > 0 ? ' ' + method.args.join(' ') : '' }}
+                            </code>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -536,6 +614,37 @@ const goBack = () => {
                             <Unlock v-else class="h-3 w-3 text-green-500" title="Configurable" />
                           </div>
                           <span v-if="arg.description" class="truncate text-xs text-gray-500 mt-1">{{ arg.description }}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+                </ul>
+              </dd>
+            </div>
+
+            <!-- Template Headers -->
+            <div v-if="displayTemplateHeaders.length > 0" class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+              <dt class="text-sm/6 font-medium text-gray-900">Static Headers</dt>
+              <dd class="mt-2 text-sm text-gray-900 sm:col-span-2 sm:mt-0">
+                <ul role="list" class="divide-y divide-gray-100 rounded-md border border-gray-200">
+                  <li
+                    v-for="(header, index) in displayTemplateHeaders"
+                    :key="index"
+                    class="flex items-center justify-between py-4 pr-5 pl-4 text-sm/6"
+                  >
+                    <div class="flex w-0 flex-1 items-center">
+                      <Terminal class="size-5 shrink-0 text-gray-400" aria-hidden="true" />
+                      <div class="ml-4 flex min-w-0 flex-1 gap-2">
+                        <div class="flex flex-col">
+                          <div class="flex items-center gap-2">
+                            <code class="bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs font-mono">{{ header.name }}</code>
+                            <Lock v-if="header.locked" class="h-3 w-3 text-red-500" title="Locked by global admin" />
+                            <Unlock v-else class="h-3 w-3 text-green-500" title="Configurable" />
+                          </div>
+                          <div v-if="header.value" class="mt-1">
+                            <code class="bg-gray-50 text-gray-600 px-2 py-1 rounded text-xs font-mono">{{ header.value }}</code>
+                          </div>
+                          <span v-if="header.description" class="truncate text-xs text-gray-500 mt-1">{{ header.description }}</span>
                         </div>
                       </div>
                     </div>
@@ -611,6 +720,73 @@ const goBack = () => {
               </dd>
             </div>
 
+            <!-- Team Headers -->
+            <div v-if="displayTeamHeadersSchema.length > 0" class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+              <dt class="text-sm/6 font-medium text-gray-900">Team Headers</dt>
+              <dd class="mt-2 text-sm text-gray-900 sm:col-span-2 sm:mt-0">
+                <ul role="list" class="divide-y divide-gray-100 rounded-md border border-gray-200">
+                  <li
+                    v-for="(header, index) in displayTeamHeadersSchema"
+                    :key="index"
+                    class="flex items-center justify-between py-4 pr-5 pl-4 text-sm/6"
+                  >
+                    <div class="flex w-0 flex-1 items-center">
+                      <Globe class="size-5 shrink-0 text-gray-400" aria-hidden="true" />
+                      <div class="ml-4 flex min-w-0 flex-1 gap-2">
+                        <div class="flex flex-col">
+                          <div class="flex items-center gap-2">
+                            <code class="bg-orange-50 text-orange-700 px-2 py-1 rounded text-xs font-mono">{{ header.name }}</code>
+                            <Badge v-if="header.required" variant="default" class="text-xs">Required</Badge>
+                            <Badge v-else variant="secondary" class="text-xs">Optional</Badge>
+                            <Lock v-if="header.locked" class="h-3 w-3 text-red-500" title="Locked by global admin" />
+                            <Unlock v-else class="h-3 w-3 text-green-500" title="Team configurable" />
+                          </div>
+                          <div class="flex items-center gap-2 mt-1">
+                            <span class="text-xs text-gray-500">Type: {{ header.type }}</span>
+                            <span v-if="!header.visible_to_users" class="text-xs text-orange-600">(Hidden from users)</span>
+                          </div>
+                          <span v-if="header.description" class="truncate text-xs text-gray-500 mt-1">{{ header.description }}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+                </ul>
+              </dd>
+            </div>
+
+            <!-- User Headers -->
+            <div v-if="displayUserHeadersSchema.length > 0" class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+              <dt class="text-sm/6 font-medium text-gray-900">User Headers</dt>
+              <dd class="mt-2 text-sm text-gray-900 sm:col-span-2 sm:mt-0">
+                <ul role="list" class="divide-y divide-gray-100 rounded-md border border-gray-200">
+                  <li
+                    v-for="(header, index) in displayUserHeadersSchema"
+                    :key="index"
+                    class="flex items-center justify-between py-4 pr-5 pl-4 text-sm/6"
+                  >
+                    <div class="flex w-0 flex-1 items-center">
+                      <User class="size-5 shrink-0 text-gray-400" aria-hidden="true" />
+                      <div class="ml-4 flex min-w-0 flex-1 gap-2">
+                        <div class="flex flex-col">
+                          <div class="flex items-center gap-2">
+                            <code class="bg-indigo-50 text-indigo-700 px-2 py-1 rounded text-xs font-mono">{{ header.name }}</code>
+                            <Badge v-if="header.required" variant="default" class="text-xs">Required</Badge>
+                            <Badge v-else variant="secondary" class="text-xs">Optional</Badge>
+                            <Lock v-if="header.locked" class="h-3 w-3 text-red-500" title="Locked by team admin" />
+                            <Unlock v-else class="h-3 w-3 text-green-500" title="User configurable" />
+                          </div>
+                          <div class="flex items-center gap-2 mt-1">
+                            <span class="text-xs text-gray-500">Type: {{ header.type }}</span>
+                          </div>
+                          <span v-if="header.description" class="truncate text-xs text-gray-500 mt-1">{{ header.description }}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+                </ul>
+              </dd>
+            </div>
+
 
 
             <!-- Transport Type -->
@@ -645,18 +821,7 @@ const goBack = () => {
               </dd>
             </div>
 
-            <!-- Dependencies -->
-            <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
-              <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.edit.fields.dependencies') }}</dt>
-              <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
-                <div v-if="displayDependencies && Object.keys(displayDependencies).length > 0" class="bg-gray-50 rounded-md p-4">
-                  <pre class="text-xs text-gray-800 whitespace-pre-wrap font-mono">{{ JSON.stringify(displayDependencies, null, 2) }}</pre>
-                </div>
-                <div v-else class="text-sm text-gray-500 italic">
-                  {{ t('mcpCatalog.edit.values.notProvided') }}
-                </div>
-              </dd>
-            </div>
+
           </dl>
         </div>
 

@@ -74,6 +74,10 @@ const loadServerData = async () => {
     clearEditStorage()
 
     const server = await McpCatalogService.getServerById(serverId)
+
+    // Store the RAW server response in storage for debugging
+    eventBus.setState('edit_raw_server_response', server)
+
     serverData.value = server
 
     // Convert server data to form data format
@@ -125,7 +129,17 @@ const convertServerToFormData = (server: McpServer): Partial<McpServerFormData> 
       }
     }
 
-    // Handle new format: {client, command, args, env}
+    // Handle HTTP servers: {client, url, type, headers}
+    if (method.url) {
+      return {
+        client: 'claude-desktop' as const,
+        url: method.url,
+        type: method.type || 'streamableHttp',
+        headers: method.headers || {}
+      }
+    }
+
+    // Handle stdio servers: {client, command, args, env}
     return {
       client: 'claude-desktop' as const,
       command: method.command || 'npx',
@@ -133,12 +147,18 @@ const convertServerToFormData = (server: McpServer): Partial<McpServerFormData> 
       env: method.env || {}
     }
 
-  }).filter((method: any) =>
+  }).filter((method: any) => {
     // Filter out git clone template entries and any invalid entries
-    method.command &&
-    method.command !== 'git clone <repository_url>' &&
-    !method.command.includes('<repository_url>')
-  )
+    if (method.url) {
+      // For HTTP methods, just check if URL exists
+      return method.url && method.url !== ''
+    } else {
+      // For stdio methods, check command
+      return method.command &&
+             method.command !== 'git clone <repository_url>' &&
+             !method.command.includes('<repository_url>')
+    }
+  })
 
   // Parse tags with proper handling
   const parsedTags = parseJsonField(server.tags, [])
@@ -160,10 +180,13 @@ const convertServerToFormData = (server: McpServer): Partial<McpServerFormData> 
   const configurationSchema = {
     template_args: parseSchemaField(server.template_args, []),
     template_env: parseSchemaField(server.template_env, []),
+    template_headers: parseSchemaField(server.template_headers, []),
     team_args_schema: parseSchemaField(server.team_args_schema, []),
     team_env_schema: parseSchemaField(server.team_env_schema, []),
+    team_headers_schema: parseSchemaField(server.team_headers_schema, []),
     user_args_schema: parseSchemaField(server.user_args_schema, []),
-    user_env_schema: parseSchemaField(server.user_env_schema, [])
+    user_env_schema: parseSchemaField(server.user_env_schema, []),
+    user_headers_schema: parseSchemaField(server.user_headers_schema, [])
   }
 
   return {
@@ -289,10 +312,13 @@ const handleSubmit = async (formData: McpServerFormData) => {
     // UPDATED: Use the synchronized configuration schema
     template_args: finalConfigurationSchema.template_args,
     template_env: finalConfigurationSchema.template_env,
+    template_headers: finalConfigurationSchema.template_headers,
     team_args_schema: finalConfigurationSchema.team_args_schema,
     team_env_schema: finalConfigurationSchema.team_env_schema,
+    team_headers_schema: finalConfigurationSchema.team_headers_schema,
     user_args_schema: finalConfigurationSchema.user_args_schema,
     user_env_schema: finalConfigurationSchema.user_env_schema,
+    user_headers_schema: finalConfigurationSchema.user_headers_schema,
 
     // Tools, resources, and prompts (from server data)
     tools: parsedTools,

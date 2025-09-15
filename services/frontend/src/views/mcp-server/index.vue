@@ -420,7 +420,7 @@ onUnmounted(() => {
               showStep2ButtonHighZIndex ? 'relative z-[10000]' : ''
             ]"
           >
-            {{ t('gatewayConfig.button.getConfiguration') }}
+            {{ t('satelliteConfig.button.getConfiguration') }}
           </Button>
           <Button
             @click="handleInstallServer"

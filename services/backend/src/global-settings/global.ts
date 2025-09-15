@@ -15,7 +15,15 @@ export const globalSettings: GlobalSettingsModule = {
       type: 'string',
       description: 'Base URL for the application frontend',
       encrypted: false,
-      required: false
+      required: true
+    },
+    {
+      key: 'global.backend_url',
+      defaultValue: 'http://localhost:3000',
+      type: 'string',
+      description: 'Base URL for the application backend API',
+      encrypted: false,
+      required: true
     },
     {
       key: 'global.enable_login',

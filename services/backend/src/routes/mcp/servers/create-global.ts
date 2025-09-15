@@ -23,6 +23,13 @@ const templateEnvSchema = z.object({
   description: z.string().optional()
 });
 
+const templateHeaderSchema = z.object({
+  name: z.string(),
+  value: z.string().nullable(),
+  locked: z.boolean(),
+  description: z.string().optional()
+});
+
 const teamArgSchema = z.object({
   name: z.string(),
   type: z.enum(['string', 'number', 'boolean', 'secret']),
@@ -35,6 +42,16 @@ const teamArgSchema = z.object({
 });
 
 const teamEnvSchema = z.object({
+  name: z.string(),
+  type: z.enum(['string', 'number', 'boolean', 'secret']),
+  description: z.string(),
+  required: z.boolean(),
+  locked: z.boolean(),
+  default_team_locked: z.boolean(),
+  visible_to_users: z.boolean()
+});
+
+const teamHeaderSchema = z.object({
   name: z.string(),
   type: z.enum(['string', 'number', 'boolean', 'secret']),
   description: z.string(),
@@ -62,13 +79,24 @@ const userEnvSchema = z.object({
   locked: z.boolean()
 });
 
+const userHeaderSchema = z.object({
+  name: z.string(),
+  type: z.enum(['string', 'number', 'boolean', 'secret']),
+  description: z.string(),
+  required: z.boolean(),
+  locked: z.boolean()
+});
+
 const configurationSchema = z.object({
   template_args: z.array(templateArgSchema).optional(),
   template_env: z.array(templateEnvSchema).optional(),
+  template_headers: z.array(templateHeaderSchema).optional(),
   team_args_schema: z.array(teamArgSchema).optional(),
   team_env_schema: z.array(teamEnvSchema).optional(),
+  team_headers_schema: z.array(teamHeaderSchema).optional(),
   user_args_schema: z.array(userArgSchema).optional(),
-  user_env_schema: z.array(userEnvSchema).optional()
+  user_env_schema: z.array(userEnvSchema).optional(),
+  user_headers_schema: z.array(userHeaderSchema).optional()
 });
 
 // Request schema for creating global MCP servers (supports both old and new formats)
@@ -147,12 +175,15 @@ const createGlobalServerResponseSchema = z.object({
     license: z.string().nullable(),
     transport_type: z.enum(['stdio', 'http', 'sse']),
     // Three-tier configuration schema
-    template_args: z.array(z.any()).nullable(),
-    template_env: z.record(z.string(), z.any()).nullable(),
-    team_args_schema: z.array(z.any()).nullable(),
-    team_env_schema: z.array(z.any()).nullable(),
-    user_args_schema: z.array(z.any()).nullable(),
+    template_args: z.array(z.any()),
+    template_env: z.array(z.any()),
+    template_headers: z.array(z.any()),
+    team_args_schema: z.array(z.any()),
+    team_env_schema: z.array(z.any()),
+    team_headers_schema: z.array(z.any()),
+    user_args_schema: z.array(z.any()),
     user_env_schema: z.array(z.any()).nullable(),
+    user_headers_schema: z.array(z.any()).nullable(),
     dependencies: z.record(z.string(), z.any()).nullable(),
     category_id: z.string().nullable(),
     tags: z.array(z.string()).nullable(),
@@ -209,14 +240,28 @@ export default async function createGlobalServer(server: FastifyInstance) {
               mcpServers: {
                 type: 'object',
                 additionalProperties: {
-                  type: 'object',
-                  properties: {
-                    command: { type: 'string', minLength: 1 },
-                    args: { type: 'array', items: { type: 'string' } },
-                    env: { type: 'object', additionalProperties: { type: 'string' } }
-                  },
-                  required: ['command', 'args'],
-                  additionalProperties: false
+                  oneOf: [
+                    {
+                      type: 'object',
+                      properties: {
+                        command: { type: 'string', minLength: 1 },
+                        args: { type: 'array', items: { type: 'string' } },
+                        env: { type: 'object', additionalProperties: { type: 'string' } }
+                      },
+                      required: ['command', 'args'],
+                      additionalProperties: false
+                    },
+                    {
+                      type: 'object',
+                      properties: {
+                        url: { type: 'string', format: 'uri' },
+                        type: { type: 'string', enum: ['streamableHttp', 'http', 'sse'] },
+                        headers: { type: 'object', additionalProperties: { type: 'string' } }
+                      },
+                      required: ['url', 'type'],
+                      additionalProperties: false
+                    }
+                  ]
                 }
               }
             },
@@ -306,10 +351,13 @@ export default async function createGlobalServer(server: FastifyInstance) {
       let finalTools: any[];
       let finalTemplateArgs: any[] | undefined;
       let finalTemplateEnv: any[] | undefined;
+      let finalTemplateHeaders: any[] | undefined;
       let finalTeamArgsSchema: any[] | undefined;
       let finalTeamEnvSchema: any[] | undefined;
+      let finalTeamHeadersSchema: any[] | undefined;
       let finalUserArgsSchema: any[] | undefined;
       let finalUserEnvSchema: any[] | undefined;
+      let finalUserHeadersSchema: any[] | undefined;
 
       if (requestData.configuration_schema) {
         // New format (ADR-007) - but check if installation_methods is incomplete
@@ -324,8 +372,7 @@ export default async function createGlobalServer(server: FastifyInstance) {
           request.log.debug('Detected incomplete installation_methods, falling back to claude_desktop_config extraction');
           // Fall back to extracting from claude_desktop_config if available
           if (requestData.claude_desktop_config) {
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            const { installation_methods, environment_variables, args, transport_type: extractedTransportType } = extractMcpConfigData(requestData.claude_desktop_config);
+            const { installation_methods, environment_variables, headers, transport_type: extractedTransportType } = extractMcpConfigData(requestData.claude_desktop_config);
             finalInstallationMethods = installation_methods;
             finalTransportType = requestData.transport_type || extractedTransportType;
             
@@ -336,28 +383,40 @@ export default async function createGlobalServer(server: FastifyInstance) {
               locked: true,
               description: env.description
             }));
+            
+            // Extract headers for template_headers
+            finalTemplateHeaders = headers?.map(header => ({
+              name: header.name,
+              value: header.placeholder || null,
+              locked: true,
+              description: header.description
+            }));
           } else {
             finalInstallationMethods = requestData.installation_methods || [];
             finalTransportType = requestData.transport_type || 'stdio';
             finalTemplateEnv = requestData.configuration_schema.template_env;
+            finalTemplateHeaders = requestData.configuration_schema.template_headers;
           }
         } else {
           finalInstallationMethods = requestData.installation_methods || [];
           finalTransportType = requestData.transport_type || 'stdio';
           finalTemplateEnv = requestData.configuration_schema.template_env;
+          finalTemplateHeaders = requestData.configuration_schema.template_headers;
         }
         
         finalTools = requestData.tools || [];
         finalTemplateArgs = requestData.configuration_schema.template_args;
         finalTeamArgsSchema = requestData.configuration_schema.team_args_schema;
         finalTeamEnvSchema = requestData.configuration_schema.team_env_schema;
+        finalTeamHeadersSchema = requestData.configuration_schema.team_headers_schema;
         finalUserArgsSchema = requestData.configuration_schema.user_args_schema;
         finalUserEnvSchema = requestData.configuration_schema.user_env_schema;
+        finalUserHeadersSchema = requestData.configuration_schema.user_headers_schema;
       } else if (requestData.claude_desktop_config) {
         // Old format - extract and convert data
         request.log.debug('Using old claude_desktop_config format, extracting data');
         
-        const { installation_methods, environment_variables, args, transport_type: extractedTransportType } = extractMcpConfigData(requestData.claude_desktop_config);
+        const { installation_methods, environment_variables, args, headers, transport_type: extractedTransportType } = extractMcpConfigData(requestData.claude_desktop_config);
         
         finalInstallationMethods = installation_methods;
         finalTransportType = requestData.transport_type || extractedTransportType;
@@ -379,31 +438,30 @@ export default async function createGlobalServer(server: FastifyInstance) {
           description: env.description
         }));
         
+        // Convert headers to template_headers array format
+        finalTemplateHeaders = headers?.map(header => ({
+          name: header.name,
+          value: header.placeholder || null,
+          locked: true,
+          description: header.description
+        }));
+        
         // Leave team/user schemas empty for old format
         finalTeamArgsSchema = undefined;
         finalTeamEnvSchema = undefined;
+        finalTeamHeadersSchema = undefined;
         finalUserArgsSchema = undefined;
         finalUserEnvSchema = undefined;
+        finalUserHeadersSchema = undefined;
       } else {
         throw new Error('Either configuration_schema or claude_desktop_config must be provided');
       }
 
-      // Convert template_env array format to object format for database storage
-      let templateEnvForDb: Record<string, any> | undefined;
-      if (finalTemplateEnv && finalTemplateEnv.length > 0) {
-        templateEnvForDb = {};
-        finalTemplateEnv.forEach(env => {
-          if (env.name) {
-            templateEnvForDb![env.name] = {
-              value: env.value,
-              locked: env.locked,
-              description: env.description
-            };
-          }
-        });
-      }
-
+      // Convert template_env and template_headers - keep as arrays for consistency
+      // All template fields should be stored as arrays: template_args, template_env, template_headers
+      
       // Prepare server data with the processed configuration
+      // Ensure all schema arrays default to empty arrays instead of undefined/null
       const serverData = {
         name: requestData.name,
         description: requestData.description,
@@ -424,13 +482,16 @@ export default async function createGlobalServer(server: FastifyInstance) {
         organization: requestData.organization,
         license: requestData.license,
         transport_type: finalTransportType,
-        // Three-tier configuration schema
-        template_args: finalTemplateArgs,
-        template_env: templateEnvForDb, // Use converted object format
-        team_args_schema: finalTeamArgsSchema,
-        team_env_schema: finalTeamEnvSchema,
-        user_args_schema: finalUserArgsSchema,
-        user_env_schema: finalUserEnvSchema,
+        // Three-tier configuration schema - all stored as arrays for consistency
+        template_args: finalTemplateArgs || [],
+        template_env: finalTemplateEnv || [], // Store as array format (not converted to object)
+        template_headers: finalTemplateHeaders || [], // Store as array format (not converted to object)
+        team_args_schema: finalTeamArgsSchema || [],
+        team_env_schema: finalTeamEnvSchema || [],
+        team_headers_schema: finalTeamHeadersSchema || [],
+        user_args_schema: finalUserArgsSchema || [],
+        user_env_schema: finalUserEnvSchema || [],
+        user_headers_schema: finalUserHeadersSchema || [],
         dependencies: requestData.dependencies,
         category_id: requestData.category_id,
         tags: requestData.tags,
@@ -508,16 +569,17 @@ export default async function createGlobalServer(server: FastifyInstance) {
           userId: request.user?.id,
           serverId: newServer.id,
           rawServerData: {
-            installation_methods: newServer.installation_methods,
-            tools: newServer.tools,
-            resources: newServer.resources,
-            prompts: newServer.prompts,
-            transport_type: newServer.transport_type,
-            template_args: newServer.template_args,
-            template_env: newServer.template_env,
-            dependencies: newServer.dependencies,
+          installation_methods: newServer.installation_methods,
+          tools: newServer.tools,
+          resources: newServer.resources,
+          prompts: newServer.prompts,
+          transport_type: newServer.transport_type,
+          template_args: newServer.template_args,
+          template_env: newServer.template_env,
+          template_headers: newServer.template_headers,
+          dependencies: newServer.dependencies,
             tags: newServer.tags
-          }
+            }
         }, 'About to parse JSON fields for response');
 
         const responseData = {
@@ -545,12 +607,15 @@ export default async function createGlobalServer(server: FastifyInstance) {
           license: newServer.license || null,
           transport_type: newServer.transport_type,
           // Three-tier configuration schema
-          template_args: newServer.template_args ? JSON.parse(newServer.template_args) : null,
-          template_env: newServer.template_env ? JSON.parse(newServer.template_env) : null,
-          team_args_schema: newServer.team_args_schema ? JSON.parse(newServer.team_args_schema) : null,
-          team_env_schema: newServer.team_env_schema ? JSON.parse(newServer.team_env_schema) : null,
-          user_args_schema: newServer.user_args_schema ? JSON.parse(newServer.user_args_schema) : null,
+          template_args: newServer.template_args ? JSON.parse(newServer.template_args) : [],
+          template_env: newServer.template_env ? JSON.parse(newServer.template_env) : [],
+          template_headers: newServer.template_headers ? JSON.parse(newServer.template_headers) : [],
+          team_args_schema: newServer.team_args_schema ? JSON.parse(newServer.team_args_schema) : [],
+          team_env_schema: newServer.team_env_schema ? JSON.parse(newServer.team_env_schema) : [],
+          team_headers_schema: newServer.team_headers_schema ? JSON.parse(newServer.team_headers_schema) : [],
+          user_args_schema: newServer.user_args_schema ? JSON.parse(newServer.user_args_schema) : [],
           user_env_schema: newServer.user_env_schema ? JSON.parse(newServer.user_env_schema) : null,
+          user_headers_schema: newServer.user_headers_schema ? JSON.parse(newServer.user_headers_schema) : null,
           dependencies: newServer.dependencies ? JSON.parse(newServer.dependencies) : null,
           category_id: newServer.category_id || null,
           tags: newServer.tags ? JSON.parse(newServer.tags) : null,
@@ -589,16 +654,17 @@ export default async function createGlobalServer(server: FastifyInstance) {
           serverId: newServer.id,
           jsonError,
           serverData: {
-            installation_methods: newServer.installation_methods,
-            tools: newServer.tools,
-            resources: newServer.resources,
-            prompts: newServer.prompts,
-            transport_type: newServer.transport_type,
-            template_args: newServer.template_args,
-            template_env: newServer.template_env,
-            dependencies: newServer.dependencies,
+          installation_methods: newServer.installation_methods,
+          tools: newServer.tools,
+          resources: newServer.resources,
+          prompts: newServer.prompts,
+          transport_type: newServer.transport_type,
+          template_args: newServer.template_args,
+          template_env: newServer.template_env,
+          template_headers: newServer.template_headers,
+          dependencies: newServer.dependencies,
             tags: newServer.tags
-          }
+            }
         }, 'Failed to parse JSON fields in response');
 
         const errorResponse = {

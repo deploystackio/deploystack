@@ -17,10 +17,13 @@ export interface McpServer {
   // Three-tier configuration schema fields
   template_args?: any[] | null
   template_env?: Record<string, string> | null
+  template_headers?: Record<string, string> | null
   team_args_schema?: any[] | null
   team_env_schema?: any[] | null
+  team_headers_schema?: any[] | null
   user_args_schema?: any[] | null
   user_env_schema?: any[] | null
+  user_headers_schema?: any[] | null
 }
 
 export interface EnvironmentVariable {
@@ -37,10 +40,11 @@ export interface McpInstallation {
   installation_name: string
   server_id: string
   server: McpServer
-  installation_type: 'local' | 'cloud'
+  installation_type: 'global' | 'team'
   user_environment_variables: Record<string, string>
   team_args?: string[]
   team_env?: Record<string, string>
+  team_headers?: Record<string, string>
   team_id: string
   user_id: string
   created_at: string
@@ -51,7 +55,7 @@ export interface McpInstallation {
 export interface InstallServerRequest {
   server_id: string
   installation_name: string
-  installation_type: 'local'
+  installation_type: 'global' | 'team'
   user_environment_variables: Record<string, string>
 }
 
@@ -63,6 +67,7 @@ export interface UserConfiguration {
   device_name?: string
   user_args: string[]
   user_env: Record<string, string>
+  user_headers: Record<string, string>
   created_at: string
   updated_at: string
   last_used_at?: string
@@ -72,10 +77,12 @@ export interface CreateUserConfigRequest {
   device_id: string
   user_args: string[]
   user_env: Record<string, string>
+  user_headers: Record<string, string>
 }
 
 export interface UpdateUserConfigRequest {
   device_id?: string
   user_args: string[]
   user_env: Record<string, string>
+  user_headers: Record<string, string>
 }

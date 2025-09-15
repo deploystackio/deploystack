@@ -25,6 +25,15 @@ interface ArgumentSchema {
   default_team_locked?: boolean
 }
 
+interface HeaderSchema {
+  name: string
+  type?: string
+  description?: string
+  placeholder?: string
+  required?: boolean
+  visible_to_users?: boolean
+}
+
 interface ServerData {
   id: string
   name: string
@@ -33,14 +42,17 @@ interface ServerData {
   category_id?: string
   team_args_schema?: string | ArgumentSchema[]
   team_env_schema?: string | EnvironmentVariable[]
+  team_headers_schema?: string | HeaderSchema[]
   user_args_schema?: string | ArgumentSchema[]
   user_env_schema?: string | EnvironmentVariable[]
+  user_headers_schema?: string | HeaderSchema[]
   [key: string]: unknown
 }
 
 const modelValue = defineModel<{
   team_args: string[]
   team_env: Record<string, string>
+  team_headers: Record<string, string>
   user_env: Record<string, string>
 }>({ required: true })
 
@@ -82,15 +94,19 @@ const parseArgsSchema = (schema: string | ArgumentSchema[] | undefined): Argumen
 
 const teamArgsSchema = computed(() => parseArgsSchema(props.serverData?.team_args_schema))
 const teamEnvSchema = computed(() => parseEnvSchema(props.serverData?.team_env_schema))
+const teamHeadersSchema = computed(() => parseEnvSchema(props.serverData?.team_headers_schema))
 const userArgsSchema = computed(() => parseArgsSchema(props.serverData?.user_args_schema))
 const userEnvSchema = computed(() => parseEnvSchema(props.serverData?.user_env_schema))
+const userHeadersSchema = computed(() => parseEnvSchema(props.serverData?.user_headers_schema))
 
 const hasTeamArgs = computed(() => teamArgsSchema.value.length > 0)
 const hasTeamEnvVars = computed(() => teamEnvSchema.value.length > 0)
+const hasTeamHeaders = computed(() => teamHeadersSchema.value.length > 0)
 const hasUserArgs = computed(() => userArgsSchema.value.length > 0)
 const hasUserEnvVars = computed(() => userEnvSchema.value.length > 0)
-const hasUserConfiguration = computed(() => hasUserArgs.value || hasUserEnvVars.value)
-const hasAnyConfiguration = computed(() => hasTeamArgs.value || hasTeamEnvVars.value || hasUserConfiguration.value)
+const hasUserHeaders = computed(() => userHeadersSchema.value.length > 0)
+const hasUserConfiguration = computed(() => hasUserArgs.value || hasUserEnvVars.value || hasUserHeaders.value)
+const hasAnyConfiguration = computed(() => hasTeamArgs.value || hasTeamEnvVars.value || hasTeamHeaders.value || hasUserConfiguration.value)
 
 const validateConfiguration = () => {
   const missingFields: string[] = []
@@ -112,6 +128,14 @@ const validateConfiguration = () => {
     }
   })
 
+  // Validate team headers
+  teamHeadersSchema.value.forEach((header) => {
+    if (header.required && !modelValue.value.team_headers[header.name]?.trim()) {
+      missingFields.push(header.name)
+      isValid = false
+    }
+  })
+
   emit('validation-change', isValid, missingFields)
   return isValid
 }
@@ -124,14 +148,20 @@ watch(() => modelValue.value.team_env, () => {
   validateConfiguration()
 }, { deep: true })
 
+watch(() => modelValue.value.team_headers, () => {
+  validateConfiguration()
+}, { deep: true })
+
 watch(() => props.serverData, (newData) => {
   if (newData) {
     const newTeamArgs: string[] = []
     const newTeamEnv: Record<string, string> = {}
+    const newTeamHeaders: Record<string, string> = {}
     const newUserEnv: Record<string, string> = {}
 
     const argsSchema = parseArgsSchema(newData.team_args_schema)
     const teamSchema = parseEnvSchema(newData.team_env_schema)
+    const teamHeadersSchema = parseEnvSchema(newData.team_headers_schema)
     const userSchema = parseEnvSchema(newData.user_env_schema)
 
     // Initialize team arguments array
@@ -143,6 +173,10 @@ watch(() => props.serverData, (newData) => {
       newTeamEnv[env.name] = modelValue.value.team_env?.[env.name] || ''
     })
 
+    teamHeadersSchema.forEach((header) => {
+      newTeamHeaders[header.name] = modelValue.value.team_headers?.[header.name] || ''
+    })
+
     userSchema.forEach((env) => {
       newUserEnv[env.name] = ''
     })
@@ -150,6 +184,7 @@ watch(() => props.serverData, (newData) => {
     modelValue.value = {
       team_args: newTeamArgs,
       team_env: newTeamEnv,
+      team_headers: newTeamHeaders,
       user_env: newUserEnv
     }
 
@@ -302,6 +337,58 @@ const isTextarea = (envVar: EnvironmentVariable) => {
         </div>
       </div>
 
+      <!-- Team Headers Section -->
+      <div v-if="hasTeamHeaders" class="bg-green-50 p-4">
+        <div class="mb-4">
+          <h3 class="text-lg font-medium text-gray-900">
+            Team Headers
+          </h3>
+          <span class="text-sm text-gray-500">
+            {{ teamHeadersSchema.length }} {{ teamHeadersSchema.length === 1 ? 'header' : 'headers' }}
+          </span>
+        </div>
+        <p class="text-sm text-gray-600 mb-6">
+          Configure HTTP headers that will be shared across all team members for this MCP server installation.
+        </p>
+
+        <div class="space-y-4">
+          <div v-for="header in teamHeadersSchema" :key="header.name" class="space-y-2">
+            <div class="flex items-center gap-2">
+              <Label :for="`team_header_${header.name}`" class="flex items-center gap-2">
+                {{ header.name }}
+                <span v-if="header.required" class="text-xs text-gray-500">
+                  {{ t('mcpInstallations.teamConfiguration.userEnvDetails.required') }}
+                </span>
+                <span v-else class="text-xs text-gray-500">
+                  {{ t('mcpInstallations.teamConfiguration.userEnvDetails.optional') }}
+                </span>
+                <span v-if="header.visible_to_users === false" class="text-xs text-gray-500">
+                  {{ t('mcpInstallations.teamConfiguration.table.values.hiddenFromUsers') }}
+                </span>
+              </Label>
+            </div>
+
+            <div v-if="header.description" class="text-sm text-gray-600">
+              {{ header.description }}
+            </div>
+
+            <div class="relative">
+              <Input
+                :id="`team_header_${header.name}`"
+                :type="getInputType(header)"
+                v-model="modelValue.team_headers[header.name]"
+                :placeholder="header.placeholder || 'Enter header value'"
+                :required="header.required"
+              />
+            </div>
+
+            <div v-if="header.type" class="text-xs text-gray-500">
+              {{ t('mcpInstallations.teamConfiguration.userEnvDetails.typeLabel') }} <code class="bg-gray-100 px-1 rounded">{{ header.type }}</code>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- User Configuration Section -->
       <div v-if="hasUserConfiguration" class="bg-gray-50 p-4">
         <div class="mb-4">
@@ -309,7 +396,7 @@ const isTextarea = (envVar: EnvironmentVariable) => {
             {{ t('mcpInstallations.teamConfiguration.sections.userConfig.title') }}
           </h3>
           <span class="text-sm text-gray-500">
-            {{ (userArgsSchema.length + userEnvSchema.length) }} {{ (userArgsSchema.length + userEnvSchema.length) === 1 ? t('mcpInstallations.teamConfiguration.sections.userConfig.counter.single') : t('mcpInstallations.teamConfiguration.sections.userConfig.counter.plural') }}
+            {{ (userArgsSchema.length + userEnvSchema.length + userHeadersSchema.length) }} {{ (userArgsSchema.length + userEnvSchema.length + userHeadersSchema.length) === 1 ? t('mcpInstallations.teamConfiguration.sections.userConfig.counter.single') : t('mcpInstallations.teamConfiguration.sections.userConfig.counter.plural') }}
           </span>
         </div>
 
@@ -371,6 +458,33 @@ const isTextarea = (envVar: EnvironmentVariable) => {
               <div class="flex items-center gap-4 text-xs text-gray-500">
                 <span>{{ t('mcpInstallations.teamConfiguration.userEnvDetails.typeLabel') }} <code class="bg-gray-100 px-1 rounded">{{ envVar.type || 'string' }}</code></span>
                 <span v-if="envVar.placeholder">{{ t('mcpInstallations.teamConfiguration.userEnvDetails.placeholderLabel') }} "{{ envVar.placeholder }}"</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- User Headers -->
+          <div v-if="hasUserHeaders" class="space-y-3">
+            <h4 class="text-sm font-semibold text-gray-900 border-b border-gray-200 pb-2">
+              User Headers
+            </h4>
+            <div v-for="header in userHeadersSchema" :key="header.name" class="bg-white p-4 rounded-lg border">
+              <div class="flex items-center gap-2 mb-2">
+                <span class="font-medium text-gray-900 font-mono">{{ header.name }}</span>
+                <span v-if="header.required" class="text-xs text-gray-500">
+                  {{ t('mcpInstallations.teamConfiguration.userEnvDetails.required') }}
+                </span>
+                <span v-else class="text-xs text-gray-500">
+                  {{ t('mcpInstallations.teamConfiguration.userEnvDetails.optional') }}
+                </span>
+              </div>
+
+              <div v-if="header.description" class="text-sm text-gray-600 mb-2">
+                {{ header.description }}
+              </div>
+
+              <div class="flex items-center gap-4 text-xs text-gray-500">
+                <span>{{ t('mcpInstallations.teamConfiguration.userEnvDetails.typeLabel') }} <code class="bg-gray-100 px-1 rounded">{{ header.type || 'string' }}</code></span>
+                <span v-if="header.placeholder">{{ t('mcpInstallations.teamConfiguration.userEnvDetails.placeholderLabel') }} "{{ header.placeholder }}"</span>
               </div>
             </div>
           </div>
