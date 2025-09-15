@@ -26,7 +26,7 @@
     "@release-it/conventional-changelog": "^10.0.1",
     "@types/node": "^20.0.0",
     "@typescript-eslint/eslint-plugin": "^8.36.0",
-    "@typescript-eslint/parser": "^8.39.1",
+    "@typescript-eslint/parser": "^8.44.0",
     "copy-webpack-plugin": "^13.0.1",
     "eslint": "^9.34.0",
     "node-loader": "^2.1.0",
