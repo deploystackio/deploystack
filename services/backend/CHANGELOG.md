@@ -2,6 +2,13 @@
 
 ## <small>0.33.1 (2025-09-15)</small>
 
+* chore(backend): release v0.33.1 ([8ad733e](https://github.com/deploystackio/deploystack/commit/8ad733e))
+* chore(satellite): release v0.2.1 ([a2a7295](https://github.com/deploystackio/deploystack/commit/a2a7295))
+* chore(satellite): release v0.2.1 ([a67e9ff](https://github.com/deploystackio/deploystack/commit/a67e9ff))
+* fix(all): remove unnecessary grep-or from commit logs in release scripts ([bcbdff7](https://github.com/deploystackio/deploystack/commit/bcbdff7))
+
+## <small>0.33.1 (2025-09-15)</small>
+
 * chore(all): update README to reflect completed tasks in Satellite MVP and Advanced Architecture phas ([3e0bd44](https://github.com/deploystackio/deploystack/commit/3e0bd44))
 * chore(backend): release v0.33.0 ([4ff5141](https://github.com/deploystackio/deploystack/commit/4ff5141))
 * chore(frontend): release v0.27.0 ([91cd9d5](https://github.com/deploystackio/deploystack/commit/91cd9d5))
