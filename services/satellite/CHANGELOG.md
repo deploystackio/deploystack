@@ -2,6 +2,20 @@
 
 ## <small>0.2.1 (2025-09-15)</small>
 
+* chore(satellite): release v0.2.1 ([a67e9ff](https://github.com/deploystackio/deploystack/commit/a67e9ff))
+* fix(all): remove unnecessary grep-or from commit logs in release scripts ([bcbdff7](https://github.com/deploystackio/deploystack/commit/bcbdff7))
+
+
+
+## v0.2.0 (2025-09-15)
+
+* chore(satellite): release v0.2.0 ([3d552de](https://github.com/deploystackio/deploystack/commit/3d552de))
+* chore(satellite): release v0.2.0 ([8c795e1](https://github.com/deploystackio/deploystack/commit/8c795e1))
+* fix(all): remove unnecessary grep-or for commit logs ([1e229d4](https://github.com/deploystackio/deploystack/commit/1e229d4))
+* docs(satellite): update README ([c0740a1](https://github.com/deploystackio/deploystack/commit/c0740a1))
+
+## <small>0.2.1 (2025-09-15)</small>
+
 * fix(all): remove unnecessary grep-or from commit logs in release scripts ([bcbdff7](https://github.com/deploystackio/deploystack/commit/bcbdff7))
 
 ## 0.2.0 (2025-09-15)
