@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.33.0 (2025-09-15)
+
+* chore(all): update README to reflect completed tasks in Satellite MVP and Advanced Architecture phas ([3e0bd44](https://github.com/deploystackio/deploystack/commit/3e0bd44))
+* backend(fix): fixed console log ([420172d](https://github.com/deploystackio/deploystack/commit/420172d))
+* refactor(satellite): removed gateway ([ecdcb91](https://github.com/deploystackio/deploystack/commit/ecdcb91))
+* release satellite ([d7a5a10](https://github.com/deploystackio/deploystack/commit/d7a5a10))
+
 ## <small>0.32.1 (2025-09-05)</small>
 
 * chore(backend): release v0.32.1 ([1b290ef](https://github.com/deploystackio/deploystack/commit/1b290ef))
