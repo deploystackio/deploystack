@@ -2,6 +2,21 @@
 
 ## 0.2.0 (2025-09-15)
 
+* chore(all): update README to reflect completed tasks in Satellite MVP and Advanced Architecture phas ([3e0bd44](https://github.com/deploystackio/deploystack/commit/3e0bd44))
+* chore(backend): release v0.33.0 ([4ff5141](https://github.com/deploystackio/deploystack/commit/4ff5141))
+* chore(frontend): release v0.27.0 ([91cd9d5](https://github.com/deploystackio/deploystack/commit/91cd9d5))
+* chore(frontend): release v0.27.0 ([832baab](https://github.com/deploystackio/deploystack/commit/832baab))
+* chore(satellite): release v0.2.0 ([8c795e1](https://github.com/deploystackio/deploystack/commit/8c795e1))
+* fix(all): remove unnecessary grep-or for commit logs ([1e229d4](https://github.com/deploystackio/deploystack/commit/1e229d4))
+* docs(all): remove IDE integrations and developer tools from To Do list ([a210486](https://github.com/deploystackio/deploystack/commit/a210486))
+* docs(all): update README to improve clarity and structure with additional spacing ([857e74a](https://github.com/deploystackio/deploystack/commit/857e74a))
+* docs(satellite): update README ([c0740a1](https://github.com/deploystackio/deploystack/commit/c0740a1))
+* backend(fix): fixed console log ([420172d](https://github.com/deploystackio/deploystack/commit/420172d))
+* refactor(satellite): removed gateway ([ecdcb91](https://github.com/deploystackio/deploystack/commit/ecdcb91))
+* release satellite ([d7a5a10](https://github.com/deploystackio/deploystack/commit/d7a5a10))
+
+## 0.2.0 (2025-09-15)
+
 * fix: add missing line breaks in Docker command examples for clarity ([94d1571](https://github.com/deploystackio/deploystack/commit/94d1571))
 * fix: add newline to commitPartial format for better readability ([4e36538](https://github.com/deploystackio/deploystack/commit/4e36538))
 * fix: add permissions for issues in backend release workflow ([9b100b8](https://github.com/deploystackio/deploystack/commit/9b100b8))
