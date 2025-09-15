@@ -95,7 +95,7 @@ jobs:
           
           if [ -z "$LATEST_TAG" ]; then
             echo "No previous backend tag found, using all commits"
-            BACKEND_COMMITS=$(git log --oneline --grep="(backend)" --grep="(all)" --grep-or)
+            BACKEND_COMMITS=$(git log --oneline --grep="(backend)" --grep="(all)")
           else
             echo "Using commits since $LATEST_TAG"
             # Get backend and all scoped commits since last release
@@ -103,7 +103,7 @@ jobs:
             ALL_COMMITS=$(git log ${LATEST_TAG}..HEAD --oneline --grep="(all)")
             
             # Combine and format the commits
-            COMBINED_COMMITS=$(echo -e "$BACKEND_COMMITS\n$ALL_COMMITS" | sort -u | grep -v "^$")
+            COMBINED_COMMITS=$(echo -e "$BACKEND_COMMITS\n$ALL_COMMITS" | sort -u | grep -v "^$" || true)
           fi
           
           # Format commits for release notes
