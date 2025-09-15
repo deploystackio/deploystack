@@ -24,7 +24,7 @@ npm install
 npm run dev
 
 # The server will start on http://localhost:3001
-# API Documentation: http://localhost:3001/documentation
+# API Documentation: http://localhost:3001/documentation (comming soon)
 # Backend Status: http://localhost:3001/api/status/backend
 ```
 
