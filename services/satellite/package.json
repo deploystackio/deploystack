@@ -24,7 +24,7 @@
   },
   "devDependencies": {
     "@release-it/conventional-changelog": "^10.0.1",
-    "@types/node": "^24.4.0",
+    "@types/node": "^24.5.2",
     "@typescript-eslint/eslint-plugin": "^8.36.0",
     "@typescript-eslint/parser": "^8.39.1",
     "copy-webpack-plugin": "^13.0.1",
