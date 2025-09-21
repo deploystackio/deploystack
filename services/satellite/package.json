@@ -14,7 +14,7 @@
     "release": "release-it --config=.release-it.js"
   },
   "dependencies": {
-    "@fastify/http-proxy": "^10.0.0",
+    "@fastify/http-proxy": "^11.3.0",
     "@fastify/swagger": "^9.5.1",
     "@fastify/swagger-ui": "^5.2.3",
     "dotenv": "^17.2.2",
