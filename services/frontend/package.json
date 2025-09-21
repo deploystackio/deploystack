@@ -51,7 +51,7 @@
     "npm-run-all2": "^8.0.4",
     "prettier": "3.6.2",
     "release-it": "^19.0.4",
-    "tailwindcss": "^4.1.12",
+    "tailwindcss": "^4.1.13",
     "typescript": "~5.9.2",
     "vite": "^7.1.4",
     "vite-plugin-vue-devtools": "^8.0.1",
