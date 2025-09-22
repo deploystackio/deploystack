@@ -417,31 +417,10 @@ export class McpInstallationService {
 
   async deleteInstallation(installationId: string, teamId: string): Promise<boolean> {
     this.logger.debug({
-      operation: 'delete_installation_debug',
+      operation: 'delete_installation',
       installationId,
-      teamId,
-      installationIdLength: installationId.length,
-      teamIdLength: teamId.length
-    }, 'Starting deletion with exact parameters');
-
-    // Check if record exists before deletion
-    const existsBefore = await this.db
-      .select({ id: mcpServerInstallations.id, team_id: mcpServerInstallations.team_id })
-      .from(mcpServerInstallations)
-      .where(
-        and(
-          eq(mcpServerInstallations.id, installationId),
-          eq(mcpServerInstallations.team_id, teamId)
-        )
-      );
-
-    this.logger.debug({
-      operation: 'delete_installation_before',
-      installationId,
-      teamId,
-      recordsFound: existsBefore.length,
-      foundRecords: existsBefore
-    }, 'Records found before deletion');
+      teamId
+    }, 'Deleting MCP installation');
 
     const result = await this.db
       .delete(mcpServerInstallations)
@@ -454,16 +433,6 @@ export class McpInstallationService {
 
     // Handle different property names between SQLite (changes) and Turso (rowsAffected)
     const deleted = (result.changes || result.rowsAffected || 0) > 0;
-
-    this.logger.info({
-      operation: 'delete_installation_result',
-      installationId,
-      teamId,
-      changes: result.changes,
-      rowsAffected: result.rowsAffected,
-      deleted,
-      result: result
-    }, 'Delete operation completed');
 
     return deleted;
   }
