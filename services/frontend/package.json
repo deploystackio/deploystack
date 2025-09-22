@@ -50,7 +50,7 @@
     "jiti": "^2.5.1",
     "npm-run-all2": "^8.0.4",
     "prettier": "3.6.2",
-    "release-it": "^19.0.4",
+    "release-it": "^19.0.5",
     "tailwindcss": "^4.1.13",
     "typescript": "~5.9.2",
     "vite": "^7.1.6",
