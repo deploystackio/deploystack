@@ -36,20 +36,6 @@ export class GlobalSettingsService {
   }
 
   /**
-   * Get the MCP catalog banner visibility setting
-   */
-  static async shouldShowMcpCatalogBanner(): Promise<boolean> {
-    try {
-      const value = await this.getSetting('global.show_mcp_catalog_banner')
-      // Convert string to boolean - 'true' becomes true, anything else becomes false
-      return value === 'true'
-    } catch (error) {
-      console.error('Failed to check MCP catalog banner setting:', error)
-      return false // Default to not showing banner on error
-    }
-  }
-
-  /**
    * Get the user walkthrough visibility setting
    * Uses user preferences for proper permissions (no 403 errors for normal users)
    */

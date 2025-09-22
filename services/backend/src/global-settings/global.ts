@@ -82,14 +82,6 @@ export const globalSettings: GlobalSettingsModule = {
       required: false
     },
     {
-      key: 'global.show_mcp_catalog_banner',
-      defaultValue: false,
-      type: 'boolean',
-      description: 'Show banner during MCP installation to inform users that adding new servers to the DeployStack catalog requires submitting a pull request to the awesome-mcp-server repository',
-      encrypted: false,
-      required: false
-    },
-    {
       key: 'global.show_user_walkthrough',
       defaultValue: false,
       type: 'boolean',
