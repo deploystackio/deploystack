@@ -1,5 +1,6 @@
 import { createServer } from './server'
 import { displayStartupBanner } from './utils/banner'
+import { TokenCleanupService } from './services/tokenCleanupService'
 
 const start = async () => {
   try {
@@ -11,6 +12,9 @@ const start = async () => {
     
     // Display the fancy startup banner
     displayStartupBanner(port, server.log)
+    
+    // Start background services
+    TokenCleanupService.start()
     
     // Also log using the standard logger (useful for log files)
     server.log.info(`DeployStack server started on port ${port}`)

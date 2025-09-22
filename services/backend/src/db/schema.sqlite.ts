@@ -14,6 +14,7 @@
 // DO NOT create or edit schema.ts - this file has been removed to avoid confusion.
 
 import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
+import { nanoid } from 'nanoid';
 
 // Define tables with proper foreign key relationships
 export const roles = sqliteTable('roles', {
@@ -410,6 +411,41 @@ export const satellites = sqliteTable('satellites', {
   lastHeartbeatIdx: index('satellites_last_heartbeat_idx').on(table.last_heartbeat),
   // Unique satellite names per team (global satellites have NULL team_id)
   uniqueTeamName: index('satellites_unique_team_name').on(table.team_id, table.name),
+}));
+
+// Satellite Registration Tokens - Secure token-based satellite pairing system
+export const satelliteRegistrationTokens = sqliteTable('satelliteRegistrationTokens', {
+  // Primary identification
+  id: text('id').primaryKey().$defaultFn(() => nanoid()),
+  
+  // Token type and scope
+  token_type: text('token_type', { enum: ['global', 'team'] }).notNull(),
+  team_id: text('team_id').references(() => teams.id, { onDelete: 'cascade' }),
+  
+  // Token data (security)
+  token_hash: text('token_hash').notNull().unique(), // Argon2 hashed token
+  token_prefix: text('token_prefix').notNull(), // 'deploystack_satellite_global_' or 'deploystack_satellite_team_'
+  
+  // Token metadata
+  created_by: text('created_by').notNull().references(() => authUser.id),
+  permissions: text('permissions', { mode: 'json' }).$type<string[]>().notNull(),
+  
+  // Token usage tracking
+  used: integer('used', { mode: 'boolean' }).notNull().default(false),
+  used_at: text('used_at'),
+  used_by_satellite_id: text('used_by_satellite_id').references(() => satellites.id),
+  
+  // Expiration and lifecycle
+  expires_at: text('expires_at').notNull(),
+  created_at: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
+  
+  // Indexes for performance
+}, (table) => ({
+  tokenHashIdx: index('satelliteRegistrationTokens_token_hash_idx').on(table.token_hash),
+  teamScopeIdx: index('satelliteRegistrationTokens_team_scope_idx').on(table.team_id, table.token_type),
+  expirationIdx: index('satelliteRegistrationTokens_expiration_idx').on(table.expires_at),
+  creatorIdx: index('satelliteRegistrationTokens_creator_idx').on(table.created_by),
+  usageIdx: index('satelliteRegistrationTokens_usage_idx').on(table.used, table.used_at),
 }));
 
 // Command Queue Management - Priority-based command queue for satellite orchestration
