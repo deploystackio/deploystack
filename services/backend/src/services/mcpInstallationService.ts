@@ -452,13 +452,15 @@ export class McpInstallationService {
         )
       );
 
-    const deleted = result.changes > 0;
+    // Handle different property names between SQLite (changes) and Turso (rowsAffected)
+    const deleted = (result.changes || result.rowsAffected || 0) > 0;
 
     this.logger.info({
       operation: 'delete_installation_result',
       installationId,
       teamId,
       changes: result.changes,
+      rowsAffected: result.rowsAffected,
       deleted,
       result: result
     }, 'Delete operation completed');
