@@ -417,10 +417,31 @@ export class McpInstallationService {
 
   async deleteInstallation(installationId: string, teamId: string): Promise<boolean> {
     this.logger.debug({
-      operation: 'delete_installation',
+      operation: 'delete_installation_debug',
       installationId,
-      teamId
-    }, 'Deleting MCP installation');
+      teamId,
+      installationIdLength: installationId.length,
+      teamIdLength: teamId.length
+    }, 'Starting deletion with exact parameters');
+
+    // Check if record exists before deletion
+    const existsBefore = await this.db
+      .select({ id: mcpServerInstallations.id, team_id: mcpServerInstallations.team_id })
+      .from(mcpServerInstallations)
+      .where(
+        and(
+          eq(mcpServerInstallations.id, installationId),
+          eq(mcpServerInstallations.team_id, teamId)
+        )
+      );
+
+    this.logger.debug({
+      operation: 'delete_installation_before',
+      installationId,
+      teamId,
+      recordsFound: existsBefore.length,
+      foundRecords: existsBefore
+    }, 'Records found before deletion');
 
     const result = await this.db
       .delete(mcpServerInstallations)
@@ -434,10 +455,13 @@ export class McpInstallationService {
     const deleted = result.changes > 0;
 
     this.logger.info({
-      operation: 'delete_installation',
+      operation: 'delete_installation_result',
       installationId,
-      deleted
-    }, 'MCP installation deletion completed');
+      teamId,
+      changes: result.changes,
+      deleted,
+      result: result
+    }, 'Delete operation completed');
 
     return deleted;
   }

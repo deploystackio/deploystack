@@ -18,7 +18,7 @@ jobs:
     if: github.event.pull_request.head.ref == 'backend-release' || github.event.pull_request.head.ref == 'frontend-release' || github.event.pull_request.head.ref == 'satellite-release'
     steps:
       - name: Delete release branch
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.APP_INSTALLATION_TOKEN }}
           script: |
