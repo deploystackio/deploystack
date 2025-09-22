@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { type FastifyInstance } from 'fastify';
 import { SatelliteTokenService } from '../../services/satelliteTokenService';
 import { requireGlobalAdmin, requireTeamPermission, requireAuthentication } from '../../middleware/roleMiddleware';
@@ -208,7 +209,7 @@ export default async function registrationTokenRoutes(server: FastifyInstance) {
         error: 'Failed to generate registration token'
       };
       const jsonString = JSON.stringify(errorResponse);
-      return reply.status(500).type('application/json').send(jsonString);
+      return reply.status(500 as any).type('application/json').send(jsonString);
     }
   });
 
@@ -303,7 +304,7 @@ export default async function registrationTokenRoutes(server: FastifyInstance) {
         error: 'Failed to generate registration token'
       };
       const jsonString = JSON.stringify(errorResponse);
-      return reply.status(500).type('application/json').send(jsonString);
+      return reply.status(500 as any).type('application/json').send(jsonString);
     }
   });
 
@@ -346,7 +347,7 @@ export default async function registrationTokenRoutes(server: FastifyInstance) {
         error: 'Failed to list tokens' 
       };
       const jsonString = JSON.stringify(errorResponse);
-      return reply.status(500).type('application/json').send(jsonString);
+      return reply.status(500 as any).type('application/json').send(jsonString);
     }
   });
 
@@ -399,7 +400,7 @@ export default async function registrationTokenRoutes(server: FastifyInstance) {
         error: 'Failed to list tokens' 
       };
       const jsonString = JSON.stringify(errorResponse);
-      return reply.status(500).type('application/json').send(jsonString);
+      return reply.status(500 as any).type('application/json').send(jsonString);
     }
   });
 
@@ -482,7 +483,7 @@ export default async function registrationTokenRoutes(server: FastifyInstance) {
         error: 'Failed to revoke token' 
       };
       const jsonString = JSON.stringify(errorResponse);
-      return reply.status(500).type('application/json').send(jsonString);
+      return reply.status(500 as any).type('application/json').send(jsonString);
     }
   });
 }

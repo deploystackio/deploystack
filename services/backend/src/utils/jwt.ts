@@ -1,4 +1,5 @@
-import { createHmac, randomBytes, timingSafeEqual } from 'crypto';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { createHmac, timingSafeEqual } from 'crypto';
 
 /**
  * Simple JWT implementation using Node.js crypto

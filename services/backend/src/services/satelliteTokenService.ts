@@ -1,7 +1,7 @@
 import { nanoid } from 'nanoid';
 import { hash, verify } from '@node-rs/argon2';
 import { getDb } from '../db';
-import { satelliteRegistrationTokens, teams, authUser } from '../db/schema.sqlite';
+import { satelliteRegistrationTokens } from '../db/schema.sqlite';
 import { eq, and, lt } from 'drizzle-orm';
 import { SimpleJWT, TokenExpiredError } from '../utils/jwt';
 import type { 
@@ -115,6 +115,7 @@ export class SatelliteTokenService {
       try {
         payload = SimpleJWT.verify(jwtToken, this.JWT_SECRET) as JWTPayload;
       } catch (jwtError) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         if (jwtError instanceof TokenExpiredError || (jwtError as any).name === 'TokenExpiredError') {
           return { valid: false, error: 'Token has expired' };
         }

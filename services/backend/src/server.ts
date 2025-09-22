@@ -151,9 +151,25 @@ export async function initializeDatabaseDependentServices(
         server.log.warn('⚠️ Continuing without MCP User Configuration Service due to error');
       }
 
+      // Start Token Cleanup Service (only after database is ready)
+      try {
+        server.log.debug('Starting Token Cleanup Service...');
+        const { TokenCleanupService } = await import('./services/tokenCleanupService');
+        TokenCleanupService.start(server.log);
+        server.log.debug('Token Cleanup Service started');
+      } catch (tokenCleanupError) {
+        server.log.error({
+          error: tokenCleanupError,
+          message: tokenCleanupError instanceof Error ? tokenCleanupError.message : 'Unknown error',
+          stack: tokenCleanupError instanceof Error ? tokenCleanupError.stack : 'No stack trace'
+        }, 'Token Cleanup Service failed to start:');
+        // Don't throw - continue with startup but log the error
+        server.log.warn('Continuing without Token Cleanup Service due to error');
+      }
+
       // Initialize global settings with comprehensive debugging
       try {
-        server.log.debug('🔄 Starting global settings initialization...');
+        server.log.debug('Starting global settings initialization...');
         
         // Check database status before proceeding
         const dbStatus = getDbStatus();
