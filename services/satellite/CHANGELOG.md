@@ -2,6 +2,15 @@
 
 ## 0.3.0 (2025-09-23)
 
+* chore(all): bump fastify from 5.5.0 to 5.6.1 ([f4b9683](https://github.com/deploystackio/deploystack/commit/f4b9683))
+* chore(all): bump nanoid from 5.1.5 to 5.1.6 ([0bcd969](https://github.com/deploystackio/deploystack/commit/0bcd969))
+* chore(all): bump release-it from 19.0.4 to 19.0.5 ([17c302e](https://github.com/deploystackio/deploystack/commit/17c302e))
+* chore(frontend): release v0.28.0 ([aeb8b7a](https://github.com/deploystackio/deploystack/commit/aeb8b7a))
+* chore(frontend): release v0.28.0 ([92d741e](https://github.com/deploystackio/deploystack/commit/92d741e))
+* chore(satellite): release v0.3.0 ([e256e3f](https://github.com/deploystackio/deploystack/commit/e256e3f))
+
+## 0.3.0 (2025-09-23)
+
 * chore(all): bump @eslint/js from 9.34.0 to 9.35.0 ([c7d6995](https://github.com/deploystackio/deploystack/commit/c7d6995))
 * chore(all): bump @fastify/http-proxy from 10.0.2 to 11.3.0 ([a0664e2](https://github.com/deploystackio/deploystack/commit/a0664e2))
 * chore(all): bump @libsql/client from 0.15.14 to 0.15.15 ([f950974](https://github.com/deploystackio/deploystack/commit/f950974))
