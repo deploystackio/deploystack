@@ -32,7 +32,7 @@
     "@octokit/request": "^10.0.3",
     "arctic": "^3.7.0",
     "argon2": "^0.44.0",
-    "better-sqlite3": "^12.2.0",
+    "better-sqlite3": "^12.4.1",
     "drizzle-orm": "^0.44.5",
     "fastify": "^5.6.1",
     "fastify-favicon": "^5.0.0",
