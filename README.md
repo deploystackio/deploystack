@@ -75,7 +75,7 @@ some-mcp configure --api-key=xxx
 - **Multi-tenant**: Resource isolation between teams
 - **Example**: `https://satellite.deploystack.io/mcp`
 
-### Team Satellites (Deploy Your Own) - (On Premise or Cloud) - (Comming Soon)
+### Team Satellites (Deploy Your Own) - (On Premise or Cloud) - (Security Ready, Deployment Tooling Coming Soon)
 
 - **Enterprise Security**: On-premise deployment within your network
 - **Internal Access**: Connect to company databases, APIs, file systems
@@ -149,31 +149,33 @@ VS Code → HTTPS Request → DeployStack Satellite → MCP Server Process → E
 - **[Done]** **Global Satellite Infrastructure** - managed MCP servers via HTTPS
 - **[Done]** **Zero-Installation Experience** - just add URL to VS Code
 - **[Done]** **OAuth Authentication** - seamless token-based auth
-- **[In Progress]** **Resource Management** - process isolation and limits
+- **[Done]** **Satellite Pairing Security** - JWT-based token registration system for secure satellite onboarding
 - **[Done]** **Public Launch** - production satellite for community use
+- **[Done]** **Resource Management** - process isolation (remote MCP) and limits
+- **[In Progress]** **Resource Management** - process isolation (stdio) and limits
+- **[In Progress]** **MCP Registry** - integration of the official MCP Registry
 - **[To Do]** Build out Audit Logging features in the cloud UI
 - **[To Do]** Develop Analytics dashboards for tool usage and performance
 - **[To Do]** Implement advanced policy controls (e.g., rate limiting, request validation)
 - **[To Do]** Enhance the searchable MCP Server Catalog within the cloud UI
 - **[To Do]** Deeper integration with IDEs and AI agent frameworks
 
-### **Phase 4: Advanced Architecture** (Next)
+### **Phase 4: Advanced Architecture** (Current Priority)
 
 - **[Done]** **Multi-Transport Support** - SSE, Streamable HTTP, Direct HTTP protocols
-- **[To Do]** **Real-Time Command Orchestration** - instant status feedback
+- **[Done]** **Real-Time Command Orchestration** - instant status feedback
 - **[To Do]** **Comprehensive Monitoring** - satellite health and usage analytics
 - **[To Do]** **Enterprise Security** - audit logging and compliance features
 
 ### **Phase 5: Enterprise Team Satellites** (Future)
 
-- **[To Do]** **Team Satellites** - customer-deployed satellites for enterprise
+- **[To Do]** **Team Satellites** - customer-deployed satellites for enterprise (*security infrastructure completed, deployment tooling pending*)
 - **[To Do]** **Advanced Team Isolation** - Linux namespaces and cgroups
 - **[To Do]** **On-Premise Deployment** - GitHub Actions runner-style deployment  
 - **[To Do]** **Enterprise Authentication** - SSO integration (SAML, OIDC)
 
 ### **Phase 6: Ecosystem Expansion** (Future)
 
-- **[To Do]** Advanced MCP server marketplace
 - **[To Do]** Multi-region satellite deployment
 - **[To Do]** AI agent framework integrations
 

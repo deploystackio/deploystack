@@ -1,5 +1,7 @@
 import { FastifyBaseLogger } from 'fastify';
 import { platform, arch, totalmem } from 'os';
+import { readFile, writeFile, access } from 'fs/promises';
+import { join } from 'path';
 
 export interface BackendConnectionStatus {
   backend_url: string;
@@ -59,15 +61,27 @@ export interface HeartbeatResult {
   error?: string;
 }
 
+export interface PersistedSatelliteData {
+  api_key: string | null;
+  satellite_id: string | null;
+  satellite_name: string | null;
+  registered_at: string | null;
+  last_verified: string | null;
+}
+
 export class BackendClient {
   private backendUrl: string;
   private logger: FastifyBaseLogger;
   private lastConnectionStatus: BackendConnectionStatus;
   private apiKey?: string;
+  private persistentDataPath: string;
+  private keyFilePath: string;
 
   constructor(backendUrl: string, logger: FastifyBaseLogger) {
     this.backendUrl = backendUrl;
     this.logger = logger;
+    this.persistentDataPath = join(process.cwd(), 'persistent_data');
+    this.keyFilePath = join(this.persistentDataPath, 'backend.key.json');
     this.lastConnectionStatus = {
       backend_url: backendUrl,
       connection_status: 'disconnected',
@@ -194,9 +208,9 @@ export class BackendClient {
   }
 
   /**
-   * Register satellite with backend
+   * Register satellite with backend using registration token
    */
-  async registerSatellite(registrationData: SatelliteRegistrationData): Promise<SatelliteRegistrationResult> {
+  async registerSatellite(registrationData: SatelliteRegistrationData, registrationToken: string): Promise<SatelliteRegistrationResult> {
     const startTime = Date.now();
     
     try {
@@ -209,7 +223,8 @@ export class BackendClient {
       const response = await fetch(`${this.backendUrl}/api/satellites/register`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${registrationToken}`
         },
         body: JSON.stringify(registrationData),
         // 10 second timeout for registration
@@ -233,14 +248,29 @@ export class BackendClient {
         return result;
       } else {
         let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        let errorCode: string | undefined;
         
         try {
           const errorResult = JSON.parse(responseText);
           if (errorResult.error) {
+            errorCode = errorResult.error;
             errorMessage = errorResult.error;
           }
         } catch {
           // Use HTTP status if JSON parsing fails
+        }
+
+        // Handle specific token-related errors with helpful English messages
+        if (errorCode === 'registration_token_required') {
+          errorMessage = 'Registration token missing. Please set DEPLOYSTACK_REGISTRATION_TOKEN environment variable with a valid token from the DeployStack Backend Admin Interface.';
+        } else if (errorCode === 'invalid_registration_token') {
+          errorMessage = 'Invalid registration token format. Please check the token format and generate a new token if needed from the DeployStack Backend Admin Interface.';
+        } else if (errorCode === 'token_expired') {
+          errorMessage = 'Registration token has expired. Please generate a new registration token from the DeployStack Backend Admin Interface. Global tokens are valid for 1 hour, team tokens for 24 hours.';
+        } else if (errorCode === 'token_already_used') {
+          errorMessage = 'Registration token has already been used. Tokens can only be used once. Please generate a new registration token from the DeployStack Backend Admin Interface.';
+        } else if (errorCode === 'token_invalid_scope') {
+          errorMessage = 'Registration token has invalid scope. Please use the correct token for Global or Team Satellites from the DeployStack Backend Admin Interface.';
         }
 
         this.logger.error({
@@ -248,6 +278,7 @@ export class BackendClient {
           backend_url: this.backendUrl,
           satellite_name: registrationData.name,
           status_code: response.status,
+          error_code: errorCode,
           error_message: errorMessage,
           response_time_ms: responseTime
         }, 'Satellite registration failed');
@@ -400,5 +431,111 @@ export class BackendClient {
    */
   getBackendUrl(): string {
     return this.backendUrl;
+  }
+
+  /**
+   * Load persisted satellite data from file
+   */
+  async loadPersistedData(): Promise<PersistedSatelliteData | null> {
+    try {
+      await access(this.keyFilePath);
+      const fileContent = await readFile(this.keyFilePath, 'utf-8');
+      const data = JSON.parse(fileContent) as PersistedSatelliteData;
+      
+      this.logger.info({
+        operation: 'persistent_data_loaded',
+        file_path: this.keyFilePath,
+        has_api_key: !!data.api_key,
+        satellite_id: data.satellite_id,
+        satellite_name: data.satellite_name
+      }, 'Persistent satellite data loaded from file');
+      
+      return data;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        this.logger.info({
+          operation: 'persistent_data_not_found',
+          file_path: this.keyFilePath
+        }, 'No persistent satellite data found - will proceed with registration');
+      } else {
+        this.logger.warn({
+          operation: 'persistent_data_load_error',
+          file_path: this.keyFilePath,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        }, 'Failed to load persistent satellite data - will proceed with registration');
+      }
+      return null;
+    }
+  }
+
+  /**
+   * Save satellite data to persistent storage
+   */
+  async savePersistedData(data: PersistedSatelliteData): Promise<void> {
+    try {
+      const fileContent = JSON.stringify(data, null, 2);
+      await writeFile(this.keyFilePath, fileContent, 'utf-8');
+      
+      this.logger.info({
+        operation: 'persistent_data_saved',
+        file_path: this.keyFilePath,
+        satellite_id: data.satellite_id,
+        satellite_name: data.satellite_name
+      }, 'Satellite data saved to persistent storage');
+      
+    } catch (error) {
+      this.logger.error({
+        operation: 'persistent_data_save_error',
+        file_path: this.keyFilePath,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      }, 'Failed to save satellite data to persistent storage');
+      throw error;
+    }
+  }
+
+  /**
+   * Update last verified timestamp in persistent storage
+   */
+  async updateLastVerified(): Promise<void> {
+    try {
+      const existingData = await this.loadPersistedData();
+      if (existingData && existingData.api_key) {
+        existingData.last_verified = new Date().toISOString();
+        await this.savePersistedData(existingData);
+      }
+    } catch (error) {
+      this.logger.warn({
+        operation: 'last_verified_update_error',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      }, 'Failed to update last verified timestamp');
+    }
+  }
+
+  /**
+   * Clear persistent storage (force re-registration)
+   */
+  async clearPersistedData(): Promise<void> {
+    try {
+      const emptyData: PersistedSatelliteData = {
+        api_key: null,
+        satellite_id: null,
+        satellite_name: null,
+        registered_at: null,
+        last_verified: null
+      };
+      await this.savePersistedData(emptyData);
+      
+      this.logger.info({
+        operation: 'persistent_data_cleared',
+        file_path: this.keyFilePath
+      }, 'Persistent satellite data cleared - will require re-registration');
+      
+    } catch (error) {
+      this.logger.error({
+        operation: 'persistent_data_clear_error',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      }, 'Failed to clear persistent storage');
+      throw error;
+    }
   }
 }

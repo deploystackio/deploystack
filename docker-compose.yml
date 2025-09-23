@@ -34,12 +34,23 @@ services:
       - LOG_LEVEL=info
       - DEPLOYSTACK_BACKEND_URL=http://backend:3000
       - DEPLOYSTACK_SATELLITE_NAME=docker-satellite-001
+      # Registration token required for first startup only
+      # After initial registration, credentials are saved to persistent storage
+      - DEPLOYSTACK_REGISTRATION_TOKEN=${DEPLOYSTACK_REGISTRATION_TOKEN}
+    volumes:
+      - deploystack_satellite_persistent:/app/persistent_data
     networks:
       - deploystack-network
     restart: unless-stopped
     depends_on:
       backend:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   frontend:
     image: deploystack/frontend:latest
@@ -60,6 +71,8 @@ services:
 
 volumes:
   deploystack_backend_persistent:
+    driver: local
+  deploystack_satellite_persistent:
     driver: local
 
 networks:

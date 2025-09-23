@@ -47,6 +47,7 @@ export const ROLE_DEFINITIONS = {
     'gateway.config:read',
     'satellites.view',
     'satellites.manage',
+    'satellites.revoke',
   ],
   global_user: [
     'profile.view',

@@ -3167,10 +3167,7 @@ paths:
             type: string
             enum:
               - claude-desktop
-              - cline
               - vscode
-              - cursor
-              - windsurf
           in: path
           name: client
           required: true
@@ -3230,6 +3227,22 @@ paths:
                       required:
                         - type
                         - url
+                      additionalProperties: false
+                    - type: object
+                      properties:
+                        type:
+                          type: string
+                          enum:
+                            - text
+                        content:
+                          type: string
+                        title:
+                          type: string
+                        description:
+                          type: string
+                      required:
+                        - type
+                        - content
                       additionalProperties: false
         "400":
           description: Bad Request - Invalid client type
@@ -3304,10 +3317,7 @@ paths:
                       type: string
                       enum:
                         - claude-desktop
-                        - cline
                         - vscode
-                        - cursor
-                        - windsurf
                     description: List of supported MCP client types
                 required:
                   - clients
@@ -10533,11 +10543,15 @@ paths:
                           type: array
                           items: {}
                         user_env_schema:
-                          type: array
-                          items: {}
+                          anyOf:
+                            - type: array
+                              items: {}
+                            - type: "null"
                         user_headers_schema:
-                          type: array
-                          items: {}
+                          anyOf:
+                            - type: array
+                              items: {}
+                            - type: "null"
                         dependencies:
                           anyOf:
                             - type: object
@@ -11493,9 +11507,9 @@ paths:
                 installation_type:
                   type: string
                   enum:
-                    - local
-                    - cloud
-                  description: Installation type (defaults to local)
+                    - global
+                    - team
+                  description: Installation type (defaults to global)
                 team_args:
                   type: array
                   items:
@@ -11559,8 +11573,8 @@ paths:
                       installation_type:
                         type: string
                         enum:
-                          - local
-                          - cloud
+                          - global
+                          - team
                         description: Installation type
                       team_args:
                         type: array
@@ -11838,8 +11852,8 @@ paths:
                         installation_type:
                           type: string
                           enum:
-                            - local
-                            - cloud
+                            - global
+                            - team
                           description: Installation type
                         team_args:
                           type: array
@@ -12106,8 +12120,8 @@ paths:
                       installation_type:
                         type: string
                         enum:
-                          - local
-                          - cloud
+                          - global
+                          - team
                         description: Installation type
                       team_args:
                         type: array
@@ -12394,8 +12408,8 @@ paths:
                       installation_type:
                         type: string
                         enum:
-                          - local
-                          - cloud
+                          - global
+                          - team
                         description: Installation type
                       team_args:
                         type: array
@@ -12825,8 +12839,8 @@ paths:
                       installation_type:
                         type: string
                         enum:
-                          - local
-                          - cloud
+                          - global
+                          - team
                         description: Installation type
                       team_args:
                         type: array
@@ -13112,8 +13126,8 @@ paths:
                       installation_type:
                         type: string
                         enum:
-                          - local
-                          - cloud
+                          - global
+                          - team
                         description: Installation type
                       team_args:
                         type: array
@@ -13399,8 +13413,8 @@ paths:
                       installation_type:
                         type: string
                         enum:
-                          - local
-                          - cloud
+                          - global
+                          - team
                         description: Installation type
                       team_args:
                         type: array
@@ -16302,13 +16316,12 @@ paths:
                 description: Internal Server Error
   /api/satellites/register:
     post:
-      summary: Register a new satellite
+      summary: Register satellite with token
       tags:
-        - Satellites
-      description: "Registers a new satellite with the backend. All satellites are
-        registered as global and inactive by default - admin activation
-        required. No authentication required for now. Requires Content-Type:
-        application/json header when sending request body."
+        - Satellite Registration
+      description: "Registers a satellite using a valid registration token. BREAKING
+        CHANGE: Now requires Authorization: Bearer <token> header. Requires
+        Content-Type: application/json header when sending request body."
       requestBody:
         content:
           application/json:
@@ -16317,14 +16330,20 @@ paths:
               properties:
                 name:
                   type: string
-                  minLength: 1
-                  maxLength: 100
-                  description: Human-readable satellite name (e.g., "dev-satellite-001")
+                  minLength: 10
+                  maxLength: 32
+                  pattern: ^[a-z0-9_-]+$
+                  description: Satellite name (10-32 chars, lowercase/numbers/hyphens/underscores
+                    only)
                 capabilities:
                   type: array
                   items:
                     type: string
-                  description: Array of supported MCP server types
+                  default:
+                    - stdio
+                    - http
+                    - sse
+                  description: Satellite capabilities
                 system_info:
                   type: object
                   properties:
@@ -16336,14 +16355,15 @@ paths:
                       type: string
                     memory_mb:
                       type: number
-                  description: Hardware and OS information
+                  description: System information (optional)
               required:
                 - name
-                - capabilities
               additionalProperties: false
         required: true
+      security:
+        - bearerAuth: []
       responses:
-        "201":
+        "200":
           description: Satellite registered successfully
           content:
             application/json:
@@ -16357,16 +16377,22 @@ paths:
                     properties:
                       id:
                         type: string
-                        description: Unique satellite identifier
                       name:
                         type: string
-                        description: Satellite name
+                      satellite_type:
+                        type: string
+                      team_id:
+                        type: string
+                        nullable: true
+                      status:
+                        type: string
                       api_key:
                         type: string
-                        description: API key for authentication (store securely)
                     required:
                       - id
                       - name
+                      - satellite_type
+                      - status
                       - api_key
                   message:
                     type: string
@@ -16387,12 +16413,17 @@ paths:
                     default: false
                   error:
                     type: string
+                  message:
+                    type: string
+                  instructions:
+                    type: string
                 required:
                   - success
                   - error
+                  - message
                 description: Bad Request - Invalid input
-        "409":
-          description: Conflict - Satellite name already exists
+        "401":
+          description: Unauthorized - Invalid or missing registration token
           content:
             application/json:
               schema:
@@ -16403,12 +16434,17 @@ paths:
                     default: false
                   error:
                     type: string
+                  message:
+                    type: string
+                  instructions:
+                    type: string
                 required:
                   - success
                   - error
-                description: Conflict - Satellite name already exists
+                  - message
+                description: Unauthorized - Invalid or missing registration token
         "500":
-          description: Internal Server Error
+          description: Internal server error
           content:
             application/json:
               schema:
@@ -16419,10 +16455,46 @@ paths:
                     default: false
                   error:
                     type: string
+                  message:
+                    type: string
+                  instructions:
+                    type: string
                 required:
                   - success
                   - error
-                description: Internal Server Error
+                  - message
+                description: Internal server error
+  /api/satellites/register/status:
+    get:
+      summary: Get registration status
+      tags:
+        - Satellite Registration
+      description: Returns information about the current registration method and
+        requirements.
+      responses:
+        "200":
+          description: Registration status information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  registration_method:
+                    type: string
+                  token_required:
+                    type: boolean
+                  supported_prefixes:
+                    type: array
+                    items:
+                      type: string
+                  instructions:
+                    type: string
+                required:
+                  - registration_method
+                  - token_required
+                  - supported_prefixes
+                  - instructions
+                description: Registration status information
   /api/satellites/{satelliteId}/commands:
     get:
       summary: Poll for pending satellite commands
@@ -17526,6 +17598,730 @@ paths:
                     type: boolean
                   error:
                     type: string
+  /api/satellites/registration-tokens:
+    get:
+      summary: List all registration tokens
+      tags:
+        - Satellite Registration
+      description: Lists all registration tokens. Only global administrators can
+        access this endpoint.
+      parameters:
+        - schema:
+            type: integer
+            minimum: 1
+            default: 1
+          in: query
+          name: page
+          required: false
+        - schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+          in: query
+          name: limit
+          required: false
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: List of all registration tokens user has access to
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: true
+                  data:
+                    type: object
+                    properties:
+                      tokens:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            token:
+                              type: string
+                            token_type:
+                              type: string
+                              enum:
+                                - global
+                                - team
+                            team_id:
+                              type: string
+                              nullable: true
+                            team_slug:
+                              type: string
+                              nullable: true
+                            created_by:
+                              type: string
+                            creator_name:
+                              type: string
+                              nullable: true
+                            expires_at:
+                              type: string
+                              format: date-time
+                            created_at:
+                              type: string
+                              format: date-time
+                            used:
+                              type: boolean
+                            used_at:
+                              type: string
+                              format: date-time
+                              nullable: true
+                            used_by:
+                              type: string
+                              nullable: true
+                          required:
+                            - id
+                            - token
+                            - token_type
+                            - team_id
+                            - created_by
+                            - expires_at
+                            - created_at
+                            - used
+                      pagination:
+                        type: object
+                        properties:
+                          total:
+                            type: number
+                          page:
+                            type: number
+                          pages:
+                            type: number
+                          limit:
+                            type: number
+                        required:
+                          - total
+                          - page
+                          - pages
+                          - limit
+                    required:
+                      - tokens
+                required:
+                  - success
+                  - data
+                description: List of all registration tokens user has access to
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - success
+                  - error
+                description: Unauthorized
+        "403":
+          description: Forbidden - Insufficient permissions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - success
+                  - error
+                description: Forbidden - Insufficient permissions
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - success
+                  - error
+                description: Internal Server Error
+  /api/satellites/global/registration-tokens:
+    post:
+      summary: Generate global satellite registration token
+      tags:
+        - Satellite Registration
+      description: "Generates a time-limited JWT token for registering global
+        satellites. Only global administrators can create these tokens. Requires
+        Content-Type: application/json header when sending request body."
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                expires_in_hours:
+                  type: number
+                  minimum: 1
+                  maximum: 24
+                  description: Token expiration in hours (max 24 hours for security)
+              additionalProperties: false
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Token generated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      token:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                          token:
+                            type: string
+                            description: Complete token with prefix (deploystack_satellite_global_...)
+                          token_type:
+                            type: string
+                            enum:
+                              - global
+                          team_id:
+                            type: "null"
+                          created_by:
+                            type: string
+                          expires_at:
+                            type: string
+                            format: date-time
+                            description: ISO timestamp when token expires
+                          created_at:
+                            type: string
+                            format: date-time
+                          used:
+                            type: boolean
+                        required:
+                          - id
+                          - token
+                          - token_type
+                          - team_id
+                          - created_by
+                          - expires_at
+                          - created_at
+                          - used
+                    required:
+                      - token
+                  instructions:
+                    type: string
+                    description: Instructions for using the token
+                required:
+                  - success
+                  - data
+                  - instructions
+                description: Token generated successfully
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - success
+                  - error
+                description: Unauthorized
+        "403":
+          description: Forbidden - Global admin required
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - success
+                  - error
+                description: Forbidden - Global admin required
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - success
+                  - error
+                description: Internal Server Error
+    get:
+      summary: List global registration tokens
+      tags:
+        - Satellite Registration
+      description: Lists all active global satellite registration tokens. Only global
+        administrators can view these tokens.
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: List of global registration tokens
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tokens:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        token_type:
+                          type: string
+                          enum:
+                            - global
+                            - team
+                        team_id:
+                          type: string
+                          nullable: true
+                        created_by:
+                          type: string
+                        expires_at:
+                          type: string
+                          format: date-time
+                        created_at:
+                          type: string
+                          format: date-time
+                        used:
+                          type: boolean
+                      required:
+                        - id
+                        - token_type
+                        - team_id
+                        - created_by
+                        - expires_at
+                        - created_at
+                        - used
+                required:
+                  - tokens
+                description: List of global registration tokens
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - success
+                  - error
+                description: Unauthorized
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - success
+                  - error
+                description: Forbidden
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - success
+                  - error
+                description: Internal Server Error
+  /api/teams/{teamId}/satellites/registration-tokens:
+    post:
+      summary: Generate team satellite registration token
+      tags:
+        - Satellite Registration
+      description: "Generates a time-limited JWT token for registering team-scoped
+        satellites. Team administrators can create tokens for their teams.
+        Requires Content-Type: application/json header when sending request
+        body."
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                expires_in_hours:
+                  type: number
+                  minimum: 1
+                  maximum: 72
+                  description: Token expiration in hours (max 72 hours for team tokens)
+              additionalProperties: false
+      parameters:
+        - schema:
+            type: string
+            minLength: 1
+          in: path
+          name: teamId
+          required: true
+          description: Team ID
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Team token generated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      token:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                          token:
+                            type: string
+                            description: Complete token with prefix (deploystack_satellite_team_...)
+                          token_type:
+                            type: string
+                            enum:
+                              - team
+                          team_id:
+                            type: string
+                            description: Team ID this token is scoped to
+                          created_by:
+                            type: string
+                          expires_at:
+                            type: string
+                            format: date-time
+                            description: ISO timestamp when token expires
+                          created_at:
+                            type: string
+                            format: date-time
+                          used:
+                            type: boolean
+                        required:
+                          - id
+                          - token
+                          - token_type
+                          - team_id
+                          - created_by
+                          - expires_at
+                          - created_at
+                          - used
+                    required:
+                      - token
+                  instructions:
+                    type: string
+                    description: Instructions for using the token
+                required:
+                  - success
+                  - data
+                  - instructions
+                description: Team token generated successfully
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - success
+                  - error
+                description: Unauthorized
+        "403":
+          description: Forbidden - Team admin required
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - success
+                  - error
+                description: Forbidden - Team admin required
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - success
+                  - error
+                description: Internal Server Error
+    get:
+      summary: List team registration tokens
+      tags:
+        - Satellite Registration
+      description: Lists all active registration tokens for a specific team. Team
+        administrators can view tokens for their teams.
+      parameters:
+        - schema:
+            type: string
+            minLength: 1
+          in: path
+          name: teamId
+          required: true
+          description: Team ID
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: List of team registration tokens
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tokens:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        token_type:
+                          type: string
+                          enum:
+                            - global
+                            - team
+                        team_id:
+                          type: string
+                          nullable: true
+                        created_by:
+                          type: string
+                        expires_at:
+                          type: string
+                          format: date-time
+                        created_at:
+                          type: string
+                          format: date-time
+                        used:
+                          type: boolean
+                      required:
+                        - id
+                        - token_type
+                        - team_id
+                        - created_by
+                        - expires_at
+                        - created_at
+                        - used
+                required:
+                  - tokens
+                description: List of team registration tokens
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - success
+                  - error
+                description: Unauthorized
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - success
+                  - error
+                description: Forbidden
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - success
+                  - error
+                description: Internal Server Error
+  /api/satellites/registration-tokens/{tokenId}:
+    delete:
+      summary: Revoke registration token
+      tags:
+        - Satellite Registration
+      description: Revokes an unused registration token. Only global administrators
+        can revoke satellite registration tokens.
+      parameters:
+        - schema:
+            type: string
+            minLength: 1
+          in: path
+          name: tokenId
+          required: true
+          description: Token ID to revoke
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Token revoked successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                required:
+                  - success
+                description: Token revoked successfully
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - success
+                  - error
+                description: Unauthorized
+        "403":
+          description: Forbidden - Insufficient permissions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - success
+                  - error
+                description: Forbidden - Insufficient permissions
+        "404":
+          description: Token not found or already used
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - success
+                  - error
+                description: Token not found or already used
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - success
+                  - error
+                description: Internal Server Error
   /api/auth/email/register:
     post:
       summary: User registration via email

@@ -211,6 +211,11 @@ const routes = [
         name: 'AdminSatellites',
         component: () => import('../views/admin/satellites/index.vue'),
       },
+      {
+        path: 'satellites/pairing',
+        name: 'AdminSatellitePairing',
+        component: () => import('../views/admin/satellites/pairing/index.vue'),
+      },
     ],
   },
   {

@@ -1,8 +1,8 @@
 import { nanoid } from 'nanoid';
 import { hash, verify } from '@node-rs/argon2';
 import { getDb } from '../db';
-import { satelliteRegistrationTokens } from '../db/schema.sqlite';
-import { eq, and, lt } from 'drizzle-orm';
+import { satelliteRegistrationTokens, authUser } from '../db/schema.sqlite';
+import { eq, and, lt, count, desc } from 'drizzle-orm';
 import { SimpleJWT, TokenExpiredError } from '../utils/jwt';
 import type { 
   TokenType, 
@@ -10,6 +10,7 @@ import type {
   TokenValidationResult, 
   JWTPayload 
 } from '../types/satellite';
+import type { FastifyBaseLogger } from 'fastify';
 
 export class SatelliteTokenService {
   private static readonly JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key-for-satellite-tokens';
@@ -93,7 +94,8 @@ export class SatelliteTokenService {
    * Validate a registration token during satellite registration
    */
   static async validateRegistrationToken(
-    token: string
+    token: string,
+    logger: FastifyBaseLogger
   ): Promise<TokenValidationResult> {
     try {
       // Extract prefix and JWT
@@ -171,7 +173,12 @@ export class SatelliteTokenService {
 
       return { valid: true, tokenRecord };
     } catch (error) {
-      console.error('Token validation error:', error);
+      logger.error({
+        error,
+        operation: 'validate_registration_token',
+        tokenPrefix: token.startsWith(this.GLOBAL_TOKEN_PREFIX) ? 'global' : 
+                    token.startsWith(this.TEAM_TOKEN_PREFIX) ? 'team' : 'unknown'
+      }, 'Token validation failed');
       return { valid: false, error: 'Token validation failed' };
     }
   }
@@ -232,6 +239,139 @@ export class SatelliteTokenService {
     }
 
     return await query;
+  }
+
+  /**
+   * Get all registration tokens a user has access to (for unified listing)
+   */
+  static async getAllTokensForUser(
+    userId: string, 
+    userRole: string, 
+    page: number = 1, 
+    limit: number = 50
+  ) {
+    const db = getDb();
+    
+    // Calculate offset
+    const offset = (page - 1) * limit;
+    
+    let query;
+    let countQuery;
+    
+    if (userRole === 'global_admin') {
+      // Global admins see all tokens
+      query = db.select({
+        id: satelliteRegistrationTokens.id,
+        token: satelliteRegistrationTokens.token_prefix, // Return masked token for display
+        token_type: satelliteRegistrationTokens.token_type,
+        team_id: satelliteRegistrationTokens.team_id,
+        team_slug: satelliteRegistrationTokens.team_id, // TODO: Join with teams table for slug
+        created_by: satelliteRegistrationTokens.created_by,
+        creator_name: authUser.username,
+        creator_email: authUser.email,
+        creator_display_name: authUser.first_name,
+        creator_last_name: authUser.last_name,
+        expires_at: satelliteRegistrationTokens.expires_at,
+        created_at: satelliteRegistrationTokens.created_at,
+        used: satelliteRegistrationTokens.used,
+        used_at: satelliteRegistrationTokens.used_at,
+        used_by: satelliteRegistrationTokens.used_by_satellite_id
+      })
+      .from(satelliteRegistrationTokens)
+      .leftJoin(authUser, eq(satelliteRegistrationTokens.created_by, authUser.id))
+      .limit(limit)
+      .offset(offset)
+      .orderBy(desc(satelliteRegistrationTokens.created_at));
+      
+      countQuery = db.select({ count: count() })
+        .from(satelliteRegistrationTokens);
+        
+    } else {
+      // Regular users only see tokens they created
+      query = db.select({
+        id: satelliteRegistrationTokens.id,
+        token: satelliteRegistrationTokens.token_prefix, // Return masked token for display
+        token_type: satelliteRegistrationTokens.token_type,
+        team_id: satelliteRegistrationTokens.team_id,
+        team_slug: satelliteRegistrationTokens.team_id, // TODO: Join with teams table for slug
+        created_by: satelliteRegistrationTokens.created_by,
+        creator_name: authUser.username,
+        creator_email: authUser.email,
+        creator_display_name: authUser.first_name,
+        creator_last_name: authUser.last_name,
+        expires_at: satelliteRegistrationTokens.expires_at,
+        created_at: satelliteRegistrationTokens.created_at,
+        used: satelliteRegistrationTokens.used,
+        used_at: satelliteRegistrationTokens.used_at,
+        used_by: satelliteRegistrationTokens.used_by_satellite_id
+      })
+      .from(satelliteRegistrationTokens)
+      .leftJoin(authUser, eq(satelliteRegistrationTokens.created_by, authUser.id))
+      .where(eq(satelliteRegistrationTokens.created_by, userId))
+      .limit(limit)
+      .offset(offset)
+      .orderBy(desc(satelliteRegistrationTokens.created_at));
+      
+      countQuery = db.select({ count: count() })
+        .from(satelliteRegistrationTokens)
+        .where(eq(satelliteRegistrationTokens.created_by, userId));
+    }
+    
+    // Execute queries
+    const [rawTokens, totalResult] = await Promise.all([
+      query,
+      countQuery
+    ]);
+    
+    // Process the results to format user display names
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const tokens = rawTokens.map((token: any) => {
+      // Create a display name from first_name, last_name, username, and email
+      let displayName = '';
+      
+      if (token.creator_display_name && token.creator_last_name) {
+        displayName = `${token.creator_display_name} ${token.creator_last_name}`;
+      } else if (token.creator_display_name) {
+        displayName = token.creator_display_name;
+      } else if (token.creator_name) {
+        displayName = token.creator_name;
+      } else {
+        displayName = token.created_by; // Fallback to user ID
+      }
+      
+      // Add email in parentheses if available
+      if (token.creator_email) {
+        displayName += ` (${token.creator_email})`;
+      }
+      
+      return {
+        id: token.id,
+        token: token.token,
+        token_type: token.token_type,
+        team_id: token.team_id,
+        team_slug: token.team_slug,
+        created_by: token.created_by,
+        creator_name: displayName, // This will now be "John Doe (john@example.com)"
+        expires_at: token.expires_at,
+        created_at: token.created_at,
+        used: token.used,
+        used_at: token.used_at,
+        used_by: token.used_by
+      };
+    });
+    
+    const total = totalResult[0]?.count || 0;
+    const pages = Math.ceil(total / limit);
+    
+    return {
+      data: tokens,
+      pagination: {
+        total,
+        page,
+        pages,
+        limit
+      }
+    };
   }
 
   /**

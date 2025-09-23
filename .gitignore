@@ -53,6 +53,7 @@ fastly-events.log
 
 deploystack.db
 services/backend/persistent_data/*
+services/satellite/persistent_data/*
 
 # Test files
 .test-context.json

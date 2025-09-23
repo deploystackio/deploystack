@@ -1,25 +1,28 @@
 import { type FastifyInstance } from 'fastify';
-import { getDb } from '../../db';
-import { satellites, authUser } from '../../db/schema.sqlite';
-import { generateId } from 'lucia';
+import { validateRegistrationToken, RegistrationTokenRequest } from '../../middleware/registrationTokenMiddleware';
+import { SatelliteTokenService } from '../../services/satelliteTokenService';
+import { nanoid } from 'nanoid';
 import { hash } from '@node-rs/argon2';
-import { randomBytes } from 'crypto';
+import { getDb } from '../../db';
+import { satellites } from '../../db/schema.sqlite';
 import { eq } from 'drizzle-orm';
 
 // Reusable Schema Constants
-const REGISTER_REQUEST_SCHEMA = {
+const SATELLITE_REGISTRATION_SCHEMA = {
   type: 'object',
   properties: {
-    name: { 
-      type: 'string', 
-      minLength: 1,
-      maxLength: 100,
-      description: 'Human-readable satellite name (e.g., "dev-satellite-001")'
+    name: {
+      type: 'string',
+      minLength: 10,
+      maxLength: 32,
+      pattern: '^[a-z0-9_-]+$',
+      description: 'Satellite name (10-32 chars, lowercase/numbers/hyphens/underscores only)'
     },
     capabilities: {
       type: 'array',
       items: { type: 'string' },
-      description: 'Array of supported MCP server types'
+      default: ['stdio', 'http', 'sse'],
+      description: 'Satellite capabilities'
     },
     system_info: {
       type: 'object',
@@ -29,44 +32,63 @@ const REGISTER_REQUEST_SCHEMA = {
         node_version: { type: 'string' },
         memory_mb: { type: 'number' }
       },
-      description: 'Hardware and OS information'
+      description: 'System information (optional)'
     }
   },
-  required: ['name', 'capabilities'],
+  required: ['name'],
   additionalProperties: false
 } as const;
 
-const REGISTER_SUCCESS_RESPONSE_SCHEMA = {
+const REGISTRATION_SUCCESS_SCHEMA = {
   type: 'object',
   properties: {
     success: { type: 'boolean' },
     satellite: {
       type: 'object',
       properties: {
-        id: { type: 'string', description: 'Unique satellite identifier' },
-        name: { type: 'string', description: 'Satellite name' },
-        api_key: { type: 'string', description: 'API key for authentication (store securely)' }
+        id: { type: 'string' },
+        name: { type: 'string' },
+        satellite_type: { type: 'string' },
+        team_id: { type: 'string', nullable: true },
+        status: { type: 'string' },
+        api_key: { type: 'string' }
       },
-      required: ['id', 'name', 'api_key']
+      required: ['id', 'name', 'satellite_type', 'status', 'api_key']
     },
     message: { type: 'string' }
   },
   required: ['success', 'satellite', 'message']
 } as const;
 
-const ERROR_RESPONSE_SCHEMA = {
+const REGISTRATION_ERROR_SCHEMA = {
   type: 'object',
   properties: {
     success: { type: 'boolean', default: false },
-    error: { type: 'string' }
+    error: { type: 'string' },
+    message: { type: 'string' },
+    instructions: { type: 'string' }
   },
-  required: ['success', 'error']
+  required: ['success', 'error', 'message']
+} as const;
+
+const REGISTRATION_STATUS_SCHEMA = {
+  type: 'object',
+  properties: {
+    registration_method: { type: 'string' },
+    token_required: { type: 'boolean' },
+    supported_prefixes: {
+      type: 'array',
+      items: { type: 'string' }
+    },
+    instructions: { type: 'string' }
+  },
+  required: ['registration_method', 'token_required', 'supported_prefixes', 'instructions']
 } as const;
 
 // TypeScript interfaces
-interface RegisterRequest {
+interface RegistrationRequest {
   name: string;
-  capabilities: string[];
+  capabilities?: string[];
   system_info?: {
     os: string;
     arch: string;
@@ -75,188 +97,213 @@ interface RegisterRequest {
   };
 }
 
-interface RegisterSuccessResponse {
+interface RegistrationSuccessResponse {
   success: boolean;
   satellite: {
     id: string;
     name: string;
+    satellite_type: string;
+    team_id: string | null;
+    status: string;
     api_key: string;
   };
   message: string;
 }
 
-interface ErrorResponse {
+interface RegistrationErrorResponse {
   success: boolean;
   error: string;
+  message: string;
+  instructions?: string;
 }
 
 export default async function satelliteRegisterRoute(server: FastifyInstance) {
-  // POST /api/satellites/register - Register a new satellite (no authentication for now)
+  
+  /**
+   * Satellite Registration Endpoint (Now Secured with Tokens)
+   * 
+   * BREAKING CHANGE: Now requires registration token in Authorization header
+   */
   server.post('/satellites/register', {
-    // No preValidation - this is a public endpoint for now (as requested)
+    preValidation: [validateRegistrationToken],
     schema: {
-      tags: ['Satellites'],
-      summary: 'Register a new satellite',
-      description: 'Registers a new satellite with the backend. All satellites are registered as global and inactive by default - admin activation required. No authentication required for now. Requires Content-Type: application/json header when sending request body.',
+      tags: ['Satellite Registration'],
+      summary: 'Register satellite with token',
+      description: 'Registers a satellite using a valid registration token. BREAKING CHANGE: Now requires Authorization: Bearer <token> header. Requires Content-Type: application/json header when sending request body.',
+      security: [{ bearerAuth: [] }],
       
-      body: REGISTER_REQUEST_SCHEMA,
-      
-      requestBody: {
-        required: true,
-        content: {
-          'application/json': {
-            schema: REGISTER_REQUEST_SCHEMA
+      headers: {
+        type: 'object',
+        properties: {
+          authorization: {
+            type: 'string',
+            pattern: '^Bearer deploystack_satellite_(global|team)_',
+            description: 'Registration token in Bearer format'
           }
-        }
+        },
+        required: ['authorization'],
+        additionalProperties: true
       },
       
+      body: SATELLITE_REGISTRATION_SCHEMA,
+      
       response: {
-        201: {
-          ...REGISTER_SUCCESS_RESPONSE_SCHEMA,
+        200: {
+          ...REGISTRATION_SUCCESS_SCHEMA,
           description: 'Satellite registered successfully'
         },
         400: {
-          ...ERROR_RESPONSE_SCHEMA,
+          ...REGISTRATION_ERROR_SCHEMA,
           description: 'Bad Request - Invalid input'
         },
-        409: {
-          ...ERROR_RESPONSE_SCHEMA,
-          description: 'Conflict - Satellite name already exists'
+        401: {
+          ...REGISTRATION_ERROR_SCHEMA,
+          description: 'Unauthorized - Invalid or missing registration token'
         },
         500: {
-          ...ERROR_RESPONSE_SCHEMA,
-          description: 'Internal Server Error'
+          ...REGISTRATION_ERROR_SCHEMA,
+          description: 'Internal server error'
         }
       }
     }
-  }, async (request, reply) => {
+  }, async (request: RegistrationTokenRequest, reply) => {
     const db = getDb();
-    const registrationData = request.body as RegisterRequest;
-
+    
     try {
-      // Generate API key (32 bytes, base64url encoded)
-      const apiKey = randomBytes(32).toString('base64url');
-      const apiKeyHash = await hash(apiKey);
-
-      // Check if satellite name already exists globally (all satellites are global by default)
-      const existingSatellite = await db
-        .select()
+      const { name, capabilities = ['stdio', 'http', 'sse'], system_info } = request.body as RegistrationRequest;
+      const tokenData = request.registrationToken!;
+      
+      // Extract token scope and determine satellite type
+      const tokenRecord = tokenData.tokenRecord;
+      const satelliteType = tokenRecord.token_type; // 'global' or 'team'
+      const teamId = tokenRecord.team_id; // null for global, team ID for team tokens
+      
+      // Check if satellite name already exists
+      const existingSatellites = await db.select()
         .from(satellites)
-        .where(eq(satellites.name, registrationData.name))
-        .limit(1);
+        .where(eq(satellites.name, name));
 
       let satelliteId: string;
       let isUpdate = false;
 
-      if (existingSatellite.length > 0) {
-        // Satellite exists - update it (upsert behavior)
-        satelliteId = existingSatellite[0].id;
+      if (existingSatellites.length > 0) {
+        // Update existing satellite (upsert behavior)
+        satelliteId = existingSatellites[0].id;
         isUpdate = true;
+      } else {
+        // Create new satellite
+        satelliteId = nanoid();
+      }
 
-        // Update existing satellite record with default values
-        await db
-          .update(satellites)
+      // Generate permanent API key for satellite
+      const apiKey = `deploystack_satellite_api_${satelliteType}_${nanoid(32)}`;
+      const apiKeyHash = await hash(apiKey);
+
+      // Prepare satellite data
+      const satelliteData = {
+        id: satelliteId,
+        name: name,
+        satellite_type: satelliteType,
+        team_id: teamId,
+        status: 'inactive' as const, // Requires admin activation
+        capabilities: JSON.stringify(capabilities),
+        api_key_hash: apiKeyHash,
+        system_info: system_info ? JSON.stringify(system_info) : null,
+        config: JSON.stringify({}),
+        last_heartbeat: null,
+        created_by: tokenRecord.created_by,
+        created_at: new Date(),
+        updated_at: new Date()
+      };
+
+      if (isUpdate) {
+        // Update existing satellite
+        await db.update(satellites)
           .set({
-            satellite_type: 'global', // Always set to global
-            team_id: null, // Always null for global satellites
-            status: 'inactive', // Always inactive until admin activates
-            capabilities: JSON.stringify(registrationData.capabilities),
-            api_key_hash: apiKeyHash,
-            system_info: registrationData.system_info ? JSON.stringify(registrationData.system_info) : null,
-            config: JSON.stringify({}), // Reset config on re-registration
+            satellite_type: satelliteData.satellite_type,
+            team_id: satelliteData.team_id,
+            status: satelliteData.status,
+            capabilities: satelliteData.capabilities,
+            api_key_hash: satelliteData.api_key_hash,
+            system_info: satelliteData.system_info,
             updated_at: new Date()
           })
           .where(eq(satellites.id, satelliteId));
-
-        request.log.info({
-          operation: 'satellite_re_registration',
-          satelliteId,
-          name: registrationData.name,
-          satellite_type: 'global',
-          team_id: null,
-          status: 'inactive',
-          capabilities: registrationData.capabilities
-        }, 'Satellite re-registered successfully (updated existing record)');
-
       } else {
-        // Satellite doesn't exist - create new one
-        satelliteId = generateId(15);
-        isUpdate = false;
-
-        // Find the first user to use as created_by (required by schema)
-        const firstUser = await db
-          .select({ id: authUser.id })
-          .from(authUser)
-          .limit(1);
-
-        if (firstUser.length === 0) {
-          const errorResponse: ErrorResponse = {
-            success: false,
-            error: 'No users found in system. Please create a user account first.'
-          };
-          const jsonString = JSON.stringify(errorResponse);
-          return reply.status(400).type('application/json').send(jsonString);
-        }
-
-        // Create satellite record with default values
-        const newSatellite = {
-          id: satelliteId,
-          name: registrationData.name,
-          satellite_type: 'global' as const, // Always set to global
-          team_id: null, // Always null for global satellites
-          status: 'inactive' as const, // Always inactive until admin activates
-          capabilities: JSON.stringify(registrationData.capabilities),
-          api_key_hash: apiKeyHash,
-          system_info: registrationData.system_info ? JSON.stringify(registrationData.system_info) : null,
-          config: JSON.stringify({}), // Empty config for now
-          created_by: firstUser[0].id, // Use first user as creator (system registration)
-          created_at: new Date(),
-          updated_at: new Date()
-        };
-
-        await db.insert(satellites).values(newSatellite);
-
-        request.log.info({
-          operation: 'satellite_registration',
-          satelliteId,
-          name: registrationData.name,
-          satellite_type: 'global',
-          team_id: null,
-          status: 'inactive',
-          capabilities: registrationData.capabilities
-        }, 'Satellite registered successfully');
+        // Insert new satellite
+        await db.insert(satellites).values(satelliteData);
       }
 
-      // Return success response (same for both create and update)
-      const successResponse: RegisterSuccessResponse = {
+      // Mark registration token as used
+      await SatelliteTokenService.markTokenAsUsed(tokenRecord.id, satelliteId);
+
+      // Audit log
+      server.log.info({
+        action: isUpdate ? 'satellite_re_registered' : 'satellite_registered',
+        satellite_id: satelliteId,
+        satellite_name: name,
+        satellite_type: satelliteType,
+        team_id: teamId,
+        token_id: tokenRecord.id,
+        created_by: tokenRecord.created_by,
+        ip: request.ip,
+        user_agent: request.headers['user-agent']
+      }, `Satellite ${isUpdate ? 're-' : ''}registered successfully`);
+
+      const successResponse: RegistrationSuccessResponse = {
         success: true,
         satellite: {
           id: satelliteId,
-          name: registrationData.name,
-          api_key: apiKey // Return the plain API key (satellite should store this securely)
+          name: name,
+          satellite_type: satelliteType,
+          team_id: teamId,
+          status: 'inactive',
+          api_key: apiKey // Return plaintext API key (only time it's exposed)
         },
-        message: isUpdate 
-          ? `Satellite '${registrationData.name}' re-registered successfully`
-          : `Satellite '${registrationData.name}' registered successfully`
+        message: `Satellite ${isUpdate ? 're-' : ''}registered successfully. Status set to 'inactive' - admin activation required.`
       };
       const jsonString = JSON.stringify(successResponse);
-      return reply.status(201).type('application/json').send(jsonString);
+      return reply.status(200).type('application/json').send(jsonString);
 
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      
-      request.log.error({
-        operation: 'satellite_registration_error',
-        error: errorMessage,
-        name: registrationData.name
-      }, 'Failed to register satellite');
-
-      const errorResponse: ErrorResponse = {
+      server.log.error(error, 'Satellite registration failed');
+      const errorResponse: RegistrationErrorResponse = {
         success: false,
-        error: `Failed to register satellite: ${errorMessage}`
+        error: 'registration_failed',
+        message: 'Satellite registration failed'
       };
       const jsonString = JSON.stringify(errorResponse);
       return reply.status(500).type('application/json').send(jsonString);
     }
+  });
+
+  /**
+   * Registration Status Check (for diagnostics)
+   */
+  server.get('/satellites/register/status', {
+    schema: {
+      tags: ['Satellite Registration'],
+      summary: 'Get registration status',
+      description: 'Returns information about the current registration method and requirements.',
+      
+      response: {
+        200: {
+          ...REGISTRATION_STATUS_SCHEMA,
+          description: 'Registration status information'
+        }
+      }
+    }
+  }, async (request, reply) => {
+    const statusResponse = {
+      registration_method: 'token_based',
+      token_required: true,
+      supported_prefixes: [
+        'deploystack_satellite_global_',
+        'deploystack_satellite_team_'
+      ],
+      instructions: 'Include registration token in Authorization: Bearer <token> header'
+    };
+    const jsonString = JSON.stringify(statusResponse);
+    return reply.status(200).type('application/json').send(jsonString);
   });
 }

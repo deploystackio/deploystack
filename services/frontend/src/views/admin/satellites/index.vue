@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { toast } from 'vue-sonner'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { RefreshCw } from 'lucide-vue-next'
+import { RefreshCw, Key } from 'lucide-vue-next'
 import DashboardLayout from '@/components/DashboardLayout.vue'
 import SatelliteTableColumns from './SatelliteTableColumns.vue'
 import { SatelliteService, type Satellite, type SatelliteListParams } from '@/services/satelliteService'
@@ -163,20 +163,28 @@ onUnmounted(() => {
   <DashboardLayout :title="t('satellites.title')">
     <div class="space-y-6">
       <!-- Header -->
-      <div class="flex items-center justify-between">
-        <div>
+      <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div class="flex-1">
           <p class="text-muted-foreground">{{ t('satellites.description') }}</p>
         </div>
-        <Button
-          @click="handleRefresh"
-          :disabled="isRefreshing"
-          variant="outline"
-          size="sm"
-          class="flex items-center gap-2"
-        >
-          <RefreshCw :class="{ 'animate-spin': isRefreshing }" class="h-4 w-4" />
-          {{ t('satellites.actions.refresh') }}
-        </Button>
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+          <Button
+            @click="$router.push('/admin/satellites/pairing')"
+            variant="outline"
+            class="flex items-center justify-center gap-2 bg-black text-white border-black hover:bg-black/90 hover:border-black hover:text-white"
+          >
+            <Key class="h-4 w-4" />
+            {{ t('satellites.actions.pairing') }}
+          </Button>
+          <Button
+            @click="handleRefresh"
+            :disabled="isRefreshing"
+            class="flex items-center justify-center gap-2"
+          >
+            <RefreshCw :class="{ 'animate-spin': isRefreshing }" class="h-4 w-4" />
+            {{ t('satellites.actions.refresh') }}
+          </Button>
+        </div>
       </div>
 
       <!-- Loading State -->

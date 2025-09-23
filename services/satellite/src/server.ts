@@ -18,12 +18,65 @@ import { TokenIntrospectionService } from './services/token-introspection-servic
 import { TeamAwareMcpHandler } from './services/team-aware-mcp-handler';
 
 /**
+ * Validate registration token format and availability
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function validateRegistrationToken(token: string | undefined, logger?: any): void {
+  if (!token) {
+    const errorMsg = 'DEPLOYSTACK_REGISTRATION_TOKEN is required. Please set the DEPLOYSTACK_REGISTRATION_TOKEN environment variable. You can generate a registration token in the DeployStack Backend Admin Interface.';
+    if (logger) {
+      logger.fatal({ operation: 'registration_token_missing' }, errorMsg);
+    }
+    process.exit(1);
+  }
+
+  // Check if token is just the placeholder value
+  if (token === 'your_registration_token_here') {
+    const errorMsg = 'DEPLOYSTACK_REGISTRATION_TOKEN contains placeholder value. Please replace "your_registration_token_here" with a real registration token from the DeployStack Backend Admin Interface.';
+    if (logger) {
+      logger.fatal({ operation: 'registration_token_placeholder', token }, errorMsg);
+    }
+    process.exit(1);
+  }
+
+  // Check token format - should start with deploystack_satellite_global_ or deploystack_satellite_team_
+  const globalPrefix = 'deploystack_satellite_global_';
+  const teamPrefix = 'deploystack_satellite_team_';
+  
+  if (!token.startsWith(globalPrefix) && !token.startsWith(teamPrefix)) {
+    const errorMsg = `Invalid registration token format: "${token.substring(0, 20)}...". Registration token must start with "${globalPrefix}" or "${teamPrefix}". Please generate a new token in the DeployStack Backend Admin Interface.`;
+    if (logger) {
+      logger.fatal({ operation: 'registration_token_invalid_format', token_prefix: token.substring(0, 20) }, errorMsg);
+    }
+    process.exit(1);
+  }
+
+  // Check that token has content after the prefix (JWT part)
+  const tokenWithoutPrefix = token.startsWith(globalPrefix) 
+    ? token.substring(globalPrefix.length)
+    : token.substring(teamPrefix.length);
+    
+  if (tokenWithoutPrefix.length < 10) {
+    const errorMsg = `Registration token is incomplete: Token appears to be cut off after the prefix. Please copy the complete token from the DeployStack Backend Admin Interface.`;
+    if (logger) {
+      logger.fatal({ operation: 'registration_token_incomplete', token_length: token.length }, errorMsg);
+    }
+    process.exit(1);
+  }
+
+  if (logger) {
+    const tokenType = token.startsWith(globalPrefix) ? 'global' : 'team';
+    logger.info({ operation: 'registration_token_validated', tokenType }, `Registration token validated: ${tokenType} satellite token`);
+  }
+}
+
+/**
  * Validate satellite name according to strict rules
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function validateSatelliteName(name: string | undefined, logger?: any): void {
   if (!name) {
-    const errorMsg = 'DEPLOYSTACK_SATELLITE_NAME ist erforderlich. Bitte setze die Environment Variable DEPLOYSTACK_SATELLITE_NAME. Beispiel: DEPLOYSTACK_SATELLITE_NAME=dev-satellite-001';
+    const errorMsg = 'DEPLOYSTACK_SATELLITE_NAME is required. Please set the DEPLOYSTACK_SATELLITE_NAME environment variable. Example: DEPLOYSTACK_SATELLITE_NAME=dev-satellite-001';
     if (logger) {
       logger.fatal({ operation: 'satellite_name_missing' }, errorMsg);
     }
@@ -32,7 +85,7 @@ function validateSatelliteName(name: string | undefined, logger?: any): void {
 
   // Check length constraints
   if (name.length < 10) {
-    const errorMsg = `Satellite Name zu kurz: "${name}" (${name.length} Zeichen). Minimum: 10 Zeichen erforderlich`;
+    const errorMsg = `Satellite name too short: "${name}" (${name.length} characters). Minimum: 10 characters required`;
     if (logger) {
       logger.fatal({ operation: 'satellite_name_too_short', name, length: name.length }, errorMsg);
     }
@@ -40,7 +93,7 @@ function validateSatelliteName(name: string | undefined, logger?: any): void {
   }
 
   if (name.length > 32) {
-    const errorMsg = `Satellite Name zu lang: "${name}" (${name.length} Zeichen). Maximum: 32 Zeichen erlaubt`;
+    const errorMsg = `Satellite name too long: "${name}" (${name.length} characters). Maximum: 32 characters allowed`;
     if (logger) {
       logger.fatal({ operation: 'satellite_name_too_long', name, length: name.length }, errorMsg);
     }
@@ -50,7 +103,7 @@ function validateSatelliteName(name: string | undefined, logger?: any): void {
   // Check character constraints
   const validPattern = /^[a-z0-9_-]+$/;
   if (!validPattern.test(name)) {
-    const errorMsg = `Ungültiger Satellite Name: "${name}". Erlaubt: Nur lowercase Buchstaben (a-z), Zahlen (0-9), - und _. Keine Leerzeichen oder Großbuchstaben erlaubt. Beispiele: dev-satellite-001, production_worker_main`;
+    const errorMsg = `Invalid satellite name: "${name}". Allowed: Only lowercase letters (a-z), numbers (0-9), hyphens (-), and underscores (_). No spaces or uppercase letters allowed. Examples: dev-satellite-001, production_worker_main`;
     if (logger) {
       logger.fatal({ operation: 'satellite_name_invalid_chars', name }, errorMsg);
     }
@@ -58,7 +111,7 @@ function validateSatelliteName(name: string | undefined, logger?: any): void {
   }
 
   if (logger) {
-    logger.info({ operation: 'satellite_name_validated', name }, `Satellite Name validiert: "${name}"`);
+    logger.info({ operation: 'satellite_name_validated', name }, `Satellite name validated: "${name}"`);
   }
 }
 
@@ -71,10 +124,13 @@ export async function createServer() {
     fatal: (obj: any, msg: string) => process.stderr.write(`FATAL: ${msg}\n`)
   };
   
-  // STEP 1: Validate satellite name BEFORE any other operations
+  // STEP 1: Validate satellite configuration BEFORE any other operations
   tempLogger.info({ operation: 'satellite_validation_start' }, 'Validating satellite configuration...');
   const satelliteName = process.env.DEPLOYSTACK_SATELLITE_NAME;
+  const registrationToken = process.env.DEPLOYSTACK_REGISTRATION_TOKEN;
+  
   validateSatelliteName(satelliteName, tempLogger);
+  validateRegistrationToken(registrationToken, tempLogger);
 
   const server = fastify({
     logger: loggerConfig,
@@ -225,10 +281,92 @@ export async function createServer() {
     process.exit(1);
   }
 
-  // Register satellite with backend after successful connection
+  // Check for existing API key before attempting registration
   server.log.info({
-    operation: 'satellite_registration_start'
-  }, 'Registering satellite with backend...');
+    operation: 'satellite_auth_start'
+  }, 'Checking for existing satellite credentials...');
+  
+  let satelliteId: string | undefined;
+  let apiKey: string | undefined;
+  let skipRegistration = false;
+  
+  // Try to load persisted credentials
+  const persistedData = await backendClient.loadPersistedData();
+  
+  if (persistedData && persistedData.api_key && persistedData.satellite_id) {
+    server.log.info({
+      operation: 'persistent_credentials_found',
+      satellite_id: persistedData.satellite_id,
+      satellite_name: persistedData.satellite_name,
+      registered_at: persistedData.registered_at
+    }, 'Found existing satellite credentials - verifying with backend...');
+    
+    // Verify existing credentials with a test heartbeat
+    backendClient.setApiKey(persistedData.api_key);
+    satelliteId = persistedData.satellite_id;
+    apiKey = persistedData.api_key;
+    
+    try {
+      // Test the credentials with a simple heartbeat
+      const testHeartbeat = {
+        status: 'active' as const,
+        system_metrics: {
+          cpu_usage_percent: 0,
+          memory_usage_mb: Math.round(process.memoryUsage().rss / 1024 / 1024),
+          disk_usage_percent: 0,
+          uptime_seconds: Math.round(process.uptime())
+        },
+        processes: [],
+        error_count: 0,
+        version: '1.0.0'
+      };
+      
+      const heartbeatResult = await backendClient.sendHeartbeat(satelliteId, testHeartbeat);
+      
+      if (heartbeatResult.success) {
+        server.log.info({
+          operation: 'credentials_verified',
+          satellite_id: satelliteId,
+          response_time_ms: heartbeatResult.response_time_ms
+        }, 'Existing credentials verified successfully - skipping registration');
+        
+        // Update last verified timestamp
+        await backendClient.updateLastVerified();
+        skipRegistration = true;
+        
+      } else {
+        server.log.warn({
+          operation: 'credentials_verification_failed',
+          satellite_id: satelliteId,
+          error: heartbeatResult.error
+        }, 'Existing credentials failed verification - will attempt re-registration');
+        
+        // Clear invalid credentials
+        await backendClient.clearPersistedData();
+      }
+      
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      server.log.warn({
+        operation: 'credentials_verification_error',
+        satellite_id: satelliteId,
+        error: errorMessage
+      }, 'Failed to verify existing credentials - will attempt re-registration');
+      
+      // Clear potentially corrupted credentials
+      await backendClient.clearPersistedData();
+    }
+  } else {
+    server.log.info({
+      operation: 'no_persistent_credentials'
+    }, 'No existing satellite credentials found - proceeding with registration');
+  }
+  
+  // Perform registration if needed
+  if (!skipRegistration) {
+    server.log.info({
+      operation: 'satellite_registration_start'
+    }, 'Registering satellite with backend...');
 
   try {
     // Get satellite configuration from environment
@@ -237,23 +375,51 @@ export async function createServer() {
     // Generate registration data (satellite type and team ID are determined by backend)
     const registrationData = backendClient.generateRegistrationData(satelliteName);
     
-    // Register with backend
-    const registrationResult = await backendClient.registerSatellite(registrationData);
+    // Register with backend using registration token
+    const registrationResult = await backendClient.registerSatellite(registrationData, registrationToken!);
     
     if (registrationResult.success && registrationResult.satellite) {
+      satelliteId = registrationResult.satellite.id;
+      apiKey = registrationResult.satellite.api_key;
+      
       server.log.info({
         operation: 'satellite_registration_success',
-        satellite_id: registrationResult.satellite.id,
+        satellite_id: satelliteId,
         satellite_name: registrationResult.satellite.name
-      }, `Satellite registered successfully: ${registrationResult.satellite.name} (${registrationResult.satellite.id})`);
+      }, `Satellite registered successfully: ${registrationResult.satellite.name} (${satelliteId})`);
       
       server.log.info({
         operation: 'satellite_api_key_received',
-        satellite_id: registrationResult.satellite.id
+        satellite_id: satelliteId
       }, 'API key received and ready for authenticated communication');
 
       // Set API key for authenticated backend communication
-      backendClient.setApiKey(registrationResult.satellite.api_key);
+      backendClient.setApiKey(apiKey);
+      
+      // Save credentials to persistent storage
+      try {
+        const persistData = {
+          api_key: apiKey,
+          satellite_id: satelliteId,
+          satellite_name: registrationResult.satellite.name,
+          registered_at: new Date().toISOString(),
+          last_verified: new Date().toISOString()
+        };
+        await backendClient.savePersistedData(persistData);
+        
+        server.log.info({
+          operation: 'credentials_persisted',
+          satellite_id: satelliteId
+        }, 'Satellite credentials saved to persistent storage');
+        
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        server.log.error({
+          operation: 'credentials_persistence_failed',
+          satellite_id: satelliteId,
+          error: errorMessage
+        }, 'Failed to save credentials to persistent storage - satellite will work but require re-registration on restart');
+      }
 
       // Initialize Token Introspection Service for OAuth authentication
       const tokenIntrospectionService = new TokenIntrospectionService(backendClient, server.log);
@@ -272,16 +438,70 @@ export async function createServer() {
 
       server.log.info({
         operation: 'oauth_services_initialized',
-        satellite_id: registrationResult.satellite.id
+        satellite_id: satelliteId
       }, 'OAuth authentication and team-aware MCP services initialized');
+    } else {
+      server.log.error({
+        operation: 'satellite_registration_failed',
+        error: registrationResult.error
+      }, `Satellite registration failed: ${registrationResult.error}. Satellite cannot operate without registration.`);
+      process.exit(1);
+    }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    
+    server.log.error({
+      operation: 'satellite_registration_exception',
+      error: errorMessage
+    }, `Satellite registration failed with exception: ${errorMessage}. Satellite cannot operate without registration.`);
+    process.exit(1);
+  }
+  } // End of !skipRegistration block
+  
+  // Ensure we have valid credentials before proceeding
+  if (!satelliteId || !apiKey) {
+    server.log.fatal({
+      operation: 'satellite_credentials_missing'
+    }, 'Satellite credentials missing after authentication process - cannot proceed');
+    process.exit(1);
+  }
+  
+  // Continue with common initialization (both registered and existing satellites)
+  server.log.info({
+    operation: 'satellite_initialization_continue',
+    satellite_id: satelliteId
+  }, 'Proceeding with satellite service initialization...');
+  
+  // Initialize OAuth services if not already done (for existing satellites)
+  if (skipRegistration) {
+    // Initialize Token Introspection Service for OAuth authentication
+    const tokenIntrospectionService = new TokenIntrospectionService(backendClient, server.log);
+    
+    // Initialize Team-Aware MCP Handler for team-filtered tool access
+    const teamAwareMcpHandler = new TeamAwareMcpHandler(
+      mcpProtocolHandler,
+      dynamicConfigManager,
+      toolDiscoveryManager,
+      server.log
+    );
 
-      // Start heartbeat service
-      const heartbeatService = new HeartbeatService(
-        registrationResult.satellite.id,
-        registrationResult.satellite.api_key,
-        backendClient,
-        server.log
-      );
+    // Store OAuth services on server instance for access by routes
+    server.decorate('tokenIntrospectionService', tokenIntrospectionService);
+    server.decorate('teamAwareMcpHandler', teamAwareMcpHandler);
+
+    server.log.info({
+      operation: 'oauth_services_initialized',
+      satellite_id: satelliteId
+    }, 'OAuth authentication and team-aware MCP services initialized');
+  }
+  
+  // Start heartbeat service
+  const heartbeatService = new HeartbeatService(
+    satelliteId,
+    apiKey,
+    backendClient,
+    server.log
+  );
 
       // Set command processor for process reporting
       heartbeatService.setCommandProcessor(commandProcessor);
@@ -294,12 +514,11 @@ export async function createServer() {
 
       server.log.info({
         operation: 'heartbeat_service_started',
-        satellite_id: registrationResult.satellite.id,
+        satellite_id: satelliteId,
         interval_seconds: 30
       }, 'Heartbeat service started (30s interval)');
 
-      // Fetch initial configuration from backend after registration
-      const satelliteId = registrationResult.satellite.id;
+      // Fetch initial configuration from backend
       server.log.info({
         operation: 'initial_config_fetch_start',
         satellite_id: satelliteId
@@ -453,21 +672,6 @@ export async function createServer() {
         operation: 'command_polling_service_started',
         satellite_id: satelliteId
       }, 'Command polling service started');
-      
-    } else {
-      server.log.error({
-        operation: 'satellite_registration_failed',
-        error: registrationResult.error
-      }, `Satellite registration failed: ${registrationResult.error}. Satellite will continue without registration. Some features may not work properly.`);
-    }
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    
-    server.log.error({
-      operation: 'satellite_registration_exception',
-      error: errorMessage
-    }, `Satellite registration failed with exception: ${errorMessage}. Satellite will continue without registration. Some features may not work properly.`);
-  }
 
   // Note: HTTP Proxy Manager and Tool Discovery Manager have been initialized
   // with initial configuration and will be updated via command polling
