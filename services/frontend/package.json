@@ -1,7 +1,6 @@
 {
   "name": "@deploystack/frontend",
   "version": "0.28.0",
-  "version": "0.28.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -49,11 +48,8 @@
     "eslint": "^9.36.0",
     "eslint-plugin-vue": "~10.5.0",
     "jiti": "^2.6.0",
-    "eslint-plugin-vue": "~10.5.0",
-    "jiti": "^2.6.0",
     "npm-run-all2": "^8.0.4",
     "prettier": "3.6.2",
-    "release-it": "^19.0.5",
     "release-it": "^19.0.5",
     "tailwindcss": "^4.1.13",
     "typescript": "~5.9.2",

@@ -1,15 +1,19 @@
-// services/backend/eslint.config.ts
+// services/satellite/eslint.config.ts
 import ts from '@typescript-eslint/eslint-plugin';
 import tsParser from '@typescript-eslint/parser';
+import path from 'path';
+
+const __dirname = path.resolve();
 
 const config = [
   {
     files: ['**/*.ts'],
-    ignores: ['**/node_modules/**', '**/dist/**', '**/._*.ts'],
+    ignores: ['**/node_modules/**', '**/dist/**', '**/._*.ts', '**/*.test.ts', '**/*.spec.ts', 'eslint.config.ts'],
     languageOptions: {
       parser: tsParser,
       parserOptions: {
         project: './tsconfig.json',
+        tsconfigRootDir: __dirname,
         ecmaVersion: 2022,
         sourceType: 'module',
       },
