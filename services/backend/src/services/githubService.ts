@@ -13,6 +13,7 @@ export interface GitHubRepoInfo {
   stars: number;
   forks: number;
   topics: string[];
+  github_account_id: string | null; // GitHub Account ID (owner.id from GitHub API)
 }
 
 export interface GitHubRelease {
@@ -449,7 +450,8 @@ export class GitHubService {
         defaultBranch: data.default_branch,
         stars: data.stargazers_count || 0,
         forks: data.forks_count || 0,
-        topics: data.topics || []
+        topics: data.topics || [],
+        github_account_id: data.owner?.id ? String(data.owner.id) : null // Extract GitHub Account ID from owner
       };
       
       logger.info({

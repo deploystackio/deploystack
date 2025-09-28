@@ -23,6 +23,7 @@ interface UpdateGlobalServerRequest {
   github_url?: string;
   git_branch?: string;
   homepage_url?: string;
+  github_account_id?: string;
   language?: string;
   runtime?: string;
   transport_type?: 'stdio' | 'http' | 'sse';

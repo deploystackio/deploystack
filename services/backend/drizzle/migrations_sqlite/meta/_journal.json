@@ -22,6 +22,13 @@
       "when": 1759081563771,
       "tag": "0002_gorgeous_medusa",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1759089890932,
+      "tag": "0003_lucky_archangel",
+      "breakpoints": true
     }
   ]
 }

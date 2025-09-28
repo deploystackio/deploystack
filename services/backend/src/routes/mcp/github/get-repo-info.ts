@@ -95,6 +95,7 @@ export default async function getRepoInfo(server: FastifyInstance) {
                 installation_methods: { type: 'array' },
                 dependencies: { type: 'object', nullable: true },
                 latest_version: { type: 'string', nullable: true },
+                github_account_id: { type: 'string', nullable: true },
                 stars: { type: 'number' },
                 forks: { type: 'number' }
               }
@@ -180,6 +181,9 @@ export default async function getRepoInfo(server: FastifyInstance) {
         
         // Version information
         latest_version: latestRelease?.version || null,
+        
+        // GitHub integration
+        github_account_id: repoInfo.github_account_id,
         
         // Repository stats
         stars: repoInfo.stars || 0,

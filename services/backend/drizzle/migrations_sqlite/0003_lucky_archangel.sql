@@ -1,0 +1,1 @@
+ALTER TABLE `mcpServers` ADD `github_account_id` text;

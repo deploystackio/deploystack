@@ -506,6 +506,10 @@ export const CREATE_GLOBAL_SERVER_REQUEST_SCHEMA = {
       format: 'uri',
       description: 'Homepage URL'
     },
+    github_account_id: { 
+      type: 'string',
+      description: 'GitHub Account ID (owner.id from GitHub API)'
+    },
     resources: { 
       type: 'array',
       items: RESOURCE_SCHEMA,
@@ -623,6 +627,11 @@ export const SERVER_ENTITY_SCHEMA = {
       type: 'string', 
       nullable: true,
       description: 'Homepage URL'
+    },
+    github_account_id: { 
+      type: 'string', 
+      nullable: true,
+      description: 'GitHub Account ID'
     },
     language: { 
       type: 'string',
@@ -897,6 +906,10 @@ export const UPDATE_GLOBAL_SERVER_REQUEST_SCHEMA = {
     github_url: SERVER_FIELDS.github_url,
     git_branch: SERVER_FIELDS.git_branch,
     homepage_url: SERVER_FIELDS.homepage_url,
+    github_account_id: { 
+      type: 'string',
+      description: 'GitHub Account ID (owner.id from GitHub API)'
+    },
     language: SERVER_FIELDS.language,
     runtime: SERVER_FIELDS.runtime,
     transport_type: SERVER_FIELDS.transport_type,
@@ -970,6 +983,7 @@ export interface ServerEntity {
   github_url: string | null;
   git_branch: string | null;
   homepage_url: string | null;
+  github_account_id: string | null;
   language: string;
   runtime: string;
   installation_methods: any[];
@@ -1106,6 +1120,7 @@ export interface CreateGlobalServerRequest {
   github_url?: string;
   git_branch?: string;
   homepage_url?: string;
+  github_account_id?: string;
   resources?: Resource[];
   prompts?: Prompt[];
   author_name?: string;
@@ -1156,6 +1171,20 @@ export interface ListServersSuccessResponse {
  * Handles undefined -> null conversion and JSON parsing for complex fields
  */
 export function formatServerResponse(server: any): ServerEntity {
+  // Helper function to safely parse JSON fields
+  const safeJsonParse = (field: any, defaultValue: any) => {
+    if (!field) return defaultValue;
+    if (typeof field === 'string') {
+      try {
+        return JSON.parse(field);
+      } catch {
+        return defaultValue;
+      }
+    }
+    // If it's already an object/array, return as-is
+    return field;
+  };
+
   return {
     id: server.id,
     name: server.name,
@@ -1165,11 +1194,12 @@ export function formatServerResponse(server: any): ServerEntity {
     github_url: server.github_url || null,
     git_branch: server.git_branch || null,
     homepage_url: server.homepage_url || null,
+    github_account_id: server.github_account_id || null,
     language: server.language,
     runtime: server.runtime,
-    installation_methods: server.installation_methods ? JSON.parse(server.installation_methods) : [],
-    resources: server.resources ? JSON.parse(server.resources) : null,
-    prompts: server.prompts ? JSON.parse(server.prompts) : null,
+    installation_methods: safeJsonParse(server.installation_methods, []),
+    resources: safeJsonParse(server.resources, null),
+    prompts: safeJsonParse(server.prompts, null),
     visibility: server.visibility,
     owner_team_id: server.owner_team_id || null,
     created_by: server.created_by,
@@ -1178,19 +1208,19 @@ export function formatServerResponse(server: any): ServerEntity {
     organization: server.organization || null,
     license: server.license || null,
     transport_type: server.transport_type,
-    // Three-tier configuration schema - parse JSON fields
-    template_args: server.template_args ? JSON.parse(server.template_args) : [],
-    template_env: server.template_env ? JSON.parse(server.template_env) : [],
-    template_headers: server.template_headers ? JSON.parse(server.template_headers) : [],
-    team_args_schema: server.team_args_schema ? JSON.parse(server.team_args_schema) : [],
-    team_env_schema: server.team_env_schema ? JSON.parse(server.team_env_schema) : [],
-    team_headers_schema: server.team_headers_schema ? JSON.parse(server.team_headers_schema) : [],
-    user_args_schema: server.user_args_schema ? JSON.parse(server.user_args_schema) : [],
-    user_env_schema: server.user_env_schema ? JSON.parse(server.user_env_schema) : null,
-    user_headers_schema: server.user_headers_schema ? JSON.parse(server.user_headers_schema) : null,
-    dependencies: server.dependencies ? JSON.parse(server.dependencies) : null,
+    // Three-tier configuration schema - safely parse JSON fields
+    template_args: safeJsonParse(server.template_args, []),
+    template_env: safeJsonParse(server.template_env, []),
+    template_headers: safeJsonParse(server.template_headers, []),
+    team_args_schema: safeJsonParse(server.team_args_schema, []),
+    team_env_schema: safeJsonParse(server.team_env_schema, []),
+    team_headers_schema: safeJsonParse(server.team_headers_schema, []),
+    user_args_schema: safeJsonParse(server.user_args_schema, []),
+    user_env_schema: safeJsonParse(server.user_env_schema, null),
+    user_headers_schema: safeJsonParse(server.user_headers_schema, null),
+    dependencies: safeJsonParse(server.dependencies, null),
     category_id: server.category_id || null,
-    tags: server.tags ? JSON.parse(server.tags) : null,
+    tags: safeJsonParse(server.tags, null),
     status: server.status,
     featured: server.featured,
     auto_install_new_default_team: server.auto_install_new_default_team,

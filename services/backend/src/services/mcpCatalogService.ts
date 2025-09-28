@@ -29,6 +29,7 @@ export interface McpServer {
   organization?: string;
   license?: string;
   transport_type: 'stdio' | 'http' | 'sse';
+  github_account_id?: string;
   // Three-tier configuration schema
   template_args?: string; // JSON: Fixed args that never change
   template_env?: string; // JSON: Fixed env vars that never change
@@ -68,6 +69,7 @@ export interface CreateMcpServerRequest {
   organization?: string;
   license?: string;
   transport_type?: 'stdio' | 'http' | 'sse'; // MCP transport type
+  github_account_id?: string;
   // Three-tier configuration schema
   template_args?: any[]; // Fixed args that never change (e.g., ["-y", "@modelcontextprotocol/server-filesystem"])
   template_env?: any; // Fixed env vars that never change (e.g., {"FIXED_VAR": "fixed_value"})
@@ -102,6 +104,7 @@ export interface UpdateMcpServerRequest {
   organization?: string;
   license?: string;
   transport_type?: 'stdio' | 'http' | 'sse';
+  github_account_id?: string;
   // Three-tier configuration schema
   template_args?: any[];
   template_env?: any;
@@ -321,7 +324,8 @@ export class McpCatalogService {
           language: data.language || repoInfo.language,
           homepage_url: data.homepage_url || repoInfo.homepage,
           license: data.license || repoInfo.license,
-          tags: data.tags || repoInfo.topics
+          tags: data.tags || repoInfo.topics,
+          github_account_id: data.github_account_id || repoInfo.github_account_id
         };
         
         this.logger.info({
@@ -363,6 +367,7 @@ export class McpCatalogService {
       organization: data.organization,
       license: githubInfo.license || data.license,
       transport_type: data.transport_type || 'stdio',
+      github_account_id: githubInfo.github_account_id || data.github_account_id,
       // Three-tier configuration schema
       template_args: data.template_args ? JSON.stringify(data.template_args) : null,
       template_env: data.template_env ? JSON.stringify(data.template_env) : null,
@@ -441,6 +446,7 @@ export class McpCatalogService {
     if (data.organization !== undefined) updateData.organization = data.organization;
     if (data.license !== undefined) updateData.license = data.license;
     if (data.transport_type !== undefined) updateData.transport_type = data.transport_type;
+    if (data.github_account_id !== undefined) updateData.github_account_id = data.github_account_id;
     // Three-tier configuration schema
     if (data.template_args !== undefined) updateData.template_args = data.template_args ? JSON.stringify(data.template_args) : null;
     if (data.template_env !== undefined) updateData.template_env = data.template_env ? JSON.stringify(data.template_env) : null;

@@ -214,7 +214,8 @@ export default async function createGlobalServer(server: FastifyInstance) {
         category_id: requestData.category_id,
         tags: requestData.tags,
         featured: requestData.featured,
-        auto_install_new_default_team: requestData.auto_install_new_default_team
+        auto_install_new_default_team: requestData.auto_install_new_default_team,
+        github_account_id: requestData.github_account_id
       };
 
       const newServer = await mcpService.createServer(

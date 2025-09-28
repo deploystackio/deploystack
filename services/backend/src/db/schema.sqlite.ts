@@ -167,6 +167,9 @@ export const mcpServers = sqliteTable('mcpServers', {
   language: text('language').notNull(), // 'typescript', 'javascript', 'python', 'go'
   runtime: text('runtime').notNull(), // 'node', 'python', 'docker'
   
+  // GitHub Integration
+  github_account_id: text('github_account_id'), // GitHub Account ID (owner.id from GitHub API)
+  
   // Installation Methods (JSON array of objects)
   installation_methods: text('installation_methods').notNull(), // [{"type": "npm", "command": "npx @playwright/mcp"}, {"type": "docker", "image": "..."}]
   
