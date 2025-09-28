@@ -237,10 +237,7 @@ const handleSubmit = async () => {
       )
     }
 
-    // Update the installation prop with the response data
-    Object.assign(props.installation, updatedInstallation)
-
-    // Emit update event
+    // Emit update event to parent component
     emit('installation-updated', updatedInstallation)
 
     // Show success toast

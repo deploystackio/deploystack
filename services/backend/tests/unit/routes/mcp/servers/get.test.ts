@@ -3,7 +3,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import getServer from '../../../../../src/routes/mcp/servers/get';
 import { McpCatalogService } from '../../../../../src/services/mcpCatalogService';
 import { TeamService } from '../../../../../src/services/teamService';
-import { getUserRole } from '../../../../../src/middleware/roleMiddleware';
+import { getUserRole, requireAuthentication } from '../../../../../src/middleware/roleMiddleware';
 import { getDb } from '../../../../../src/db';
 
 // Mock dependencies
@@ -20,6 +20,7 @@ describe('MCP Servers - Get Server', () => {
   let mockMcpService: any;
   let mockDb: any;
   let mockLogger: any;
+  let mockAuthMiddleware: any;
 
   beforeEach(() => {
     // Reset all mocks
@@ -68,8 +69,10 @@ describe('MCP Servers - Get Server', () => {
     mockFastify = {
       get: vi.fn((path: string, options: any, handler?: any) => {
         if (handler) {
+          // Store the handler when both options and handler are provided
           routeHandlers[`GET ${path}`] = handler;
         } else {
+          // When only options are provided, it should contain the handler
           routeHandlers[`GET ${path}`] = options;
         }
         return mockFastify as FastifyInstance;
@@ -83,11 +86,27 @@ describe('MCP Servers - Get Server', () => {
       log: mockLogger
     } as any;
 
-    // Setup mock reply
+    // Setup mock authentication middleware
+    mockAuthMiddleware = vi.fn(async (request: any, reply: any) => {
+      if (!request.user) {
+        const errorResponse = {
+          success: false,
+          error: 'Authentication required'
+        };
+        const jsonString = JSON.stringify(errorResponse);
+        return reply.status(401).type('application/json').send(jsonString);
+      }
+    });
+
+    // Setup mock reply with proper method chaining
     mockReply = {
       status: vi.fn().mockReturnThis(),
+      type: vi.fn().mockReturnThis(),
       send: vi.fn().mockReturnThis(),
     };
+
+    // Mock the requireAuthentication function
+    vi.mocked(requireAuthentication).mockReturnValue(mockAuthMiddleware);
   });
 
   afterEach(() => {
@@ -130,10 +149,10 @@ describe('MCP Servers - Get Server', () => {
       );
       
       expect(getCall).toBeDefined();
-      const [, schema] = getCall;
+      const [, options] = getCall;
       
-      expect(schema.preValidation).toBeDefined();
-      expect(typeof schema.preValidation).toBe('function');
+      expect(options.preValidation).toBeDefined();
+      expect(typeof options.preValidation).toBe('function');
     });
   });
 
@@ -152,10 +171,13 @@ describe('MCP Servers - Get Server', () => {
       await preValidation(unauthenticatedRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(401);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        success: false,
-        error: 'Authentication required'
-      });
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      expect(mockReply.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          success: false,
+          error: 'Authentication required'
+        })
+      );
     });
 
     it('should allow authenticated users', async () => {
@@ -183,16 +205,24 @@ describe('MCP Servers - Get Server', () => {
         name: 'Test Server',
         slug: 'test-server',
         description: 'A test server',
-        installation_methods: [], // Already parsed by service
-        tools: [], // Already parsed by service
+        installation_methods: JSON.stringify([]), // Database format - JSON string
+        tools: JSON.stringify([]), // Database format - JSON string
         resources: null,
         prompts: null,
-        default_config: null,
-        environment_variables: null,
         dependencies: null,
         tags: null,
-        created_at: new Date('2024-01-01'),
-        updated_at: new Date('2024-01-01'),
+        template_args: JSON.stringify([]),
+        template_env: JSON.stringify([]),
+        template_headers: JSON.stringify([]),
+        team_args_schema: JSON.stringify([]),
+        team_env_schema: JSON.stringify([]),
+        team_headers_schema: JSON.stringify([]),
+        user_args_schema: JSON.stringify([]),
+        user_env_schema: null,
+        user_headers_schema: null,
+        transport_type: 'stdio',
+        created_at: new Date('2024-01-01'), // Database format - Date object
+        updated_at: new Date('2024-01-01'), // Database format - Date object
         last_sync_at: null,
         visibility: 'global',
         owner_team_id: null,
@@ -200,7 +230,8 @@ describe('MCP Servers - Get Server', () => {
         language: 'javascript',
         runtime: 'node',
         status: 'active',
-        featured: false
+        featured: false,
+        auto_install_new_default_team: false
       };
 
       mockMcpService.getServerById.mockResolvedValue(mockServer);
@@ -210,24 +241,55 @@ describe('MCP Servers - Get Server', () => {
 
       expect(mockMcpService.getServerById).toHaveBeenCalledWith('test-server-id');
       expect(mockReply.status).toHaveBeenCalledWith(200);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        success: true,
-        data: expect.objectContaining({
-          id: 'server-1',
-          name: 'Test Server',
-          installation_methods: [],
-          tools: [],
-          resources: null,
-          prompts: null,
-          default_config: null,
-          environment_variables: null,
-          dependencies: null,
-          tags: null,
-          created_at: '2024-01-01T00:00:00.000Z',
-          updated_at: '2024-01-01T00:00:00.000Z',
-          last_sync_at: null
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      expect(mockReply.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          success: true,
+          data: {
+            id: 'server-1',
+            name: 'Test Server',
+            slug: 'test-server',
+            description: 'A test server',
+            long_description: null,
+            github_url: null,
+            git_branch: null,
+            homepage_url: null,
+            language: 'javascript',
+            runtime: 'node',
+            runtime_min_version: null,
+            installation_methods: [],
+            tools: [],
+            resources: null,
+            prompts: null,
+            visibility: 'global',
+            owner_team_id: null,
+            created_by: 'user-1',
+            author_name: null,
+            author_contact: null,
+            organization: null,
+            license: null,
+            transport_type: 'stdio',
+            template_args: [],
+            template_env: [],
+            template_headers: [],
+            team_args_schema: [],
+            team_env_schema: [],
+            team_headers_schema: [],
+            user_args_schema: [],
+            user_env_schema: null,
+            user_headers_schema: null,
+            dependencies: null,
+            category_id: null,
+            tags: null,
+            status: 'active',
+            featured: false,
+            auto_install_new_default_team: false,
+            created_at: '2024-01-01T00:00:00.000Z',
+            updated_at: '2024-01-01T00:00:00.000Z',
+            last_sync_at: null
+          }
         })
-      });
+      );
     });
 
     it('should return 404 when server does not exist', async () => {
@@ -238,10 +300,13 @@ describe('MCP Servers - Get Server', () => {
 
       expect(mockMcpService.getServerById).toHaveBeenCalledWith('test-server-id');
       expect(mockReply.status).toHaveBeenCalledWith(404);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        success: false,
-        error: 'Server not found'
-      });
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      expect(mockReply.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          success: false,
+          error: 'Server not found'
+        })
+      );
     });
 
     it('should allow global admin to access any server', async () => {
@@ -260,16 +325,24 @@ describe('MCP Servers - Get Server', () => {
         name: 'Team Server',
         slug: 'team-server',
         description: 'A team server',
-        installation_methods: [], // Already parsed by service
-        tools: [], // Already parsed by service
+        installation_methods: JSON.stringify([]), // Database format - JSON string
+        tools: JSON.stringify([]), // Database format - JSON string
         resources: null,
         prompts: null,
-        default_config: null,
-        environment_variables: null,
         dependencies: null,
         tags: null,
-        created_at: new Date('2024-01-01'),
-        updated_at: new Date('2024-01-01'),
+        template_args: JSON.stringify([]),
+        template_env: JSON.stringify([]),
+        template_headers: JSON.stringify([]),
+        team_args_schema: JSON.stringify([]),
+        team_env_schema: JSON.stringify([]),
+        team_headers_schema: JSON.stringify([]),
+        user_args_schema: JSON.stringify([]),
+        user_env_schema: null,
+        user_headers_schema: null,
+        transport_type: 'stdio',
+        created_at: new Date('2024-01-01'), // Database format - Date object
+        updated_at: new Date('2024-01-01'), // Database format - Date object
         last_sync_at: null,
         visibility: 'team',
         owner_team_id: 'team-1',
@@ -277,7 +350,8 @@ describe('MCP Servers - Get Server', () => {
         language: 'javascript',
         runtime: 'node',
         status: 'active',
-        featured: false
+        featured: false,
+        auto_install_new_default_team: false
       };
 
       mockMcpService.getServerById.mockResolvedValue(mockServer);
@@ -286,14 +360,55 @@ describe('MCP Servers - Get Server', () => {
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(200);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        success: true,
-        data: expect.objectContaining({
-          id: 'server-1',
-          name: 'Team Server',
-          visibility: 'team'
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      expect(mockReply.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          success: true,
+          data: {
+            id: 'server-1',
+            name: 'Team Server',
+            slug: 'team-server',
+            description: 'A team server',
+            long_description: null,
+            github_url: null,
+            git_branch: null,
+            homepage_url: null,
+            language: 'javascript',
+            runtime: 'node',
+            runtime_min_version: null,
+            installation_methods: [],
+            tools: [],
+            resources: null,
+            prompts: null,
+            visibility: 'team',
+            owner_team_id: 'team-1',
+            created_by: 'user-1',
+            author_name: null,
+            author_contact: null,
+            organization: null,
+            license: null,
+            transport_type: 'stdio',
+            template_args: [],
+            template_env: [],
+            template_headers: [],
+            team_args_schema: [],
+            team_env_schema: [],
+            team_headers_schema: [],
+            user_args_schema: [],
+            user_env_schema: null,
+            user_headers_schema: null,
+            dependencies: null,
+            category_id: null,
+            tags: null,
+            status: 'active',
+            featured: false,
+            auto_install_new_default_team: false,
+            created_at: '2024-01-01T00:00:00.000Z',
+            updated_at: '2024-01-01T00:00:00.000Z',
+            last_sync_at: null
+          }
         })
-      });
+      );
     });
 
     it('should allow access to global servers for any authenticated user', async () => {
@@ -302,16 +417,24 @@ describe('MCP Servers - Get Server', () => {
         name: 'Global Server',
         slug: 'global-server',
         description: 'A global server',
-        installation_methods: [], // Already parsed by service
-        tools: [], // Already parsed by service
+        installation_methods: JSON.stringify([]), // Database format - JSON string
+        tools: JSON.stringify([]), // Database format - JSON string
         resources: null,
         prompts: null,
-        default_config: null,
-        environment_variables: null,
         dependencies: null,
         tags: null,
-        created_at: new Date('2024-01-01'),
-        updated_at: new Date('2024-01-01'),
+        template_args: JSON.stringify([]),
+        template_env: JSON.stringify([]),
+        template_headers: JSON.stringify([]),
+        team_args_schema: JSON.stringify([]),
+        team_env_schema: JSON.stringify([]),
+        team_headers_schema: JSON.stringify([]),
+        user_args_schema: JSON.stringify([]),
+        user_env_schema: null,
+        user_headers_schema: null,
+        transport_type: 'stdio',
+        created_at: new Date('2024-01-01'), // Database format - Date object
+        updated_at: new Date('2024-01-01'), // Database format - Date object
         last_sync_at: null,
         visibility: 'global',
         owner_team_id: null,
@@ -319,7 +442,8 @@ describe('MCP Servers - Get Server', () => {
         language: 'javascript',
         runtime: 'node',
         status: 'active',
-        featured: false
+        featured: false,
+        auto_install_new_default_team: false
       };
 
       mockMcpService.getServerById.mockResolvedValue(mockServer);
@@ -328,14 +452,55 @@ describe('MCP Servers - Get Server', () => {
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(200);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        success: true,
-        data: expect.objectContaining({
-          id: 'server-1',
-          name: 'Global Server',
-          visibility: 'global'
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      expect(mockReply.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          success: true,
+          data: {
+            id: 'server-1',
+            name: 'Global Server',
+            slug: 'global-server',
+            description: 'A global server',
+            long_description: null,
+            github_url: null,
+            git_branch: null,
+            homepage_url: null,
+            language: 'javascript',
+            runtime: 'node',
+            runtime_min_version: null,
+            installation_methods: [],
+            tools: [],
+            resources: null,
+            prompts: null,
+            visibility: 'global',
+            owner_team_id: null,
+            created_by: 'user-1',
+            author_name: null,
+            author_contact: null,
+            organization: null,
+            license: null,
+            transport_type: 'stdio',
+            template_args: [],
+            template_env: [],
+            template_headers: [],
+            team_args_schema: [],
+            team_env_schema: [],
+            team_headers_schema: [],
+            user_args_schema: [],
+            user_env_schema: null,
+            user_headers_schema: null,
+            dependencies: null,
+            category_id: null,
+            tags: null,
+            status: 'active',
+            featured: false,
+            auto_install_new_default_team: false,
+            created_at: '2024-01-01T00:00:00.000Z',
+            updated_at: '2024-01-01T00:00:00.000Z',
+            last_sync_at: null
+          }
         })
-      });
+      );
     });
 
     it('should allow team members to access their team servers', async () => {
@@ -357,16 +522,24 @@ describe('MCP Servers - Get Server', () => {
         name: 'Team Server',
         slug: 'team-server',
         description: 'A team server',
-        installation_methods: [], // Already parsed by service
-        tools: [], // Already parsed by service
+        installation_methods: JSON.stringify([]), // Database format - JSON string
+        tools: JSON.stringify([]), // Database format - JSON string
         resources: null,
         prompts: null,
-        default_config: null,
-        environment_variables: null,
         dependencies: null,
         tags: null,
-        created_at: new Date('2024-01-01'),
-        updated_at: new Date('2024-01-01'),
+        template_args: JSON.stringify([]),
+        template_env: JSON.stringify([]),
+        template_headers: JSON.stringify([]),
+        team_args_schema: JSON.stringify([]),
+        team_env_schema: JSON.stringify([]),
+        team_headers_schema: JSON.stringify([]),
+        user_args_schema: JSON.stringify([]),
+        user_env_schema: null,
+        user_headers_schema: null,
+        transport_type: 'stdio',
+        created_at: new Date('2024-01-01'), // Database format - Date object
+        updated_at: new Date('2024-01-01'), // Database format - Date object
         last_sync_at: null,
         visibility: 'team',
         owner_team_id: 'team-1',
@@ -374,8 +547,9 @@ describe('MCP Servers - Get Server', () => {
         language: 'javascript',
         runtime: 'node',
         status: 'active',
-        featured: false
-      };
+        featured: false,
+        auto_install_new_default_team: false
+        };
 
       mockMcpService.getServerById.mockResolvedValue(mockServer);
 
@@ -383,15 +557,55 @@ describe('MCP Servers - Get Server', () => {
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(200);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        success: true,
-        data: expect.objectContaining({
-          id: 'server-1',
-          name: 'Team Server',
-          visibility: 'team',
-          owner_team_id: 'team-1'
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      expect(mockReply.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          success: true,
+          data: {
+            id: 'server-1',
+            name: 'Team Server',
+            slug: 'team-server',
+            description: 'A team server',
+            long_description: null,
+            github_url: null,
+            git_branch: null,
+            homepage_url: null,
+            language: 'javascript',
+            runtime: 'node',
+            runtime_min_version: null,
+            installation_methods: [],
+            tools: [],
+            resources: null,
+            prompts: null,
+            visibility: 'team',
+            owner_team_id: 'team-1',
+            created_by: 'user-1',
+            author_name: null,
+            author_contact: null,
+            organization: null,
+            license: null,
+            transport_type: 'stdio',
+            template_args: [],
+            template_env: [],
+            template_headers: [],
+            team_args_schema: [],
+            team_env_schema: [],
+            team_headers_schema: [],
+            user_args_schema: [],
+            user_env_schema: null,
+            user_headers_schema: null,
+            dependencies: null,
+            category_id: null,
+            tags: null,
+            status: 'active',
+            featured: false,
+            auto_install_new_default_team: false,
+            created_at: '2024-01-01T00:00:00.000Z',
+            updated_at: '2024-01-01T00:00:00.000Z',
+            last_sync_at: null
+          }
         })
-      });
+      );
     });
 
     it('should deny access to team servers for non-members', async () => {
@@ -413,16 +627,24 @@ describe('MCP Servers - Get Server', () => {
         name: 'Team Server',
         slug: 'team-server',
         description: 'A team server',
-        installation_methods: [], // Already parsed by service
-        tools: [], // Already parsed by service
+        installation_methods: JSON.stringify([]), // Database format - JSON string
+        tools: JSON.stringify([]), // Database format - JSON string
         resources: null,
         prompts: null,
-        default_config: null,
-        environment_variables: null,
         dependencies: null,
         tags: null,
-        created_at: new Date('2024-01-01'),
-        updated_at: new Date('2024-01-01'),
+        template_args: JSON.stringify([]),
+        template_env: JSON.stringify([]),
+        template_headers: JSON.stringify([]),
+        team_args_schema: JSON.stringify([]),
+        team_env_schema: JSON.stringify([]),
+        team_headers_schema: JSON.stringify([]),
+        user_args_schema: JSON.stringify([]),
+        user_env_schema: null,
+        user_headers_schema: null,
+        transport_type: 'stdio',
+        created_at: new Date('2024-01-01'), // Database format - Date object
+        updated_at: new Date('2024-01-01'), // Database format - Date object
         last_sync_at: null,
         visibility: 'team',
         owner_team_id: 'team-1', // User is not a member of team-1
@@ -430,7 +652,8 @@ describe('MCP Servers - Get Server', () => {
         language: 'javascript',
         runtime: 'node',
         status: 'active',
-        featured: false
+        featured: false,
+        auto_install_new_default_team: false
       };
 
       mockMcpService.getServerById.mockResolvedValue(mockServer);
@@ -439,10 +662,13 @@ describe('MCP Servers - Get Server', () => {
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(404);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        success: false,
-        error: 'Server not found'
-      });
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      expect(mockReply.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          success: false,
+          error: 'Server not found'
+        })
+      );
     });
 
     it('should handle team service errors gracefully', async () => {
@@ -453,16 +679,24 @@ describe('MCP Servers - Get Server', () => {
         name: 'Global Server',
         slug: 'global-server',
         description: 'A global server',
-        installation_methods: [], // Already parsed by service
-        tools: [], // Already parsed by service
+        installation_methods: JSON.stringify([]), // Database format - JSON string
+        tools: JSON.stringify([]), // Database format - JSON string
         resources: null,
         prompts: null,
-        default_config: null,
-        environment_variables: null,
         dependencies: null,
         tags: null,
-        created_at: new Date('2024-01-01'),
-        updated_at: new Date('2024-01-01'),
+        template_args: JSON.stringify([]),
+        template_env: JSON.stringify([]),
+        template_headers: JSON.stringify([]),
+        team_args_schema: JSON.stringify([]),
+        team_env_schema: JSON.stringify([]),
+        team_headers_schema: JSON.stringify([]),
+        user_args_schema: JSON.stringify([]),
+        user_env_schema: null,
+        user_headers_schema: null,
+        transport_type: 'stdio',
+        created_at: new Date('2024-01-01'), // Database format - Date object
+        updated_at: new Date('2024-01-01'), // Database format - Date object
         last_sync_at: null,
         visibility: 'global',
         owner_team_id: null,
@@ -490,6 +724,7 @@ describe('MCP Servers - Get Server', () => {
 
       // Should still work for global servers
       expect(mockReply.status).toHaveBeenCalledWith(200);
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
     });
 
     it('should handle service errors', async () => {
@@ -499,10 +734,13 @@ describe('MCP Servers - Get Server', () => {
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(500);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        success: false,
-        error: 'Failed to get MCP server'
-      });
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      expect(mockReply.send).toHaveBeenCalledWith(
+        JSON.stringify({
+          success: false,
+          error: 'Failed to get MCP server'
+        })
+      );
 
       expect(mockLogger.error).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -521,17 +759,26 @@ describe('MCP Servers - Get Server', () => {
         name: 'Test Server',
         slug: 'test-server',
         description: 'A test server',
-        installation_methods: ['npm', 'yarn'], // Already parsed by service
-        tools: [{ name: 'test-tool' }], // Already parsed by service
-        resources: [{ name: 'test-resource' }], // Already parsed by service
-        prompts: [{ name: 'test-prompt' }], // Already parsed by service
-        default_config: { key: 'value' }, // Already parsed by service
-        environment_variables: [{ name: 'TEST_VAR' }], // Already parsed by service
-        dependencies: { dep1: '^1.0.0' }, // Already parsed by service
-        tags: ['tag1', 'tag2'], // Already parsed by service
-        created_at: new Date('2024-01-01'),
-        updated_at: new Date('2024-01-01'),
-        last_sync_at: new Date('2024-01-02'),
+        installation_methods: JSON.stringify(['npm', 'yarn']), // Database format - JSON string
+        tools: JSON.stringify([{ name: 'test-tool' }]), // Database format - JSON string
+        resources: JSON.stringify([{ name: 'test-resource' }]), // Database format - JSON string
+        prompts: JSON.stringify([{ name: 'test-prompt' }]), // Database format - JSON string
+
+        dependencies: JSON.stringify({ dep1: '^1.0.0' }), // Database format - JSON string
+        tags: JSON.stringify(['tag1', 'tag2']), // Database format - JSON string
+        template_args: JSON.stringify([]),
+        template_env: JSON.stringify([]),
+        template_headers: JSON.stringify([]),
+        team_args_schema: JSON.stringify([]),
+        team_env_schema: JSON.stringify([]),
+        team_headers_schema: JSON.stringify([]),
+        user_args_schema: JSON.stringify([]),
+        user_env_schema: null,
+        user_headers_schema: null,
+        transport_type: 'stdio',
+        created_at: new Date('2024-01-01'), // Database format - Date object
+        updated_at: new Date('2024-01-01'), // Database format - Date object
+        last_sync_at: new Date('2024-01-02'), // Database format - Date object
         visibility: 'global',
         owner_team_id: null,
         created_by: 'user-1',
@@ -546,15 +793,14 @@ describe('MCP Servers - Get Server', () => {
       const handler = routeHandlers['GET /mcp/servers/:id'];
       await handler(mockRequest, mockReply);
 
-      const response = (mockReply.send as any).mock.calls[0][0];
+      const jsonResponse = (mockReply.send as any).mock.calls[0][0];
+      const response = JSON.parse(jsonResponse);
       const server = response.data;
 
       expect(server.installation_methods).toEqual(['npm', 'yarn']);
       expect(server.tools).toEqual([{ name: 'test-tool' }]);
       expect(server.resources).toEqual([{ name: 'test-resource' }]);
       expect(server.prompts).toEqual([{ name: 'test-prompt' }]);
-      expect(server.default_config).toEqual({ key: 'value' });
-      expect(server.environment_variables).toEqual([{ name: 'TEST_VAR' }]);
       expect(server.dependencies).toEqual({ dep1: '^1.0.0' });
       expect(server.tags).toEqual(['tag1', 'tag2']);
       expect(server.created_at).toBe('2024-01-01T00:00:00.000Z');
@@ -568,16 +814,24 @@ describe('MCP Servers - Get Server', () => {
         name: 'Test Server',
         slug: 'test-server',
         description: 'A test server',
-        installation_methods: [], // Already parsed by service
-        tools: [], // Already parsed by service
+        installation_methods: JSON.stringify([]), // Database format - JSON string
+        tools: JSON.stringify([]), // Database format - JSON string
         resources: null,
         prompts: null,
-        default_config: null,
-        environment_variables: null,
         dependencies: null,
         tags: null,
-        created_at: new Date('2024-01-01'),
-        updated_at: new Date('2024-01-01'),
+        template_args: JSON.stringify([]),
+        template_env: JSON.stringify([]),
+        template_headers: JSON.stringify([]),
+        team_args_schema: JSON.stringify([]),
+        team_env_schema: JSON.stringify([]),
+        team_headers_schema: JSON.stringify([]),
+        user_args_schema: JSON.stringify([]),
+        user_env_schema: null,
+        user_headers_schema: null,
+        transport_type: 'stdio',
+        created_at: new Date('2024-01-01'), // Database format - Date object
+        updated_at: new Date('2024-01-01'), // Database format - Date object
         last_sync_at: null,
         visibility: 'global',
         owner_team_id: null,
@@ -593,15 +847,14 @@ describe('MCP Servers - Get Server', () => {
       const handler = routeHandlers['GET /mcp/servers/:id'];
       await handler(mockRequest, mockReply);
 
-      const response = (mockReply.send as any).mock.calls[0][0];
+      const jsonResponse = (mockReply.send as any).mock.calls[0][0];
+      const response = JSON.parse(jsonResponse);
       const server = response.data;
 
       expect(server.installation_methods).toEqual([]);
       expect(server.tools).toEqual([]);
       expect(server.resources).toBeNull();
       expect(server.prompts).toBeNull();
-      expect(server.default_config).toBeNull();
-      expect(server.environment_variables).toBeNull();
       expect(server.dependencies).toBeNull();
       expect(server.tags).toBeNull();
       expect(server.last_sync_at).toBeNull();
@@ -709,16 +962,24 @@ describe('MCP Servers - Get Server', () => {
           name: 'Test Server',
           slug: 'test-server',
           description: 'A test server',
-          installation_methods: [], // Already parsed by service
-          tools: [], // Already parsed by service
+          installation_methods: JSON.stringify([]), // Database format - JSON string
+          tools: JSON.stringify([]), // Database format - JSON string
           resources: null,
           prompts: null,
-          default_config: null,
-          environment_variables: null,
           dependencies: null,
           tags: null,
-          created_at: new Date('2024-01-01'),
-          updated_at: new Date('2024-01-01'),
+          template_args: JSON.stringify([]),
+          template_env: JSON.stringify([]),
+          template_headers: JSON.stringify([]),
+          team_args_schema: JSON.stringify([]),
+          team_env_schema: JSON.stringify([]),
+          team_headers_schema: JSON.stringify([]),
+          user_args_schema: JSON.stringify([]),
+          user_env_schema: null,
+          user_headers_schema: null,
+          transport_type: 'stdio',
+          created_at: new Date('2024-01-01'), // Database format - Date object
+          updated_at: new Date('2024-01-01'), // Database format - Date object
           last_sync_at: null,
           visibility: testCase.serverVisibility as 'global' | 'team',
           owner_team_id: testCase.serverOwnerTeamId,
@@ -726,7 +987,8 @@ describe('MCP Servers - Get Server', () => {
           language: 'javascript',
           runtime: 'node',
           status: 'active' as const,
-          featured: false
+          featured: false,
+          auto_install_new_default_team: false
         };
 
         mockMcpService.getServerById.mockResolvedValue(mockServer);
@@ -736,12 +998,16 @@ describe('MCP Servers - Get Server', () => {
 
         if (testCase.expectedAccess) {
           expect(mockReply.status).toHaveBeenCalledWith(200);
+          expect(mockReply.type).toHaveBeenCalledWith('application/json');
         } else {
           expect(mockReply.status).toHaveBeenCalledWith(404);
-          expect(mockReply.send).toHaveBeenCalledWith({
-            success: false,
-            error: 'Server not found'
-          });
+          expect(mockReply.type).toHaveBeenCalledWith('application/json');
+          expect(mockReply.send).toHaveBeenCalledWith(
+            JSON.stringify({
+              success: false,
+              error: 'Server not found'
+            })
+          );
         }
 
         // Reset mocks for next iteration
@@ -795,16 +1061,25 @@ describe('MCP Servers - Get Server', () => {
         name: 'Team Server',
         slug: 'team-server',
         description: 'A team server',
-        installation_methods: [], // Already parsed by service
-        tools: [], // Already parsed by service
+        installation_methods: JSON.stringify([]), // Database format - JSON string
+        tools: JSON.stringify([]), // Database format - JSON string
         resources: null,
         prompts: null,
-        default_config: null,
-        environment_variables: null,
+
         dependencies: null,
         tags: null,
-        created_at: new Date('2024-01-01'),
-        updated_at: new Date('2024-01-01'),
+        template_args: JSON.stringify([]),
+        template_env: JSON.stringify([]),
+        template_headers: JSON.stringify([]),
+        team_args_schema: JSON.stringify([]),
+        team_env_schema: JSON.stringify([]),
+        team_headers_schema: JSON.stringify([]),
+        user_args_schema: JSON.stringify([]),
+        user_env_schema: null,
+        user_headers_schema: null,
+        transport_type: 'stdio',
+        created_at: new Date('2024-01-01'), // Database format - Date object
+        updated_at: new Date('2024-01-01'), // Database format - Date object
         last_sync_at: null,
         visibility: 'team',
         owner_team_id: 'team-1',
@@ -840,16 +1115,24 @@ describe('MCP Servers - Get Server', () => {
         name: 'Global Server',
         slug: 'global-server',
         description: 'A global server',
-        installation_methods: [], // Already parsed by service
-        tools: [], // Already parsed by service
+        installation_methods: JSON.stringify([]), // Database format - JSON string
+        tools: JSON.stringify([]), // Database format - JSON string
         resources: null,
         prompts: null,
-        default_config: null,
-        environment_variables: null,
         dependencies: null,
         tags: null,
-        created_at: new Date('2024-01-01'),
-        updated_at: new Date('2024-01-01'),
+        template_args: JSON.stringify([]),
+        template_env: JSON.stringify([]),
+        template_headers: JSON.stringify([]),
+        team_args_schema: JSON.stringify([]),
+        team_env_schema: JSON.stringify([]),
+        team_headers_schema: JSON.stringify([]),
+        user_args_schema: JSON.stringify([]),
+        user_env_schema: null,
+        user_headers_schema: null,
+        transport_type: 'stdio',
+        created_at: new Date('2024-01-01'), // Database format - Date object
+        updated_at: new Date('2024-01-01'), // Database format - Date object
         last_sync_at: null,
         visibility: 'global',
         owner_team_id: null,

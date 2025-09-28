@@ -1,34 +1,17 @@
 import { type FastifyInstance } from 'fastify';
-import { z } from 'zod';
-import { createSchema } from 'zod-openapi';
 import { requireGlobalAdmin } from '../../../middleware/roleMiddleware';
 import { McpCatalogService } from '../../../services/mcpCatalogService';
 import { getDb } from '../../../db';
 import { EVENT_NAMES } from '../../../events';
 import type { EventContext } from '../../../events/types';
-
-// Path parameters schema
-const deleteGlobalServerParamsSchema = z.object({
-  id: z.string().min(1, 'Server ID is required')
-});
-
-// Response schema for successful deletion
-const deleteGlobalServerResponseSchema = z.object({
-  success: z.boolean(),
-  message: z.string(),
-  data: z.object({
-    id: z.string(),
-    name: z.string(),
-    deleted_at: z.string()
-  })
-});
-
-// Error response schema
-const errorResponseSchema = z.object({
-  success: z.boolean().default(false),
-  error: z.string(),
-  details: z.any().optional()
-});
+import {
+  SERVER_ID_PARAM_SCHEMA,
+  DELETE_GLOBAL_SERVER_SUCCESS_RESPONSE_SCHEMA,
+  COMMON_ERROR_RESPONSES,
+  type ServerIdParams,
+  type DeleteGlobalServerSuccessResponse,
+  type ErrorResponse
+} from './schemas';
 
 export default async function deleteGlobalServer(server: FastifyInstance) {
   server.delete('/mcp/servers/global/:id', {
@@ -38,17 +21,20 @@ export default async function deleteGlobalServer(server: FastifyInstance) {
       summary: 'Delete global MCP server (Global Admin only)',
       description: 'Delete an existing global MCP server - requires global admin permissions. Only global servers can be deleted through this endpoint. This action is irreversible.',
       security: [{ cookieAuth: [] }],
-      params: createSchema(deleteGlobalServerParamsSchema),
+      
+      // Fastify validation schema
+      params: SERVER_ID_PARAM_SCHEMA,
+      
       response: {
-        200: createSchema(deleteGlobalServerResponseSchema),
-        401: createSchema(errorResponseSchema.describe('Unauthorized - Authentication required')),
-        403: createSchema(errorResponseSchema.describe('Forbidden - Global admin permissions required')),
-        404: createSchema(errorResponseSchema.describe('Not Found - Server not found or not a global server')),
-        500: createSchema(errorResponseSchema.describe('Internal Server Error'))
+        200: {
+          ...DELETE_GLOBAL_SERVER_SUCCESS_RESPONSE_SCHEMA,
+          description: 'Global MCP server deleted successfully'
+        },
+        ...COMMON_ERROR_RESPONSES
       }
     }
   }, async (request, reply) => {
-    const { id: serverId } = request.params as z.infer<typeof deleteGlobalServerParamsSchema>;
+    const { id: serverId } = request.params as ServerIdParams;
     
     request.log.info({
       operation: 'delete_global_mcp_server',
@@ -69,10 +55,12 @@ export default async function deleteGlobalServer(server: FastifyInstance) {
           serverId
         }, 'Server not found');
         
-        return reply.status(404).send({
+        const errorResponse: ErrorResponse = {
           success: false,
           error: 'Server not found'
-        });
+        };
+        const jsonString = JSON.stringify(errorResponse);
+        return reply.status(404).type('application/json').send(jsonString);
       }
 
       if (existingServer.visibility !== 'global') {
@@ -83,10 +71,12 @@ export default async function deleteGlobalServer(server: FastifyInstance) {
           serverVisibility: existingServer.visibility
         }, 'Attempted to delete non-global server through global endpoint');
         
-        return reply.status(404).send({
+        const errorResponse: ErrorResponse = {
           success: false,
           error: 'Server not found or not a global server'
-        });
+        };
+        const jsonString = JSON.stringify(errorResponse);
+        return reply.status(404).type('application/json').send(jsonString);
       }
 
       // Store server info before deletion for response
@@ -108,10 +98,12 @@ export default async function deleteGlobalServer(server: FastifyInstance) {
           serverId
         }, 'Failed to delete server - server not found or insufficient permissions');
         
-        return reply.status(404).send({
+        const errorResponse: ErrorResponse = {
           success: false,
           error: 'Server not found'
-        });
+        };
+        const jsonString = JSON.stringify(errorResponse);
+        return reply.status(404).type('application/json').send(jsonString);
       }
 
       request.log.info({
@@ -165,7 +157,7 @@ export default async function deleteGlobalServer(server: FastifyInstance) {
         // Don't fail deletion if event emission fails
       }
 
-      return reply.status(200).send({
+      const response: DeleteGlobalServerSuccessResponse = {
         success: true,
         message: 'Global MCP server deleted successfully',
         data: {
@@ -173,7 +165,9 @@ export default async function deleteGlobalServer(server: FastifyInstance) {
           name: serverInfo.name,
           deleted_at: new Date().toISOString()
         }
-      });
+      };
+      const jsonString = JSON.stringify(response);
+      return reply.status(200).type('application/json').send(jsonString);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       request.log.error({
@@ -185,23 +179,29 @@ export default async function deleteGlobalServer(server: FastifyInstance) {
 
       // Handle specific error cases
       if (error.message?.includes('Server not found')) {
-        return reply.status(404).send({
+        const errorResponse: ErrorResponse = {
           success: false,
           error: 'Server not found'
-        });
+        };
+        const jsonString = JSON.stringify(errorResponse);
+        return reply.status(404).type('application/json').send(jsonString);
       }
 
       if (error.message?.includes('Insufficient permissions')) {
-        return reply.status(403).send({
+        const errorResponse: ErrorResponse = {
           success: false,
           error: 'Global admin permissions required'
-        });
+        };
+        const jsonString = JSON.stringify(errorResponse);
+        return reply.status(403).type('application/json').send(jsonString);
       }
 
-      return reply.status(500).send({
+      const errorResponse: ErrorResponse = {
         success: false,
         error: 'Failed to delete global MCP server'
-      });
+      };
+      const jsonString = JSON.stringify(errorResponse);
+      return reply.status(500).type('application/json').send(jsonString);
     }
   });
 }

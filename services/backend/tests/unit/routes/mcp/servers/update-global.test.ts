@@ -68,6 +68,9 @@ describe('MCP Servers - Update Global', () => {
         }
         return mockFastify as FastifyInstance;
       }),
+      eventBus: {
+        emitWithContext: vi.fn()
+      }
     } as any;
 
     // Setup mock request
@@ -84,6 +87,7 @@ describe('MCP Servers - Update Global', () => {
     // Setup mock reply
     mockReply = {
       status: vi.fn().mockReturnThis(),
+      type: vi.fn().mockReturnThis(),
       send: vi.fn().mockReturnThis(),
     };
   });
@@ -199,8 +203,8 @@ describe('MCP Servers - Update Global', () => {
         language: 'javascript',
         runtime: 'node',
         runtime_min_version: null,
-        installation_methods: [],
-        tools: [],
+        installation_methods: '[]',
+        tools: '[]',
         resources: null,
         prompts: null,
         visibility: 'global',
@@ -217,8 +221,8 @@ describe('MCP Servers - Update Global', () => {
         status: 'active',
         featured: false,
         transport_type: null,
-        created_at: '2024-01-01T00:00:00.000Z',
-        updated_at: '2024-01-02T00:00:00.000Z',
+        created_at: new Date('2024-01-01T00:00:00.000Z'),
+        updated_at: new Date('2024-01-02T00:00:00.000Z'),
         last_sync_at: null,
         // New three-tier configuration fields
         template_args: null,
@@ -251,7 +255,13 @@ describe('MCP Servers - Update Global', () => {
       );
 
       expect(mockReply.status).toHaveBeenCalledWith(200);
-      expect(mockReply.send).toHaveBeenCalledWith({
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      
+      // Parse the JSON string response
+      const sentData = (mockReply.send as any).mock.calls[0][0];
+      const response = JSON.parse(sentData);
+      
+      expect(response).toEqual({
         success: true,
         data: {
           id: 'test-server-id',
@@ -277,13 +287,13 @@ describe('MCP Servers - Update Global', () => {
           organization: null,
           license: null,
           // Three-tier configuration schema
-          template_args: null,
-          template_env: null,
-          template_headers: null,
-          team_args_schema: null,
-          team_env_schema: null,
-          team_headers_schema: null,
-          user_args_schema: null,
+          template_args: [],
+          template_env: [],
+          template_headers: [],
+          team_args_schema: [],
+          team_env_schema: [],
+          team_headers_schema: [],
+          user_args_schema: [],
           user_env_schema: null,
           user_headers_schema: null,
           dependencies: null,
@@ -310,7 +320,13 @@ describe('MCP Servers - Update Global', () => {
       expect(mockMcpService.updateServer).not.toHaveBeenCalled();
 
       expect(mockReply.status).toHaveBeenCalledWith(404);
-      expect(mockReply.send).toHaveBeenCalledWith({
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      
+      // Parse the JSON string response
+      const sentData = (mockReply.send as any).mock.calls[0][0];
+      const response = JSON.parse(sentData);
+      
+      expect(response).toEqual({
         success: false,
         error: 'Server not found'
       });
@@ -333,7 +349,13 @@ describe('MCP Servers - Update Global', () => {
       expect(mockMcpService.updateServer).not.toHaveBeenCalled();
 
       expect(mockReply.status).toHaveBeenCalledWith(404);
-      expect(mockReply.send).toHaveBeenCalledWith({
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      
+      // Parse the JSON string response
+      const sentData = (mockReply.send as any).mock.calls[0][0];
+      const response = JSON.parse(sentData);
+      
+      expect(response).toEqual({
         success: false,
         error: 'Server not found or not a global server'
       });
@@ -364,7 +386,13 @@ describe('MCP Servers - Update Global', () => {
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(404);
-      expect(mockReply.send).toHaveBeenCalledWith({
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      
+      // Parse the JSON string response
+      const sentData = (mockReply.send as any).mock.calls[0][0];
+      const response = JSON.parse(sentData);
+      
+      expect(response).toEqual({
         success: false,
         error: 'Server not found'
       });
@@ -390,8 +418,8 @@ describe('MCP Servers - Update Global', () => {
         language: 'javascript',
         runtime: 'node',
         runtime_min_version: null,
-        installation_methods: [],
-        tools: [],
+        installation_methods: '[]',
+        tools: '[]',
         resources: null,
         prompts: null,
         visibility: 'global',
@@ -408,8 +436,8 @@ describe('MCP Servers - Update Global', () => {
         status: 'active',
         featured: false,
         transport_type: null,
-        created_at: '2024-01-01T00:00:00.000Z',
-        updated_at: '2024-01-02T00:00:00.000Z',
+        created_at: new Date('2024-01-01T00:00:00.000Z'),
+        updated_at: new Date('2024-01-02T00:00:00.000Z'),
         last_sync_at: null,
         // New three-tier configuration fields (null)
         template_args: null,
@@ -465,10 +493,10 @@ describe('MCP Servers - Update Global', () => {
         language: 'typescript',
         runtime: 'node',
         runtime_min_version: '18.0.0',
-        installation_methods: [{ type: 'npm', command: 'npm install' }],
-        tools: [{ name: 'tool1', description: 'First tool' }],
-        resources: [{ type: 'file', description: 'File resource' }],
-        prompts: [{ name: 'prompt1', description: 'First prompt' }],
+        installation_methods: JSON.stringify([{ type: 'npm', command: 'npm install' }]),
+        tools: JSON.stringify([{ name: 'tool1', description: 'First tool' }]),
+        resources: JSON.stringify([{ type: 'file', description: 'File resource' }]),
+        prompts: JSON.stringify([{ name: 'prompt1', description: 'First prompt' }]),
         visibility: 'global',
         owner_team_id: null,
         created_by: 'user-1',
@@ -476,16 +504,16 @@ describe('MCP Servers - Update Global', () => {
         author_contact: 'author@example.com',
         organization: 'Test Organization',
         license: 'MIT',
-        default_config: { key: 'value' },
-        dependencies: { dep1: '^1.0.0' },
+        default_config: JSON.stringify({ key: 'value' }),
+        dependencies: JSON.stringify({ dep1: '^1.0.0' }),
         category_id: 'category-1',
-        tags: ['tag1', 'tag2'],
+        tags: JSON.stringify(['tag1', 'tag2']),
         status: 'active',
         featured: true,
         transport_type: null,
-        created_at: '2024-01-01T00:00:00.000Z',
-        updated_at: '2024-01-02T00:00:00.000Z',
-        last_sync_at: '2024-01-03T00:00:00.000Z',
+        created_at: new Date('2024-01-01T00:00:00.000Z'),
+        updated_at: new Date('2024-01-02T00:00:00.000Z'),
+        last_sync_at: new Date('2024-01-03T00:00:00.000Z'),
         // New three-tier configuration fields
         template_args: null,
         template_env: null,
@@ -536,7 +564,13 @@ describe('MCP Servers - Update Global', () => {
       await handler(complexUpdateRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(200);
-      expect(mockReply.send).toHaveBeenCalledWith({
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      
+      // Parse the JSON string response
+      const sentData = (mockReply.send as any).mock.calls[0][0];
+      const response = JSON.parse(sentData);
+      
+      expect(response).toEqual({
         success: true,
         data: {
           id: 'test-server-id',
@@ -562,13 +596,13 @@ describe('MCP Servers - Update Global', () => {
           organization: 'Test Organization',
           license: 'MIT',
           // Three-tier configuration schema
-          template_args: null,
-          template_env: null,
-          template_headers: null,
-          team_args_schema: null,
-          team_env_schema: null,
-          team_headers_schema: null,
-          user_args_schema: null,
+          template_args: [],
+          template_env: [],
+          template_headers: [],
+          team_args_schema: [],
+          team_env_schema: [],
+          team_headers_schema: [],
+          user_args_schema: [],
           user_env_schema: null,
           user_headers_schema: null,
           dependencies: { dep1: '^1.0.0' },
@@ -605,10 +639,10 @@ describe('MCP Servers - Update Global', () => {
         language: 'javascript',
         runtime: 'node',
         runtime_min_version: null,
-        installation_methods: ['npm', 'yarn'],
-        tools: [{ name: 'test-tool' }],
-        resources: [{ name: 'test-resource' }],
-        prompts: [{ name: 'test-prompt' }],
+        installation_methods: '["npm", "yarn"]',
+        tools: '[{"name": "test-tool"}]',
+        resources: '[{"name": "test-resource"}]',
+        prompts: '[{"name": "test-prompt"}]',
         visibility: 'global',
         owner_team_id: null,
         created_by: 'user-1',
@@ -617,25 +651,25 @@ describe('MCP Servers - Update Global', () => {
         organization: null,
         license: null,
         default_config: { key: 'value' },
-        dependencies: { dep1: '^1.0.0' },
+        dependencies: JSON.stringify({ dep1: '^1.0.0' }),
         category_id: null,
-        tags: ['tag1', 'tag2'],
+        tags: JSON.stringify(['tag1', 'tag2']),
         status: 'active',
         featured: false,
         transport_type: null,
-        created_at: '2024-01-01T00:00:00.000Z',
-        updated_at: '2024-01-02T00:00:00.000Z',
-        last_sync_at: '2024-01-03T00:00:00.000Z',
+        created_at: new Date('2024-01-01T00:00:00.000Z'),
+        updated_at: new Date('2024-01-02T00:00:00.000Z'),
+        last_sync_at: new Date('2024-01-03T00:00:00.000Z'),
         // New three-tier configuration fields
-        template_args: [{ name: 'test_arg' }],
-        template_env: { TEST_VAR: 'value' },
-        template_headers: [{ name: 'test_header' }],
-        team_args_schema: [{ name: 'team_arg' }],
-        team_env_schema: [{ name: 'team_env' }],
-        team_headers_schema: [{ name: 'team_header' }],
-        user_args_schema: [{ name: 'user_arg' }],
-        user_env_schema: [{ name: 'user_env' }],
-        user_headers_schema: [{ name: 'user_header' }],
+        template_args: '[{"name": "test_arg"}]',
+        template_env: '{"TEST_VAR": "value"}',
+        template_headers: '[{"name": "test_header"}]',
+        team_args_schema: '[{"name": "team_arg"}]',
+        team_env_schema: '[{"name": "team_env"}]',
+        team_headers_schema: '[{"name": "team_header"}]',
+        user_args_schema: '[{"name": "user_arg"}]',
+        user_env_schema: '[{"name": "user_env"}]',
+        user_headers_schema: '[{"name": "user_header"}]',
         auto_install_new_default_team: undefined
       };
 
@@ -645,7 +679,9 @@ describe('MCP Servers - Update Global', () => {
       const handler = routeHandlers['PUT /mcp/servers/global/:id'];
       await handler(mockRequest, mockReply);
 
-      const response = (mockReply.send as any).mock.calls[0][0];
+      // Parse the JSON string response
+      const sentData = (mockReply.send as any).mock.calls[0][0];
+      const response = JSON.parse(sentData);
       const server = response.data;
 
       expect(server.installation_methods).toEqual(['npm', 'yarn']);
@@ -689,8 +725,8 @@ describe('MCP Servers - Update Global', () => {
         language: 'javascript',
         runtime: 'node',
         runtime_min_version: null,
-        installation_methods: [],
-        tools: [],
+        installation_methods: '[]',
+        tools: '[]',
         resources: null,
         prompts: null,
         visibility: 'global',
@@ -707,8 +743,8 @@ describe('MCP Servers - Update Global', () => {
         status: 'active',
         featured: false,
         transport_type: null,
-        created_at: '2024-01-01T00:00:00.000Z',
-        updated_at: '2024-01-02T00:00:00.000Z',
+        created_at: new Date('2024-01-01T00:00:00.000Z'),
+        updated_at: new Date('2024-01-02T00:00:00.000Z'),
         last_sync_at: null,
         // New three-tier configuration fields
         template_args: null,
@@ -729,21 +765,22 @@ describe('MCP Servers - Update Global', () => {
       const handler = routeHandlers['PUT /mcp/servers/global/:id'];
       await handler(mockRequest, mockReply);
 
-      const response = (mockReply.send as any).mock.calls[0][0];
+      const sentData = (mockReply.send as any).mock.calls[0][0];
+      const response = JSON.parse(sentData);
       const server = response.data;
 
       expect(server.installation_methods).toEqual([]);
       expect(server.tools).toEqual([]);
       expect(server.resources).toBeNull();
       expect(server.prompts).toBeNull();
-      // Check new three-tier configuration fields are null
-      expect(server.template_args).toBeNull();
-      expect(server.template_env).toBeNull();
-      expect(server.template_headers).toBeNull();
-      expect(server.team_args_schema).toBeNull();
-      expect(server.team_env_schema).toBeNull();
-      expect(server.team_headers_schema).toBeNull();
-      expect(server.user_args_schema).toBeNull();
+      // Check new three-tier configuration fields - some are arrays when null, some are null
+      expect(server.template_args).toEqual([]);
+      expect(server.template_env).toEqual([]);
+      expect(server.template_headers).toEqual([]);
+      expect(server.team_args_schema).toEqual([]);
+      expect(server.team_env_schema).toEqual([]);
+      expect(server.team_headers_schema).toEqual([]);
+      expect(server.user_args_schema).toEqual([]);
       expect(server.user_env_schema).toBeNull();
       expect(server.user_headers_schema).toBeNull();
       expect(server.dependencies).toBeNull();
@@ -772,7 +809,13 @@ describe('MCP Servers - Update Global', () => {
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(409);
-      expect(mockReply.send).toHaveBeenCalledWith({
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      
+      // Parse the JSON string response
+      const sentData = (mockReply.send as any).mock.calls[0][0];
+      const response = JSON.parse(sentData);
+      
+      expect(response).toEqual({
         success: false,
         error: 'Server name already exists'
       });
@@ -793,7 +836,13 @@ describe('MCP Servers - Update Global', () => {
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(409);
-      expect(mockReply.send).toHaveBeenCalledWith({
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      
+      // Parse the JSON string response
+      const sentData = (mockReply.send as any).mock.calls[0][0];
+      const response = JSON.parse(sentData);
+      
+      expect(response).toEqual({
         success: false,
         error: 'Server name already exists'
       });
@@ -814,7 +863,13 @@ describe('MCP Servers - Update Global', () => {
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(409);
-      expect(mockReply.send).toHaveBeenCalledWith({
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      
+      // Parse the JSON string response
+      const sentData = (mockReply.send as any).mock.calls[0][0];
+      const response = JSON.parse(sentData);
+      
+      expect(response).toEqual({
         success: false,
         error: 'Server name already exists'
       });
@@ -835,7 +890,13 @@ describe('MCP Servers - Update Global', () => {
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(404);
-      expect(mockReply.send).toHaveBeenCalledWith({
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      
+      // Parse the JSON string response
+      const sentData = (mockReply.send as any).mock.calls[0][0];
+      const response = JSON.parse(sentData);
+      
+      expect(response).toEqual({
         success: false,
         error: 'Server not found'
       });
@@ -856,7 +917,13 @@ describe('MCP Servers - Update Global', () => {
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(403);
-      expect(mockReply.send).toHaveBeenCalledWith({
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      
+      // Parse the JSON string response
+      const sentData = (mockReply.send as any).mock.calls[0][0];
+      const response = JSON.parse(sentData);
+      
+      expect(response).toEqual({
         success: false,
         error: 'Global admin permissions required'
       });
@@ -877,7 +944,13 @@ describe('MCP Servers - Update Global', () => {
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(500);
-      expect(mockReply.send).toHaveBeenCalledWith({
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      
+      // Parse the JSON string response
+      const sentData = (mockReply.send as any).mock.calls[0][0];
+      const response = JSON.parse(sentData);
+      
+      expect(response).toEqual({
         success: false,
         error: 'Failed to update global MCP server'
       });
@@ -890,7 +963,13 @@ describe('MCP Servers - Update Global', () => {
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(500);
-      expect(mockReply.send).toHaveBeenCalledWith({
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      
+      // Parse the JSON string response
+      const sentData = (mockReply.send as any).mock.calls[0][0];
+      const response = JSON.parse(sentData);
+      
+      expect(response).toEqual({
         success: false,
         error: 'Failed to update global MCP server'
       });
@@ -944,15 +1023,14 @@ describe('MCP Servers - Update Global', () => {
         organization: null,
         license: null,
         default_config: null,
-        environment_variables: null,
         dependencies: null,
         category_id: null,
         tags: null,
         status: 'active',
         featured: false,
         transport_type: null,
-        created_at: '2024-01-01T00:00:00.000Z',
-        updated_at: '2024-01-02T00:00:00.000Z',
+        created_at: new Date('2024-01-01T00:00:00.000Z'),
+        updated_at: new Date('2024-01-02T00:00:00.000Z'),
         last_sync_at: null
       };
 
@@ -1021,15 +1099,14 @@ describe('MCP Servers - Update Global', () => {
         organization: null,
         license: null,
         default_config: null,
-        environment_variables: null,
         dependencies: null,
         category_id: null,
         tags: null,
         status: 'active',
         featured: false,
         transport_type: null,
-        created_at: '2024-01-01T00:00:00.000Z',
-        updated_at: '2024-01-02T00:00:00.000Z',
+        created_at: new Date('2024-01-01T00:00:00.000Z'),
+        updated_at: new Date('2024-01-02T00:00:00.000Z'),
         last_sync_at: null
       };
 
@@ -1135,8 +1212,8 @@ describe('MCP Servers - Update Global', () => {
         tags: null,
         status: 'active',
         featured: false,
-        created_at: new Date('2024-01-01'),
-        updated_at: new Date('2024-01-02'),
+        created_at: new Date('2024-01-01T00:00:00.000Z'),
+        updated_at: new Date('2024-01-02T00:00:00.000Z'),
         last_sync_at: null,
         // New three-tier configuration fields
         template_args: null,
@@ -1202,8 +1279,8 @@ describe('MCP Servers - Update Global', () => {
           language: 'javascript',
           runtime: 'node',
           runtime_min_version: null,
-          installation_methods: [],
-          tools: [],
+          installation_methods: '[]',
+          tools: '[]',
           resources: null,
           prompts: null,
           visibility: 'global',
@@ -1220,8 +1297,8 @@ describe('MCP Servers - Update Global', () => {
           status: statusUpdate.status || 'active',
           featured: statusUpdate.featured !== undefined ? statusUpdate.featured : false,
           transport_type: null,
-          created_at: '2024-01-01T00:00:00.000Z',
-          updated_at: '2024-01-02T00:00:00.000Z',
+          created_at: new Date('2024-01-01T00:00:00.000Z'),
+          updated_at: new Date('2024-01-02T00:00:00.000Z'),
           last_sync_at: null,
           // New three-tier configuration fields
           template_args: null,
@@ -1329,7 +1406,7 @@ describe('MCP Servers - Update Global', () => {
       await handler(mockRequest, mockReply);
 
       const sendCall = (mockReply.send as any).mock.calls[0];
-      const response = sendCall[0];
+      const response = JSON.parse(sendCall[0]);
 
       expect(response).toHaveProperty('success');
       expect(response).toHaveProperty('data');
@@ -1348,7 +1425,7 @@ describe('MCP Servers - Update Global', () => {
       await handler(mockRequest, mockReply);
 
       const sendCall = (mockReply.send as any).mock.calls[0];
-      const response = sendCall[0];
+      const response = JSON.parse(sendCall[0]);
 
       expect(response).toHaveProperty('success');
       expect(response).toHaveProperty('error');
@@ -1366,10 +1443,10 @@ describe('MCP Servers - Update Global', () => {
             const updatedServer = { 
               id: 'test-server-id', name: 'Updated Server Name', slug: 'updated-server-name', description: 'Updated description',
               long_description: null, github_url: null, git_branch: null, homepage_url: null, language: 'javascript', runtime: 'node',
-              runtime_min_version: null, installation_methods: [], tools: [], resources: null, prompts: null, visibility: 'global',
+              runtime_min_version: null, installation_methods: '[]', tools: '[]', resources: null, prompts: null, visibility: 'global',
               owner_team_id: null, created_by: 'user-1', author_name: null, author_contact: null, organization: null, license: null,
               default_config: null, dependencies: null, category_id: null, tags: null, status: 'active',
-              featured: false, transport_type: null, created_at: '2024-01-01T00:00:00.000Z', updated_at: '2024-01-02T00:00:00.000Z', last_sync_at: null,
+              featured: false, transport_type: null, created_at: new Date('2024-01-01T00:00:00.000Z'), updated_at: new Date('2024-01-02T00:00:00.000Z'), last_sync_at: null,
               // New three-tier configuration fields
               template_args: null, template_env: null, template_headers: null, team_args_schema: null, team_env_schema: null,
               team_headers_schema: null, user_args_schema: null, user_env_schema: null, user_headers_schema: null, auto_install_new_default_team: undefined

@@ -18,6 +18,12 @@ vi.mock('../../../../../src/db', () => ({
   getDb: vi.fn()
 }));
 
+vi.mock('../../../../../src/events', () => ({
+  EVENT_NAMES: {
+    MCP_SERVER_DELETED: 'mcp_server_deleted'
+  }
+}));
+
 describe('MCP Servers - Delete Global', () => {
   let mockFastify: Partial<FastifyInstance>;
   let mockRequest: Partial<FastifyRequest>;
@@ -49,18 +55,27 @@ describe('MCP Servers - Delete Global', () => {
         }
         return mockFastify as FastifyInstance;
       }),
+      eventBus: {
+        emitWithContext: vi.fn()
+      }
     } as any;
 
     // Setup mock request
     mockRequest = {
       params: { id: 'test-server-id' },
-      user: { id: 'test-user-id', role: 'global_admin' },
+      user: { id: 'test-user-id', role: 'global_admin', email: 'test@example.com' },
       log: mockLog,
+      ip: '127.0.0.1',
+      id: 'request-id-123',
+      headers: {
+        'user-agent': 'test-agent'
+      }
     } as any;
 
     // Setup mock reply
     mockReply = {
       status: vi.fn().mockReturnThis(),
+      type: vi.fn().mockReturnThis(),
       send: vi.fn().mockReturnThis(),
     };
   });
@@ -114,10 +129,8 @@ describe('MCP Servers - Delete Global', () => {
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(404);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        success: false,
-        error: 'Server not found'
-      });
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      expect(mockReply.send).toHaveBeenCalledWith(expect.stringContaining('"error":"Server not found"'));
     });
 
     it('should return 404 when server is not global', async () => {
@@ -131,10 +144,8 @@ describe('MCP Servers - Delete Global', () => {
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(404);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        success: false,
-        error: 'Server not found or not a global server'
-      });
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      expect(mockReply.send).toHaveBeenCalledWith(expect.stringContaining('"error":"Server not found or not a global server"'));
     });
 
     it('should successfully delete global server', async () => {
@@ -142,6 +153,7 @@ describe('MCP Servers - Delete Global', () => {
       const mockServer = {
         id: 'test-server-id',
         name: 'Test Global Server',
+        description: 'Test server description',
         visibility: 'global'
       };
       
@@ -151,15 +163,8 @@ describe('MCP Servers - Delete Global', () => {
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(200);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        success: true,
-        message: 'Global MCP server deleted successfully',
-        data: {
-          id: mockServer.id,
-          name: mockServer.name,
-          deleted_at: expect.any(String)
-        }
-      });
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      expect(mockReply.send).toHaveBeenCalledWith(expect.stringContaining('"success":true'));
     });
 
     it('should handle deletion failure', async () => {
@@ -167,6 +172,7 @@ describe('MCP Servers - Delete Global', () => {
       const mockServer = {
         id: 'test-server-id',
         name: 'Test Global Server',
+        description: 'Test server description',
         visibility: 'global'
       };
       
@@ -176,10 +182,8 @@ describe('MCP Servers - Delete Global', () => {
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(404);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        success: false,
-        error: 'Server not found'
-      });
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      expect(mockReply.send).toHaveBeenCalledWith(expect.stringContaining('"error":"Server not found"'));
     });
 
     it('should handle service errors', async () => {
@@ -189,10 +193,8 @@ describe('MCP Servers - Delete Global', () => {
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(500);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        success: false,
-        error: 'Failed to delete global MCP server'
-      });
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      expect(mockReply.send).toHaveBeenCalledWith(expect.stringContaining('"error":"Failed to delete global MCP server"'));
     });
 
     it('should handle specific error messages', async () => {
@@ -202,10 +204,8 @@ describe('MCP Servers - Delete Global', () => {
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(404);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        success: false,
-        error: 'Server not found'
-      });
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      expect(mockReply.send).toHaveBeenCalledWith(expect.stringContaining('"error":"Server not found"'));
     });
 
     it('should handle insufficient permissions error', async () => {
@@ -215,10 +215,8 @@ describe('MCP Servers - Delete Global', () => {
       await handler(mockRequest, mockReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(403);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        success: false,
-        error: 'Global admin permissions required'
-      });
+      expect(mockReply.type).toHaveBeenCalledWith('application/json');
+      expect(mockReply.send).toHaveBeenCalledWith(expect.stringContaining('"error":"Global admin permissions required"'));
     });
   });
 
@@ -264,16 +262,15 @@ describe('MCP Servers - Delete Global', () => {
 
       const malformedReply = {
         status: vi.fn().mockReturnThis(),
+        type: vi.fn().mockReturnThis(),
         send: vi.fn()
       };
 
       await handler(mockRequest, malformedReply);
 
       expect(malformedReply.status).toHaveBeenCalledWith(404);
-      expect(malformedReply.send).toHaveBeenCalledWith({
-        success: false,
-        error: 'Server not found'
-      });
+      expect(malformedReply.type).toHaveBeenCalledWith('application/json');
+      expect(malformedReply.send).toHaveBeenCalledWith(expect.stringContaining('"error":"Server not found"'));
     });
   });
 
@@ -296,6 +293,7 @@ describe('MCP Servers - Delete Global', () => {
       const mockServer = {
         id: 'test-server-id',
         name: 'Test Global Server',
+        description: 'Test server description',
         visibility: 'global'
       };
       
@@ -305,7 +303,8 @@ describe('MCP Servers - Delete Global', () => {
       await handler(mockRequest, mockReply);
 
       const sendCall = (mockReply.send as any).mock.calls[0];
-      const response = sendCall[0];
+      const responseString = sendCall[0];
+      const response = JSON.parse(responseString);
 
       expect(response).toHaveProperty('success');
       expect(response).toHaveProperty('message');
@@ -325,7 +324,8 @@ describe('MCP Servers - Delete Global', () => {
       await handler(mockRequest, mockReply);
 
       const sendCall = (mockReply.send as any).mock.calls[0];
-      const response = sendCall[0];
+      const responseString = sendCall[0];
+      const response = JSON.parse(responseString);
 
       expect(response).toHaveProperty('success');
       expect(response).toHaveProperty('error');
@@ -339,6 +339,7 @@ describe('MCP Servers - Delete Global', () => {
       const mockServer = {
         id: 'test-server-id',
         name: 'Test Global Server',
+        description: 'Test server description',
         visibility: 'global'
       };
       

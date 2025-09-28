@@ -67,6 +67,9 @@ describe('MCP Servers - Create Global', () => {
         }
         return mockFastify as FastifyInstance;
       }),
+      eventBus: {
+        emitWithContext: vi.fn()
+      }
     } as any;
 
     // Setup mock request

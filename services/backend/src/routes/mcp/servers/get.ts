@@ -1,97 +1,51 @@
 import { type FastifyInstance } from 'fastify';
-import { z } from 'zod';
-import { createSchema } from 'zod-openapi';
 import { McpCatalogService } from '../../../services/mcpCatalogService';
 import { TeamService } from '../../../services/teamService';
-import { getUserRole } from '../../../middleware/roleMiddleware';
+import { getUserRole, requireAuthentication } from '../../../middleware/roleMiddleware';
 import { getDb } from '../../../db';
-
-// Path parameters schema
-const getServerParamsSchema = z.object({
-  id: z.string().min(1, 'Server ID is required')
-});
-
-// Response schema for single server
-const getServerResponseSchema = z.object({
-  success: z.boolean(),
-  data: z.object({
-    id: z.string(),
-    name: z.string(),
-    slug: z.string(),
-    description: z.string(),
-    long_description: z.string().nullable(),
-    github_url: z.string().nullable(),
-    git_branch: z.string().nullable(),
-    homepage_url: z.string().nullable(),
-    language: z.string(),
-    runtime: z.string(),
-    runtime_min_version: z.string().nullable(),
-    installation_methods: z.array(z.any()),
-    tools: z.array(z.any()),
-    resources: z.array(z.any()).nullable(),
-    prompts: z.array(z.any()).nullable(),
-    visibility: z.enum(['global', 'team']),
-    owner_team_id: z.string().nullable(),
-    created_by: z.string(),
-    author_name: z.string().nullable(),
-    author_contact: z.string().nullable(),
-    organization: z.string().nullable(),
-    license: z.string().nullable(),
-    transport_type: z.enum(['stdio', 'http', 'sse']),
-    template_args: z.array(z.any()).nullable(),
-    template_env: z.array(z.any()).nullable(),
-    template_headers: z.record(z.string(), z.any()).nullable(),
-    team_args_schema: z.array(z.any()).nullable(),
-    team_env_schema: z.array(z.any()).nullable(),
-    team_headers_schema: z.array(z.any()).nullable(),
-    user_args_schema: z.array(z.any()).nullable(),
-    user_env_schema: z.array(z.any()).nullable(),
-    user_headers_schema: z.array(z.any()).nullable(),
-    dependencies: z.record(z.string(), z.any()).nullable(),
-    category_id: z.string().nullable(),
-    tags: z.array(z.string()).nullable(),
-    status: z.enum(['active', 'deprecated', 'maintenance']),
-    featured: z.boolean(),
-    auto_install_new_default_team: z.boolean(),
-    created_at: z.string(),
-    updated_at: z.string(),
-    last_sync_at: z.string().nullable()
-  })
-});
-
-// Error response schema
-const errorResponseSchema = z.object({
-  success: z.boolean().default(false),
-  error: z.string(),
-  details: z.any().optional()
-});
+import {
+  SERVER_ID_PARAM_SCHEMA,
+  GET_SERVER_SUCCESS_RESPONSE_SCHEMA,
+  ERROR_RESPONSE_SCHEMA,
+  type ServerIdParams,
+  type GetServerSuccessResponse,
+  type ErrorResponse,
+  formatServerResponse
+} from './schemas';
 
 export default async function getServer(server: FastifyInstance) {
   server.get('/mcp/servers/:id', {
+    preValidation: requireAuthentication(),
     schema: {
       tags: ['MCP Servers'],
       summary: 'Get MCP server by ID',
       description: 'Retrieve a specific MCP server by its ID. Access is controlled based on user role and team membership - users can access global servers and their team servers, while global admins can access all servers.',
       security: [{ cookieAuth: [] }],
-      params: createSchema(getServerParamsSchema),
+      
+      // Fastify validation schema
+      params: SERVER_ID_PARAM_SCHEMA,
+      
       response: {
-        200: createSchema(getServerResponseSchema),
-        401: createSchema(errorResponseSchema.describe('Unauthorized - Authentication required')),
-        404: createSchema(errorResponseSchema.describe('Not Found - Server not found or access denied')),
-        500: createSchema(errorResponseSchema.describe('Internal Server Error'))
-      }
-    },
-    preValidation: async (request, reply) => {
-      // Require authentication for all MCP server access
-      if (!request.user) {
-        return reply.status(401).send({
-          success: false,
-          error: 'Authentication required'
-        });
+        200: {
+          ...GET_SERVER_SUCCESS_RESPONSE_SCHEMA,
+          description: 'Server retrieved successfully'
+        },
+        401: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Unauthorized - Authentication required'
+        },
+        404: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Not Found - Server not found or access denied'
+        },
+        500: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Internal Server Error'
+        }
       }
     }
   }, async (request, reply) => {
-    const { id: serverId } = request.params as z.infer<typeof getServerParamsSchema>;
+    const { id: serverId } = request.params as ServerIdParams;
     
     request.log.info({
       operation: 'get_mcp_server',
@@ -134,10 +88,12 @@ export default async function getServer(server: FastifyInstance) {
           userRole
         }, 'MCP server not found');
 
-        return reply.status(404).send({
+        const errorResponse: ErrorResponse = {
           success: false,
           error: 'Server not found'
-        });
+        };
+        const jsonString = JSON.stringify(errorResponse);
+        return reply.status(404).type('application/json').send(jsonString);
       }
 
       // Check access permissions
@@ -166,10 +122,12 @@ export default async function getServer(server: FastifyInstance) {
         }, 'Access denied to MCP server');
 
         // Return 404 instead of 403 to avoid information disclosure
-        return reply.status(404).send({
+        const errorResponse: ErrorResponse = {
           success: false,
           error: 'Server not found'
-        });
+        };
+        const jsonString = JSON.stringify(errorResponse);
+        return reply.status(404).type('application/json').send(jsonString);
       }
 
       request.log.info({
@@ -181,20 +139,18 @@ export default async function getServer(server: FastifyInstance) {
         teamCount: teamIds.length
       }, 'MCP server access granted');
 
-      // Format dates for response - JSON fields are already parsed by the service
-      const responseServer = {
-        ...server,
-        created_at: server.created_at.toISOString(),
-        updated_at: server.updated_at.toISOString(),
-        last_sync_at: server.last_sync_at?.toISOString() || null
-      };
+      // Format the server response using the shared utility function
+      const responseServer = formatServerResponse(server);
 
-      return reply.status(200).send({
+      const response: GetServerSuccessResponse = {
         success: true,
         data: responseServer
-      });
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (error: any) {
+      };
+
+      // Manual JSON serialization to ensure consistent JSON output
+      const jsonString = JSON.stringify(response);
+      return reply.status(200).type('application/json').send(jsonString);
+    } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
       request.log.error({
         operation: 'get_mcp_server',
         userId: request.user?.id,
@@ -202,10 +158,12 @@ export default async function getServer(server: FastifyInstance) {
         error
       }, 'Failed to get MCP server');
 
-      return reply.status(500).send({
+      const errorResponse: ErrorResponse = {
         success: false,
         error: 'Failed to get MCP server'
-      });
+      };
+      const jsonString = JSON.stringify(errorResponse);
+      return reply.status(500).type('application/json').send(jsonString);
     }
   });
 }

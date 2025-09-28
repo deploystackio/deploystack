@@ -1,5 +1,71 @@
 # Changelog
 
+## 0.34.0 (2025-09-23)
+
+* chore(all): bump @types/node from 20.19.13 to 24.4.0 ([da2047d](https://github.com/deploystackio/deploystack/commit/da2047d))
+* chore(all): bump eslint from 9.34.0 to 9.35.0 ([ee720b5](https://github.com/deploystackio/deploystack/commit/ee720b5))
+* chore(all): bump pino from 9.9.0 to 9.9.5 ([7d69829](https://github.com/deploystackio/deploystack/commit/7d69829))
+* chore(all): bump vite from 7.1.4 to 7.1.5 ([95574fc](https://github.com/deploystackio/deploystack/commit/95574fc))
+* chore(all): bump vite from 7.1.6 to 7.1.7 ([f662458](https://github.com/deploystackio/deploystack/commit/f662458))
+* chore(all): ci/cd updates ([b32b782](https://github.com/deploystackio/deploystack/commit/b32b782))
+* chore(backend): release v0.34.0 ([a7d6771](https://github.com/deploystackio/deploystack/commit/a7d6771))
+* feat: Implement satellite registration token management system ([1928400](https://github.com/deploystackio/deploystack/commit/1928400))
+* feat(all): added satellite pairing system ([59e63bc](https://github.com/deploystackio/deploystack/commit/59e63bc))
+* refactor(backend): improve token cleanup service logging and initialization ([73de288](https://github.com/deploystackio/deploystack/commit/73de288))
+* refactor(backend): simplify deleteInstallation logging and remove checks ([cfa74ab](https://github.com/deploystackio/deploystack/commit/cfa74ab))
+* refactor(frontend): remove MCP catalog contribution banner component ([4e7c699](https://github.com/deploystackio/deploystack/commit/4e7c699))
+* fix(backend): handle property name differences in delete operation ([1444a10](https://github.com/deploystackio/deploystack/commit/1444a10))
+
+
+
+## <small>v0.33.1 (2025-09-15)</small>
+
+* chore(all): bump @eslint/js from 9.34.0 to 9.35.0 ([c7d6995](https://github.com/deploystackio/deploystack/commit/c7d6995))
+* chore(all): bump @fastify/http-proxy from 10.0.2 to 11.3.0 ([a0664e2](https://github.com/deploystackio/deploystack/commit/a0664e2))
+* chore(all): bump @libsql/client from 0.15.14 to 0.15.15 ([f950974](https://github.com/deploystackio/deploystack/commit/f950974))
+* chore(all): bump nanoid from 3.3.11 to 5.1.5 ([e07ef11](https://github.com/deploystackio/deploystack/commit/e07ef11))
+* chore(all): bump tailwindcss from 4.1.12 to 4.1.13 ([308fa44](https://github.com/deploystackio/deploystack/commit/308fa44))
+* chore(all): bump vue from 3.5.20 to 3.5.21 ([43dfe73](https://github.com/deploystackio/deploystack/commit/43dfe73))
+* chore(all): bump vue-tsc from 3.0.6 to 3.0.7 ([7d6c7c7](https://github.com/deploystackio/deploystack/commit/7d6c7c7))
+* chore(all): bump zod-openapi from 5.4.0 to 5.4.1 ([d0a2d5f](https://github.com/deploystackio/deploystack/commit/d0a2d5f))
+* chore(backend): release v0.33.1 ([c5db135](https://github.com/deploystackio/deploystack/commit/c5db135))
+* chore(backend): release v0.33.1 ([8ad733e](https://github.com/deploystackio/deploystack/commit/8ad733e))
+* chore(deps): bump actions/github-script from 7 to 8 ([1226ad1](https://github.com/deploystackio/deploystack/commit/1226ad1))
+* chore(deps): bump actions/setup-node from 4 to 5 ([2c52ca0](https://github.com/deploystackio/deploystack/commit/2c52ca0))
+* chore(frontend): bump lucide-vue-next in /services/frontend ([e6010f3](https://github.com/deploystackio/deploystack/commit/e6010f3))
+* chore(satellite): bump @fastify/http-proxy in /services/satellite ([3ab8436](https://github.com/deploystackio/deploystack/commit/3ab8436))
+* chore(satellite): bump @types/node in /services/satellite ([e50b404](https://github.com/deploystackio/deploystack/commit/e50b404))
+* chore(satellite): bump dotenv in /services/satellite ([5cb8a83](https://github.com/deploystackio/deploystack/commit/5cb8a83))
+
+## 0.34.0 (2025-09-23)
+
+* feat: Implement satellite registration token management system ([1928400](https://github.com/deploystackio/deploystack/commit/1928400))
+* feat(all): added satellite pairing system ([59e63bc](https://github.com/deploystackio/deploystack/commit/59e63bc))
+* refactor(backend): improve token cleanup service logging and initialization ([73de288](https://github.com/deploystackio/deploystack/commit/73de288))
+* refactor(backend): simplify deleteInstallation logging and remove checks ([cfa74ab](https://github.com/deploystackio/deploystack/commit/cfa74ab))
+* refactor(frontend): remove MCP catalog contribution banner component ([4e7c699](https://github.com/deploystackio/deploystack/commit/4e7c699))
+* chore(all): bump @eslint/js from 9.34.0 to 9.35.0 ([c7d6995](https://github.com/deploystackio/deploystack/commit/c7d6995))
+* chore(all): bump @fastify/http-proxy from 10.0.2 to 11.3.0 ([a0664e2](https://github.com/deploystackio/deploystack/commit/a0664e2))
+* chore(all): bump @libsql/client from 0.15.14 to 0.15.15 ([f950974](https://github.com/deploystackio/deploystack/commit/f950974))
+* chore(all): bump @types/node from 20.19.13 to 24.4.0 ([da2047d](https://github.com/deploystackio/deploystack/commit/da2047d))
+* chore(all): bump eslint from 9.34.0 to 9.35.0 ([ee720b5](https://github.com/deploystackio/deploystack/commit/ee720b5))
+* chore(all): bump nanoid from 3.3.11 to 5.1.5 ([e07ef11](https://github.com/deploystackio/deploystack/commit/e07ef11))
+* chore(all): bump pino from 9.9.0 to 9.9.5 ([7d69829](https://github.com/deploystackio/deploystack/commit/7d69829))
+* chore(all): bump tailwindcss from 4.1.12 to 4.1.13 ([308fa44](https://github.com/deploystackio/deploystack/commit/308fa44))
+* chore(all): bump vite from 7.1.4 to 7.1.5 ([95574fc](https://github.com/deploystackio/deploystack/commit/95574fc))
+* chore(all): bump vite from 7.1.6 to 7.1.7 ([f662458](https://github.com/deploystackio/deploystack/commit/f662458))
+* chore(all): bump vue from 3.5.20 to 3.5.21 ([43dfe73](https://github.com/deploystackio/deploystack/commit/43dfe73))
+* chore(all): bump vue-tsc from 3.0.6 to 3.0.7 ([7d6c7c7](https://github.com/deploystackio/deploystack/commit/7d6c7c7))
+* chore(all): bump zod-openapi from 5.4.0 to 5.4.1 ([d0a2d5f](https://github.com/deploystackio/deploystack/commit/d0a2d5f))
+* chore(all): ci/cd updates ([b32b782](https://github.com/deploystackio/deploystack/commit/b32b782))
+* chore(deps): bump actions/github-script from 7 to 8 ([1226ad1](https://github.com/deploystackio/deploystack/commit/1226ad1))
+* chore(deps): bump actions/setup-node from 4 to 5 ([2c52ca0](https://github.com/deploystackio/deploystack/commit/2c52ca0))
+* chore(frontend): bump lucide-vue-next in /services/frontend ([e6010f3](https://github.com/deploystackio/deploystack/commit/e6010f3))
+* chore(satellite): bump @fastify/http-proxy in /services/satellite ([3ab8436](https://github.com/deploystackio/deploystack/commit/3ab8436))
+* chore(satellite): bump @types/node in /services/satellite ([e50b404](https://github.com/deploystackio/deploystack/commit/e50b404))
+* chore(satellite): bump dotenv in /services/satellite ([5cb8a83](https://github.com/deploystackio/deploystack/commit/5cb8a83))
+* fix(backend): handle property name differences in delete operation ([1444a10](https://github.com/deploystackio/deploystack/commit/1444a10))
+
 ## <small>0.33.1 (2025-09-15)</small>
 
 * chore(backend): release v0.33.1 ([8ad733e](https://github.com/deploystackio/deploystack/commit/8ad733e))
