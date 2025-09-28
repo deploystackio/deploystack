@@ -7,6 +7,7 @@ export interface McpServer {
   description: string
   long_description?: string
   github_url?: string
+  github_account_id?: string
   git_branch?: string
   homepage_url?: string
   language: string
@@ -172,6 +173,7 @@ export interface CreateMcpServerRequest {
   description: string
   long_description?: string
   github_url?: string
+  github_account_id?: string
   git_branch?: string
   homepage_url?: string
   language?: string
@@ -211,6 +213,7 @@ export interface UpdateMcpServerRequest {
   description?: string
   long_description?: string
   github_url?: string
+  github_account_id?: string
   git_branch?: string
   homepage_url?: string
   language?: string

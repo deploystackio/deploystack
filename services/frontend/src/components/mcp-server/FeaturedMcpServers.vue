@@ -99,6 +99,11 @@ const getServerDescription = (server: McpServer) => {
   return server.description || 'No description available'
 }
 
+const getGitHubAvatarUrl = (server: McpServer) => {
+  if (!server.github_account_id) return null
+  return `https://avatars.githubusercontent.com/u/${server.github_account_id}?v=4&s=64`
+}
+
 // Lifecycle
 onMounted(() => {
   fetchFeaturedServers()
@@ -151,10 +156,17 @@ onMounted(() => {
           <dl class="flex flex-wrap">
             <div class="flex-auto pt-6 pl-6">
               <dt 
-                class="text-sm/6 font-semibold text-gray-900 cursor-pointer hover:text-teal-700 transition-colors"
+                class="text-sm/6 font-semibold text-gray-900 cursor-pointer hover:text-teal-700 transition-colors flex items-center gap-2"
                 @click="handleServerClick(server)"
                 :title="`View ${server.name} details`"
               >
+                <img 
+                  v-if="getGitHubAvatarUrl(server)"
+                  :src="getGitHubAvatarUrl(server)!"
+                  :alt="`${server.name} GitHub avatar`"
+                  class="h-8 w-8 rounded-md flex-shrink-0"
+                  @error="($event.target as HTMLImageElement).style.display = 'none'"
+                />
                 {{ server.name }}
               </dt>
             </div>

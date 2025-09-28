@@ -194,6 +194,11 @@ const installServer = () => {
     }
   })
 }
+
+const getGitHubAvatarUrl = (server: McpServer) => {
+  if (!server.github_account_id) return null
+  return `https://avatars.githubusercontent.com/u/${server.github_account_id}?v=4&s=128`
+}
 </script>
 
 <template>
@@ -231,9 +236,18 @@ const installServer = () => {
 
       <!-- Server Details -->
       <ContentWrapper v-if="server">
-        <div class="px-4 sm:px-0">
-          <h3 class="text-base/7 font-semibold text-gray-900">{{ t('mcpInstallations.view.serverInformation') }}</h3>
-          <p class="mt-1 max-w-2xl text-sm/6 text-gray-500">{{ t('mcpInstallations.view.serverDetails') }}</p>
+        <div class="px-4 sm:px-0 flex items-center gap-4">
+          <img 
+            v-if="getGitHubAvatarUrl(server)"
+            :src="getGitHubAvatarUrl(server)!"
+            :alt="`${server.name} GitHub avatar`"
+            class="h-12 w-12 rounded-lg flex-shrink-0"
+            @error="($event.target as HTMLImageElement).style.display = 'none'"
+          />
+          <div>
+            <h3 class="text-base/7 font-semibold text-gray-900">{{ t('mcpInstallations.view.serverInformation') }}</h3>
+            <p class="mt-1 max-w-2xl text-sm/6 text-gray-500">{{ t('mcpInstallations.view.serverDetails') }}</p>
+          </div>
         </div>
         <div class="mt-6 border-t border-gray-100">
           <dl class="divide-y divide-gray-100">
