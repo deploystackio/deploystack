@@ -204,7 +204,6 @@ const compatibleFormData = computed((): McpServerFormData => ({
   technical: {
     language: '',
     runtime: 'node',
-    runtime_min_version: '18.0.0',
     installation_methods: [],
     dependencies: '',
     transport_type: 'auto'
@@ -380,7 +379,6 @@ const submitForm = async () => {
     const claudeConfig = formData.value.claudeConfig.claude_desktop_config as any;
     let extractedInstallationMethods: any[] = [];
     let extractedTransportType = 'stdio';
-    let extractedTools: any[] = [];
 
     if (claudeConfig && claudeConfig.mcpServers) {
       const serverKey = Object.keys(claudeConfig.mcpServers)[0];
@@ -420,11 +418,6 @@ const submitForm = async () => {
         extractedTransportType = 'stdio';
       }
 
-        // Extract tools from configuration schema or create default
-        extractedTools = [{
-          name: formData.value.basic.name || 'MCP Tool',
-          description: formData.value.basic.description || 'MCP Server Tool'
-        }];
       }
     }
 
@@ -461,7 +454,6 @@ const submitForm = async () => {
       runtime: extractedTransportType === 'http' || extractedTransportType === 'sse' ? 'http' : 'node',
       transport_type: extractedTransportType,
       installation_methods: extractedInstallationMethods,
-      tools: extractedTools,
     };
 
     await emit('submit', finalPayload)

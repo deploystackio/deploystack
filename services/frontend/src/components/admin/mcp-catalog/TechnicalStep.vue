@@ -42,7 +42,6 @@ const isEditMode = computed(() => props.mode === 'edit')
 const localData = ref<TechnicalFormData>({
   language: '',
   runtime: '',
-  runtime_min_version: '',
   installation_methods: [],
   dependencies: '',
   transport_type: isEditMode.value ? 'stdio' : 'auto'

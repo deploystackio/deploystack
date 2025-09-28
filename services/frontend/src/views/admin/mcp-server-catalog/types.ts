@@ -11,9 +11,7 @@ export interface McpServer {
   homepage_url?: string
   language: string
   runtime: string
-  runtime_min_version?: string
   installation_methods: InstallationMethod[]
-  tools: McpTool[]
   resources?: McpResource[]
   prompts?: McpPrompt[]
   visibility: 'global' | 'team'
@@ -178,9 +176,7 @@ export interface CreateMcpServerRequest {
   homepage_url?: string
   language?: string
   runtime?: string
-  runtime_min_version?: string
   installation_methods?: InstallationMethod[]
-  tools?: McpTool[]
   resources?: McpResource[]
   prompts?: McpPrompt[]
   visibility: 'global' | 'team'
@@ -219,9 +215,7 @@ export interface UpdateMcpServerRequest {
   homepage_url?: string
   language?: string
   runtime?: string
-  runtime_min_version?: string
   installation_methods?: InstallationMethod[]
-  tools?: McpTool[]
   resources?: McpResource[]
   prompts?: McpPrompt[]
   author_name?: string
@@ -283,7 +277,6 @@ export interface RepositoryFormData {
 export interface TechnicalFormData {
   language: string
   runtime: string
-  runtime_min_version: string
   installation_methods: InstallationMethod[]
   dependencies: string
   transport_type: string

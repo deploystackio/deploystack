@@ -300,9 +300,6 @@ const installServer = () => {
                     </Badge>
                   </div>
                   <div><span class="font-medium">{{ t('mcpInstallations.view.values.runtime') }}</span> {{ server.runtime }}</div>
-                  <div v-if="server.runtime_min_version">
-                    <span class="font-medium">{{ t('mcpInstallations.view.values.minVersion') }}</span> {{ server.runtime_min_version }}
-                  </div>
                   <div><span class="font-medium">{{ t('mcpInstallations.view.values.license') }}</span> {{ server.license || t('mcpInstallations.view.values.notProvided') }}</div>
                 </div>
               </dd>

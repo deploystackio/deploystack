@@ -392,9 +392,6 @@ const goBack = () => {
                     </Badge>
                   </div>
                   <div><span class="font-medium">{{ t('mcpCatalog.edit.values.runtime') }}</span> {{ server.runtime }}</div>
-                  <div v-if="server.runtime_min_version">
-                    <span class="font-medium">{{ t('mcpCatalog.edit.values.minVersion') }}</span> {{ server.runtime_min_version }}
-                  </div>
                   <div><span class="font-medium">{{ t('mcpCatalog.edit.values.license') }}</span> {{ server.license || t('mcpCatalog.edit.values.notProvided') }}</div>
                 </div>
               </dd>

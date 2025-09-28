@@ -211,7 +211,6 @@ const convertServerToFormData = (server: McpServer): Partial<McpServerFormData> 
     technical: {
       language: server.language || '',
       runtime: server.runtime || '',
-      runtime_min_version: server.runtime_min_version || '',
       installation_methods: convertedInstallationMethods,
       dependencies: server.dependencies ? JSON.stringify(server.dependencies, null, 2) : '',
       transport_type: server.transport_type || 'auto'
@@ -232,8 +231,7 @@ const handleSubmit = async (formData: McpServerFormData) => {
   const server = serverData.value
   if (!server) return
 
-  // Parse tools, resources, and prompts from server data
-  const parsedTools = parseJsonField(server.tools, [])
+  // Parse resources and prompts from server data
   const parsedResources = parseJsonField(server.resources, [])
   const parsedPrompts = parseJsonField(server.prompts, [])
 
@@ -305,7 +303,6 @@ const handleSubmit = async (formData: McpServerFormData) => {
     // Technical
     language: formData.technical.language,
     runtime: formData.technical.runtime,
-    runtime_min_version: formData.technical.runtime_min_version || undefined,
     installation_methods: formData.technical.installation_methods,
     dependencies: formData.technical.dependencies ? JSON.parse(formData.technical.dependencies) : undefined,
 
@@ -320,8 +317,7 @@ const handleSubmit = async (formData: McpServerFormData) => {
     user_env_schema: finalConfigurationSchema.user_env_schema,
     user_headers_schema: finalConfigurationSchema.user_headers_schema,
 
-    // Tools, resources, and prompts (from server data)
-    tools: parsedTools,
+    // Resources and prompts (from server data)
     resources: parsedResources.length > 0 ? parsedResources : undefined,
     prompts: parsedPrompts.length > 0 ? parsedPrompts : undefined,
     transport_type: formData.technical.transport_type !== 'auto' ? formData.technical.transport_type as 'stdio' | 'http' | 'sse' : undefined

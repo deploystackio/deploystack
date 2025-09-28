@@ -262,7 +262,6 @@ const formData = ref<McpServerFormData>({
   technical: {
     language: '',
     runtime: '',
-    runtime_min_version: '',
     installation_methods: [],
     dependencies: '',
     transport_type: 'auto'
@@ -452,7 +451,6 @@ const autoPopulateFromGitHub = (githubData: any) => {
     technical: {
       language: githubData.language || '',
       runtime: 'node',
-      runtime_min_version: githubData.runtime_min_version || '18.0.0',
       installation_methods: githubData.installation_methods || [],
       dependencies: githubData.dependencies || '',
       transport_type: githubData.transport_type || 'auto'

@@ -249,12 +249,6 @@ const formatJson = (jsonString: string) => {
         </dd>
       </div>
 
-      <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
-        <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.review.fields.minimumVersion') }}</dt>
-        <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
-          {{ getTechnicalData().runtime_min_version || t('mcpCatalog.form.review.values.notSpecified') }}
-        </dd>
-      </div>
 
       <div v-if="claudeConfig || (getTechnicalData().installation_methods && getTechnicalData().installation_methods.length > 0)" class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
         <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.review.fields.claudeDesktopConfiguration') }}</dt>
