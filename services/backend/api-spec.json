@@ -13540,6 +13540,11 @@
                                 "nullable": true,
                                 "description": "Homepage URL"
                               },
+                              "github_account_id": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "GitHub Account ID"
+                              },
                               "language": {
                                 "type": "string",
                                 "description": "Programming language"
@@ -13906,6 +13911,11 @@
                           "type": "string",
                           "nullable": true,
                           "description": "Homepage URL"
+                        },
+                        "github_account_id": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "GitHub Account ID"
                         },
                         "language": {
                           "type": "string",
@@ -14353,6 +14363,11 @@
                                 "type": "string",
                                 "nullable": true,
                                 "description": "Homepage URL"
+                              },
+                              "github_account_id": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "GitHub Account ID"
                               },
                               "language": {
                                 "type": "string",
@@ -15215,6 +15230,10 @@
                     "format": "uri",
                     "description": "Homepage URL"
                   },
+                  "github_account_id": {
+                    "type": "string",
+                    "description": "GitHub Account ID (owner.id from GitHub API)"
+                  },
                   "resources": {
                     "type": "array",
                     "items": {
@@ -15370,6 +15389,11 @@
                           "type": "string",
                           "nullable": true,
                           "description": "Homepage URL"
+                        },
+                        "github_account_id": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "GitHub Account ID"
                         },
                         "language": {
                           "type": "string",
@@ -15783,6 +15807,10 @@
                     "format": "uri",
                     "description": "Homepage URL"
                   },
+                  "github_account_id": {
+                    "type": "string",
+                    "description": "GitHub Account ID (owner.id from GitHub API)"
+                  },
                   "language": {
                     "type": "string",
                     "minLength": 1,
@@ -15975,6 +16003,11 @@
                           "type": "string",
                           "nullable": true,
                           "description": "Homepage URL"
+                        },
+                        "github_account_id": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "GitHub Account ID"
                         },
                         "language": {
                           "type": "string",
@@ -16895,6 +16928,10 @@
                           "nullable": true
                         },
                         "latest_version": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "github_account_id": {
                           "type": "string",
                           "nullable": true
                         },

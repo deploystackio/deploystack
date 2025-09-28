@@ -9444,6 +9444,10 @@ paths:
                               type: string
                               nullable: true
                               description: Homepage URL
+                            github_account_id:
+                              type: string
+                              nullable: true
+                              description: GitHub Account ID
                             language:
                               type: string
                               description: Programming language
@@ -9720,6 +9724,10 @@ paths:
                         type: string
                         nullable: true
                         description: Homepage URL
+                      github_account_id:
+                        type: string
+                        nullable: true
+                        description: GitHub Account ID
                       language:
                         type: string
                         description: Programming language
@@ -10054,6 +10062,10 @@ paths:
                               type: string
                               nullable: true
                               description: Homepage URL
+                            github_account_id:
+                              type: string
+                              nullable: true
+                              description: GitHub Account ID
                             language:
                               type: string
                               description: Programming language
@@ -10704,6 +10716,9 @@ paths:
                   type: string
                   format: uri
                   description: Homepage URL
+                github_account_id:
+                  type: string
+                  description: GitHub Account ID (owner.id from GitHub API)
                 resources:
                   type: array
                   items:
@@ -10820,6 +10835,10 @@ paths:
                         type: string
                         nullable: true
                         description: Homepage URL
+                      github_account_id:
+                        type: string
+                        nullable: true
+                        description: GitHub Account ID
                       language:
                         type: string
                         description: Programming language
@@ -11127,6 +11146,9 @@ paths:
                   type: string
                   format: uri
                   description: Homepage URL
+                github_account_id:
+                  type: string
+                  description: GitHub Account ID (owner.id from GitHub API)
                 language:
                   type: string
                   minLength: 1
@@ -11270,6 +11292,10 @@ paths:
                         type: string
                         nullable: true
                         description: Homepage URL
+                      github_account_id:
+                        type: string
+                        nullable: true
+                        description: GitHub Account ID
                       language:
                         type: string
                         description: Programming language
@@ -11912,6 +11938,9 @@ paths:
                         type: object
                         nullable: true
                       latest_version:
+                        type: string
+                        nullable: true
+                      github_account_id:
                         type: string
                         nullable: true
                       stars:
