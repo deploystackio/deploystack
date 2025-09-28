@@ -25,11 +25,9 @@ interface UpdateGlobalServerRequest {
   homepage_url?: string;
   language?: string;
   runtime?: string;
-  runtime_min_version?: string;
   transport_type?: 'stdio' | 'http' | 'sse';
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   installation_methods?: any[];
-  tools?: Array<{ name: string; description: string; }>;
   resources?: Array<{ type: string; description: string; }>;
   prompts?: Array<{ name: string; description: string; }>;
   author_name?: string;

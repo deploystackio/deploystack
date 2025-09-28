@@ -259,7 +259,6 @@ describe('GET /mcp/github/repo-info', () => {
       expect(data).toHaveProperty('license');
       expect(data).toHaveProperty('language');
       expect(data).toHaveProperty('runtime');
-      expect(data).toHaveProperty('runtime_min_version');
       expect(data).toHaveProperty('tags');
       expect(data).toHaveProperty('installation_methods');
       expect(data).toHaveProperty('dependencies');

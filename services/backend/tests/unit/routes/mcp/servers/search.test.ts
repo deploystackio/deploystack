@@ -166,7 +166,6 @@ describe('MCP Servers - Search Servers', () => {
           git_branch: null,
           homepage_url: null,
           installation_methods: '[]',
-          tools: '[]',
           resources: null,
           prompts: null,
           dependencies: null,
@@ -243,7 +242,6 @@ describe('MCP Servers - Search Servers', () => {
       expect(server.id).toBe('server-1');
       expect(server.name).toBe('Test Server');
       expect(server.installation_methods).toEqual([]);
-      expect(server.tools).toEqual([]);
     });
 
     it('should handle search with filters', async () => {
@@ -313,7 +311,6 @@ describe('MCP Servers - Search Servers', () => {
         git_branch: null,
         homepage_url: null,
         installation_methods: '[]',
-        tools: '[]',
         resources: null,
         prompts: null,
         dependencies: null,
@@ -491,7 +488,6 @@ describe('MCP Servers - Search Servers', () => {
         git_branch: null,
         homepage_url: null,
         installation_methods: '["npm", "yarn"]',
-        tools: '[{"name": "test-tool"}]',
         resources: '[{"name": "test-resource"}]',
         prompts: '[{"name": "test-prompt"}]',
         dependencies: '{"dep1": "^1.0.0"}',
@@ -542,7 +538,6 @@ describe('MCP Servers - Search Servers', () => {
       
       const server = response.data.servers[0];
       expect(server.installation_methods).toEqual(['npm', 'yarn']);
-      expect(server.tools).toEqual([{ name: 'test-tool' }]);
       expect(server.resources).toEqual([{ name: 'test-resource' }]);
       expect(server.prompts).toEqual([{ name: 'test-prompt' }]);
       expect(server.dependencies).toEqual({ dep1: '^1.0.0' });
@@ -564,7 +559,6 @@ describe('MCP Servers - Search Servers', () => {
         git_branch: null,
         homepage_url: null,
         installation_methods: '[]',
-        tools: '[]',
         resources: null,
         prompts: null,
         dependencies: null,
@@ -615,7 +609,6 @@ describe('MCP Servers - Search Servers', () => {
       
       const server = response.data.servers[0];
       expect(server.installation_methods).toEqual([]);
-      expect(server.tools).toEqual([]);
       expect(server.resources).toBeNull();
       expect(server.prompts).toBeNull();
       expect(server.dependencies).toBeNull();
@@ -716,7 +709,6 @@ describe('MCP Servers - Search Servers', () => {
         git_branch: null,
         homepage_url: null,
         installation_methods: '[]',
-        tools: '[]',
         resources: null,
         prompts: null,
         default_config: null,

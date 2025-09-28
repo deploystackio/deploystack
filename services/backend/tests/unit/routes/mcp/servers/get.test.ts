@@ -206,7 +206,6 @@ describe('MCP Servers - Get Server', () => {
         slug: 'test-server',
         description: 'A test server',
         installation_methods: JSON.stringify([]), // Database format - JSON string
-        tools: JSON.stringify([]), // Database format - JSON string
         resources: null,
         prompts: null,
         dependencies: null,
@@ -256,9 +255,7 @@ describe('MCP Servers - Get Server', () => {
             homepage_url: null,
             language: 'javascript',
             runtime: 'node',
-            runtime_min_version: null,
             installation_methods: [],
-            tools: [],
             resources: null,
             prompts: null,
             visibility: 'global',
@@ -326,7 +323,6 @@ describe('MCP Servers - Get Server', () => {
         slug: 'team-server',
         description: 'A team server',
         installation_methods: JSON.stringify([]), // Database format - JSON string
-        tools: JSON.stringify([]), // Database format - JSON string
         resources: null,
         prompts: null,
         dependencies: null,
@@ -375,9 +371,7 @@ describe('MCP Servers - Get Server', () => {
             homepage_url: null,
             language: 'javascript',
             runtime: 'node',
-            runtime_min_version: null,
             installation_methods: [],
-            tools: [],
             resources: null,
             prompts: null,
             visibility: 'team',
@@ -418,7 +412,6 @@ describe('MCP Servers - Get Server', () => {
         slug: 'global-server',
         description: 'A global server',
         installation_methods: JSON.stringify([]), // Database format - JSON string
-        tools: JSON.stringify([]), // Database format - JSON string
         resources: null,
         prompts: null,
         dependencies: null,
@@ -467,9 +460,7 @@ describe('MCP Servers - Get Server', () => {
             homepage_url: null,
             language: 'javascript',
             runtime: 'node',
-            runtime_min_version: null,
             installation_methods: [],
-            tools: [],
             resources: null,
             prompts: null,
             visibility: 'global',
@@ -523,7 +514,6 @@ describe('MCP Servers - Get Server', () => {
         slug: 'team-server',
         description: 'A team server',
         installation_methods: JSON.stringify([]), // Database format - JSON string
-        tools: JSON.stringify([]), // Database format - JSON string
         resources: null,
         prompts: null,
         dependencies: null,
@@ -572,9 +562,7 @@ describe('MCP Servers - Get Server', () => {
             homepage_url: null,
             language: 'javascript',
             runtime: 'node',
-            runtime_min_version: null,
             installation_methods: [],
-            tools: [],
             resources: null,
             prompts: null,
             visibility: 'team',
@@ -628,7 +616,6 @@ describe('MCP Servers - Get Server', () => {
         slug: 'team-server',
         description: 'A team server',
         installation_methods: JSON.stringify([]), // Database format - JSON string
-        tools: JSON.stringify([]), // Database format - JSON string
         resources: null,
         prompts: null,
         dependencies: null,
@@ -680,7 +667,6 @@ describe('MCP Servers - Get Server', () => {
         slug: 'global-server',
         description: 'A global server',
         installation_methods: JSON.stringify([]), // Database format - JSON string
-        tools: JSON.stringify([]), // Database format - JSON string
         resources: null,
         prompts: null,
         dependencies: null,
@@ -760,7 +746,7 @@ describe('MCP Servers - Get Server', () => {
         slug: 'test-server',
         description: 'A test server',
         installation_methods: JSON.stringify(['npm', 'yarn']), // Database format - JSON string
-        tools: JSON.stringify([{ name: 'test-tool' }]), // Database format - JSON string
+
         resources: JSON.stringify([{ name: 'test-resource' }]), // Database format - JSON string
         prompts: JSON.stringify([{ name: 'test-prompt' }]), // Database format - JSON string
 
@@ -798,7 +784,6 @@ describe('MCP Servers - Get Server', () => {
       const server = response.data;
 
       expect(server.installation_methods).toEqual(['npm', 'yarn']);
-      expect(server.tools).toEqual([{ name: 'test-tool' }]);
       expect(server.resources).toEqual([{ name: 'test-resource' }]);
       expect(server.prompts).toEqual([{ name: 'test-prompt' }]);
       expect(server.dependencies).toEqual({ dep1: '^1.0.0' });
@@ -815,7 +800,7 @@ describe('MCP Servers - Get Server', () => {
         slug: 'test-server',
         description: 'A test server',
         installation_methods: JSON.stringify([]), // Database format - JSON string
-        tools: JSON.stringify([]), // Database format - JSON string
+
         resources: null,
         prompts: null,
         dependencies: null,
@@ -852,7 +837,6 @@ describe('MCP Servers - Get Server', () => {
       const server = response.data;
 
       expect(server.installation_methods).toEqual([]);
-      expect(server.tools).toEqual([]);
       expect(server.resources).toBeNull();
       expect(server.prompts).toBeNull();
       expect(server.dependencies).toBeNull();
@@ -963,7 +947,6 @@ describe('MCP Servers - Get Server', () => {
           slug: 'test-server',
           description: 'A test server',
           installation_methods: JSON.stringify([]), // Database format - JSON string
-          tools: JSON.stringify([]), // Database format - JSON string
           resources: null,
           prompts: null,
           dependencies: null,
@@ -1062,7 +1045,6 @@ describe('MCP Servers - Get Server', () => {
         slug: 'team-server',
         description: 'A team server',
         installation_methods: JSON.stringify([]), // Database format - JSON string
-        tools: JSON.stringify([]), // Database format - JSON string
         resources: null,
         prompts: null,
 
@@ -1116,7 +1098,6 @@ describe('MCP Servers - Get Server', () => {
         slug: 'global-server',
         description: 'A global server',
         installation_methods: JSON.stringify([]), // Database format - JSON string
-        tools: JSON.stringify([]), // Database format - JSON string
         resources: null,
         prompts: null,
         dependencies: null,

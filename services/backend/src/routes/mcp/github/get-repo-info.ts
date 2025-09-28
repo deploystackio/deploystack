@@ -91,7 +91,6 @@ export default async function getRepoInfo(server: FastifyInstance) {
                 license: { type: 'string', nullable: true },
                 language: { type: 'string' },
                 runtime: { type: 'string' },
-                runtime_min_version: { type: 'string', nullable: true },
                 tags: { type: 'array', items: { type: 'string' } },
                 installation_methods: { type: 'array' },
                 dependencies: { type: 'object', nullable: true },
@@ -152,18 +151,6 @@ export default async function getRepoInfo(server: FastifyInstance) {
         request.log.debug({ error }, 'No releases found or accessible');
       }
       
-      // Determine runtime minimum version
-      let runtimeMinVersion = null;
-      if (packageInfo) {
-        if (repoInfo.language === 'TypeScript' || repoInfo.language === 'JavaScript') {
-          // Access engines from the raw package data (not typed in interface)
-          runtimeMinVersion = (packageInfo as any).engines?.node;
-        } else if (repoInfo.language === 'Python') {
-          // Access python_requires from the raw package data (not typed in interface)
-          runtimeMinVersion = (packageInfo as any).python_requires;
-        }
-      }
-      
       // Structure the response data
       const mcpServerData = {
         // Basic information
@@ -181,7 +168,6 @@ export default async function getRepoInfo(server: FastifyInstance) {
         // Technical details
         language: repoInfo.language || 'unknown',
         runtime: inferRuntime(repoInfo.language || ''),
-        runtime_min_version: runtimeMinVersion,
         
         // Metadata
         tags: repoInfo.topics || [],

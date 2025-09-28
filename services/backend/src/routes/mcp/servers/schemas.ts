@@ -54,7 +54,6 @@ const SERVER_FIELDS = {
   homepage_url: { type: 'string', format: 'uri', description: 'Homepage URL' },
   language: { type: 'string', minLength: 1, description: 'Programming language is required' },
   runtime: { type: 'string', minLength: 1, description: 'Runtime environment is required' },
-  runtime_min_version: { type: 'string', description: 'Minimum runtime version' },
   transport_type: { type: 'string', enum: ['stdio', 'http', 'sse'], description: 'MCP transport type' },
   installation_methods: { type: 'array', description: 'Installation methods' },
   author_name: { type: 'string', description: 'Author name' },
@@ -484,11 +483,6 @@ export const CREATE_GLOBAL_SERVER_REQUEST_SCHEMA = {
       type: 'array',
       description: 'Installation methods'
     },
-    tools: { 
-      type: 'array',
-      items: TOOL_SCHEMA,
-      description: 'Available tools'
-    },
     
     // Old format (backward compatibility) - optional
     claude_desktop_config: CLAUDE_DESKTOP_CONFIG_SCHEMA,
@@ -511,10 +505,6 @@ export const CREATE_GLOBAL_SERVER_REQUEST_SCHEMA = {
       type: 'string', 
       format: 'uri',
       description: 'Homepage URL'
-    },
-    runtime_min_version: { 
-      type: 'string',
-      description: 'Minimum runtime version'
     },
     resources: { 
       type: 'array',
@@ -642,18 +632,9 @@ export const SERVER_ENTITY_SCHEMA = {
       type: 'string',
       description: 'Runtime environment'
     },
-    runtime_min_version: { 
-      type: 'string', 
-      nullable: true,
-      description: 'Minimum runtime version'
-    },
     installation_methods: { 
       type: 'array',
       description: 'Installation methods'
-    },
-    tools: { 
-      type: 'array',
-      description: 'Available tools'
     },
     resources: { 
       type: 'array', 
@@ -789,7 +770,7 @@ export const SERVER_ENTITY_SCHEMA = {
       description: 'Last sync timestamp'
     }
   },
-  required: ['id', 'name', 'slug', 'description', 'language', 'runtime', 'installation_methods', 'tools', 'visibility', 'created_by', 'transport_type', 'template_args', 'template_env', 'template_headers', 'team_args_schema', 'team_env_schema', 'team_headers_schema', 'user_args_schema', 'status', 'featured', 'auto_install_new_default_team', 'created_at', 'updated_at']
+  required: ['id', 'name', 'slug', 'description', 'language', 'runtime', 'installation_methods', 'visibility', 'created_by', 'transport_type', 'template_args', 'template_env', 'template_headers', 'team_args_schema', 'team_env_schema', 'team_headers_schema', 'user_args_schema', 'status', 'featured', 'auto_install_new_default_team', 'created_at', 'updated_at']
 } as const;
 
 const PAGINATION_SCHEMA = {
@@ -918,14 +899,8 @@ export const UPDATE_GLOBAL_SERVER_REQUEST_SCHEMA = {
     homepage_url: SERVER_FIELDS.homepage_url,
     language: SERVER_FIELDS.language,
     runtime: SERVER_FIELDS.runtime,
-    runtime_min_version: SERVER_FIELDS.runtime_min_version,
     transport_type: SERVER_FIELDS.transport_type,
     installation_methods: SERVER_FIELDS.installation_methods,
-    tools: { 
-      type: 'array',
-      items: TOOL_SCHEMA,
-      description: 'Available tools'
-    },
     resources: { 
       type: 'array',
       items: RESOURCE_SCHEMA,
@@ -997,9 +972,7 @@ export interface ServerEntity {
   homepage_url: string | null;
   language: string;
   runtime: string;
-  runtime_min_version: string | null;
   installation_methods: any[];
-  tools: any[];
   resources: any[] | null;
   prompts: any[] | null;
   visibility: 'global' | 'team';
@@ -1133,7 +1106,6 @@ export interface CreateGlobalServerRequest {
   github_url?: string;
   git_branch?: string;
   homepage_url?: string;
-  runtime_min_version?: string;
   resources?: Resource[];
   prompts?: Prompt[];
   author_name?: string;
@@ -1195,9 +1167,7 @@ export function formatServerResponse(server: any): ServerEntity {
     homepage_url: server.homepage_url || null,
     language: server.language,
     runtime: server.runtime,
-    runtime_min_version: server.runtime_min_version || null,
     installation_methods: server.installation_methods ? JSON.parse(server.installation_methods) : [],
-    tools: server.tools ? JSON.parse(server.tools) : [],
     resources: server.resources ? JSON.parse(server.resources) : null,
     prompts: server.prompts ? JSON.parse(server.prompts) : null,
     visibility: server.visibility,

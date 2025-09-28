@@ -202,9 +202,7 @@ describe('MCP Servers - Update Global', () => {
         homepage_url: null,
         language: 'javascript',
         runtime: 'node',
-        runtime_min_version: null,
         installation_methods: '[]',
-        tools: '[]',
         resources: null,
         prompts: null,
         visibility: 'global',
@@ -274,9 +272,7 @@ describe('MCP Servers - Update Global', () => {
           homepage_url: null,
           language: 'javascript',
           runtime: 'node',
-          runtime_min_version: null,
           installation_methods: [],
-          tools: [],
           resources: null,
           prompts: null,
           visibility: 'global',
@@ -417,9 +413,7 @@ describe('MCP Servers - Update Global', () => {
         homepage_url: null,
         language: 'javascript',
         runtime: 'node',
-        runtime_min_version: null,
         installation_methods: '[]',
-        tools: '[]',
         resources: null,
         prompts: null,
         visibility: 'global',
@@ -492,9 +486,7 @@ describe('MCP Servers - Update Global', () => {
         homepage_url: 'https://complex-server.example.com',
         language: 'typescript',
         runtime: 'node',
-        runtime_min_version: '18.0.0',
         installation_methods: JSON.stringify([{ type: 'npm', command: 'npm install' }]),
-        tools: JSON.stringify([{ name: 'tool1', description: 'First tool' }]),
         resources: JSON.stringify([{ type: 'file', description: 'File resource' }]),
         prompts: JSON.stringify([{ name: 'prompt1', description: 'First prompt' }]),
         visibility: 'global',
@@ -541,9 +533,7 @@ describe('MCP Servers - Update Global', () => {
           homepage_url: 'https://complex-server.example.com',
           language: 'typescript',
           runtime: 'node',
-          runtime_min_version: '18.0.0',
           installation_methods: [{ type: 'npm', command: 'npm install' }],
-          tools: [{ name: 'tool1', description: 'First tool' }],
           resources: [{ type: 'file', description: 'File resource' }],
           prompts: [{ name: 'prompt1', description: 'First prompt' }],
           author_name: 'Test Author',
@@ -583,9 +573,9 @@ describe('MCP Servers - Update Global', () => {
           homepage_url: 'https://complex-server.example.com',
           language: 'typescript',
           runtime: 'node',
-          runtime_min_version: '18.0.0',
+
           installation_methods: [{ type: 'npm', command: 'npm install' }],
-          tools: [{ name: 'tool1', description: 'First tool' }],
+
           resources: [{ type: 'file', description: 'File resource' }],
           prompts: [{ name: 'prompt1', description: 'First prompt' }],
           visibility: 'global',
@@ -638,9 +628,9 @@ describe('MCP Servers - Update Global', () => {
         homepage_url: null,
         language: 'javascript',
         runtime: 'node',
-        runtime_min_version: null,
+
         installation_methods: '["npm", "yarn"]',
-        tools: '[{"name": "test-tool"}]',
+
         resources: '[{"name": "test-resource"}]',
         prompts: '[{"name": "test-prompt"}]',
         visibility: 'global',
@@ -685,7 +675,7 @@ describe('MCP Servers - Update Global', () => {
       const server = response.data;
 
       expect(server.installation_methods).toEqual(['npm', 'yarn']);
-      expect(server.tools).toEqual([{ name: 'test-tool' }]);
+
       expect(server.resources).toEqual([{ name: 'test-resource' }]);
       expect(server.prompts).toEqual([{ name: 'test-prompt' }]);
       // Check new three-tier configuration fields
@@ -724,9 +714,9 @@ describe('MCP Servers - Update Global', () => {
         homepage_url: null,
         language: 'javascript',
         runtime: 'node',
-        runtime_min_version: null,
+
         installation_methods: '[]',
-        tools: '[]',
+
         resources: null,
         prompts: null,
         visibility: 'global',
@@ -770,7 +760,7 @@ describe('MCP Servers - Update Global', () => {
       const server = response.data;
 
       expect(server.installation_methods).toEqual([]);
-      expect(server.tools).toEqual([]);
+
       expect(server.resources).toBeNull();
       expect(server.prompts).toBeNull();
       // Check new three-tier configuration fields - some are arrays when null, some are null
@@ -1010,9 +1000,7 @@ describe('MCP Servers - Update Global', () => {
         homepage_url: null,
         language: 'javascript',
         runtime: 'node',
-        runtime_min_version: null,
         installation_methods: [],
-        tools: [],
         resources: null,
         prompts: null,
         visibility: 'global',
@@ -1194,9 +1182,7 @@ describe('MCP Servers - Update Global', () => {
         homepage_url: null,
         language: 'javascript',
         runtime: 'node',
-        runtime_min_version: null,
         installation_methods: '[]',
-        tools: '[]',
         resources: null,
         prompts: null,
         visibility: 'global',
@@ -1278,9 +1264,7 @@ describe('MCP Servers - Update Global', () => {
           homepage_url: null,
           language: 'javascript',
           runtime: 'node',
-          runtime_min_version: null,
           installation_methods: '[]',
-          tools: '[]',
           resources: null,
           prompts: null,
           visibility: 'global',
@@ -1365,9 +1349,7 @@ describe('MCP Servers - Update Global', () => {
         homepage_url: null,
         language: 'javascript',
         runtime: 'node',
-        runtime_min_version: null,
         installation_methods: '[]',
-        tools: '[]',
         resources: null,
         prompts: null,
         visibility: 'global',

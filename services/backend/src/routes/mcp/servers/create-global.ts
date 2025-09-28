@@ -66,7 +66,6 @@ export default async function createGlobalServer(server: FastifyInstance) {
       // Determine which format is being used and extract/convert data accordingly
       let finalInstallationMethods: any[];
       let finalTransportType: 'stdio' | 'http' | 'sse';
-      let finalTools: any[];
       let finalTemplateArgs: any[] | undefined;
       let finalTemplateEnv: any[] | undefined;
       let finalTemplateHeaders: any[] | undefined;
@@ -122,7 +121,6 @@ export default async function createGlobalServer(server: FastifyInstance) {
           finalTemplateHeaders = requestData.configuration_schema.template_headers;
         }
         
-        finalTools = requestData.tools || [];
         finalTemplateArgs = requestData.configuration_schema.template_args;
         finalTeamArgsSchema = requestData.configuration_schema.team_args_schema;
         finalTeamEnvSchema = requestData.configuration_schema.team_env_schema;
@@ -138,7 +136,6 @@ export default async function createGlobalServer(server: FastifyInstance) {
         
         finalInstallationMethods = installation_methods;
         finalTransportType = requestData.transport_type || extractedTransportType;
-        finalTools = requestData.tools || [];
         
         // Convert old format to new three-tier schema
         // For now, put everything in template level (locked)
@@ -194,9 +191,7 @@ export default async function createGlobalServer(server: FastifyInstance) {
         homepage_url: requestData.homepage_url,
         language: requestData.language,
         runtime: requestData.runtime,
-        runtime_min_version: requestData.runtime_min_version,
         installation_methods: finalInstallationMethods,
-        tools: finalTools,
         resources: requestData.resources,
         prompts: requestData.prompts,
         visibility: 'global' as const,

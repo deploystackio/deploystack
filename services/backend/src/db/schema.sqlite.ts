@@ -166,13 +166,11 @@ export const mcpServers = sqliteTable('mcpServers', {
   // Technical Details
   language: text('language').notNull(), // 'typescript', 'javascript', 'python', 'go'
   runtime: text('runtime').notNull(), // 'node', 'python', 'docker'
-  runtime_min_version: text('runtime_min_version'), // e.g., "Node.js 18+", "Python 3.11+"
   
   // Installation Methods (JSON array of objects)
   installation_methods: text('installation_methods').notNull(), // [{"type": "npm", "command": "npx @playwright/mcp"}, {"type": "docker", "image": "..."}]
   
   // MCP Capabilities (JSON array)
-  tools: text('tools').notNull(), // JSON array of tool definitions with descriptions
   resources: text('resources'), // JSON array of resource types
   prompts: text('prompts'), // JSON array of available prompts
   

@@ -88,7 +88,7 @@ describe('MCP Servers - Create Global', () => {
             }
           }
         },
-        tools: [{ name: 'test-tool', description: 'A test tool' }],
+
         featured: false
       },
       user: { id: 'test-user-id' },
@@ -204,9 +204,9 @@ describe('MCP Servers - Create Global', () => {
         homepage_url: null,
         language: 'javascript',
         runtime: 'node',
-        runtime_min_version: null,
+
         installation_methods: '[{"type": "npm", "command": "npm install test-server"}]',
-        tools: '[{"name": "test-tool", "description": "A test tool"}]',
+
         resources: null,
         prompts: null,
         visibility: 'global',
@@ -253,7 +253,7 @@ describe('MCP Servers - Create Global', () => {
             args: ['install', 'test-server'],
             env: {}
           }],
-          tools: [{ name: 'test-tool', description: 'A test tool' }],
+
           visibility: 'global'
         })
       );
@@ -275,7 +275,7 @@ describe('MCP Servers - Create Global', () => {
           language: 'javascript',
           runtime: 'node',
           installation_methods: [{ type: 'npm', command: 'npm install test-server' }],
-          tools: [{ name: 'test-tool', description: 'A test tool' }],
+
           visibility: 'global',
           owner_team_id: null,
           created_by: 'test-user-id',
@@ -300,7 +300,7 @@ describe('MCP Servers - Create Global', () => {
           homepage_url: 'https://complex-server.example.com',
           language: 'typescript',
           runtime: 'node',
-          runtime_min_version: '18.0.0',
+  
           claude_desktop_config: {
             mcpServers: {
               'complex-server': {
@@ -313,10 +313,7 @@ describe('MCP Servers - Create Global', () => {
               }
             }
           },
-          tools: [
-            { name: 'complex-tool', description: 'A complex tool' },
-            { name: 'another-tool', description: 'Another tool' }
-          ],
+
           resources: [
             { type: 'file', description: 'File resource' },
             { type: 'database', description: 'Database resource' }
@@ -346,9 +343,9 @@ describe('MCP Servers - Create Global', () => {
         homepage_url: 'https://complex-server.example.com',
         language: 'typescript',
         runtime: 'node',
-        runtime_min_version: '18.0.0',
+
         installation_methods: '[{"type": "npm", "command": "npm install complex-server", "description": "Install via npm"}, {"type": "docker", "image": "complex-server:latest", "description": "Run with Docker"}]',
-        tools: '[{"name": "complex-tool", "description": "A complex tool"}, {"name": "another-tool", "description": "Another tool"}]',
+
         resources: '[{"type": "file", "description": "File resource"}, {"type": "database", "description": "Database resource"}]',
         prompts: '[{"name": "test-prompt", "description": "A test prompt"}]',
         visibility: 'global',
@@ -396,10 +393,7 @@ describe('MCP Servers - Create Global', () => {
             { type: 'npm', command: 'npm install complex-server', description: 'Install via npm' },
             { type: 'docker', image: 'complex-server:latest', description: 'Run with Docker' }
           ],
-          tools: [
-            { name: 'complex-tool', description: 'A complex tool' },
-            { name: 'another-tool', description: 'Another tool' }
-          ],
+
           resources: [
             { type: 'file', description: 'File resource' },
             { type: 'database', description: 'Database resource' }
@@ -430,9 +424,9 @@ describe('MCP Servers - Create Global', () => {
         homepage_url: null,
         language: 'javascript',
         runtime: 'node',
-        runtime_min_version: null,
+
         installation_methods: '["npm", "yarn"]',
-        tools: '[{"name": "json-tool"}]',
+
         resources: '[{"name": "json-resource"}]',
         prompts: '[{"name": "json-prompt"}]',
         visibility: 'global',
@@ -470,7 +464,7 @@ describe('MCP Servers - Create Global', () => {
       const server = response.data;
 
       expect(server.installation_methods).toEqual(['npm', 'yarn']);
-      expect(server.tools).toEqual([{ name: 'json-tool' }]);
+
       expect(server.resources).toEqual([{ name: 'json-resource' }]);
       expect(server.prompts).toEqual([{ name: 'json-prompt' }]);
       expect(server.transport_type).toEqual('stdio');
@@ -494,9 +488,9 @@ describe('MCP Servers - Create Global', () => {
         homepage_url: null,
         language: 'javascript',
         runtime: 'node',
-        runtime_min_version: null,
+
         installation_methods: '[]',
-        tools: '[]',
+
         resources: null,
         prompts: null,
         visibility: 'global',
@@ -534,7 +528,7 @@ describe('MCP Servers - Create Global', () => {
       const server = response.data;
 
       expect(server.installation_methods).toEqual([]);
-      expect(server.tools).toEqual([]);
+
       expect(server.resources).toBeNull();
       expect(server.prompts).toBeNull();
       expect(server.transport_type).toEqual('stdio');
@@ -564,9 +558,9 @@ describe('MCP Servers - Create Global', () => {
         homepage_url: null,
         language: 'javascript',
         runtime: 'node',
-        runtime_min_version: null,
+
         installation_methods: '[]',
-        tools: '[]',
+
         resources: null,
         prompts: null,
         visibility: 'global',
@@ -722,9 +716,9 @@ describe('MCP Servers - Create Global', () => {
         homepage_url: null,
         language: 'javascript',
         runtime: 'node',
-        runtime_min_version: null,
+
         installation_methods: 'invalid json',
-        tools: '[]',
+
         resources: null,
         prompts: null,
         visibility: 'global',
@@ -792,9 +786,9 @@ describe('MCP Servers - Create Global', () => {
         homepage_url: null,
         language: 'javascript',
         runtime: 'node',
-        runtime_min_version: null,
+
         installation_methods: '[]',
-        tools: '[]',
+
         resources: null,
         prompts: null,
         visibility: 'global',
@@ -846,9 +840,9 @@ describe('MCP Servers - Create Global', () => {
         homepage_url: null,
         language: 'javascript',
         runtime: 'node',
-        runtime_min_version: null,
+
         installation_methods: '[]',
-        tools: '[]',
+
         resources: null,
         prompts: null,
         visibility: 'global',
@@ -940,7 +934,7 @@ describe('MCP Servers - Create Global', () => {
               }
             }
           },
-          tools: [{ name: 'minimal-tool', description: 'A minimal tool' }]
+  
         }
       };
 
@@ -955,9 +949,9 @@ describe('MCP Servers - Create Global', () => {
         homepage_url: null,
         language: 'python',
         runtime: 'python',
-        runtime_min_version: null,
+
         installation_methods: '[{"type": "pip"}]',
-        tools: '[{"name": "minimal-tool", "description": "A minimal tool"}]',
+
         resources: null,
         prompts: null,
         visibility: 'global',
@@ -999,7 +993,7 @@ describe('MCP Servers - Create Global', () => {
             args: ['-m', 'minimal_server'],
             env: {}
           }],
-          tools: [{ name: 'minimal-tool', description: 'A minimal tool' }],
+
           visibility: 'global'
         })
       );
@@ -1037,9 +1031,9 @@ describe('MCP Servers - Create Global', () => {
           homepage_url: null,
           language: combo.language,
           runtime: combo.runtime,
-          runtime_min_version: null,
+  
           installation_methods: '[]',
-          tools: '[]',
+
           resources: null,
           prompts: null,
           visibility: 'global',
@@ -1106,9 +1100,9 @@ describe('MCP Servers - Create Global', () => {
         homepage_url: null,
         language: 'javascript',
         runtime: 'node',
-        runtime_min_version: null,
+
         installation_methods: '[]',
-        tools: '[]',
+
         resources: null,
         prompts: null,
         visibility: 'global',
@@ -1183,9 +1177,9 @@ describe('MCP Servers - Create Global', () => {
               homepage_url: null,
               language: 'javascript',
               runtime: 'node',
-              runtime_min_version: null,
+    
               installation_methods: '[]',
-              tools: '[]',
+
               resources: null,
               prompts: null,
               visibility: 'global',

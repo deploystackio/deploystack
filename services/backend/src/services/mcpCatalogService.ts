@@ -18,9 +18,7 @@ export interface McpServer {
   homepage_url?: string;
   language: string;
   runtime: string;
-  runtime_min_version?: string;
   installation_methods: string; // JSON
-  tools: string; // JSON
   resources?: string; // JSON
   prompts?: string; // JSON
   visibility: 'global' | 'team';
@@ -61,9 +59,7 @@ export interface CreateMcpServerRequest {
   homepage_url?: string;
   language: string;
   runtime: string;
-  runtime_min_version?: string;
   installation_methods: any[]; // Will be JSON stringified - auto-extracted from Claude Desktop config
-  tools: any[]; // Will be JSON stringified
   resources?: any[]; // Will be JSON stringified
   prompts?: any[]; // Will be JSON stringified
   visibility: 'global' | 'team';
@@ -98,9 +94,7 @@ export interface UpdateMcpServerRequest {
   homepage_url?: string;
   language?: string;
   runtime?: string;
-  runtime_min_version?: string;
   installation_methods?: any[];
-  tools?: any[];
   resources?: any[];
   prompts?: any[];
   author_name?: string;
@@ -358,9 +352,7 @@ export class McpCatalogService {
       homepage_url: githubInfo.homepage_url || data.homepage_url,
       language: githubInfo.language || data.language,
       runtime: data.runtime,
-      runtime_min_version: data.runtime_min_version,
       installation_methods: JSON.stringify(data.installation_methods),
-      tools: JSON.stringify(data.tools),
       resources: data.resources ? JSON.stringify(data.resources) : null,
       prompts: data.prompts ? JSON.stringify(data.prompts) : null,
       visibility: data.visibility,
@@ -441,9 +433,7 @@ export class McpCatalogService {
     if (data.homepage_url !== undefined) updateData.homepage_url = data.homepage_url;
     if (data.language !== undefined) updateData.language = data.language;
     if (data.runtime !== undefined) updateData.runtime = data.runtime;
-    if (data.runtime_min_version !== undefined) updateData.runtime_min_version = data.runtime_min_version;
     if (data.installation_methods !== undefined) updateData.installation_methods = JSON.stringify(data.installation_methods);
-    if (data.tools !== undefined) updateData.tools = JSON.stringify(data.tools);
     if (data.resources !== undefined) updateData.resources = data.resources ? JSON.stringify(data.resources) : null;
     if (data.prompts !== undefined) updateData.prompts = data.prompts ? JSON.stringify(data.prompts) : null;
     if (data.author_name !== undefined) updateData.author_name = data.author_name;
@@ -541,7 +531,6 @@ export class McpCatalogService {
     
     // Parse JSON fields that should be arrays/objects
     parsed.installation_methods = parseJsonField('installation_methods', parsed.installation_methods, []);
-    parsed.tools = parseJsonField('tools', parsed.tools, []);
     parsed.resources = parseJsonField('resources', parsed.resources, null);
     parsed.prompts = parseJsonField('prompts', parsed.prompts, null);
     // Three-tier configuration schema

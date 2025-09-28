@@ -9450,16 +9450,9 @@ paths:
                             runtime:
                               type: string
                               description: Runtime environment
-                            runtime_min_version:
-                              type: string
-                              nullable: true
-                              description: Minimum runtime version
                             installation_methods:
                               type: array
                               description: Installation methods
-                            tools:
-                              type: array
-                              description: Available tools
                             resources:
                               type: array
                               nullable: true
@@ -9581,7 +9574,6 @@ paths:
                             - language
                             - runtime
                             - installation_methods
-                            - tools
                             - visibility
                             - created_by
                             - transport_type
@@ -9734,16 +9726,9 @@ paths:
                       runtime:
                         type: string
                         description: Runtime environment
-                      runtime_min_version:
-                        type: string
-                        nullable: true
-                        description: Minimum runtime version
                       installation_methods:
                         type: array
                         description: Installation methods
-                      tools:
-                        type: array
-                        description: Available tools
                       resources:
                         type: array
                         nullable: true
@@ -9865,7 +9850,6 @@ paths:
                       - language
                       - runtime
                       - installation_methods
-                      - tools
                       - visibility
                       - created_by
                       - transport_type
@@ -10076,16 +10060,9 @@ paths:
                             runtime:
                               type: string
                               description: Runtime environment
-                            runtime_min_version:
-                              type: string
-                              nullable: true
-                              description: Minimum runtime version
                             installation_methods:
                               type: array
                               description: Installation methods
-                            tools:
-                              type: array
-                              description: Available tools
                             resources:
                               type: array
                               nullable: true
@@ -10207,7 +10184,6 @@ paths:
                             - language
                             - runtime
                             - installation_methods
-                            - tools
                             - visibility
                             - created_by
                             - transport_type
@@ -10662,24 +10638,6 @@ paths:
                 installation_methods:
                   type: array
                   description: Installation methods
-                tools:
-                  type: array
-                  items:
-                    type: object
-                    properties:
-                      name:
-                        type: string
-                        minLength: 1
-                        description: Name is required
-                      description:
-                        type: string
-                        minLength: 1
-                        description: Description is required
-                    required:
-                      - name
-                      - description
-                    additionalProperties: false
-                  description: Available tools
                 claude_desktop_config:
                   type: object
                   properties:
@@ -10746,9 +10704,6 @@ paths:
                   type: string
                   format: uri
                   description: Homepage URL
-                runtime_min_version:
-                  type: string
-                  description: Minimum runtime version
                 resources:
                   type: array
                   items:
@@ -10871,16 +10826,9 @@ paths:
                       runtime:
                         type: string
                         description: Runtime environment
-                      runtime_min_version:
-                        type: string
-                        nullable: true
-                        description: Minimum runtime version
                       installation_methods:
                         type: array
                         description: Installation methods
-                      tools:
-                        type: array
-                        description: Available tools
                       resources:
                         type: array
                         nullable: true
@@ -11002,7 +10950,6 @@ paths:
                       - language
                       - runtime
                       - installation_methods
-                      - tools
                       - visibility
                       - created_by
                       - transport_type
@@ -11188,9 +11135,6 @@ paths:
                   type: string
                   minLength: 1
                   description: Runtime environment is required
-                runtime_min_version:
-                  type: string
-                  description: Minimum runtime version
                 transport_type:
                   type: string
                   enum:
@@ -11201,24 +11145,6 @@ paths:
                 installation_methods:
                   type: array
                   description: Installation methods
-                tools:
-                  type: array
-                  items:
-                    type: object
-                    properties:
-                      name:
-                        type: string
-                        minLength: 1
-                        description: Name is required
-                      description:
-                        type: string
-                        minLength: 1
-                        description: Description is required
-                    required:
-                      - name
-                      - description
-                    additionalProperties: false
-                  description: Available tools
                 resources:
                   type: array
                   items:
@@ -11350,16 +11276,9 @@ paths:
                       runtime:
                         type: string
                         description: Runtime environment
-                      runtime_min_version:
-                        type: string
-                        nullable: true
-                        description: Minimum runtime version
                       installation_methods:
                         type: array
                         description: Installation methods
-                      tools:
-                        type: array
-                        description: Available tools
                       resources:
                         type: array
                         nullable: true
@@ -11481,7 +11400,6 @@ paths:
                       - language
                       - runtime
                       - installation_methods
-                      - tools
                       - visibility
                       - created_by
                       - transport_type
@@ -11984,9 +11902,6 @@ paths:
                         type: string
                       runtime:
                         type: string
-                      runtime_min_version:
-                        type: string
-                        nullable: true
                       tags:
                         type: array
                         items:
