@@ -36,7 +36,7 @@
   },
   "devDependencies": {
     "@commitlint/cli": "^19.8.1",
-    "@commitlint/config-conventional": "^19.8.1",
+    "@commitlint/config-conventional": "^20.0.0",
     "@release-it/conventional-changelog": "^10.0.1",
     "@tailwindcss/postcss": "^4.1.13",
     "@tsconfig/node22": "^22.0.2",
