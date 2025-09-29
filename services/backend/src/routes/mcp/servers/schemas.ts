@@ -633,6 +633,11 @@ export const SERVER_ENTITY_SCHEMA = {
       nullable: true,
       description: 'GitHub Account ID'
     },
+    github_stars: { 
+      type: 'number', 
+      nullable: true,
+      description: 'Number of GitHub stars'
+    },
     language: { 
       type: 'string',
       description: 'Programming language'
@@ -782,6 +787,20 @@ export const SERVER_ENTITY_SCHEMA = {
   required: ['id', 'name', 'slug', 'description', 'language', 'runtime', 'installation_methods', 'visibility', 'created_by', 'transport_type', 'template_args', 'template_env', 'template_headers', 'team_args_schema', 'team_env_schema', 'team_headers_schema', 'user_args_schema', 'status', 'featured', 'auto_install_new_default_team', 'created_at', 'updated_at']
 } as const;
 
+// Extended schema for GET endpoint only
+export const GET_SERVER_ENTITY_SCHEMA = {
+  type: 'object',
+  properties: {
+    ...SERVER_ENTITY_SCHEMA.properties,
+    github_readme_base64: {
+      type: 'string',
+      nullable: true,
+      description: 'Base64-encoded GitHub README content'
+    }
+  },
+  required: SERVER_ENTITY_SCHEMA.required
+} as const;
+
 const PAGINATION_SCHEMA = {
   type: 'object',
   properties: {
@@ -820,7 +839,7 @@ function createSuccessResponseSchema(dataSchema: any, description: string) {
   } as const;
 }
 
-export const GET_SERVER_SUCCESS_RESPONSE_SCHEMA = createSuccessResponseSchema(SERVER_ENTITY_SCHEMA, 'server retrieval');
+export const GET_SERVER_SUCCESS_RESPONSE_SCHEMA = createSuccessResponseSchema(GET_SERVER_ENTITY_SCHEMA, 'server retrieval');
 export const CREATE_GLOBAL_SERVER_SUCCESS_RESPONSE_SCHEMA = createSuccessResponseSchema(SERVER_ENTITY_SCHEMA, 'server creation');
 
 export const DELETE_GLOBAL_SERVER_SUCCESS_RESPONSE_SCHEMA = {
@@ -984,6 +1003,7 @@ export interface ServerEntity {
   git_branch: string | null;
   homepage_url: string | null;
   github_account_id: string | null;
+  github_stars: number | null;
   language: string;
   runtime: string;
   installation_methods: any[];
@@ -1015,6 +1035,11 @@ export interface ServerEntity {
   created_at: string | Date; // Flexible for both DB (Date) and API (string) formats
   updated_at: string | Date;
   last_sync_at: string | Date | null;
+}
+
+// Extended interface for GET endpoint only - includes github_readme_base64
+export interface GetServerEntity extends ServerEntity {
+  github_readme_base64: string | null;
 }
 
 // Base configuration interfaces
@@ -1141,7 +1166,7 @@ export interface CreateGlobalServerSuccessResponse {
 
 export interface GetServerSuccessResponse {
   success: boolean;
-  data: ServerEntity;
+  data: GetServerEntity;
 }
 
 export interface DeleteGlobalServerSuccessResponse {
@@ -1195,6 +1220,7 @@ export function formatServerResponse(server: any): ServerEntity {
     git_branch: server.git_branch || null,
     homepage_url: server.homepage_url || null,
     github_account_id: server.github_account_id || null,
+    github_stars: server.github_stars || null,
     language: server.language,
     runtime: server.runtime,
     installation_methods: safeJsonParse(server.installation_methods, []),

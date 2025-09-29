@@ -152,6 +152,8 @@ VS Code → HTTPS Request → DeployStack Satellite → MCP Server Process → E
 - **[Done]** **Satellite Pairing Security** - JWT-based token registration system for secure satellite onboarding
 - **[Done]** **Public Launch** - production satellite for community use
 - **[Done]** **Resource Management** - process isolation (remote MCP) and limits
+- **[Done]** **GitHub README and Stars Integration** - automatic GitHub data fetching, secure storage, XSS prevention, DoS protection, and comprehensive audit logging for MCP server catalog enhancement
+- **[Done]** **Background Job Queue System** - complete 4-phase custom SQLite-based job queue with worker infrastructure, admin API, frontend monitoring UI, and comprehensive documentation for long-running tasks
 - **[In Progress]** **Resource Management** - process isolation (stdio) and limits
 - **[In Progress]** **MCP Registry** - integration of the official MCP Registry
 - **[To Do]** Build out Audit Logging features in the cloud UI

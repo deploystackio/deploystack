@@ -9,6 +9,7 @@ import {
   ERROR_RESPONSE_SCHEMA,
   type ServerIdParams,
   type GetServerSuccessResponse,
+  type GetServerEntity,
   type ErrorResponse,
   formatServerResponse
 } from './schemas';
@@ -142,9 +143,15 @@ export default async function getServer(server: FastifyInstance) {
       // Format the server response using the shared utility function
       const responseServer = formatServerResponse(server);
 
+      // Extend with GET-specific fields
+      const getServerEntity: GetServerEntity = {
+        ...responseServer,
+        github_readme_base64: server.github_readme_base64 || null
+      };
+
       const response: GetServerSuccessResponse = {
         success: true,
-        data: responseServer
+        data: getServerEntity
       };
 
       // Manual JSON serialization to ensure consistent JSON output

@@ -253,6 +253,8 @@ describe('MCP Servers - Get Server', () => {
             github_url: null,
             git_branch: null,
             homepage_url: null,
+            github_account_id: null,
+            github_stars: null,
             language: 'javascript',
             runtime: 'node',
             installation_methods: [],
@@ -283,7 +285,8 @@ describe('MCP Servers - Get Server', () => {
             auto_install_new_default_team: false,
             created_at: '2024-01-01T00:00:00.000Z',
             updated_at: '2024-01-01T00:00:00.000Z',
-            last_sync_at: null
+            last_sync_at: null,
+            github_readme_base64: null
           }
         })
       );
@@ -369,6 +372,8 @@ describe('MCP Servers - Get Server', () => {
             github_url: null,
             git_branch: null,
             homepage_url: null,
+            github_account_id: null,
+            github_stars: null,
             language: 'javascript',
             runtime: 'node',
             installation_methods: [],
@@ -399,7 +404,8 @@ describe('MCP Servers - Get Server', () => {
             auto_install_new_default_team: false,
             created_at: '2024-01-01T00:00:00.000Z',
             updated_at: '2024-01-01T00:00:00.000Z',
-            last_sync_at: null
+            last_sync_at: null,
+            github_readme_base64: null
           }
         })
       );
@@ -458,6 +464,8 @@ describe('MCP Servers - Get Server', () => {
             github_url: null,
             git_branch: null,
             homepage_url: null,
+            github_account_id: null,
+            github_stars: null,
             language: 'javascript',
             runtime: 'node',
             installation_methods: [],
@@ -488,7 +496,8 @@ describe('MCP Servers - Get Server', () => {
             auto_install_new_default_team: false,
             created_at: '2024-01-01T00:00:00.000Z',
             updated_at: '2024-01-01T00:00:00.000Z',
-            last_sync_at: null
+            last_sync_at: null,
+            github_readme_base64: null
           }
         })
       );
@@ -539,7 +548,7 @@ describe('MCP Servers - Get Server', () => {
         status: 'active',
         featured: false,
         auto_install_new_default_team: false
-        };
+      };
 
       mockMcpService.getServerById.mockResolvedValue(mockServer);
 
@@ -560,6 +569,8 @@ describe('MCP Servers - Get Server', () => {
             github_url: null,
             git_branch: null,
             homepage_url: null,
+            github_account_id: null,
+            github_stars: null,
             language: 'javascript',
             runtime: 'node',
             installation_methods: [],
@@ -590,7 +601,8 @@ describe('MCP Servers - Get Server', () => {
             auto_install_new_default_team: false,
             created_at: '2024-01-01T00:00:00.000Z',
             updated_at: '2024-01-01T00:00:00.000Z',
-            last_sync_at: null
+            last_sync_at: null,
+            github_readme_base64: null
           }
         })
       );
@@ -746,10 +758,8 @@ describe('MCP Servers - Get Server', () => {
         slug: 'test-server',
         description: 'A test server',
         installation_methods: JSON.stringify(['npm', 'yarn']), // Database format - JSON string
-
         resources: JSON.stringify([{ name: 'test-resource' }]), // Database format - JSON string
         prompts: JSON.stringify([{ name: 'test-prompt' }]), // Database format - JSON string
-
         dependencies: JSON.stringify({ dep1: '^1.0.0' }), // Database format - JSON string
         tags: JSON.stringify(['tag1', 'tag2']), // Database format - JSON string
         template_args: JSON.stringify([]),
@@ -800,7 +810,6 @@ describe('MCP Servers - Get Server', () => {
         slug: 'test-server',
         description: 'A test server',
         installation_methods: JSON.stringify([]), // Database format - JSON string
-
         resources: null,
         prompts: null,
         dependencies: null,
@@ -1047,7 +1056,6 @@ describe('MCP Servers - Get Server', () => {
         installation_methods: JSON.stringify([]), // Database format - JSON string
         resources: null,
         prompts: null,
-
         dependencies: null,
         tags: null,
         template_args: JSON.stringify([]),

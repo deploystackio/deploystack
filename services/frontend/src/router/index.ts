@@ -216,6 +216,21 @@ const routes = [
         name: 'AdminSatellitePairing',
         component: () => import('../views/admin/satellites/pairing/index.vue'),
       },
+      {
+        path: 'jobs',
+        name: 'AdminJobs',
+        component: () => import('../views/admin/jobs/index.vue'),
+      },
+      {
+        path: 'jobs/:id',
+        name: 'AdminJobDetail',
+        component: () => import('../views/admin/jobs/[id].vue'),
+      },
+      {
+        path: 'jobs/batches/:batchId',
+        name: 'AdminJobBatch',
+        component: () => import('../views/admin/jobs/batches/[batchId].vue'),
+      },
     ],
   },
   {

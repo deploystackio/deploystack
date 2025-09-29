@@ -14,6 +14,7 @@ export default {
       mcpCatalog: 'MCP Catalog',
       mcpCategories: 'MCP Categories',
       satellites: 'Satellites',
+      backgroundJobs: 'Background Jobs',
     },
     teams: {
       title: 'Teams',

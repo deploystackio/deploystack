@@ -30,6 +30,8 @@ export interface McpServer {
   license?: string;
   transport_type: 'stdio' | 'http' | 'sse';
   github_account_id?: string;
+  github_readme_base64?: string;
+  github_stars?: number;
   // Three-tier configuration schema
   template_args?: string; // JSON: Fixed args that never change
   template_env?: string; // JSON: Fixed env vars that never change
@@ -69,7 +71,9 @@ export interface CreateMcpServerRequest {
   organization?: string;
   license?: string;
   transport_type?: 'stdio' | 'http' | 'sse'; // MCP transport type
-  github_account_id?: string;
+  github_account_id?: string | null;
+  github_readme_base64?: string | null;
+  github_stars?: number | null;
   // Three-tier configuration schema
   template_args?: any[]; // Fixed args that never change (e.g., ["-y", "@modelcontextprotocol/server-filesystem"])
   template_env?: any; // Fixed env vars that never change (e.g., {"FIXED_VAR": "fixed_value"})
@@ -368,6 +372,8 @@ export class McpCatalogService {
       license: githubInfo.license || data.license,
       transport_type: data.transport_type || 'stdio',
       github_account_id: githubInfo.github_account_id || data.github_account_id,
+      github_readme_base64: data.github_readme_base64 || null,
+      github_stars: data.github_stars || null,
       // Three-tier configuration schema
       template_args: data.template_args ? JSON.stringify(data.template_args) : null,
       template_env: data.template_env ? JSON.stringify(data.template_env) : null,

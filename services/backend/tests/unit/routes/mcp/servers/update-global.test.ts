@@ -199,6 +199,8 @@ describe('MCP Servers - Update Global', () => {
         long_description: null,
         github_url: null,
         git_branch: null,
+        github_account_id: null,
+        github_stars: null,
         homepage_url: null,
         language: 'javascript',
         runtime: 'node',
@@ -231,8 +233,7 @@ describe('MCP Servers - Update Global', () => {
         team_headers_schema: null,
         user_args_schema: null,
         user_env_schema: null,
-        user_headers_schema: null,
-        auto_install_new_default_team: undefined
+        user_headers_schema: null
       };
 
       mockMcpService.getServerById.mockResolvedValue(existingServer);
@@ -269,6 +270,8 @@ describe('MCP Servers - Update Global', () => {
           long_description: null,
           github_url: null,
           git_branch: null,
+          github_account_id: null,
+          github_stars: null,
           homepage_url: null,
           language: 'javascript',
           runtime: 'node',
@@ -300,8 +303,7 @@ describe('MCP Servers - Update Global', () => {
           transport_type: null,
           created_at: '2024-01-01T00:00:00.000Z',
           updated_at: '2024-01-02T00:00:00.000Z',
-          last_sync_at: null,
-          auto_install_new_default_team: undefined
+          last_sync_at: null
         }
       });
     });
@@ -442,8 +444,7 @@ describe('MCP Servers - Update Global', () => {
         team_headers_schema: null,
         user_args_schema: null,
         user_env_schema: null,
-        user_headers_schema: null,
-        auto_install_new_default_team: undefined
+        user_headers_schema: null
       };
 
       mockMcpService.getServerById.mockResolvedValue(existingServer);
@@ -483,6 +484,8 @@ describe('MCP Servers - Update Global', () => {
         long_description: 'This is a detailed description',
         github_url: 'https://github.com/complex/server',
         git_branch: 'main',
+        github_account_id: null,
+        github_stars: null,
         homepage_url: 'https://complex-server.example.com',
         language: 'typescript',
         runtime: 'node',
@@ -515,8 +518,7 @@ describe('MCP Servers - Update Global', () => {
         team_headers_schema: null,
         user_args_schema: null,
         user_env_schema: null,
-        user_headers_schema: null,
-        auto_install_new_default_team: undefined
+        user_headers_schema: null
       };
 
       mockMcpService.getServerById.mockResolvedValue(existingServer);
@@ -570,6 +572,8 @@ describe('MCP Servers - Update Global', () => {
           long_description: 'This is a detailed description',
           github_url: 'https://github.com/complex/server',
           git_branch: 'main',
+          github_account_id: null,
+          github_stars: null,
           homepage_url: 'https://complex-server.example.com',
           language: 'typescript',
           runtime: 'node',
@@ -603,8 +607,7 @@ describe('MCP Servers - Update Global', () => {
           transport_type: null,
           created_at: '2024-01-01T00:00:00.000Z',
           updated_at: '2024-01-02T00:00:00.000Z',
-          last_sync_at: '2024-01-03T00:00:00.000Z',
-          auto_install_new_default_team: undefined
+          last_sync_at: '2024-01-03T00:00:00.000Z'
         }
       });
     });
@@ -659,8 +662,7 @@ describe('MCP Servers - Update Global', () => {
         team_headers_schema: '[{"name": "team_header"}]',
         user_args_schema: '[{"name": "user_arg"}]',
         user_env_schema: '[{"name": "user_env"}]',
-        user_headers_schema: '[{"name": "user_header"}]',
-        auto_install_new_default_team: undefined
+        user_headers_schema: '[{"name": "user_header"}]'
       };
 
       mockMcpService.getServerById.mockResolvedValue(existingServer);
@@ -745,8 +747,7 @@ describe('MCP Servers - Update Global', () => {
         team_headers_schema: null,
         user_args_schema: null,
         user_env_schema: null,
-        user_headers_schema: null,
-        auto_install_new_default_team: undefined
+        user_headers_schema: null
       };
 
       mockMcpService.getServerById.mockResolvedValue(existingServer);
@@ -1210,8 +1211,7 @@ describe('MCP Servers - Update Global', () => {
         team_headers_schema: null,
         user_args_schema: null,
         user_env_schema: null,
-        user_headers_schema: null,
-        auto_install_new_default_team: undefined
+        user_headers_schema: null
       };
 
       mockMcpService.getServerById.mockResolvedValue(existingServer);
@@ -1293,8 +1293,7 @@ describe('MCP Servers - Update Global', () => {
           team_headers_schema: null,
           user_args_schema: null,
           user_env_schema: null,
-          user_headers_schema: null,
-          auto_install_new_default_team: undefined
+          user_headers_schema: null
         };
 
         mockMcpService.getServerById.mockResolvedValue(existingServer);
@@ -1431,7 +1430,7 @@ describe('MCP Servers - Update Global', () => {
               featured: false, transport_type: null, created_at: new Date('2024-01-01T00:00:00.000Z'), updated_at: new Date('2024-01-02T00:00:00.000Z'), last_sync_at: null,
               // New three-tier configuration fields
               template_args: null, template_env: null, template_headers: null, team_args_schema: null, team_env_schema: null,
-              team_headers_schema: null, user_args_schema: null, user_env_schema: null, user_headers_schema: null, auto_install_new_default_team: undefined
+              team_headers_schema: null, user_args_schema: null, user_env_schema: null, user_headers_schema: null
             };
             mockMcpService.getServerById.mockResolvedValue(existingServer);
             mockMcpService.updateServer.mockResolvedValue(updatedServer);

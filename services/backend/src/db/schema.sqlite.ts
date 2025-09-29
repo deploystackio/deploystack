@@ -169,6 +169,8 @@ export const mcpServers = sqliteTable('mcpServers', {
   
   // GitHub Integration
   github_account_id: text('github_account_id'), // GitHub Account ID (owner.id from GitHub API)
+  github_readme_base64: text('github_readme_base64'), // Base64 encoded README content
+  github_stars: integer('github_stars'), // Star count from GitHub
   
   // Installation Methods (JSON array of objects)
   installation_methods: text('installation_methods').notNull(), // [{"type": "npm", "command": "npx @playwright/mcp"}, {"type": "docker", "image": "..."}]
@@ -567,6 +569,42 @@ export const dynamicOauthClients = sqliteTable('dynamic_oauth_clients', {
 }, (table) => ({
   expiresAtIdx: index('dynamic_oauth_clients_expires_at_idx').on(table.expires_at),
   createdAtIdx: index('dynamic_oauth_clients_created_at_idx').on(table.created_at),
+}));
+
+// Background Job Queue System - Persistent job processing with retry logic
+export const queueJobBatches = sqliteTable('queueJobBatches', {
+  id: text('id').primaryKey().$defaultFn(() => nanoid()),
+  type: text('type').notNull(),
+  total_jobs: integer('total_jobs').notNull(),
+  completed_jobs: integer('completed_jobs').notNull().default(0),
+  failed_jobs: integer('failed_jobs').notNull().default(0),
+  status: text('status', { enum: ['pending', 'processing', 'completed', 'failed'] }).notNull().default('pending'),
+  metadata: text('metadata'), // JSON
+  created_at: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  completed_at: integer('completed_at', { mode: 'timestamp' }),
+}, (table) => ({
+  statusIdx: index('job_batches_status_idx').on(table.status),
+  createdAtIdx: index('job_batches_created_at_idx').on(table.created_at),
+}));
+
+export const queueJobs = sqliteTable('queueJobs', {
+  id: text('id').primaryKey().$defaultFn(() => nanoid()),
+  type: text('type').notNull(),
+  payload: text('payload').notNull(), // JSON
+  status: text('status', { enum: ['pending', 'processing', 'completed', 'failed'] }).notNull().default('pending'),
+  scheduled_for: integer('scheduled_for', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  attempts: integer('attempts').notNull().default(0),
+  max_attempts: integer('max_attempts').notNull().default(3),
+  error: text('error'),
+  batch_id: text('batch_id').references(() => queueJobBatches.id, { onDelete: 'cascade' }),
+  created_at: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  updated_at: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  completed_at: integer('completed_at', { mode: 'timestamp' }),
+}, (table) => ({
+  statusScheduledIdx: index('jobs_status_scheduled_idx').on(table.status, table.scheduled_for),
+  typeIdx: index('jobs_type_idx').on(table.type),
+  createdAtIdx: index('jobs_created_at_idx').on(table.created_at),
+  batchIdIdx: index('jobs_batch_id_idx').on(table.batch_id),
 }));
 
 // Plugin table definitions - populated dynamically by the plugin system

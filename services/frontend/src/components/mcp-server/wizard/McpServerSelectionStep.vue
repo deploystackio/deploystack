@@ -5,7 +5,7 @@ import { useRouter } from 'vue-router'
 import { Loader2, ChevronDown, PackagePlus, AlertTriangle } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import McpServerCard from '@/components/mcp-server/McpServerCard.vue'
+import McpServerSquareCard from '@/components/mcp-server/McpServerSquareCard.vue'
 import FeaturedMcpServers from '@/components/mcp-server/FeaturedMcpServers.vue'
 import { McpCatalogService } from '@/services/mcpCatalogService'
 import { McpCategoriesService } from '@/services/mcpCategoriesService'
@@ -268,8 +268,8 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- Server List (only show when there's a search query and results fit criteria) -->
-    <div v-else-if="shouldShowResults" class="mt-14 space-y-4">
+    <!-- Server Grid (only show when there's a search query and results fit criteria) -->
+    <div v-else-if="shouldShowResults" class="mt-14 space-y-6">
       <!-- Results info -->
       <div v-if="searchResults?.pagination" class="text-sm text-gray-600 text-center">
         {{ t('mcpInstallations.wizard.server.maxResultsReached', {
@@ -278,14 +278,16 @@ onMounted(() => {
         }) }}
       </div>
 
-      <McpServerCard
-        v-for="server in filteredServers"
-        :key="server.id"
-        :server="server"
-        :selected-server-id="selectedServerId"
-        @install="handleInstallClick"
-        @details="handleDetailsClick"
-      />
+      <!-- 3-tier grid layout -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <McpServerSquareCard
+          v-for="server in filteredServers"
+          :key="server.id"
+          :server="server"
+          @install="handleInstallClick"
+          @click="handleDetailsClick"
+        />
+      </div>
     </div>
 
     <!-- No Results -->

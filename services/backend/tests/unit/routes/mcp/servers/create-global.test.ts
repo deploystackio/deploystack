@@ -704,7 +704,7 @@ describe('MCP Servers - Create Global', () => {
       });
     });
 
-    it('should handle JSON parsing errors in response (500)', async () => {
+    it('should handle invalid JSON fields gracefully in response (201)', async () => {
       const createdServerWithInvalidJson = {
         id: 'server-invalid',
         name: 'Invalid JSON Server',
@@ -729,7 +729,12 @@ describe('MCP Servers - Create Global', () => {
         organization: null,
         license: null,
         transport_type: 'stdio',
-        environment_variables: null,
+        template_args: null,
+        template_env: null,
+        team_args_schema: null,
+        user_args_schema: null,
+        team_env_schema: null,
+        user_env_schema: null,
         dependencies: null,
         category_id: null,
         tags: null,
@@ -745,7 +750,7 @@ describe('MCP Servers - Create Global', () => {
       const handler = routeHandlers['POST /mcp/servers/global'];
       await handler(mockRequest, mockReply);
 
-      expect(mockReply.status).toHaveBeenCalledWith(500);
+      expect(mockReply.status).toHaveBeenCalledWith(201);
       expect(mockReply.type).toHaveBeenCalledWith('application/json');
       
       // Parse the JSON string response
@@ -753,19 +758,19 @@ describe('MCP Servers - Create Global', () => {
       const response = JSON.parse(sentData);
       
       expect(response).toEqual({
-        success: false,
-        error: 'Failed to format server response'
+        success: true,
+        data: expect.objectContaining({
+          id: 'server-invalid',
+          name: 'Invalid JSON Server',
+          slug: 'invalid-json-server',
+          description: 'A server with invalid JSON',
+          // safeJsonParse should return empty array [] for invalid JSON string
+          installation_methods: [],
+          visibility: 'global',
+          status: 'active',
+          featured: false
+        })
       });
-
-      expect(mockLogger.error).toHaveBeenCalledWith(
-        expect.objectContaining({
-          operation: 'create_global_mcp_server',
-          userId: 'test-user-id',
-          serverId: 'server-invalid',
-          jsonError: expect.any(Error)
-        }),
-        'Failed to parse JSON fields in response'
-      );
     });
   });
 

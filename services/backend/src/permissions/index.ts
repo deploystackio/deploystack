@@ -48,6 +48,9 @@ export const ROLE_DEFINITIONS = {
     'satellites.view',
     'satellites.manage',
     'satellites.revoke',
+    'jobs.view',
+    'jobs.monitor',
+    'jobs.manage',
   ],
   global_user: [
     'profile.view',

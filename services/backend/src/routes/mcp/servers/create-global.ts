@@ -2,6 +2,8 @@
 import { type FastifyInstance } from 'fastify';
 import { requireGlobalAdmin } from '../../../middleware/roleMiddleware';
 import { McpCatalogService } from '../../../services/mcpCatalogService';
+import { GitHubService } from '../../../services/githubService';
+import { GitHubReadmeService } from '../../../services/githubReadmeService';
 import { getDb } from '../../../db';
 import { extractMcpConfigData } from '../../../utils/mcpConfigExtractor';
 import { EVENT_NAMES } from '../../../events';
@@ -180,6 +182,82 @@ export default async function createGlobalServer(server: FastifyInstance) {
       // Convert template_env and template_headers - keep as arrays for consistency
       // All template fields should be stored as arrays: template_args, template_env, template_headers
       
+      // Fetch GitHub data if github_url is provided (non-blocking)
+      let githubReadmeBase64: string | null = null;
+      let githubStars: number | null = null;
+      let githubAccountId: string | null = requestData.github_account_id || null;
+
+      if (requestData.github_url) {
+        request.log.debug({
+          operation: 'create_global_mcp_server',
+          step: 'fetch_github_data',
+          github_url: requestData.github_url
+        }, 'Attempting to fetch GitHub data');
+
+        // Fetch repository info (stars and account ID)
+        try {
+          const repoInfo = await GitHubService.getRepositoryInfo(
+            requestData.github_url,
+            request.log
+          );
+          
+          githubStars = repoInfo.stars;
+          if (repoInfo.github_account_id) {
+            githubAccountId = repoInfo.github_account_id;
+          }
+          
+          request.log.info({
+            operation: 'create_global_mcp_server',
+            step: 'fetch_github_data',
+            github_url: requestData.github_url,
+            stars: githubStars,
+            account_id: githubAccountId
+          }, 'Successfully fetched GitHub repository info');
+        } catch (error) {
+          request.log.warn({
+            operation: 'create_global_mcp_server',
+            step: 'fetch_github_data',
+            error,
+            github_url: requestData.github_url
+          }, 'Failed to fetch GitHub repository info, continuing without it');
+        }
+
+        // Fetch README content
+        try {
+          const branch = requestData.git_branch || 'main';
+          const readmeResult = await GitHubReadmeService.getReadmeContent(
+            requestData.github_url,
+            branch,
+            request.log
+          );
+          
+          if (readmeResult) {
+            githubReadmeBase64 = Buffer.from(readmeResult.content, 'utf8').toString('base64');
+            
+            request.log.info({
+              operation: 'create_global_mcp_server',
+              step: 'fetch_github_data',
+              github_url: requestData.github_url,
+              readme_length: readmeResult.content.length,
+              readme_encoded_length: githubReadmeBase64.length
+            }, 'Successfully fetched and encoded GitHub README');
+          } else {
+            request.log.debug({
+              operation: 'create_global_mcp_server',
+              step: 'fetch_github_data',
+              github_url: requestData.github_url
+            }, 'No README found in repository');
+          }
+        } catch (error) {
+          request.log.warn({
+            operation: 'create_global_mcp_server',
+            step: 'fetch_github_data',
+            error,
+            github_url: requestData.github_url
+          }, 'Failed to fetch GitHub README, continuing without it');
+        }
+      }
+
       // Prepare server data with the processed configuration
       // Ensure all schema arrays default to empty arrays instead of undefined/null
       const serverData = {
@@ -215,7 +293,9 @@ export default async function createGlobalServer(server: FastifyInstance) {
         tags: requestData.tags,
         featured: requestData.featured,
         auto_install_new_default_team: requestData.auto_install_new_default_team,
-        github_account_id: requestData.github_account_id
+        github_account_id: githubAccountId,
+        github_readme_base64: githubReadmeBase64,
+        github_stars: githubStars
       };
 
       const newServer = await mcpService.createServer(

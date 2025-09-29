@@ -42,7 +42,8 @@ import {
   UserRoundPen,
   FileSliders,
   FolderTree,
-  Satellite
+  Satellite,
+  ListTodo
 } from 'lucide-vue-next'
 
 // Define props, including variant
@@ -368,6 +369,17 @@ onUnmounted(() => {
               >
                 <Satellite class="mr-2 h-4 w-4 shrink-0" />
                 <span>{{ t('sidebar.adminArea.satellites') }}</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                @click="navigateTo('/admin/jobs')"
+                :is-active="router.currentRoute.value.path.startsWith('/admin/jobs')"
+                class="w-full justify-start"
+                :aria-current="router.currentRoute.value.path.startsWith('/admin/jobs') ? 'page' : undefined"
+              >
+                <ListTodo class="mr-2 h-4 w-4 shrink-0" />
+                <span>{{ t('sidebar.adminArea.backgroundJobs') }}</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>

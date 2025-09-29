@@ -214,6 +214,11 @@ export const SERVER_DETAILS_SCHEMA = {
       nullable: true, 
       description: 'Author name' 
     },
+    github_stars: { 
+      type: 'number', 
+      nullable: true,
+      description: 'Number of GitHub stars'
+    },
     language: { 
       type: 'string', 
       description: 'Programming language' 
@@ -500,6 +505,7 @@ export interface ServerDetails {
   github_url: string | null;
   homepage_url: string | null;
   author_name: string | null;
+  github_stars: number | null;
   language: string;
   runtime: string;
   status: 'active' | 'deprecated' | 'maintenance';

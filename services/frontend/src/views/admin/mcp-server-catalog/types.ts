@@ -8,6 +8,7 @@ export interface McpServer {
   long_description?: string
   github_url?: string
   github_account_id?: string
+  github_stars?: number
   git_branch?: string
   homepage_url?: string
   language: string
@@ -44,6 +45,7 @@ export interface McpServer {
   created_at: string
   updated_at: string
   last_sync_at?: string
+  github_readme_base64?: string
 }
 
 export interface McpCategory {
@@ -174,6 +176,7 @@ export interface CreateMcpServerRequest {
   long_description?: string
   github_url?: string
   github_account_id?: string
+  github_stars?: number
   git_branch?: string
   homepage_url?: string
   language?: string
@@ -214,6 +217,7 @@ export interface UpdateMcpServerRequest {
   long_description?: string
   github_url?: string
   github_account_id?: string
+  github_stars?: number
   git_branch?: string
   homepage_url?: string
   language?: string

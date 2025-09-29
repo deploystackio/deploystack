@@ -9448,6 +9448,10 @@ paths:
                               type: string
                               nullable: true
                               description: GitHub Account ID
+                            github_stars:
+                              type: number
+                              nullable: true
+                              description: Number of GitHub stars
                             language:
                               type: string
                               description: Programming language
@@ -9728,6 +9732,10 @@ paths:
                         type: string
                         nullable: true
                         description: GitHub Account ID
+                      github_stars:
+                        type: number
+                        nullable: true
+                        description: Number of GitHub stars
                       language:
                         type: string
                         description: Programming language
@@ -9850,6 +9858,10 @@ paths:
                         format: date-time
                         nullable: true
                         description: Last sync timestamp
+                      github_readme_base64:
+                        type: string
+                        nullable: true
+                        description: Base64-encoded GitHub README content
                     required:
                       - id
                       - name
@@ -10066,6 +10078,10 @@ paths:
                               type: string
                               nullable: true
                               description: GitHub Account ID
+                            github_stars:
+                              type: number
+                              nullable: true
+                              description: Number of GitHub stars
                             language:
                               type: string
                               description: Programming language
@@ -10839,6 +10855,10 @@ paths:
                         type: string
                         nullable: true
                         description: GitHub Account ID
+                      github_stars:
+                        type: number
+                        nullable: true
+                        description: Number of GitHub stars
                       language:
                         type: string
                         description: Programming language
@@ -11296,6 +11316,10 @@ paths:
                         type: string
                         nullable: true
                         description: GitHub Account ID
+                      github_stars:
+                        type: number
+                        nullable: true
+                        description: Number of GitHub stars
                       language:
                         type: string
                         description: Programming language
@@ -12123,6 +12147,10 @@ paths:
                             type: string
                             nullable: true
                             description: Author name
+                          github_stars:
+                            type: number
+                            nullable: true
+                            description: Number of GitHub stars
                           language:
                             type: string
                             description: Programming language
@@ -12402,6 +12430,10 @@ paths:
                               type: string
                               nullable: true
                               description: Author name
+                            github_stars:
+                              type: number
+                              nullable: true
+                              description: Number of GitHub stars
                             language:
                               type: string
                               description: Programming language
@@ -12670,6 +12702,10 @@ paths:
                             type: string
                             nullable: true
                             description: Author name
+                          github_stars:
+                            type: number
+                            nullable: true
+                            description: Number of GitHub stars
                           language:
                             type: string
                             description: Programming language
@@ -12958,6 +12994,10 @@ paths:
                             type: string
                             nullable: true
                             description: Author name
+                          github_stars:
+                            type: number
+                            nullable: true
+                            description: Number of GitHub stars
                           language:
                             type: string
                             description: Programming language
@@ -13389,6 +13429,10 @@ paths:
                             type: string
                             nullable: true
                             description: Author name
+                          github_stars:
+                            type: number
+                            nullable: true
+                            description: Number of GitHub stars
                           language:
                             type: string
                             description: Programming language
@@ -13676,6 +13720,10 @@ paths:
                             type: string
                             nullable: true
                             description: Author name
+                          github_stars:
+                            type: number
+                            nullable: true
+                            description: Number of GitHub stars
                           language:
                             type: string
                             description: Programming language
@@ -13963,6 +14011,10 @@ paths:
                             type: string
                             nullable: true
                             description: Author name
+                          github_stars:
+                            type: number
+                            nullable: true
+                            description: Number of GitHub stars
                           language:
                             type: string
                             description: Programming language
@@ -16661,6 +16713,718 @@ paths:
                   - success
                   - error
                 description: Internal Server Error - SMTP configuration or email sending failed
+  /api/admin/jobs:
+    get:
+      summary: List all jobs
+      tags:
+        - Jobs
+      description: List jobs with filtering and pagination. Supports filtering by
+        status and job type. Requires global_admin role with jobs.view
+        permission.
+      parameters:
+        - schema:
+            type: string
+            enum:
+              - pending
+              - processing
+              - completed
+              - failed
+          in: query
+          name: status
+          required: false
+          description: Filter by job status
+        - schema:
+            type: string
+          in: query
+          name: type
+          required: false
+          description: Filter by job type
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: query
+          name: limit
+          required: false
+          description: "Maximum number of jobs to return (1-100, default: 50)"
+        - schema:
+            type: string
+            pattern: ^\d+$
+          in: query
+          name: offset
+          required: false
+          description: "Number of jobs to skip (≥0, default: 0)"
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Jobs retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Indicates operation success
+                  data:
+                    type: object
+                    properties:
+                      jobs:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                              description: Job ID
+                            type:
+                              type: string
+                              description: Job type
+                            payload:
+                              type: object
+                              description: Job payload data
+                            status:
+                              type: string
+                              enum:
+                                - pending
+                                - processing
+                                - completed
+                                - failed
+                              description: Current job status
+                            scheduled_for:
+                              type: string
+                              format: date-time
+                              description: When the job should be processed
+                            attempts:
+                              type: number
+                              description: Number of processing attempts
+                            max_attempts:
+                              type: number
+                              description: Maximum allowed attempts
+                            error:
+                              type: string
+                              nullable: true
+                              description: Error message if failed
+                            batch_id:
+                              type: string
+                              nullable: true
+                              description: Associated batch ID
+                            created_at:
+                              type: string
+                              format: date-time
+                              description: Job creation time
+                            updated_at:
+                              type: string
+                              format: date-time
+                              description: Last update time
+                            completed_at:
+                              type: string
+                              format: date-time
+                              nullable: true
+                              description: Job completion time
+                          required:
+                            - id
+                            - type
+                            - payload
+                            - status
+                            - scheduled_for
+                            - attempts
+                            - max_attempts
+                            - created_at
+                            - updated_at
+                        description: Array of jobs
+                      pagination:
+                        type: object
+                        properties:
+                          total:
+                            type: number
+                            description: Total number of jobs matching filters
+                          limit:
+                            type: number
+                            description: Maximum number of items per page
+                          offset:
+                            type: number
+                            description: Number of items skipped
+                          has_more:
+                            type: boolean
+                            description: Whether more items are available
+                        required:
+                          - total
+                          - limit
+                          - offset
+                          - has_more
+                    required:
+                      - jobs
+                      - pagination
+                required:
+                  - success
+                  - data
+                description: Jobs retrieved successfully
+        "400":
+          description: Bad Request - Invalid pagination parameters
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates operation failure
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - success
+                  - error
+                description: Bad Request - Invalid pagination parameters
+        "401":
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates operation failure
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - success
+                  - error
+                description: Unauthorized - Authentication required
+        "403":
+          description: Forbidden - Requires global_admin role with jobs.view permission
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates operation failure
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - success
+                  - error
+                description: Forbidden - Requires global_admin role with jobs.view permission
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates operation failure
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - success
+                  - error
+                description: Internal Server Error
+  /api/admin/jobs/{id}:
+    get:
+      summary: Get job details
+      tags:
+        - Jobs
+      description: Get detailed information about a specific job by its ID. Requires
+        global_admin role with jobs.view permission.
+      parameters:
+        - schema:
+            type: string
+            minLength: 1
+          in: path
+          name: id
+          required: true
+          description: Job ID
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Job details retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Indicates operation success
+                  job:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        description: Job ID
+                      type:
+                        type: string
+                        description: Job type
+                      payload:
+                        type: object
+                        description: Job payload data
+                      status:
+                        type: string
+                        enum:
+                          - pending
+                          - processing
+                          - completed
+                          - failed
+                        description: Current job status
+                      scheduled_for:
+                        type: string
+                        format: date-time
+                        description: When the job should be processed
+                      attempts:
+                        type: number
+                        description: Number of processing attempts
+                      max_attempts:
+                        type: number
+                        description: Maximum allowed attempts
+                      error:
+                        type: string
+                        nullable: true
+                        description: Error message if failed
+                      batch_id:
+                        type: string
+                        nullable: true
+                        description: Associated batch ID
+                      created_at:
+                        type: string
+                        format: date-time
+                        description: Job creation time
+                      updated_at:
+                        type: string
+                        format: date-time
+                        description: Last update time
+                      completed_at:
+                        type: string
+                        format: date-time
+                        nullable: true
+                        description: Job completion time
+                    required:
+                      - id
+                      - type
+                      - payload
+                      - status
+                      - scheduled_for
+                      - attempts
+                      - max_attempts
+                      - created_at
+                      - updated_at
+                required:
+                  - success
+                  - job
+                description: Job details retrieved successfully
+        "401":
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates operation failure
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - success
+                  - error
+                description: Unauthorized - Authentication required
+        "403":
+          description: Forbidden - Requires global_admin role with jobs.view permission
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates operation failure
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - success
+                  - error
+                description: Forbidden - Requires global_admin role with jobs.view permission
+        "404":
+          description: Not Found - Job not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates operation failure
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - success
+                  - error
+                description: Not Found - Job not found
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates operation failure
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - success
+                  - error
+                description: Internal Server Error
+  /api/admin/jobs/batches/{batchId}:
+    get:
+      summary: Get batch status
+      tags:
+        - Jobs
+      description: Get progress and status of a job batch, including completion
+        progress, estimated completion time, and recent jobs. Requires
+        global_admin role with jobs.monitor permission.
+      parameters:
+        - schema:
+            type: string
+            minLength: 1
+          in: path
+          name: batchId
+          required: true
+          description: Batch ID
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Batch status retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Indicates operation success
+                  batch:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        description: Batch ID
+                      type:
+                        type: string
+                        description: Batch type
+                      totalJobs:
+                        type: number
+                        description: Total number of jobs in batch
+                      completedJobs:
+                        type: number
+                        description: Number of completed jobs
+                      failedJobs:
+                        type: number
+                        description: Number of failed jobs
+                      status:
+                        type: string
+                        enum:
+                          - pending
+                          - processing
+                          - completed
+                          - failed
+                        description: Overall batch status
+                      progress:
+                        type: number
+                        description: Completion progress (0.0 to 1.0)
+                      estimatedCompletion:
+                        type: string
+                        nullable: true
+                        description: Estimated time to completion
+                      createdAt:
+                        type: string
+                        format: date-time
+                        description: Batch creation time
+                      completedAt:
+                        type: string
+                        format: date-time
+                        nullable: true
+                        description: Batch completion time
+                    required:
+                      - id
+                      - type
+                      - totalJobs
+                      - completedJobs
+                      - failedJobs
+                      - status
+                      - progress
+                      - createdAt
+                  recentJobs:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          description: Job ID
+                        type:
+                          type: string
+                          description: Job type
+                        payload:
+                          type: object
+                          description: Job payload data
+                        status:
+                          type: string
+                          enum:
+                            - pending
+                            - processing
+                            - completed
+                            - failed
+                          description: Current job status
+                        scheduled_for:
+                          type: string
+                          format: date-time
+                          description: When the job should be processed
+                        attempts:
+                          type: number
+                          description: Number of processing attempts
+                        max_attempts:
+                          type: number
+                          description: Maximum allowed attempts
+                        error:
+                          type: string
+                          nullable: true
+                          description: Error message if failed
+                        batch_id:
+                          type: string
+                          nullable: true
+                          description: Associated batch ID
+                        created_at:
+                          type: string
+                          format: date-time
+                          description: Job creation time
+                        updated_at:
+                          type: string
+                          format: date-time
+                          description: Last update time
+                        completed_at:
+                          type: string
+                          format: date-time
+                          nullable: true
+                          description: Job completion time
+                      required:
+                        - id
+                        - type
+                        - payload
+                        - status
+                        - scheduled_for
+                        - attempts
+                        - max_attempts
+                        - created_at
+                        - updated_at
+                    description: Last 10 jobs in batch
+                required:
+                  - success
+                  - batch
+                  - recentJobs
+                description: Batch status retrieved successfully
+        "401":
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates operation failure
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - success
+                  - error
+                description: Unauthorized - Authentication required
+        "403":
+          description: Forbidden - Requires global_admin role with jobs.monitor permission
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates operation failure
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - success
+                  - error
+                description: Forbidden - Requires global_admin role with jobs.monitor permission
+        "404":
+          description: Not Found - Batch not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates operation failure
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - success
+                  - error
+                description: Not Found - Batch not found
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates operation failure
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - success
+                  - error
+                description: Internal Server Error
+  /api/admin/jobs/stats:
+    get:
+      summary: Get job statistics
+      tags:
+        - Jobs
+      description: Get aggregate statistics about the job queue, including counts by
+        status, daily totals, and average processing duration. Requires
+        global_admin role with jobs.monitor permission.
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Job statistics retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Indicates operation success
+                  stats:
+                    type: object
+                    properties:
+                      pending:
+                        type: number
+                        description: Number of pending jobs
+                      processing:
+                        type: number
+                        description: Number of jobs currently processing
+                      completed:
+                        type: number
+                        description: Number of completed jobs
+                      failed:
+                        type: number
+                        description: Number of failed jobs
+                      totalToday:
+                        type: number
+                        description: Total jobs created today
+                      averageDuration:
+                        type: number
+                        description: Average job duration in milliseconds
+                    required:
+                      - pending
+                      - processing
+                      - completed
+                      - failed
+                      - totalToday
+                      - averageDuration
+                required:
+                  - success
+                  - stats
+                description: Job statistics retrieved successfully
+        "401":
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates operation failure
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - success
+                  - error
+                description: Unauthorized - Authentication required
+        "403":
+          description: Forbidden - Requires global_admin role with jobs.monitor permission
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates operation failure
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - success
+                  - error
+                description: Forbidden - Requires global_admin role with jobs.monitor permission
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates operation failure
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - success
+                  - error
+                description: Internal Server Error
   /api/gateway/me/mcp-configurations:
     get:
       summary: Get merged MCP configurations for gateway

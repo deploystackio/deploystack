@@ -29,6 +29,20 @@
       "when": 1759089890932,
       "tag": "0003_lucky_archangel",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1759134010422,
+      "tag": "0004_panoramic_albert_cleary",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1759152305678,
+      "tag": "0005_mature_tarot",
+      "breakpoints": true
     }
   ]
 }

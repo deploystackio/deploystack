@@ -436,8 +436,9 @@ onMounted(async () => {
 
 <template>
   <div class="space-y-6">
-    <!-- Progress Navigation -->
+    <!-- Progress Navigation - Hidden on first step -->
     <ProgressBars
+      v-if="currentStep > 0"
       :steps="progressSteps"
       :progress="progressPercentage"
       :title="t('mcpInstallations.wizard.title')"

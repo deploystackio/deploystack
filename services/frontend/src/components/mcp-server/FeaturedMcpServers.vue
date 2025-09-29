@@ -3,9 +3,10 @@ import { ref, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter, useRoute } from 'vue-router'
 import { Button } from '@/components/ui/button'
-import { Loader2, Github, Code } from 'lucide-vue-next'
+import { Loader2 } from 'lucide-vue-next'
 import { McpCatalogService } from '@/services/mcpCatalogService'
 import type { McpServer } from '@/views/admin/mcp-server-catalog/types'
+import McpServerSquareCard from './McpServerSquareCard.vue'
 
 interface Props {
   title?: string
@@ -74,34 +75,11 @@ const fetchFeaturedServers = async () => {
 }
 
 const handleInstall = (server: McpServer) => {
-  // Emit the server selection for parent components that need it
   emit('serverSelected', server)
-
-  // Navigate to wizard step 2 with pre-selected server
-  router.push({
-    path: '/mcp-server/add',
-    query: {
-      serverId: server.id,
-      step: '2'
-    }
-  })
 }
 
-const handleServerClick = (server: McpServer) => {
-  router.push(`/mcp-server/view/${server.id}`)
-}
-
-const getServerLanguageBadge = (server: McpServer) => {
-  return server.language || 'Unknown'
-}
-
-const getServerDescription = (server: McpServer) => {
-  return server.description || 'No description available'
-}
-
-const getGitHubAvatarUrl = (server: McpServer) => {
-  if (!server.github_account_id) return null
-  return `https://avatars.githubusercontent.com/u/${server.github_account_id}?v=4&s=64`
+const handleServerClick = () => {
+  // The card component handles navigation internally
 }
 
 // Lifecycle
@@ -147,72 +125,13 @@ onMounted(() => {
 
     <!-- Featured Servers Grid -->
     <div v-else :class="`grid ${gridCols} gap-8`">
-      <div
+      <McpServerSquareCard
         v-for="server in featuredServers"
         :key="server.id"
-      >
-        <h2 class="sr-only">Server Details</h2>
-        <div class="rounded-lg bg-gray-50 shadow-xs outline-1 outline-gray-900/5">
-          <dl class="flex flex-wrap">
-            <div class="flex-auto pt-6 pl-6">
-              <dt 
-                class="text-sm/6 font-semibold text-gray-900 cursor-pointer hover:text-teal-700 transition-colors flex items-center gap-2"
-                @click="handleServerClick(server)"
-                :title="`View ${server.name} details`"
-              >
-                <img 
-                  v-if="getGitHubAvatarUrl(server)"
-                  :src="getGitHubAvatarUrl(server)!"
-                  :alt="`${server.name} GitHub avatar`"
-                  class="h-8 w-8 rounded-md flex-shrink-0"
-                  @error="($event.target as HTMLImageElement).style.display = 'none'"
-                />
-                {{ server.name }}
-              </dt>
-            </div>
-            <div class="mt-6 flex w-full flex-none gap-x-4 items-center border-t border-gray-900/5 px-6 pt-6">
-              <dt class="flex-none">
-                <span class="sr-only">{{ t('mcpInstallations.view.fields.repository') }}</span>
-                <Github class="h-4 w-4 text-gray-400" aria-hidden="true" />
-              </dt>
-              <dd class="text-sm/6 font-medium text-gray-900 min-w-0 flex-1">
-                <a
-                  v-if="server.github_url"
-                  :href="server.github_url"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="hover:underline truncate block"
-                  :title="server.github_url.replace('https://github.com/', '')"
-                >
-                  {{ server.github_url.replace('https://github.com/', '') }}
-                </a>
-                <span v-else class="text-gray-500 truncate block">{{ t('mcpInstallations.view.values.notProvided') }}</span>
-              </dd>
-            </div>
-            <div class="mt-4 flex w-full flex-none gap-x-4 items-center px-6">
-              <dt class="flex-none">
-                <span class="sr-only">{{ t('mcpInstallations.view.fields.technical') }}</span>
-                <Code class="h-4 w-4 text-gray-400" aria-hidden="true" />
-              </dt>
-              <dd class="text-sm/6 text-gray-500">
-                {{ getServerLanguageBadge(server) }}
-              </dd>
-            </div>
-            <div class="mt-4 flex w-full flex-none gap-x-4 px-6">
-              <dd class="text-sm text-gray-600 line-clamp-2 min-h-[2.5rem]">{{ getServerDescription(server) }}</dd>
-            </div>
-          </dl>
-          <div class="mt-6 border-t border-gray-900/5 px-6 py-6">
-            <Button
-              @click="handleInstall(server)"
-              variant="outline"
-              class="w-full flex items-center justify-center gap-2 bg-black text-white border-black hover:bg-black/90 hover:border-black hover:text-white text-sm font-semibold"
-            >
-              {{ t('mcpInstallations.actions.install') }} <span aria-hidden="true">&rarr;</span>
-            </Button>
-          </div>
-        </div>
-      </div>
+        :server="server"
+        @install="handleInstall"
+        @click="handleServerClick"
+      />
     </div>
 
     <!-- Show More Link -->
@@ -228,12 +147,3 @@ onMounted(() => {
     </div>
   </div>
 </template>
-
-<style scoped>
-.line-clamp-2 {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-</style>
