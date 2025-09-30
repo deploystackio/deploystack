@@ -1,0 +1,540 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/**
+ * Official MCP Registry Data Transformation Layer
+ * 
+ * Transforms official MCP Registry format to DeployStack's internal format
+ * Reuses existing ConfigurationSchema types from schemas.ts
+ */
+
+import type {
+  ConfigurationSchema,
+  TemplateArg,
+  TemplateEnv,
+  TemplateHeader,
+  TeamArg,
+  TeamEnv,
+  TeamHeader,
+  UserArg,
+  UserEnv,
+  UserHeader,
+  CreateGlobalServerRequest
+} from '../../routes/mcp/servers/schemas';
+
+// =============================================================================
+// OFFICIAL REGISTRY TYPE DEFINITIONS
+// =============================================================================
+
+/**
+ * Official Registry Environment Variable
+ * Source: registry.modelcontextprotocol.io schema
+ */
+export interface OfficialEnvironmentVariable {
+  name: string;
+  description?: string;
+  isRequired?: boolean;
+  format?: string;
+  value?: string;
+  isSecret?: boolean;
+  default?: string;
+  choices?: string[];
+}
+
+/**
+ * Official Registry Transport Type
+ */
+export interface OfficialTransport {
+  type: 'stdio' | 'streamable-http' | 'sse';
+}
+
+/**
+ * Official Registry Package (npm, pypi, docker, etc.)
+ */
+export interface OfficialPackage {
+  registryType: string;
+  registryBaseUrl?: string;
+  identifier: string;
+  version: string;
+  transport: OfficialTransport;
+  environmentVariables?: OfficialEnvironmentVariable[];
+  runtimeArguments?: any[];
+  packageArguments?: any[];
+}
+
+/**
+ * Official Registry Header (for HTTP/SSE remotes)
+ */
+export interface OfficialHeader {
+  name: string;
+  description?: string;
+  isRequired?: boolean;
+  isSecret?: boolean;
+  value?: string;
+  default?: string;
+}
+
+/**
+ * Official Registry Remote (HTTP/SSE endpoints)
+ */
+export interface OfficialRemote {
+  type: 'streamable-http' | 'sse';
+  url: string;
+  headers?: OfficialHeader[];
+}
+
+/**
+ * Official Registry Repository Information
+ */
+export interface OfficialRepository {
+  url: string;
+  source: string;
+  id?: string;
+  subfolder?: string;
+}
+
+/**
+ * Official MCP Registry Server
+ * Complete server definition from registry.modelcontextprotocol.io
+ */
+export interface OfficialServer {
+  $schema?: string;
+  name: string; // Official reverse-DNS name (e.g., "io.github.upstash/context7")
+  description: string;
+  status?: 'active' | 'deprecated' | 'deleted';
+  version: string;
+  repository?: OfficialRepository;
+  websiteUrl?: string;
+  packages?: OfficialPackage[];
+  remotes?: OfficialRemote[];
+  _meta?: Record<string, any>;
+}
+
+// =============================================================================
+// NAME TRANSFORMATION UTILITIES
+// =============================================================================
+
+/**
+ * Transform official reverse-DNS name to user-friendly display name
+ * 
+ * Examples:
+ * - "io.github.upstash/context7" → "Context7"
+ * - "io.github.vfarcic/dot-ai" → "Dot AI"
+ * - "com.apple-rag/mcp-server" → "Apple RAG"
+ * 
+ * @param officialName - Official reverse-DNS name
+ * @returns User-friendly display name
+ */
+export function createFriendlyName(officialName: string): string {
+  // Extract the server part after the last slash
+  const serverPart = officialName.split('/').pop() || officialName;
+  
+  // Remove common prefixes
+  let friendlyName = serverPart
+    .replace(/^mcp-server-?/i, '')
+    .replace(/^mcp-?/i, '')
+    .replace(/-server$/i, '')
+    .replace(/-mcp$/i, '');
+  
+  // Convert kebab-case and snake_case to Title Case
+  friendlyName = friendlyName
+    .replace(/[-_]/g, ' ')
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+  
+  // Handle special cases
+  const specialCases: Record<string, string> = {
+    'dot-ai': 'Dot AI',
+    'context7': 'Context7',
+    'apple-rag': 'Apple RAG',
+    'brave-search': 'Brave Search',
+  };
+  
+  const lowerKey = serverPart.toLowerCase();
+  if (specialCases[lowerKey]) {
+    return specialCases[lowerKey];
+  }
+  
+  return friendlyName;
+}
+
+/**
+ * Create URL-friendly slug from official name
+ * 
+ * @param officialName - Official reverse-DNS name
+ * @returns URL-friendly slug
+ */
+export function createSlug(officialName: string): string {
+  return officialName
+    .replace(/^[^/]+\//, '') // Remove namespace prefix
+    .toLowerCase()
+    .replace(/[^a-z0-9-]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
+// =============================================================================
+// TRANSPORT TYPE DERIVATION
+// =============================================================================
+
+/**
+ * Derive DeployStack transport_type from official packages/remotes
+ * 
+ * @param packages - Official packages array
+ * @param remotes - Official remotes array
+ * @returns DeployStack transport type
+ */
+export function deriveTransportType(
+  packages?: OfficialPackage[],
+  remotes?: OfficialRemote[]
+): 'stdio' | 'http' | 'sse' {
+  // Check packages first
+  if (packages && packages.length > 0) {
+    const transport = packages[0].transport?.type;
+    if (transport === 'stdio') return 'stdio';
+    if (transport === 'streamable-http') return 'http';
+    if (transport === 'sse') return 'sse';
+  }
+  
+  // Check remotes
+  if (remotes && remotes.length > 0) {
+    const transport = remotes[0].type;
+    if (transport === 'streamable-http') return 'http';
+    if (transport === 'sse') return 'sse';
+  }
+  
+  return 'stdio'; // Default fallback
+}
+
+/**
+ * Derive programming language from packages
+ * 
+ * @param packages - Official packages array
+ * @returns Programming language identifier
+ */
+export function deriveLanguage(packages?: OfficialPackage[]): string {
+  if (!packages || packages.length === 0) return 'http';
+  
+  const registryType = packages[0].registryType;
+  switch (registryType) {
+    case 'npm': return 'typescript';
+    case 'pypi': return 'python';
+    case 'docker': return 'docker';
+    default: return 'http';
+  }
+}
+
+/**
+ * Derive runtime from packages
+ * 
+ * @param packages - Official packages array
+ * @returns Runtime identifier
+ */
+export function deriveRuntime(packages?: OfficialPackage[]): string {
+  if (!packages || packages.length === 0) return 'http';
+  
+  const registryType = packages[0].registryType;
+  switch (registryType) {
+    case 'npm': return 'node';
+    case 'pypi': return 'python';
+    case 'docker': return 'docker';
+    default: return 'http';
+  }
+}
+
+// =============================================================================
+// THREE-TIER CONFIGURATION MAPPING
+// =============================================================================
+
+/**
+ * Map official environment variables to DeployStack's 3-tier configuration system
+ * 
+ * Rules:
+ * - Fixed values → Template Level (locked)
+ * - Secrets & required → Team Level (shared credentials)
+ * - Optional configs → User Level (personal customization)
+ * 
+ * @param envVars - Official environment variables array
+ * @returns DeployStack ConfigurationSchema with template/team/user tiers
+ */
+export function mapEnvironmentVariablesToThreeTier(
+  envVars: OfficialEnvironmentVariable[]
+): Pick<ConfigurationSchema, 'template_env' | 'team_env_schema' | 'user_env_schema'> {
+  const templateEnv: TemplateEnv[] = [];
+  const teamEnvSchema: TeamEnv[] = [];
+  const userEnvSchema: UserEnv[] = [];
+  
+  for (const envVar of envVars) {
+    // Fixed values go to Template Level (locked)
+    if (envVar.value && envVar.value !== 'YOUR_API_KEY' && envVar.value !== 'TOKEN') {
+      templateEnv.push({
+        name: envVar.name,
+        value: envVar.value,
+        locked: true,
+        description: envVar.description || `Fixed value: ${envVar.value}`,
+        type: 'string',
+        required: true
+      });
+      continue;
+    }
+    
+    // Secrets and required vars go to Team Level (shared credentials)
+    if (envVar.isSecret || envVar.isRequired) {
+      teamEnvSchema.push({
+        name: envVar.name,
+        type: envVar.isSecret ? 'secret' : (envVar.format as any || 'string'),
+        required: envVar.isRequired || false,
+        description: envVar.description || `Environment variable: ${envVar.name}`,
+        locked: false,
+        default_team_locked: envVar.isSecret || false, // Secrets locked by default
+        visible_to_users: !envVar.isSecret, // Secrets not visible to users
+      });
+      continue;
+    }
+    
+    // Optional configs go to User Level (personal customization)
+    userEnvSchema.push({
+      name: envVar.name,
+      type: (envVar.format as any || 'string'),
+      required: false,
+      description: envVar.description || `Optional environment variable: ${envVar.name}`,
+      locked: false,
+      // No default value or choices in existing schema, but keeping for consistency
+    });
+  }
+  
+  return { template_env: templateEnv, team_env_schema: teamEnvSchema, user_env_schema: userEnvSchema };
+}
+
+/**
+ * Map official headers to DeployStack's 3-tier header system
+ * 
+ * Rules:
+ * - Authentication headers → Team Level (shared credentials)
+ * - Optional headers → User Level (personal customization)
+ * 
+ * @param headers - Official headers array
+ * @returns DeployStack ConfigurationSchema header configuration
+ */
+export function mapHeadersToThreeTier(
+  headers: OfficialHeader[]
+): Pick<ConfigurationSchema, 'template_headers' | 'team_headers_schema' | 'user_headers_schema'> {
+  const templateHeaders: TemplateHeader[] = [];
+  const teamHeadersSchema: TeamHeader[] = [];
+  const userHeadersSchema: UserHeader[] = [];
+  
+  for (const header of headers) {
+    // Fixed header values go to template level
+    if (header.value && !header.isSecret) {
+      templateHeaders.push({
+        name: header.name,
+        value: header.value,
+        locked: true,
+        description: header.description || `Fixed header: ${header.name}`,
+        type: 'string',
+        required: true
+      });
+      continue;
+    }
+    
+    // Authentication headers go to team level
+    if (header.isSecret || header.isRequired) {
+      teamHeadersSchema.push({
+        name: header.name,
+        type: header.isSecret ? 'secret' : 'string',
+        required: header.isRequired || false,
+        description: header.description || `Header: ${header.name}`,
+        locked: false,
+        default_team_locked: header.isSecret || false,
+        visible_to_users: !header.isSecret,
+      });
+    } else {
+      // Optional headers go to user level
+      userHeadersSchema.push({
+        name: header.name,
+        type: 'string',
+        required: false,
+        description: header.description || `Optional header: ${header.name}`,
+        locked: false,
+      });
+    }
+  }
+  
+  return { template_headers: templateHeaders, team_headers_schema: teamHeadersSchema, user_headers_schema: userHeadersSchema };
+}
+
+/**
+ * Map official runtime/package arguments to DeployStack's 3-tier args system
+ * 
+ * @param packages - Official packages array
+ * @returns DeployStack ConfigurationSchema args configuration
+ */
+export function mapArgumentsToThreeTier(
+  packages?: OfficialPackage[]
+): Pick<ConfigurationSchema, 'template_args' | 'team_args_schema' | 'user_args_schema'> {
+  const templateArgs: TemplateArg[] = [];
+  const teamArgsSchema: TeamArg[] = [];
+  const userArgsSchema: UserArg[] = [];
+  
+  if (!packages || packages.length === 0) {
+    return { template_args: templateArgs, team_args_schema: teamArgsSchema, user_args_schema: userArgsSchema };
+  }
+  
+  // Extract runtime and package arguments
+  const pkg = packages[0];
+  
+  // Package arguments go to template (locked)
+  if (pkg.packageArguments && pkg.packageArguments.length > 0) {
+    for (const arg of pkg.packageArguments) {
+      templateArgs.push({
+        value: String(arg),
+        locked: true,
+        description: 'Package argument'
+      });
+    }
+  }
+  
+  // Runtime arguments might be configurable at team/user level
+  if (pkg.runtimeArguments && pkg.runtimeArguments.length > 0) {
+    // For now, treat runtime arguments as user-configurable
+    userArgsSchema.push({
+      name: 'runtime_args',
+      type: 'string',
+      required: false,
+      description: 'Runtime arguments',
+      locked: false,
+      min_items: 0,
+      max_items: 10
+    });
+  }
+  
+  return { template_args: templateArgs, team_args_schema: teamArgsSchema, user_args_schema: userArgsSchema };
+}
+
+// =============================================================================
+// MAIN TRANSFORMATION FUNCTION
+// =============================================================================
+
+/**
+ * Transform official registry server to DeployStack format
+ * 
+ * Outputs data in the exact format that create-global.ts expects
+ * Reuses existing ConfigurationSchema types from schemas.ts
+ * 
+ * @param officialServer - Official MCP Registry server data
+ * @param _createdBy - User ID creating the server (unused in transformation, used by caller)
+ * @returns Partial CreateGlobalServerRequest ready for McpCatalogService.createServer
+ */
+export async function transformOfficialToDeployStack(
+  officialServer: OfficialServer,
+  _createdBy: string
+): Promise<Partial<CreateGlobalServerRequest>> {
+  // Extract 3-tier configurations from packages (env vars + args)
+  const envConfig = mapEnvironmentVariablesToThreeTier(
+    officialServer.packages?.[0]?.environmentVariables || []
+  );
+  
+  const argsConfig = mapArgumentsToThreeTier(officialServer.packages);
+  
+  // Extract 3-tier configurations from remotes (headers)
+  const headerConfig = mapHeadersToThreeTier(
+    officialServer.remotes?.[0]?.headers || []
+  );
+  
+  // Combine into full ConfigurationSchema
+  const configurationSchema: ConfigurationSchema = {
+    template_args: argsConfig.template_args,
+    template_env: envConfig.template_env,
+    template_headers: headerConfig.template_headers,
+    team_args_schema: argsConfig.team_args_schema,
+    team_env_schema: envConfig.team_env_schema,
+    team_headers_schema: headerConfig.team_headers_schema,
+    user_args_schema: argsConfig.user_args_schema,
+    user_env_schema: envConfig.user_env_schema,
+    user_headers_schema: headerConfig.user_headers_schema,
+  };
+  
+  // Create friendly name (slug auto-generated by McpCatalogService)
+  const friendlyName = createFriendlyName(officialServer.name);
+  
+  // Extract repository info
+  const repository = officialServer.repository;
+  
+  // Derive DeployStack fields
+  const transportType = deriveTransportType(officialServer.packages, officialServer.remotes);
+  const language = deriveLanguage(officialServer.packages);
+  const runtime = deriveRuntime(officialServer.packages);
+  
+  // Build the server data in create-global.ts format
+  // Note: status field not included as it's not part of CreateGlobalServerRequest
+  // Status will be set to 'active' by default in the service layer
+  return {
+    name: friendlyName,
+    description: officialServer.description,
+    language: language,
+    runtime: runtime,
+    
+    // Repository information
+    repository_url: repository?.url,
+    repository_source: repository?.source,
+    repository_id: repository?.id,
+    repository_subfolder: repository?.subfolder,
+    
+    // Website
+    website_url: officialServer.websiteUrl,
+    
+    // Official format storage (will be JSON stringified by create-global.ts)
+    packages: officialServer.packages,
+    remotes: officialServer.remotes,
+    
+    // Derived DeployStack fields
+    transport_type: transportType,
+    
+    // 3-tier configuration schema
+    configuration_schema: configurationSchema,
+    
+    // Defaults for global servers from official registry
+    featured: false,
+    auto_install_new_default_team: false,
+  };
+}
+
+/**
+ * Validate official server data structure
+ * 
+ * @param data - Data to validate
+ * @returns True if valid official server
+ */
+export function isValidOfficialServer(data: unknown): data is OfficialServer {
+  if (!data || typeof data !== 'object') return false;
+  const obj = data as any;
+  
+  return (
+    typeof obj.name === 'string' &&
+    typeof obj.description === 'string' &&
+    typeof obj.version === 'string'
+  );
+}
+
+/**
+ * Extract server metadata from official registry _meta field
+ * 
+ * @param officialServer - Official server data
+ * @returns Extracted metadata for tracking
+ */
+export function extractOfficialMetadata(officialServer: OfficialServer): {
+  official_name: string;
+  official_registry_server_id: string | null;
+  official_registry_version_id: string | null;
+  official_registry_published_at: Date | null;
+  official_registry_updated_at: Date | null;
+  synced_from_official_registry: boolean;
+} {
+  const meta = officialServer._meta?.['io.modelcontextprotocol.registry/official'];
+  
+  return {
+    official_name: officialServer.name,
+    official_registry_server_id: meta?.serverId || null,
+    official_registry_version_id: meta?.versionId || null,
+    official_registry_published_at: meta?.publishedAt ? new Date(meta.publishedAt) : null,
+    official_registry_updated_at: meta?.updatedAt ? new Date(meta.updatedAt) : null,
+    synced_from_official_registry: true,
+  };
+}

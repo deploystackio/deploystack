@@ -24931,6 +24931,129 @@
         }
       }
     },
+    "/api/admin/mcp-registry/sync": {
+      "post": {
+        "summary": "Trigger MCP Registry sync via job queue",
+        "tags": [
+          "Admin - MCP Registry"
+        ],
+        "description": "Trigger synchronization with official MCP Registry using background jobs for rate limiting. Progress can be monitored via GET /api/admin/jobs/batches/{batchId}",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "maxServers": {
+                    "type": "number",
+                    "minimum": 1,
+                    "maximum": 1000,
+                    "description": "Maximum number of servers to sync (for testing). Omit to sync all servers."
+                  },
+                  "skipExisting": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Skip servers that already exist in the database"
+                  },
+                  "forceRefresh": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Force refresh of existing servers (overrides skipExisting)"
+                  },
+                  "rateLimitDelay": {
+                    "type": "number",
+                    "minimum": 1,
+                    "maximum": 10,
+                    "default": 2,
+                    "description": "Delay between jobs in seconds (default: 2)"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "batchId": {
+                          "type": "string",
+                          "description": "Job batch ID for tracking progress"
+                        },
+                        "totalServers": {
+                          "type": "number",
+                          "description": "Total servers to sync"
+                        },
+                        "jobsCreated": {
+                          "type": "number",
+                          "description": "Number of jobs created"
+                        },
+                        "estimatedCompletion": {
+                          "type": "string",
+                          "description": "Estimated completion time (ISO 8601)"
+                        },
+                        "rateLimitDelay": {
+                          "type": "number",
+                          "description": "Delay between jobs in seconds"
+                        }
+                      },
+                      "required": [
+                        "batchId",
+                        "totalServers",
+                        "jobsCreated",
+                        "estimatedCompletion"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/gateway/me/mcp-configurations": {
       "get": {
         "summary": "Get merged MCP configurations for gateway",

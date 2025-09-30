@@ -1,5 +1,7 @@
 import type { FastifyBaseLogger } from 'fastify';
+import type { AnyDatabase } from '../db';
 import type { JobProcessorService } from '../services/jobProcessorService';
+import { McpServerSyncWorker } from './mcpServerSyncWorker';
 
 /**
  * Register all workers with the job processor
@@ -16,21 +18,24 @@ import type { JobProcessorService } from '../services/jobProcessorService';
  * ```typescript
  * import { MyCustomWorker } from './myCustomWorker';
  * 
- * export function registerWorkers(processor: JobProcessorService, logger: FastifyBaseLogger) {
- *   processor.registerWorker('my_custom_job', new MyCustomWorker());
+ * export function registerWorkers(processor: JobProcessorService, db: AnyDatabase, logger: FastifyBaseLogger) {
+ *   processor.registerWorker('my_custom_job', new MyCustomWorker(db, logger));
  *   logger.info('Workers registered successfully');
  * }
  * ```
  */
 export function registerWorkers(
   processor: JobProcessorService,
+  db: AnyDatabase,
   logger: FastifyBaseLogger
 ): void {
-  // Future workers will be registered here
-  // Example:
-  // processor.registerWorker('send_email', new EmailWorker(db, logger));
-  // processor.registerWorker('process_csv', new CsvProcessorWorker(db, logger));
-  // processor.registerWorker('mcp_registry_sync', new McpRegistrySyncWorker(db, logger));
+  // Register MCP Server Sync Worker
+  processor.registerWorker(
+    'sync_mcp_server',
+    new McpServerSyncWorker(db, logger)
+  );
 
-  logger.info('Job queue workers registered (no workers yet - Phase 3)');
+  logger.info({
+    workers: ['sync_mcp_server']
+  }, 'Job queue workers registered successfully');
 }
