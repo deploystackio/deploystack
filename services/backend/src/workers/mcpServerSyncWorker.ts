@@ -1,7 +1,7 @@
 import type { AnyDatabase } from '../db';
 import type { FastifyBaseLogger } from 'fastify';
 import type { Worker, WorkerResult } from './types';
-import { transformOfficialToDeployStack, isValidOfficialServer, type OfficialServer } from '../services/transforms/officialRegistryTransforms';
+import { transformOfficialToDeployStack, isValidOfficialServer, isGitHubRateLimitError, type OfficialServer } from '../services/transforms/officialRegistryTransforms';
 import { McpCatalogService } from '../services/mcpCatalogService';
 
 /**
@@ -90,10 +90,14 @@ export class McpServerSyncWorker implements Worker {
         }
       }
 
-      // Transform official format to DeployStack format
+      // Transform official format to DeployStack format with GitHub enhancement
       const transformedData = await transformOfficialToDeployStack(
         officialServer,
-        syncConfig.syncedBy
+        syncConfig.syncedBy,
+        {
+          logger: this.logger,
+          fetchGitHubMetadata: true // Enable GitHub metadata enhancement
+        }
       );
 
       this.logger.debug({
@@ -237,6 +241,15 @@ export class McpServerSyncWorker implements Worker {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private isRetriableError(error: any): boolean {
     const errorMessage = error?.message || String(error);
+    
+    // GitHub rate limit errors (most important - should be checked first)
+    if (isGitHubRateLimitError(error)) {
+      this.logger.info({
+        error: errorMessage,
+        operation: 'github_rate_limit_retry'
+      }, 'GitHub rate limit detected, marking as retriable');
+      return true;
+    }
     
     // Network timeouts
     if (errorMessage.includes('timeout') || errorMessage.includes('ETIMEDOUT')) {

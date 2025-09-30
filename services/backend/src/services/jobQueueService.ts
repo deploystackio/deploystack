@@ -397,4 +397,225 @@ export class JobQueueService {
       throw error;
     }
   }
+
+  /**
+   * Get detailed batch progress with job breakdown
+   */
+  async getBatchProgress(batchId: string): Promise<{
+    batch: JobBatch;
+    progress: {
+      total: number;
+      completed: number;
+      failed: number;
+      pending: number;
+      processing: number;
+      percentage: number;
+    };
+    recentJobs: Job[];
+    errors: Array<{
+      jobId: string;
+      error: string | null;
+      attempts: number;
+      createdAt: Date;
+    }>;
+    estimatedTimeRemaining: number | null;
+  }> {
+    try {
+      // Get batch info
+      const batchResult = await this.db
+        .select()
+        .from(queueJobBatches)
+        .where(eq(queueJobBatches.id, batchId))
+        .limit(1);
+      
+      if (batchResult.length === 0) {
+        throw new Error(`Batch not found: ${batchId}`);
+      }
+      
+      const batch = batchResult[0] as JobBatch;
+      
+      // Get job counts by status
+      const jobCounts = await this.db
+        .select({
+          status: queueJobs.status,
+          count: sql<number>`COUNT(*)`,
+        })
+        .from(queueJobs)
+        .where(eq(queueJobs.batch_id, batchId))
+        .groupBy(queueJobs.status);
+      
+      // Calculate progress
+      const statusCounts: Record<string, number> = {};
+      for (const row of jobCounts) {
+        statusCounts[row.status] = Number(row.count);
+      }
+      
+      const total = batch.total_jobs;
+      const completed = statusCounts.completed || 0;
+      const failed = statusCounts.failed || 0;
+      const pending = statusCounts.pending || 0;
+      const processing = statusCounts.processing || 0;
+      const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+      
+      // Get recent jobs (last 10)
+      const recentJobs = await this.db
+        .select()
+        .from(queueJobs)
+        .where(eq(queueJobs.batch_id, batchId))
+        .orderBy(sql`${queueJobs.created_at} DESC`)
+        .limit(10);
+      
+      // Get failed jobs for error analysis
+      const failedJobs = await this.db
+        .select()
+        .from(queueJobs)
+        .where(
+          and(
+            eq(queueJobs.batch_id, batchId),
+            eq(queueJobs.status, 'failed')
+          )
+        )
+        .limit(20);
+      
+      // Estimate time remaining
+      let estimatedTimeRemaining: number | null = null;
+      if (pending > 0) {
+        const avgDuration = await this.getAverageJobDuration(batch.type);
+        if (avgDuration > 0) {
+          estimatedTimeRemaining = pending * avgDuration;
+        }
+      }
+      
+      return {
+        batch,
+        progress: {
+          total,
+          completed,
+          failed,
+          pending,
+          processing,
+          percentage,
+        },
+        recentJobs: recentJobs as Job[],
+        errors: failedJobs.map((job: Job) => ({
+          jobId: job.id,
+          error: job.error,
+          attempts: job.attempts,
+          createdAt: job.created_at,
+        })),
+        estimatedTimeRemaining,
+      };
+      
+    } catch (error) {
+      this.logger.error({ error, batchId }, 'Failed to get batch progress');
+      throw error;
+    }
+  }
+
+  /**
+   * Get recent batches with metadata
+   */
+  async getRecentBatches(batchType: string, limit: number = 10): Promise<JobBatch[]> {
+    try {
+      const batches = await this.db
+        .select()
+        .from(queueJobBatches)
+        .where(eq(queueJobBatches.type, batchType))
+        .orderBy(sql`${queueJobBatches.created_at} DESC`)
+        .limit(limit);
+      
+      return batches as JobBatch[];
+    } catch (error) {
+      this.logger.error({ error, batchType }, 'Failed to get recent batches');
+      throw error;
+    }
+  }
+
+  /**
+   * Cancel all pending jobs in a batch
+   */
+  async cancelBatchJobs(batchId: string): Promise<number> {
+    try {
+      await this.db
+        .update(queueJobs)
+        .set({
+          status: 'failed',
+          error: 'Cancelled by administrator',
+          updated_at: new Date(),
+        })
+        .where(
+          and(
+            eq(queueJobs.batch_id, batchId),
+            eq(queueJobs.status, 'pending')
+          )
+        );
+      
+      // SQLite doesn't return affected row count directly, so we need to count
+      const cancelledJobs = await this.db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(queueJobs)
+        .where(
+          and(
+            eq(queueJobs.batch_id, batchId),
+            eq(queueJobs.status, 'failed'),
+            eq(queueJobs.error, 'Cancelled by administrator')
+          )
+        );
+      
+      const count = cancelledJobs.length > 0 ? Number(cancelledJobs[0].count) : 0;
+      
+      this.logger.info({ batchId, count }, 'Cancelled batch jobs');
+      
+      return count;
+    } catch (error) {
+      this.logger.error({ error, batchId }, 'Failed to cancel batch jobs');
+      throw error;
+    }
+  }
+
+  /**
+   * Retry all failed jobs in a batch
+   */
+  async retryFailedBatchJobs(batchId: string): Promise<number> {
+    try {
+      const now = new Date();
+      
+      await this.db
+        .update(queueJobs)
+        .set({
+          status: 'pending',
+          scheduled_for: now,
+          attempts: 0,
+          error: null,
+          updated_at: now,
+        })
+        .where(
+          and(
+            eq(queueJobs.batch_id, batchId),
+            eq(queueJobs.status, 'failed')
+          )
+        );
+      
+      // Count retried jobs
+      const retriedJobs = await this.db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(queueJobs)
+        .where(
+          and(
+            eq(queueJobs.batch_id, batchId),
+            eq(queueJobs.status, 'pending'),
+            eq(queueJobs.attempts, 0)
+          )
+        );
+      
+      const count = retriedJobs.length > 0 ? Number(retriedJobs[0].count) : 0;
+      
+      this.logger.info({ batchId, count }, 'Retried failed batch jobs');
+      
+      return count;
+    } catch (error) {
+      this.logger.error({ error, batchId }, 'Failed to retry batch jobs');
+      throw error;
+    }
+  }
 }

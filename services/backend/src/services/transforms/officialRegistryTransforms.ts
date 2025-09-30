@@ -6,6 +6,7 @@
  * Reuses existing ConfigurationSchema types from schemas.ts
  */
 
+import type { FastifyBaseLogger } from 'fastify';
 import type {
   ConfigurationSchema,
   TemplateArg,
@@ -19,6 +20,7 @@ import type {
   UserHeader,
   CreateGlobalServerRequest
 } from '../../routes/mcp/servers/schemas';
+import { GitHubService } from '../githubService';
 
 // =============================================================================
 // OFFICIAL REGISTRY TYPE DEFINITIONS
@@ -420,11 +422,18 @@ export function mapArgumentsToThreeTier(
  * 
  * @param officialServer - Official MCP Registry server data
  * @param _createdBy - User ID creating the server (unused in transformation, used by caller)
+ * @param options - Optional transformation options
+ * @param options.logger - Logger for GitHub API calls
+ * @param options.fetchGitHubMetadata - Enable GitHub metadata enhancement (default: false)
  * @returns Partial CreateGlobalServerRequest ready for McpCatalogService.createServer
  */
 export async function transformOfficialToDeployStack(
   officialServer: OfficialServer,
-  _createdBy: string
+  _createdBy: string,
+  options?: {
+    logger?: FastifyBaseLogger;
+    fetchGitHubMetadata?: boolean;
+  }
 ): Promise<Partial<CreateGlobalServerRequest>> {
   // Extract 3-tier configurations from packages (env vars + args)
   const envConfig = mapEnvironmentVariablesToThreeTier(
@@ -462,10 +471,10 @@ export async function transformOfficialToDeployStack(
   const language = deriveLanguage(officialServer.packages);
   const runtime = deriveRuntime(officialServer.packages);
   
-  // Build the server data in create-global.ts format
+  // Build base server data in create-global.ts format
   // Note: status field not included as it's not part of CreateGlobalServerRequest
   // Status will be set to 'active' by default in the service layer
-  return {
+  const baseData: Partial<CreateGlobalServerRequest> = {
     name: friendlyName,
     description: officialServer.description,
     language: language,
@@ -494,6 +503,41 @@ export async function transformOfficialToDeployStack(
     featured: false,
     auto_install_new_default_team: false,
   };
+  
+  // Optionally enhance with GitHub metadata
+  if (options?.fetchGitHubMetadata && options.logger && repository?.url) {
+    try {
+      const githubData = await enhanceWithGitHubMetadata(
+        repository.url,
+        baseData,
+        options.logger
+      );
+      
+      // Merge GitHub enhancements
+      return { ...baseData, ...githubData };
+    } catch (error) {
+      // Check if this is a rate limit error - if so, throw to trigger job retry
+      if (isGitHubRateLimitError(error)) {
+        options.logger.warn({
+          repositoryUrl: repository.url,
+          serverName: officialServer.name,
+          error: error instanceof Error ? error.message : String(error),
+          operation: 'github_rate_limit_detected'
+        }, 'GitHub rate limit detected, will retry job');
+        throw error; // Re-throw to trigger job queue retry
+      }
+      
+      // For other errors, log and continue without GitHub data
+      options.logger.warn({
+        repositoryUrl: repository.url,
+        serverName: officialServer.name,
+        error: error instanceof Error ? error.message : String(error),
+        operation: 'github_enhancement_failed'
+      }, 'Failed to enhance with GitHub metadata, continuing without it');
+    }
+  }
+  
+  return baseData;
 }
 
 /**
@@ -510,6 +554,105 @@ export function isValidOfficialServer(data: unknown): data is OfficialServer {
     typeof obj.name === 'string' &&
     typeof obj.description === 'string' &&
     typeof obj.version === 'string'
+  );
+}
+
+/**
+ * Enhance server data with GitHub repository metadata
+ * 
+ * @param repositoryUrl - GitHub repository URL
+ * @param baseData - Base server data to enhance
+ * @param logger - Logger for GitHub API calls
+ * @returns Enhanced server data fields
+ */
+async function enhanceWithGitHubMetadata(
+  repositoryUrl: string,
+  baseData: Partial<CreateGlobalServerRequest>,
+  logger: FastifyBaseLogger
+): Promise<Partial<CreateGlobalServerRequest>> {
+  // Only process GitHub URLs
+  if (!repositoryUrl.includes('github.com')) {
+    logger.debug({
+      repositoryUrl,
+      operation: 'skip_non_github'
+    }, 'Skipping non-GitHub repository URL');
+    return {};
+  }
+  
+  logger.debug({
+    repositoryUrl,
+    operation: 'github_enhancement_start'
+  }, 'Starting GitHub metadata enhancement');
+  
+  // Fetch GitHub repository info using existing GitHubService
+  const githubInfo = await GitHubService.getRepositoryInfo(repositoryUrl, logger);
+  
+  logger.info({
+    repositoryUrl,
+    stars: githubInfo.stars,
+    forks: githubInfo.forks,
+    language: githubInfo.language,
+    topics: githubInfo.topics,
+    github_account_id: githubInfo.github_account_id,
+    operation: 'github_enhancement_complete'
+  }, 'Successfully enhanced with GitHub metadata');
+  
+  // Merge GitHub-enhanced fields
+  const enhancements: Partial<CreateGlobalServerRequest> = {
+    // Use GitHub language/runtime if more specific than package detection
+    language: githubInfo.language && githubInfo.language !== 'unknown' 
+      ? githubInfo.language.toLowerCase() 
+      : baseData.language,
+    
+    // Enhanced license information from GitHub
+    license: githubInfo.license || baseData.license,
+    
+    // GitHub account ID for avatar support (convert null to undefined)
+    github_account_id: githubInfo.github_account_id || undefined,
+    
+    // Git branch (default branch from GitHub)
+    git_branch: githubInfo.defaultBranch,
+    
+    // Enhanced description with GitHub data
+    long_description: githubInfo.description || baseData.description,
+    
+    // Use GitHub homepage if no website URL provided
+    website_url: baseData.website_url || githubInfo.homepage,
+    
+    // Merge topics with existing tags
+    tags: [
+      ...new Set([
+        ...(githubInfo.topics || []),
+        'mcp',
+        'mcp-server',
+      ])
+    ],
+  };
+  
+  logger.debug({
+    repositoryUrl,
+    enhancedFields: Object.keys(enhancements),
+    operation: 'github_enhancement_merged'
+  }, 'GitHub enhancements merged successfully');
+  
+  return enhancements;
+}
+
+/**
+ * Check if error is a GitHub rate limit error
+ * 
+ * @param error - Error to check
+ * @returns True if rate limit error
+ */
+export function isGitHubRateLimitError(error: unknown): boolean {
+  const errorMessage = error instanceof Error ? error.message : String(error);
+  const errorString = String(error);
+  
+  return (
+    errorMessage.includes('rate limit') ||
+    errorMessage.includes('429') ||
+    errorString.includes('rate limit') ||
+    errorString.includes('429')
   );
 }
 
