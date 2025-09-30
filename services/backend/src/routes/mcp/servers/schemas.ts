@@ -49,13 +49,17 @@ const SERVER_FIELDS = {
   name: { type: 'string', minLength: 1, maxLength: 255, description: 'Server name (1-255 characters)' },
   description: { type: 'string', minLength: 1, description: 'Server description is required' },
   long_description: { type: 'string', description: 'Detailed server description' },
-  github_url: { type: 'string', format: 'uri', description: 'GitHub repository URL' },
+  repository_url: { type: 'string', format: 'uri', description: 'Repository URL' },
+  repository_source: { type: 'string', description: 'Repository platform (github, gitlab, bitbucket)' },
+  repository_id: { type: 'string', description: 'Platform-specific repository identifier' },
+  repository_subfolder: { type: 'string', description: 'Subfolder path for monorepos' },
   git_branch: { type: 'string', description: 'Git branch (defaults to main)' },
-  homepage_url: { type: 'string', format: 'uri', description: 'Homepage URL' },
+  website_url: { type: 'string', format: 'uri', description: 'Website URL' },
   language: { type: 'string', minLength: 1, description: 'Programming language is required' },
   runtime: { type: 'string', minLength: 1, description: 'Runtime environment is required' },
   transport_type: { type: 'string', enum: ['stdio', 'http', 'sse'], description: 'MCP transport type' },
-  installation_methods: { type: 'array', description: 'Installation methods' },
+  packages: { type: 'array', description: 'MCP Registry packages array' },
+  remotes: { type: 'array', description: 'MCP Registry remotes array for HTTP/SSE' },
   author_name: { type: 'string', description: 'Author name' },
   author_contact: { type: 'string', description: 'Author contact information' },
   organization: { type: 'string', description: 'Organization name' },
@@ -472,16 +476,20 @@ export const CREATE_GLOBAL_SERVER_REQUEST_SCHEMA = {
       description: 'Runtime environment is required'
     },
     
-    // New format (ADR-007) - optional for backward compatibility
+    // Configuration schema
     configuration_schema: CONFIGURATION_SCHEMA,
     transport_type: { 
       type: 'string', 
       enum: ['stdio', 'http', 'sse'],
       description: 'MCP transport type'
     },
-    installation_methods: { 
+    packages: { 
       type: 'array',
-      description: 'Installation methods'
+      description: 'MCP Registry packages array'
+    },
+    remotes: { 
+      type: 'array',
+      description: 'MCP Registry remotes array for HTTP/SSE'
     },
     
     // Old format (backward compatibility) - optional
@@ -492,19 +500,31 @@ export const CREATE_GLOBAL_SERVER_REQUEST_SCHEMA = {
       type: 'string',
       description: 'Detailed server description'
     },
-    github_url: { 
+    repository_url: { 
+    type: 'string', 
+    format: 'uri', 
+    description: 'Repository URL' 
+    },
+    repository_source: { 
       type: 'string', 
-      format: 'uri',
-      description: 'GitHub repository URL'
+      description: 'Repository platform (github, gitlab, bitbucket)' 
+    },
+    repository_id: { 
+      type: 'string', 
+      description: 'Platform-specific repository identifier' 
+    },
+    repository_subfolder: { 
+      type: 'string', 
+      description: 'Subfolder path for monorepos' 
     },
     git_branch: { 
       type: 'string',
       description: 'Git branch (defaults to main)'
     },
-    homepage_url: { 
+    website_url: { 
       type: 'string', 
       format: 'uri',
-      description: 'Homepage URL'
+      description: 'Website URL'
     },
     github_account_id: { 
       type: 'string',
@@ -613,20 +633,35 @@ export const SERVER_ENTITY_SCHEMA = {
       nullable: true,
       description: 'Detailed server description'
     },
-    github_url: { 
+    repository_url: { 
       type: 'string', 
       nullable: true,
-      description: 'GitHub repository URL'
+      description: 'Repository URL'
+    },
+    repository_source: { 
+      type: 'string', 
+      nullable: true,
+      description: 'Repository platform (github, gitlab, bitbucket)'
+    },
+    repository_id: { 
+      type: 'string', 
+      nullable: true,
+      description: 'Platform-specific repository identifier'
+    },
+    repository_subfolder: { 
+      type: 'string', 
+      nullable: true,
+      description: 'Subfolder path for monorepos'
     },
     git_branch: { 
       type: 'string', 
       nullable: true,
       description: 'Git branch'
     },
-    homepage_url: { 
+    website_url: { 
       type: 'string', 
       nullable: true,
-      description: 'Homepage URL'
+      description: 'Website URL'
     },
     github_account_id: { 
       type: 'string', 
@@ -646,9 +681,14 @@ export const SERVER_ENTITY_SCHEMA = {
       type: 'string',
       description: 'Runtime environment'
     },
-    installation_methods: { 
+    packages: { 
       type: 'array',
-      description: 'Installation methods'
+      description: 'MCP Registry packages array'
+    },
+    remotes: { 
+      type: 'array',
+      nullable: true,
+      description: 'MCP Registry remotes array for HTTP/SSE'
     },
     resources: { 
       type: 'array', 
@@ -784,7 +824,7 @@ export const SERVER_ENTITY_SCHEMA = {
       description: 'Last sync timestamp'
     }
   },
-  required: ['id', 'name', 'slug', 'description', 'language', 'runtime', 'installation_methods', 'visibility', 'created_by', 'transport_type', 'template_args', 'template_env', 'template_headers', 'team_args_schema', 'team_env_schema', 'team_headers_schema', 'user_args_schema', 'status', 'featured', 'auto_install_new_default_team', 'created_at', 'updated_at']
+  required: ['id', 'name', 'slug', 'description', 'language', 'runtime', 'packages', 'visibility', 'created_by', 'transport_type', 'template_args', 'template_env', 'template_headers', 'team_args_schema', 'team_env_schema', 'team_headers_schema', 'user_args_schema', 'status', 'featured', 'auto_install_new_default_team', 'created_at', 'updated_at']
 } as const;
 
 // Extended schema for GET endpoint only
@@ -922,9 +962,12 @@ export const UPDATE_GLOBAL_SERVER_REQUEST_SCHEMA = {
     name: SERVER_FIELDS.name,
     description: SERVER_FIELDS.description,
     long_description: SERVER_FIELDS.long_description,
-    github_url: SERVER_FIELDS.github_url,
+    repository_url: SERVER_FIELDS.repository_url,
+    repository_source: SERVER_FIELDS.repository_source,
+    repository_id: SERVER_FIELDS.repository_id,
+    repository_subfolder: SERVER_FIELDS.repository_subfolder,
     git_branch: SERVER_FIELDS.git_branch,
-    homepage_url: SERVER_FIELDS.homepage_url,
+    website_url: SERVER_FIELDS.website_url,
     github_account_id: { 
       type: 'string',
       description: 'GitHub Account ID (owner.id from GitHub API)'
@@ -932,7 +975,8 @@ export const UPDATE_GLOBAL_SERVER_REQUEST_SCHEMA = {
     language: SERVER_FIELDS.language,
     runtime: SERVER_FIELDS.runtime,
     transport_type: SERVER_FIELDS.transport_type,
-    installation_methods: SERVER_FIELDS.installation_methods,
+    packages: SERVER_FIELDS.packages,
+    remotes: SERVER_FIELDS.remotes,
     resources: { 
       type: 'array',
       items: RESOURCE_SCHEMA,
@@ -999,14 +1043,18 @@ export interface ServerEntity {
   slug: string;
   description: string;
   long_description: string | null;
-  github_url: string | null;
+  repository_url: string | null;
+  repository_source: string | null;
+  repository_id: string | null;
+  repository_subfolder: string | null;
   git_branch: string | null;
-  homepage_url: string | null;
+  website_url: string | null;
   github_account_id: string | null;
   github_stars: number | null;
   language: string;
   runtime: string;
-  installation_methods: any[];
+  packages: any[];
+  remotes: any[] | null;
   resources: any[] | null;
   prompts: any[] | null;
   visibility: 'global' | 'team';
@@ -1131,10 +1179,11 @@ export interface CreateGlobalServerRequest {
   language: string;
   runtime: string;
   
-  // New format (ADR-007) - optional for backward compatibility
+  // Configuration
   configuration_schema?: ConfigurationSchema;
   transport_type?: 'stdio' | 'http' | 'sse';
-  installation_methods?: any[];
+  packages?: any[];
+  remotes?: any[];
   tools?: Tool[];
   
   // Old format (backward compatibility) - optional
@@ -1142,9 +1191,12 @@ export interface CreateGlobalServerRequest {
   
   // Optional fields
   long_description?: string;
-  github_url?: string;
+  repository_url?: string;
+  repository_source?: string;
+  repository_id?: string;
+  repository_subfolder?: string;
   git_branch?: string;
-  homepage_url?: string;
+  website_url?: string;
   github_account_id?: string;
   resources?: Resource[];
   prompts?: Prompt[];
@@ -1216,14 +1268,18 @@ export function formatServerResponse(server: any): ServerEntity {
     slug: server.slug,
     description: server.description,
     long_description: server.long_description || null,
-    github_url: server.github_url || null,
+    repository_url: server.repository_url || null,
+    repository_source: server.repository_source || null,
+    repository_id: server.repository_id || null,
+    repository_subfolder: server.repository_subfolder || null,
     git_branch: server.git_branch || null,
-    homepage_url: server.homepage_url || null,
+    website_url: server.website_url || null,
     github_account_id: server.github_account_id || null,
     github_stars: server.github_stars || null,
     language: server.language,
     runtime: server.runtime,
-    installation_methods: safeJsonParse(server.installation_methods, []),
+    packages: safeJsonParse(server.packages, []),
+    remotes: safeJsonParse(server.remotes, null),
     resources: safeJsonParse(server.resources, null),
     prompts: safeJsonParse(server.prompts, null),
     visibility: server.visibility,

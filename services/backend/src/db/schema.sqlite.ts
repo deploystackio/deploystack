@@ -154,14 +154,20 @@ export const mcpServers = sqliteTable('mcpServers', {
   
   // Basic Information
   name: text('name').notNull(), // Display name like "Playwright MCP"
+  official_name: text('official_name'), // Official reverse-DNS name like "io.github.upstash/context7"
   slug: text('slug').notNull().unique(), // Globally unique with team prefix for team servers
   description: text('description').notNull(), // Short description
   long_description: text('long_description'), // Full README content
   
-  // Repository & Package Info
-  github_url: text('github_url'), // https://github.com/microsoft/playwright-mcp
-  git_branch: text('git_branch').default('main'), // main, master, develop
-  homepage_url: text('homepage_url'), // https://playwright.dev
+  // Version Information
+  version: text('version'), // Current version from official registry
+  
+  repository_url: text('repository_url'), // Official repository.url - supports GitHub, GitLab, etc.
+  repository_source: text('repository_source'), // "github", "gitlab", etc.
+  repository_id: text('repository_id'), // Platform-specific repo ID for API calls
+  repository_subfolder: text('repository_subfolder'), // For monorepos
+  git_branch: text('git_branch').default('main'),
+  website_url: text('website_url'),
   
   // Technical Details
   language: text('language').notNull(), // 'typescript', 'javascript', 'python', 'go'
@@ -172,8 +178,9 @@ export const mcpServers = sqliteTable('mcpServers', {
   github_readme_base64: text('github_readme_base64'), // Base64 encoded README content
   github_stars: integer('github_stars'), // Star count from GitHub
   
-  // Installation Methods (JSON array of objects)
-  installation_methods: text('installation_methods').notNull(), // [{"type": "npm", "command": "npx @playwright/mcp"}, {"type": "docker", "image": "..."}]
+  // Installation & Package Methods
+  packages: text('packages'), // Official packages array (JSON)
+  remotes: text('remotes'), // Official remotes array (JSON)
   
   // MCP Capabilities (JSON array)
   resources: text('resources'), // JSON array of resource types
@@ -214,12 +221,21 @@ export const mcpServers = sqliteTable('mcpServers', {
   
   dependencies: text('dependencies'), // JSON of dependencies
   
+  meta_extensions: text('meta_extensions'), // JSON object for _meta field
+  
   // Metadata & Status
   category_id: text('category_id').references(() => mcpCategories.id),
   tags: text('tags'), // JSON array: ["browser", "automation", "testing"]
   status: text('status').notNull().default('active'), // 'active', 'deprecated', 'maintenance'
   featured: integer('featured', { mode: 'boolean' }).notNull().default(false),
   auto_install_new_default_team: integer('auto_install_new_default_team', { mode: 'boolean' }).notNull().default(false),
+  
+  // Official Registry Sync Tracking
+  synced_from_official_registry: integer('synced_from_official_registry', { mode: 'boolean' }).notNull().default(false),
+  official_registry_server_id: text('official_registry_server_id'),
+  official_registry_version_id: text('official_registry_version_id'),
+  official_registry_published_at: integer('official_registry_published_at', { mode: 'timestamp' }),
+  official_registry_updated_at: integer('official_registry_updated_at', { mode: 'timestamp' }),
   
   // Timestamps
   created_at: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
@@ -230,6 +246,10 @@ export const mcpServers = sqliteTable('mcpServers', {
   categoryIdx: index('mcp_servers_category_idx').on(table.category_id),
   statusIdx: index('mcp_servers_status_idx').on(table.status),
   ownerTeamIdx: index('mcp_servers_owner_team_idx').on(table.owner_team_id),
+  officialNameIdx: index('mcp_servers_official_name_idx').on(table.official_name),
+  syncedFlagIdx: index('mcp_servers_synced_flag_idx').on(table.synced_from_official_registry),
+  registryServerIdIdx: index('mcp_servers_registry_server_id_idx').on(table.official_registry_server_id),
+  repositoryUrlIdx: index('mcp_servers_repository_url_idx').on(table.repository_url),
 }));
 
 // MCP Server Versions/Releases tracking

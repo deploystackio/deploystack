@@ -30,10 +30,14 @@ export interface McpInstallation {
     runtime: string;
     status: string; // Required in DB with default 'active'
     author_name: string | null; // Optional in DB
-    homepage_url: string | null; // Optional in DB
-    github_url: string | null; // Optional in DB
+    website_url: string | null; // Optional in DB
+    repository_url: string | null; // Optional in DB
+    repository_source: string | null; // Optional in DB
+    repository_id: string | null; // Optional in DB
+    repository_subfolder: string | null; // Optional in DB
     tags: string[] | null; // Optional in DB
-    installation_methods: any[];
+    packages: any[];
+    remotes: any[] | null;
     // Three-tier schema fields
     template_args: any[] | null;
     template_env: Record<string, string> | null;
@@ -130,10 +134,14 @@ export class McpInstallationService {
           runtime: row.server.runtime,
           status: row.server.status,
           author_name: row.server.author_name,
-          homepage_url: row.server.homepage_url,
-          github_url: row.server.github_url,
+          website_url: row.server.website_url,
+          repository_url: row.server.repository_url,
+        repository_source: row.server.repository_source,
+        repository_id: row.server.repository_id,
+        repository_subfolder: row.server.repository_subfolder,
           tags: this.parseJsonField(row.server.tags, []),
-          installation_methods: this.parseJsonField(row.server.installation_methods, []),
+          packages: this.parseJsonField(row.server.packages, []),
+          remotes: this.parseJsonField(row.server.remotes, null),
           template_args: this.parseJsonField(row.server.template_args, []),
           template_env: this.parseJsonField(row.server.template_env, {}),
           team_args_schema: this.parseJsonField(row.server.team_args_schema, []),
@@ -212,10 +220,14 @@ export class McpInstallationService {
         runtime: server.runtime,
         status: server.status,
         author_name: server.author_name,
-        homepage_url: server.homepage_url,
-        github_url: server.github_url,
+        website_url: server.website_url,
+        repository_url: server.repository_url,
+        repository_source: server.repository_source,
+        repository_id: server.repository_id,
+        repository_subfolder: server.repository_subfolder,
         tags: this.parseJsonField(server.tags, []),
-        installation_methods: this.parseJsonField(server.installation_methods, []),
+        packages: this.parseJsonField(server.packages, []),
+        remotes: this.parseJsonField(server.remotes, null),
         template_args: this.parseJsonField(server.template_args, []),
         template_env: this.parseJsonField(server.template_env, {}),
         team_args_schema: this.parseJsonField(server.team_args_schema, []),
@@ -477,13 +489,17 @@ export class McpInstallationService {
       .set({ last_used_at: new Date() })
       .where(eq(mcpServerInstallations.id, installationId));
 
-    // Get Claude Desktop config from server's installation_methods
-    const claudeDesktopMethod = this.parseJsonField(server.installation_methods, []).find(
-      (method: any) => method.client === 'claude-desktop'
-    );
+    // Get command configuration from server's packages
+    const packages = this.parseJsonField(server.packages, []);
+    
+    if (!packages || packages.length === 0) {
+      throw new Error('Server has no package configuration');
+    }
 
-    if (!claudeDesktopMethod) {
-      throw new Error('Server does not support Claude Desktop installation');
+    // Use the first package's transport configuration
+    const packageConfig = packages[0];
+    if (!packageConfig.transport) {
+      throw new Error('Server package has no transport configuration');
     }
 
     // For gateway config generation, we need to decrypt secrets (authorized use case)
@@ -494,15 +510,15 @@ export class McpInstallationService {
         )
       : null;
 
-    // Merge template with team environment variables (with decrypted secrets)
-    const mergedEnv = { ...claudeDesktopMethod.env };
+    // Merge environment variables from package config with team environment variables (with decrypted secrets)
+    const mergedEnv = {};
     if (decryptedTeamEnv) {
       Object.assign(mergedEnv, decryptedTeamEnv);
     }
 
     const baseConfig = {
-      command: claudeDesktopMethod.command,
-      args: claudeDesktopMethod.args,
+      command: packageConfig.transport.command,
+      args: packageConfig.transport.args,
       env: mergedEnv
     };
 

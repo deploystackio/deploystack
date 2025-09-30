@@ -6,14 +6,19 @@ export interface McpServer {
   slug: string
   description: string
   long_description?: string
-  github_url?: string
   github_account_id?: string
   github_stars?: number
+  // Repository platform fields
+  repository_url?: string
+  repository_source?: string // 'github', 'gitlab', 'bitbucket', etc.
+  repository_id?: string // Platform-specific repository ID
+  repository_subfolder?: string // For monorepos
   git_branch?: string
-  homepage_url?: string
+  website_url?: string
   language: string
   runtime: string
-  installation_methods: InstallationMethod[]
+  packages: any
+  remotes: any
   resources?: McpResource[]
   prompts?: McpPrompt[]
   visibility: 'global' | 'team'
@@ -24,7 +29,7 @@ export interface McpServer {
   organization?: string
   license?: string
   transport_type?: 'stdio' | 'http' | 'sse'
-  
+
   // New three-tier schema fields
   template_args?: TemplateArg[] | string
   template_env?: TemplateEnvVar[] | string
@@ -35,7 +40,7 @@ export interface McpServer {
   user_args_schema?: UserArgsSchema[] | string
   user_env_schema?: UserEnvSchema[] | string
   user_headers_schema?: UserHeadersSchema[] | string
-  
+
   dependencies?: Record<string, any>
   category_id?: string
   tags?: string[]
@@ -174,14 +179,19 @@ export interface CreateMcpServerRequest {
   name: string
   description: string
   long_description?: string
-  github_url?: string
   github_account_id?: string
   github_stars?: number
+  // Repository platform fields
+  repository_url?: string
+  repository_source?: string
+  repository_id?: string
+  repository_subfolder?: string
   git_branch?: string
-  homepage_url?: string
+  website_url?: string
   language?: string
   runtime?: string
-  installation_methods?: InstallationMethod[]
+  packages?: any
+  remotes?: any
   resources?: McpResource[]
   prompts?: McpPrompt[]
   visibility: 'global' | 'team'
@@ -190,7 +200,7 @@ export interface CreateMcpServerRequest {
   organization?: string
   license?: string
   transport_type?: 'stdio' | 'http' | 'sse'
-  
+
   // New three-tier schema fields
   template_args?: TemplateArg[]
   template_env?: TemplateEnvVar[]
@@ -201,7 +211,7 @@ export interface CreateMcpServerRequest {
   user_args_schema?: UserArgsSchema[]
   user_env_schema?: UserEnvSchema[]
   user_headers_schema?: UserHeadersSchema[]
-  
+
   dependencies?: Record<string, any>
   category_id?: string
   tags?: string[]
@@ -215,14 +225,19 @@ export interface UpdateMcpServerRequest {
   name?: string
   description?: string
   long_description?: string
-  github_url?: string
   github_account_id?: string
   github_stars?: number
+  // Repository platform fields
+  repository_url?: string
+  repository_source?: string
+  repository_id?: string
+  repository_subfolder?: string
   git_branch?: string
-  homepage_url?: string
+  website_url?: string
   language?: string
   runtime?: string
-  installation_methods?: InstallationMethod[]
+  packages?: any
+  remotes?: any
   resources?: McpResource[]
   prompts?: McpPrompt[]
   author_name?: string
@@ -230,7 +245,7 @@ export interface UpdateMcpServerRequest {
   organization?: string
   license?: string
   transport_type?: 'stdio' | 'http' | 'sse'
-  
+
   // New three-tier schema fields
   template_args?: TemplateArg[]
   template_env?: TemplateEnvVar[]
@@ -241,7 +256,7 @@ export interface UpdateMcpServerRequest {
   user_args_schema?: UserArgsSchema[]
   user_env_schema?: UserEnvSchema[]
   user_headers_schema?: UserHeadersSchema[]
-  
+
   dependencies?: Record<string, any>
   category_id?: string
   tags?: string[]
@@ -276,23 +291,29 @@ export interface BasicInfoFormData {
 }
 
 export interface RepositoryFormData {
-  github_url: string
+  repository_url: string
+  repository_source: string // 'github', 'gitlab', 'bitbucket', etc.
+  repository_id?: string // Platform-specific repository ID
+  repository_subfolder?: string // For monorepos
   git_branch: string
-  homepage_url: string
+  website_url: string
 }
 
 export interface TechnicalFormData {
   language: string
   runtime: string
-  installation_methods: InstallationMethod[]
+  packages?: any
+  remotes?: any
+  installation_methods?: InstallationMethod[]
   dependencies: string
   transport_type: string
 }
 
 
 
-export interface GitHubFormData {
-  github_url: string
+export interface RepositorySetupFormData {
+  repository_url: string
+  repository_source: string
   git_branch: string
   auto_populated?: boolean
   repo_data?: any
@@ -317,21 +338,21 @@ export interface McpServerFormData {
   repository: RepositoryFormData
   technical: TechnicalFormData
   configuration_schema: ConfigurationSchemaFormData
-  github: GitHubFormData
+  repository_setup: RepositorySetupFormData
   review: ReviewFormData
 }
 
 // Form step configuration
 export interface FormStep {
-  key: keyof McpServerFormData
+  key: keyof McpServerFormData | 'repository'
   label: string
   icon: any
   component: any
 }
 
-// Extended FormStep for wizard with additional keys  
+// Extended FormStep for wizard with additional keys
 export interface ExtendedFormStep {
-  key: keyof McpServerFormData | 'configurationSchema'
+  key: keyof McpServerFormData | 'configurationSchema' | 'repository'
   label: string
   icon: any
   component: any

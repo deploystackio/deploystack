@@ -7,8 +7,11 @@ export interface McpServer {
   runtime: string
   status: 'active' | 'deprecated' | 'maintenance'
   author_name?: string | null
-  homepage_url?: string | null
-  github_url?: string | null
+  website_url?: string | null
+  repository_url?: string | null
+  repository_source?: string | null
+  repository_id?: string | null
+  repository_subfolder?: string | null
   tags?: string[] | null
   environment_variables?: EnvironmentVariable[]
   category_id?: string

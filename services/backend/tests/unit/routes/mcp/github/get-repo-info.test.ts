@@ -121,7 +121,10 @@ describe('GET /mcp/github/repo-info', () => {
       expect(payload).toHaveProperty('data');
       expect(payload.data).toHaveProperty('name', 'test-repo');
       expect(payload.data).toHaveProperty('description', 'Test repository');
-      expect(payload.data).toHaveProperty('github_url', 'https://github.com/test-owner/test-repo');
+      expect(payload.data).toHaveProperty('repository_url', 'https://github.com/test-owner/test-repo');
+      expect(payload.data).toHaveProperty('repository_source', 'github');
+      expect(payload.data).toHaveProperty('repository_id', 'test-owner/test-repo');
+      expect(payload.data).toHaveProperty('repository_subfolder', null);
     });
 
     it('should handle request with branch parameter', async () => {
@@ -251,16 +254,19 @@ describe('GET /mcp/github/repo-info', () => {
       const data = payload.data;
       expect(data).toHaveProperty('name');
       expect(data).toHaveProperty('description');
-      expect(data).toHaveProperty('github_url');
+      expect(data).toHaveProperty('repository_url');
+      expect(data).toHaveProperty('repository_source');
+      expect(data).toHaveProperty('repository_id');
+      expect(data).toHaveProperty('repository_subfolder');
       expect(data).toHaveProperty('git_branch');
-      expect(data).toHaveProperty('homepage_url');
+      expect(data).toHaveProperty('website_url');
       expect(data).toHaveProperty('author_name');
       expect(data).toHaveProperty('organization');
       expect(data).toHaveProperty('license');
       expect(data).toHaveProperty('language');
       expect(data).toHaveProperty('runtime');
       expect(data).toHaveProperty('tags');
-      expect(data).toHaveProperty('installation_methods');
+      expect(data).toHaveProperty('packages');
       expect(data).toHaveProperty('dependencies');
       expect(data).toHaveProperty('latest_version');
       expect(data).toHaveProperty('stars');

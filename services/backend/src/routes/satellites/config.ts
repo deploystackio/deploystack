@@ -353,25 +353,32 @@ export default async function satelliteConfigRoute(server: FastifyInstance) {
           // Create unique process identifier: {server_slug}-{team_slug}-{installation_id}
           const processId = `${server.slug}-${team_slug}-${installation.id}`;
 
-          // Parse base configuration from installation_methods (like gateway)
-          const installationMethods = JSON.parse(server.installation_methods || '[]');
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const claudeDesktopMethod = installationMethods.find((method: any) => method.client === 'claude-desktop');
+          // Parse base configuration from packages (like gateway)
+          const packages = JSON.parse(server.packages || '[]');
           
-          if (!claudeDesktopMethod) {
+          if (!packages || packages.length === 0) {
             request.log.warn({
               serverId: server.id,
               serverName: server.name
-            }, 'No claude-desktop installation method found');
+            }, 'No packages configuration found');
             continue;
           }
 
-          // Start with base configuration
-          let finalCommand = claudeDesktopMethod.command || 'npx';
-          let finalArgs = [...(claudeDesktopMethod.args || [])];
-          let finalEnv = { ...(claudeDesktopMethod.env || {}) };
-          let finalUrl = claudeDesktopMethod.url; // Extract real URL from installation method
-          let finalHeaders = { ...(claudeDesktopMethod.headers || {}) };
+          const packageConfig = packages[0];
+          if (!packageConfig.transport) {
+            request.log.warn({
+              serverId: server.id,
+              serverName: server.name
+            }, 'No transport configuration in package');
+            continue;
+          }
+
+          // Start with base configuration from package transport
+          let finalCommand = packageConfig.transport.command || 'npx';
+          let finalArgs = [...(packageConfig.transport.args || [])];
+          let finalEnv = { ...(packageConfig.transport.env || {}) };
+          let finalUrl = packageConfig.transport.url; // Extract real URL from package transport
+          let finalHeaders = { ...(packageConfig.transport.headers || {}) };
 
           // Apply team configuration with proper decryption (like gateway)
           if (installation.team_args) {

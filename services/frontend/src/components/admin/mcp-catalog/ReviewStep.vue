@@ -207,7 +207,7 @@ const formatJson = (jsonString: string) => {
       <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
         <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.review.fields.githubRepository') }}</dt>
         <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
-          {{ getRepositoryData().github_url || t('mcpCatalog.form.review.values.notSpecified') }}
+          {{ getRepositoryData().repository_url || t('mcpCatalog.form.review.values.notSpecified') }}
         </dd>
       </div>
 
@@ -221,7 +221,7 @@ const formatJson = (jsonString: string) => {
       <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
         <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.review.fields.homepage') }}</dt>
         <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
-          {{ getRepositoryData().homepage_url || t('mcpCatalog.form.review.values.notSpecified') }}
+          {{ getRepositoryData().website_url || t('mcpCatalog.form.review.values.notSpecified') }}
         </dd>
       </div>
     </dl>

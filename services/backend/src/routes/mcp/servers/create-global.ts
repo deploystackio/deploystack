@@ -5,7 +5,6 @@ import { McpCatalogService } from '../../../services/mcpCatalogService';
 import { GitHubService } from '../../../services/githubService';
 import { GitHubReadmeService } from '../../../services/githubReadmeService';
 import { getDb } from '../../../db';
-import { extractMcpConfigData } from '../../../utils/mcpConfigExtractor';
 import { EVENT_NAMES } from '../../../events';
 import type { EventContext } from '../../../events/types';
 import {
@@ -65,196 +64,105 @@ export default async function createGlobalServer(server: FastifyInstance) {
       const db = getDb();
       const mcpService = new McpCatalogService(db, request.log);
       
-      // Determine which format is being used and extract/convert data accordingly
-      let finalInstallationMethods: any[];
-      let finalTransportType: 'stdio' | 'http' | 'sse';
-      let finalTemplateArgs: any[] | undefined;
-      let finalTemplateEnv: any[] | undefined;
-      let finalTemplateHeaders: any[] | undefined;
-      let finalTeamArgsSchema: any[] | undefined;
-      let finalTeamEnvSchema: any[] | undefined;
-      let finalTeamHeadersSchema: any[] | undefined;
-      let finalUserArgsSchema: any[] | undefined;
-      let finalUserEnvSchema: any[] | undefined;
-      let finalUserHeadersSchema: any[] | undefined;
-
-      if (requestData.configuration_schema) {
-        // New format (ADR-007) - but check if installation_methods is incomplete
-        request.log.debug('Using new configuration_schema format');
-        
-        // Check if installation_methods looks incomplete (frontend TODO issue)
-        const hasIncompleteInstallationMethods = requestData.installation_methods && 
-          requestData.installation_methods.length > 0 && 
-          requestData.installation_methods[0].command === 'npx ...';
-        
-        if (hasIncompleteInstallationMethods) {
-          request.log.debug('Detected incomplete installation_methods, falling back to claude_desktop_config extraction');
-          // Fall back to extracting from claude_desktop_config if available
-          if (requestData.claude_desktop_config) {
-            const { installation_methods, environment_variables, headers, transport_type: extractedTransportType } = extractMcpConfigData(requestData.claude_desktop_config);
-            finalInstallationMethods = installation_methods;
-            finalTransportType = requestData.transport_type || extractedTransportType;
-            
-            // Also extract environment variables for template_env
-            finalTemplateEnv = environment_variables?.map(env => ({
-              name: env.name,
-              value: env.placeholder || null,
-              locked: true,
-              description: env.description
-            }));
-            
-            // Extract headers for template_headers
-            finalTemplateHeaders = headers?.map(header => ({
-              name: header.name,
-              value: header.placeholder || null,
-              locked: true,
-              description: header.description
-            }));
-          } else {
-            finalInstallationMethods = requestData.installation_methods || [];
-            finalTransportType = requestData.transport_type || 'stdio';
-            finalTemplateEnv = requestData.configuration_schema.template_env;
-            finalTemplateHeaders = requestData.configuration_schema.template_headers;
-          }
-        } else {
-          finalInstallationMethods = requestData.installation_methods || [];
-          finalTransportType = requestData.transport_type || 'stdio';
-          finalTemplateEnv = requestData.configuration_schema.template_env;
-          finalTemplateHeaders = requestData.configuration_schema.template_headers;
-        }
-        
-        finalTemplateArgs = requestData.configuration_schema.template_args;
-        finalTeamArgsSchema = requestData.configuration_schema.team_args_schema;
-        finalTeamEnvSchema = requestData.configuration_schema.team_env_schema;
-        finalTeamHeadersSchema = requestData.configuration_schema.team_headers_schema;
-        finalUserArgsSchema = requestData.configuration_schema.user_args_schema;
-        finalUserEnvSchema = requestData.configuration_schema.user_env_schema;
-        finalUserHeadersSchema = requestData.configuration_schema.user_headers_schema;
-      } else if (requestData.claude_desktop_config) {
-        // Old format - extract and convert data
-        request.log.debug('Using old claude_desktop_config format, extracting data');
-        
-        const { installation_methods, environment_variables, args, headers, transport_type: extractedTransportType } = extractMcpConfigData(requestData.claude_desktop_config);
-        
-        finalInstallationMethods = installation_methods;
-        finalTransportType = requestData.transport_type || extractedTransportType;
-        
-        // Convert old format to new three-tier schema
-        // For now, put everything in template level (locked)
-        finalTemplateArgs = args?.map(arg => ({
-          value: arg.default_value,
-          locked: true,
-          description: arg.description
-        }));
-        
-        // Convert environment variables to template_env array format
-        finalTemplateEnv = environment_variables?.map(env => ({
-          name: env.name,
-          value: env.placeholder || null,
-          locked: true,
-          description: env.description
-        }));
-        
-        // Convert headers to template_headers array format
-        finalTemplateHeaders = headers?.map(header => ({
-          name: header.name,
-          value: header.placeholder || null,
-          locked: true,
-          description: header.description
-        }));
-        
-        // Leave team/user schemas empty for old format
-        finalTeamArgsSchema = undefined;
-        finalTeamEnvSchema = undefined;
-        finalTeamHeadersSchema = undefined;
-        finalUserArgsSchema = undefined;
-        finalUserEnvSchema = undefined;
-        finalUserHeadersSchema = undefined;
-      } else {
-        const errorResponse: ErrorResponse = {
-          success: false,
-          error: 'Either configuration_schema or claude_desktop_config must be provided'
-        };
-        const jsonString = JSON.stringify(errorResponse);
-        return reply.status(400).type('application/json').send(jsonString);
-      }
-
-      // Convert template_env and template_headers - keep as arrays for consistency
-      // All template fields should be stored as arrays: template_args, template_env, template_headers
+      // Frontend sends packages/remotes and configuration schema
+      // No extraction needed - use data as provided
+      const finalPackages = requestData.packages || [];
+      const finalRemotes = requestData.remotes || undefined;
+      const finalTransportType = requestData.transport_type || 'stdio';
       
-      // Fetch GitHub data if github_url is provided (non-blocking)
+      // Configuration schema from request (frontend handles extraction)
+      const finalTemplateArgs = requestData.configuration_schema?.template_args || [];
+      const finalTemplateEnv = requestData.configuration_schema?.template_env || [];
+      const finalTemplateHeaders = requestData.configuration_schema?.template_headers || [];
+      const finalTeamArgsSchema = requestData.configuration_schema?.team_args_schema || [];
+      const finalTeamEnvSchema = requestData.configuration_schema?.team_env_schema || [];
+      const finalTeamHeadersSchema = requestData.configuration_schema?.team_headers_schema || [];
+      const finalUserArgsSchema = requestData.configuration_schema?.user_args_schema || [];
+      const finalUserEnvSchema = requestData.configuration_schema?.user_env_schema || [];
+      const finalUserHeadersSchema = requestData.configuration_schema?.user_headers_schema || [];
+      
+      // Fetch GitHub data if repository_url points to GitHub (non-blocking)
       let githubReadmeBase64: string | null = null;
       let githubStars: number | null = null;
       let githubAccountId: string | null = requestData.github_account_id || null;
 
-      if (requestData.github_url) {
+      if (requestData.repository_url) {
         request.log.debug({
           operation: 'create_global_mcp_server',
           step: 'fetch_github_data',
-          github_url: requestData.github_url
-        }, 'Attempting to fetch GitHub data');
+          repository_url: requestData.repository_url
+        }, 'Attempting to fetch repository data');
 
-        // Fetch repository info (stars and account ID)
-        try {
-          const repoInfo = await GitHubService.getRepositoryInfo(
-            requestData.github_url,
-            request.log
-          );
-          
-          githubStars = repoInfo.stars;
-          if (repoInfo.github_account_id) {
-            githubAccountId = repoInfo.github_account_id;
-          }
-          
-          request.log.info({
-            operation: 'create_global_mcp_server',
-            step: 'fetch_github_data',
-            github_url: requestData.github_url,
-            stars: githubStars,
-            account_id: githubAccountId
-          }, 'Successfully fetched GitHub repository info');
-        } catch (error) {
-          request.log.warn({
-            operation: 'create_global_mcp_server',
-            step: 'fetch_github_data',
-            error,
-            github_url: requestData.github_url
-          }, 'Failed to fetch GitHub repository info, continuing without it');
-        }
-
-        // Fetch README content
-        try {
-          const branch = requestData.git_branch || 'main';
-          const readmeResult = await GitHubReadmeService.getReadmeContent(
-            requestData.github_url,
-            branch,
-            request.log
-          );
-          
-          if (readmeResult) {
-            githubReadmeBase64 = Buffer.from(readmeResult.content, 'utf8').toString('base64');
+        // Check if it's a GitHub repository
+        if (requestData.repository_url.includes('github.com')) {
+          // Fetch repository info (stars and account ID)
+          try {
+            const repoInfo = await GitHubService.getRepositoryInfo(
+              requestData.repository_url,
+              request.log
+            );
+            
+            githubStars = repoInfo.stars;
+            if (repoInfo.github_account_id) {
+              githubAccountId = repoInfo.github_account_id;
+            }
             
             request.log.info({
               operation: 'create_global_mcp_server',
               step: 'fetch_github_data',
-              github_url: requestData.github_url,
-              readme_length: readmeResult.content.length,
-              readme_encoded_length: githubReadmeBase64.length
-            }, 'Successfully fetched and encoded GitHub README');
-          } else {
-            request.log.debug({
+              repository_url: requestData.repository_url,
+              stars: githubStars,
+              account_id: githubAccountId
+            }, 'Successfully fetched GitHub repository info');
+          } catch (error) {
+            request.log.warn({
               operation: 'create_global_mcp_server',
               step: 'fetch_github_data',
-              github_url: requestData.github_url
-            }, 'No README found in repository');
+              error,
+              repository_url: requestData.repository_url
+            }, 'Failed to fetch GitHub repository info, continuing without it');
           }
-        } catch (error) {
-          request.log.warn({
+
+          // Fetch README content
+          try {
+            const branch = requestData.git_branch || 'main';
+            const readmeResult = await GitHubReadmeService.getReadmeContent(
+              requestData.repository_url,
+              branch,
+              request.log
+            );
+            
+            if (readmeResult) {
+              githubReadmeBase64 = Buffer.from(readmeResult.content, 'utf8').toString('base64');
+              
+              request.log.info({
+                operation: 'create_global_mcp_server',
+                step: 'fetch_github_data',
+                repository_url: requestData.repository_url,
+                readme_length: readmeResult.content.length,
+                readme_encoded_length: githubReadmeBase64.length
+              }, 'Successfully fetched and encoded GitHub README');
+            } else {
+              request.log.debug({
+                operation: 'create_global_mcp_server',
+                step: 'fetch_github_data',
+                repository_url: requestData.repository_url
+              }, 'No README found in repository');
+            }
+          } catch (error) {
+            request.log.warn({
+              operation: 'create_global_mcp_server',
+              step: 'fetch_github_data',
+              error,
+              repository_url: requestData.repository_url
+            }, 'Failed to fetch GitHub README, continuing without it');
+          }
+        } else {
+          request.log.debug({
             operation: 'create_global_mcp_server',
-            step: 'fetch_github_data',
-            error,
-            github_url: requestData.github_url
-          }, 'Failed to fetch GitHub README, continuing without it');
+            step: 'skip_github_data',
+            repository_url: requestData.repository_url
+          }, 'Repository is not on GitHub, skipping GitHub-specific data fetch');
         }
       }
 
@@ -264,12 +172,26 @@ export default async function createGlobalServer(server: FastifyInstance) {
         name: requestData.name,
         description: requestData.description,
         long_description: requestData.long_description,
-        github_url: requestData.github_url,
+        repository_url: requestData.repository_url,
+        repository_source: requestData.repository_url?.includes('github.com') ? 'github' : 
+                          requestData.repository_url?.includes('gitlab.com') ? 'gitlab' :
+                          requestData.repository_url?.includes('bitbucket.org') ? 'bitbucket' : undefined,
+        repository_id: requestData.repository_url ? (
+          requestData.repository_url.includes('github.com') ? 
+            requestData.repository_url.split('github.com/')[1]?.replace('.git', '') :
+          requestData.repository_url.includes('gitlab.com') ? 
+            requestData.repository_url.split('gitlab.com/')[1]?.replace('.git', '') :
+          requestData.repository_url.includes('bitbucket.org') ? 
+            requestData.repository_url.split('bitbucket.org/')[1]?.replace('.git', '') :
+            undefined
+        ) : undefined,
+        repository_subfolder: requestData.repository_subfolder || undefined,
         git_branch: requestData.git_branch,
-        homepage_url: requestData.homepage_url,
+        website_url: requestData.website_url,
         language: requestData.language,
         runtime: requestData.runtime,
-        installation_methods: finalInstallationMethods,
+        packages: finalPackages,
+        remotes: finalRemotes,
         resources: requestData.resources,
         prompts: requestData.prompts,
         visibility: 'global' as const,

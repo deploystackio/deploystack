@@ -76,7 +76,8 @@ export class McpCatalogService {
     return {
       ...server,
       tags: safeJsonParse(server.tags, null),
-      installation_methods: safeJsonParse(server.installation_methods, []),
+      packages: safeJsonParse(server.packages, null),
+      remotes: safeJsonParse(server.remotes, null),
       tools: safeJsonParse(server.tools, []),
       resources: safeJsonParse(server.resources, null),
       prompts: safeJsonParse(server.prompts, null),
@@ -85,10 +86,13 @@ export class McpCatalogService {
       dependencies: safeJsonParse(server.dependencies, null),
       template_args: safeJsonParse(server.template_args, []),
       template_env: safeJsonParse(server.template_env, []),
+      template_headers: safeJsonParse(server.template_headers, []),
       team_args_schema: safeJsonParse(server.team_args_schema, []),
       team_env_schema: safeJsonParse(server.team_env_schema, []),
+      team_headers_schema: safeJsonParse(server.team_headers_schema, []),
       user_args_schema: safeJsonParse(server.user_args_schema, []),
-      user_env_schema: safeJsonParse(server.user_env_schema, [])
+      user_env_schema: safeJsonParse(server.user_env_schema, []),
+      user_headers_schema: safeJsonParse(server.user_headers_schema, [])
     }
   }
 
@@ -331,6 +335,51 @@ export class McpCatalogService {
   }
 
   /**
+   * Parse repository URL to extract platform information
+   */
+  static parseRepositoryUrl(repoUrl: string): {
+    source: string
+    owner: string
+    repo: string
+    subfolder?: string
+  } | null {
+    try {
+      const url = new URL(repoUrl)
+      const hostname = url.hostname.toLowerCase()
+      const pathParts = url.pathname.split('/').filter(part => part.length > 0)
+
+      if (pathParts.length < 2 || !pathParts[0] || !pathParts[1]) {
+        return null
+      }
+
+      const owner = pathParts[0]
+      const repo = pathParts[1].replace(/\.git$/, '')
+      let source: string
+
+      if (hostname === 'github.com' || hostname === 'www.github.com') {
+        source = 'github'
+      } else if (hostname.includes('gitlab')) {
+        source = 'gitlab'
+      } else if (hostname.includes('bitbucket')) {
+        source = 'bitbucket'
+      } else {
+        return null
+      }
+
+      return { source, owner, repo }
+    } catch {
+      return null
+    }
+  }
+
+  /**
+   * Validate if a repository URL is supported
+   */
+  static isSupportedRepository(repoUrl: string): boolean {
+    return this.parseRepositoryUrl(repoUrl) !== null
+  }
+
+  /**
    * Get all MCP categories
    */
   static async getCategories(): Promise<McpCategory[]> {
@@ -352,10 +401,10 @@ export class McpCatalogService {
   }
 
   /**
-   * Get GitHub repository information
+   * Get repository information from any supported platform
    */
-  static async getGitHubRepoInfo(repoUrl: string, branch: string = 'main'): Promise<any> {
-    const url = new URL(`${this.baseUrl}/api/mcp/github/repo-info`)
+  static async getRepositoryInfo(repoUrl: string, branch: string = 'main'): Promise<any> {
+    const url = new URL(`${this.baseUrl}/api/mcp/repository/info`)
     url.searchParams.append('url', repoUrl)
     url.searchParams.append('branch', branch)
 
@@ -373,6 +422,34 @@ export class McpCatalogService {
     }
 
     return await response.json()
+  }
+
+  /**
+   * Get GitHub repository information (legacy method for backward compatibility)
+   * @deprecated Use getRepositoryInfo instead
+   */
+  static async getGitHubRepoInfo(repoUrl: string, branch: string = 'main'): Promise<any> {
+    return this.getRepositoryInfo(repoUrl, branch)
+  }
+
+  /**
+   * Get supported repository platforms
+   */
+  static getSupportedPlatforms(): Array<{ value: string; label: string; hostname: string }> {
+    return [
+      { value: 'github', label: 'GitHub', hostname: 'github.com' },
+      { value: 'gitlab', label: 'GitLab', hostname: 'gitlab.com' },
+      { value: 'bitbucket', label: 'Bitbucket', hostname: 'bitbucket.org' }
+    ]
+  }
+
+  /**
+   * Get the display name for a repository platform
+   */
+  static getPlatformDisplayName(source: string): string {
+    const platforms = this.getSupportedPlatforms()
+    const platform = platforms.find(p => p.value === source)
+    return platform ? platform.label : source
   }
 
   /**

@@ -165,7 +165,7 @@ describe('MCP Servers - Search Servers', () => {
           github_url: null,
           git_branch: null,
           homepage_url: null,
-          installation_methods: '[]',
+          packages: '[]',
           resources: null,
           prompts: null,
           dependencies: null,
@@ -241,7 +241,7 @@ describe('MCP Servers - Search Servers', () => {
       const server = response.data.servers[0];
       expect(server.id).toBe('server-1');
       expect(server.name).toBe('Test Server');
-      expect(server.installation_methods).toEqual([]);
+      expect(server.packages).toEqual([]);
     });
 
     it('should handle search with filters', async () => {
@@ -310,7 +310,7 @@ describe('MCP Servers - Search Servers', () => {
         github_url: null,
         git_branch: null,
         homepage_url: null,
-        installation_methods: '[]',
+        packages: '[]',
         resources: null,
         prompts: null,
         dependencies: null,
@@ -487,7 +487,7 @@ describe('MCP Servers - Search Servers', () => {
         github_url: null,
         git_branch: null,
         homepage_url: null,
-        installation_methods: '["npm", "yarn"]',
+        packages: '["npm", "yarn"]',
         resources: '[{"name": "test-resource"}]',
         prompts: '[{"name": "test-prompt"}]',
         dependencies: '{"dep1": "^1.0.0"}',
@@ -537,7 +537,7 @@ describe('MCP Servers - Search Servers', () => {
       expect(response.data.servers).toHaveLength(1);
       
       const server = response.data.servers[0];
-      expect(server.installation_methods).toEqual(['npm', 'yarn']);
+      expect(server.packages).toEqual(['npm', 'yarn']);
       expect(server.resources).toEqual([{ name: 'test-resource' }]);
       expect(server.prompts).toEqual([{ name: 'test-prompt' }]);
       expect(server.dependencies).toEqual({ dep1: '^1.0.0' });
@@ -558,7 +558,7 @@ describe('MCP Servers - Search Servers', () => {
         github_url: null,
         git_branch: null,
         homepage_url: null,
-        installation_methods: '[]',
+        packages: '[]',
         resources: null,
         prompts: null,
         dependencies: null,
@@ -608,7 +608,7 @@ describe('MCP Servers - Search Servers', () => {
       expect(response.data.servers).toHaveLength(1);
       
       const server = response.data.servers[0];
-      expect(server.installation_methods).toEqual([]);
+      expect(server.packages).toEqual([]);
       expect(server.resources).toBeNull();
       expect(server.prompts).toBeNull();
       expect(server.dependencies).toBeNull();

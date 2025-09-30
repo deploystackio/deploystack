@@ -434,15 +434,13 @@ watch(jsonInput, (newValue) => {
         eventBus.setState('technical_extracted_headers_edit', validation.headerKeys)
       }
 
-      // Convert to installation_methods format for HTTP
-      const installationMethods = [{
-        client: 'claude-desktop' as const,
+      // Convert to remotes format for HTTP
+      updateField('packages', null)
+      updateField('remotes', [{
+        type: validation.type || 'sse',
         url: validation.url,
-        type: validation.type,
-        headers: validation.headers
-      }]
-
-      updateField('installation_methods', installationMethods)
+        headers: validation.headers || {}
+      }])
     } else {
       // Stdio server
       extractedCommand.value = validation.command || ''
@@ -463,19 +461,19 @@ watch(jsonInput, (newValue) => {
       // ALSO store in persistent storage for ConfigurationSchemaStep to load later
       eventBus.setState('technical_extracted_env_vars_edit', validation.envVars || [])
 
-      // Convert back to installation_methods format for stdio
+      // Convert to packages format for stdio
       const serverName = validation.serverName!
       const serverConfig = validation.parsed.mcpServers[serverName]
 
-      const installationMethods = [{
-        client: 'claude-desktop' as const,
-        command: serverConfig.command,
-        args: serverConfig.args,
+      updateField('remotes', null)
+      updateField('packages', [{
+        transport: {
+          type: 'stdio',
+          command: serverConfig.command,
+          args: serverConfig.args
+        },
         env: serverConfig.env || {}
-      }]
-
-      // Update installation_methods
-      updateField('installation_methods', installationMethods)
+      }])
 
       // Also update the capabilities section with environment variables
       if (validation.envVars && validation.envVars.length > 0) {
@@ -589,7 +587,7 @@ onUnmounted(() => {
         <dd class="mt-1 sm:col-span-2 sm:mt-0">
           <Select
             :model-value="localData.language"
-            @update:model-value="(value) => updateField('language', String(value || ''))"
+            @update:model-value="(value: any) => updateField('language', String(value || ''))"
           >
             <SelectTrigger>
               <SelectValue :placeholder="t('mcpCatalog.form.technical.language.placeholder')" />
@@ -627,7 +625,7 @@ onUnmounted(() => {
         <dd class="mt-1 sm:col-span-2 sm:mt-0">
           <Select
             :model-value="localData.transport_type"
-            @update:model-value="(value) => updateField('transport_type', String(value || 'auto'))"
+            @update:model-value="(value: any) => updateField('transport_type', String(value || 'auto'))"
           >
             <SelectTrigger>
               <SelectValue :placeholder="t('mcpCatalog.form.technical.transportType.placeholder')" />

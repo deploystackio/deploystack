@@ -21,7 +21,7 @@ const router = useRouter()
 
 const handleInstall = () => {
   emit('install', props.server)
-  
+
   router.push({
     path: '/mcp-server/add',
     query: {
@@ -52,12 +52,12 @@ const getGitHubAvatarUrl = (server: McpServer) => {
     <div class="rounded-lg bg-gray-50 border-[6px] border-gray-200">
       <dl class="flex flex-wrap">
         <div class="flex-auto pt-6 pl-6">
-          <dt 
+          <dt
             class="text-sm/6 font-semibold text-gray-900 cursor-pointer hover:text-teal-700 transition-colors flex items-center gap-2"
             @click="handleServerClick"
             :title="`View ${server.name} details`"
           >
-            <img 
+            <img
               v-if="getGitHubAvatarUrl(server)"
               :src="getGitHubAvatarUrl(server)!"
               :alt="`${server.name} GitHub avatar`"
@@ -74,14 +74,14 @@ const getGitHubAvatarUrl = (server: McpServer) => {
           </dt>
           <dd class="text-sm/6 font-medium text-gray-900 min-w-0 flex-1">
             <a
-              v-if="server.github_url"
-              :href="server.github_url"
+              v-if="server.repository_url"
+              :href="server.repository_url"
               target="_blank"
               rel="noopener noreferrer"
               class="hover:underline truncate block"
-              :title="server.github_url.replace('https://github.com/', '')"
+              :title="server.repository_url.replace('https://github.com/', '').replace('https://gitlab.com/', '').replace('https://bitbucket.org/', '')"
             >
-              {{ server.github_url.replace('https://github.com/', '') }}
+              {{ server.repository_url.replace('https://github.com/', '').replace('https://gitlab.com/', '').replace('https://bitbucket.org/', '') }}
             </a>
             <span v-else class="text-gray-500 truncate block">{{ t('mcpInstallations.view.values.notProvided') }}</span>
           </dd>

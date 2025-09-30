@@ -205,7 +205,8 @@ describe('MCP Servers - Get Server', () => {
         name: 'Test Server',
         slug: 'test-server',
         description: 'A test server',
-        installation_methods: JSON.stringify([]), // Database format - JSON string
+        packages: JSON.stringify([]), // Database format - JSON string
+        remotes: null,
         resources: null,
         prompts: null,
         dependencies: null,
@@ -250,14 +251,18 @@ describe('MCP Servers - Get Server', () => {
             slug: 'test-server',
             description: 'A test server',
             long_description: null,
-            github_url: null,
+            repository_url: null,
+            repository_source: null,
+            repository_id: null,
+            repository_subfolder: null,
             git_branch: null,
-            homepage_url: null,
+            website_url: null,
             github_account_id: null,
             github_stars: null,
             language: 'javascript',
             runtime: 'node',
-            installation_methods: [],
+            packages: [],
+            remotes: null,
             resources: null,
             prompts: null,
             visibility: 'global',
@@ -325,7 +330,8 @@ describe('MCP Servers - Get Server', () => {
         name: 'Team Server',
         slug: 'team-server',
         description: 'A team server',
-        installation_methods: JSON.stringify([]), // Database format - JSON string
+        packages: JSON.stringify([]), // Database format - JSON string
+        remotes: null,
         resources: null,
         prompts: null,
         dependencies: null,
@@ -369,14 +375,18 @@ describe('MCP Servers - Get Server', () => {
             slug: 'team-server',
             description: 'A team server',
             long_description: null,
-            github_url: null,
+            repository_url: null,
+            repository_source: null,
+            repository_id: null,
+            repository_subfolder: null,
             git_branch: null,
-            homepage_url: null,
+            website_url: null,
             github_account_id: null,
             github_stars: null,
             language: 'javascript',
             runtime: 'node',
-            installation_methods: [],
+            packages: [],
+            remotes: null,
             resources: null,
             prompts: null,
             visibility: 'team',
@@ -417,7 +427,8 @@ describe('MCP Servers - Get Server', () => {
         name: 'Global Server',
         slug: 'global-server',
         description: 'A global server',
-        installation_methods: JSON.stringify([]), // Database format - JSON string
+        packages: JSON.stringify([]), // Database format - JSON string
+        remotes: null,
         resources: null,
         prompts: null,
         dependencies: null,
@@ -461,14 +472,18 @@ describe('MCP Servers - Get Server', () => {
             slug: 'global-server',
             description: 'A global server',
             long_description: null,
-            github_url: null,
+            repository_url: null,
+            repository_source: null,
+            repository_id: null,
+            repository_subfolder: null,
             git_branch: null,
-            homepage_url: null,
+            website_url: null,
             github_account_id: null,
             github_stars: null,
             language: 'javascript',
             runtime: 'node',
-            installation_methods: [],
+            packages: [],
+            remotes: null,
             resources: null,
             prompts: null,
             visibility: 'global',
@@ -522,7 +537,8 @@ describe('MCP Servers - Get Server', () => {
         name: 'Team Server',
         slug: 'team-server',
         description: 'A team server',
-        installation_methods: JSON.stringify([]), // Database format - JSON string
+        packages: JSON.stringify([]), // Database format - JSON string
+        remotes: null,
         resources: null,
         prompts: null,
         dependencies: null,
@@ -566,14 +582,18 @@ describe('MCP Servers - Get Server', () => {
             slug: 'team-server',
             description: 'A team server',
             long_description: null,
-            github_url: null,
+            repository_url: null,
+            repository_source: null,
+            repository_id: null,
+            repository_subfolder: null,
             git_branch: null,
-            homepage_url: null,
+            website_url: null,
             github_account_id: null,
             github_stars: null,
             language: 'javascript',
             runtime: 'node',
-            installation_methods: [],
+            packages: [],
+            remotes: null,
             resources: null,
             prompts: null,
             visibility: 'team',
@@ -627,7 +647,8 @@ describe('MCP Servers - Get Server', () => {
         name: 'Team Server',
         slug: 'team-server',
         description: 'A team server',
-        installation_methods: JSON.stringify([]), // Database format - JSON string
+        packages: JSON.stringify([]), // Database format - JSON string
+        remotes: null,
         resources: null,
         prompts: null,
         dependencies: null,
@@ -678,7 +699,8 @@ describe('MCP Servers - Get Server', () => {
         name: 'Global Server',
         slug: 'global-server',
         description: 'A global server',
-        installation_methods: JSON.stringify([]), // Database format - JSON string
+        packages: JSON.stringify([]), // Database format - JSON string
+        remotes: null,
         resources: null,
         prompts: null,
         dependencies: null,
@@ -757,7 +779,8 @@ describe('MCP Servers - Get Server', () => {
         name: 'Test Server',
         slug: 'test-server',
         description: 'A test server',
-        installation_methods: JSON.stringify(['npm', 'yarn']), // Database format - JSON string
+        packages: JSON.stringify(['npm', 'yarn']), // Database format - JSON string
+        remotes: null,
         resources: JSON.stringify([{ name: 'test-resource' }]), // Database format - JSON string
         prompts: JSON.stringify([{ name: 'test-prompt' }]), // Database format - JSON string
         dependencies: JSON.stringify({ dep1: '^1.0.0' }), // Database format - JSON string
@@ -793,7 +816,7 @@ describe('MCP Servers - Get Server', () => {
       const response = JSON.parse(jsonResponse);
       const server = response.data;
 
-      expect(server.installation_methods).toEqual(['npm', 'yarn']);
+      expect(server.packages).toEqual(['npm', 'yarn']);
       expect(server.resources).toEqual([{ name: 'test-resource' }]);
       expect(server.prompts).toEqual([{ name: 'test-prompt' }]);
       expect(server.dependencies).toEqual({ dep1: '^1.0.0' });
@@ -809,7 +832,8 @@ describe('MCP Servers - Get Server', () => {
         name: 'Test Server',
         slug: 'test-server',
         description: 'A test server',
-        installation_methods: JSON.stringify([]), // Database format - JSON string
+        packages: JSON.stringify([]), // Database format - JSON string
+        remotes: null,
         resources: null,
         prompts: null,
         dependencies: null,
@@ -845,7 +869,7 @@ describe('MCP Servers - Get Server', () => {
       const response = JSON.parse(jsonResponse);
       const server = response.data;
 
-      expect(server.installation_methods).toEqual([]);
+      expect(server.packages).toEqual([]);
       expect(server.resources).toBeNull();
       expect(server.prompts).toBeNull();
       expect(server.dependencies).toBeNull();
@@ -955,7 +979,8 @@ describe('MCP Servers - Get Server', () => {
           name: 'Test Server',
           slug: 'test-server',
           description: 'A test server',
-          installation_methods: JSON.stringify([]), // Database format - JSON string
+          packages: JSON.stringify([]), // Database format - JSON string
+          remotes: null,
           resources: null,
           prompts: null,
           dependencies: null,
@@ -1053,7 +1078,8 @@ describe('MCP Servers - Get Server', () => {
         name: 'Team Server',
         slug: 'team-server',
         description: 'A team server',
-        installation_methods: JSON.stringify([]), // Database format - JSON string
+        packages: JSON.stringify([]), // Database format - JSON string
+        remotes: null,
         resources: null,
         prompts: null,
         dependencies: null,
@@ -1105,7 +1131,8 @@ describe('MCP Servers - Get Server', () => {
         name: 'Global Server',
         slug: 'global-server',
         description: 'A global server',
-        installation_methods: JSON.stringify([]), // Database format - JSON string
+        packages: JSON.stringify([]), // Database format - JSON string
+        remotes: null,
         resources: null,
         prompts: null,
         dependencies: null,

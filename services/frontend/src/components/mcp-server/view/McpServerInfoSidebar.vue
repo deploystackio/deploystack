@@ -52,8 +52,8 @@ const { t } = useI18n()
 
       <div class="border-t pt-4">
         <McpServerInfoLinks
-          :github-url="server.github_url"
-          :homepage-url="server.homepage_url"
+          :repository-url="server.repository_url"
+          :homepage-url="server.website_url"
         />
       </div>
     </div>

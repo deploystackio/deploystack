@@ -40,11 +40,11 @@ const eventBus = useEventBus()
 
 // Form data interface for add wizard
 interface McpServerAddFormData {
-  github: {
-    github_url: string
+  repository: {
+    repository_url: string
+    repository_source: string
     git_branch: string
     auto_populated: boolean
-
     repo_data?: any
   }
   claudeConfig: {
@@ -167,8 +167,9 @@ const githubFetchError = ref<string | null>(null)
 
 // Form data with proper initialization
 const formData = ref<McpServerAddFormData>({
-  github: {
-    github_url: '',
+  repository: {
+    repository_url: '',
+    repository_source: 'github',
     git_branch: 'main',
     auto_populated: false
   },
@@ -197,9 +198,10 @@ const formData = ref<McpServerAddFormData>({
 const compatibleFormData = computed((): McpServerFormData => ({
   basic: formData.value.basic,
   repository: {
-    github_url: formData.value.github.github_url,
-    git_branch: formData.value.github.git_branch,
-    homepage_url: ''
+    repository_url: formData.value.repository.repository_url,
+    repository_source: formData.value.repository.repository_source,
+    git_branch: formData.value.repository.git_branch,
+    website_url: ''
   },
   technical: {
     language: '',
@@ -209,7 +211,7 @@ const compatibleFormData = computed((): McpServerFormData => ({
     transport_type: 'auto'
   },
   configuration_schema: formData.value.configuration_schema,
-  github: formData.value.github,
+  repository_setup: formData.value.repository,
   review: {}
 }))
 
@@ -220,10 +222,9 @@ const canGoNext = computed(() => !isLastStep.value)
 const canGoPrevious = computed(() => !isFirstStep.value)
 
 const canProceedFromGitHub = computed(() => {
-  const githubUrl = formData.value.github.github_url
-  return githubUrl &&
-         githubUrl.includes('github.com') &&
-         githubUrl.includes('/') &&
+  const repositoryUrl = formData.value.repository.repository_url
+  return repositoryUrl &&
+         repositoryUrl.length > 0 &&
          !isFetchingGitHub.value
 })
 
@@ -235,7 +236,7 @@ const canProceedFromClaudeConfig = computed(() => {
 const canSubmit = computed(() => {
   return formData.value.basic.name &&
          formData.value.basic.description &&
-         formData.value.github.github_url &&
+         formData.value.repository.repository_url &&
          canProceedFromClaudeConfig.value
 })
 
@@ -307,7 +308,7 @@ const handleCancel = () => {
   emit('cancel')
 }
 
-// GitHub step navigation with auto-population
+// Repository step navigation with auto-population
 const handleGitHubStepNext = async () => {
   if (currentStep.value !== 0) return
 
@@ -315,10 +316,11 @@ const handleGitHubStepNext = async () => {
     isFetchingGitHub.value = true
     githubFetchError.value = null
 
-    const githubUrl = formData.value.github.github_url
+    const repositoryUrl = formData.value.repository.repository_url
+    const gitBranch = formData.value.repository.git_branch
 
-    // Call backend API to fetch GitHub data
-    const response = await McpCatalogService.getGitHubRepoInfo(githubUrl)
+    // Call backend API to fetch repository data
+    const response = await McpCatalogService.getRepositoryInfo(repositoryUrl, gitBranch)
 
     if (response.success && response.data) {
       // Auto-populate basic info from GitHub data
@@ -341,27 +343,26 @@ const handleGitHubStepNext = async () => {
   }
 }
 
-// Auto-population function for GitHub data
-
-const autoPopulateFromGitHub = (githubData: any) => {
-  // Update GitHub data
-  formData.value.github = {
-    ...formData.value.github,
+// Auto-population function for repository data
+const autoPopulateFromGitHub = (repositoryData: any) => {
+  // Update repository data
+  formData.value.repository = {
+    ...formData.value.repository,
     auto_populated: true,
-    repo_data: githubData
+    repo_data: repositoryData
   }
 
   // Auto-populate basic info
   formData.value.basic = {
     ...formData.value.basic,
-    name: githubData.name || '',
-    description: githubData.description || '',
-    long_description: githubData.readme_content || githubData.description || '',
-    author_name: githubData.owner?.login || githubData.author_name || '',
-    author_contact: githubData.owner?.email || githubData.author_contact || '',
-    organization: githubData.owner?.type === 'Organization' ? githubData.owner.login : (githubData.organization || ''),
-    license: githubData.license?.spdx_id || githubData.license || '',
-    tags: githubData.topics || githubData.tags || [],
+    name: repositoryData.name || '',
+    description: repositoryData.description || '',
+    long_description: repositoryData.readme_content || repositoryData.description || '',
+    author_name: repositoryData.owner?.login || repositoryData.author_name || '',
+    author_contact: repositoryData.owner?.email || repositoryData.author_contact || '',
+    organization: repositoryData.owner?.type === 'Organization' ? repositoryData.owner.login : (repositoryData.organization || ''),
+    license: repositoryData.license?.spdx_id || repositoryData.license || '',
+    tags: repositoryData.topics || repositoryData.tags || [],
     // Keep existing values for these properties
     featured: formData.value.basic.featured,
     auto_install_new_default_team: formData.value.basic.auto_install_new_default_team,
@@ -375,9 +376,10 @@ const submitForm = async () => {
     isSubmitting.value = true
     submitError.value = null
 
-    // Extract data from Claude Desktop config for proper installation_methods
+    // Extract data from Claude Desktop config for packages/remotes
     const claudeConfig = formData.value.claudeConfig.claude_desktop_config as any;
-    let extractedInstallationMethods: any[] = [];
+    let extractedPackages: any = null;
+    let extractedRemotes: any = null;
     let extractedTransportType = 'stdio';
 
     if (claudeConfig && claudeConfig.mcpServers) {
@@ -385,39 +387,26 @@ const submitForm = async () => {
       const serverConfig = serverKey ? claudeConfig.mcpServers[serverKey] : null;
 
       if (serverConfig) {
-      // Create proper Claude Desktop installation method based on server type
-      if (serverConfig.url) {
-        // HTTP-based server
-        extractedInstallationMethods = [{
-          client: "claude-desktop",
-          url: serverConfig.url,
-          type: serverConfig.type,
-          headers: serverConfig.headers || {}
-        }];
-      } else if (serverConfig.command) {
-        // Command-based server
-        extractedInstallationMethods = [{
-          client: "claude-desktop",
-          command: serverConfig.command,
-          args: serverConfig.args || [],
-          env: serverConfig.env || {}
-        }];
-      } else {
-        extractedInstallationMethods = [];
-      }
-
-      // Determine transport type from server configuration
-      if (serverConfig.url) {
-        // HTTP-based server (has URL)
-        extractedTransportType = 'http';
-      } else if (serverConfig.command) {
-        // Command-based server (stdio)
-        extractedTransportType = 'stdio';
-      } else {
-        // Default fallback
-        extractedTransportType = 'stdio';
-      }
-
+        if (serverConfig.url) {
+          // HTTP/SSE server - use remotes
+          extractedRemotes = [{
+            type: serverConfig.type || 'sse',
+            url: serverConfig.url,
+            headers: serverConfig.headers || {}
+          }];
+          extractedTransportType = serverConfig.type || 'http';
+        } else if (serverConfig.command) {
+          // STDIO server - use packages
+          extractedPackages = [{
+            transport: {
+              type: 'stdio',
+              command: serverConfig.command,
+              args: serverConfig.args || []
+            },
+            env: serverConfig.env || {}
+          }];
+          extractedTransportType = 'stdio';
+        }
       }
     }
 
@@ -436,12 +425,13 @@ const submitForm = async () => {
       featured: formData.value.basic.featured,
       auto_install_new_default_team: formData.value.basic.auto_install_new_default_team,
 
-      // GitHub Info
-      github_url: formData.value.github.github_url,
-      git_branch: formData.value.github.git_branch,
+      // Repository Info
+      repository_url: formData.value.repository.repository_url,
+      repository_source: formData.value.repository.repository_source,
+      git_branch: formData.value.repository.git_branch,
 
       // From auto-population or manual entry
-      homepage_url: formData.value.github.repo_data?.homepage,
+      website_url: formData.value.repository.repo_data?.homepage,
 
       // New Configuration Schema (ADR-007)
       configuration_schema: formData.value.configuration_schema,
@@ -453,7 +443,8 @@ const submitForm = async () => {
       language: extractedTransportType === 'http' || extractedTransportType === 'sse' ? 'http' : 'typescript',
       runtime: extractedTransportType === 'http' || extractedTransportType === 'sse' ? 'http' : 'node',
       transport_type: extractedTransportType,
-      installation_methods: extractedInstallationMethods,
+      packages: extractedPackages,
+      remotes: extractedRemotes,
     };
 
     await emit('submit', finalPayload)
@@ -490,10 +481,10 @@ const submitForm = async () => {
 
     <!-- Step Content -->
     <ContentWrapper>
-      <!-- GitHub Step -->
+      <!-- Repository Step -->
       <GitHubRepositoryStep
         v-if="currentStep === 0"
-        v-model="formData.github"
+        v-model="formData.repository"
         :form-data="compatibleFormData"
       />
 

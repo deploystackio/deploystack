@@ -20,15 +20,20 @@ interface UpdateGlobalServerRequest {
   name?: string;
   description?: string;
   long_description?: string;
-  github_url?: string;
+  repository_url?: string;
+  repository_source?: string;
+  repository_id?: string;
+  repository_subfolder?: string;
   git_branch?: string;
-  homepage_url?: string;
+  website_url?: string;
   github_account_id?: string;
   language?: string;
   runtime?: string;
   transport_type?: 'stdio' | 'http' | 'sse';
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  installation_methods?: any[];
+  packages?: any[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  remotes?: any[];
   resources?: Array<{ type: string; description: string; }>;
   prompts?: Array<{ name: string; description: string; }>;
   author_name?: string;

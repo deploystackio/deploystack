@@ -207,15 +207,15 @@ export class GitHubReadmeService {
   }
 
   /**
-   * Fetch README content from a GitHub repository
+   * Fetch README content from a repository
    * 
-   * @param githubUrl - Full GitHub repository URL
+   * @param repositoryUrl - Full repository URL (GitHub, GitLab, etc.)
    * @param branch - Optional branch name (defaults to 'main')
    * @param logger - Fastify logger instance
    * @returns Object with decoded content and encoding, or null if README not found
    */
   static async getReadmeContent(
-    githubUrl: string,
+    repositoryUrl: string,
     branch: string = 'main',
     logger: FastifyBaseLogger
   ): Promise<GitHubReadmeResult | null> {
@@ -224,15 +224,25 @@ export class GitHubReadmeService {
     logger.debug({
       operation: 'github_readme_get_content',
       step: 'start',
-      githubUrl,
+      repositoryUrl,
       branch
     }, 'Starting README content fetch');
+
+    // Check if this is a GitHub repository
+    if (!repositoryUrl.includes('github.com')) {
+      logger.debug({
+        operation: 'github_readme_get_content',
+        step: 'unsupported_platform',
+        repositoryUrl
+      }, 'Repository is not on GitHub, skipping README fetch');
+      return null;
+    }
 
     let owner: string;
     let repo: string;
     
     try {
-      const parsed = this.parseGitHubUrl(githubUrl);
+      const parsed = this.parseGitHubUrl(repositoryUrl);
       owner = parsed.owner;
       repo = parsed.repo;
       
@@ -241,14 +251,14 @@ export class GitHubReadmeService {
         step: 'parse_url',
         owner,
         repo,
-        githubUrl
+        repositoryUrl
       }, `Parsed GitHub URL: ${owner}/${repo}`);
     } catch (error) {
       logger.error({
         operation: 'github_readme_get_content',
         step: 'parse_url',
         error,
-        githubUrl
+        repositoryUrl
       }, 'Failed to parse GitHub URL');
       throw error;
     }
@@ -318,7 +328,7 @@ export class GitHubReadmeService {
           repo,
           size_mb: (sizeInBytes / (1024 * 1024)).toFixed(2),
           max_mb: 2,
-          github_url: githubUrl
+          repository_url: repositoryUrl
         }, `README exceeds maximum size (${(sizeInBytes / (1024 * 1024)).toFixed(2)}MB), skipping`);
         
         return null;
@@ -357,7 +367,7 @@ export class GitHubReadmeService {
           repo,
           removal_percentage: removalPercentage.toFixed(2),
           removal_bytes: removalBytes,
-          github_url: githubUrl
+          repository_url: repositoryUrl
         }, `High sanitization removal rate detected: ${removalPercentage.toFixed(2)}% of content removed`);
       }
       
@@ -428,7 +438,7 @@ export class GitHubReadmeService {
         owner,
         repo,
         branch,
-        githubUrl,
+        repositoryUrl,
         duration_ms: duration
       }, `Failed to fetch README for ${owner}/${repo}`);
       

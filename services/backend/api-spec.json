@@ -13525,20 +13525,35 @@
                                 "nullable": true,
                                 "description": "Detailed server description"
                               },
-                              "github_url": {
+                              "repository_url": {
                                 "type": "string",
                                 "nullable": true,
-                                "description": "GitHub repository URL"
+                                "description": "Repository URL"
+                              },
+                              "repository_source": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "Repository platform (github, gitlab, bitbucket)"
+                              },
+                              "repository_id": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "Platform-specific repository identifier"
+                              },
+                              "repository_subfolder": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "Subfolder path for monorepos"
                               },
                               "git_branch": {
                                 "type": "string",
                                 "nullable": true,
                                 "description": "Git branch"
                               },
-                              "homepage_url": {
+                              "website_url": {
                                 "type": "string",
                                 "nullable": true,
-                                "description": "Homepage URL"
+                                "description": "Website URL"
                               },
                               "github_account_id": {
                                 "type": "string",
@@ -13558,9 +13573,14 @@
                                 "type": "string",
                                 "description": "Runtime environment"
                               },
-                              "installation_methods": {
+                              "packages": {
                                 "type": "array",
-                                "description": "Installation methods"
+                                "description": "MCP Registry packages array"
+                              },
+                              "remotes": {
+                                "type": "array",
+                                "nullable": true,
+                                "description": "MCP Registry remotes array for HTTP/SSE"
                               },
                               "resources": {
                                 "type": "array",
@@ -13715,7 +13735,7 @@
                               "description",
                               "language",
                               "runtime",
-                              "installation_methods",
+                              "packages",
                               "visibility",
                               "created_by",
                               "transport_type",
@@ -13902,20 +13922,35 @@
                           "nullable": true,
                           "description": "Detailed server description"
                         },
-                        "github_url": {
+                        "repository_url": {
                           "type": "string",
                           "nullable": true,
-                          "description": "GitHub repository URL"
+                          "description": "Repository URL"
+                        },
+                        "repository_source": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Repository platform (github, gitlab, bitbucket)"
+                        },
+                        "repository_id": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Platform-specific repository identifier"
+                        },
+                        "repository_subfolder": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Subfolder path for monorepos"
                         },
                         "git_branch": {
                           "type": "string",
                           "nullable": true,
                           "description": "Git branch"
                         },
-                        "homepage_url": {
+                        "website_url": {
                           "type": "string",
                           "nullable": true,
-                          "description": "Homepage URL"
+                          "description": "Website URL"
                         },
                         "github_account_id": {
                           "type": "string",
@@ -13935,9 +13970,14 @@
                           "type": "string",
                           "description": "Runtime environment"
                         },
-                        "installation_methods": {
+                        "packages": {
                           "type": "array",
-                          "description": "Installation methods"
+                          "description": "MCP Registry packages array"
+                        },
+                        "remotes": {
+                          "type": "array",
+                          "nullable": true,
+                          "description": "MCP Registry remotes array for HTTP/SSE"
                         },
                         "resources": {
                           "type": "array",
@@ -14097,7 +14137,7 @@
                         "description",
                         "language",
                         "runtime",
-                        "installation_methods",
+                        "packages",
                         "visibility",
                         "created_by",
                         "transport_type",
@@ -14364,20 +14404,35 @@
                                 "nullable": true,
                                 "description": "Detailed server description"
                               },
-                              "github_url": {
+                              "repository_url": {
                                 "type": "string",
                                 "nullable": true,
-                                "description": "GitHub repository URL"
+                                "description": "Repository URL"
+                              },
+                              "repository_source": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "Repository platform (github, gitlab, bitbucket)"
+                              },
+                              "repository_id": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "Platform-specific repository identifier"
+                              },
+                              "repository_subfolder": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "Subfolder path for monorepos"
                               },
                               "git_branch": {
                                 "type": "string",
                                 "nullable": true,
                                 "description": "Git branch"
                               },
-                              "homepage_url": {
+                              "website_url": {
                                 "type": "string",
                                 "nullable": true,
-                                "description": "Homepage URL"
+                                "description": "Website URL"
                               },
                               "github_account_id": {
                                 "type": "string",
@@ -14397,9 +14452,14 @@
                                 "type": "string",
                                 "description": "Runtime environment"
                               },
-                              "installation_methods": {
+                              "packages": {
                                 "type": "array",
-                                "description": "Installation methods"
+                                "description": "MCP Registry packages array"
+                              },
+                              "remotes": {
+                                "type": "array",
+                                "nullable": true,
+                                "description": "MCP Registry remotes array for HTTP/SSE"
                               },
                               "resources": {
                                 "type": "array",
@@ -14554,7 +14614,7 @@
                               "description",
                               "language",
                               "runtime",
-                              "installation_methods",
+                              "packages",
                               "visibility",
                               "created_by",
                               "transport_type",
@@ -15152,9 +15212,13 @@
                     ],
                     "description": "MCP transport type"
                   },
-                  "installation_methods": {
+                  "packages": {
                     "type": "array",
-                    "description": "Installation methods"
+                    "description": "MCP Registry packages array"
+                  },
+                  "remotes": {
+                    "type": "array",
+                    "description": "MCP Registry remotes array for HTTP/SSE"
                   },
                   "claude_desktop_config": {
                     "type": "object",
@@ -15236,19 +15300,31 @@
                     "type": "string",
                     "description": "Detailed server description"
                   },
-                  "github_url": {
+                  "repository_url": {
                     "type": "string",
                     "format": "uri",
-                    "description": "GitHub repository URL"
+                    "description": "Repository URL"
+                  },
+                  "repository_source": {
+                    "type": "string",
+                    "description": "Repository platform (github, gitlab, bitbucket)"
+                  },
+                  "repository_id": {
+                    "type": "string",
+                    "description": "Platform-specific repository identifier"
+                  },
+                  "repository_subfolder": {
+                    "type": "string",
+                    "description": "Subfolder path for monorepos"
                   },
                   "git_branch": {
                     "type": "string",
                     "description": "Git branch (defaults to main)"
                   },
-                  "homepage_url": {
+                  "website_url": {
                     "type": "string",
                     "format": "uri",
-                    "description": "Homepage URL"
+                    "description": "Website URL"
                   },
                   "github_account_id": {
                     "type": "string",
@@ -15395,20 +15471,35 @@
                           "nullable": true,
                           "description": "Detailed server description"
                         },
-                        "github_url": {
+                        "repository_url": {
                           "type": "string",
                           "nullable": true,
-                          "description": "GitHub repository URL"
+                          "description": "Repository URL"
+                        },
+                        "repository_source": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Repository platform (github, gitlab, bitbucket)"
+                        },
+                        "repository_id": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Platform-specific repository identifier"
+                        },
+                        "repository_subfolder": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Subfolder path for monorepos"
                         },
                         "git_branch": {
                           "type": "string",
                           "nullable": true,
                           "description": "Git branch"
                         },
-                        "homepage_url": {
+                        "website_url": {
                           "type": "string",
                           "nullable": true,
-                          "description": "Homepage URL"
+                          "description": "Website URL"
                         },
                         "github_account_id": {
                           "type": "string",
@@ -15428,9 +15519,14 @@
                           "type": "string",
                           "description": "Runtime environment"
                         },
-                        "installation_methods": {
+                        "packages": {
                           "type": "array",
-                          "description": "Installation methods"
+                          "description": "MCP Registry packages array"
+                        },
+                        "remotes": {
+                          "type": "array",
+                          "nullable": true,
+                          "description": "MCP Registry remotes array for HTTP/SSE"
                         },
                         "resources": {
                           "type": "array",
@@ -15585,7 +15681,7 @@
                         "description",
                         "language",
                         "runtime",
-                        "installation_methods",
+                        "packages",
                         "visibility",
                         "created_by",
                         "transport_type",
@@ -15818,19 +15914,31 @@
                     "type": "string",
                     "description": "Detailed server description"
                   },
-                  "github_url": {
+                  "repository_url": {
                     "type": "string",
                     "format": "uri",
-                    "description": "GitHub repository URL"
+                    "description": "Repository URL"
+                  },
+                  "repository_source": {
+                    "type": "string",
+                    "description": "Repository platform (github, gitlab, bitbucket)"
+                  },
+                  "repository_id": {
+                    "type": "string",
+                    "description": "Platform-specific repository identifier"
+                  },
+                  "repository_subfolder": {
+                    "type": "string",
+                    "description": "Subfolder path for monorepos"
                   },
                   "git_branch": {
                     "type": "string",
                     "description": "Git branch (defaults to main)"
                   },
-                  "homepage_url": {
+                  "website_url": {
                     "type": "string",
                     "format": "uri",
-                    "description": "Homepage URL"
+                    "description": "Website URL"
                   },
                   "github_account_id": {
                     "type": "string",
@@ -15855,9 +15963,13 @@
                     ],
                     "description": "MCP transport type"
                   },
-                  "installation_methods": {
+                  "packages": {
                     "type": "array",
-                    "description": "Installation methods"
+                    "description": "MCP Registry packages array"
+                  },
+                  "remotes": {
+                    "type": "array",
+                    "description": "MCP Registry remotes array for HTTP/SSE"
                   },
                   "resources": {
                     "type": "array",
@@ -16014,20 +16126,35 @@
                           "nullable": true,
                           "description": "Detailed server description"
                         },
-                        "github_url": {
+                        "repository_url": {
                           "type": "string",
                           "nullable": true,
-                          "description": "GitHub repository URL"
+                          "description": "Repository URL"
+                        },
+                        "repository_source": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Repository platform (github, gitlab, bitbucket)"
+                        },
+                        "repository_id": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Platform-specific repository identifier"
+                        },
+                        "repository_subfolder": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Subfolder path for monorepos"
                         },
                         "git_branch": {
                           "type": "string",
                           "nullable": true,
                           "description": "Git branch"
                         },
-                        "homepage_url": {
+                        "website_url": {
                           "type": "string",
                           "nullable": true,
-                          "description": "Homepage URL"
+                          "description": "Website URL"
                         },
                         "github_account_id": {
                           "type": "string",
@@ -16047,9 +16174,14 @@
                           "type": "string",
                           "description": "Runtime environment"
                         },
-                        "installation_methods": {
+                        "packages": {
                           "type": "array",
-                          "description": "Installation methods"
+                          "description": "MCP Registry packages array"
+                        },
+                        "remotes": {
+                          "type": "array",
+                          "nullable": true,
+                          "description": "MCP Registry remotes array for HTTP/SSE"
                         },
                         "resources": {
                           "type": "array",
@@ -16204,7 +16336,7 @@
                         "description",
                         "language",
                         "runtime",
-                        "installation_methods",
+                        "packages",
                         "visibility",
                         "created_by",
                         "transport_type",
@@ -16917,13 +17049,24 @@
                         "description": {
                           "type": "string"
                         },
-                        "github_url": {
+                        "repository_url": {
                           "type": "string"
+                        },
+                        "repository_source": {
+                          "type": "string"
+                        },
+                        "repository_id": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "repository_subfolder": {
+                          "type": "string",
+                          "nullable": true
                         },
                         "git_branch": {
                           "type": "string"
                         },
-                        "homepage_url": {
+                        "website_url": {
                           "type": "string",
                           "nullable": true
                         },
@@ -16950,7 +17093,7 @@
                             "type": "string"
                           }
                         },
-                        "installation_methods": {
+                        "packages": {
                           "type": "array"
                         },
                         "dependencies": {
@@ -17201,15 +17344,30 @@
                               "type": "string",
                               "description": "Server description"
                             },
-                            "github_url": {
+                            "repository_url": {
                               "type": "string",
                               "nullable": true,
-                              "description": "GitHub repository URL"
+                              "description": "Repository URL"
                             },
-                            "homepage_url": {
+                            "repository_source": {
                               "type": "string",
                               "nullable": true,
-                              "description": "Homepage URL"
+                              "description": "Repository platform (github, gitlab, bitbucket)"
+                            },
+                            "repository_id": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "Platform-specific repository identifier"
+                            },
+                            "repository_subfolder": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "Subfolder path for monorepos"
+                            },
+                            "website_url": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "Website URL"
                             },
                             "author_name": {
                               "type": "string",
@@ -17258,10 +17416,16 @@
                               "nullable": true,
                               "description": "Server command line arguments"
                             },
-                            "installation_methods": {
+                            "packages": {
                               "type": "array",
                               "items": {},
-                              "description": "Installation methods"
+                              "description": "MCP Registry packages array"
+                            },
+                            "remotes": {
+                              "type": "array",
+                              "items": {},
+                              "nullable": true,
+                              "description": "MCP Registry remotes array for HTTP/SSE"
                             },
                             "category_id": {
                               "type": "string",
@@ -17588,15 +17752,30 @@
                                 "type": "string",
                                 "description": "Server description"
                               },
-                              "github_url": {
+                              "repository_url": {
                                 "type": "string",
                                 "nullable": true,
-                                "description": "GitHub repository URL"
+                                "description": "Repository URL"
                               },
-                              "homepage_url": {
+                              "repository_source": {
                                 "type": "string",
                                 "nullable": true,
-                                "description": "Homepage URL"
+                                "description": "Repository platform (github, gitlab, bitbucket)"
+                              },
+                              "repository_id": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "Platform-specific repository identifier"
+                              },
+                              "repository_subfolder": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "Subfolder path for monorepos"
+                              },
+                              "website_url": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "Website URL"
                               },
                               "author_name": {
                                 "type": "string",
@@ -17645,10 +17824,16 @@
                                 "nullable": true,
                                 "description": "Server command line arguments"
                               },
-                              "installation_methods": {
+                              "packages": {
                                 "type": "array",
                                 "items": {},
-                                "description": "Installation methods"
+                                "description": "MCP Registry packages array"
+                              },
+                              "remotes": {
+                                "type": "array",
+                                "items": {},
+                                "nullable": true,
+                                "description": "MCP Registry remotes array for HTTP/SSE"
                               },
                               "category_id": {
                                 "type": "string",
@@ -17960,15 +18145,30 @@
                               "type": "string",
                               "description": "Server description"
                             },
-                            "github_url": {
+                            "repository_url": {
                               "type": "string",
                               "nullable": true,
-                              "description": "GitHub repository URL"
+                              "description": "Repository URL"
                             },
-                            "homepage_url": {
+                            "repository_source": {
                               "type": "string",
                               "nullable": true,
-                              "description": "Homepage URL"
+                              "description": "Repository platform (github, gitlab, bitbucket)"
+                            },
+                            "repository_id": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "Platform-specific repository identifier"
+                            },
+                            "repository_subfolder": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "Subfolder path for monorepos"
+                            },
+                            "website_url": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "Website URL"
                             },
                             "author_name": {
                               "type": "string",
@@ -18017,10 +18217,16 @@
                               "nullable": true,
                               "description": "Server command line arguments"
                             },
-                            "installation_methods": {
+                            "packages": {
                               "type": "array",
                               "items": {},
-                              "description": "Installation methods"
+                              "description": "MCP Registry packages array"
+                            },
+                            "remotes": {
+                              "type": "array",
+                              "items": {},
+                              "nullable": true,
+                              "description": "MCP Registry remotes array for HTTP/SSE"
                             },
                             "category_id": {
                               "type": "string",
@@ -18359,15 +18565,30 @@
                               "type": "string",
                               "description": "Server description"
                             },
-                            "github_url": {
+                            "repository_url": {
                               "type": "string",
                               "nullable": true,
-                              "description": "GitHub repository URL"
+                              "description": "Repository URL"
                             },
-                            "homepage_url": {
+                            "repository_source": {
                               "type": "string",
                               "nullable": true,
-                              "description": "Homepage URL"
+                              "description": "Repository platform (github, gitlab, bitbucket)"
+                            },
+                            "repository_id": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "Platform-specific repository identifier"
+                            },
+                            "repository_subfolder": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "Subfolder path for monorepos"
+                            },
+                            "website_url": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "Website URL"
                             },
                             "author_name": {
                               "type": "string",
@@ -18416,10 +18637,16 @@
                               "nullable": true,
                               "description": "Server command line arguments"
                             },
-                            "installation_methods": {
+                            "packages": {
                               "type": "array",
                               "items": {},
-                              "description": "Installation methods"
+                              "description": "MCP Registry packages array"
+                            },
+                            "remotes": {
+                              "type": "array",
+                              "items": {},
+                              "nullable": true,
+                              "description": "MCP Registry remotes array for HTTP/SSE"
                             },
                             "category_id": {
                               "type": "string",
@@ -18964,15 +19191,30 @@
                               "type": "string",
                               "description": "Server description"
                             },
-                            "github_url": {
+                            "repository_url": {
                               "type": "string",
                               "nullable": true,
-                              "description": "GitHub repository URL"
+                              "description": "Repository URL"
                             },
-                            "homepage_url": {
+                            "repository_source": {
                               "type": "string",
                               "nullable": true,
-                              "description": "Homepage URL"
+                              "description": "Repository platform (github, gitlab, bitbucket)"
+                            },
+                            "repository_id": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "Platform-specific repository identifier"
+                            },
+                            "repository_subfolder": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "Subfolder path for monorepos"
+                            },
+                            "website_url": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "Website URL"
                             },
                             "author_name": {
                               "type": "string",
@@ -19021,10 +19263,16 @@
                               "nullable": true,
                               "description": "Server command line arguments"
                             },
-                            "installation_methods": {
+                            "packages": {
                               "type": "array",
                               "items": {},
-                              "description": "Installation methods"
+                              "description": "MCP Registry packages array"
+                            },
+                            "remotes": {
+                              "type": "array",
+                              "items": {},
+                              "nullable": true,
+                              "description": "MCP Registry remotes array for HTTP/SSE"
                             },
                             "category_id": {
                               "type": "string",
@@ -19362,15 +19610,30 @@
                               "type": "string",
                               "description": "Server description"
                             },
-                            "github_url": {
+                            "repository_url": {
                               "type": "string",
                               "nullable": true,
-                              "description": "GitHub repository URL"
+                              "description": "Repository URL"
                             },
-                            "homepage_url": {
+                            "repository_source": {
                               "type": "string",
                               "nullable": true,
-                              "description": "Homepage URL"
+                              "description": "Repository platform (github, gitlab, bitbucket)"
+                            },
+                            "repository_id": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "Platform-specific repository identifier"
+                            },
+                            "repository_subfolder": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "Subfolder path for monorepos"
+                            },
+                            "website_url": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "Website URL"
                             },
                             "author_name": {
                               "type": "string",
@@ -19419,10 +19682,16 @@
                               "nullable": true,
                               "description": "Server command line arguments"
                             },
-                            "installation_methods": {
+                            "packages": {
                               "type": "array",
                               "items": {},
-                              "description": "Installation methods"
+                              "description": "MCP Registry packages array"
+                            },
+                            "remotes": {
+                              "type": "array",
+                              "items": {},
+                              "nullable": true,
+                              "description": "MCP Registry remotes array for HTTP/SSE"
                             },
                             "category_id": {
                               "type": "string",
@@ -19760,15 +20029,30 @@
                               "type": "string",
                               "description": "Server description"
                             },
-                            "github_url": {
+                            "repository_url": {
                               "type": "string",
                               "nullable": true,
-                              "description": "GitHub repository URL"
+                              "description": "Repository URL"
                             },
-                            "homepage_url": {
+                            "repository_source": {
                               "type": "string",
                               "nullable": true,
-                              "description": "Homepage URL"
+                              "description": "Repository platform (github, gitlab, bitbucket)"
+                            },
+                            "repository_id": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "Platform-specific repository identifier"
+                            },
+                            "repository_subfolder": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "Subfolder path for monorepos"
+                            },
+                            "website_url": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "Website URL"
                             },
                             "author_name": {
                               "type": "string",
@@ -19817,10 +20101,16 @@
                               "nullable": true,
                               "description": "Server command line arguments"
                             },
-                            "installation_methods": {
+                            "packages": {
                               "type": "array",
                               "items": {},
-                              "description": "Installation methods"
+                              "description": "MCP Registry packages array"
+                            },
+                            "remotes": {
+                              "type": "array",
+                              "items": {},
+                              "nullable": true,
+                              "description": "MCP Registry remotes array for HTTP/SSE"
                             },
                             "category_id": {
                               "type": "string",

@@ -198,23 +198,30 @@ export default async function gatewayMeMcpConfigurationsRoute(server: FastifyIns
         if (!server) continue;
 
         try {
-          // Parse base configuration from installation_methods
-          const installationMethods = JSON.parse(server.installation_methods || '[]');
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const claudeDesktopMethod = installationMethods.find((method: any) => method.client === 'claude-desktop');
+          // Parse base configuration from packages
+          const packages = JSON.parse(server.packages || '[]');
           
-          if (!claudeDesktopMethod) {
+          if (!packages || packages.length === 0) {
             request.log.warn({
               serverId: server.id,
               serverName: server.name
-            }, 'No claude-desktop installation method found');
+            }, 'No packages configuration found');
             continue;
           }
 
-          // Start with base configuration
-          let finalCommand = claudeDesktopMethod.command || 'npx';
-          let finalArgs = [...(claudeDesktopMethod.args || [])];
-          let finalEnv = { ...(claudeDesktopMethod.env || {}) };
+          const packageConfig = packages[0];
+          if (!packageConfig.transport) {
+            request.log.warn({
+              serverId: server.id,
+              serverName: server.name
+            }, 'No transport configuration in package');
+            continue;
+          }
+
+          // Start with base configuration from package transport
+          let finalCommand = packageConfig.transport.command || 'npx';
+          let finalArgs = [...(packageConfig.transport.args || [])];
+          let finalEnv = { ...(packageConfig.transport.env || {}) };
 
           // Apply team configuration with proper decryption
           if (installation.team_args) {

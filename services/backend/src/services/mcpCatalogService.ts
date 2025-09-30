@@ -13,12 +13,16 @@ export interface McpServer {
   slug: string;
   description: string;
   long_description?: string;
-  github_url?: string;
+  repository_url?: string;
+  repository_source?: string;
+  repository_id?: string;
+  repository_subfolder?: string;
   git_branch?: string;
-  homepage_url?: string;
+  website_url?: string;
   language: string;
   runtime: string;
-  installation_methods: string; // JSON
+  packages: string; // JSON
+  remotes?: string; // JSON
   resources?: string; // JSON
   prompts?: string; // JSON
   visibility: 'global' | 'team';
@@ -57,12 +61,16 @@ export interface CreateMcpServerRequest {
   name: string;
   description: string;
   long_description?: string;
-  github_url?: string;
+  repository_url?: string;
+  repository_source?: string;
+  repository_id?: string;
+  repository_subfolder?: string;
   git_branch?: string;
-  homepage_url?: string;
+  website_url?: string;
   language: string;
   runtime: string;
-  installation_methods: any[]; // Will be JSON stringified - auto-extracted from Claude Desktop config
+  packages: any[]; // Will be JSON stringified - MCP Registry packages array
+  remotes?: any[]; // Will be JSON stringified - MCP Registry remotes array
   resources?: any[]; // Will be JSON stringified
   prompts?: any[]; // Will be JSON stringified
   visibility: 'global' | 'team';
@@ -95,12 +103,16 @@ export interface UpdateMcpServerRequest {
   name?: string;
   description?: string;
   long_description?: string;
-  github_url?: string;
+  repository_url?: string;
+  repository_source?: string;
+  repository_id?: string;
+  repository_subfolder?: string;
   git_branch?: string;
-  homepage_url?: string;
+  website_url?: string;
   language?: string;
   runtime?: string;
-  installation_methods?: any[];
+  packages?: any[];
+  remotes?: any[];
   resources?: any[];
   prompts?: any[];
   author_name?: string;
@@ -317,16 +329,16 @@ export class McpCatalogService {
     // Generate unique slug
     const slug = await McpSlugService.generateSlug(data.name, data.visibility, teamId || undefined, this.db);
     
-    // Sync from GitHub if URL provided
+    // Sync from GitHub if repository URL points to GitHub
     let githubInfo: any = {};
-    if (data.github_url) {
+    if (data.repository_url && data.repository_url.includes('github.com')) {
       try {
-        const repoInfo = await GitHubService.getRepositoryInfo(data.github_url, this.logger);
+        const repoInfo = await GitHubService.getRepositoryInfo(data.repository_url, this.logger);
         githubInfo = {
           description: data.description || repoInfo.description,
           long_description: data.long_description || repoInfo.description,
           language: data.language || repoInfo.language,
-          homepage_url: data.homepage_url || repoInfo.homepage,
+          website_url: data.website_url || repoInfo.homepage,
           license: data.license || repoInfo.license,
           tags: data.tags || repoInfo.topics,
           github_account_id: data.github_account_id || repoInfo.github_account_id
@@ -334,13 +346,13 @@ export class McpCatalogService {
         
         this.logger.info({
           operation: 'create_mcp_server',
-          githubUrl: data.github_url,
+          repositoryUrl: data.repository_url,
           syncedFields: Object.keys(githubInfo)
         }, 'Synced server info from GitHub');
       } catch (error) {
         this.logger.warn({
           operation: 'create_mcp_server',
-          githubUrl: data.github_url,
+          repositoryUrl: data.repository_url,
           error
         }, 'Failed to sync from GitHub, continuing with provided data');
       }
@@ -355,12 +367,28 @@ export class McpCatalogService {
       slug,
       description: githubInfo.description || data.description,
       long_description: githubInfo.long_description || data.long_description,
-      github_url: data.github_url,
+      repository_url: data.repository_url,
+      repository_source: data.repository_url ? (
+        data.repository_url.includes('github.com') ? 'github' :
+        data.repository_url.includes('gitlab.com') ? 'gitlab' :
+        data.repository_url.includes('bitbucket.org') ? 'bitbucket' : null
+      ) : null,
+      repository_id: data.repository_url ? (
+        data.repository_url.includes('github.com') ? 
+          data.repository_url.split('github.com/')[1]?.replace('.git', '') :
+        data.repository_url.includes('gitlab.com') ? 
+          data.repository_url.split('gitlab.com/')[1]?.replace('.git', '') :
+        data.repository_url.includes('bitbucket.org') ? 
+          data.repository_url.split('bitbucket.org/')[1]?.replace('.git', '') :
+          null
+      ) : null,
+      repository_subfolder: data.repository_subfolder || null,
       git_branch: data.git_branch || 'main',
-      homepage_url: githubInfo.homepage_url || data.homepage_url,
+      website_url: githubInfo.website_url || data.website_url,
       language: githubInfo.language || data.language,
       runtime: data.runtime,
-      installation_methods: JSON.stringify(data.installation_methods),
+      packages: JSON.stringify(data.packages),
+      remotes: data.remotes ? JSON.stringify(data.remotes) : null,
       resources: data.resources ? JSON.stringify(data.resources) : null,
       prompts: data.prompts ? JSON.stringify(data.prompts) : null,
       visibility: data.visibility,
@@ -392,7 +420,7 @@ export class McpCatalogService {
       auto_install_new_default_team: userRole === 'global_admin' ? (data.auto_install_new_default_team || false) : false,
       created_at: now,
       updated_at: now,
-      last_sync_at: data.github_url ? now : null
+      last_sync_at: data.repository_url && data.repository_url.includes('github.com') ? now : null
     };
     
     await this.db.insert(mcpServers).values(serverData);
@@ -439,12 +467,16 @@ export class McpCatalogService {
     if (data.name !== undefined) updateData.name = data.name;
     if (data.description !== undefined) updateData.description = data.description;
     if (data.long_description !== undefined) updateData.long_description = data.long_description;
-    if (data.github_url !== undefined) updateData.github_url = data.github_url;
+    if (data.repository_url !== undefined) updateData.repository_url = data.repository_url;
+    if (data.repository_source !== undefined) updateData.repository_source = data.repository_source;
+    if (data.repository_id !== undefined) updateData.repository_id = data.repository_id;
+    if (data.repository_subfolder !== undefined) updateData.repository_subfolder = data.repository_subfolder;
     if (data.git_branch !== undefined) updateData.git_branch = data.git_branch;
-    if (data.homepage_url !== undefined) updateData.homepage_url = data.homepage_url;
+    if (data.website_url !== undefined) updateData.website_url = data.website_url;
     if (data.language !== undefined) updateData.language = data.language;
     if (data.runtime !== undefined) updateData.runtime = data.runtime;
-    if (data.installation_methods !== undefined) updateData.installation_methods = JSON.stringify(data.installation_methods);
+    if (data.packages !== undefined) updateData.packages = JSON.stringify(data.packages);
+    if (data.remotes !== undefined) updateData.remotes = data.remotes ? JSON.stringify(data.remotes) : null;
     if (data.resources !== undefined) updateData.resources = data.resources ? JSON.stringify(data.resources) : null;
     if (data.prompts !== undefined) updateData.prompts = data.prompts ? JSON.stringify(data.prompts) : null;
     if (data.author_name !== undefined) updateData.author_name = data.author_name;
@@ -542,7 +574,8 @@ export class McpCatalogService {
     };
     
     // Parse JSON fields that should be arrays/objects
-    parsed.installation_methods = parseJsonField('installation_methods', parsed.installation_methods, []);
+    parsed.packages = parseJsonField('packages', parsed.packages, []);
+    parsed.remotes = parseJsonField('remotes', parsed.remotes, null);
     parsed.resources = parseJsonField('resources', parsed.resources, null);
     parsed.prompts = parseJsonField('prompts', parsed.prompts, null);
     // Three-tier configuration schema

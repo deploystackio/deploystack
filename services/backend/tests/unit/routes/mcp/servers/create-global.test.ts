@@ -79,16 +79,12 @@ describe('MCP Servers - Create Global', () => {
         description: 'A test global MCP server',
         language: 'javascript',
         runtime: 'node',
-        claude_desktop_config: {
-          mcpServers: {
-            'test-server': {
-              command: 'npm',
-              args: ['install', 'test-server'],
-              env: {}
-            }
+        packages: [{
+          transport: {
+            command: 'npm',
+            args: ['install', 'test-server']
           }
-        },
-
+        }],
         featured: false
       },
       user: { id: 'test-user-id' },
@@ -205,7 +201,8 @@ describe('MCP Servers - Create Global', () => {
         language: 'javascript',
         runtime: 'node',
 
-        installation_methods: '[{"type": "npm", "command": "npm install test-server"}]',
+        packages: [],
+        remotes: null,
 
         resources: null,
         prompts: null,
@@ -247,11 +244,11 @@ describe('MCP Servers - Create Global', () => {
           description: 'A test global MCP server',
           language: 'javascript',
           runtime: 'node',
-          installation_methods: [{
-            client: 'claude-desktop',
-            command: 'npm',
-            args: ['install', 'test-server'],
-            env: {}
+          packages: [{
+            transport: {
+              command: 'npm',
+              args: ['install', 'test-server']
+            }
           }],
 
           visibility: 'global'
@@ -274,7 +271,7 @@ describe('MCP Servers - Create Global', () => {
           description: 'A test global MCP server',
           language: 'javascript',
           runtime: 'node',
-          installation_methods: [{ type: 'npm', command: 'npm install test-server' }],
+          packages: [],
 
           visibility: 'global',
           owner_team_id: null,
@@ -301,18 +298,12 @@ describe('MCP Servers - Create Global', () => {
           language: 'typescript',
           runtime: 'node',
   
-          claude_desktop_config: {
-            mcpServers: {
-              'complex-server': {
-                command: 'npx',
-                args: ['complex-server'],
-                env: {
-                  'TEST_VAR': 'test_value',
-                  'API_KEY': 'secret'
-                }
-              }
+          packages: [{
+            transport: {
+              command: 'npx',
+              args: ['complex-server']
             }
-          },
+          }],
 
           resources: [
             { type: 'file', description: 'File resource' },
@@ -344,7 +335,8 @@ describe('MCP Servers - Create Global', () => {
         language: 'typescript',
         runtime: 'node',
 
-        installation_methods: '[{"type": "npm", "command": "npm install complex-server", "description": "Install via npm"}, {"type": "docker", "image": "complex-server:latest", "description": "Run with Docker"}]',
+        packages: [],
+        remotes: null,
 
         resources: '[{"type": "file", "description": "File resource"}, {"type": "database", "description": "Database resource"}]',
         prompts: '[{"name": "test-prompt", "description": "A test prompt"}]',
@@ -389,10 +381,7 @@ describe('MCP Servers - Create Global', () => {
         data: expect.objectContaining({
           id: 'server-456',
           name: 'Complex Server',
-          installation_methods: [
-            { type: 'npm', command: 'npm install complex-server', description: 'Install via npm' },
-            { type: 'docker', image: 'complex-server:latest', description: 'Run with Docker' }
-          ],
+          packages: [],
 
           resources: [
             { type: 'file', description: 'File resource' },
@@ -425,7 +414,8 @@ describe('MCP Servers - Create Global', () => {
         language: 'javascript',
         runtime: 'node',
 
-        installation_methods: '["npm", "yarn"]',
+        packages: [],
+        remotes: null,
 
         resources: '[{"name": "json-resource"}]',
         prompts: '[{"name": "json-prompt"}]',
@@ -463,7 +453,7 @@ describe('MCP Servers - Create Global', () => {
       const response = JSON.parse(sentData);
       const server = response.data;
 
-      expect(server.installation_methods).toEqual(['npm', 'yarn']);
+      expect(server.packages).toEqual([]);
 
       expect(server.resources).toEqual([{ name: 'json-resource' }]);
       expect(server.prompts).toEqual([{ name: 'json-prompt' }]);
@@ -489,7 +479,8 @@ describe('MCP Servers - Create Global', () => {
         language: 'javascript',
         runtime: 'node',
 
-        installation_methods: '[]',
+        packages: [],
+        remotes: null,
 
         resources: null,
         prompts: null,
@@ -527,7 +518,7 @@ describe('MCP Servers - Create Global', () => {
       const response = JSON.parse(sentData);
       const server = response.data;
 
-      expect(server.installation_methods).toEqual([]);
+      expect(server.packages).toEqual([]);
 
       expect(server.resources).toBeNull();
       expect(server.prompts).toBeNull();
@@ -559,7 +550,8 @@ describe('MCP Servers - Create Global', () => {
         language: 'javascript',
         runtime: 'node',
 
-        installation_methods: '[]',
+        packages: [],
+        remotes: null,
 
         resources: null,
         prompts: null,
@@ -571,7 +563,12 @@ describe('MCP Servers - Create Global', () => {
         organization: null,
         license: null,
         transport_type: 'stdio',
-        environment_variables: null,
+        template_args: null,
+        template_env: null,
+        team_args_schema: null,
+        user_args_schema: null,
+        team_env_schema: null,
+        user_env_schema: null,
         dependencies: null,
         category_id: null,
         tags: null,
@@ -717,7 +714,8 @@ describe('MCP Servers - Create Global', () => {
         language: 'javascript',
         runtime: 'node',
 
-        installation_methods: 'invalid json',
+        packages: [],
+        remotes: null,
 
         resources: null,
         prompts: null,
@@ -764,8 +762,8 @@ describe('MCP Servers - Create Global', () => {
           name: 'Invalid JSON Server',
           slug: 'invalid-json-server',
           description: 'A server with invalid JSON',
-          // safeJsonParse should return empty array [] for invalid JSON string
-          installation_methods: [],
+          // packages should be empty array
+          packages: [],
           visibility: 'global',
           status: 'active',
           featured: false
@@ -792,7 +790,8 @@ describe('MCP Servers - Create Global', () => {
         language: 'javascript',
         runtime: 'node',
 
-        installation_methods: '[]',
+        packages: [],
+        remotes: null,
 
         resources: null,
         prompts: null,
@@ -804,7 +803,12 @@ describe('MCP Servers - Create Global', () => {
         organization: null,
         license: null,
         transport_type: 'stdio',
-        environment_variables: null,
+        template_args: null,
+        template_env: null,
+        team_args_schema: null,
+        user_args_schema: null,
+        team_env_schema: null,
+        user_env_schema: null,
         dependencies: null,
         category_id: null,
         tags: null,
@@ -846,7 +850,8 @@ describe('MCP Servers - Create Global', () => {
         language: 'javascript',
         runtime: 'node',
 
-        installation_methods: '[]',
+        packages: [],
+        remotes: null,
 
         resources: null,
         prompts: null,
@@ -930,15 +935,12 @@ describe('MCP Servers - Create Global', () => {
           description: 'A minimal server',
           language: 'python',
           runtime: 'python',
-          claude_desktop_config: {
-            mcpServers: {
-              'minimal-server': {
-                command: 'python',
-                args: ['-m', 'minimal_server'],
-                env: {}
-              }
+          packages: [{
+            transport: {
+              command: 'python',
+              args: ['-m', 'minimal_server']
             }
-          },
+          }],
   
         }
       };
@@ -955,7 +957,8 @@ describe('MCP Servers - Create Global', () => {
         language: 'python',
         runtime: 'python',
 
-        installation_methods: '[{"type": "pip"}]',
+        packages: [],
+        remotes: null,
 
         resources: null,
         prompts: null,
@@ -966,8 +969,13 @@ describe('MCP Servers - Create Global', () => {
         author_contact: null,
         organization: null,
         license: null,
-        default_config: null,
-        environment_variables: null,
+        transport_type: 'stdio',
+        template_args: null,
+        template_env: null,
+        team_args_schema: null,
+        user_args_schema: null,
+        team_env_schema: null,
+        user_env_schema: null,
         dependencies: null,
         category_id: null,
         tags: null,
@@ -992,11 +1000,11 @@ describe('MCP Servers - Create Global', () => {
           description: 'A minimal server',
           language: 'python',
           runtime: 'python',
-          installation_methods: [{
-            client: 'claude-desktop',
-            command: 'python',
-            args: ['-m', 'minimal_server'],
-            env: {}
+          packages: [{
+            transport: {
+              command: 'python',
+              args: ['-m', 'minimal_server']
+            }
           }],
 
           visibility: 'global'
@@ -1037,7 +1045,8 @@ describe('MCP Servers - Create Global', () => {
           language: combo.language,
           runtime: combo.runtime,
   
-          installation_methods: '[]',
+          packages: [],
+          remotes: null,
 
           resources: null,
           prompts: null,
@@ -1117,8 +1126,13 @@ describe('MCP Servers - Create Global', () => {
         author_contact: null,
         organization: null,
         license: null,
-        default_config: null,
-        environment_variables: null,
+        transport_type: 'stdio',
+        template_args: null,
+        template_env: null,
+        team_args_schema: null,
+        user_args_schema: null,
+        team_env_schema: null,
+        user_env_schema: null,
         dependencies: null,
         category_id: null,
         tags: null,
@@ -1183,7 +1197,8 @@ describe('MCP Servers - Create Global', () => {
               language: 'javascript',
               runtime: 'node',
     
-              installation_methods: '[]',
+              packages: [],
+              remotes: null,
 
               resources: null,
               prompts: null,

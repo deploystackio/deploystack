@@ -124,14 +124,14 @@ const formatDate = (dateString: string) => {
         </div>
 
         <!-- Repository Links -->
-        <div v-if="server.github_url || server.homepage_url" class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+        <div v-if="server.repository_url || server.website_url" class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
           <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpInstallations.details.installationDetails.fields.links') }}</dt>
           <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
             <div class="space-y-2">
-              <div v-if="server.github_url" class="flex items-center gap-1">
+              <div v-if="server.repository_url" class="flex items-center gap-1">
                 <Github class="h-4 w-4 text-muted-foreground" />
                 <a
-                  :href="server.github_url"
+                  :href="server.repository_url"
                   target="_blank"
                   rel="noopener noreferrer"
                   class="text-blue-600 hover:underline"
@@ -140,10 +140,10 @@ const formatDate = (dateString: string) => {
                   <ExternalLink class="inline h-3 w-3 ml-1" />
                 </a>
               </div>
-              <div v-if="server.homepage_url" class="flex items-center gap-1">
+              <div v-if="server.website_url" class="flex items-center gap-1">
                 <ExternalLink class="h-4 w-4 text-muted-foreground" />
                 <a
-                  :href="server.homepage_url"
+                  :href="server.website_url"
                   target="_blank"
                   rel="noopener noreferrer"
                   class="text-blue-600 hover:underline"

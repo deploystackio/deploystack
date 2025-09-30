@@ -83,16 +83,19 @@ export default async function getRepoInfo(server: FastifyInstance) {
               properties: {
                 name: { type: 'string' },
                 description: { type: 'string' },
-                github_url: { type: 'string' },
+                repository_url: { type: 'string' },
+                repository_source: { type: 'string' },
+                repository_id: { type: 'string', nullable: true },
+                repository_subfolder: { type: 'string', nullable: true },
                 git_branch: { type: 'string' },
-                homepage_url: { type: 'string', nullable: true },
+                website_url: { type: 'string', nullable: true },
                 author_name: { type: 'string' },
                 organization: { type: 'string', nullable: true },
                 license: { type: 'string', nullable: true },
                 language: { type: 'string' },
                 runtime: { type: 'string' },
                 tags: { type: 'array', items: { type: 'string' } },
-                installation_methods: { type: 'array' },
+                packages: { type: 'array' },
                 dependencies: { type: 'object', nullable: true },
                 latest_version: { type: 'string', nullable: true },
                 github_account_id: { type: 'string', nullable: true },
@@ -157,9 +160,12 @@ export default async function getRepoInfo(server: FastifyInstance) {
         // Basic information
         name: repoInfo.name,
         description: repoInfo.description || '',
-        github_url: url,
+        repository_url: url,
+        repository_source: 'github',
+        repository_id: `${owner}/${repo}`,
+        repository_subfolder: null,
         git_branch: branch || repoInfo.defaultBranch,
-        homepage_url: repoInfo.homepage || null,
+        website_url: repoInfo.homepage || null,
         
         // Author and organization
         author_name: owner,
@@ -173,8 +179,8 @@ export default async function getRepoInfo(server: FastifyInstance) {
         // Metadata
         tags: repoInfo.topics || [],
         
-        // Installation methods (inferred from package info)
-        installation_methods: inferInstallationMethods(packageInfo, repoInfo.language || ''),
+        // MCP Registry packages (inferred from package info)
+        packages: inferInstallationMethods(packageInfo, repoInfo.language || ''),
         
         // Dependencies
         dependencies: packageInfo?.dependencies || null,

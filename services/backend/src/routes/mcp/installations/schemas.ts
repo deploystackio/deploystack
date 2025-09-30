@@ -199,15 +199,30 @@ export const SERVER_DETAILS_SCHEMA = {
       type: 'string', 
       description: 'Server description' 
     },
-    github_url: { 
+    repository_url: { 
       type: 'string', 
       nullable: true, 
-      description: 'GitHub repository URL' 
+      description: 'Repository URL' 
     },
-    homepage_url: { 
+    repository_source: { 
       type: 'string', 
       nullable: true, 
-      description: 'Homepage URL' 
+      description: 'Repository platform (github, gitlab, bitbucket)' 
+    },
+    repository_id: { 
+      type: 'string', 
+      nullable: true, 
+      description: 'Platform-specific repository identifier' 
+    },
+    repository_subfolder: { 
+      type: 'string', 
+      nullable: true, 
+      description: 'Subfolder path for monorepos' 
+    },
+    website_url: { 
+      type: 'string', 
+      nullable: true, 
+      description: 'Website URL' 
     },
     author_name: { 
       type: 'string', 
@@ -250,10 +265,16 @@ export const SERVER_DETAILS_SCHEMA = {
       nullable: true,
       description: 'Server command line arguments'
     },
-    installation_methods: { 
+    packages: { 
       type: 'array', 
       items: {},
-      description: 'Installation methods'
+      description: 'MCP Registry packages array'
+    },
+    remotes: { 
+      type: 'array', 
+      items: {},
+      nullable: true,
+      description: 'MCP Registry remotes array for HTTP/SSE'
     },
     category_id: { 
       type: 'string', 
@@ -502,8 +523,11 @@ export interface ServerDetails {
   id: string;
   name: string;
   description: string;
-  github_url: string | null;
-  homepage_url: string | null;
+  repository_url: string | null;
+  repository_source: string | null;
+  repository_id: string | null;
+  repository_subfolder: string | null;
+  website_url: string | null;
   author_name: string | null;
   github_stars: number | null;
   language: string;
@@ -512,7 +536,8 @@ export interface ServerDetails {
   tags: string[] | null;
   environment_variables: any[] | null; // eslint-disable-line @typescript-eslint/no-explicit-any
   args: any[] | null; // eslint-disable-line @typescript-eslint/no-explicit-any
-  installation_methods: any[]; // eslint-disable-line @typescript-eslint/no-explicit-any
+  packages: any[]; // eslint-disable-line @typescript-eslint/no-explicit-any
+  remotes: any[] | null; // eslint-disable-line @typescript-eslint/no-explicit-any
   category_id: string | null;
   transport_type: 'stdio' | 'http' | 'sse';
 }

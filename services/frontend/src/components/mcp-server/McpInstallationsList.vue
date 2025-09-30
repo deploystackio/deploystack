@@ -261,9 +261,9 @@ onUnmounted(() => {
                 </div>
                 <div>
                   <dt class="font-medium text-gray-700">{{ t('mcpInstallations.table.columns.repository') }}</dt>
-                  <dd v-if="installation.server.github_url">
+                  <dd v-if="installation.server.repository_url">
                     <a
-                      :href="installation.server.github_url"
+                      :href="installation.server.repository_url"
                       target="_blank"
                       rel="noopener noreferrer"
                       class="inline-flex items-center gap-1 text-gray-600 hover:text-gray-900 transition-colors"

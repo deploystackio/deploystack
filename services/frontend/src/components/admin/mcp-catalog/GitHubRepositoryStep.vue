@@ -5,52 +5,73 @@ import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import type { McpServerFormData } from '../../../views/admin/mcp-server-catalog/types'
 
+interface RepositoryData {
+  repository_url: string
+  repository_source: string
+  git_branch: string
+  auto_populated: boolean
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  repo_data?: any
+}
+
 interface Props {
-  modelValue: McpServerFormData['github']
+  modelValue: RepositoryData
   formData: McpServerFormData
 }
 
 interface Emits {
-  (e: 'update:modelValue', value: McpServerFormData['github']): void
+  (e: 'update:modelValue', value: RepositoryData): void
 }
 
 const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 
 // Simple state - just URL and validation
-const githubUrl = ref(props.modelValue?.github_url || '')
+const repositoryUrl = ref(props.modelValue?.repository_url || '')
 const validationError = ref<string | null>(null)
 
-// Basic GitHub URL validation
-const isValidGitHubUrl = computed(() => {
-  if (!githubUrl.value) return false
-  return githubUrl.value.includes('github.com') && githubUrl.value.includes('/')
+// Basic repository URL validation (supports any Git platform)
+const isValidRepositoryUrl = computed(() => {
+  if (!repositoryUrl.value) return false
+  // Basic validation - check if it looks like a repository URL
+  return repositoryUrl.value.length > 0 && repositoryUrl.value.includes('/')
 })
 
 // Validate URL format
 const validateUrl = () => {
-  if (!githubUrl.value) {
+  if (!repositoryUrl.value) {
     validationError.value = null
     return
   }
 
-  if (!isValidGitHubUrl.value) {
-    validationError.value = 'Please enter a valid GitHub repository URL'
+  if (!isValidRepositoryUrl.value) {
+    validationError.value = 'Please enter a valid repository URL'
     return
   }
 
   validationError.value = null
 
+  // Detect repository source from URL
+  let source = 'github'
+  if (repositoryUrl.value.includes('github.com')) {
+    source = 'github'
+  } else if (repositoryUrl.value.includes('gitlab.com')) {
+    source = 'gitlab'
+  } else if (repositoryUrl.value.includes('bitbucket.org')) {
+    source = 'bitbucket'
+  }
+
   // Update parent component
   emit('update:modelValue', {
-    github_url: githubUrl.value,
+    repository_url: repositoryUrl.value,
+    repository_source: source,
     git_branch: 'main', // Default branch
     auto_populated: false
   })
 }
 
 // Watch for changes
-watch(githubUrl, validateUrl)
+watch(repositoryUrl, validateUrl)
 </script>
 
 <template>
@@ -63,16 +84,16 @@ watch(githubUrl, validateUrl)
     </div>
 
     <div class="space-y-2">
-      <Label for="github-url">Repository URL *</Label>
+      <Label for="repository-url">Repository URL *</Label>
       <Input
-        id="github-url"
-        v-model="githubUrl"
+        id="repository-url"
+        v-model="repositoryUrl"
         type="url"
         placeholder="https://github.com/owner/repository"
         @blur="validateUrl"
       />
       <p class="text-sm text-muted-foreground">
-        Enter a valid GitHub repository URL (e.g., https://github.com/owner/repo)
+        Enter a valid repository URL (GitHub, GitLab, Bitbucket, etc.)
       </p>
     </div>
 

@@ -64,7 +64,7 @@ export function extractTransportTypeFromClaudeConfig(claudeConfig: ClaudeDesktop
 /**
  * Extract complete MCP configuration data from Claude Desktop config
  * @param claudeConfig - The claude desktop configuration object
- * @returns Object containing installation_methods, environment_variables, args, headers, and transport_type
+ * @returns Object containing packages, remotes, environment_variables, args, headers, and transport_type
  */
 export function extractMcpConfigData(claudeConfig: ClaudeDesktopConfig) {
   const serverKey = Object.keys(claudeConfig.mcpServers)[0];
@@ -73,11 +73,12 @@ export function extractMcpConfigData(claudeConfig: ClaudeDesktopConfig) {
   // Check if it's HTTP/remote configuration
   if ('url' in serverConfig && 'type' in serverConfig) {
     // HTTP/Remote server configuration
-    const installation_methods = [{
-      client: "claude-desktop",
+    const remotes = [{
       url: serverConfig.url,
-      type: serverConfig.type,
-      headers: serverConfig.headers || {}
+      transport: {
+        type: serverConfig.type,
+        headers: serverConfig.headers || {}
+      }
     }];
     
     // Extract headers metadata
@@ -98,16 +99,17 @@ export function extractMcpConfigData(claudeConfig: ClaudeDesktopConfig) {
     
     const transport_type = extractTransportTypeFromClaudeConfig(claudeConfig);
     
-    return { installation_methods, environment_variables, args, headers, transport_type };
+    return { packages: [], remotes, environment_variables, args, headers, transport_type };
   }
   
   // stdio/local server configuration
   if ('command' in serverConfig) {
-    const installation_methods = [{
-      client: "claude-desktop",
-      command: serverConfig.command,
-      args: serverConfig.args,
-      env: serverConfig.env || {}
+    const packages = [{
+      transport: {
+        command: serverConfig.command,
+        args: serverConfig.args,
+        env: serverConfig.env || {}
+      }
     }];
     
     // Extract environment_variables metadata
@@ -136,10 +138,10 @@ export function extractMcpConfigData(claudeConfig: ClaudeDesktopConfig) {
     
     const transport_type = extractTransportTypeFromClaudeConfig(claudeConfig);
     
-    return { installation_methods, environment_variables, args, headers, transport_type };
+    return { packages, remotes: [], environment_variables, args, headers, transport_type };
   }
   
   // Fallback (shouldn't happen with proper validation)
   const transport_type = extractTransportTypeFromClaudeConfig(claudeConfig);
-  return { installation_methods: [], environment_variables: [], args: [], headers: [], transport_type };
+  return { packages: [], remotes: [], environment_variables: [], args: [], headers: [], transport_type };
 }

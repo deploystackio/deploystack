@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
   Table,
@@ -15,6 +15,8 @@ import { DynamicIcon } from '@/components/ui/dynamic-icon'
 import {
   Edit,
   Github,
+  GitBranch,
+  Globe,
   ExternalLink
 } from 'lucide-vue-next'
 import type { McpServer } from './types'
@@ -64,10 +66,32 @@ const getCategoryById = (categoryId?: string): McpCategory | null => {
   return categories.value.find(cat => cat.id === categoryId) || null
 }
 
-// Sort servers by name for consistency
-const sortedServers = computed(() => {
-  return [...props.servers].sort((a, b) => a.name.localeCompare(b.name))
-})
+// Get repository icon based on platform
+const getRepositoryIcon = (platform?: string) => {
+  switch (platform) {
+    case 'github':
+      return Github
+    case 'gitlab':
+    case 'bitbucket':
+      return GitBranch
+    default:
+      return Globe
+  }
+}
+
+// Get repository label based on platform
+const getRepositoryLabel = (platform?: string) => {
+  switch (platform) {
+    case 'github':
+      return 'Repository'
+    case 'gitlab':
+      return 'GitLab'
+    case 'bitbucket':
+      return 'Bitbucket'
+    default:
+      return 'Repository'
+  }
+}
 </script>
 
 <template>
@@ -84,14 +108,14 @@ const sortedServers = computed(() => {
       </TableHeader>
       <TableBody>
         <!-- Empty State -->
-        <TableRow v-if="sortedServers.length === 0">
+        <TableRow v-if="props.servers.length === 0">
           <TableCell :colspan="5" class="h-24 text-center">
             {{ t('mcpCatalog.table.noData') }}
           </TableCell>
         </TableRow>
 
         <!-- Data Rows -->
-        <TableRow v-for="server in sortedServers" :key="server.id">
+        <TableRow v-for="server in props.servers" :key="server.id">
           <!-- Name -->
           <TableCell class="font-medium">
             <div class="space-y-1">
@@ -99,15 +123,19 @@ const sortedServers = computed(() => {
               <div v-if="server.author_name" class="text-sm text-muted-foreground">
                 by {{ server.author_name }}
               </div>
-              <div v-if="server.github_url" class="flex items-center gap-1">
-                <Github class="h-3 w-3 text-muted-foreground" />
+              <!-- Repository Link -->
+              <div v-if="server.repository_url" class="flex items-center gap-1">
+                <component
+                  :is="getRepositoryIcon(server.repository_source)"
+                  class="h-3 w-3 text-muted-foreground"
+                />
                 <a
-                  :href="server.github_url"
+                  :href="server.repository_url"
                   target="_blank"
                   rel="noopener noreferrer"
                   class="text-xs text-blue-600 hover:underline"
                 >
-                  Repository
+                  {{ getRepositoryLabel(server.repository_source) }}
                   <ExternalLink class="inline h-3 w-3 ml-1" />
                 </a>
               </div>

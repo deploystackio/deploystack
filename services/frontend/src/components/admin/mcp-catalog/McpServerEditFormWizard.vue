@@ -17,14 +17,14 @@ import { useI18n } from 'vue-i18n'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { ProgressBars } from '@/components/ui/progress-bars'
-import { FileText, Github, Code, Settings, CheckCircle } from 'lucide-vue-next'
+import { FileText, GitBranch, Code, Settings, CheckCircle } from 'lucide-vue-next'
 import { McpCatalogService } from '@/services/mcpCatalogService'
 import { useEventBus } from '@/composables/useEventBus'
 import ContentWrapper from '@/components/ContentWrapper.vue'
 import BasicInfoStepEdit from '@/components/admin/mcp-catalog/steps/BasicInfoStepEdit.vue'
 import TechnicalStep from '@/components/admin/mcp-catalog/TechnicalStep.vue'
 import ConfigurationSchemaStepEdit from '@/components/admin/mcp-catalog/steps/ConfigurationSchemaStepEdit.vue'
-import GitHubRepositoryStep from '@/components/admin/mcp-catalog/GitHubRepositoryStep.vue'
+import RepositoryStep from '@/components/admin/mcp-catalog/RepositoryStep.vue'
 import ReviewStep from '@/components/admin/mcp-catalog/ReviewStep.vue'
 import type {
   McpServerFormData
@@ -64,10 +64,10 @@ const DRAFT_EXPIRY_HOURS = 24
 // Form steps configuration
 const steps = [
   {
-    key: 'github' as const,
-    label: t('mcpCatalog.form.steps.github'),
-    icon: Github,
-    component: GitHubRepositoryStep
+    key: 'repository' as const,
+    label: t('mcpCatalog.form.steps.repository'),
+    icon: GitBranch,
+    component: RepositoryStep
   },
   {
     key: 'basic' as const,
@@ -107,7 +107,7 @@ const progressSteps = computed(() => {
     }
 
     // Check for errors
-    if (index === 0 && githubFetchError.value) {
+    if (index === 0 && repositoryFetchError.value) {
       status = 'error'
     }
 
@@ -138,11 +138,11 @@ const progressTitle = computed(() => {
       ? t('mcpCatalog.form.navigation.updating')
       : t('mcpCatalog.form.navigation.creating')
   }
-  if (isFetchingGitHub.value) {
+  if (isFetchingRepository.value) {
     return t('mcpCatalog.form.navigation.fetching')
   }
-  if (githubFetchError.value) {
-    return t('mcpCatalog.form.errors.githubFetch')
+  if (repositoryFetchError.value) {
+    return t('mcpCatalog.form.errors.repositoryFetch')
   }
 
   const currentStepData = steps[currentStep.value]
@@ -154,7 +154,7 @@ const progressTitle = computed(() => {
 
 // Progress variant based on state
 const progressVariant = computed(() => {
-  if (githubFetchError.value || submitError.value) return 'destructive'
+  if (repositoryFetchError.value || submitError.value) return 'destructive'
   if (isSubmitting.value) return 'default' // Keep default while submitting
   // Only show success after actual completion (would need to be handled by parent component)
   return 'default'
@@ -164,24 +164,52 @@ const progressVariant = computed(() => {
 const currentStep = ref(0)
 const isSubmitting = ref(false)
 const submitError = ref<string | null>(null)
-const isFetchingGitHub = ref(false)
-const githubFetchError = ref<string | null>(null)
+const isFetchingRepository = ref(false)
+const repositoryFetchError = ref<string | null>(null)
 
 // Initialize storage with form data for edit mode - FORCE FRESH DATA LOADING
 const initializeStorageWithData = (data: McpServerFormData) => {
   // Always overwrite storage with fresh data in edit mode
   // This ensures we load fresh data from database, not old corrupted cache
   eventBus.setState('edit_basic_data', data.basic)
-  eventBus.setState('edit_repository_data', data.repository)
 
-  // Parse installation_methods if it's a string (from database)
+  // Ensure we have default values for repository fields
+  const repositoryData = {
+    repository_url: data.repository.repository_url || '',
+    repository_source: data.repository.repository_source || 'github',
+    repository_id: data.repository.repository_id || '',
+    repository_subfolder: data.repository.repository_subfolder || '',
+    git_branch: data.repository.git_branch || 'main',
+    website_url: data.repository.website_url || ''
+  }
+
+  eventBus.setState('edit_repository_data', repositoryData)
+
+  // Initialize repository_setup for the first step using the same data
+  const repositorySetupData = {
+    repository_url: repositoryData.repository_url || '',
+    repository_source: repositoryData.repository_source || '',
+    git_branch: repositoryData.git_branch || 'main',
+    auto_populated: !!data.repository_setup?.auto_populated
+  }
+  eventBus.setState('edit_repository_setup_data', repositorySetupData)
+
+  // Parse packages/remotes if they're strings (from database)
   const technicalData = { ...data.technical }
-  if (typeof technicalData.installation_methods === 'string') {
+  if (typeof technicalData.packages === 'string') {
     try {
-      technicalData.installation_methods = JSON.parse(technicalData.installation_methods)
+      technicalData.packages = JSON.parse(technicalData.packages)
     } catch (e) {
-      console.error('Failed to parse installation_methods in initializeStorageWithData:', e)
-      technicalData.installation_methods = []
+      console.error('Failed to parse packages in initializeStorageWithData:', e)
+      technicalData.packages = null
+    }
+  }
+  if (typeof technicalData.remotes === 'string') {
+    try {
+      technicalData.remotes = JSON.parse(technicalData.remotes)
+    } catch (e) {
+      console.error('Failed to parse remotes in initializeStorageWithData:', e)
+      technicalData.remotes = null
     }
   }
 
@@ -205,37 +233,37 @@ const initializeStorageWithData = (data: McpServerFormData) => {
     eventBus.setState('edit_configuration_schema', fullConfigSchema)
   }
 
-  // Initialize Claude Desktop config if available
-  if (technicalData.installation_methods && technicalData.installation_methods.length > 0) {
-  const method = technicalData.installation_methods[0]
-  if (method && method.client === 'claude-desktop') {
+  // Initialize Claude Desktop config from packages/remotes
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          let serverConfig: any
+  let serverConfig: any = null
 
-      if (method.url) {
-        // HTTP server configuration
-        serverConfig = {
-          url: method.url,
-          type: method.type || 'streamableHttp',
-          headers: method.headers || {}
-        }
-      } else {
-        // Stdio server configuration
-        serverConfig = {
-          command: method.command || '',
-          args: method.args || [],
-          env: method.env || {},
-          headers: method.headers || {}
-        }
-      }
-
-      const claudeConfig = {
-        mcpServers: {
-          [data.basic.name || 'server']: serverConfig
-        }
-      }
-      eventBus.setState('edit_claude_config', JSON.stringify(claudeConfig, null, 2))
+  if (technicalData.remotes && Array.isArray(technicalData.remotes) && technicalData.remotes.length > 0) {
+    // HTTP/SSE server from remotes
+    const remote = technicalData.remotes[0]
+    serverConfig = {
+      url: remote.url,
+      type: remote.type || 'sse',
+      headers: remote.headers || {}
     }
+  } else if (technicalData.packages && Array.isArray(technicalData.packages) && technicalData.packages.length > 0) {
+    // STDIO server from packages
+    const pkg = technicalData.packages[0]
+    if (pkg.transport) {
+      serverConfig = {
+        command: pkg.transport.command || 'npx',
+        args: pkg.transport.args || [],
+        env: pkg.env || {}
+      }
+    }
+  }
+
+  if (serverConfig) {
+    const claudeConfig = {
+      mcpServers: {
+        [data.basic.name || 'server']: serverConfig
+      }
+    }
+    eventBus.setState('edit_claude_config', JSON.stringify(claudeConfig, null, 2))
   }
 }
 
@@ -255,9 +283,12 @@ const formData = ref<McpServerFormData>({
     auto_install_new_default_team: false
   },
   repository: {
-    github_url: '',
+    repository_url: '',
+    repository_source: '',
+    repository_id: '',
+    repository_subfolder: '',
     git_branch: 'main',
-    homepage_url: ''
+    website_url: ''
   },
   technical: {
     language: '',
@@ -267,8 +298,9 @@ const formData = ref<McpServerFormData>({
     transport_type: 'auto'
   },
   configuration_schema: {},
-  github: {
-    github_url: '',
+  repository_setup: {
+    repository_url: '',
+    repository_source: '',
     git_branch: 'main',
     auto_populated: false
   },
@@ -287,7 +319,7 @@ watch(
         repository: { ...formData.value.repository, ...newInitialData.repository },
         technical: { ...formData.value.technical, ...newInitialData.technical },
         configuration_schema: newInitialData.configuration_schema ? newInitialData.configuration_schema : formData.value.configuration_schema,
-        github: { ...formData.value.github, ...newInitialData.github },
+        repository_setup: { ...formData.value.repository_setup, ...newInitialData.repository_setup },
         review: { ...formData.value.review, ...newInitialData.review }
       }
 
@@ -308,12 +340,11 @@ const isLastStep = computed(() => currentStep.value === steps.length - 1)
 const canGoNext = computed(() => !isLastStep.value)
 const canGoPrevious = computed(() => !isFirstStep.value)
 
-const canProceedFromGitHub = computed(() => {
-  const githubUrl = formData.value.github.github_url
-  return githubUrl &&
-         githubUrl.includes('github.com') &&
-         githubUrl.includes('/') &&
-         !isFetchingGitHub.value
+const canProceedFromRepository = computed(() => {
+  const repositoryUrl = formData.value.repository_setup.repository_url
+  return repositoryUrl &&
+         repositoryUrl.length > 0 &&
+         !isFetchingRepository.value
 })
 
 // Dynamic button text based on props or defaults
@@ -385,32 +416,33 @@ const handleCancel = () => {
   emit('cancel')
 }
 
-// GitHub step navigation with auto-population
-const handleGitHubStepNext = async () => {
+// Repository step navigation with auto-population
+const handleRepositoryStepNext = async () => {
   if (currentStep.value !== 0) return
 
-  // In edit mode, skip GitHub auto-population and just go to next step
+  // In edit mode, skip repository auto-population and just go to next step
   if (props.mode === 'edit') {
     nextStep()
     return
   }
 
   try {
-    isFetchingGitHub.value = true
-    githubFetchError.value = null
+    isFetchingRepository.value = true
+    repositoryFetchError.value = null
 
-    const githubUrl = formData.value.github.github_url
+    const repositoryUrl = formData.value.repository_setup.repository_url
+    const gitBranch = formData.value.repository_setup.git_branch
 
-    // Call backend API to fetch GitHub data
-    const response = await McpCatalogService.getGitHubRepoInfo(githubUrl)
+    // Call backend API to fetch repository data from any supported platform
+    const response = await McpCatalogService.getRepositoryInfo(repositoryUrl, gitBranch)
 
     if (response.success && response.data) {
       // Auto-populate all form data
-      autoPopulateFromGitHub(response.data)
+      autoPopulateFromRepository(response.data)
 
       // Emit events
-      emit('githubDataPopulated', response.data)
-      eventBus.emit('mcp-github-data-populated', response.data)
+      emit('githubDataPopulated', response.data) // Keep same event name for backward compatibility
+      // Event emission removed - repository data is handled through form state
 
       // Advance to next step
       nextStep()
@@ -418,49 +450,53 @@ const handleGitHubStepNext = async () => {
       throw new Error(response.message || 'Failed to fetch repository information')
     }
   } catch (error) {
-    githubFetchError.value = error instanceof Error ? error.message : 'Failed to fetch repository data'
+    repositoryFetchError.value = error instanceof Error ? error.message : 'Failed to fetch repository data'
     // Stay on current step - user must retry
   } finally {
-    isFetchingGitHub.value = false
+    isFetchingRepository.value = false
   }
 }
 
-// Enhanced auto-population function
+// Enhanced auto-population function for any repository platform
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const autoPopulateFromGitHub = (githubData: any) => {
+const autoPopulateFromRepository = (repositoryData: any) => {
   formData.value = {
     ...formData.value,
     basic: {
-      name: githubData.name || '',
-      description: githubData.description || '',
-      long_description: githubData.readme_content || githubData.description || '',
+      name: repositoryData.name || '',
+      description: repositoryData.description || '',
+      long_description: repositoryData.readme_content || repositoryData.description || '',
       category_id: '',
-      author_name: githubData.owner?.login || githubData.author_name || '',
-      author_contact: githubData.owner?.email || githubData.author_contact || '',
-      organization: githubData.owner?.type === 'Organization' ? githubData.owner.login : (githubData.organization || ''),
-      license: githubData.license?.spdx_id || githubData.license || '',
-      tags: githubData.topics || githubData.tags || [],
+      author_name: repositoryData.owner?.login || repositoryData.author_name || '',
+      author_contact: repositoryData.owner?.email || repositoryData.author_contact || '',
+      organization: repositoryData.owner?.type === 'Organization' ? repositoryData.owner.login : (repositoryData.organization || ''),
+      license: repositoryData.license?.spdx_id || repositoryData.license || '',
+      tags: repositoryData.topics || repositoryData.tags || [],
       featured: false,
       auto_install_new_default_team: false
     },
     repository: {
-      github_url: githubData.html_url || githubData.github_url || formData.value.github.github_url,
-      git_branch: githubData.default_branch || 'main',
-      homepage_url: githubData.homepage || githubData.homepage_url || ''
+      repository_url: repositoryData.html_url || repositoryData.repository_url || formData.value.repository_setup.repository_url,
+      repository_source: repositoryData.repository_source || formData.value.repository_setup.repository_source,
+      repository_id: repositoryData.repository_id || '',
+      repository_subfolder: repositoryData.repository_subfolder || '',
+      git_branch: repositoryData.default_branch || 'main',
+      website_url: repositoryData.homepage || repositoryData.website_url || ''
     },
     technical: {
-      language: githubData.language || '',
+      language: repositoryData.language || '',
       runtime: 'node',
-      installation_methods: githubData.installation_methods || [],
-      dependencies: githubData.dependencies || '',
-      transport_type: githubData.transport_type || 'auto'
+      installation_methods: repositoryData.installation_methods || [],
+      dependencies: repositoryData.dependencies || '',
+      transport_type: repositoryData.transport_type || 'auto'
     },
-    configuration_schema: githubData.configuration_schema || {},
-    github: {
-      github_url: githubData.html_url || githubData.github_url || formData.value.github.github_url,
-      git_branch: githubData.default_branch || 'main',
+    configuration_schema: repositoryData.configuration_schema || {},
+    repository_setup: {
+      repository_url: repositoryData.html_url || repositoryData.repository_url || formData.value.repository_setup.repository_url,
+      repository_source: repositoryData.repository_source || formData.value.repository_setup.repository_source,
+      git_branch: repositoryData.default_branch || 'main',
       auto_populated: true,
-      repo_data: githubData
+      repo_data: repositoryData
     }
   }
 }
@@ -586,6 +622,7 @@ const submitForm = async () => {
     // Get fresh data from ALL storage keys being used by components
     const freshBasicData = eventBus.getState('edit_basic_data')
     const freshRepositoryData = eventBus.getState('edit_repository_data')
+    const freshRepositorySetupData = eventBus.getState('edit_repository_setup_data')
     const freshTechnicalData = eventBus.getState('edit_technical_data')
     const freshConfigurationSchema = eventBus.getState('edit_configuration_schema')
 
@@ -603,6 +640,20 @@ const submitForm = async () => {
 
     if (freshRepositoryData) {
       finalFormData.repository = { ...finalFormData.repository, ...freshRepositoryData }
+    }
+
+    // Also merge repository setup data if available (for consistency)
+    if (freshRepositorySetupData && typeof freshRepositorySetupData === 'object') {
+      const repoSetup = freshRepositorySetupData as { repository_url?: string; repository_source?: string; git_branch?: string }
+      finalFormData.repository_setup = { ...finalFormData.repository_setup, ...freshRepositorySetupData }
+
+      // Sync repository data with repository setup data to ensure consistency
+      finalFormData.repository = {
+        ...finalFormData.repository,
+        repository_url: repoSetup.repository_url || finalFormData.repository.repository_url,
+        repository_source: repoSetup.repository_source || finalFormData.repository.repository_source,
+        git_branch: repoSetup.git_branch || finalFormData.repository.git_branch
+      }
     }
 
     if (freshTechnicalData) {
@@ -730,6 +781,14 @@ onUnmounted(() => {
       />
       <component
         :is="currentStepData?.component"
+        v-else-if="currentStepData?.key === 'repository'"
+        v-model="formData.repository_setup"
+        :form-data="formData"
+        @update:modelValue="(newValue: any) => formData.repository_setup = newValue"
+        @update:formData="(newFormData: any) => formData = newFormData"
+      />
+      <component
+        :is="currentStepData?.component"
         v-else-if="currentStepData"
         v-model="formData[currentStepData.key]"
         :form-data="formData"
@@ -757,12 +816,12 @@ onUnmounted(() => {
           {{ cancelText }}
         </Button>
 
-        <!-- Special GitHub step button with loading -->
+        <!-- Special Repository step button with loading -->
         <Button
           v-if="currentStep === 0"
-          @click="handleGitHubStepNext"
-          :disabled="!canProceedFromGitHub"
-          :loading="isFetchingGitHub"
+          @click="handleRepositoryStepNext"
+          :disabled="!canProceedFromRepository"
+          :loading="isFetchingRepository"
           :loading-text="t('mcpCatalog.form.navigation.fetching')"
           class="min-w-[120px]"
         >
@@ -789,12 +848,12 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <!-- GitHub Fetch Error (show below navigation) -->
-    <Alert v-if="githubFetchError && currentStep === 0" variant="destructive" class="mt-4">
+    <!-- Repository Fetch Error (show below navigation) -->
+    <Alert v-if="repositoryFetchError && currentStep === 0" variant="destructive" class="mt-4">
       <AlertDescription>
-        {{ githubFetchError }}
+        {{ repositoryFetchError }}
         <br>
-        <span class="text-sm">{{ t('mcpCatalog.validation.githubUrlInvalid') }}</span>
+        <span class="text-sm">{{ t('mcpCatalog.validation.repositoryUrlInvalid') }}</span>
       </AlertDescription>
     </Alert>
   </div>

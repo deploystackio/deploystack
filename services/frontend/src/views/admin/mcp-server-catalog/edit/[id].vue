@@ -111,55 +111,6 @@ const parseJsonField = (fieldValue: any, defaultValue: any) => {
 
 // Convert server data to form data format
 const convertServerToFormData = (server: McpServer): Partial<McpServerFormData> => {
-  // Convert installation methods to new format
-
-  const convertedInstallationMethods = (server.installation_methods || []).map((method: any) => {
-    // Handle old format: {type, command, description}
-    if (method.type && method.command && !method.client) {
-      // Parse old format command like "npx @brightdata/mcp" into command and args
-      const commandParts = method.command.split(' ')
-      const command = commandParts[0] || 'npx'
-      const args = commandParts.slice(1)
-
-      return {
-        client: 'claude-desktop' as const,
-        command: command,
-        args: args,
-        env: {} // Old format doesn't have env, so empty object
-      }
-    }
-
-    // Handle HTTP servers: {client, url, type, headers}
-    if (method.url) {
-      return {
-        client: 'claude-desktop' as const,
-        url: method.url,
-        type: method.type || 'streamableHttp',
-        headers: method.headers || {}
-      }
-    }
-
-    // Handle stdio servers: {client, command, args, env}
-    return {
-      client: 'claude-desktop' as const,
-      command: method.command || 'npx',
-      args: method.args || [],
-      env: method.env || {}
-    }
-
-  }).filter((method: any) => {
-    // Filter out git clone template entries and any invalid entries
-    if (method.url) {
-      // For HTTP methods, just check if URL exists
-      return method.url && method.url !== ''
-    } else {
-      // For stdio methods, check command
-      return method.command &&
-             method.command !== 'git clone <repository_url>' &&
-             !method.command.includes('<repository_url>')
-    }
-  })
-
   // Parse tags with proper handling
   const parsedTags = parseJsonField(server.tags, [])
 
@@ -204,20 +155,25 @@ const convertServerToFormData = (server: McpServer): Partial<McpServerFormData> 
       auto_install_new_default_team: Boolean(server.auto_install_new_default_team),
     },
     repository: {
-      github_url: server.github_url || '',
+      repository_url: server.repository_url || '',
+      repository_source: server.repository_source || 'github',
+      repository_id: server.repository_id || '',
+      repository_subfolder: server.repository_subfolder || '',
       git_branch: server.git_branch || 'main',
-      homepage_url: server.homepage_url || ''
+      website_url: server.website_url || ''
     },
     technical: {
       language: server.language || '',
       runtime: server.runtime || '',
-      installation_methods: convertedInstallationMethods,
+      packages: server.packages,
+      remotes: server.remotes,
       dependencies: server.dependencies ? JSON.stringify(server.dependencies, null, 2) : '',
       transport_type: server.transport_type || 'auto'
     },
     configuration_schema: configurationSchema,
-    github: {
-      github_url: server.github_url || '',
+    repository_setup: {
+      repository_url: server.repository_url || '',
+      repository_source: server.repository_source || 'github',
       git_branch: server.git_branch || 'main',
       auto_populated: false
     },
@@ -295,15 +251,19 @@ const handleSubmit = async (formData: McpServerFormData) => {
     featured: formData.basic.featured,
     auto_install_new_default_team: formData.basic.auto_install_new_default_team,
 
-    // Repository (use GitHub data if available, fallback to repository data)
-    github_url: formData.github.github_url || formData.repository.github_url || undefined,
-    git_branch: formData.github.git_branch || formData.repository.git_branch || 'main',
-    homepage_url: formData.repository.homepage_url || undefined,
+    // Repository
+    repository_url: formData.repository.repository_url || undefined,
+    repository_source: formData.repository.repository_source || undefined,
+    repository_id: formData.repository.repository_id || undefined,
+    repository_subfolder: formData.repository.repository_subfolder || undefined,
+    git_branch: formData.repository.git_branch || 'main',
+    website_url: formData.repository.website_url || undefined,
 
     // Technical
     language: formData.technical.language,
     runtime: formData.technical.runtime,
-    installation_methods: formData.technical.installation_methods,
+    packages: formData.technical.packages,
+    remotes: formData.technical.remotes,
     dependencies: formData.technical.dependencies ? JSON.parse(formData.technical.dependencies) : undefined,
 
     // UPDATED: Use the synchronized configuration schema

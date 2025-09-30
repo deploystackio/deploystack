@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import CategoryDisplay from '@/components/mcp-server/CategoryDisplay.vue'
 import ContentWrapper from '@/components/ContentWrapper.vue'
-import { ArrowLeft, Github, ExternalLink, Package, Settings, Calendar, Tag, Trash2, AlertTriangle, Edit, Terminal, Users, User, Lock, Unlock, Globe, Link } from 'lucide-vue-next'
+import { ArrowLeft, Github, GitBranch, Globe, ExternalLink, Package, Settings, Calendar, Tag, Trash2, AlertTriangle, Edit, Terminal, Users, User, Lock, Unlock, Link } from 'lucide-vue-next'
 import DashboardLayout from '@/components/DashboardLayout.vue'
 
 import { McpCatalogService } from '@/services/mcpCatalogService'
@@ -84,17 +84,46 @@ const displayTags = computed(() => {
 })
 
 const displayInstallationMethods = computed(() => {
-  if (!server.value?.installation_methods) return []
-  // Handle both array and JSON string formats
-  if (Array.isArray(server.value.installation_methods)) {
-    return server.value.installation_methods
-  }
-  try {
+  if (!server.value) return []
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const methods: any[] = []
+
+  // Convert packages to display format (STDIO servers)
+  if (server.value.packages) {
+    const packages = Array.isArray(server.value.packages) ? server.value.packages :
+                     (typeof server.value.packages === 'string' ? JSON.parse(server.value.packages) : [server.value.packages])
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return JSON.parse(server.value.installation_methods as any)
-  } catch {
-    return []
+    packages.forEach((pkg: any) => {
+      if (pkg.transport) {
+        methods.push({
+          client: 'claude-desktop',
+          command: pkg.transport.command,
+          args: pkg.transport.args || [],
+          env: pkg.env || {}
+        })
+      }
+    })
   }
+
+  // Convert remotes to display format (HTTP/SSE servers)
+  if (server.value.remotes) {
+    const remotes = Array.isArray(server.value.remotes) ? server.value.remotes :
+                    (typeof server.value.remotes === 'string' ? JSON.parse(server.value.remotes) : [server.value.remotes])
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    remotes.forEach((remote: any) => {
+      methods.push({
+        client: 'claude-desktop',
+        url: remote.url,
+        type: remote.type || 'sse',
+        headers: remote.headers || {}
+      })
+    })
+  }
+
+  return methods
 })
 
 
@@ -248,13 +277,43 @@ const handleEditServer = () => {
   router.push(`/admin/mcp-server-catalog/edit/${serverId}`)
 }
 
-const goBack = () => {
-  router.push('/admin/mcp-server-catalog')
+const getGitHubAvatarUrl = (server: McpServer) => {
+  // Only show GitHub avatar if the repository is hosted on GitHub
+  if (!server.github_account_id || (server.repository_source && server.repository_source !== 'github')) {
+    return null
+  }
+  return `https://avatars.githubusercontent.com/u/${server.github_account_id}?v=4&s=128`
 }
 
-const getGitHubAvatarUrl = (server: McpServer) => {
-  if (!server.github_account_id) return null
-  return `https://avatars.githubusercontent.com/u/${server.github_account_id}?v=4&s=128`
+// Get repository icon based on platform
+const getRepositoryIcon = (platform: string | undefined) => {
+  switch (platform) {
+    case 'github':
+      return Github
+    case 'gitlab':
+    case 'bitbucket':
+      return GitBranch
+    default:
+      return Globe
+  }
+}
+
+// Get repository label based on platform
+const getRepositoryLabel = (platform: string | undefined) => {
+  switch (platform) {
+    case 'github':
+      return t('mcpCatalog.edit.values.repository')
+    case 'gitlab':
+      return 'GitLab Repository'
+    case 'bitbucket':
+      return 'Bitbucket Repository'
+    default:
+      return t('mcpCatalog.edit.values.repository')
+  }
+}
+
+const goBack = () => {
+  router.push('/admin/mcp-server-catalog')
 }
 </script>
 
@@ -307,7 +366,7 @@ const getGitHubAvatarUrl = (server: McpServer) => {
       <ContentWrapper v-if="server">
         <!-- Basic Information Section -->
         <div class="px-4 sm:px-0 flex items-center gap-4">
-          <img 
+          <img
             v-if="getGitHubAvatarUrl(server)"
             :src="getGitHubAvatarUrl(server)!"
             :alt="`${server.name} GitHub avatar`"
@@ -416,22 +475,30 @@ const getGitHubAvatarUrl = (server: McpServer) => {
               <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.edit.fields.links') }}</dt>
               <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
                 <div class="space-y-2">
-                  <div v-if="server.github_url" class="flex items-center gap-1">
-                    <Github class="h-4 w-4 text-muted-foreground" />
+                  <!-- Primary Repository URL -->
+                  <div v-if="server.repository_url" class="flex items-center gap-1">
+                    <component
+                      :is="getRepositoryIcon(server.repository_source)"
+                      class="h-4 w-4 text-muted-foreground"
+                    />
                     <a
-                      :href="server.github_url"
+                      :href="server.repository_url"
                       target="_blank"
                       rel="noopener noreferrer"
                       class="text-blue-600 hover:underline"
                     >
-                      {{ t('mcpCatalog.edit.values.repository') }}
+                      {{ getRepositoryLabel(server.repository_source) }}
                       <ExternalLink class="inline h-3 w-3 ml-1" />
                     </a>
+                    <!-- Show platform badge if available -->
+                    <Badge v-if="server.repository_source" variant="outline" class="text-xs">
+                      {{ McpCatalogService.getPlatformDisplayName(server.repository_source) }}
+                    </Badge>
                   </div>
-                  <div v-if="server.homepage_url" class="flex items-center gap-1">
+                  <div v-if="server.website_url" class="flex items-center gap-1">
                     <ExternalLink class="h-4 w-4 text-muted-foreground" />
                     <a
-                      :href="server.homepage_url"
+                      :href="server.website_url"
                       target="_blank"
                       rel="noopener noreferrer"
                       class="text-blue-600 hover:underline"
@@ -440,7 +507,7 @@ const getGitHubAvatarUrl = (server: McpServer) => {
                       <ExternalLink class="inline h-3 w-3 ml-1" />
                     </a>
                   </div>
-                  <div v-if="!server.github_url && !server.homepage_url" class="text-muted-foreground">
+                  <div v-if="!server.repository_url && !server.website_url" class="text-muted-foreground">
                     {{ t('mcpCatalog.edit.values.noLinks') }}
                   </div>
                 </div>

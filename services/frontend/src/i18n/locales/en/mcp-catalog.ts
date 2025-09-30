@@ -48,19 +48,18 @@ export default {
     subtitle: 'Create a new global MCP server for the catalog',
 
     steps: {
-      github: 'GitHub Repository',
+      repository: 'Repository',
       claudeConfig: 'Claude Desktop Config',
       configurationSchema: 'Configuration Schema',
       basic: 'Basic Info',
       configuring: 'Step in progress',
-      repository: 'Repository',
       technical: 'Technical',
       capabilities: 'Capabilities',
       review: 'Review'
     },
 
     errors: {
-      githubFetch: 'Failed to fetch repository information'
+      repositoryFetch: 'Failed to fetch repository information'
     },
 
     github: {
@@ -755,7 +754,7 @@ export default {
     descriptionRequired: 'Description is required',
     languageRequired: 'Programming language is required',
     runtimeRequired: 'Runtime environment is required',
-    githubUrlInvalid: 'Please enter a valid GitHub repository URL',
+    repositoryUrlInvalid: 'Please enter a valid repository URL from GitHub, GitLab, or Bitbucket',
     homepageUrlInvalid: 'Please enter a valid URL',
     jsonInvalid: 'Please enter valid JSON'
   },
