@@ -16976,30 +16976,6 @@
         }
       }
     },
-    "/api/mcp/github/sync/{serverId}": {
-      "post": {
-        "summary": "Sync MCP server from GitHub",
-        "tags": [
-          "MCP GitHub Integration"
-        ],
-        "description": "Sync an MCP server with its GitHub repository to update metadata and versions",
-        "parameters": [
-          {
-            "schema": {
-              "type": "string"
-            },
-            "in": "path",
-            "name": "serverId",
-            "required": true
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Default Response"
-          }
-        }
-      }
-    },
     "/api/mcp/github/repo-info": {
       "get": {
         "summary": "Get GitHub repository info",

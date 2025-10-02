@@ -24,7 +24,6 @@ vi.mock('../../../../src/routes/mcp/versions/list');
 vi.mock('../../../../src/routes/mcp/versions/create');
 vi.mock('../../../../src/routes/mcp/versions/update');
 
-vi.mock('../../../../src/routes/mcp/github/sync-repo');
 vi.mock('../../../../src/routes/mcp/github/get-repo-info');
 
 vi.mock('../../../../src/routes/mcp/installations');
@@ -52,7 +51,6 @@ import listVersions from '../../../../src/routes/mcp/versions/list';
 import createVersion from '../../../../src/routes/mcp/versions/create';
 import updateVersion from '../../../../src/routes/mcp/versions/update';
 
-import syncRepo from '../../../../src/routes/mcp/github/sync-repo';
 import getRepoInfo from '../../../../src/routes/mcp/github/get-repo-info';
 
 import installationsRoutes from '../../../../src/routes/mcp/installations';
@@ -80,7 +78,6 @@ const mockListVersions = listVersions as MockedFunction<typeof listVersions>;
 const mockCreateVersion = createVersion as MockedFunction<typeof createVersion>;
 const mockUpdateVersion = updateVersion as MockedFunction<typeof updateVersion>;
 
-const mockSyncRepo = syncRepo as MockedFunction<typeof syncRepo>;
 const mockGetRepoInfo = getRepoInfo as MockedFunction<typeof getRepoInfo>;
 
 const mockInstallationsRoutes = installationsRoutes as MockedFunction<typeof installationsRoutes>;
@@ -126,7 +123,6 @@ describe('MCP Routes Registration', () => {
     mockCreateVersion.mockResolvedValue(undefined);
     mockUpdateVersion.mockResolvedValue(undefined);
 
-    mockSyncRepo.mockResolvedValue(undefined);
     mockGetRepoInfo.mockResolvedValue(undefined);
 
     mockInstallationsRoutes.mockResolvedValue(undefined);
@@ -137,8 +133,8 @@ describe('MCP Routes Registration', () => {
     it('should register all MCP route modules', async () => {
       await mcpRoutes(mockFastify as FastifyInstance);
 
-      // Verify that all 21 routes are registered
-      expect(mockFastify.register).toHaveBeenCalledTimes(21);
+      // Verify that all 20 routes are registered (removed syncRepo)
+      expect(mockFastify.register).toHaveBeenCalledTimes(20);
     });
 
     it('should register all category routes', async () => {
@@ -186,7 +182,6 @@ describe('MCP Routes Registration', () => {
     it('should register all GitHub integration routes', async () => {
       await mcpRoutes(mockFastify as FastifyInstance);
 
-      expect(mockFastify.register).toHaveBeenCalledWith(syncRepo);
       expect(mockFastify.register).toHaveBeenCalledWith(getRepoInfo);
     });
 
@@ -266,9 +261,8 @@ describe('MCP Routes Registration', () => {
 
       const registerCalls = (mockFastify.register as any).mock.calls;
       
-      // Check that GitHub routes are at positions 17-18
-      expect(registerCalls[17][0]).toBe(syncRepo);
-      expect(registerCalls[18][0]).toBe(getRepoInfo);
+      // Check that GitHub route is at position 17
+      expect(registerCalls[17][0]).toBe(getRepoInfo);
     });
 
     it('should register installations routes correctly', async () => {
@@ -276,8 +270,8 @@ describe('MCP Routes Registration', () => {
 
       const registerCalls = (mockFastify.register as any).mock.calls;
       
-      // Check that installations route is at position 19
-      expect(registerCalls[19][0]).toBe(installationsRoutes);
+      // Check that installations route is at position 18
+      expect(registerCalls[18][0]).toBe(installationsRoutes);
     });
 
     it('should register user configurations routes last', async () => {
@@ -285,8 +279,8 @@ describe('MCP Routes Registration', () => {
 
       const registerCalls = (mockFastify.register as any).mock.calls;
       
-      // Check that user configurations route is at position 20 (last)
-      expect(registerCalls[20][0]).toBe(userConfigurationsRoutes);
+      // Check that user configurations route is at position 19 (last)
+      expect(registerCalls[19][0]).toBe(userConfigurationsRoutes);
     });
   });
 
@@ -336,7 +330,6 @@ describe('MCP Routes Registration', () => {
       expect(createVersion).toBeDefined();
       expect(updateVersion).toBeDefined();
 
-      expect(syncRepo).toBeDefined();
       expect(getRepoInfo).toBeDefined();
 
       expect(installationsRoutes).toBeDefined();
