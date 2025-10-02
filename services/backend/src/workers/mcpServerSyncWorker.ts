@@ -1,8 +1,9 @@
 import type { AnyDatabase } from '../db';
 import type { FastifyBaseLogger } from 'fastify';
 import type { Worker, WorkerResult } from './types';
-import { transformOfficialToDeployStack, isValidOfficialServer, isGitHubRateLimitError, type OfficialServer } from '../services/transforms/officialRegistryTransforms';
+import { transformOfficialToDeployStack, isValidOfficialServer, isGitHubRateLimitError, extractOfficialMetadata, type OfficialServer } from '../services/transforms/officialRegistryTransforms';
 import { McpCatalogService } from '../services/mcpCatalogService';
+import { GitHubReadmeService } from '../services/githubReadmeService';
 
 /**
  * Job payload interface for MCP server sync jobs
@@ -100,6 +101,9 @@ export class McpServerSyncWorker implements Worker {
         }
       );
 
+      // Extract official registry metadata for tracking
+      const registryMetadata = extractOfficialMetadata(officialServer);
+
       this.logger.debug({
         jobId,
         serverName,
@@ -112,7 +116,7 @@ export class McpServerSyncWorker implements Worker {
         throw new Error('Transformation failed: missing required fields');
       }
 
-      // Add required fields for createServer
+      // Add required fields for createServer, including registry tracking metadata
       const serverData = {
         ...transformedData,
         name: transformedData.name,
@@ -121,6 +125,14 @@ export class McpServerSyncWorker implements Worker {
         runtime: transformedData.runtime,
         packages: transformedData.packages || [],
         visibility: 'global' as const, // Synced servers are always global
+        
+        // Registry tracking fields
+        official_name: registryMetadata.official_name,
+        synced_from_official_registry: registryMetadata.synced_from_official_registry,
+        official_registry_server_id: registryMetadata.official_registry_server_id,
+        official_registry_version_id: registryMetadata.official_registry_version_id,
+        official_registry_published_at: registryMetadata.official_registry_published_at,
+        official_registry_updated_at: registryMetadata.official_registry_updated_at,
       };
 
       // Save to database using McpCatalogService
@@ -139,6 +151,61 @@ export class McpServerSyncWorker implements Worker {
         slug: savedServer.slug,
         operation: 'mcp_server_sync_complete'
       }, 'Successfully synced MCP server');
+      
+      // Fetch and save GitHub README if this is a GitHub repository
+      if (transformedData.repository_url && transformedData.repository_url.includes('github.com')) {
+        this.logger.debug({
+          jobId,
+          serverId: savedServer.id,
+          repositoryUrl: transformedData.repository_url,
+          operation: 'github_readme_fetch_start'
+        }, 'Fetching GitHub README for synced server');
+        
+        try {
+          const readmeResult = await GitHubReadmeService.getReadmeContent(
+            transformedData.repository_url,
+            transformedData.git_branch || 'main',
+            this.logger
+          );
+          
+          if (readmeResult) {
+            // Convert README content to base64 for storage
+            const readmeBase64 = Buffer.from(readmeResult.content, 'utf8').toString('base64');
+            
+            // Update the server record with README
+            await this.mcpService.updateServer(
+              savedServer.id,
+              syncConfig.syncedBy,
+              'global_admin',
+              {
+                github_readme_base64: readmeBase64
+              }
+            );
+            
+            this.logger.info({
+              jobId,
+              serverId: savedServer.id,
+              readmeSize: readmeResult.content.length,
+              operation: 'github_readme_saved'
+            }, 'Successfully saved GitHub README to database');
+          } else {
+            this.logger.debug({
+              jobId,
+              serverId: savedServer.id,
+              operation: 'github_readme_not_found'
+            }, 'No README found for repository');
+          }
+        } catch (readmeError) {
+          // Log README fetch failure but don't fail the entire sync
+          this.logger.warn({
+            jobId,
+            serverId: savedServer.id,
+            repositoryUrl: transformedData.repository_url,
+            error: readmeError,
+            operation: 'github_readme_fetch_failed'
+          }, 'Failed to fetch GitHub README, continuing without it');
+        }
+      }
 
       return {
         success: true,

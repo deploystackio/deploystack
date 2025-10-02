@@ -1080,6 +1080,15 @@ export interface ServerEntity {
   status: 'active' | 'deprecated' | 'maintenance';
   featured: boolean;
   auto_install_new_default_team: boolean;
+  
+  // Official Registry Sync Tracking
+  official_name: string | null;
+  synced_from_official_registry: boolean;
+  official_registry_server_id: string | null;
+  official_registry_version_id: string | null;
+  official_registry_published_at: string | Date | null;
+  official_registry_updated_at: string | Date | null;
+  
   created_at: string | Date; // Flexible for both DB (Date) and API (string) formats
   updated_at: string | Date;
   last_sync_at: string | Date | null;
@@ -1179,6 +1188,9 @@ export interface CreateGlobalServerRequest {
   language: string;
   runtime: string;
   
+  // Version information
+  version?: string;
+  
   // Configuration
   configuration_schema?: ConfigurationSchema;
   transport_type?: 'stdio' | 'http' | 'sse';
@@ -1198,6 +1210,7 @@ export interface CreateGlobalServerRequest {
   git_branch?: string;
   website_url?: string;
   github_account_id?: string;
+  github_stars?: number;
   resources?: Resource[];
   prompts?: Prompt[];
   author_name?: string;
@@ -1209,6 +1222,14 @@ export interface CreateGlobalServerRequest {
   tags?: string[];
   featured?: boolean;
   auto_install_new_default_team?: boolean;
+  
+  // Official Registry Sync Tracking
+  official_name?: string;
+  synced_from_official_registry?: boolean;
+  official_registry_server_id?: string | null;
+  official_registry_version_id?: string | null;
+  official_registry_published_at?: Date | null;
+  official_registry_updated_at?: Date | null;
 }
 
 export interface CreateGlobalServerSuccessResponse {
@@ -1306,6 +1327,15 @@ export function formatServerResponse(server: any): ServerEntity {
     status: server.status,
     featured: server.featured,
     auto_install_new_default_team: server.auto_install_new_default_team,
+    
+    // Official Registry Sync Tracking
+    official_name: server.official_name || null,
+    synced_from_official_registry: server.synced_from_official_registry || false,
+    official_registry_server_id: server.official_registry_server_id || null,
+    official_registry_version_id: server.official_registry_version_id || null,
+    official_registry_published_at: server.official_registry_published_at?.toISOString() || null,
+    official_registry_updated_at: server.official_registry_updated_at?.toISOString() || null,
+    
     created_at: server.created_at.toISOString(),
     updated_at: server.updated_at.toISOString(),
     last_sync_at: server.last_sync_at?.toISOString() || null

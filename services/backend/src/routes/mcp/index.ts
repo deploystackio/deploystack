@@ -22,7 +22,6 @@ import listVersions from './versions/list';
 import createVersion from './versions/create';
 import updateVersion from './versions/update';
 
-import syncRepo from './github/sync-repo';
 import getRepoInfo from './github/get-repo-info';
 
 import installationsRoutes from './installations';
@@ -57,7 +56,6 @@ export default async function mcpRoutes(server: FastifyInstance) {
   await server.register(updateVersion);
   
   // GitHub integration
-  await server.register(syncRepo);
   await server.register(getRepoInfo);
   
   // MCP Server Installations

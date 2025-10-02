@@ -480,6 +480,9 @@ export async function transformOfficialToDeployStack(
     language: language,
     runtime: runtime,
     
+    // Version information
+    version: officialServer.version,
+    
     // Repository information
     repository_url: repository?.url,
     repository_source: repository?.source,
@@ -607,8 +610,15 @@ async function enhanceWithGitHubMetadata(
     // Enhanced license information from GitHub
     license: githubInfo.license || baseData.license,
     
+    // GitHub stars count
+    github_stars: githubInfo.stars,
+    
     // GitHub account ID for avatar support (convert null to undefined)
     github_account_id: githubInfo.github_account_id || undefined,
+    
+    // Author and organization from GitHub
+    author_name: githubInfo.author_name || baseData.author_name,
+    organization: githubInfo.organization || baseData.organization,
     
     // Git branch (default branch from GitHub)
     git_branch: githubInfo.defaultBranch,

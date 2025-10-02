@@ -17743,6 +17743,208 @@ paths:
                 required:
                   - success
                   - error
+  /api/admin/mcp-registry/progress/{batchId}:
+    get:
+      summary: Get detailed sync progress for batch
+      tags:
+        - Admin - MCP Registry
+      description: Get real-time progress, job status, and error details for MCP
+        Registry sync batch
+      parameters:
+        - schema:
+            type: string
+          in: path
+          name: batchId
+          required: true
+          description: Job batch ID
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      batch:
+                        type: object
+                        description: Batch information
+                      progress:
+                        type: object
+                        properties:
+                          total:
+                            type: number
+                          completed:
+                            type: number
+                          failed:
+                            type: number
+                          pending:
+                            type: number
+                          processing:
+                            type: number
+                          percentage:
+                            type: number
+                      recentJobs:
+                        type: array
+                        description: Recent jobs in batch (last 10)
+                      errors:
+                        type: array
+                        description: Failed jobs with error details
+                      estimatedTimeRemaining:
+                        type: number
+                        nullable: true
+                        description: Estimated milliseconds until completion
+        "500":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  error:
+                    type: string
+  /api/admin/mcp-registry/cancel/{batchId}:
+    post:
+      summary: Cancel active sync batch
+      tags:
+        - Admin - MCP Registry
+      description: Cancel an active MCP Registry sync batch and all pending jobs
+      parameters:
+        - schema:
+            type: string
+          in: path
+          name: batchId
+          required: true
+          description: Job batch ID to cancel
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      batchId:
+                        type: string
+                      cancelledJobs:
+                        type: number
+        "500":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  error:
+                    type: string
+  /api/admin/mcp-registry/retry/{batchId}:
+    post:
+      summary: Retry failed jobs in batch
+      tags:
+        - Admin - MCP Registry
+      description: Retry all failed jobs in an MCP Registry sync batch
+      parameters:
+        - schema:
+            type: string
+          in: path
+          name: batchId
+          required: true
+          description: Job batch ID to retry failed jobs
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      batchId:
+                        type: string
+                      retriedJobs:
+                        type: number
+        "500":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  error:
+                    type: string
+  /api/admin/mcp-registry/batches:
+    get:
+      summary: Get recent sync batches
+      tags:
+        - Admin - MCP Registry
+      description: Get recent MCP Registry sync operations with progress information
+      parameters:
+        - schema:
+            type: number
+            minimum: 1
+            maximum: 50
+            default: 10
+          in: query
+          name: limit
+          required: false
+          description: Number of batches to return
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      description: Batch information with progress
+        "500":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  error:
+                    type: string
   /api/gateway/me/mcp-configurations:
     get:
       summary: Get merged MCP configurations for gateway

@@ -766,5 +766,32 @@ export default {
     pageInfo: 'Page {current} of {total}',
     previous: 'Previous',
     next: 'Next'
+  },
+
+  registrySync: {
+    button: 'Sync Registry',
+    modal: {
+      title: 'Sync MCP Registry',
+      description: 'This action will start a background process to load MCP servers from the official MCP Registry.',
+      registryInfo: 'Registry URL:',
+      registryUrl: 'https://registry.modelcontextprotocol.io',
+      explanation: 'The sync process will:',
+      steps: [
+        'Fetch up to 25 servers for testing',
+        'Process each server with rate limiting (2 seconds between servers)',
+        'Skip servers that already exist in your catalog',
+        'Run in the background without blocking other operations'
+      ],
+      note: 'Note: This is a test sync limited to 25 servers. You can check the progress in the backend logs.',
+      cancel: 'Cancel',
+      confirm: 'Start Sync',
+      syncing: 'Syncing...'
+    },
+    messages: {
+      success: 'Registry sync started successfully',
+      successDescription: 'Syncing {count} servers in the background. Batch ID: {batchId}',
+      error: 'Failed to start registry sync',
+      errorDescription: '{message}'
+    }
   }
 }

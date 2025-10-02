@@ -151,6 +151,52 @@ export async function initializeDatabaseDependentServices(
         server.log.warn('⚠️ Continuing without MCP User Configuration Service due to error');
       }
 
+      // Initialize and start Job Queue System
+      try {
+        server.log.debug('🔄 Initializing Job Queue System...');
+        const { JobQueueService } = await import('./services/jobQueueService');
+        const { JobProcessorService } = await import('./services/jobProcessorService');
+        const { registerWorkers } = await import('./workers');
+        
+        // Initialize JobQueueService
+        const jobQueueService = new JobQueueService(dbInstance, server.log);
+        server.log.debug('✅ JobQueueService initialized');
+        
+        // Initialize JobProcessorService (pass db and logger, not jobQueueService)
+        const jobProcessorService = new JobProcessorService(dbInstance, server.log);
+        server.log.debug('✅ JobProcessorService initialized');
+        
+        // Register workers
+        registerWorkers(jobProcessorService, dbInstance, server.log);
+        server.log.debug('✅ Workers registered');
+        
+        // Start processing jobs
+        await jobProcessorService.start();
+        server.log.info('✅ Job Queue System started and processing jobs');
+        
+        // Decorate server with job services for use in routes
+        if (!server.hasDecorator('jobQueueService')) {
+          server.decorate('jobQueueService', jobQueueService);
+        } else {
+          (server as any).jobQueueService = jobQueueService;
+        }
+        
+        if (!server.hasDecorator('jobProcessorService')) {
+          server.decorate('jobProcessorService', jobProcessorService);
+        } else {
+          (server as any).jobProcessorService = jobProcessorService;
+        }
+        
+      } catch (jobQueueError) {
+        server.log.error({
+          error: jobQueueError,
+          message: jobQueueError instanceof Error ? jobQueueError.message : 'Unknown error',
+          stack: jobQueueError instanceof Error ? jobQueueError.stack : 'No stack trace'
+        }, '❌ Job Queue System failed to initialize:');
+        // Don't throw - continue with startup but log the error
+        server.log.warn('⚠️ Continuing without Job Queue System due to error');
+      }
+
       // Start Token Cleanup Service (only after database is ready)
       try {
         server.log.debug('Starting Token Cleanup Service...');
@@ -555,6 +601,13 @@ export const createServer = async () => {
   server.log.info('Authentication routes registered under /api/auth.');
   
   server.addHook('onClose', async () => {
+    // Stop job processor first to gracefully finish current jobs
+    if ((server as any).jobProcessorService) {
+      server.log.info('Stopping job processor...');
+      await (server as any).jobProcessorService.stop();
+      server.log.info('Job processor stopped.');
+    }
+    
     await pluginManager.shutdownPlugins();
     const rawConn = server.rawDbConnection; // Get from decoration
     if (rawConn) {

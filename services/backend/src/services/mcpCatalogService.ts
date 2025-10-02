@@ -52,6 +52,15 @@ export interface McpServer {
   status: 'active' | 'deprecated' | 'maintenance';
   featured: boolean;
   auto_install_new_default_team: boolean;
+  
+  // Official Registry Sync Tracking
+  official_name?: string | null;
+  synced_from_official_registry?: boolean;
+  official_registry_server_id?: string | null;
+  official_registry_version_id?: string | null;
+  official_registry_published_at?: Date | null;
+  official_registry_updated_at?: Date | null;
+  
   created_at: Date;
   updated_at: Date;
   last_sync_at?: Date;
@@ -67,6 +76,10 @@ export interface CreateMcpServerRequest {
   repository_subfolder?: string;
   git_branch?: string;
   website_url?: string;
+  
+  // Version information
+  version?: string;
+  
   language: string;
   runtime: string;
   packages: any[]; // Will be JSON stringified - MCP Registry packages array
@@ -97,6 +110,14 @@ export interface CreateMcpServerRequest {
   tags?: string[];
   featured?: boolean;
   auto_install_new_default_team?: boolean;
+  
+  // Official Registry Sync Tracking
+  official_name?: string;
+  synced_from_official_registry?: boolean;
+  official_registry_server_id?: string | null;
+  official_registry_version_id?: string | null;
+  official_registry_published_at?: Date | null;
+  official_registry_updated_at?: Date | null;
 }
 
 export interface UpdateMcpServerRequest {
@@ -121,6 +142,8 @@ export interface UpdateMcpServerRequest {
   license?: string;
   transport_type?: 'stdio' | 'http' | 'sse';
   github_account_id?: string;
+  github_readme_base64?: string;
+  github_stars?: number;
   // Three-tier configuration schema
   template_args?: any[];
   template_env?: any;
@@ -367,6 +390,10 @@ export class McpCatalogService {
       slug,
       description: githubInfo.description || data.description,
       long_description: githubInfo.long_description || data.long_description,
+      
+      // Version information
+      version: data.version || null,
+      
       repository_url: data.repository_url,
       repository_source: data.repository_url ? (
         data.repository_url.includes('github.com') ? 'github' :
@@ -401,7 +428,7 @@ export class McpCatalogService {
       transport_type: data.transport_type || 'stdio',
       github_account_id: githubInfo.github_account_id || data.github_account_id,
       github_readme_base64: data.github_readme_base64 || null,
-      github_stars: data.github_stars || null,
+      github_stars: githubInfo.stars || data.github_stars || null,
       // Three-tier configuration schema
       template_args: data.template_args ? JSON.stringify(data.template_args) : null,
       template_env: data.template_env ? JSON.stringify(data.template_env) : null,
@@ -418,6 +445,15 @@ export class McpCatalogService {
       status: 'active',
       featured: userRole === 'global_admin' ? (data.featured || false) : false,
       auto_install_new_default_team: userRole === 'global_admin' ? (data.auto_install_new_default_team || false) : false,
+      
+      // Official Registry Sync Tracking
+      official_name: (data as any).official_name || null,
+      synced_from_official_registry: (data as any).synced_from_official_registry || false,
+      official_registry_server_id: (data as any).official_registry_server_id || null,
+      official_registry_version_id: (data as any).official_registry_version_id || null,
+      official_registry_published_at: (data as any).official_registry_published_at || null,
+      official_registry_updated_at: (data as any).official_registry_updated_at || null,
+      
       created_at: now,
       updated_at: now,
       last_sync_at: data.repository_url && data.repository_url.includes('github.com') ? now : null
@@ -485,6 +521,8 @@ export class McpCatalogService {
     if (data.license !== undefined) updateData.license = data.license;
     if (data.transport_type !== undefined) updateData.transport_type = data.transport_type;
     if (data.github_account_id !== undefined) updateData.github_account_id = data.github_account_id;
+    if (data.github_readme_base64 !== undefined) updateData.github_readme_base64 = data.github_readme_base64;
+    if (data.github_stars !== undefined) updateData.github_stars = data.github_stars;
     // Three-tier configuration schema
     if (data.template_args !== undefined) updateData.template_args = data.template_args ? JSON.stringify(data.template_args) : null;
     if (data.template_env !== undefined) updateData.template_env = data.template_env ? JSON.stringify(data.template_env) : null;

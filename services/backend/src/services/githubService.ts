@@ -14,6 +14,8 @@ export interface GitHubRepoInfo {
   forks: number;
   topics: string[];
   github_account_id: string | null; // GitHub Account ID (owner.id from GitHub API)
+  author_name: string | null; // Owner login (user or organization name)
+  organization: string | null; // Organization name if repo belongs to org
 }
 
 export interface GitHubRelease {
@@ -451,7 +453,9 @@ export class GitHubService {
         stars: data.stargazers_count || 0,
         forks: data.forks_count || 0,
         topics: data.topics || [],
-        github_account_id: data.owner?.id ? String(data.owner.id) : null // Extract GitHub Account ID from owner
+        github_account_id: data.owner?.id ? String(data.owner.id) : null, // Extract GitHub Account ID from owner
+        author_name: data.owner?.login || null, // Owner's username
+        organization: data.owner?.type === 'Organization' ? data.owner.login : null // Organization name if applicable
       };
       
       logger.info({

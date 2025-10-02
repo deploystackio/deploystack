@@ -165,7 +165,25 @@ export class RegistrySyncService {
       }
       
       const { servers, metadata } = batchResult.data;
-      allServers.push(...servers);
+      
+      // Extract the actual server data from the registry response
+      // Registry API returns: { servers: [{ _meta: {...}, server: {...} }] }
+      // We need to attach _meta to the server object so it's available for metadata extraction
+      // FILTER: Only include servers where _meta.io.modelcontextprotocol.registry/official.isLatest === true
+      const serverData = servers
+        .filter((item: any) => {
+          const meta = item._meta?.['io.modelcontextprotocol.registry/official'];
+          return meta?.isLatest === true;
+        })
+        .map((item: any) => {
+          const server = item.server || item;
+          // Attach _meta to the server object for later extraction
+          return {
+            ...server,
+            _meta: item._meta
+          };
+        });
+      allServers.push(...serverData);
       
       this.logger.debug({
         batchSize: servers.length,

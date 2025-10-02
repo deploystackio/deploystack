@@ -5,15 +5,26 @@ import { useRouter, useRoute } from 'vue-router'
 import { toast } from 'vue-sonner'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Plus } from 'lucide-vue-next'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { Plus, RefreshCw, ExternalLink } from 'lucide-vue-next'
 import DashboardLayout from '@/components/DashboardLayout.vue'
 import { McpCatalogService, type PaginationMeta } from '@/services/mcpCatalogService'
 import { useEventBus } from '@/composables/useEventBus'
 import McpServerTableColumns from './McpServerTableColumns.vue'
 import PaginationControls from '@/components/ui/pagination/PaginationControls.vue'
 import type { McpServer, McpServerFilters } from './types'
+import { getEnv } from '@/utils/env'
 
-const { t } = useI18n()
+const { t, tm } = useI18n()
 const router = useRouter()
 const route = useRoute()
 const eventBus = useEventBus()
@@ -23,6 +34,10 @@ const servers = ref<McpServer[]>([])
 const isLoading = ref(true)
 const error = ref<string | null>(null)
 const searchQuery = ref('')
+
+// Sync state
+const isSyncModalOpen = ref(false)
+const isSyncing = ref(false)
 
 // Pagination state
 const currentPage = ref(1)
@@ -74,6 +89,56 @@ const handleAddServer = () => {
 
 const handleEditServer = (serverId: string) => {
   router.push(`/admin/mcp-server-catalog/view/${serverId}`)
+}
+
+// Sync registry handler
+const handleSyncRegistry = async () => {
+  try {
+    isSyncing.value = true
+
+    const baseUrl = getEnv('VITE_DEPLOYSTACK_BACKEND_URL')
+
+    // Call backend sync endpoint with test limit
+    const response = await fetch(`${baseUrl}/api/admin/mcp-registry/sync`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({
+        maxServers: 3,
+        skipExisting: true,
+        rateLimitDelay: 2
+      })
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json()
+      throw new Error(errorData.error || 'Sync failed')
+    }
+
+    const data = await response.json()
+
+    // Close modal and show success
+    isSyncModalOpen.value = false
+    toast.success(t('mcpCatalog.registrySync.messages.success'), {
+      description: t('mcpCatalog.registrySync.messages.successDescription', {
+        count: data.data.totalServers,
+        batchId: data.data.batchId
+      })
+    })
+
+    // Optionally refresh the catalog after a delay
+    setTimeout(() => fetchServers(), 3000)
+
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    toast.error(t('mcpCatalog.registrySync.messages.error'), {
+      description: t('mcpCatalog.registrySync.messages.errorDescription', {
+        message: errorMessage
+      })
+    })
+  } finally {
+    isSyncing.value = false
+  }
 }
 
 
@@ -165,13 +230,23 @@ onUnmounted(() => {
         <div>
           <p class="text-muted-foreground">{{ t('mcpCatalog.description') }}</p>
         </div>
-        <Button
-          @click="handleAddServer"
-          class="flex items-center gap-2"
-        >
-          <Plus class="h-4 w-4" />
-          {{ t('mcpCatalog.addButton') }}
-        </Button>
+        <div class="flex items-center gap-2">
+          <Button
+            variant="outline"
+            @click="isSyncModalOpen = true"
+            class="flex items-center gap-2"
+          >
+            <RefreshCw class="h-4 w-4" />
+            {{ t('mcpCatalog.registrySync.button') }}
+          </Button>
+          <Button
+            @click="handleAddServer"
+            class="flex items-center gap-2"
+          >
+            <Plus class="h-4 w-4" />
+            {{ t('mcpCatalog.addButton') }}
+          </Button>
+        </div>
       </div>
 
       <!-- Loading State -->
@@ -222,5 +297,68 @@ onUnmounted(() => {
         </div>
       </div>
     </div>
+
+    <!-- Sync Registry Modal -->
+    <AlertDialog :open="isSyncModalOpen" @update:open="(value) => isSyncModalOpen = value">
+      <AlertDialogContent class="sm:max-w-[500px]">
+        <AlertDialogHeader>
+          <AlertDialogTitle>{{ t('mcpCatalog.registrySync.modal.title') }}</AlertDialogTitle>
+          <AlertDialogDescription>
+            {{ t('mcpCatalog.registrySync.modal.description') }}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+
+        <div class="space-y-4 py-4">
+          <!-- Registry URL -->
+          <div class="space-y-2">
+            <p class="text-sm font-medium">{{ t('mcpCatalog.registrySync.modal.registryInfo') }}</p>
+            <a
+              :href="t('mcpCatalog.registrySync.modal.registryUrl')"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="flex items-center gap-2 text-sm text-primary hover:underline"
+            >
+              {{ t('mcpCatalog.registrySync.modal.registryUrl') }}
+              <ExternalLink class="h-3 w-3" />
+            </a>
+          </div>
+
+          <!-- Explanation -->
+          <div class="space-y-2">
+            <p class="text-sm font-medium">{{ t('mcpCatalog.registrySync.modal.explanation') }}</p>
+            <ul class="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+              <li v-for="(step, index) in tm('mcpCatalog.registrySync.modal.steps') as string[]" :key="index">
+                {{ step }}
+              </li>
+            </ul>
+          </div>
+
+          <!-- Note -->
+          <div class="rounded-md bg-muted p-3">
+            <p class="text-sm text-muted-foreground">
+              {{ t('mcpCatalog.registrySync.modal.note') }}
+            </p>
+          </div>
+        </div>
+
+        <AlertDialogFooter>
+          <AlertDialogCancel :disabled="isSyncing">
+            {{ t('mcpCatalog.registrySync.modal.cancel') }}
+          </AlertDialogCancel>
+          <AlertDialogAction
+            as-child
+          >
+            <Button
+              @click="handleSyncRegistry"
+              :loading="isSyncing"
+              :loading-text="t('mcpCatalog.registrySync.modal.syncing')"
+              :disabled="isSyncing"
+            >
+              {{ t('mcpCatalog.registrySync.modal.confirm') }}
+            </Button>
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   </DashboardLayout>
 </template>
