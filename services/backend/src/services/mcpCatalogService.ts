@@ -223,7 +223,8 @@ export class McpCatalogService {
     userId: string, 
     userRole: string, 
     teamIds: string[],
-    filters?: McpServerFilters
+    filters?: McpServerFilters,
+    sortBy: 'name' | 'github_stars' = 'name'
   ): Promise<McpServer[]> {
     this.logger.debug({
       operation: 'get_servers_for_user',
@@ -288,8 +289,14 @@ export class McpCatalogService {
       query = query.where(and(...whereConditions));
     }
     
-    // Order by featured first, then by name
-    query = query.orderBy(desc(mcpServers.featured), asc(mcpServers.name));
+    // Apply sorting based on sortBy parameter
+    if (sortBy === 'github_stars') {
+      // Sort by GitHub stars (descending, nulls last), then by name
+      query = query.orderBy(desc(mcpServers.github_stars), asc(mcpServers.name));
+    } else {
+      // Default: Sort by featured first, then by name
+      query = query.orderBy(desc(mcpServers.featured), asc(mcpServers.name));
+    }
     
     const servers = await query;
     

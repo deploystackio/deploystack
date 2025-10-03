@@ -219,7 +219,8 @@ describe('MCP Servers - Search Servers', () => {
         [],
         expect.objectContaining({
           search: 'test'
-        })
+        }),
+        'name'
       );
 
       expect(mockReply.status).toHaveBeenCalledWith(200);
@@ -276,7 +277,8 @@ describe('MCP Servers - Search Servers', () => {
           runtime: 'node',
           status: 'active',
           featured: true
-        }
+        },
+        'name'
       );
 
       expect(mockReply.status).toHaveBeenCalledWith(200);
@@ -386,7 +388,8 @@ describe('MCP Servers - Search Servers', () => {
         'test-user-id',
         'global_admin',
         [],
-        expect.any(Object)
+        expect.any(Object),
+        'name'
       );
     });
 
@@ -421,7 +424,8 @@ describe('MCP Servers - Search Servers', () => {
         'test-user-id',
         'global_user',
         ['team-1', 'team-2'],
-        expect.any(Object)
+        expect.any(Object),
+        'name'
       );
     });
 
@@ -445,7 +449,8 @@ describe('MCP Servers - Search Servers', () => {
         'test-user-id',
         'global_user',
         [],
-        expect.any(Object)
+        expect.any(Object),
+        'name'
       );
     });
 
@@ -621,6 +626,66 @@ describe('MCP Servers - Search Servers', () => {
     });
   });
 
+  describe('Sorting', () => {
+    beforeEach(async () => {
+      await searchServers(mockFastify as FastifyInstance);
+    });
+
+    it('should sort by name by default', async () => {
+      mockMcpService.getServersForUser.mockResolvedValue([]);
+
+      const handler = routeHandlers['GET /mcp/servers/search'];
+      await handler({
+        ...mockRequest,
+        query: { q: 'test', limit: '20', offset: '0' }
+      }, mockReply);
+
+      expect(mockMcpService.getServersForUser).toHaveBeenCalledWith(
+        'test-user-id',
+        'global_user',
+        [],
+        expect.any(Object),
+        'name'
+      );
+    });
+
+    it('should sort by github_stars when specified', async () => {
+      mockMcpService.getServersForUser.mockResolvedValue([]);
+
+      const handler = routeHandlers['GET /mcp/servers/search'];
+      await handler({
+        ...mockRequest,
+        query: { q: 'test', sort_by: 'github_stars', limit: '20', offset: '0' }
+      }, mockReply);
+
+      expect(mockMcpService.getServersForUser).toHaveBeenCalledWith(
+        'test-user-id',
+        'global_user',
+        [],
+        expect.any(Object),
+        'github_stars'
+      );
+    });
+
+    it('should sort by name when explicitly specified', async () => {
+      mockMcpService.getServersForUser.mockResolvedValue([]);
+
+      const handler = routeHandlers['GET /mcp/servers/search'];
+      await handler({
+        ...mockRequest,
+        query: { q: 'test', sort_by: 'name', limit: '20', offset: '0' }
+      }, mockReply);
+
+      expect(mockMcpService.getServersForUser).toHaveBeenCalledWith(
+        'test-user-id',
+        'global_user',
+        [],
+        expect.any(Object),
+        'name'
+      );
+    });
+  });
+
   describe('Query Parameter Validation', () => {
     beforeEach(async () => {
       await searchServers(mockFastify as FastifyInstance);
@@ -659,7 +724,8 @@ describe('MCP Servers - Search Servers', () => {
         'test-user-id',
         'global_user',
         [],
-        expect.objectContaining({ featured: true })
+        expect.objectContaining({ featured: true }),
+        'name'
       );
 
       // Test featured: 'false' (as string, which gets converted to boolean)
@@ -672,7 +738,8 @@ describe('MCP Servers - Search Servers', () => {
         'test-user-id',
         'global_user',
         [],
-        expect.objectContaining({ featured: false })
+        expect.objectContaining({ featured: false }),
+        'name'
       );
     });
   });

@@ -109,6 +109,11 @@ export const SEARCH_SERVERS_QUERY_SCHEMA = {
       type: 'boolean',
       description: 'Filter by auto-install flag'
     },
+    sort_by: {
+      type: 'string',
+      enum: ['name', 'github_stars'],
+      description: 'Sort results by name (default) or GitHub stars (descending, nulls last)'
+    },
     limit: { 
       type: 'string',
       pattern: '^\\d+$',

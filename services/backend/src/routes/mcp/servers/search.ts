@@ -16,6 +16,7 @@ import {
 // TypeScript interface for search query params
 interface SearchServersQueryParams extends Omit<ListServersQueryParams, 'search'> {
   q: string; // Search query is required for search endpoint
+  sort_by?: 'name' | 'github_stars'; // Optional sort parameter
 }
 
 export default async function searchServers(server: FastifyInstance) {
@@ -62,6 +63,7 @@ export default async function searchServers(server: FastifyInstance) {
         status: queryParams.status,
         featured: queryParams.featured
       },
+      sortBy: queryParams.sort_by,
       pagination: {
         limit: queryParams.limit,
         offset: queryParams.offset
@@ -96,6 +98,7 @@ export default async function searchServers(server: FastifyInstance) {
       const offset = parseInt(queryParams.offset || '0') || 0;
       const featured = queryParams.featured === 'true' ? true : queryParams.featured === 'false' ? false : undefined;
       const status = queryParams.status as 'active' | 'deprecated' | 'maintenance' | undefined;
+      const sortBy = (queryParams.sort_by as 'name' | 'github_stars') || 'name';
 
       // Build filters object - use 'search' internally (service expects 'search', not 'q')
       const filters = {
@@ -112,7 +115,8 @@ export default async function searchServers(server: FastifyInstance) {
         request.user!.id,
         userRole,
         teamIds,
-        filters
+        filters,
+        sortBy
       );
 
       // Apply pagination
@@ -123,6 +127,7 @@ export default async function searchServers(server: FastifyInstance) {
         operation: 'search_mcp_servers',
         userId: request.user!.id,
         query: queryParams.q,
+        sortBy: sortBy,
         totalResults: total,
         returnedResults: paginatedServers.length,
         userRole,

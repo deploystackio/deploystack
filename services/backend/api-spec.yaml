@@ -10045,6 +10045,16 @@ paths:
           description: Filter by auto-install flag
         - schema:
             type: string
+            enum:
+              - name
+              - github_stars
+          in: query
+          name: sort_by
+          required: false
+          description: Sort results by name (default) or GitHub stars (descending, nulls
+            last)
+        - schema:
+            type: string
             pattern: ^\d+$
           in: query
           name: limit
