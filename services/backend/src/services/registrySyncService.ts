@@ -259,6 +259,14 @@ export class RegistrySyncService {
       
       const { servers, metadata } = batchResult.data;
       
+      // Log the actual metadata structure to debug pagination issues
+      this.logger.debug({
+        pageNumber,
+        metadataKeys: Object.keys(metadata || {}),
+        metadataStructure: JSON.stringify(metadata, null, 2),
+        operation: 'registry_api_metadata'
+      }, 'Registry API metadata structure');
+      
       // Extract server data and filter for isLatest === true (CRITICAL: keep this filter!)
       const serverData = servers
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -279,7 +287,7 @@ export class RegistrySyncService {
         pageNumber,
         rawBatchSize: servers.length,
         afterIsLatestFilter: serverData.length,
-        cursor,
+        currentCursor: cursor,
       }, 'Fetched and filtered page from official registry');
       
       // Filter this page against database (only check these 50 servers)
@@ -296,9 +304,36 @@ export class RegistrySyncService {
       // Add new servers from this page to accumulated list
       accumulatedNewServers.push(...newServersInPage);
       
-      // Check for next page
-      cursor = metadata.next_cursor;
-      hasMore = !!cursor;
+      // Check for next page - try multiple possible field names
+      // Official MCP Registry might use different naming conventions
+      cursor = metadata.next_cursor || metadata.nextCursor || metadata.cursor || metadata.next;
+      
+      // Determine if there are more pages
+      // Stop if: no cursor OR we fetched fewer servers than requested (end of data)
+      const shouldContinue = !!cursor && servers.length > 0;
+      hasMore = shouldContinue;
+      
+      this.logger.debug({
+        pageNumber,
+        nextCursor: cursor,
+        serversInBatch: servers.length,
+        hasMore,
+        metadataCount: metadata.count,
+        metadataTotal: metadata.total,
+        accumulated: accumulatedNewServers.length,
+        targetMax: maxServers,
+        operation: 'pagination_check'
+      }, 'Pagination status after page fetch');
+      
+      // If we have no cursor but metadata suggests more servers exist, log a warning
+      if (!cursor && metadata.total && metadata.count < metadata.total) {
+        this.logger.warn({
+          pageNumber,
+          metadataCount: metadata.count,
+          metadataTotal: metadata.total,
+          operation: 'pagination_cursor_missing'
+        }, 'API indicates more servers exist but no cursor provided - possible API issue');
+      }
       
       // Rate limiting for registry API
       if (hasMore) {

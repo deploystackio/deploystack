@@ -46,6 +46,8 @@ export interface OfficialEnvironmentVariable {
  */
 export interface OfficialTransport {
   type: 'stdio' | 'streamable-http' | 'sse';
+  command?: string; // Optional in official registry
+  args?: string[]; // Optional in official registry
 }
 
 /**
@@ -175,6 +177,62 @@ export function createSlug(officialName: string): string {
 // =============================================================================
 // TRANSPORT TYPE DERIVATION
 // =============================================================================
+
+/**
+ * Infer command and args for STDIO packages based on registry type
+ * 
+ * The official MCP registry doesn't always provide command/args in the transport object.
+ * We need to infer them based on the package's registryType and identifier.
+ * 
+ * @param pkg - Official package data
+ * @returns Inferred transport with command and args
+ */
+export function inferStdioTransport(pkg: OfficialPackage): {
+  command: string;
+  args: string[];
+} {
+  // If transport already has command and args, use them
+  if (pkg.transport.command && pkg.transport.args) {
+    return {
+      command: pkg.transport.command,
+      args: pkg.transport.args
+    };
+  }
+  
+  // Otherwise, infer based on registryType
+  const identifier = pkg.identifier;
+  
+  switch (pkg.registryType.toLowerCase()) {
+    case 'npm':
+      // NPM packages: npx -y <package-name>
+      return {
+        command: 'npx',
+        args: ['-y', identifier]
+      };
+    
+    case 'pypi':
+      // PyPI packages: uvx <package-name>
+      // Alternative: python -m <package-name>
+      return {
+        command: 'uvx',
+        args: [identifier]
+      };
+    
+    case 'docker':
+      // Docker images: docker run <image-name>
+      return {
+        command: 'docker',
+        args: ['run', identifier]
+      };
+    
+    default:
+      // Fallback to npx for unknown types
+      return {
+        command: 'npx',
+        args: [identifier]
+      };
+  }
+}
 
 /**
  * Derive DeployStack transport_type from official packages/remotes
@@ -365,6 +423,8 @@ export function mapHeadersToThreeTier(
 /**
  * Map official runtime/package arguments to DeployStack's 3-tier args system
  * 
+ * IMPORTANT: For STDIO packages, we need to infer command/args if not provided
+ * 
  * @param packages - Official packages array
  * @returns DeployStack ConfigurationSchema args configuration
  */
@@ -381,6 +441,29 @@ export function mapArgumentsToThreeTier(
   
   // Extract runtime and package arguments
   const pkg = packages[0];
+  
+  // For STDIO packages, infer transport command/args if not provided
+  if (pkg.transport.type === 'stdio') {
+    const inferredTransport = inferStdioTransport(pkg);
+    
+    // Add inferred args as template args (locked)
+    for (const arg of inferredTransport.args) {
+      templateArgs.push({
+        value: arg,
+        locked: true,
+        description: `Static argument: ${arg}`
+      });
+    }
+    
+    // Store command in the package for later use
+    // This will be used when constructing the packages array
+    if (!pkg.transport.command) {
+      pkg.transport.command = inferredTransport.command;
+    }
+    if (!pkg.transport.args) {
+      pkg.transport.args = inferredTransport.args;
+    }
+  }
   
   // Package arguments go to template (locked)
   if (pkg.packageArguments && pkg.packageArguments.length > 0) {
@@ -435,12 +518,17 @@ export async function transformOfficialToDeployStack(
     fetchGitHubMetadata?: boolean;
   }
 ): Promise<Partial<CreateGlobalServerRequest>> {
+  // IMPORTANT: Create a deep copy of packages to avoid mutating the original
+  // We'll be adding inferred command/args to the packages during transformation
+  const packagesCopy = officialServer.packages ? JSON.parse(JSON.stringify(officialServer.packages)) : undefined;
+  
   // Extract 3-tier configurations from packages (env vars + args)
   const envConfig = mapEnvironmentVariablesToThreeTier(
-    officialServer.packages?.[0]?.environmentVariables || []
+    packagesCopy?.[0]?.environmentVariables || []
   );
   
-  const argsConfig = mapArgumentsToThreeTier(officialServer.packages);
+  // This will infer and add command/args to packagesCopy if missing
+  const argsConfig = mapArgumentsToThreeTier(packagesCopy);
   
   // Extract 3-tier configurations from remotes (headers)
   // Merge headers from all remotes (in case there are multiple endpoints)
@@ -500,7 +588,8 @@ export async function transformOfficialToDeployStack(
     website_url: officialServer.websiteUrl,
     
     // Official format storage (will be JSON stringified by create-global.ts)
-    packages: officialServer.packages,
+    // Use packagesCopy which now has inferred command/args
+    packages: packagesCopy,
     remotes: officialServer.remotes,
     
     // Derived DeployStack fields
