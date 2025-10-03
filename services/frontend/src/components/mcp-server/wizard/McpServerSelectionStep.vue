@@ -103,6 +103,7 @@ const performSearch = async () => {
 
     const searchParams: McpServerSearchParams = {
       q: searchTerm.value.trim(),
+      sort_by: 'github_stars',
       limit: pageSize.value,
       offset: offset
     }

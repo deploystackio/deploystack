@@ -297,6 +297,7 @@ export class McpCatalogService {
     if (params.runtime) url.searchParams.append('runtime', params.runtime)
     if (params.status) url.searchParams.append('status', params.status)
     if (params.featured !== undefined) url.searchParams.append('featured', params.featured.toString())
+    if (params.sort_by) url.searchParams.append('sort_by', params.sort_by)
     if (params.limit) url.searchParams.append('limit', params.limit.toString())
     if (params.offset) url.searchParams.append('offset', params.offset.toString())
 

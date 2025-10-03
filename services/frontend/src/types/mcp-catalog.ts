@@ -5,6 +5,7 @@ export interface McpServerSearchParams {
   runtime?: string
   status?: 'active' | 'deprecated' | 'maintenance'
   featured?: boolean
+  sort_by?: 'name' | 'github_stars'
   limit?: number
   offset?: number
 }
