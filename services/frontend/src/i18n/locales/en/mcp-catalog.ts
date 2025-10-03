@@ -777,12 +777,23 @@ export default {
       registryUrl: 'https://registry.modelcontextprotocol.io',
       explanation: 'The sync process will:',
       steps: [
-        'Fetch up to 25 servers for testing',
-        'Process each server with rate limiting (2 seconds between servers)',
-        'Skip servers that already exist in your catalog',
         'Run in the background without blocking other operations'
       ],
-      note: 'Note: This is a test sync limited to 25 servers. You can check the progress in the backend logs.',
+      form: {
+        maxServers: {
+          label: 'Maximum Servers',
+          placeholder: '25',
+          description: 'Maximum number of servers to fetch from the registry'
+        },
+        skipExisting: {
+          label: 'Skip Existing Servers'
+        },
+        rateLimitDelay: {
+          label: 'Rate Limit Delay (seconds)',
+          placeholder: '2',
+          description: 'Delay in seconds between processing each server'
+        }
+      },
       cancel: 'Cancel',
       confirm: 'Start Sync',
       syncing: 'Syncing...'

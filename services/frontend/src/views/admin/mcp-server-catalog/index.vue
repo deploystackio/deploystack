@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter, useRoute } from 'vue-router'
 import { toast } from 'vue-sonner'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Button } from '@/components/ui/button'
 import {
   AlertDialog,
@@ -38,6 +40,24 @@ const searchQuery = ref('')
 // Sync state
 const isSyncModalOpen = ref(false)
 const isSyncing = ref(false)
+
+// Sync form data
+const syncFormData = ref({
+  maxServers: 25,
+  skipExisting: true,
+  rateLimitDelay: 2
+})
+
+// Reset form data when modal opens
+watch(isSyncModalOpen, (isOpen) => {
+  if (isOpen) {
+    syncFormData.value = {
+      maxServers: 25,
+      skipExisting: true,
+      rateLimitDelay: 2
+    }
+  }
+})
 
 // Pagination state
 const currentPage = ref(1)
@@ -98,15 +118,15 @@ const handleSyncRegistry = async () => {
 
     const baseUrl = getEnv('VITE_DEPLOYSTACK_BACKEND_URL')
 
-    // Call backend sync endpoint with test limit
+    // Call backend sync endpoint with form data
     const response = await fetch(`${baseUrl}/api/admin/mcp-registry/sync`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
       body: JSON.stringify({
-        maxServers: 3,
-        skipExisting: true,
-        rateLimitDelay: 2
+        maxServers: syncFormData.value.maxServers,
+        skipExisting: syncFormData.value.skipExisting,
+        rateLimitDelay: syncFormData.value.rateLimitDelay
       })
     })
 
@@ -323,6 +343,54 @@ onUnmounted(() => {
             </a>
           </div>
 
+          <!-- Form Fields -->
+          <div class="space-y-4">
+            <!-- Max Servers -->
+            <div class="space-y-2">
+              <Label for="maxServers">{{ t('mcpCatalog.registrySync.modal.form.maxServers.label') }}</Label>
+              <Input
+                id="maxServers"
+                v-model.number="syncFormData.maxServers"
+                type="number"
+                min="1"
+                :placeholder="t('mcpCatalog.registrySync.modal.form.maxServers.placeholder')"
+              />
+              <p class="text-sm text-muted-foreground">
+                {{ t('mcpCatalog.registrySync.modal.form.maxServers.description') }}
+              </p>
+            </div>
+
+            <!-- Rate Limit Delay -->
+            <div class="space-y-2">
+              <Label for="rateLimitDelay">{{ t('mcpCatalog.registrySync.modal.form.rateLimitDelay.label') }}</Label>
+              <Input
+                id="rateLimitDelay"
+                v-model.number="syncFormData.rateLimitDelay"
+                type="number"
+                min="0"
+                step="0.5"
+                :placeholder="t('mcpCatalog.registrySync.modal.form.rateLimitDelay.placeholder')"
+              />
+              <p class="text-sm text-muted-foreground">
+                {{ t('mcpCatalog.registrySync.modal.form.rateLimitDelay.description') }}
+              </p>
+            </div>
+
+            <!-- Skip Existing Checkbox -->
+            <div class="flex items-start space-x-3">
+              <Checkbox
+                id="skipExisting"
+                v-model="syncFormData.skipExisting"
+              />
+              <Label
+                for="skipExisting"
+                class="cursor-pointer font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                {{ t('mcpCatalog.registrySync.modal.form.skipExisting.label') }}
+              </Label>
+            </div>
+          </div>
+
           <!-- Explanation -->
           <div class="space-y-2">
             <p class="text-sm font-medium">{{ t('mcpCatalog.registrySync.modal.explanation') }}</p>
@@ -331,13 +399,6 @@ onUnmounted(() => {
                 {{ step }}
               </li>
             </ul>
-          </div>
-
-          <!-- Note -->
-          <div class="rounded-md bg-muted p-3">
-            <p class="text-sm text-muted-foreground">
-              {{ t('mcpCatalog.registrySync.modal.note') }}
-            </p>
           </div>
         </div>
 
