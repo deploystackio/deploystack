@@ -54,7 +54,7 @@ export default async function mcpRegistryRoutes(server: FastifyInstance) {
           rateLimitDelay: { 
             type: 'number', 
             minimum: 1, 
-            maximum: 10, 
+            maximum: 120, 
             default: 2,
             description: 'Delay between jobs in seconds (default: 2)'
           }

@@ -116,15 +116,31 @@ export class McpServerSyncWorker implements Worker {
         throw new Error('Transformation failed: missing required fields');
       }
 
+      // Flatten configuration_schema for McpCatalogService
+      // The transformation returns configuration_schema as a nested object,
+      // but McpCatalogService.createServer() expects flat schema fields
+      const { configuration_schema, ...restTransformedData } = transformedData;
+      
       // Add required fields for createServer, including registry tracking metadata
       const serverData = {
-        ...transformedData,
+        ...restTransformedData,
         name: transformedData.name,
         description: transformedData.description,
         language: transformedData.language,
         runtime: transformedData.runtime,
         packages: transformedData.packages || [],
         visibility: 'global' as const, // Synced servers are always global
+        
+        // Flatten configuration_schema fields to root level
+        template_args: configuration_schema?.template_args || [],
+        template_env: configuration_schema?.template_env || [],
+        template_headers: configuration_schema?.template_headers || [],
+        team_args_schema: configuration_schema?.team_args_schema || [],
+        team_env_schema: configuration_schema?.team_env_schema || [],
+        team_headers_schema: configuration_schema?.team_headers_schema || [],
+        user_args_schema: configuration_schema?.user_args_schema || [],
+        user_env_schema: configuration_schema?.user_env_schema || [],
+        user_headers_schema: configuration_schema?.user_headers_schema || [],
         
         // Registry tracking fields
         official_name: registryMetadata.official_name,

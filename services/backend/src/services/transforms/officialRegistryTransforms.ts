@@ -443,9 +443,16 @@ export async function transformOfficialToDeployStack(
   const argsConfig = mapArgumentsToThreeTier(officialServer.packages);
   
   // Extract 3-tier configurations from remotes (headers)
-  const headerConfig = mapHeadersToThreeTier(
-    officialServer.remotes?.[0]?.headers || []
-  );
+  // Merge headers from all remotes (in case there are multiple endpoints)
+  const allHeaders: OfficialHeader[] = [];
+  if (officialServer.remotes && officialServer.remotes.length > 0) {
+    for (const remote of officialServer.remotes) {
+      if (remote.headers && remote.headers.length > 0) {
+        allHeaders.push(...remote.headers);
+      }
+    }
+  }
+  const headerConfig = mapHeadersToThreeTier(allHeaders);
   
   // Combine into full ConfigurationSchema
   const configurationSchema: ConfigurationSchema = {

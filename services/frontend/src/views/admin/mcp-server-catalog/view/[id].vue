@@ -83,47 +83,32 @@ const displayTags = computed(() => {
   }
 })
 
-const displayInstallationMethods = computed(() => {
-  if (!server.value) return []
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const methods: any[] = []
-
-  // Convert packages to display format (STDIO servers)
-  if (server.value.packages) {
-    const packages = Array.isArray(server.value.packages) ? server.value.packages :
-                     (typeof server.value.packages === 'string' ? JSON.parse(server.value.packages) : [server.value.packages])
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    packages.forEach((pkg: any) => {
-      if (pkg.transport) {
-        methods.push({
-          client: 'claude-desktop',
-          command: pkg.transport.command,
-          args: pkg.transport.args || [],
-          env: pkg.env || {}
-        })
-      }
-    })
+const displayPackages = computed(() => {
+  if (!server.value?.packages) return []
+  // Handle both array and JSON string formats
+  if (Array.isArray(server.value.packages)) {
+    return server.value.packages
   }
-
-  // Convert remotes to display format (HTTP/SSE servers)
-  if (server.value.remotes) {
-    const remotes = Array.isArray(server.value.remotes) ? server.value.remotes :
-                    (typeof server.value.remotes === 'string' ? JSON.parse(server.value.remotes) : [server.value.remotes])
-
+  try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    remotes.forEach((remote: any) => {
-      methods.push({
-        client: 'claude-desktop',
-        url: remote.url,
-        type: remote.type || 'sse',
-        headers: remote.headers || {}
-      })
-    })
+    return JSON.parse(server.value.packages as any)
+  } catch {
+    return []
   }
+})
 
-  return methods
+const displayRemotes = computed(() => {
+  if (!server.value?.remotes) return []
+  // Handle both array and JSON string formats
+  if (Array.isArray(server.value.remotes)) {
+    return server.value.remotes
+  }
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return JSON.parse(server.value.remotes as any)
+  } catch {
+    return []
+  }
 })
 
 
@@ -553,116 +538,141 @@ const goBack = () => {
 
 
 
-        <!-- Installation & Configuration Section -->
+        <!-- Server Configuration Section -->
         <div class="px-4 sm:px-0 mt-8">
-          <h3 class="text-base/7 font-semibold text-gray-900">Installation & Configuration</h3>
-          <p class="mt-1 max-w-2xl text-sm/6 text-gray-500">Installation methods and configuration options</p>
+          <h3 class="text-base/7 font-semibold text-gray-900">Server Configuration</h3>
+          <p class="mt-1 max-w-2xl text-sm/6 text-gray-500">Official MCP Registry server configuration and transport details</p>
         </div>
         <div class="mt-6 border-t border-gray-100">
           <dl class="divide-y divide-gray-100">
-            <!-- Installation Methods -->
-            <div v-if="displayInstallationMethods.length > 0" class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
-              <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.edit.fields.installation') }}</dt>
+            <!-- Transport Type -->
+            <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+              <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.edit.fields.transportType') }}</dt>
+              <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
+                <div class="flex items-center gap-2">
+                  <Badge
+                    variant="outline"
+                    :class="{
+                      'bg-blue-50 text-blue-700 border-blue-200': displayTransportType === 'stdio',
+                      'bg-green-50 text-green-700 border-green-200': displayTransportType === 'http',
+                      'bg-yellow-50 text-yellow-700 border-yellow-200': displayTransportType === 'sse',
+                      'bg-gray-50 text-gray-600 border-gray-200': displayTransportType === t('mcpCatalog.edit.values.transportType.notSpecified')
+                    }"
+                  >
+                    {{ displayTransportType === 'stdio' ? t('mcpCatalog.edit.values.transportType.stdio') :
+                       displayTransportType === 'http' ? t('mcpCatalog.edit.values.transportType.http') :
+                       displayTransportType === 'sse' ? t('mcpCatalog.edit.values.transportType.sse') :
+                       t('mcpCatalog.edit.values.transportType.notSpecified') }}
+                  </Badge>
+                  <span v-if="displayTransportType === 'stdio'" class="text-xs text-muted-foreground">
+                    {{ t('mcpCatalog.edit.values.transportType.stdioDescription') }}
+                  </span>
+                  <span v-else-if="displayTransportType === 'http'" class="text-xs text-muted-foreground">
+                    {{ t('mcpCatalog.edit.values.transportType.httpDescription') }}
+                  </span>
+                  <span v-else-if="displayTransportType === 'sse'" class="text-xs text-muted-foreground">
+                    {{ t('mcpCatalog.edit.values.transportType.sseDescription') }}
+                  </span>
+                </div>
+              </dd>
+            </div>
+
+            <!-- Packages (STDIO Transport) -->
+            <div v-if="displayPackages.length > 0" class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+              <dt class="text-sm/6 font-medium text-gray-900">Packages (STDIO)</dt>
               <dd class="mt-2 text-sm text-gray-900 sm:col-span-2 sm:mt-0">
                 <ul role="list" class="divide-y divide-gray-100 rounded-md border border-gray-200">
                   <li
-                    v-for="(method, index) in displayInstallationMethods"
+                    v-for="(pkg, index) in displayPackages"
                     :key="index"
                     class="py-4 pr-5 pl-4 text-sm/6"
                   >
                     <div class="flex items-start gap-3">
-                      <!-- Icon based on method type -->
-                      <Link v-if="method.url" class="size-5 shrink-0 text-blue-500 mt-0.5" aria-hidden="true" />
-                      <Package v-else class="size-5 shrink-0 text-gray-400 mt-0.5" aria-hidden="true" />
-
+                      <Package class="size-5 shrink-0 text-gray-400 mt-0.5" aria-hidden="true" />
                       <div class="flex-1 space-y-3">
-                        <!-- URL-based (Remote) Method -->
-                        <div v-if="method.url" class="space-y-3">
-                          <div class="flex items-center gap-2">
-                            <span class="font-medium">{{ method.client || 'Remote MCP Server' }}</span>
-                            <span class="text-gray-500">•</span>
-                            <Badge variant="outline" class="bg-blue-50 text-blue-700 border-blue-200">
-                              {{ method.type || 'streamableHttp' }}
-                            </Badge>
-                          </div>
+                        <!-- Package Info -->
+                        <div class="flex items-center gap-2">
+                          <Badge variant="outline" class="bg-blue-50 text-blue-700 border-blue-200">
+                            {{ pkg.registryType || 'npm' }}
+                          </Badge>
+                          <code class="bg-gray-100 px-2 py-1 rounded text-xs font-mono">{{ pkg.identifier }}</code>
+                          <span v-if="pkg.version" class="text-xs text-gray-500">v{{ pkg.version }}</span>
+                        </div>
 
-                          <!-- URL -->
-                          <div class="space-y-1">
-                            <div class="text-xs font-medium text-gray-600">Server URL:</div>
-                            <code class="bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs font-mono block w-fit">{{ method.url }}</code>
-                          </div>
-
-                          <!-- Headers -->
-                          <div v-if="method.headers && Object.keys(method.headers).length > 0" class="space-y-1">
-                            <div class="text-xs font-medium text-gray-600">Headers:</div>
-                            <div class="space-y-1">
-                              <div
-                                v-for="(value, key) in method.headers"
-                                :key="key"
-                                class="flex items-center gap-2 text-xs"
-                              >
-                                <code class="bg-purple-50 text-purple-700 px-2 py-1 rounded font-mono">{{ key }}</code>
-                                <span class="text-gray-400">:</span>
-                                <code class="bg-gray-50 text-gray-600 px-2 py-1 rounded font-mono">{{ value }}</code>
-                              </div>
-                            </div>
-                          </div>
-
-                          <!-- Configuration Preview -->
+                        <!-- Transport Command -->
+                        <div v-if="pkg.transport" class="space-y-1">
+                          <div class="text-xs font-medium text-gray-600">Transport:</div>
                           <div class="bg-gray-50 rounded-md p-2">
-                            <div class="text-xs font-medium text-gray-600 mb-1">Configuration Preview:</div>
-                            <pre class="text-xs font-mono text-gray-800">{
-  "url": "{{ method.url }}",
-  "type": "{{ method.type || 'streamableHttp' }}"{{ method.headers && Object.keys(method.headers).length > 0 ? ',\n  "headers": ' + JSON.stringify(method.headers, null, 2).replace(/\n/g, '\n  ') : '' }}
-}</pre>
+                            <code class="text-xs font-mono text-gray-800">{{ pkg.transport.command || 'npx' }} {{ pkg.transport.args ? pkg.transport.args.join(' ') : '' }}</code>
                           </div>
                         </div>
 
-                        <!-- Command-based (Local) Method -->
-                        <div v-else class="space-y-3">
-                          <!-- Client and Command -->
-                          <div class="flex items-center gap-2">
-                            <span class="font-medium">{{ method.client || 'Unknown Client' }}</span>
-                            <span class="text-gray-500">•</span>
-                            <code class="bg-gray-100 px-2 py-1 rounded text-xs font-mono">{{ method.command }}</code>
-                          </div>
-
-                          <!-- Arguments -->
-                          <div v-if="method.args && method.args.length > 0" class="space-y-1">
-                            <div class="text-xs font-medium text-gray-600">Arguments:</div>
-                            <div class="flex flex-wrap gap-1">
-                              <code
-                                v-for="(arg, argIndex) in method.args"
-                                :key="argIndex"
-                                class="bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs font-mono"
-                              >
-                                {{ arg }}
-                              </code>
+                        <!-- Environment Variables -->
+                        <div v-if="pkg.environmentVariables && pkg.environmentVariables.length > 0" class="space-y-1">
+                          <div class="text-xs font-medium text-gray-600">Environment Variables:</div>
+                          <div class="space-y-1">
+                            <div
+                              v-for="(envVar, envIndex) in pkg.environmentVariables"
+                              :key="envIndex"
+                              class="flex items-center gap-2 text-xs"
+                            >
+                              <code class="bg-green-50 text-green-700 px-2 py-1 rounded font-mono">{{ envVar.name }}</code>
+                              <Badge v-if="envVar.isRequired" variant="default" class="text-xs">Required</Badge>
+                              <Badge v-if="envVar.isSecret" variant="destructive" class="text-xs">Secret</Badge>
                             </div>
                           </div>
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+                </ul>
+              </dd>
+            </div>
 
-                          <!-- Environment Variables -->
-                          <div v-if="method.env && Object.keys(method.env).length > 0" class="space-y-1">
-                            <div class="text-xs font-medium text-gray-600">Environment Variables:</div>
-                            <div class="space-y-1">
-                              <div
-                                v-for="(value, key) in method.env"
-                                :key="key"
-                                class="flex items-center gap-2 text-xs"
-                              >
-                                <code class="bg-green-50 text-green-700 px-2 py-1 rounded font-mono">{{ key }}</code>
-                                <span class="text-gray-400">=</span>
-                                <code class="bg-gray-50 text-gray-600 px-2 py-1 rounded font-mono">{{ value }}</code>
+            <!-- Remotes (HTTP/SSE Transport) -->
+            <div v-if="displayRemotes.length > 0" class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+              <dt class="text-sm/6 font-medium text-gray-900">Remote Endpoints</dt>
+              <dd class="mt-2 text-sm text-gray-900 sm:col-span-2 sm:mt-0">
+                <ul role="list" class="divide-y divide-gray-100 rounded-md border border-gray-200">
+                  <li
+                    v-for="(remote, index) in displayRemotes"
+                    :key="index"
+                    class="py-4 pr-5 pl-4 text-sm/6"
+                  >
+                    <div class="flex items-start gap-3">
+                      <Link class="size-5 shrink-0 text-blue-500 mt-0.5" aria-hidden="true" />
+                      <div class="flex-1 space-y-3">
+                        <!-- Remote Type -->
+                        <div class="flex items-center gap-2">
+                          <Badge variant="outline" class="bg-green-50 text-green-700 border-green-200">
+                            {{ remote.type || 'sse' }}
+                          </Badge>
+                        </div>
+
+                        <!-- URL -->
+                        <div class="space-y-1">
+                          <div class="text-xs font-medium text-gray-600">Server URL:</div>
+                          <code class="bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs font-mono block w-fit">{{ remote.url }}</code>
+                        </div>
+
+                        <!-- Headers -->
+                        <div v-if="remote.headers && remote.headers.length > 0" class="space-y-1">
+                          <div class="text-xs font-medium text-gray-600">Headers:</div>
+                          <div class="space-y-1">
+                            <div
+                              v-for="(header, headerIndex) in remote.headers"
+                              :key="headerIndex"
+                              class="flex items-start gap-2 text-xs"
+                            >
+                              <code class="bg-purple-50 text-purple-700 px-2 py-1 rounded font-mono">{{ header.name }}</code>
+                              <div class="flex flex-col gap-1">
+                                <div class="flex items-center gap-2">
+                                  <Badge v-if="header.isRequired" variant="default" class="text-xs">Required</Badge>
+                                  <Badge v-if="header.isSecret" variant="destructive" class="text-xs">Secret</Badge>
+                                </div>
+                                <span v-if="header.description" class="text-gray-500">{{ header.description }}</span>
                               </div>
                             </div>
-                          </div>
-
-                          <!-- Full Command Preview -->
-                          <div class="bg-gray-50 rounded-md p-2">
-                            <div class="text-xs font-medium text-gray-600 mb-1">Command Preview:</div>
-                            <code class="text-xs font-mono text-gray-800">
-                              {{ method.command }}{{ method.args && method.args.length > 0 ? ' ' + method.args.join(' ') : '' }}
-                            </code>
                           </div>
                         </div>
                       </div>
@@ -864,41 +874,6 @@ const goBack = () => {
                 </ul>
               </dd>
             </div>
-
-
-
-            <!-- Transport Type -->
-            <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
-              <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.edit.fields.transportType') }}</dt>
-              <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
-                <div class="flex items-center gap-2">
-                  <Badge
-                    variant="outline"
-                    :class="{
-                      'bg-blue-50 text-blue-700 border-blue-200': displayTransportType === 'stdio',
-                      'bg-green-50 text-green-700 border-green-200': displayTransportType === 'http',
-                      'bg-yellow-50 text-yellow-700 border-yellow-200': displayTransportType === 'sse',
-                      'bg-gray-50 text-gray-600 border-gray-200': displayTransportType === t('mcpCatalog.edit.values.transportType.notSpecified')
-                    }"
-                  >
-                    {{ displayTransportType === 'stdio' ? t('mcpCatalog.edit.values.transportType.stdio') :
-                       displayTransportType === 'http' ? t('mcpCatalog.edit.values.transportType.http') :
-                       displayTransportType === 'sse' ? t('mcpCatalog.edit.values.transportType.sse') :
-                       t('mcpCatalog.edit.values.transportType.notSpecified') }}
-                  </Badge>
-                  <span v-if="displayTransportType === 'stdio'" class="text-xs text-muted-foreground">
-                    {{ t('mcpCatalog.edit.values.transportType.stdioDescription') }}
-                  </span>
-                  <span v-else-if="displayTransportType === 'http'" class="text-xs text-muted-foreground">
-                    {{ t('mcpCatalog.edit.values.transportType.httpDescription') }}
-                  </span>
-                  <span v-else-if="displayTransportType === 'sse'" class="text-xs text-muted-foreground">
-                    {{ t('mcpCatalog.edit.values.transportType.sseDescription') }}
-                  </span>
-                </div>
-              </dd>
-            </div>
-
 
           </dl>
         </div>
