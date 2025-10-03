@@ -268,11 +268,36 @@ export class RegistrySyncService {
       }, 'Registry API metadata structure');
       
       // Extract server data and filter for isLatest === true (CRITICAL: keep this filter!)
+      // Optional: Filter out servers from specific namespaces (for testing/debugging)
+      // Uncomment the EXCLUDED_NAMESPACES array below to enable namespace filtering
+      
+      // const EXCLUDED_NAMESPACES = [
+      //   'ai.smithery/',
+      //   // Add more namespaces to exclude:
+      //   // 'internal.example/',
+      //   // 'test.namespace/',
+      // ];
+      
       const serverData = servers
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         .filter((item: any) => {
           const meta = item._meta?.['io.modelcontextprotocol.registry/official'];
-          return meta?.isLatest === true; // KEEP THIS AT ALL COSTS
+          // const server = item.server || item;
+          // const serverName = server?.name || '';
+          
+          // Filter conditions:
+          // 1. Must be latest version
+          const isLatest = meta?.isLatest === true;
+          
+          // 2. Check if server is from an excluded namespace (if filtering enabled)
+          // Uncomment the lines below to enable namespace filtering
+          // const isExcluded = EXCLUDED_NAMESPACES.some(
+          //   prefix => serverName.startsWith(prefix)
+          // );
+          // return isLatest && !isExcluded;
+          
+          // Default: Only filter by isLatest
+          return isLatest;
         })
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         .map((item: any) => {
@@ -286,9 +311,9 @@ export class RegistrySyncService {
       this.logger.debug({
         pageNumber,
         rawBatchSize: servers.length,
-        afterIsLatestFilter: serverData.length,
+        afterFiltering: serverData.length,
         currentCursor: cursor,
-      }, 'Fetched and filtered page from official registry');
+      }, 'Fetched and filtered page from official registry (isLatest=true)');
       
       // Filter this page against database (only check these 50 servers)
       const newServersInPage = await this.filterExistingServers(serverData);
@@ -387,11 +412,36 @@ export class RegistrySyncService {
       // Registry API returns: { servers: [{ _meta: {...}, server: {...} }] }
       // We need to attach _meta to the server object so it's available for metadata extraction
       // FILTER: Only include servers where _meta.io.modelcontextprotocol.registry/official.isLatest === true
+      // Optional: Filter out servers from specific namespaces (for testing/debugging)
+      // Uncomment the EXCLUDED_NAMESPACES array below to enable namespace filtering
+      
+      // const EXCLUDED_NAMESPACES = [
+      //   'ai.smithery/',
+      //   // Add more namespaces to exclude:
+      //   // 'internal.example/',
+      //   // 'test.namespace/',
+      // ];
+      
       const serverData = servers
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         .filter((item: any) => {
           const meta = item._meta?.['io.modelcontextprotocol.registry/official'];
-          return meta?.isLatest === true;
+          // const server = item.server || item;
+          // const serverName = server?.name || '';
+          
+          // Filter conditions:
+          // 1. Must be latest version
+          const isLatest = meta?.isLatest === true;
+          
+          // 2. Check if server is from an excluded namespace (if filtering enabled)
+          // Uncomment the lines below to enable namespace filtering
+          // const isExcluded = EXCLUDED_NAMESPACES.some(
+          //   prefix => serverName.startsWith(prefix)
+          // );
+          // return isLatest && !isExcluded;
+          
+          // Default: Only filter by isLatest
+          return isLatest;
         })
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         .map((item: any) => {
