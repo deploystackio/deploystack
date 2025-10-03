@@ -404,7 +404,7 @@ export class McpCatalogService {
    * Get repository information from any supported platform
    */
   static async getRepositoryInfo(repoUrl: string, branch: string = 'main'): Promise<any> {
-    const url = new URL(`${this.baseUrl}/api/mcp/repository/info`)
+    const url = new URL(`${this.baseUrl}/api/mcp/github/repo-info`)
     url.searchParams.append('url', repoUrl)
     url.searchParams.append('branch', branch)
 
