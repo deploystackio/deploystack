@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import McpServerSquareCard from '@/components/mcp-server/McpServerSquareCard.vue'
 import FeaturedMcpServers from '@/components/mcp-server/FeaturedMcpServers.vue'
+import PaginationControls from '@/components/ui/pagination/PaginationControls.vue'
 import { McpCatalogService } from '@/services/mcpCatalogService'
 import { McpCategoriesService } from '@/services/mcpCategoriesService'
 import type { McpServerSearchParams, McpServerSearchResponse } from '@/types/mcp-catalog'
@@ -36,26 +37,23 @@ const selectedServerId = ref<string | null>(null)
 const selectedCategory = ref('all')
 const searchResults = ref<McpServerSearchResponse | null>(null)
 
-// Constants
-const MAX_RESULTS_TO_SHOW = 50
+// Pagination state
+const currentPage = ref(1)
+const pageSize = ref(15)
+const totalItems = ref(0)
+const pageSizeOptions = ref([15, 30, 45, 60])
 
 // Computed
 const filteredServers = computed(() => {
   return searchResults.value?.servers || []
 })
 
-const showTooManyResultsWarning = computed(() => {
-  const pagination = searchResults.value?.pagination
-  return pagination && pagination.total > MAX_RESULTS_TO_SHOW
+const hasSearched = computed(() => {
+  return searchQuery.value.trim().length > 0
 })
 
 const shouldShowResults = computed(() => {
-  const pagination = searchResults.value?.pagination
-  return pagination && pagination.total <= MAX_RESULTS_TO_SHOW && filteredServers.value.length > 0
-})
-
-const hasSearched = computed(() => {
-  return searchQuery.value.trim().length > 0
+  return hasSearched.value && filteredServers.value.length > 0
 })
 
 // Methods
@@ -101,10 +99,12 @@ const performSearch = async () => {
     error.value = null
     searchQuery.value = searchTerm.value
 
+    const offset = (currentPage.value - 1) * pageSize.value
+
     const searchParams: McpServerSearchParams = {
       q: searchTerm.value.trim(),
-      limit: MAX_RESULTS_TO_SHOW + 1, // Get one extra to detect if there are more
-      offset: 0
+      limit: pageSize.value,
+      offset: offset
     }
 
     // Add category filter if selected
@@ -113,21 +113,13 @@ const performSearch = async () => {
     }
 
     const response = await McpCatalogService.searchServers(searchParams)
-
-    // Check if we got too many results
-    if (response.pagination.total > MAX_RESULTS_TO_SHOW) {
-      searchResults.value = {
-        servers: [],
-        pagination: response.pagination,
-        filters: response.filters
-      }
-    } else {
-      searchResults.value = response
-    }
+    searchResults.value = response
+    totalItems.value = response.pagination.total
 
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'Failed to search servers'
     searchResults.value = null
+    totalItems.value = 0
   } finally {
     isLoading.value = false
   }
@@ -138,6 +130,20 @@ const clearSearch = () => {
   searchQuery.value = ''
   searchResults.value = null
   error.value = null
+  currentPage.value = 1
+  totalItems.value = 0
+}
+
+// Pagination event handlers
+const handlePageChange = async (page: number) => {
+  currentPage.value = page
+  await performSearch()
+}
+
+const handlePageSizeChange = async (newPageSize: number) => {
+  pageSize.value = newPageSize
+  currentPage.value = 1
+  await performSearch()
 }
 
 onMounted(() => {
@@ -147,9 +153,10 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="pt-10">
+  <div :class="shouldShowResults ? 'pt-2' : 'pt-10'">
     <div class="mx-auto max-w-2xl">
-      <div class="text-center">
+      <!-- Header - hide when we have search results -->
+      <div v-if="!shouldShowResults" class="text-center">
         <div class="mx-auto size-16 text-gray-400">
           <PackagePlus class="w-full h-full" stroke-width="1.25" aria-hidden="true" />
         </div>
@@ -253,31 +260,8 @@ onMounted(() => {
       <span class="text-gray-600">{{ t('messages.loading') }}</span>
     </div>
 
-    <!-- Too Many Results Warning -->
-    <div v-else-if="showTooManyResultsWarning" class="mt-14">
-      <Alert class="border-orange-200 bg-orange-50 text-orange-800">
-        <AlertTriangle class="h-4 w-4" />
-        <AlertDescription>
-          {{ t('mcpInstallations.wizard.server.tooManyResults', { total: searchResults?.pagination.total }) }}
-        </AlertDescription>
-      </Alert>
-      <div class="mt-4 text-center">
-        <Button variant="outline" @click="clearSearch">
-          {{ t('actions.clearSearch') }}
-        </Button>
-      </div>
-    </div>
-
-    <!-- Server Grid (only show when there's a search query and results fit criteria) -->
+    <!-- Server Grid (only show when there's a search query and results) -->
     <div v-else-if="shouldShowResults" class="mt-14 space-y-6">
-      <!-- Results info -->
-      <div v-if="searchResults?.pagination" class="text-sm text-gray-600 text-center">
-        {{ t('mcpInstallations.wizard.server.maxResultsReached', {
-          shown: filteredServers.length,
-          total: searchResults.pagination.total
-        }) }}
-      </div>
-
       <!-- 3-tier grid layout -->
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         <McpServerSquareCard
@@ -288,10 +272,22 @@ onMounted(() => {
           @click="handleDetailsClick"
         />
       </div>
+
+      <!-- Pagination Controls -->
+      <PaginationControls
+        v-if="totalItems > 0"
+        :current-page="currentPage"
+        :page-size="pageSize"
+        :total-items="totalItems"
+        :is-loading="isLoading"
+        :page-size-options="pageSizeOptions"
+        @page-change="handlePageChange"
+        @page-size-change="handlePageSizeChange"
+      />
     </div>
 
     <!-- No Results -->
-    <div v-else-if="hasSearched && filteredServers.length === 0 && !showTooManyResultsWarning && !isLoading" class="mt-14 text-center py-8">
+    <div v-else-if="hasSearched && filteredServers.length === 0 && !isLoading" class="mt-14 text-center py-8">
       <p class="text-gray-500">{{ t('mcpInstallations.wizard.server.noServersFound') }}</p>
       <div class="mt-4">
         <Button variant="outline" @click="clearSearch">

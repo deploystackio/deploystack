@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
   Table,
@@ -11,7 +10,6 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { DynamicIcon } from '@/components/ui/dynamic-icon'
 import {
   Edit,
   Github,
@@ -20,7 +18,6 @@ import {
   ExternalLink
 } from 'lucide-vue-next'
 import type { McpServer } from './types'
-import { McpCategoriesService, type McpCategory } from '@/services/mcpCategoriesService'
 
 interface Props {
   servers: McpServer[]
@@ -29,22 +26,6 @@ interface Props {
 
 const props = defineProps<Props>()
 const { t } = useI18n()
-
-// Categories state
-const categories = ref<McpCategory[]>([])
-const categoriesLoading = ref(false)
-
-// Fetch categories on mount
-onMounted(async () => {
-  try {
-    categoriesLoading.value = true
-    categories.value = await McpCategoriesService.getCategories()
-  } catch (error) {
-    console.error('Failed to fetch categories:', error)
-  } finally {
-    categoriesLoading.value = false
-  }
-})
 
 // Get status badge variant
 const getStatusVariant = (status: string) => {
@@ -60,10 +41,20 @@ const getStatusVariant = (status: string) => {
   }
 }
 
-// Get category by ID
-const getCategoryById = (categoryId?: string): McpCategory | null => {
-  if (!categoryId) return null
-  return categories.value.find(cat => cat.id === categoryId) || null
+// Get runtime badge color
+const getRuntimeBadgeClass = (runtime: string) => {
+  const colors: Record<string, string> = {
+    'node.js': 'bg-green-100 text-green-800',
+    node: 'bg-green-100 text-green-800',
+    python: 'bg-blue-100 text-blue-800',
+    docker: 'bg-cyan-100 text-cyan-800',
+    go: 'bg-cyan-100 text-cyan-800',
+    rust: 'bg-orange-100 text-orange-800',
+    java: 'bg-red-100 text-red-800',
+    '.net': 'bg-purple-100 text-purple-800',
+    dotnet: 'bg-purple-100 text-purple-800',
+  }
+  return colors[runtime.toLowerCase()] || 'bg-gray-100 text-gray-800'
 }
 
 // Get repository icon based on platform
@@ -101,7 +92,7 @@ const getRepositoryLabel = (platform?: string) => {
         <TableRow>
           <TableHead>{{ t('mcpCatalog.table.columns.name') }}</TableHead>
           <TableHead>{{ t('mcpCatalog.table.columns.description') }}</TableHead>
-          <TableHead>{{ t('mcpCatalog.table.columns.category') }}</TableHead>
+          <TableHead>{{ t('mcpCatalog.table.columns.runtime') }}</TableHead>
           <TableHead>{{ t('mcpCatalog.table.columns.status') }}</TableHead>
           <TableHead class="w-[100px]">{{ t('mcpCatalog.table.columns.actions') }}</TableHead>
         </TableRow>
@@ -167,18 +158,14 @@ const getRepositoryLabel = (platform?: string) => {
             </div>
           </TableCell>
 
-          <!-- Category -->
+          <!-- Runtime -->
           <TableCell>
-            <div v-if="getCategoryById(server.category_id)" class="flex items-center gap-2">
-              <DynamicIcon
-                :name="getCategoryById(server.category_id)?.icon || ''"
-                class="h-4 w-4 text-muted-foreground"
-              />
-              <span class="text-sm">{{ getCategoryById(server.category_id)?.name }}</span>
-            </div>
-            <span v-else class="text-sm text-muted-foreground italic">
-              {{ t('mcpCatalog.table.noCategory') }}
-            </span>
+            <Badge
+              variant="outline"
+              :class="getRuntimeBadgeClass(server.runtime)"
+            >
+              {{ server.runtime }}
+            </Badge>
           </TableCell>
 
           <!-- Status -->

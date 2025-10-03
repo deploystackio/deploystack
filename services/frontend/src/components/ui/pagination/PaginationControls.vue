@@ -97,7 +97,7 @@ function handlePageSizeChange(newPageSize: any) {
           @update:model-value="handlePageSizeChange"
           :disabled="isLoading"
         >
-          <SelectTrigger class="h-8 w-[70px]">
+          <SelectTrigger class="h-8 w-[80px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent side="top">

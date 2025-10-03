@@ -87,11 +87,12 @@ const displayPackages = computed(() => {
   if (!server.value?.packages) return []
   // Handle both array and JSON string formats
   if (Array.isArray(server.value.packages)) {
-    return server.value.packages
+    return server.value.packages.filter(pkg => pkg != null)
   }
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return JSON.parse(server.value.packages as any)
+    const parsed = JSON.parse(server.value.packages as any)
+    return Array.isArray(parsed) ? parsed.filter(pkg => pkg != null) : []
   } catch {
     return []
   }
@@ -101,11 +102,12 @@ const displayRemotes = computed(() => {
   if (!server.value?.remotes) return []
   // Handle both array and JSON string formats
   if (Array.isArray(server.value.remotes)) {
-    return server.value.remotes
+    return server.value.remotes.filter(remote => remote != null)
   }
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return JSON.parse(server.value.remotes as any)
+    const parsed = JSON.parse(server.value.remotes as any)
+    return Array.isArray(parsed) ? parsed.filter(remote => remote != null) : []
   } catch {
     return []
   }
@@ -117,11 +119,12 @@ const displayTemplateArgs = computed(() => {
   if (!server.value?.template_args) return []
   // Handle both array and JSON string formats
   if (Array.isArray(server.value.template_args)) {
-    return server.value.template_args
+    return server.value.template_args.filter(arg => arg != null)
   }
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return JSON.parse(server.value.template_args as any)
+    const parsed = JSON.parse(server.value.template_args as any)
+    return Array.isArray(parsed) ? parsed.filter(arg => arg != null) : []
   } catch {
     return []
   }
@@ -131,11 +134,12 @@ const displayTeamEnvSchema = computed(() => {
   if (!server.value?.team_env_schema) return []
   // Handle both array and JSON string formats
   if (Array.isArray(server.value.team_env_schema)) {
-    return server.value.team_env_schema
+    return server.value.team_env_schema.filter(env => env != null)
   }
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return JSON.parse(server.value.team_env_schema as any)
+    const parsed = JSON.parse(server.value.team_env_schema as any)
+    return Array.isArray(parsed) ? parsed.filter(env => env != null) : []
   } catch {
     return []
   }
@@ -145,11 +149,12 @@ const displayUserEnvSchema = computed(() => {
   if (!server.value?.user_env_schema) return []
   // Handle both array and JSON string formats
   if (Array.isArray(server.value.user_env_schema)) {
-    return server.value.user_env_schema
+    return server.value.user_env_schema.filter(env => env != null)
   }
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return JSON.parse(server.value.user_env_schema as any)
+    const parsed = JSON.parse(server.value.user_env_schema as any)
+    return Array.isArray(parsed) ? parsed.filter(env => env != null) : []
   } catch {
     return []
   }
@@ -159,11 +164,12 @@ const displayTeamHeadersSchema = computed(() => {
   if (!server.value?.team_headers_schema) return []
   // Handle both array and JSON string formats
   if (Array.isArray(server.value.team_headers_schema)) {
-    return server.value.team_headers_schema
+    return server.value.team_headers_schema.filter(header => header != null)
   }
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return JSON.parse(server.value.team_headers_schema as any)
+    const parsed = JSON.parse(server.value.team_headers_schema as any)
+    return Array.isArray(parsed) ? parsed.filter(header => header != null) : []
   } catch {
     return []
   }
@@ -173,11 +179,12 @@ const displayUserHeadersSchema = computed(() => {
   if (!server.value?.user_headers_schema) return []
   // Handle both array and JSON string formats
   if (Array.isArray(server.value.user_headers_schema)) {
-    return server.value.user_headers_schema
+    return server.value.user_headers_schema.filter(header => header != null)
   }
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return JSON.parse(server.value.user_headers_schema as any)
+    const parsed = JSON.parse(server.value.user_headers_schema as any)
+    return Array.isArray(parsed) ? parsed.filter(header => header != null) : []
   } catch {
     return []
   }
@@ -187,11 +194,12 @@ const displayTemplateHeaders = computed(() => {
   if (!server.value?.template_headers) return []
   // Handle both array and JSON string formats
   if (Array.isArray(server.value.template_headers)) {
-    return server.value.template_headers
+    return server.value.template_headers.filter(header => header != null)
   }
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return JSON.parse(server.value.template_headers as any)
+    const parsed = JSON.parse(server.value.template_headers as any)
+    return Array.isArray(parsed) ? parsed.filter(header => header != null) : []
   } catch {
     return []
   }
