@@ -1,6 +1,10 @@
 import { FastifyBaseLogger } from 'fastify';
 import { SatelliteCommand, CommandResult } from './command-polling-service';
 import { DynamicConfigManager } from './dynamic-config-manager';
+import { ProcessManager } from '../process/manager';
+import { RuntimeState } from '../process/runtime-state';
+import { StdioToolDiscoveryManager } from './stdio-tool-discovery-manager';
+import { MCPServerConfig } from '../process/types';
 
 export interface ProcessInfo {
   id: string;
@@ -16,13 +20,25 @@ export interface ProcessInfo {
 export class CommandProcessor {
   private logger: FastifyBaseLogger;
   private configManager: DynamicConfigManager;
+  private processManager: ProcessManager | null;
+  private runtimeState: RuntimeState | null;
+  private stdioDiscoveryManager: StdioToolDiscoveryManager | null;
   private processes: Map<string, ProcessInfo> = new Map();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private onConfigurationUpdate?: (config: any) => Promise<void>;
 
-  constructor(logger: FastifyBaseLogger, configManager: DynamicConfigManager) {
+  constructor(
+    logger: FastifyBaseLogger, 
+    configManager: DynamicConfigManager,
+    processManager?: ProcessManager,
+    runtimeState?: RuntimeState,
+    stdioDiscoveryManager?: StdioToolDiscoveryManager
+  ) {
     this.logger = logger;
     this.configManager = configManager;
+    this.processManager = processManager || null;
+    this.runtimeState = runtimeState || null;
+    this.stdioDiscoveryManager = stdioDiscoveryManager || null;
   }
 
   /**
@@ -193,9 +209,15 @@ export class CommandProcessor {
   }
 
   /**
-   * Handle spawn command - start a new HTTP MCP server proxy
+   * Handle spawn command - dispatches to HTTP or stdio handler based on transport_type
    */
   private async handleSpawnCommand(command: SatelliteCommand): Promise<CommandResult> {
+    // Check if this is a stdio transport server
+    if (command.payload.transport_type === 'stdio') {
+      return await this.handleSpawnStdioProcess(command);
+    }
+    
+    // Otherwise handle as HTTP proxy
     this.logger.debug({
       operation: 'command_spawn',
       command_id: command.id,
@@ -257,7 +279,122 @@ export class CommandProcessor {
   }
 
   /**
-   * Handle kill command - stop an HTTP MCP server proxy
+   * Handle spawn command for stdio MCP servers
+   */
+  private async handleSpawnStdioProcess(command: SatelliteCommand): Promise<CommandResult> {
+    if (!this.processManager || !this.runtimeState || !this.stdioDiscoveryManager) {
+      throw new Error('stdio process management not available - dependencies not initialized');
+    }
+
+    const payload = command.payload;
+    
+    // Validate required fields
+    if (!payload.installation_id || !payload.installation_name || !payload.team_id || 
+        !payload.command || !payload.args) {
+      throw new Error('Missing required fields in spawn command payload');
+    }
+
+    // Check if process already running
+    const existing = this.runtimeState.getProcessByName(payload.installation_name as string);
+    if (existing && existing.status === 'running') {
+      this.logger.warn({
+        operation: 'spawn_stdio_already_running',
+        installation_name: payload.installation_name,
+        team_id: payload.team_id,
+        correlation_id: command.correlation_id
+      }, 'stdio process already running, skipping spawn');
+      return {
+        command_id: command.id,
+        status: 'completed',
+        result: {
+          message: 'Process already running',
+          process_id: existing.id,
+          server_type: 'stdio'
+        }
+      };
+    }
+
+    // Build MCP server config from command payload
+    const config: MCPServerConfig = {
+      installation_id: payload.installation_id as string,
+      installation_name: payload.installation_name as string,
+      team_id: payload.team_id as string,
+      command: payload.command as string,
+      args: payload.args as string[],
+      env: (payload.env as Record<string, string>) || {}
+    };
+
+    this.logger.info({
+      operation: 'spawn_stdio_start',
+      installation_name: config.installation_name,
+      team_id: config.team_id,
+      command: config.command,
+      args: config.args,
+      correlation_id: command.correlation_id
+    }, `Spawning stdio MCP server from Backend command`);
+
+    try {
+      // Spawn process (includes MCP handshake)
+      const processInfo = await this.processManager.spawnProcess(config);
+      
+      // Add to runtime state
+      this.runtimeState.addProcess(
+        processInfo,
+        config.installation_id,
+        config.installation_name,
+        config.team_id
+      );
+
+      // Discover tools
+      try {
+        await this.stdioDiscoveryManager.discoverTools(config.installation_name);
+      } catch (error) {
+        // Tool discovery failure is non-fatal
+        this.logger.warn({
+          operation: 'spawn_stdio_tool_discovery_failed',
+          installation_name: config.installation_name,
+          error: error instanceof Error ? error.message : String(error),
+          correlation_id: command.correlation_id
+        }, 'Tool discovery failed but process running');
+      }
+
+      this.logger.info({
+        operation: 'spawn_stdio_success',
+        installation_name: config.installation_name,
+        team_id: config.team_id,
+        pid: processInfo.process.pid,
+        process_id: processInfo.id,
+        correlation_id: command.correlation_id
+      }, `stdio MCP server spawned successfully`);
+
+      return {
+        command_id: command.id,
+        status: 'completed',
+        result: {
+          process_id: processInfo.id,
+          server_type: 'stdio',
+          pid: processInfo.process.pid,
+          startup_time_ms: Date.now() - processInfo.startTime
+        }
+      };
+
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      
+      this.logger.error({
+        operation: 'spawn_stdio_failed',
+        installation_name: config.installation_name,
+        team_id: config.team_id,
+        error: errorMessage,
+        correlation_id: command.correlation_id
+      }, `Failed to spawn stdio MCP server`);
+      
+      throw error;
+    }
+  }
+
+  /**
+   * Handle kill command - stop an HTTP MCP server proxy or stdio process
    */
   private async handleKillCommand(command: SatelliteCommand): Promise<CommandResult> {
     this.logger.debug({

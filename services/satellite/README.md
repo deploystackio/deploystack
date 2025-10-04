@@ -138,6 +138,17 @@ The satellite will **fail to start** with clear error messages if required varia
 - `npm run lint` - Run ESLint with auto-fix
 - `npm start` - Start production server
 
+### System Prerequisites
+
+**Local Development:**
+- No special requirements - stdio MCP server process management works without isolation
+- Plain Node.js spawn() used for easy debugging
+- Works on macOS, Windows, and Linux
+
+**Production (Docker):**
+- nsjail automatically installed in Docker image for secure process isolation
+- See Dockerfile for configuration details
+
 ### Initial Setup Requirements
 
 1. **Backend Running**: Ensure DeployStack Backend is running at `DEPLOYSTACK_BACKEND_URL`

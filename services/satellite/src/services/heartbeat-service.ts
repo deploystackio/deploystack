@@ -1,6 +1,7 @@
 import { FastifyBaseLogger } from 'fastify';
 import { BackendClient } from './backend-client';
 import { CommandProcessor, ProcessInfo } from './command-processor';
+import { RuntimeState } from '../process/runtime-state';
 
 export interface SystemMetrics {
   cpu_usage_percent: number;
@@ -9,11 +10,23 @@ export interface SystemMetrics {
   uptime_seconds: number;
 }
 
+export interface StdioProcessMetric {
+  installation_id: string;
+  installation_name: string;
+  status: string;
+  pid: number | undefined;
+  uptime_seconds: number;
+  message_count: number;
+  error_count: number;
+  health_status: string;
+  last_activity: string;
+}
 
 export interface HeartbeatPayload {
   status: 'active' | 'degraded' | 'error';
   system_metrics: SystemMetrics;
-  processes: ProcessInfo[];
+  processes: ProcessInfo[];  // HTTP proxy processes (legacy)
+  processes_by_team: Record<string, StdioProcessMetric[]>;  // stdio processes grouped by team
   error_count: number;
   version: string;
 }
@@ -23,16 +36,24 @@ export class HeartbeatService {
   private satelliteId: string;
   private apiKey: string;
   private backendClient: BackendClient;
+  private runtimeState: RuntimeState | null;
   private logger: FastifyBaseLogger;
   private isRunning: boolean = false;
   private heartbeatCount: number = 0;
   private commandProcessor?: CommandProcessor;
 
-  constructor(satelliteId: string, apiKey: string, backendClient: BackendClient, logger: FastifyBaseLogger) {
+  constructor(
+    satelliteId: string, 
+    apiKey: string, 
+    backendClient: BackendClient, 
+    logger: FastifyBaseLogger,
+    runtimeState?: RuntimeState
+  ) {
     this.satelliteId = satelliteId;
     this.apiKey = apiKey;
     this.backendClient = backendClient;
     this.logger = logger;
+    this.runtimeState = runtimeState || null;
     
     // Ensure the backend client has the API key for authenticated requests
     this.backendClient.setApiKey(apiKey);
@@ -111,15 +132,19 @@ export class HeartbeatService {
       // Collect system metrics
       const systemMetrics = await this.collectSystemMetrics();
       
-      // Get current processes from command processor
+      // Get current processes from command processor (HTTP proxies)
       const processes: ProcessInfo[] = this.commandProcessor ? 
         this.commandProcessor.getAllProcesses() : [];
+
+      // Collect stdio processes grouped by team
+      const processesByTeam = this.collectStdioProcessesByTeam();
 
       // Create heartbeat payload
       const payload: HeartbeatPayload = {
         status: 'active',
         system_metrics: systemMetrics,
         processes: processes,
+        processes_by_team: processesByTeam,
         error_count: 0,
         version: '0.1.0'
       };
@@ -153,6 +178,44 @@ export class HeartbeatService {
         error: errorMessage
       }, `Heartbeat exception: ${errorMessage}`);
     }
+  }
+
+  /**
+   * Collect stdio processes grouped by team
+   */
+  private collectStdioProcessesByTeam(): Record<string, StdioProcessMetric[]> {
+    if (!this.runtimeState) {
+      return {};
+    }
+
+    const allProcesses = this.runtimeState.getAllProcesses();
+    const processesByTeam: Record<string, StdioProcessMetric[]> = {};
+
+    for (const proc of allProcesses) {
+      if (!processesByTeam[proc.teamId]) {
+        processesByTeam[proc.teamId] = [];
+      }
+
+      processesByTeam[proc.teamId].push({
+        installation_id: proc.installationId,
+        installation_name: proc.installationName,
+        status: proc.status,
+        pid: proc.process.pid,
+        uptime_seconds: Math.floor((Date.now() - proc.startTime) / 1000),
+        message_count: proc.messageCount,
+        error_count: proc.errorCount,
+        health_status: proc.healthStatus,
+        last_activity: new Date(proc.lastActivity).toISOString()
+      });
+    }
+
+    this.logger.debug({
+      operation: 'stdio_processes_collected',
+      team_count: Object.keys(processesByTeam).length,
+      total_processes: allProcesses.length
+    }, `Collected ${allProcesses.length} stdio processes across ${Object.keys(processesByTeam).length} teams`);
+
+    return processesByTeam;
   }
 
   /**
