@@ -367,8 +367,8 @@ export function mapEnvironmentVariablesToThreeTier(
  * Map official headers to DeployStack's 3-tier header system
  * 
  * Rules:
- * - Authentication headers → Team Level (shared credentials)
- * - Optional headers → User Level (personal customization)
+ * - ALL headers from remotes → Team Level (shared credentials)
+ * - Secret headers marked with type: 'secret' and appropriate visibility
  * 
  * @param headers - Official headers array
  * @returns DeployStack ConfigurationSchema header configuration
@@ -380,41 +380,17 @@ export function mapHeadersToThreeTier(
   const teamHeadersSchema: TeamHeader[] = [];
   const userHeadersSchema: UserHeader[] = [];
   
+  // ALL headers from remotes go to team level
   for (const header of headers) {
-    // Fixed header values go to template level
-    if (header.value && !header.isSecret) {
-      templateHeaders.push({
-        name: header.name,
-        value: header.value,
-        locked: true,
-        description: header.description || `Fixed header: ${header.name}`,
-        type: 'string',
-        required: true
-      });
-      continue;
-    }
-    
-    // Authentication headers go to team level
-    if (header.isSecret || header.isRequired) {
-      teamHeadersSchema.push({
-        name: header.name,
-        type: header.isSecret ? 'secret' : 'string',
-        required: header.isRequired || false,
-        description: header.description || `Header: ${header.name}`,
-        locked: false,
-        default_team_locked: header.isSecret || false,
-        visible_to_users: !header.isSecret,
-      });
-    } else {
-      // Optional headers go to user level
-      userHeadersSchema.push({
-        name: header.name,
-        type: 'string',
-        required: false,
-        description: header.description || `Optional header: ${header.name}`,
-        locked: false,
-      });
-    }
+    teamHeadersSchema.push({
+      name: header.name,
+      type: header.isSecret ? 'secret' : 'string',
+      required: header.isRequired || false,
+      description: header.description || `Header: ${header.name}`,
+      locked: false,
+      default_team_locked: false,
+      visible_to_users: !header.isSecret,
+    });
   }
   
   return { template_headers: templateHeaders, team_headers_schema: teamHeadersSchema, user_headers_schema: userHeadersSchema };
