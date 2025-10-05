@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { FastifyBaseLogger } from 'fastify';
 import { HttpProxyManager } from './http-proxy-manager';
-import { RemoteToolDiscoveryManager } from './remote-tool-discovery-manager';
+import { UnifiedToolDiscoveryManager } from './unified-tool-discovery-manager';
 import { ProxyRequestContext } from '../types/mcp-server';
 
 /**
@@ -11,9 +11,9 @@ import { ProxyRequestContext } from '../types/mcp-server';
 export class McpProtocolHandler {
   private logger: FastifyBaseLogger;
   private httpProxyManager: HttpProxyManager;
-  private toolDiscoveryManager: RemoteToolDiscoveryManager;
+  private toolDiscoveryManager: UnifiedToolDiscoveryManager;
 
-  constructor(httpProxyManager: HttpProxyManager, toolDiscoveryManager: RemoteToolDiscoveryManager, logger: FastifyBaseLogger) {
+  constructor(httpProxyManager: HttpProxyManager, toolDiscoveryManager: UnifiedToolDiscoveryManager, logger: FastifyBaseLogger) {
     this.httpProxyManager = httpProxyManager;
     this.toolDiscoveryManager = toolDiscoveryManager;
     this.logger = logger.child({ component: 'McpProtocolHandler' });
@@ -126,14 +126,14 @@ export class McpProtocolHandler {
   }
 
   /**
-   * Handle tools/list request - returns cached discovered tools from remote MCP servers
+   * Handle tools/list request - returns cached discovered tools from both stdio and remote MCP servers
    */
   private async handleToolsList(): Promise<any> {
     this.logger.debug({
       operation: 'mcp_tools_list'
-    }, 'Listing cached discovered tools from remote MCP servers');
+    }, 'Listing cached discovered tools from stdio and remote MCP servers');
 
-    const cachedTools = this.toolDiscoveryManager.getCachedTools();
+    const cachedTools = this.toolDiscoveryManager.getAllTools();
     
     const tools = cachedTools.map(tool => ({
       name: tool.namespacedName,
@@ -149,7 +149,7 @@ export class McpProtocolHandler {
       tools: tools.map(t => t.name),
       discovery_ready: this.toolDiscoveryManager.isReady(),
       result_object: result
-    }, `Returning ${tools.length} cached tools from remote MCP servers`);
+    }, `Returning ${tools.length} cached tools from stdio and remote MCP servers`);
 
     this.logger.debug({
       operation: 'mcp_tools_list_debug',
@@ -188,11 +188,11 @@ export class McpProtocolHandler {
     const serverSlug = namespacedToolName.substring(0, dashIndex);
 
     // Find the cached tool to get the original tool name and verify it exists
-    const cachedTools = this.toolDiscoveryManager.getCachedTools();
-    const cachedTool = cachedTools.find(tool => tool.namespacedName === namespacedToolName);
+    const cachedTool = this.toolDiscoveryManager.getTool(namespacedToolName);
     
     if (!cachedTool) {
-      throw new Error(`Tool not found: ${namespacedToolName}. Available tools: ${cachedTools.map(t => t.namespacedName).join(', ')}`);
+      const allTools = this.toolDiscoveryManager.getAllTools();
+      throw new Error(`Tool not found: ${namespacedToolName}. Available tools: ${allTools.map(t => t.namespacedName).join(', ')}`);
     }
 
     // Use OAuth team context to find the correct server instance

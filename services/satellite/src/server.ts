@@ -10,6 +10,10 @@ import { BackendClient } from './services/backend-client';
 import { HeartbeatService } from './services/heartbeat-service';
 import { HttpProxyManager } from './services/http-proxy-manager';
 import { RemoteToolDiscoveryManager } from './services/remote-tool-discovery-manager';
+import { StdioToolDiscoveryManager } from './services/stdio-tool-discovery-manager';
+import { UnifiedToolDiscoveryManager } from './services/unified-tool-discovery-manager';
+import { ProcessManager } from './process/manager';
+import { RuntimeState } from './process/runtime-state';
 import { McpProtocolHandler } from './services/mcp-protocol-handler';
 import { CommandPollingService, ConfigurationUpdate } from './services/command-polling-service';
 import { DynamicConfigManager } from './services/dynamic-config-manager';
@@ -204,8 +208,31 @@ export async function createServer() {
   const httpProxyManager = new HttpProxyManager(server, server.log);
   httpProxyManager.setConfigManager(dynamicConfigManager);
 
-  // Initialize Remote Tool Discovery Manager with dynamic config
-  const toolDiscoveryManager = new RemoteToolDiscoveryManager(server.log);
+  // Initialize Process Manager and Runtime State for stdio subprocess servers
+  const runtimeState = new RuntimeState();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const processManager = new ProcessManager(server.log as any); // Fastify logger is compatible with pino Logger
+
+  // Initialize Remote Tool Discovery Manager for HTTP/SSE remote servers
+  const remoteToolDiscoveryManager = new RemoteToolDiscoveryManager(server.log);
+  remoteToolDiscoveryManager.setConfigManager(dynamicConfigManager);
+
+  // Initialize Stdio Tool Discovery Manager for stdio subprocess servers
+  const stdioToolDiscoveryManager = new StdioToolDiscoveryManager(
+    processManager,
+    runtimeState,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    server.log as any // Fastify logger is compatible with pino Logger
+  );
+
+  // Initialize Unified Tool Discovery Manager to coordinate both transport types
+  const toolDiscoveryManager = new UnifiedToolDiscoveryManager(
+    remoteToolDiscoveryManager,
+    stdioToolDiscoveryManager,
+    processManager,
+    runtimeState,
+    server.log
+  );
   toolDiscoveryManager.setConfigManager(dynamicConfigManager);
 
   // Set up configuration change handler for tool discovery
@@ -236,6 +263,8 @@ export async function createServer() {
   server.decorate('mcpProtocolHandler', mcpProtocolHandler);
   server.decorate('dynamicConfigManager', dynamicConfigManager);
   server.decorate('commandProcessor', commandProcessor);
+  server.decorate('processManager', processManager);
+  server.decorate('runtimeState', runtimeState);
 
   server.log.info({
     operation: 'handlers_initialized',

@@ -2,7 +2,7 @@
 import { FastifyBaseLogger } from 'fastify';
 import { McpProtocolHandler } from './mcp-protocol-handler';
 import { DynamicConfigManager } from './dynamic-config-manager';
-import { RemoteToolDiscoveryManager } from './remote-tool-discovery-manager';
+import { UnifiedToolDiscoveryManager } from './unified-tool-discovery-manager';
 
 /**
  * Team-Aware MCP Protocol Handler
@@ -12,12 +12,12 @@ export class TeamAwareMcpHandler {
   private logger: FastifyBaseLogger;
   private baseHandler: McpProtocolHandler;
   private configManager: DynamicConfigManager;
-  private toolDiscoveryManager: RemoteToolDiscoveryManager;
+  private toolDiscoveryManager: UnifiedToolDiscoveryManager;
 
   constructor(
     baseHandler: McpProtocolHandler, 
     configManager: DynamicConfigManager,
-    toolDiscoveryManager: RemoteToolDiscoveryManager,
+    toolDiscoveryManager: UnifiedToolDiscoveryManager,
     logger: FastifyBaseLogger
   ) {
     this.baseHandler = baseHandler;
@@ -141,8 +141,8 @@ export class TeamAwareMcpHandler {
       return { tools: [] };
     }
 
-    // Get all cached tools from tool discovery
-    const allCachedTools = this.toolDiscoveryManager.getCachedTools();
+    // Get all cached tools from tool discovery (both stdio and remote)
+    const allCachedTools = this.toolDiscoveryManager.getAllTools();
     
     // Get team's allowed MCP servers from configuration
     const teamAllowedServers = this.getTeamAllowedServers(teamId);
@@ -207,11 +207,11 @@ export class TeamAwareMcpHandler {
     }, `Team-aware tool call: ${namespacedToolName} for team ${teamId}`);
 
     // Find the cached tool to get the actual server name and verify team access
-    const allCachedTools = this.toolDiscoveryManager.getCachedTools();
-    const cachedTool = allCachedTools.find(tool => tool.namespacedName === namespacedToolName);
+    const cachedTool = this.toolDiscoveryManager.getTool(namespacedToolName);
     
     if (!cachedTool) {
-      throw new Error(`Tool not found: ${namespacedToolName}. Available tools: ${allCachedTools.map(t => t.namespacedName).join(', ')}`);
+      const allTools = this.toolDiscoveryManager.getAllTools();
+      throw new Error(`Tool not found: ${namespacedToolName}. Available tools: ${allTools.map(t => t.namespacedName).join(', ')}`);
     }
 
     // Use the actual server name from the cached tool (e.g., "context7-john-R36no6FGoMFEZO9nWJJLT")
@@ -362,7 +362,7 @@ export class TeamAwareMcpHandler {
     let teamStats = {};
     if (teamId) {
       const teamAllowedServers = this.getTeamAllowedServers(teamId);
-      const allCachedTools = this.toolDiscoveryManager.getCachedTools();
+      const allCachedTools = this.toolDiscoveryManager.getAllTools();
       const teamFilteredTools = allCachedTools.filter(tool => 
         teamAllowedServers.includes(tool.serverName)
       );

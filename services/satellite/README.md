@@ -141,11 +141,13 @@ The satellite will **fail to start** with clear error messages if required varia
 ### System Prerequisites
 
 **Local Development:**
+
 - No special requirements - stdio MCP server process management works without isolation
 - Plain Node.js spawn() used for easy debugging
 - Works on macOS, Windows, and Linux
 
 **Production (Docker):**
+
 - nsjail automatically installed in Docker image for secure process isolation
 - See Dockerfile for configuration details
 
