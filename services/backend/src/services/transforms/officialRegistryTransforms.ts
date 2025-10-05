@@ -23,6 +23,21 @@ import type {
 import { GitHubService } from '../githubService';
 
 // =============================================================================
+// UTILITY FUNCTIONS
+// =============================================================================
+
+/**
+ * Convert empty strings to undefined for optional fields
+ * Official registry sometimes returns empty strings instead of omitting fields
+ * 
+ * @param value - Value to check and convert
+ * @returns undefined if value is empty string, otherwise the original value
+ */
+function emptyToUndefined(value: string | undefined): string | undefined {
+  return value === '' ? undefined : value;
+}
+
+// =============================================================================
 // OFFICIAL REGISTRY TYPE DEFINITIONS
 // =============================================================================
 
@@ -123,13 +138,16 @@ export interface OfficialServer {
  * - "io.github.upstash/context7" → "Context7"
  * - "io.github.vfarcic/dot-ai" → "Dot AI"
  * - "com.apple-rag/mcp-server" → "Apple RAG"
+ * - "ai.tickettailor/mcp" → "Tickettailor" (fallback to domain when server part becomes empty)
  * 
  * @param officialName - Official reverse-DNS name
  * @returns User-friendly display name
  */
 export function createFriendlyName(officialName: string): string {
   // Extract the server part after the last slash
-  const serverPart = officialName.split('/').pop() || officialName;
+  const parts = officialName.split('/');
+  const serverPart = parts[parts.length - 1] || officialName;
+  const domainPart = parts.length > 1 ? parts[0] : '';
   
   // Remove common prefixes
   let friendlyName = serverPart
@@ -137,6 +155,13 @@ export function createFriendlyName(officialName: string): string {
     .replace(/^mcp-?/i, '')
     .replace(/-server$/i, '')
     .replace(/-mcp$/i, '');
+  
+  // If friendly name is empty after removing prefixes, use domain part
+  if (!friendlyName || friendlyName.trim() === '') {
+    // Extract company/service name from domain (e.g., "ai.tickettailor" → "tickettailor")
+    const domainParts = domainPart.split('.');
+    friendlyName = domainParts[domainParts.length - 1] || officialName;
+  }
   
   // Convert kebab-case and snake_case to Title Case
   friendlyName = friendlyName
@@ -554,14 +579,14 @@ export async function transformOfficialToDeployStack(
     // Version information
     version: officialServer.version,
     
-    // Repository information
-    repository_url: repository?.url,
-    repository_source: repository?.source,
-    repository_id: repository?.id,
-    repository_subfolder: repository?.subfolder,
+    // Repository information - convert empty strings to undefined
+    repository_url: emptyToUndefined(repository?.url),
+    repository_source: emptyToUndefined(repository?.source),
+    repository_id: emptyToUndefined(repository?.id),
+    repository_subfolder: emptyToUndefined(repository?.subfolder),
     
-    // Website
-    website_url: officialServer.websiteUrl,
+    // Website - convert empty strings to undefined
+    website_url: emptyToUndefined(officialServer.websiteUrl),
     
     // Official format storage (will be JSON stringified by create-global.ts)
     // Use packagesCopy which now has inferred command/args
@@ -580,7 +605,8 @@ export async function transformOfficialToDeployStack(
   };
   
   // Optionally enhance with GitHub metadata
-  if (options?.fetchGitHubMetadata && options.logger && repository?.url) {
+  // Skip if repository URL is empty or undefined
+  if (options?.fetchGitHubMetadata && options.logger && repository?.url && repository.url !== '') {
     try {
       const githubData = await enhanceWithGitHubMetadata(
         repository.url,

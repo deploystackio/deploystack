@@ -168,7 +168,8 @@ export class McpServerSyncWorker implements Worker {
         operation: 'mcp_server_sync_complete'
       }, 'Successfully synced MCP server');
       
-      // Fetch and save GitHub README if this is a GitHub repository
+      // Fetch and save GitHub README if this is a GitHub repository with a valid URL
+      // Skip if repository_url is undefined (empty string from registry was converted to undefined)
       if (transformedData.repository_url && transformedData.repository_url.includes('github.com')) {
         this.logger.debug({
           jobId,
