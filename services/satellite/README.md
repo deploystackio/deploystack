@@ -30,6 +30,7 @@ npm run dev
 # The server will start on http://localhost:3001
 # API Documentation: http://localhost:3001/documentation (comming soon)
 # Backend Status: http://localhost:3001/api/status/backend
+# Debug Information: http://localhost:3001/api/status/debug (when enabled)
 ```
 
 ### Production
@@ -95,6 +96,9 @@ DEPLOYSTACK_REGISTRATION_TOKEN=your_token_here  # JWT registration token from ad
 # Status Display Configuration (Optional)
 DEPLOYSTACK_STATUS_SHOW_UPTIME=true     # Show uptime in status endpoint (default: true)
 DEPLOYSTACK_STATUS_SHOW_VERSION=true    # Show version info in status endpoint (default: true)
+
+# Debug Endpoint Configuration (Optional)
+DEPLOYSTACK_STATUS_SHOW_MCP_DEBUG_ROUTE=true  # Enable debug endpoint (default: true, disable in production)
 ```
 
 ### Required Environment Variables

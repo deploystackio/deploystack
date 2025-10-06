@@ -6,6 +6,7 @@ import messageRoute from './message';
 import mcpRoute from './mcp';
 import oauthDiscoveryRoutes from './oauth-discovery';
 import { registerBackendStatusRoutes } from './status/backend';
+import { registerDebugRoutes } from './status/debug';
 import { registerSatelliteStatusRoutes } from './root';
 
 export const registerRoutes = (server: FastifyInstance): void => {
@@ -31,5 +32,8 @@ export const registerRoutes = (server: FastifyInstance): void => {
   server.register(async (statusInstance) => {
     // Backend connection status - GET /api/status/backend
     await registerBackendStatusRoutes(statusInstance);
+    
+    // Debug information - GET /api/status/debug
+    await registerDebugRoutes(statusInstance);
   });
 };
