@@ -2,6 +2,12 @@
 
 ## 0.36.0 (2025-10-06)
 
+* chore(backend): release v0.36.0 ([6bdfbcf](https://github.com/deploystackio/deploystack/commit/6bdfbcf))
+* chore(satellite): release v0.4.0 ([666b992](https://github.com/deploystackio/deploystack/commit/666b992))
+* chore(satellite): release v0.4.0 ([42091ab](https://github.com/deploystackio/deploystack/commit/42091ab))
+
+## 0.36.0 (2025-10-06)
+
 * chore(all): update dependencies and improve package configurations ([a9ed054](https://github.com/deploystackio/deploystack/commit/a9ed054))
 * chore(backend): bump @commitlint/config-conventional ([3103017](https://github.com/deploystackio/deploystack/commit/3103017))
 * chore(frontend): bump @commitlint/config-conventional ([e7f6b2a](https://github.com/deploystackio/deploystack/commit/e7f6b2a))
