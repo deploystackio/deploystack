@@ -9,9 +9,8 @@
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "forceConsistentCasingInFileNames": true,
-    "baseUrl": ".",
     "paths": {
-      "@src/*": ["src/*"]
+      "@src/*": ["./src/*"]
     }
   },
   "include": ["src/**/*.ts"],
