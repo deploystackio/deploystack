@@ -242,13 +242,122 @@ export async function createServer() {
 
     // Notify tool discovery manager of configuration changes with changes parameter
     await toolDiscoveryManager.handleConfigurationUpdate(config, changes);
+
+    // Auto-spawn stdio processes when servers are added
+    if (changes && changes.addedServers.length > 0) {
+      for (const serverName of changes.addedServers) {
+        const serverConfig = config.servers[serverName];
+        const transportType = serverConfig.transport_type || serverConfig.type;
+        
+        if (transportType === 'stdio') {
+          try {
+            server.log.info({
+              operation: 'auto_spawn_stdio_server',
+              server_name: serverName,
+              transport_type: transportType
+            }, `Auto-spawning stdio server: ${serverName}`);
+
+            // Check if already running
+            const existing = runtimeState.getProcessByName(serverName);
+            if (existing && existing.status === 'running') {
+              server.log.warn({
+                operation: 'auto_spawn_already_running',
+                server_name: serverName
+              }, `stdio server already running, skipping spawn: ${serverName}`);
+              continue;
+            }
+
+            // Build MCP server config for process spawning
+            const processConfig = {
+              installation_id: serverConfig.installation_id || serverName,
+              installation_name: serverName,
+              team_id: serverConfig.team_id || 'unknown',
+              command: serverConfig.command!,
+              args: serverConfig.args!,
+              env: serverConfig.env || {}
+            };
+
+            // Spawn the process
+            const processInfo = await processManager.spawnProcess(processConfig);
+            
+            // Add to runtime state
+            runtimeState.addProcess(
+              processInfo,
+              processConfig.installation_id,
+              processConfig.installation_name,
+              processConfig.team_id
+            );
+
+            server.log.info({
+              operation: 'auto_spawn_stdio_success',
+              server_name: serverName,
+              pid: processInfo.process.pid
+            }, `stdio server spawned successfully: ${serverName}`);
+
+          } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            server.log.error({
+              operation: 'auto_spawn_stdio_failed',
+              server_name: serverName,
+              error: errorMessage
+            }, `Failed to auto-spawn stdio server: ${errorMessage}`);
+          }
+        }
+      }
+    }
   });
+
+  // Set up automatic tool discovery when stdio processes are spawned
+  processManager.on('processSpawned', async (processInfo) => {
+    try {
+      server.log.info({
+        operation: 'trigger_stdio_tool_discovery',
+        installation_name: processInfo.config.installation_name,
+        team_id: processInfo.config.team_id
+      }, `Process spawned successfully - triggering tool discovery for ${processInfo.config.installation_name}`);
+      
+      // FIXED: Add delay after handshake to allow MCP server to fully initialize
+      // Some servers (especially npm-based ones) need time to register all tools
+      server.log.debug({
+        operation: 'tool_discovery_delay',
+        installation_name: processInfo.config.installation_name,
+        delay_ms: 500
+      }, `Waiting 500ms before tool discovery to ensure server is fully initialized`);
+      
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      await toolDiscoveryManager.discoverStdioTools(processInfo.config.installation_name);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      server.log.error({
+        operation: 'stdio_tool_discovery_error',
+        installation_name: processInfo.config.installation_name,
+        error: errorMessage
+      }, `Failed to discover stdio tools after process spawn: ${errorMessage}`);
+    }
+  });
+
+  server.log.info({
+    operation: 'stdio_tool_discovery_handler_registered'
+  }, 'Automatic stdio tool discovery handler registered for process spawn events');
+
 
   // Initialize MCP Protocol Handler (after HTTP Proxy Manager and Tool Discovery Manager)
   const mcpProtocolHandler = new McpProtocolHandler(httpProxyManager, toolDiscoveryManager, server.log);
 
-  // Initialize Command Processor
-  const commandProcessor = new CommandProcessor(server.log, dynamicConfigManager);
+  // Initialize Command Processor with stdio process management dependencies
+  const commandProcessor = new CommandProcessor(
+    server.log,
+    dynamicConfigManager,
+    processManager,
+    runtimeState,
+    stdioToolDiscoveryManager
+  );
+
+  server.log.info({
+    operation: 'command_processor_initialized',
+    stdio_support: true
+  }, 'Command Processor initialized with stdio process management support');
 
   // Initialize Command Polling Service (will be started after registration)
   let commandPollingService: CommandPollingService | undefined;
@@ -534,6 +643,27 @@ export async function createServer() {
 
       // Set command processor for process reporting
       heartbeatService.setCommandProcessor(commandProcessor);
+
+      // Initialize HeartbeatDataBuilder for normalized heartbeat data
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const teamIsolationService = (server as any).teamIsolationService;
+      const heartbeatDataBuilder = new (await import('./services/heartbeat-data-builder')).HeartbeatDataBuilder(
+        processManager,
+        runtimeState,
+        toolDiscoveryManager,
+        dynamicConfigManager,
+        teamIsolationService,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        server.log as any
+      );
+
+      // Set heartbeat data builder for normalized data
+      heartbeatService.setHeartbeatDataBuilder(heartbeatDataBuilder);
+
+      server.log.info({
+        operation: 'heartbeat_data_builder_initialized',
+        satellite_id: satelliteId
+      }, 'Heartbeat data builder initialized for normalized heartbeat data');
 
       // Store heartbeat service on server instance for potential future access
       server.decorate('heartbeatService', heartbeatService);

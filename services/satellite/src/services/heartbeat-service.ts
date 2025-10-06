@@ -2,6 +2,7 @@ import { FastifyBaseLogger } from 'fastify';
 import { BackendClient } from './backend-client';
 import { CommandProcessor, ProcessInfo } from './command-processor';
 import { RuntimeState } from '../process/runtime-state';
+import { HeartbeatDataBuilder, NormalizedHeartbeatData } from './heartbeat-data-builder';
 
 export interface SystemMetrics {
   cpu_usage_percent: number;
@@ -27,6 +28,7 @@ export interface HeartbeatPayload {
   system_metrics: SystemMetrics;
   processes: ProcessInfo[];  // HTTP proxy processes (legacy)
   processes_by_team: Record<string, StdioProcessMetric[]>;  // stdio processes grouped by team
+  normalized_data?: NormalizedHeartbeatData;  // New normalized format for scale
   error_count: number;
   version: string;
 }
@@ -41,6 +43,7 @@ export class HeartbeatService {
   private isRunning: boolean = false;
   private heartbeatCount: number = 0;
   private commandProcessor?: CommandProcessor;
+  private heartbeatDataBuilder?: HeartbeatDataBuilder;
 
   constructor(
     satelliteId: string, 
@@ -68,6 +71,17 @@ export class HeartbeatService {
       operation: 'heartbeat_command_processor_set',
       satelliteId: this.satelliteId
     }, 'Command processor set for heartbeat process reporting');
+  }
+
+  /**
+   * Set heartbeat data builder for normalized data
+   */
+  setHeartbeatDataBuilder(heartbeatDataBuilder: HeartbeatDataBuilder): void {
+    this.heartbeatDataBuilder = heartbeatDataBuilder;
+    this.logger.debug({
+      operation: 'heartbeat_data_builder_set',
+      satelliteId: this.satelliteId
+    }, 'Heartbeat data builder set for normalized heartbeat data');
   }
 
   /**
@@ -139,12 +153,32 @@ export class HeartbeatService {
       // Collect stdio processes grouped by team
       const processesByTeam = this.collectStdioProcessesByTeam();
 
+      // Build normalized data if builder is available
+      let normalizedData: NormalizedHeartbeatData | undefined;
+      if (this.heartbeatDataBuilder) {
+        try {
+          normalizedData = this.heartbeatDataBuilder.buildHeartbeatData();
+          this.logger.debug({
+            operation: 'normalized_heartbeat_built',
+            teams_count: normalizedData.summary.total_teams,
+            servers_count: normalizedData.summary.total_servers,
+            tools_count: normalizedData.summary.total_tools
+          }, 'Built normalized heartbeat data for backend');
+        } catch (error) {
+          this.logger.error({
+            operation: 'normalized_heartbeat_build_failed',
+            error: error instanceof Error ? error.message : String(error)
+          }, 'Failed to build normalized heartbeat data');
+        }
+      }
+
       // Create heartbeat payload
       const payload: HeartbeatPayload = {
         status: 'active',
         system_metrics: systemMetrics,
         processes: processes,
         processes_by_team: processesByTeam,
+        normalized_data: normalizedData,
         error_count: 0,
         version: '0.1.0'
       };
