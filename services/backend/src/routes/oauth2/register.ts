@@ -1,18 +1,18 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { type FastifyInstance, type FastifyBaseLogger } from 'fastify';
-import { getDb, getSchema } from '../../db';
+import { getDb } from '../../db';
+import { dynamicOauthClients } from '../../db/schema.sqlite';
 import { eq } from 'drizzle-orm';
 
 // Database-backed client registration functions
 export async function isClientRegistered(clientId: string, logger: FastifyBaseLogger): Promise<boolean> {
   try {
     const db = getDb();
-    const schema = getSchema();
     
-    const result = await (db as any)
+    const result = await db
       .select()
-      .from(schema.dynamicOauthClients)
-      .where(eq(schema.dynamicOauthClients.client_id, clientId))
+      .from(dynamicOauthClients)
+      .where(eq(dynamicOauthClients.client_id, clientId))
       .limit(1);
     
     return result.length > 0;
@@ -29,12 +29,11 @@ export async function isClientRegistered(clientId: string, logger: FastifyBaseLo
 export async function getRegisteredClient(clientId: string, logger: FastifyBaseLogger): Promise<any> {
   try {
     const db = getDb();
-    const schema = getSchema();
     
-    const result = await (db as any)
+    const result = await db
       .select()
-      .from(schema.dynamicOauthClients)
-      .where(eq(schema.dynamicOauthClients.client_id, clientId))
+      .from(dynamicOauthClients)
+      .where(eq(dynamicOauthClients.client_id, clientId))
       .limit(1);
     
     return result[0] || null;
@@ -51,11 +50,10 @@ export async function getRegisteredClient(clientId: string, logger: FastifyBaseL
 export async function getRegisteredClientsDebugInfo(logger: FastifyBaseLogger): Promise<any> {
   try {
     const db = getDb();
-    const schema = getSchema();
     
-    const allClients = await (db as any)
+    const allClients = await db
       .select()
-      .from(schema.dynamicOauthClients);
+      .from(dynamicOauthClients);
     
     return {
       mapSize: allClients.length,
@@ -224,7 +222,6 @@ export default async function registerRoute(server: FastifyInstance) {
     try {
       // Store client registration in database
       const db = getDb();
-      const schema = getSchema();
       
       const dbRegistration = {
         client_id,
@@ -238,7 +235,7 @@ export default async function registerRoute(server: FastifyInstance) {
         expires_at: null, // No expiration for now
       };
 
-      await (db as any).insert(schema.dynamicOauthClients).values(dbRegistration);
+      await db.insert(dynamicOauthClients).values(dbRegistration);
 
       request.log.info({
         operation: 'dynamic_client_registration',
