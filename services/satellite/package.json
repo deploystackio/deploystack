@@ -28,7 +28,7 @@
     "@typescript-eslint/eslint-plugin": "^8.44.1",
     "@typescript-eslint/parser": "^8.44.1",
     "copy-webpack-plugin": "^13.0.1",
-    "eslint": "^9.36.0",
+    "eslint": "^9.37.0",
     "node-loader": "^2.1.0",
     "nodemon": "^3.1.10",
     "release-it": "^19.0.5",
