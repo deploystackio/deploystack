@@ -1,5 +1,33 @@
 # Changelog
 
+## 0.30.0 (2025-10-06)
+
+* feat(all): migrated installation_methods to official mcp registry standard ([5d53296](https://github.com/deploystackio/deploystack/commit/5d53296))
+* feat(backend): add MCP Registry sync endpoint and worker ([777520c](https://github.com/deploystackio/deploystack/commit/777520c))
+* feat(backend): add MCP Registry sync management endpoints and logic ([7aa9043](https://github.com/deploystackio/deploystack/commit/7aa9043))
+* feat(backend): add MCP Registry sync progress and management endpoints ([023c005](https://github.com/deploystackio/deploystack/commit/023c005))
+* feat(backend): add optional namespace filtering for server data ([fbf9a9c](https://github.com/deploystackio/deploystack/commit/fbf9a9c))
+* feat(backend): add sorting functionality for mcp server search results ([119dd1e](https://github.com/deploystackio/deploystack/commit/119dd1e))
+* feat(backend): add utility to convert empty strings to undefined for mcp registry sync ([dfd2c87](https://github.com/deploystackio/deploystack/commit/dfd2c87))
+* feat(backend): enhance pagination handling and logging for registry sync ([0810950](https://github.com/deploystackio/deploystack/commit/0810950))
+* feat(backend): increase maximum rate limit delay to 120 seconds ([19afec7](https://github.com/deploystackio/deploystack/commit/19afec7))
+* feat(frontend): add sorting by GitHub stars to server search ([838c0e5](https://github.com/deploystackio/deploystack/commit/838c0e5))
+* feat(frontend): implement pagination controls and enhance search results ([5206466](https://github.com/deploystackio/deploystack/commit/5206466))
+* feat(frontend): implement sync form with configurable options ([8bdccc7](https://github.com/deploystackio/deploystack/commit/8bdccc7))
+* feat(frontend): update repository info endpoint to use GitHub API ([3e761a3](https://github.com/deploystackio/deploystack/commit/3e761a3))
+* feat(satellite): add debug endpoint for comprehensive MCP server info ([55fc834](https://github.com/deploystackio/deploystack/commit/55fc834))
+* feat(satellite): implement heartbeat data builder for normalized metrics ([5f67f93](https://github.com/deploystackio/deploystack/commit/5f67f93))
+* feat(satellite): Implement runtime state management for MCP server processes ([05b8aff](https://github.com/deploystackio/deploystack/commit/05b8aff))
+* feat(satellite): implement unified tool discovery manager for stdio and remote mcp ([db3e4eb](https://github.com/deploystackio/deploystack/commit/db3e4eb))
+* chore(all): update dependencies and improve package configurations ([a9ed054](https://github.com/deploystackio/deploystack/commit/a9ed054))
+* chore(backend): bump @commitlint/config-conventional ([3103017](https://github.com/deploystackio/deploystack/commit/3103017))
+* chore(backend): release v0.35.0 ([08a6b55](https://github.com/deploystackio/deploystack/commit/08a6b55))
+* chore(backend): release v0.35.0 ([12b8da1](https://github.com/deploystackio/deploystack/commit/12b8da1))
+* chore(frontend): bump @commitlint/config-conventional ([e7f6b2a](https://github.com/deploystackio/deploystack/commit/e7f6b2a))
+* refactor(backend): remove deprecated GitHub sync endpoint from API spec ([e530a17](https://github.com/deploystackio/deploystack/commit/e530a17))
+* refactor(backend): simplify database client registration logic ([6aaac17](https://github.com/deploystackio/deploystack/commit/6aaac17))
+* refactor(backend): simplify header mapping logic for three-tier system ([9370072](https://github.com/deploystackio/deploystack/commit/9370072))
+
 ## 0.29.0 (2025-09-29)
 
 * chore(all): bump @typescript-eslint/eslint-plugin from 8.42.0 to 8.44.1 ([cc00afd](https://github.com/deploystackio/deploystack/commit/cc00afd))
