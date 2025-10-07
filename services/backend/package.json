@@ -61,7 +61,7 @@
     "@typescript-eslint/parser": "^8.44.1",
     "@vitest/coverage-v8": "^3.2.3",
     "copy-webpack-plugin": "^13.0.1",
-    "drizzle-kit": "^0.31.4",
+    "drizzle-kit": "^0.31.5",
     "eslint": "^9.36.0",
     "fs-extra": "^11.3.2",
     "jest": "^30.2.0",
