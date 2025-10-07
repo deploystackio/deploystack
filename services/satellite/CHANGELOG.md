@@ -2,6 +2,13 @@
 
 ## <small>0.4.1 (2025-10-07)</small>
 
+* chore(backend): release v0.36.0 ([dacf1af](https://github.com/deploystackio/deploystack/commit/dacf1af))
+* chore(backend): release v0.36.0 ([6bdfbcf](https://github.com/deploystackio/deploystack/commit/6bdfbcf))
+* chore(satellite): release v0.4.1 ([6594669](https://github.com/deploystackio/deploystack/commit/6594669))
+* feat(all): Enhanced Job Queue Management - Search & Filtering ([6517f1e](https://github.com/deploystackio/deploystack/commit/6517f1e))
+
+## <small>0.4.1 (2025-10-07)</small>
+
 * feat(all): Enhanced Job Queue Management - Search & Filtering ([6517f1e](https://github.com/deploystackio/deploystack/commit/6517f1e))
 * chore(backend): release v0.36.0 ([dacf1af](https://github.com/deploystackio/deploystack/commit/dacf1af))
 * chore(backend): release v0.36.0 ([6bdfbcf](https://github.com/deploystackio/deploystack/commit/6bdfbcf))
