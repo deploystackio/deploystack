@@ -1,5 +1,11 @@
 # Changelog
 
+## <small>0.4.1 (2025-10-07)</small>
+
+* feat(all): Enhanced Job Queue Management - Search & Filtering ([6517f1e](https://github.com/deploystackio/deploystack/commit/6517f1e))
+* chore(backend): release v0.36.0 ([dacf1af](https://github.com/deploystackio/deploystack/commit/dacf1af))
+* chore(backend): release v0.36.0 ([6bdfbcf](https://github.com/deploystackio/deploystack/commit/6bdfbcf))
+
 ## 0.4.0 (2025-10-06)
 
 * chore(all): update dependencies and improve package configurations ([a9ed054](https://github.com/deploystackio/deploystack/commit/a9ed054))
