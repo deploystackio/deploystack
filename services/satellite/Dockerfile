@@ -1,11 +1,46 @@
 # Production image - Debian base required for nsjail
 FROM node:24-bookworm-slim
 
-# Install nsjail for stdio MCP server process isolation
+# Install build dependencies and runtime dependencies for nsjail
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-    nsjail \
+    autoconf \
+    bison \
+    flex \
+    gcc \
+    g++ \
+    git \
+    libprotobuf-dev \
+    libnl-route-3-dev \
+    libtool \
+    make \
+    pkg-config \
+    protobuf-compiler \
+    ca-certificates \
     && rm -rf /var/lib/apt/lists/*
+
+# Build nsjail from source
+RUN git clone --depth 1 https://github.com/google/nsjail.git /tmp/nsjail && \
+    cd /tmp/nsjail && \
+    make && \
+    cp nsjail /usr/local/bin/ && \
+    chmod +x /usr/local/bin/nsjail && \
+    cd / && \
+    rm -rf /tmp/nsjail
+
+# Clean up build dependencies to reduce image size
+RUN apt-get remove -y \
+    autoconf \
+    bison \
+    flex \
+    gcc \
+    g++ \
+    git \
+    libtool \
+    make \
+    pkg-config && \
+    apt-get autoremove -y && \
+    rm -rf /var/lib/apt/lists/*
 
 # Enable unprivileged user namespaces (required for nsjail)
 RUN echo "kernel.unprivileged_userns_clone=1" > /etc/sysctl.d/00-local-userns.conf

@@ -56,18 +56,35 @@ export default async function forgotPasswordRoute(fastify: FastifyInstance) {
 
         fastify.log.info(`Password reset requested for email: ${email}`);
 
-        // Send reset email (always returns success for security)
-        const result = await PasswordResetService.sendResetEmail(email, fastify.log);
+        // Queue reset email as background job (always returns success for security)
+        try {
+          const result = await PasswordResetService.prepareResetEmail(email, fastify.log);
 
-        if (!result.success && result.error) {
-          // Only log actual errors, not security responses
-          if (result.error !== 'Password reset is currently disabled. Email functionality is not enabled.') {
-            fastify.log.error(`Password reset email failed for ${email}: ${result.error}`);
+          if (!result.success) {
+            // Only log actual errors, not security responses
+            if (result.error && result.error !== 'Password reset is currently disabled. Email functionality is not enabled.') {
+              fastify.log.error(`Password reset preparation failed for ${email}: ${result.error}`);
+            }
+            return reply.status(500).send({ 
+              success: false, 
+              error: result.error || 'An error occurred during password reset request.'
+            });
           }
-          return reply.status(500).send({ 
-            success: false, 
-            error: result.error 
-          });
+
+          // Queue email as background job if token and emailData were prepared
+          if (result.emailData) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const jobQueueService = (fastify as any).jobQueueService;
+            if (jobQueueService) {
+              await jobQueueService.createJob('send_email', result.emailData);
+              fastify.log.info(`Password reset email queued for ${email}`);
+            } else {
+              fastify.log.warn('Job queue service not available, password reset email not sent');
+            }
+          }
+        } catch (error) {
+          fastify.log.error(error, `Error queueing password reset email for ${email}:`);
+          // Don't fail the request - continue to return security message
         }
 
         // Always return success message for security

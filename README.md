@@ -144,7 +144,7 @@ VS Code → HTTPS Request → DeployStack Satellite → MCP Server Process → E
 - **[Done]** Multi-User Configuration Management - support for multiple users within teams, each with personalized device-specific configurations
 - **[Done]** Advanced MCP Argument & Environment Variable Handling - comprehensive service layer with schema validation and runtime configuration assembly
 
-### **Phase 3: Satellite MVP** (Current Priority)
+### **Phase 3: Satellite** (Current Priority)
 
 - **[Done]** **Global Satellite Infrastructure** - managed MCP servers via HTTPS
 - **[Done]** **Zero-Installation Experience** - just add URL to VS Code
@@ -154,10 +154,11 @@ VS Code → HTTPS Request → DeployStack Satellite → MCP Server Process → E
 - **[Done]** **Resource Management** - process isolation (remote MCP) and limits
 - **[Done]** **GitHub README and Stars Integration** - automatic GitHub data fetching, secure storage, XSS prevention, DoS protection, and comprehensive audit logging for MCP server catalog enhancement
 - **[Done]** **Background Job Queue System** - complete 4-phase custom SQLite-based job queue with worker infrastructure, admin API, frontend monitoring UI, and comprehensive documentation for long-running tasks
-- **[In Progress]** **Resource Management** - process isolation (stdio) and limits
-- **[In Progress]** **MCP Registry** - integration of the official MCP Registry
-- **[To Do]** Build out Audit Logging features in the cloud UI
-- **[To Do]** Develop Analytics dashboards for tool usage and performance
+- **[Done]** **Frontend Syntax Highlighting** - reusable CodeHighlight component with Prism.js for JSON, JavaScript, TypeScript, Bash, and YAML code blocks
+- **[Done]** **Resource Management** - process isolation (stdio) and limits
+- **[Done]** **MCP Registry** - integration of the official MCP Registry
+- **[In Progress]** Build out Audit Logging features in the cloud UI
+- **[In Progress]** Develop Analytics dashboards for tool usage and performance
 - **[To Do]** Implement advanced policy controls (e.g., rate limiting, request validation)
 - **[To Do]** Enhance the searchable MCP Server Catalog within the cloud UI
 - **[To Do]** Deeper integration with IDEs and AI agent frameworks

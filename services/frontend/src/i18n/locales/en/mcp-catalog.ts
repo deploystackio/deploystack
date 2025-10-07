@@ -780,7 +780,10 @@ export default {
       registryUrl: 'https://registry.modelcontextprotocol.io',
       explanation: 'The sync process will:',
       steps: [
-        'Run in the background without blocking other operations'
+        'Discover new MCP servers from the official registry',
+        'Create background jobs to sync each server',
+        'Process servers with rate limiting to avoid API throttling',
+        'Update server information including README files and metadata'
       ],
       form: {
         maxServers: {
@@ -798,12 +801,25 @@ export default {
         }
       },
       cancel: 'Cancel',
+      close: 'Close',
       confirm: 'Start Sync',
-      syncing: 'Syncing...'
+      starting: 'Starting...'
+    },
+    status: {
+      coordinating: {
+        title: 'Discovering Servers',
+        description: 'Checking the registry and identifying new servers to sync. This usually takes a few seconds.'
+      },
+      syncing: {
+        title: 'Syncing Servers'
+      }
     },
     messages: {
-      success: 'Registry sync started successfully',
-      successDescription: 'Syncing {count} servers in the background. Batch ID: {batchId}',
+      coordinating: 'Registry sync coordination started',
+      coordinatingDescription: 'The system is discovering new servers to sync. Batch ID: {batchId}',
+      completed: 'Registry sync completed',
+      completedDescription: 'Successfully synced {count} servers from the registry',
+      failed: 'Registry sync failed',
       error: 'Failed to start registry sync',
       errorDescription: '{message}'
     }

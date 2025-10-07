@@ -43,6 +43,29 @@ export interface JobFilters {
   type?: string
 }
 
+export interface SearchJobsParams {
+  id?: string
+  type?: string
+  status?: JobStatus
+  created_after?: string
+  created_before?: string
+  limit?: number
+  offset?: number
+}
+
+export interface SearchJobsResponse {
+  success: boolean
+  data: {
+    jobs: Job[]
+    pagination: {
+      total: number
+      limit: number
+      offset: number
+      has_more: boolean
+    }
+  }
+}
+
 export interface JobListResponse {
   success: boolean
   data: {
@@ -70,4 +93,10 @@ export interface BatchStatusResponse {
 export interface JobStatsResponse {
   success: boolean
   stats: JobStats
+}
+
+export interface JobTypesResponse {
+  success: boolean
+  types: string[]
+  count: number
 }

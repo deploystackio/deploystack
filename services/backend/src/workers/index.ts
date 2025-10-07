@@ -2,6 +2,8 @@ import type { FastifyBaseLogger } from 'fastify';
 import type { AnyDatabase } from '../db';
 import type { JobProcessorService } from '../services/jobProcessorService';
 import { McpServerSyncWorker } from './mcpServerSyncWorker';
+import { RegistryCoordinatorWorker } from './registryCoordinatorWorker';
+import { EmailWorker } from './emailWorker';
 
 /**
  * Register all workers with the job processor
@@ -29,13 +31,25 @@ export function registerWorkers(
   db: AnyDatabase,
   logger: FastifyBaseLogger
 ): void {
-  // Register MCP Server Sync Worker
+  // Register Email Worker (sends emails via background jobs)
+  processor.registerWorker(
+    'send_email',
+    new EmailWorker(db, logger)
+  );
+
+  // Register Registry Coordinator Worker (discovers which servers to sync)
+  processor.registerWorker(
+    'coordinate_registry_sync',
+    new RegistryCoordinatorWorker(db, logger)
+  );
+
+  // Register MCP Server Sync Worker (syncs individual servers)
   processor.registerWorker(
     'sync_mcp_server',
     new McpServerSyncWorker(db, logger)
   );
 
   logger.info({
-    workers: ['sync_mcp_server']
+    workers: ['send_email', 'coordinate_registry_sync', 'sync_mcp_server']
   }, 'Job queue workers registered successfully');
 }

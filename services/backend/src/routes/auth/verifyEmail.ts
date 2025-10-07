@@ -113,7 +113,7 @@ export default async function verifyEmailRoute(server: FastifyInstance) {
           return reply.status(400).type('application/json').send(jsonString);
         }
 
-        // Send welcome email if enabled
+        // Queue welcome email if enabled
         try {
           const shouldSendWelcome = await EmailService.shouldSendWelcomeEmail();
           if (shouldSendWelcome && result.userId) {
@@ -144,30 +144,35 @@ export default async function verifyEmailRoute(server: FastifyInstance) {
                 const loginUrl = await GlobalSettings.get('global.page_url', 'http://localhost:5173') + '/login';
                 const supportEmail = await GlobalSettings.get('smtp.from_email') || undefined;
                 
-                // Send welcome email asynchronously (don't block verification response)
-                EmailService.sendWelcomeEmail({
-                  to: user.email,
-                  userName,
-                  userEmail: user.email,
-                  loginUrl,
-                  supportEmail
-                }, request.log).catch(error => {
-                  request.log.warn({
-                    error,
-                    userId: result.userId,
-                    operation: 'send_welcome_email_after_verification'
-                  }, 'Failed to send welcome email after email verification');
-                });
+                // Queue welcome email as background job
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const jobQueueService = (server as any).jobQueueService;
+                if (jobQueueService) {
+                  await jobQueueService.createJob('send_email', {
+                    to: user.email,
+                    subject: 'Welcome to DeployStack',
+                    template: 'welcome',
+                    variables: {
+                      userName,
+                      userEmail: user.email,
+                      loginUrl,
+                      supportEmail
+                    }
+                  });
+                  request.log.info(`Welcome email queued for ${user.email}`);
+                } else {
+                  request.log.warn('Job queue service not available, skipping welcome email');
+                }
               }
             }
           }
         } catch (error: unknown) {
-          // Don't fail verification if welcome email fails
+          // Don't fail verification if welcome email queueing fails
           request.log.warn({
             error,
             userId: result.userId,
-            operation: 'send_welcome_email_after_verification'
-          }, 'Error occurred while trying to send welcome email after verification');
+            operation: 'queue_welcome_email_after_verification'
+          }, 'Error occurred while trying to queue welcome email after verification');
         }
 
         // Clean up expired tokens (housekeeping)

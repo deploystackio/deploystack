@@ -322,7 +322,7 @@ export default async function githubAuthRoutes(fastify: FastifyInstance) {
         
         await (db as any).insert(authUserTable).values(newUserData);
 
-        // Send welcome email if enabled (for new OAuth users)
+        // Queue welcome email if enabled (for new OAuth users)
         try {
           const shouldSendWelcome = await EmailService.shouldSendWelcomeEmail();
           if (shouldSendWelcome) {
@@ -333,28 +333,32 @@ export default async function githubAuthRoutes(fastify: FastifyInstance) {
             const loginUrl = await GlobalSettings.get('global.page_url', 'http://localhost:5173') + '/login';
             const supportEmail = await GlobalSettings.get('smtp.from_email') || undefined;
             
-            // Send welcome email asynchronously (don't block OAuth flow)
-            EmailService.sendWelcomeEmail({
-              to: newUserData.email,
-              userName,
-              userEmail: newUserData.email,
-              loginUrl,
-              supportEmail
-            }, fastify.log).catch(error => {
-              fastify.log.warn({
-                error,
-                userId: newUserId,
-                operation: 'send_welcome_email_after_oauth_signup'
-              }, 'Failed to send welcome email after GitHub OAuth signup');
-            });
+            // Queue welcome email as background job
+            const jobQueueService = (fastify as any).jobQueueService;
+            if (jobQueueService) {
+              await jobQueueService.createJob('send_email', {
+                to: newUserData.email,
+                subject: 'Welcome to DeployStack',
+                template: 'welcome',
+                variables: {
+                  userName,
+                  userEmail: newUserData.email,
+                  loginUrl,
+                  supportEmail
+                }
+              });
+              fastify.log.info(`Welcome email queued for ${newUserData.email}`);
+            } else {
+              fastify.log.warn('Job queue service not available, skipping welcome email');
+            }
           }
         } catch (error: unknown) {
-          // Don't fail OAuth if welcome email fails
+          // Don't fail OAuth if welcome email queueing fails
           fastify.log.warn({
             error,
             userId: newUserId,
-            operation: 'send_welcome_email_after_oauth_signup'
-          }, 'Error occurred while trying to send welcome email after GitHub OAuth signup');
+            operation: 'queue_welcome_email_after_oauth_signup'
+          }, 'Error occurred while trying to queue welcome email after GitHub OAuth signup');
         }
 
         // Create default team for the user

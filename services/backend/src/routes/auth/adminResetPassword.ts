@@ -64,41 +64,59 @@ export default async function adminResetPasswordRoute(fastify: FastifyInstance) 
 
         fastify.log.info(`Admin-initiated password reset requested by admin ${adminUserId} for email: ${email}`);
 
-        // Send admin-initiated reset email
-        const result = await PasswordResetService.sendAdminResetEmail(email, adminUserId, fastify.log);
+        // Queue admin-initiated reset email as background job
+        try {
+          const result = await PasswordResetService.prepareAdminResetEmail(email, adminUserId, fastify.log);
 
-        if (!result.success && result.error) {
-          fastify.log.error(`Admin password reset failed for ${email} by admin ${adminUserId}: ${result.error}`);
-          
-          // Determine appropriate status code based on error
-          if (result.error.includes('not found') || result.error.includes('not eligible')) {
-            return reply.status(400).send({ 
+          if (!result.success) {
+            fastify.log.error(`Admin password reset preparation failed for ${email} by admin ${adminUserId}: ${result.error}`);
+            
+            // Determine appropriate status code based on error
+            if (result.error && result.error.includes('not found') || result.error && result.error.includes('not eligible')) {
+              return reply.status(400).send({ 
+                success: false, 
+                error: result.error 
+              });
+            }
+            
+            if (result.error && result.error.includes('cannot reset their own password')) {
+              return reply.status(403).send({ 
+                success: false, 
+                error: result.error 
+              });
+            }
+            
+            if (result.error && result.error.includes('disabled')) {
+              return reply.status(503).send({ 
+                success: false, 
+                error: result.error 
+              });
+            }
+            
+            return reply.status(500).send({ 
               success: false, 
-              error: result.error 
+              error: result.error || 'An error occurred during password reset request.'
             });
           }
-          
-          if (result.error.includes('cannot reset their own password')) {
-            return reply.status(403).send({ 
-              success: false, 
-              error: result.error 
-            });
+
+          // Queue email as background job if token and emailData were prepared
+          if (result.emailData) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const jobQueueService = (fastify as any).jobQueueService;
+            if (jobQueueService) {
+              await jobQueueService.createJob('send_email', result.emailData);
+              fastify.log.info(`Admin password reset email queued for ${email} by admin ${adminUserId}`);
+            } else {
+              fastify.log.warn('Job queue service not available, admin password reset email not sent');
+            }
           }
-          
-          if (result.error.includes('disabled')) {
-            return reply.status(503).send({ 
-              success: false, 
-              error: result.error 
-            });
-          }
-          
+        } catch (error) {
+          fastify.log.error(error, `Error queueing admin password reset email for ${email}:`);
           return reply.status(500).send({ 
             success: false, 
-            error: result.error 
+            error: 'An unexpected error occurred during password reset request.'
           });
         }
-
-        fastify.log.info(`Admin password reset email sent successfully for ${email} by admin ${adminUserId}`);
 
         return reply.status(200).send({
           success: true,

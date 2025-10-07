@@ -1,14 +1,15 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { RefreshCw, Clock, Play, CheckCircle2, XCircle } from 'lucide-vue-next'
+import { Input } from '@/components/ui/input'
+import { RefreshCw, Clock, Play, CheckCircle2, XCircle, Search, X } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import DashboardLayout from '@/components/DashboardLayout.vue'
 import { JobsService } from '@/services/jobsService'
 import JobTableColumns from './JobTableColumns.vue'
 import PaginationControls from '@/components/ui/pagination/PaginationControls.vue'
-import type { Job, JobStats, JobFilters, JobStatus } from './types'
+import type { Job, JobStats, JobFilters, JobStatus, SearchJobsParams } from './types'
 
 const jobs = ref<Job[]>([])
 const stats = ref<JobStats>({
@@ -27,7 +28,21 @@ const pageSize = ref(50)
 const totalItems = ref(0)
 
 const filters = ref<JobFilters>({})
-const selectedStatus = ref<string>('all')
+
+const selectedSearchStatus = ref<string>('all')
+const selectedSearchType = ref<string>('all')
+const selectedTimeRange = ref<string>('all')
+const searchJobId = ref<string>('')
+const isSearching = ref(false)
+
+const hasActiveSearch = computed(() => {
+  return !!(searchJobId.value ||
+           selectedSearchType.value !== 'all' ||
+           selectedSearchStatus.value !== 'all' ||
+           selectedTimeRange.value !== 'all')
+})
+
+const jobTypes = ref<string[]>([])
 
 const fetchStats = async (): Promise<void> => {
   try {
@@ -37,16 +52,75 @@ const fetchStats = async (): Promise<void> => {
   }
 }
 
+const fetchJobTypes = async (): Promise<void> => {
+  try {
+    jobTypes.value = await JobsService.getJobTypes()
+  } catch (err) {
+    console.error('Failed to fetch job types:', err)
+    jobTypes.value = []
+  }
+}
+
+const calculateTimeRangeTimestamp = (range: string): string | undefined => {
+  if (range === 'all') return undefined
+
+  const now = new Date()
+  let millisecondsAgo = 0
+
+  switch (range) {
+    case '1min':
+      millisecondsAgo = 60 * 1000
+      break
+    case '5min':
+      millisecondsAgo = 5 * 60 * 1000
+      break
+    case '30min':
+      millisecondsAgo = 30 * 60 * 1000
+      break
+    case '1h':
+      millisecondsAgo = 60 * 60 * 1000
+      break
+    case '24h':
+      millisecondsAgo = 24 * 60 * 60 * 1000
+      break
+    case '7d':
+      millisecondsAgo = 7 * 24 * 60 * 60 * 1000
+      break
+    default:
+      return undefined
+  }
+
+  return new Date(now.getTime() - millisecondsAgo).toISOString()
+}
+
 const fetchJobs = async (): Promise<void> => {
   try {
     isLoading.value = true
     error.value = null
 
     const offset = (currentPage.value - 1) * pageSize.value
-    const response = await JobsService.listJobs(filters.value, pageSize.value, offset)
 
-    jobs.value = response.data.jobs
-    totalItems.value = response.data.pagination.total
+    if (hasActiveSearch.value) {
+      const params: SearchJobsParams = {
+        limit: pageSize.value,
+        offset: offset
+      }
+
+      if (searchJobId.value) params.id = searchJobId.value
+      if (selectedSearchType.value !== 'all') params.type = selectedSearchType.value
+      if (selectedSearchStatus.value !== 'all') params.status = selectedSearchStatus.value as JobStatus
+
+      const timeRangeTimestamp = calculateTimeRangeTimestamp(selectedTimeRange.value)
+      if (timeRangeTimestamp) params.created_after = timeRangeTimestamp
+
+      const response = await JobsService.searchJobs(params)
+      jobs.value = response.data.jobs
+      totalItems.value = response.data.pagination.total
+    } else {
+      const response = await JobsService.listJobs(filters.value, pageSize.value, offset)
+      jobs.value = response.data.jobs
+      totalItems.value = response.data.pagination.total
+    }
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'An unknown error occurred'
     jobs.value = []
@@ -73,17 +147,23 @@ const handlePageSizeChange = async (newPageSize: number) => {
   await fetchJobs()
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const handleStatusFilter = (value: any) => {
-  if (value === 'all' || !value || typeof value !== 'string') {
-    filters.value.status = undefined
-    selectedStatus.value = 'all'
-  } else {
-    filters.value.status = value as JobStatus
-    selectedStatus.value = value
-  }
+const handleSearch = async () => {
+  isSearching.value = true
   currentPage.value = 1
-  fetchJobs()
+  try {
+    await fetchJobs()
+  } finally {
+    isSearching.value = false
+  }
+}
+
+const handleClearSearch = async () => {
+  searchJobId.value = ''
+  selectedSearchType.value = 'all'
+  selectedSearchStatus.value = 'all'
+  selectedTimeRange.value = 'all'
+  currentPage.value = 1
+  await fetchJobs()
 }
 
 const formatDuration = (ms: number): string => {
@@ -95,7 +175,7 @@ const formatDuration = (ms: number): string => {
 
 
 onMounted(async () => {
-  await Promise.all([fetchStats(), fetchJobs()])
+  await Promise.all([fetchStats(), fetchJobTypes(), fetchJobs()])
 })
 </script>
 
@@ -167,8 +247,26 @@ onMounted(async () => {
       </div>
 
       <div v-else class="space-y-4">
-        <div class="flex items-center gap-4">
-          <Select v-model="selectedStatus" @update:model-value="handleStatusFilter">
+        <div class="flex flex-wrap items-center gap-3">
+          <Input
+            v-model="searchJobId"
+            placeholder="Job ID..."
+            class="w-[200px]"
+          />
+
+          <Select v-model="selectedSearchType">
+            <SelectTrigger class="w-[180px]">
+              <SelectValue placeholder="All types" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All types</SelectItem>
+              <SelectItem v-for="type in jobTypes" :key="type" :value="type">
+                {{ type }}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select v-model="selectedSearchStatus">
             <SelectTrigger class="w-[180px]">
               <SelectValue placeholder="All statuses" />
             </SelectTrigger>
@@ -181,15 +279,52 @@ onMounted(async () => {
             </SelectContent>
           </Select>
 
-          <Button
-            variant="outline"
-            size="sm"
-            @click="refreshData"
-            :disabled="isLoading"
-          >
-            <RefreshCw class="h-4 w-4 mr-2" :class="{ 'animate-spin': isLoading }" />
-            Refresh
-          </Button>
+          <Select v-model="selectedTimeRange">
+            <SelectTrigger class="w-[180px]">
+              <SelectValue placeholder="Time range" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All time</SelectItem>
+              <SelectItem value="1min">Last 1 minute</SelectItem>
+              <SelectItem value="5min">Last 5 minutes</SelectItem>
+              <SelectItem value="30min">Last 30 minutes</SelectItem>
+              <SelectItem value="1h">Last 1 hour</SelectItem>
+              <SelectItem value="24h">Last 24 hours</SelectItem>
+              <SelectItem value="7d">Last 7 days</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <div class="flex items-center gap-2 ml-auto">
+            <Button
+              :loading="isSearching"
+              loading-text="Searching..."
+              @click="handleSearch"
+              size="sm"
+            >
+              <Search v-if="!isSearching" class="h-4 w-4 mr-2" />
+              Search
+            </Button>
+
+            <Button
+              v-if="hasActiveSearch"
+              variant="outline"
+              size="sm"
+              @click="handleClearSearch"
+            >
+              <X class="h-4 w-4 mr-2" />
+              Clear
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              @click="refreshData"
+              :disabled="isLoading"
+            >
+              <RefreshCw class="h-4 w-4 mr-2" :class="{ 'animate-spin': isLoading }" />
+              Refresh
+            </Button>
+          </div>
         </div>
 
         <JobTableColumns :jobs="jobs" />

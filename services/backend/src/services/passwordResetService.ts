@@ -3,7 +3,6 @@ import { eq, lt, gt, and } from 'drizzle-orm';
 import { generateId } from 'lucia';
 import { hash, verify } from '@node-rs/argon2';
 import type { FastifyBaseLogger } from 'fastify';
-import { EmailService } from '../email';
 import { GlobalSettings } from '../global-settings/helpers';
 
 export class PasswordResetService {
@@ -277,9 +276,11 @@ export class PasswordResetService {
   }
 
   /**
-   * Send password reset email to user
+   * Prepare password reset email data for background job
+   * Does not send email directly - returns email data for job queue
    */
-  static async sendResetEmail(email: string, logger?: FastifyBaseLogger): Promise<{ success: boolean; error?: string }> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  static async prepareResetEmail(email: string, logger?: FastifyBaseLogger): Promise<{ success: boolean; error?: string; emailData?: any }> {
     try {
       // Check if email sending is enabled
       const isEmailEnabled = await GlobalSettings.getBoolean('smtp.enabled', false);
@@ -319,55 +320,43 @@ export class PasswordResetService {
       // Get frontend URL for reset link
       const frontendUrl = await GlobalSettings.get('global.page_url', 'http://localhost:5173');
       const resetUrl = `${frontendUrl}/reset-password?token=${token}`;
+      const supportEmail = await GlobalSettings.get('smtp.from_email') || undefined;
 
-      // Send reset email (only if logger is available)
-      if (!logger) {
-        return { success: false, error: 'Logger is required for email sending' };
-      }
-
-      const emailResult = await EmailService.sendEmail({
-        to: user.email,
-        subject: 'Reset Your Password',
-        template: 'password-reset',
-        variables: {
-          userName: user.username,
-          userEmail: user.email,
-          resetUrl,
-          expirationTime: '10 minutes',
-          supportEmail: await GlobalSettings.get('smtp.from_email') || undefined,
-        },
-      }, logger);
-
-      if (!emailResult.success) {
-        return { success: false, error: emailResult.error || 'Failed to send reset email' };
-      }
-
-      return { success: true };
+      // Return email data for background job
+      return {
+        success: true,
+        emailData: {
+          to: user.email,
+          subject: 'Reset Your Password',
+          template: 'password-reset',
+          variables: {
+            userName: user.username,
+            userEmail: user.email,
+            resetUrl,
+            expirationTime: '10 minutes',
+            supportEmail
+          }
+        }
+      };
     } catch (error) {
       if (logger) {
         logger.error({
           error,
           email,
-          operation: 'send_reset_email'
-        }, 'Error sending password reset email');
+          operation: 'prepare_reset_email'
+        }, 'Error preparing password reset email');
       }
-      return { success: false, error: 'An error occurred while sending reset email' };
+      return { success: false, error: 'An error occurred while preparing reset email' };
     }
   }
 
   /**
-   * Check if password reset is available (email sending enabled)
-   */
-  static async isPasswordResetAvailable(): Promise<boolean> {
-    return await GlobalSettings.getBoolean('smtp.enabled', false);
-  }
-
-  /**
-   * Send admin-initiated password reset email to user
+   * Prepare admin-initiated password reset email data for background job
    * Only for users with auth_type = 'email_signup'
    * Admin cannot reset their own password
    */
-  static async sendAdminResetEmail(email: string, adminUserId: string, logger?: FastifyBaseLogger): Promise<{ success: boolean; error?: string }> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  static async prepareAdminResetEmail(email: string, adminUserId: string, logger?: FastifyBaseLogger): Promise<{ success: boolean; error?: string; emailData?: any }> {
     try {
       // Check if email sending is enabled
       const isEmailEnabled = await GlobalSettings.getBoolean('smtp.enabled', false);
@@ -411,40 +400,41 @@ export class PasswordResetService {
       // Get frontend URL for reset link
       const frontendUrl = await GlobalSettings.get('global.page_url', 'http://localhost:5173');
       const resetUrl = `${frontendUrl}/reset-password?token=${token}`;
+      const supportEmail = await GlobalSettings.get('smtp.from_email') || undefined;
 
-      // Send admin-initiated reset email (only if logger is available)
-      if (!logger) {
-        return { success: false, error: 'Logger is required for email sending' };
-      }
-
-      const emailResult = await EmailService.sendEmail({
-        to: user.email,
-        subject: 'Password Reset Initiated by Administrator',
-        template: 'admin-password-reset',
-        variables: {
-          userName: user.username,
-          userEmail: user.email,
-          resetUrl,
-          expirationTime: '10 minutes',
-          supportEmail: await GlobalSettings.get('smtp.from_email') || undefined,
-        },
-      }, logger);
-
-      if (!emailResult.success) {
-        return { success: false, error: emailResult.error || 'Failed to send reset email' };
-      }
-
-      return { success: true };
+      // Return email data for background job
+      return {
+        success: true,
+        emailData: {
+          to: user.email,
+          subject: 'Password Reset Initiated by Administrator',
+          template: 'admin-password-reset',
+          variables: {
+            userName: user.username,
+            userEmail: user.email,
+            resetUrl,
+            expirationTime: '10 minutes',
+            supportEmail
+          }
+        }
+      };
     } catch (error) {
       if (logger) {
         logger.error({
           error,
           email,
           adminUserId,
-          operation: 'send_admin_reset_email'
-        }, 'Error sending admin-initiated password reset email');
+          operation: 'prepare_admin_reset_email'
+        }, 'Error preparing admin-initiated password reset email');
       }
-      return { success: false, error: 'An error occurred while sending reset email' };
+      return { success: false, error: 'An error occurred while preparing reset email' };
     }
+  }
+
+  /**
+   * Check if password reset is available (email sending enabled)
+   */
+  static async isPasswordResetAvailable(): Promise<boolean> {
+    return await GlobalSettings.getBoolean('smtp.enabled', false);
   }
 }

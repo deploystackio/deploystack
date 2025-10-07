@@ -40,6 +40,9 @@ const searchQuery = ref('')
 // Sync state
 const isSyncModalOpen = ref(false)
 const isSyncing = ref(false)
+const syncBatchId = ref<string | null>(null)
+const syncPhase = ref<'idle' | 'coordinating' | 'syncing' | 'completed' | 'failed'>('idle')
+const syncProgress = ref({ completed: 0, total: 0 })
 
 // Sync form data
 const syncFormData = ref({
@@ -48,7 +51,7 @@ const syncFormData = ref({
   rateLimitDelay: 2
 })
 
-// Reset form data when modal opens
+// Reset state when modal opens
 watch(isSyncModalOpen, (isOpen) => {
   if (isOpen) {
     syncFormData.value = {
@@ -56,6 +59,9 @@ watch(isSyncModalOpen, (isOpen) => {
       skipExisting: true,
       rateLimitDelay: 2
     }
+    syncPhase.value = 'idle'
+    syncBatchId.value = null
+    syncProgress.value = { completed: 0, total: 0 }
   }
 })
 
@@ -115,6 +121,7 @@ const handleEditServer = (serverId: string) => {
 const handleSyncRegistry = async () => {
   try {
     isSyncing.value = true
+    syncPhase.value = 'coordinating'
 
     const baseUrl = getEnv('VITE_DEPLOYSTACK_BACKEND_URL')
 
@@ -136,21 +143,21 @@ const handleSyncRegistry = async () => {
     }
 
     const data = await response.json()
+    syncBatchId.value = data.data.batchId
 
-    // Close modal and show success
-    isSyncModalOpen.value = false
-    toast.success(t('mcpCatalog.registrySync.messages.success'), {
-      description: t('mcpCatalog.registrySync.messages.successDescription', {
-        count: data.data.totalServers,
+    // Show success toast with coordination message
+    toast.success(t('mcpCatalog.registrySync.messages.coordinating'), {
+      description: t('mcpCatalog.registrySync.messages.coordinatingDescription', {
         batchId: data.data.batchId
       })
     })
 
-    // Optionally refresh the catalog after a delay
-    setTimeout(() => fetchServers(), 3000)
+    // Start polling for progress
+    startProgressPolling(data.data.batchId)
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    syncPhase.value = 'failed'
     toast.error(t('mcpCatalog.registrySync.messages.error'), {
       description: t('mcpCatalog.registrySync.messages.errorDescription', {
         message: errorMessage
@@ -160,6 +167,74 @@ const handleSyncRegistry = async () => {
     isSyncing.value = false
   }
 }
+
+// Progress polling
+let pollInterval: ReturnType<typeof setInterval> | null = null
+
+const startProgressPolling = (batchId: string) => {
+  if (pollInterval) {
+    clearInterval(pollInterval)
+  }
+
+  pollInterval = setInterval(async () => {
+    try {
+      const baseUrl = getEnv('VITE_DEPLOYSTACK_BACKEND_URL')
+      const response = await fetch(`${baseUrl}/api/admin/mcp-registry/progress/${batchId}`, {
+        credentials: 'include'
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch progress')
+      }
+
+      const data = await response.json()
+      const { batch, progress } = data.data
+
+      // Coordination phase: total_jobs = 0
+      if (batch.total_jobs === 0) {
+        syncPhase.value = 'coordinating'
+        return
+      }
+
+      // Syncing phase: total_jobs > 0
+      syncPhase.value = 'syncing'
+      syncProgress.value = {
+        completed: progress.completed,
+        total: progress.total
+      }
+
+      // Check completion
+      if (batch.status === 'completed') {
+        if (pollInterval) clearInterval(pollInterval)
+        syncPhase.value = 'completed'
+        isSyncModalOpen.value = false
+        
+        toast.success(t('mcpCatalog.registrySync.messages.completed'), {
+          description: t('mcpCatalog.registrySync.messages.completedDescription', {
+            count: progress.completed
+          })
+        })
+        
+        // Refresh catalog
+        setTimeout(() => fetchServers(), 1000)
+      } else if (batch.status === 'failed') {
+        if (pollInterval) clearInterval(pollInterval)
+        syncPhase.value = 'failed'
+        
+        toast.error(t('mcpCatalog.registrySync.messages.failed'))
+      }
+    } catch (error) {
+      console.error('Failed to fetch sync progress:', error)
+    }
+  }, 2000)
+}
+
+// Cleanup on unmount
+onUnmounted(() => {
+  if (pollInterval) {
+    clearInterval(pollInterval)
+  }
+})
 
 
 // Fetch servers from API with pagination
@@ -391,8 +466,34 @@ onUnmounted(() => {
             </div>
           </div>
 
-          <!-- Explanation -->
-          <div class="space-y-2">
+          <!-- Status Display -->
+          <div v-if="syncPhase !== 'idle'" class="space-y-3 border-t pt-4">
+            <!-- Coordinating Phase -->
+            <div v-if="syncPhase === 'coordinating'" class="flex items-start gap-3">
+              <RefreshCw class="h-5 w-5 text-primary animate-spin mt-0.5" />
+              <div class="flex-1">
+                <p class="text-sm font-medium">{{ t('mcpCatalog.registrySync.status.coordinating.title') }}</p>
+                <p class="text-sm text-muted-foreground">{{ t('mcpCatalog.registrySync.status.coordinating.description') }}</p>
+              </div>
+            </div>
+
+            <!-- Syncing Phase -->
+            <div v-if="syncPhase === 'syncing'" class="space-y-2">
+              <div class="flex items-center justify-between">
+                <p class="text-sm font-medium">{{ t('mcpCatalog.registrySync.status.syncing.title') }}</p>
+                <p class="text-sm text-muted-foreground">{{ syncProgress.completed }} / {{ syncProgress.total }}</p>
+              </div>
+              <div class="w-full bg-muted rounded-full h-2">
+                <div 
+                  class="bg-primary h-2 rounded-full transition-all duration-300"
+                  :style="{ width: `${(syncProgress.completed / syncProgress.total * 100)}%` }"
+                ></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Explanation (only when idle) -->
+          <div v-if="syncPhase === 'idle'" class="space-y-2">
             <p class="text-sm font-medium">{{ t('mcpCatalog.registrySync.modal.explanation') }}</p>
             <ul class="list-disc list-inside space-y-1 text-sm text-muted-foreground">
               <li v-for="(step, index) in tm('mcpCatalog.registrySync.modal.steps') as string[]" :key="index">
@@ -403,16 +504,17 @@ onUnmounted(() => {
         </div>
 
         <AlertDialogFooter>
-          <AlertDialogCancel :disabled="isSyncing">
-            {{ t('mcpCatalog.registrySync.modal.cancel') }}
+          <AlertDialogCancel :disabled="isSyncing || syncPhase === 'syncing'">
+            {{ syncPhase === 'completed' ? t('mcpCatalog.registrySync.modal.close') : t('mcpCatalog.registrySync.modal.cancel') }}
           </AlertDialogCancel>
           <AlertDialogAction
+            v-if="syncPhase === 'idle'"
             as-child
           >
             <Button
               @click="handleSyncRegistry"
               :loading="isSyncing"
-              :loading-text="t('mcpCatalog.registrySync.modal.syncing')"
+              :loading-text="t('mcpCatalog.registrySync.modal.starting')"
               :disabled="isSyncing"
             >
               {{ t('mcpCatalog.registrySync.modal.confirm') }}

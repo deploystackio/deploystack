@@ -64,7 +64,25 @@ describe('Admin Reset Password Route', () => {
 
     // Setup default mock implementations
     mockPasswordResetService.isPasswordResetAvailable = vi.fn().mockResolvedValue(true);
-    mockPasswordResetService.sendAdminResetEmail = vi.fn().mockResolvedValue({ success: true });
+    mockPasswordResetService.prepareAdminResetEmail = vi.fn().mockResolvedValue({ 
+      success: true,
+      emailData: {
+        to: 'user@example.com',
+        subject: 'Password Reset Initiated by Administrator',
+        template: 'admin-password-reset',
+        variables: {
+          userName: 'testuser',
+          userEmail: 'user@example.com',
+          resetUrl: 'http://localhost:5173/reset-password?token=mock-token',
+          expirationTime: '10 minutes'
+        }
+      }
+    });
+
+    // Setup mock jobQueueService
+    mockFastify.jobQueueService = {
+      createJob: vi.fn().mockResolvedValue(undefined)
+    } as any;
   });
 
   describe('Route Registration', () => {
@@ -93,13 +111,17 @@ describe('Admin Reset Password Route', () => {
       await handler(mockRequest, mockReply);
 
       expect(mockPasswordResetService.isPasswordResetAvailable).toHaveBeenCalled();
-      expect(mockPasswordResetService.sendAdminResetEmail).toHaveBeenCalledWith('user@example.com', 'admin-user-id', mockFastify.log);
+      expect(mockPasswordResetService.prepareAdminResetEmail).toHaveBeenCalledWith('user@example.com', 'admin-user-id', mockFastify.log);
       expect(mockFastify.log!.info).toHaveBeenCalledWith(
         'Admin-initiated password reset requested by admin admin-user-id for email: user@example.com'
       );
       expect(mockFastify.log!.info).toHaveBeenCalledWith(
-        'Admin password reset email sent successfully for user@example.com by admin admin-user-id'
+        'Admin password reset email queued for user@example.com by admin admin-user-id'
       );
+      expect((mockFastify as any).jobQueueService.createJob).toHaveBeenCalledWith('send_email', expect.objectContaining({
+        to: 'user@example.com',
+        subject: 'Password Reset Initiated by Administrator'
+      }));
       expect(mockReply.status).toHaveBeenCalledWith(200);
       expect(mockReply.send).toHaveBeenCalledWith({
         success: true,
@@ -114,7 +136,7 @@ describe('Admin Reset Password Route', () => {
       await handler(mockRequest, mockReply);
 
       expect(mockPasswordResetService.isPasswordResetAvailable).toHaveBeenCalled();
-      expect(mockPasswordResetService.sendAdminResetEmail).not.toHaveBeenCalled();
+      expect(mockPasswordResetService.prepareAdminResetEmail).not.toHaveBeenCalled();
       expect(mockReply.status).toHaveBeenCalledWith(503);
       expect(mockReply.send).toHaveBeenCalledWith({
         success: false,
@@ -128,7 +150,7 @@ describe('Admin Reset Password Route', () => {
       const handler = routeHandlers['POST /admin/reset-password'];
       await handler(mockRequest, mockReply);
 
-      expect(mockPasswordResetService.sendAdminResetEmail).not.toHaveBeenCalled();
+      expect(mockPasswordResetService.prepareAdminResetEmail).not.toHaveBeenCalled();
       expect(mockReply.status).toHaveBeenCalledWith(401);
       expect(mockReply.send).toHaveBeenCalledWith({
         success: false,
@@ -137,7 +159,7 @@ describe('Admin Reset Password Route', () => {
     });
 
     it('should return 400 when user is not found or not eligible', async () => {
-      mockPasswordResetService.sendAdminResetEmail.mockResolvedValue({
+      mockPasswordResetService.prepareAdminResetEmail.mockResolvedValue({
         success: false,
         error: 'User not found or not eligible for password reset (must have email authentication)',
       });
@@ -145,9 +167,9 @@ describe('Admin Reset Password Route', () => {
       const handler = routeHandlers['POST /admin/reset-password'];
       await handler(mockRequest, mockReply);
 
-      expect(mockPasswordResetService.sendAdminResetEmail).toHaveBeenCalledWith('user@example.com', 'admin-user-id', mockFastify.log);
+      expect(mockPasswordResetService.prepareAdminResetEmail).toHaveBeenCalledWith('user@example.com', 'admin-user-id', mockFastify.log);
       expect(mockFastify.log!.error).toHaveBeenCalledWith(
-        'Admin password reset failed for user@example.com by admin admin-user-id: User not found or not eligible for password reset (must have email authentication)'
+        'Admin password reset preparation failed for user@example.com by admin admin-user-id: User not found or not eligible for password reset (must have email authentication)'
       );
       expect(mockReply.status).toHaveBeenCalledWith(400);
       expect(mockReply.send).toHaveBeenCalledWith({
@@ -157,7 +179,7 @@ describe('Admin Reset Password Route', () => {
     });
 
     it('should return 403 when admin tries to reset their own password', async () => {
-      mockPasswordResetService.sendAdminResetEmail.mockResolvedValue({
+      mockPasswordResetService.prepareAdminResetEmail.mockResolvedValue({
         success: false,
         error: 'Administrators cannot reset their own password using this endpoint',
       });
@@ -165,9 +187,9 @@ describe('Admin Reset Password Route', () => {
       const handler = routeHandlers['POST /admin/reset-password'];
       await handler(mockRequest, mockReply);
 
-      expect(mockPasswordResetService.sendAdminResetEmail).toHaveBeenCalledWith('user@example.com', 'admin-user-id', mockFastify.log);
+      expect(mockPasswordResetService.prepareAdminResetEmail).toHaveBeenCalledWith('user@example.com', 'admin-user-id', mockFastify.log);
       expect(mockFastify.log!.error).toHaveBeenCalledWith(
-        'Admin password reset failed for user@example.com by admin admin-user-id: Administrators cannot reset their own password using this endpoint'
+        'Admin password reset preparation failed for user@example.com by admin admin-user-id: Administrators cannot reset their own password using this endpoint'
       );
       expect(mockReply.status).toHaveBeenCalledWith(403);
       expect(mockReply.send).toHaveBeenCalledWith({
@@ -177,7 +199,7 @@ describe('Admin Reset Password Route', () => {
     });
 
     it('should return 503 when email functionality is disabled', async () => {
-      mockPasswordResetService.sendAdminResetEmail.mockResolvedValue({
+      mockPasswordResetService.prepareAdminResetEmail.mockResolvedValue({
         success: false,
         error: 'Password reset is currently disabled. Email functionality is not enabled.',
       });
@@ -193,7 +215,7 @@ describe('Admin Reset Password Route', () => {
     });
 
     it('should return 500 for other service errors', async () => {
-      mockPasswordResetService.sendAdminResetEmail.mockResolvedValue({
+      mockPasswordResetService.prepareAdminResetEmail.mockResolvedValue({
         success: false,
         error: 'SMTP configuration error',
       });
@@ -202,7 +224,7 @@ describe('Admin Reset Password Route', () => {
       await handler(mockRequest, mockReply);
 
       expect(mockFastify.log!.error).toHaveBeenCalledWith(
-        'Admin password reset failed for user@example.com by admin admin-user-id: SMTP configuration error'
+        'Admin password reset preparation failed for user@example.com by admin admin-user-id: SMTP configuration error'
       );
       expect(mockReply.status).toHaveBeenCalledWith(500);
       expect(mockReply.send).toHaveBeenCalledWith({
@@ -228,15 +250,15 @@ describe('Admin Reset Password Route', () => {
       });
     });
 
-    it('should handle sendAdminResetEmail throwing an error', async () => {
-      mockPasswordResetService.sendAdminResetEmail.mockRejectedValue(new Error('Email service unavailable'));
+    it('should handle prepareAdminResetEmail throwing an error', async () => {
+      mockPasswordResetService.prepareAdminResetEmail.mockRejectedValue(new Error('Email service unavailable'));
 
       const handler = routeHandlers['POST /admin/reset-password'];
       await handler(mockRequest, mockReply);
 
       expect(mockFastify.log!.error).toHaveBeenCalledWith(
         expect.any(Error),
-        'Error during admin-initiated password reset request:'
+        'Error queueing admin password reset email for user@example.com:'
       );
       expect(mockReply.status).toHaveBeenCalledWith(500);
       expect(mockReply.send).toHaveBeenCalledWith({
@@ -253,7 +275,7 @@ describe('Admin Reset Password Route', () => {
       const handler = routeHandlers['POST /admin/reset-password'];
       await handler(mockRequest, mockReply);
 
-      expect(mockPasswordResetService.sendAdminResetEmail).toHaveBeenCalledWith('user+test@example.co.uk', 'admin-user-id', mockFastify.log);
+      expect(mockPasswordResetService.prepareAdminResetEmail).toHaveBeenCalledWith('user+test@example.co.uk', 'admin-user-id', mockFastify.log);
       expect(mockFastify.log!.info).toHaveBeenCalledWith(
         'Admin-initiated password reset requested by admin admin-user-id for email: user+test@example.co.uk'
       );
@@ -266,7 +288,7 @@ describe('Admin Reset Password Route', () => {
       const handler = routeHandlers['POST /admin/reset-password'];
       await handler(mockRequest, mockReply);
 
-      expect(mockPasswordResetService.sendAdminResetEmail).not.toHaveBeenCalled();
+      expect(mockPasswordResetService.prepareAdminResetEmail).not.toHaveBeenCalled();
       expect(mockReply.status).toHaveBeenCalledWith(401);
       expect(mockReply.send).toHaveBeenCalledWith({
         success: false,

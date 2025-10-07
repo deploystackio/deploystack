@@ -266,6 +266,26 @@ export class JobQueueService {
   }
 
   /**
+   * Update batch total jobs count
+   * Used when the actual number of jobs is determined after batch creation
+   */
+  async updateBatchTotalJobs(batchId: string, totalJobs: number): Promise<void> {
+    try {
+      await this.db
+        .update(queueJobBatches)
+        .set({
+          total_jobs: totalJobs,
+        })
+        .where(eq(queueJobBatches.id, batchId));
+
+      this.logger.info({ batchId, totalJobs }, 'Batch total_jobs updated');
+    } catch (error) {
+      this.logger.error({ error, batchId, totalJobs }, 'Failed to update batch total_jobs');
+      throw error;
+    }
+  }
+
+  /**
    * Update batch progress
    */
   async updateBatchProgress(batchId: string, completed: number, failed: number): Promise<void> {

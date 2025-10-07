@@ -51,7 +51,25 @@ describe('Forgot Password Route', () => {
 
     // Setup default mock implementations
     mockPasswordResetService.isPasswordResetAvailable = vi.fn().mockResolvedValue(true);
-    mockPasswordResetService.sendResetEmail = vi.fn().mockResolvedValue({ success: true });
+    mockPasswordResetService.prepareResetEmail = vi.fn().mockResolvedValue({ 
+      success: true,
+      emailData: {
+        to: 'test@example.com',
+        subject: 'Reset Your Password',
+        template: 'password-reset',
+        variables: {
+          userName: 'testuser',
+          userEmail: 'test@example.com',
+          resetUrl: 'http://localhost:5173/reset-password?token=mock-token',
+          expirationTime: '10 minutes'
+        }
+      }
+    });
+
+    // Setup mock jobQueueService
+    mockFastify.jobQueueService = {
+      createJob: vi.fn().mockResolvedValue(undefined)
+    } as any;
   });
 
   describe('Route Registration', () => {
@@ -72,8 +90,13 @@ describe('Forgot Password Route', () => {
       await handler(mockRequest, mockReply);
 
       expect(mockPasswordResetService.isPasswordResetAvailable).toHaveBeenCalled();
-      expect(mockPasswordResetService.sendResetEmail).toHaveBeenCalledWith('test@example.com', mockFastify.log);
+      expect(mockPasswordResetService.prepareResetEmail).toHaveBeenCalledWith('test@example.com', mockFastify.log);
       expect(mockFastify.log!.info).toHaveBeenCalledWith('Password reset requested for email: test@example.com');
+      expect(mockFastify.log!.info).toHaveBeenCalledWith('Password reset email queued for test@example.com');
+      expect((mockFastify as any).jobQueueService.createJob).toHaveBeenCalledWith('send_email', expect.objectContaining({
+        to: 'test@example.com',
+        subject: 'Reset Your Password'
+      }));
       expect(mockReply.status).toHaveBeenCalledWith(200);
       expect(mockReply.send).toHaveBeenCalledWith({
         success: true,
@@ -88,7 +111,7 @@ describe('Forgot Password Route', () => {
       await handler(mockRequest, mockReply);
 
       expect(mockPasswordResetService.isPasswordResetAvailable).toHaveBeenCalled();
-      expect(mockPasswordResetService.sendResetEmail).not.toHaveBeenCalled();
+      expect(mockPasswordResetService.prepareResetEmail).not.toHaveBeenCalled();
       expect(mockReply.status).toHaveBeenCalledWith(503);
       expect(mockReply.send).toHaveBeenCalledWith({
         success: false,
@@ -96,8 +119,8 @@ describe('Forgot Password Route', () => {
       });
     });
 
-    it('should return 500 when sendResetEmail fails with error', async () => {
-      mockPasswordResetService.sendResetEmail.mockResolvedValue({
+    it('should return 500 when prepareResetEmail fails with error', async () => {
+      mockPasswordResetService.prepareResetEmail.mockResolvedValue({
         success: false,
         error: 'SMTP configuration error',
       });
@@ -105,8 +128,8 @@ describe('Forgot Password Route', () => {
       const handler = routeHandlers['POST /email/forgot-password'];
       await handler(mockRequest, mockReply);
 
-      expect(mockPasswordResetService.sendResetEmail).toHaveBeenCalledWith('test@example.com', mockFastify.log);
-      expect(mockFastify.log!.error).toHaveBeenCalledWith('Password reset email failed for test@example.com: SMTP configuration error');
+      expect(mockPasswordResetService.prepareResetEmail).toHaveBeenCalledWith('test@example.com', mockFastify.log);
+      expect(mockFastify.log!.error).toHaveBeenCalledWith('Password reset preparation failed for test@example.com: SMTP configuration error');
       expect(mockReply.status).toHaveBeenCalledWith(500);
       expect(mockReply.send).toHaveBeenCalledWith({
         success: false,
@@ -115,7 +138,7 @@ describe('Forgot Password Route', () => {
     });
 
     it('should not log security-related errors', async () => {
-      mockPasswordResetService.sendResetEmail.mockResolvedValue({
+      mockPasswordResetService.prepareResetEmail.mockResolvedValue({
         success: false,
         error: 'Password reset is currently disabled. Email functionality is not enabled.',
       });
@@ -131,18 +154,18 @@ describe('Forgot Password Route', () => {
       });
     });
 
-    it('should return success even when sendResetEmail fails without error message', async () => {
-      mockPasswordResetService.sendResetEmail.mockResolvedValue({
+    it('should return success even when prepareResetEmail fails without error message', async () => {
+      mockPasswordResetService.prepareResetEmail.mockResolvedValue({
         success: false,
       });
 
       const handler = routeHandlers['POST /email/forgot-password'];
       await handler(mockRequest, mockReply);
 
-      expect(mockReply.status).toHaveBeenCalledWith(200);
+      expect(mockReply.status).toHaveBeenCalledWith(500);
       expect(mockReply.send).toHaveBeenCalledWith({
-        success: true,
-        message: 'If the email address is associated with an account, a password reset link has been sent.',
+        success: false,
+        error: 'An error occurred during password reset request.',
       });
     });
 
@@ -160,17 +183,17 @@ describe('Forgot Password Route', () => {
       });
     });
 
-    it('should handle sendResetEmail throwing an error', async () => {
-      mockPasswordResetService.sendResetEmail.mockRejectedValue(new Error('Email service unavailable'));
+    it('should handle prepareResetEmail throwing an error', async () => {
+      mockPasswordResetService.prepareResetEmail.mockRejectedValue(new Error('Email service unavailable'));
 
       const handler = routeHandlers['POST /email/forgot-password'];
       await handler(mockRequest, mockReply);
 
-      expect(mockFastify.log!.error).toHaveBeenCalledWith(expect.any(Error), 'Error during password reset request:');
-      expect(mockReply.status).toHaveBeenCalledWith(500);
+      expect(mockFastify.log!.error).toHaveBeenCalledWith(expect.any(Error), 'Error queueing password reset email for test@example.com:');
+      expect(mockReply.status).toHaveBeenCalledWith(200);
       expect(mockReply.send).toHaveBeenCalledWith({
-        success: false,
-        error: 'An unexpected error occurred during password reset request.',
+        success: true,
+        message: 'If the email address is associated with an account, a password reset link has been sent.',
       });
     });
 
@@ -182,7 +205,7 @@ describe('Forgot Password Route', () => {
       const handler = routeHandlers['POST /email/forgot-password'];
       await handler(mockRequest, mockReply);
 
-      expect(mockPasswordResetService.sendResetEmail).toHaveBeenCalledWith('user+test@example.co.uk', mockFastify.log);
+      expect(mockPasswordResetService.prepareResetEmail).toHaveBeenCalledWith('user+test@example.co.uk', mockFastify.log);
       expect(mockFastify.log!.info).toHaveBeenCalledWith('Password reset requested for email: user+test@example.co.uk');
       expect(mockReply.status).toHaveBeenCalledWith(200);
     });

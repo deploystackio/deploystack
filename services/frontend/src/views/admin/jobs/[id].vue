@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { CodeHighlight } from '@/components/ui/code-highlight'
 import { ArrowLeft, Copy, RefreshCw, ExternalLink } from 'lucide-vue-next'
 import { toast } from 'vue-sonner'
 import DashboardLayout from '@/components/DashboardLayout.vue'
@@ -50,6 +51,18 @@ const formatDuration = (job: Job): string => {
   if (ms < 1000) return `${ms}ms`
   if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`
   return `${(ms / 60000).toFixed(1)}m`
+}
+
+const formatPayload = (payload: unknown): string => {
+  try {
+    if (typeof payload === 'string') {
+      const parsed = JSON.parse(payload)
+      return JSON.stringify(parsed, null, 2)
+    }
+    return JSON.stringify(payload, null, 2)
+  } catch {
+    return String(payload)
+  }
 }
 
 const copyToClipboard = (text: string, label: string) => {
@@ -203,14 +216,10 @@ onMounted(() => {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Payload</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <pre class="bg-muted p-4 rounded-lg overflow-x-auto text-sm">{{ JSON.stringify(job.payload, null, 2) }}</pre>
-          </CardContent>
-        </Card>
+        <div>
+          <h3 class="text-lg font-semibold mb-4">Payload</h3>
+          <CodeHighlight :code="formatPayload(job.payload)" language="json" />
+        </div>
       </div>
     </div>
   </DashboardLayout>

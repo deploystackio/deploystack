@@ -319,30 +319,45 @@ export default async function registerEmailRoute(server: FastifyInstance) {
           // Don't fail registration if preferences initialization fails, just log the error
         }
 
-        // Send verification email for non-first users when email sending is enabled
+        // Queue verification email for non-first users when email sending is enabled
         if (!isFirstUser) {
           try {
             const { EmailVerificationService } = await import('../../services/emailVerificationService');
             const isEmailEnabled = await EmailVerificationService.isVerificationRequired();
             
             if (isEmailEnabled) {
-              const emailResult = await EmailVerificationService.sendVerificationEmail(
-                userId,
-                email.toLowerCase(),
-                username,
-                request.log
-              );
+              // Generate verification token
+              const token = await EmailVerificationService.createVerificationToken(userId);
               
-              if (!emailResult.success) {
-                server.log.warn(`Failed to send verification email to ${email}: ${emailResult.error}`);
-                // Don't fail registration if email sending fails
+              // Get frontend URL for verification link
+              const { GlobalSettings } = await import('../../global-settings/helpers');
+              const frontendUrl = await GlobalSettings.get('global.page_url', 'http://localhost:5173');
+              const verificationUrl = `${frontendUrl}/verify-email?token=${token}`;
+              const supportEmail = await GlobalSettings.get('smtp.from_email') || undefined;
+              
+              // Queue email as background job
+              const jobQueueService = (server as any).jobQueueService;
+              if (jobQueueService) {
+                await jobQueueService.createJob('send_email', {
+                  to: email.toLowerCase(),
+                  subject: 'Verify Your Email Address',
+                  template: 'email-verification',
+                  variables: {
+                    userName: username,
+                    userEmail: email.toLowerCase(),
+                    verificationUrl,
+                    expirationTime: '24 hours',
+                    supportEmail
+                  }
+                });
+                server.log.info(`Verification email queued for ${email}`);
               } else {
-                server.log.info(`Verification email sent successfully to ${email}`);
+                server.log.warn('Job queue service not available, skipping verification email');
               }
             }
           } catch (emailError) {
-            server.log.error(emailError, `Error sending verification email to ${email}:`);
-            // Don't fail registration if email sending fails
+            server.log.error(emailError, `Error queueing verification email for ${email}:`);
+            // Don't fail registration if email queueing fails
           }
         }
 
