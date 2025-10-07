@@ -6,42 +6,58 @@ block content
   h1 Welcome to DeployStack, #{userName}!
   
   p
-    | Thanks for joining our mission to simplify MCP complexity for development teams. Your account is now active, and you're ready to eliminate credential management hassles and get productive with MCP tools in minutes, not hours.
+    | Thanks for joining our mission to eliminate MCP adoption friction for development teams. Your account is now active with your first MCP server pre-installed, and you're ready to get productive in under 1 minute.
   
   .text-center
-    a.button(href=loginUrl) Install DeployStack Gateway
+    a.button(href=loginUrl) Get Started
   
-  h2 Ready to get started?
+  h2 Ready to connect?
   
   p Here's how to get your MCP tools working instantly:
   
   .steps
     p
-      strong 1. Install the gateway:
+      strong 1. Log in to your dashboard:
       br
-      code npm install -g @deploystack/gateway
+      | Visit 
+      a(href=loginUrl) cloud.deploystack.io
+      |  and sign in
     
     p
-      strong 2. Login to your account:
+      strong 2. Get your client configuration:
       br
-      code deploystack login
+      | Click 
+      strong "Get Client Configuration"
+      |  and select your client (VS Code, Cursor, Claude Desktop)
     
     p
-      strong 3. Configure VS Code:
+      strong 3. Add to VS Code:
       br
-      | Replace your MCP config with our gateway endpoint:
+      | Copy the configuration into your VS Code settings
       br
-      code "url": "http://localhost:9095/sse"
+      code .vscode/settings.json
+    
+    p
+      strong 4. Connect:
+      br
+      | Restart VS Code - your browser will open for authorization
+      br
+      | Select your team and authorize
+      br
+      | Done! Your MCP tools are instantly available
   
   h2 What's next?
   
   ul
     li 
-      strong Add your first MCP server&nbsp;
+      strong Add more MCP servers&nbsp;
       | - Browse our catalog and add tools like GitHub, BrightData, or Weather
     li
       strong Invite team members&nbsp;
       | - Share secure access to MCP tools without credential sharing
+    li
+      strong Explore team features&nbsp;
+      | - Set up team-wide credentials and configurations
   
   h2 Need help?
   
@@ -57,7 +73,7 @@ block content
       |  for available tools
   
   p
-    | We're excited to see what you'll build with zero-configuration MCP access!
+    | We're excited to see what you'll build with zero-installation MCP access!
   
   p.text-muted
     | Best regards,
