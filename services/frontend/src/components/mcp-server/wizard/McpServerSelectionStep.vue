@@ -2,9 +2,10 @@
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { Loader2, ChevronDown, PackagePlus, AlertTriangle } from 'lucide-vue-next'
+import { ChevronDown, PackagePlus, AlertTriangle } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Skeleton } from '@/components/ui/skeleton'
 import McpServerSquareCard from '@/components/mcp-server/McpServerSquareCard.vue'
 import FeaturedMcpServers from '@/components/mcp-server/FeaturedMcpServers.vue'
 import PaginationControls from '@/components/ui/pagination/PaginationControls.vue'
@@ -256,9 +257,40 @@ onMounted(() => {
     </div>
 
     <!-- Loading State -->
-    <div v-if="isLoading" class="mt-14 flex items-center justify-center py-8">
-      <Loader2 class="h-6 w-6 animate-spin mr-2 text-gray-400" />
-      <span class="text-gray-600">{{ t('messages.loading') }}</span>
+    <div v-if="isLoading" class="mt-14 space-y-6">
+      <!-- Skeleton grid with 6 cards (2 rows x 3 columns) -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div v-for="i in 6" :key="i" class="rounded-lg bg-gray-50 border-[6px] border-gray-200 p-6">
+          <div class="space-y-4">
+            <!-- Header with avatar and title -->
+            <div class="flex items-center gap-2">
+              <Skeleton class="h-8 w-8 rounded-md" />
+              <Skeleton class="h-5 w-32" />
+            </div>
+            <!-- GitHub repo line -->
+            <div class="flex items-center gap-2 pt-4 border-t border-gray-900/5">
+              <Skeleton class="h-4 w-4 rounded" />
+              <Skeleton class="h-4 flex-1" />
+            </div>
+            <!-- Description -->
+            <div class="space-y-2">
+              <Skeleton class="h-4 w-full" />
+              <Skeleton class="h-4 w-full" />
+              <Skeleton class="h-4 w-3/4" />
+            </div>
+            <!-- Tags area -->
+            <div class="flex gap-1.5 flex-wrap min-h-[3rem]">
+              <Skeleton class="h-6 w-16 rounded-md" />
+              <Skeleton class="h-6 w-20 rounded-md" />
+              <Skeleton class="h-6 w-14 rounded-md" />
+            </div>
+            <!-- Install button -->
+            <div class="pt-4 border-t border-gray-900/5">
+              <Skeleton class="h-10 w-full rounded-md" />
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Server Grid (only show when there's a search query and results) -->
