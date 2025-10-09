@@ -16,6 +16,7 @@ import {
 // TypeScript interface for search query params
 interface SearchServersQueryParams extends Omit<ListServersQueryParams, 'search'> {
   q: string; // Search query is required for search endpoint
+  tags?: string; // Optional comma-separated tags filter
   sort_by?: 'name' | 'github_stars'; // Optional sort parameter
 }
 
@@ -61,7 +62,8 @@ export default async function searchServers(server: FastifyInstance) {
         language: queryParams.language,
         runtime: queryParams.runtime,
         status: queryParams.status,
-        featured: queryParams.featured
+        featured: queryParams.featured,
+        tags: queryParams.tags
       },
       sortBy: queryParams.sort_by,
       pagination: {
@@ -107,7 +109,8 @@ export default async function searchServers(server: FastifyInstance) {
         language: queryParams.language,
         runtime: queryParams.runtime,
         status: status,
-        featured: featured
+        featured: featured,
+        tags: queryParams.tags
       };
 
       // Get servers using the service (which handles permission filtering)
@@ -127,6 +130,7 @@ export default async function searchServers(server: FastifyInstance) {
         operation: 'search_mcp_servers',
         userId: request.user!.id,
         query: queryParams.q,
+        tags: queryParams.tags,
         sortBy: sortBy,
         totalResults: total,
         returnedResults: paginatedServers.length,

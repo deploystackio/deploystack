@@ -10045,6 +10045,13 @@ paths:
           description: Filter by auto-install flag
         - schema:
             type: string
+          in: query
+          name: tags
+          required: false
+          description: Filter by tags (comma-separated list, e.g., "mcp,web-scraping").
+            Servers matching ANY of the provided tags will be returned.
+        - schema:
+            type: string
             enum:
               - name
               - github_stars
@@ -10336,6 +10343,88 @@ paths:
                   - success
                   - error
                 description: Bad Request - Invalid query parameters
+        "401":
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates the operation failed
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                  details:
+                    description: Additional error details
+                required:
+                  - success
+                  - error
+                description: Unauthorized - Authentication required
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates the operation failed
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                  details:
+                    description: Additional error details
+                required:
+                  - success
+                  - error
+                description: Internal Server Error
+  /api/mcp/servers/tags:
+    get:
+      summary: Get all unique tags
+      tags:
+        - MCP Servers
+      description: Retrieve all unique tags from MCP servers. Authentication is
+        required. Results are filtered based on user permissions - users see
+        tags from global servers plus their team servers, while global admins
+        see tags from all servers.
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Tags retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Indicates successful tags retrieval
+                  data:
+                    type: object
+                    properties:
+                      tags:
+                        type: array
+                        items:
+                          type: string
+                        description: Array of unique tags sorted alphabetically
+                      total:
+                        type: number
+                        description: Total number of unique tags
+                    required:
+                      - tags
+                      - total
+                    additionalProperties: false
+                required:
+                  - success
+                  - data
+                additionalProperties: false
+                description: Tags retrieved successfully
         "401":
           description: Unauthorized - Authentication required
           content:

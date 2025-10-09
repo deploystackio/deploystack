@@ -109,6 +109,10 @@ export const SEARCH_SERVERS_QUERY_SCHEMA = {
       type: 'boolean',
       description: 'Filter by auto-install flag'
     },
+    tags: {
+      type: 'string',
+      description: 'Filter by tags (comma-separated list, e.g., "mcp,web-scraping"). Servers matching ANY of the provided tags will be returned.'
+    },
     sort_by: {
       type: 'string',
       enum: ['name', 'github_stars'],
@@ -1008,6 +1012,34 @@ export const UPDATE_GLOBAL_SERVER_REQUEST_SCHEMA = {
 
 export const UPDATE_GLOBAL_SERVER_SUCCESS_RESPONSE_SCHEMA = createSuccessResponseSchema(SERVER_ENTITY_SCHEMA, 'server update');
 
+export const GET_TAGS_SUCCESS_RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    success: {
+      type: 'boolean',
+      description: 'Indicates successful tags retrieval'
+    },
+    data: {
+      type: 'object',
+      properties: {
+        tags: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Array of unique tags sorted alphabetically'
+        },
+        total: {
+          type: 'number',
+          description: 'Total number of unique tags'
+        }
+      },
+      required: ['tags', 'total'],
+      additionalProperties: false
+    }
+  },
+  required: ['success', 'data'],
+  additionalProperties: false
+} as const;
+
 // =============================================================================
 // TYPESCRIPT INTERFACES - CONSOLIDATED
 // =============================================================================
@@ -1262,6 +1294,14 @@ export interface ListServersSuccessResponse {
   data: {
     servers: ServerEntity[];
     pagination: PaginationInfo;
+  };
+}
+
+export interface GetTagsSuccessResponse {
+  success: boolean;
+  data: {
+    tags: string[];
+    total: number;
   };
 }
 

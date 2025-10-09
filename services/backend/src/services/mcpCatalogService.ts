@@ -170,6 +170,7 @@ export interface McpServerFilters {
   status?: 'active' | 'deprecated' | 'maintenance';
   featured?: boolean;
   search?: string;
+  tags?: string;
 }
 
 export class McpSlugService {
@@ -280,6 +281,13 @@ export class McpCatalogService {
             like(mcpServers.tags, searchTerm)
           )
         );
+      }
+      if (filters.tags) {
+        const tagList = filters.tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+        if (tagList.length > 0) {
+          const tagConditions = tagList.map(tag => like(mcpServers.tags, `%${tag}%`));
+          whereConditions.push(or(...tagConditions));
+        }
       }
     }
     
@@ -661,5 +669,84 @@ export class McpCatalogService {
     teamIds: string[]
   ): Promise<McpServer[]> {
     return await this.getServersForUser(userId, userRole, teamIds, { search: query });
+  }
+  
+  async getTagsForUser(
+    userId: string,
+    userRole: string,
+    teamIds: string[]
+  ): Promise<string[]> {
+    this.logger.debug({
+      operation: 'get_tags_for_user',
+      userId,
+      userRole,
+      teamIds: teamIds.length
+    }, 'Getting unique tags for user');
+    
+    const whereConditions: any[] = [];
+    
+    // Apply visibility filters based on user role
+    if (userRole === 'global_admin') {
+      // Global admin sees ALL tags from all servers
+      this.logger.debug('Global admin - including tags from all servers');
+    } else {
+      // Regular users see tags from global servers + their team servers
+      whereConditions.push(
+        or(
+          eq(mcpServers.visibility, 'global'),
+          and(
+            eq(mcpServers.visibility, 'team'),
+            teamIds.length > 0 ? or(...teamIds.map(teamId => eq(mcpServers.owner_team_id, teamId))) : eq(mcpServers.id, 'never-match')
+          )
+        )
+      );
+    }
+    
+    // Use DISTINCT to get only unique tag combinations at database level
+    // This is much more efficient when many servers share the same tags
+    let query = this.db.selectDistinct({ tags: mcpServers.tags }).from(mcpServers);
+    if (whereConditions.length > 0) {
+      query = query.where(and(...whereConditions));
+    }
+    
+    const results = await query;
+    
+    this.logger.debug({
+      operation: 'get_tags_for_user',
+      uniqueTagCombinations: results.length
+    }, 'Retrieved unique tag combinations from database');
+    
+    // Collect all unique tags from the distinct JSON combinations
+    const uniqueTags = new Set<string>();
+    
+    for (const row of results) {
+      if (row.tags) {
+        try {
+          const parsedTags = typeof row.tags === 'string' ? JSON.parse(row.tags) : row.tags;
+          if (Array.isArray(parsedTags)) {
+            parsedTags.forEach(tag => {
+              if (tag && typeof tag === 'string') {
+                uniqueTags.add(tag.trim());
+              }
+            });
+          }
+        } catch (e) {
+          this.logger.warn({ tags: row.tags, error: e }, 'Failed to parse tags JSON');
+        }
+      }
+    }
+    
+    // Convert Set to sorted array
+    const sortedTags = Array.from(uniqueTags).sort();
+    
+    this.logger.info({
+      operation: 'get_tags_for_user',
+      userId,
+      userRole,
+      uniqueTagCombinations: results.length,
+      uniqueIndividualTags: sortedTags.length
+    }, 'Unique tags retrieved successfully');
+    
+    return sortedTags;
   }
 }

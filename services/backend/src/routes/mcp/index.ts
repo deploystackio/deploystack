@@ -9,6 +9,7 @@ import deleteCategory from './categories/delete';
 import listServers from './servers/list';
 import getServer from './servers/get';
 import searchServers from './servers/search';
+import getTags from './servers/tags';
 import createGlobalServer from './servers/create-global';
 import updateGlobalServer from './servers/update-global';
 import deleteGlobalServer from './servers/delete-global';
@@ -38,6 +39,7 @@ export default async function mcpRoutes(server: FastifyInstance) {
   await server.register(listServers);
   await server.register(getServer);
   await server.register(searchServers);
+  await server.register(getTags);
   
   // Global server management (global_admin only)
   await server.register(createGlobalServer);

@@ -11,6 +11,7 @@ vi.mock('../../../../src/routes/mcp/categories/delete');
 vi.mock('../../../../src/routes/mcp/servers/list');
 vi.mock('../../../../src/routes/mcp/servers/get');
 vi.mock('../../../../src/routes/mcp/servers/search');
+vi.mock('../../../../src/routes/mcp/servers/tags');
 vi.mock('../../../../src/routes/mcp/servers/create-global');
 vi.mock('../../../../src/routes/mcp/servers/update-global');
 vi.mock('../../../../src/routes/mcp/servers/delete-global');
@@ -38,6 +39,7 @@ import deleteCategory from '../../../../src/routes/mcp/categories/delete';
 import listServers from '../../../../src/routes/mcp/servers/list';
 import getServer from '../../../../src/routes/mcp/servers/get';
 import searchServers from '../../../../src/routes/mcp/servers/search';
+import getTags from '../../../../src/routes/mcp/servers/tags';
 import createGlobalServer from '../../../../src/routes/mcp/servers/create-global';
 import updateGlobalServer from '../../../../src/routes/mcp/servers/update-global';
 import deleteGlobalServer from '../../../../src/routes/mcp/servers/delete-global';
@@ -65,6 +67,7 @@ const mockDeleteCategory = deleteCategory as MockedFunction<typeof deleteCategor
 const mockListServers = listServers as MockedFunction<typeof listServers>;
 const mockGetServer = getServer as MockedFunction<typeof getServer>;
 const mockSearchServers = searchServers as MockedFunction<typeof searchServers>;
+const mockGetTags = getTags as MockedFunction<typeof getTags>;
 const mockCreateGlobalServer = createGlobalServer as MockedFunction<typeof createGlobalServer>;
 const mockUpdateGlobalServer = updateGlobalServer as MockedFunction<typeof updateGlobalServer>;
 const mockDeleteGlobalServer = deleteGlobalServer as MockedFunction<typeof deleteGlobalServer>;
@@ -110,6 +113,7 @@ describe('MCP Routes Registration', () => {
     mockListServers.mockResolvedValue(undefined);
     mockGetServer.mockResolvedValue(undefined);
     mockSearchServers.mockResolvedValue(undefined);
+    mockGetTags.mockResolvedValue(undefined);
     mockCreateGlobalServer.mockResolvedValue(undefined);
     mockUpdateGlobalServer.mockResolvedValue(undefined);
     mockDeleteGlobalServer.mockResolvedValue(undefined);
@@ -133,8 +137,8 @@ describe('MCP Routes Registration', () => {
     it('should register all MCP route modules', async () => {
       await mcpRoutes(mockFastify as FastifyInstance);
 
-      // Verify that all 20 routes are registered (removed syncRepo)
-      expect(mockFastify.register).toHaveBeenCalledTimes(20);
+      // Verify that all 21 routes are registered
+      expect(mockFastify.register).toHaveBeenCalledTimes(21);
     });
 
     it('should register all category routes', async () => {
@@ -152,6 +156,7 @@ describe('MCP Routes Registration', () => {
       expect(mockFastify.register).toHaveBeenCalledWith(listServers);
       expect(mockFastify.register).toHaveBeenCalledWith(getServer);
       expect(mockFastify.register).toHaveBeenCalledWith(searchServers);
+      expect(mockFastify.register).toHaveBeenCalledWith(getTags);
     });
 
     it('should register all global server management routes', async () => {
@@ -216,10 +221,11 @@ describe('MCP Routes Registration', () => {
 
       const registerCalls = (mockFastify.register as any).mock.calls;
       
-      // Check that global server routes are in positions 4-6
+      // Check that server routes are in positions 4-7
       expect(registerCalls[4][0]).toBe(listServers);
       expect(registerCalls[5][0]).toBe(getServer);
       expect(registerCalls[6][0]).toBe(searchServers);
+      expect(registerCalls[7][0]).toBe(getTags);
     });
 
     it('should register global server management routes correctly', async () => {
@@ -227,10 +233,10 @@ describe('MCP Routes Registration', () => {
 
       const registerCalls = (mockFastify.register as any).mock.calls;
       
-      // Check that global server management routes are in positions 7-9
-      expect(registerCalls[7][0]).toBe(createGlobalServer);
-      expect(registerCalls[8][0]).toBe(updateGlobalServer);
-      expect(registerCalls[9][0]).toBe(deleteGlobalServer);
+      // Check that global server management routes are in positions 8-10
+      expect(registerCalls[8][0]).toBe(createGlobalServer);
+      expect(registerCalls[9][0]).toBe(updateGlobalServer);
+      expect(registerCalls[10][0]).toBe(deleteGlobalServer);
     });
 
     it('should register team server management routes correctly', async () => {
@@ -238,11 +244,11 @@ describe('MCP Routes Registration', () => {
 
       const registerCalls = (mockFastify.register as any).mock.calls;
       
-      // Check that team server management routes are in positions 10-13
-      expect(registerCalls[10][0]).toBe(listTeamServers);
-      expect(registerCalls[11][0]).toBe(createTeamServer);
-      expect(registerCalls[12][0]).toBe(updateTeamServer);
-      expect(registerCalls[13][0]).toBe(deleteTeamServer);
+      // Check that team server management routes are in positions 11-14
+      expect(registerCalls[11][0]).toBe(listTeamServers);
+      expect(registerCalls[12][0]).toBe(createTeamServer);
+      expect(registerCalls[13][0]).toBe(updateTeamServer);
+      expect(registerCalls[14][0]).toBe(deleteTeamServer);
     });
 
     it('should register version management routes correctly', async () => {
@@ -250,10 +256,10 @@ describe('MCP Routes Registration', () => {
 
       const registerCalls = (mockFastify.register as any).mock.calls;
       
-      // Check that version management routes are in positions 14-16
-      expect(registerCalls[14][0]).toBe(listVersions);
-      expect(registerCalls[15][0]).toBe(createVersion);
-      expect(registerCalls[16][0]).toBe(updateVersion);
+      // Check that version management routes are in positions 15-17
+      expect(registerCalls[15][0]).toBe(listVersions);
+      expect(registerCalls[16][0]).toBe(createVersion);
+      expect(registerCalls[17][0]).toBe(updateVersion);
     });
 
     it('should register GitHub integration routes correctly', async () => {
@@ -261,8 +267,8 @@ describe('MCP Routes Registration', () => {
 
       const registerCalls = (mockFastify.register as any).mock.calls;
       
-      // Check that GitHub route is at position 17
-      expect(registerCalls[17][0]).toBe(getRepoInfo);
+      // Check that GitHub route is at position 18
+      expect(registerCalls[18][0]).toBe(getRepoInfo);
     });
 
     it('should register installations routes correctly', async () => {
@@ -270,8 +276,8 @@ describe('MCP Routes Registration', () => {
 
       const registerCalls = (mockFastify.register as any).mock.calls;
       
-      // Check that installations route is at position 18
-      expect(registerCalls[18][0]).toBe(installationsRoutes);
+      // Check that installations route is at position 19
+      expect(registerCalls[19][0]).toBe(installationsRoutes);
     });
 
     it('should register user configurations routes last', async () => {
@@ -279,8 +285,8 @@ describe('MCP Routes Registration', () => {
 
       const registerCalls = (mockFastify.register as any).mock.calls;
       
-      // Check that user configurations route is at position 19 (last)
-      expect(registerCalls[19][0]).toBe(userConfigurationsRoutes);
+      // Check that user configurations route is at position 20 (last)
+      expect(registerCalls[20][0]).toBe(userConfigurationsRoutes);
     });
   });
 
@@ -317,6 +323,7 @@ describe('MCP Routes Registration', () => {
       expect(listServers).toBeDefined();
       expect(getServer).toBeDefined();
       expect(searchServers).toBeDefined();
+      expect(getTags).toBeDefined();
       expect(createGlobalServer).toBeDefined();
       expect(updateGlobalServer).toBeDefined();
       expect(deleteGlobalServer).toBeDefined();
