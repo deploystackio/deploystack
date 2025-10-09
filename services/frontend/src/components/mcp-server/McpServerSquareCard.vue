@@ -2,6 +2,7 @@
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { Github, Star } from 'lucide-vue-next'
 import type { McpServer } from '@/views/admin/mcp-server-catalog/types'
 
@@ -44,6 +45,22 @@ const getGitHubAvatarUrl = (server: McpServer) => {
   if (!server.github_account_id) return null
   return `https://avatars.githubusercontent.com/u/${server.github_account_id}?v=4&s=64`
 }
+
+const getRuntimeBadgeClass = (runtime: string | null | undefined) => {
+  if (!runtime) return 'bg-gray-100 text-gray-800'
+  
+  const runtimeLower = runtime.toLowerCase()
+  
+  if (runtimeLower === 'node') {
+    return 'bg-green-100 text-green-800'
+  } else if (runtimeLower === 'python') {
+    return 'bg-blue-100 text-blue-800'
+  } else if (runtimeLower === 'http') {
+    return 'bg-purple-100 text-purple-800'
+  }
+  
+  return 'bg-gray-100 text-gray-800'
+}
 </script>
 
 <template>
@@ -66,6 +83,11 @@ const getGitHubAvatarUrl = (server: McpServer) => {
             />
             {{ server.name }}
           </dt>
+        </div>
+        <div class="flex-none pt-6 pr-6">
+          <Badge v-if="server.runtime" variant="secondary" :class="['font-mono text-xs', getRuntimeBadgeClass(server.runtime)]">
+            {{ server.runtime }}
+          </Badge>
         </div>
         <div class="mt-6 flex w-full flex-none gap-x-4 items-center border-t border-gray-900/5 px-6 pt-6">
           <dt class="flex-none">
@@ -91,7 +113,24 @@ const getGitHubAvatarUrl = (server: McpServer) => {
           </dd>
         </div>
         <div class="mt-4 flex w-full flex-none gap-x-4 px-6">
-          <dd class="text-sm text-gray-600 line-clamp-3 min-h-[3.75rem]">{{ getServerDescription(server) }}</dd>
+          <dd class="text-sm text-gray-600 line-clamp-3 min-h-[3.75rem]">
+            {{ getServerDescription(server) }}
+          </dd>
+        </div>
+        <div v-if="server.tags && server.tags.length > 0" class="mt-2 flex w-full flex-none px-6 min-h-[3rem]">
+          <dd class="flex flex-wrap gap-1.5 items-center line-clamp-2">
+            <Badge
+              v-for="tag in server.tags"
+              :key="tag"
+              variant="outline"
+              class="text-xs px-2 py-0.5"
+            >
+              {{ tag }}
+            </Badge>
+          </dd>
+        </div>
+        <div v-else class="mt-2 flex w-full flex-none px-6 min-h-[3rem]">
+          <!-- Empty space to maintain consistent card height -->
         </div>
       </dl>
       <div class="mt-6 border-t border-gray-900/5 px-6 py-6">
@@ -111,6 +150,13 @@ const getGitHubAvatarUrl = (server: McpServer) => {
 .line-clamp-3 {
   display: -webkit-box;
   -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
