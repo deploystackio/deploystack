@@ -3,6 +3,11 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from '@/components/ui/hover-card'
 import { Github, Star } from 'lucide-vue-next'
 import type { McpServer } from '@/views/admin/mcp-server-catalog/types'
 
@@ -21,6 +26,11 @@ const { t } = useI18n()
 const router = useRouter()
 
 const handleInstall = () => {
+  // Prevent installation for Python servers
+  if (isPythonServer(props.server.runtime)) {
+    return
+  }
+
   emit('install', props.server)
 
   router.push({
@@ -60,6 +70,11 @@ const getRuntimeBadgeClass = (runtime: string | null | undefined) => {
   }
   
   return 'bg-gray-100 text-gray-800'
+}
+
+const isPythonServer = (runtime: string | null | undefined) => {
+  if (!runtime) return false
+  return runtime.toLowerCase() === 'python'
 }
 </script>
 
@@ -134,7 +149,24 @@ const getRuntimeBadgeClass = (runtime: string | null | undefined) => {
         </div>
       </dl>
       <div class="mt-6 border-t border-gray-900/5 px-6 py-6">
+        <HoverCard v-if="isPythonServer(server.runtime)" :open-delay="0">
+          <HoverCardTrigger as-child>
+            <Button
+              variant="outline"
+              class="w-full flex items-center justify-center gap-2 bg-black text-white border-black hover:bg-black/90 hover:border-black hover:text-white text-sm font-semibold"
+            >
+              {{ t('mcpInstallations.actions.install') }} <span aria-hidden="true">&rarr;</span>
+            </Button>
+          </HoverCardTrigger>
+          <HoverCardContent class="w-80">
+            <div class="text-sm">
+              <p class="font-semibold text-gray-900">Python MCP servers not supported yet</p>
+              <p class="text-gray-600 mt-1">We're working on adding Python runtime support. Stay tuned!</p>
+            </div>
+          </HoverCardContent>
+        </HoverCard>
         <Button
+          v-else
           @click="handleInstall"
           variant="outline"
           class="w-full flex items-center justify-center gap-2 bg-black text-white border-black hover:bg-black/90 hover:border-black hover:text-white text-sm font-semibold"
