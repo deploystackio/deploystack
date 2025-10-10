@@ -100,11 +100,6 @@ VS Code → HTTPS Request → DeployStack Satellite → MCP Server Process → E
 
 ### Why Satellite vs Traditional Gateway?
 
-**Conversion Rate Data:**
-
-- **Traditional Gateway CLI**: 1% (install CLI → configure → first use)
-- **DeployStack Satellite**: 12% (register → copy URL → first use)
-
 **User Experience:**
 
 - **Gateway**: "Install our CLI tool, configure localhost, manage processes"
@@ -112,7 +107,7 @@ VS Code → HTTPS Request → DeployStack Satellite → MCP Server Process → E
 
 **Why This Matters:**
 
-- **Adoption Friction Kills Everything**: Every MCP solution requiring CLI installation loses 99% of interested developers
+- **Adoption Friction Kills Everything**: Every MCP solution requiring CLI installation loses interested developers
 - **"Another Local Proxy" Fatigue**: Market saturated with similar gateway solutions requiring installation
 - **Teams Can't Scale**: Complex setups prevent MCP adoption beyond early adopters
 - **Enterprise Path**: Natural progression from managed service to on-premise deployment
@@ -122,7 +117,7 @@ VS Code → HTTPS Request → DeployStack Satellite → MCP Server Process → E
 - **No Local Dependencies**: No Node.js, npm, or port management
 - **Familiar Pattern**: Works like OpenAI API, Claude API, or any SaaS
 - **Auto-scaling**: Handles traffic spikes automatically
-- **High Availability**: 99.9% uptime with multi-region deployment
+- **High Availability**: multi-region deployment
 - **Instant Updates**: No user installations required for new features
 
 ## Roadmap
