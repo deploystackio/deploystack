@@ -1,21 +1,38 @@
 <script setup lang="ts">
 import type { HTMLAttributes } from 'vue'
+import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
 
-const props = defineProps<{
-  class?: HTMLAttributes['class']
-}>()
+const cardVariants = cva(
+  'text-card-foreground flex flex-col gap-6 rounded-xl border py-6',
+  {
+    variants: {
+      variant: {
+        default: 'bg-card',
+        gray: 'bg-stone-200',
+      },
+    },
+    defaultVariants: {
+      variant: 'default',
+    },
+  }
+)
+
+const props = withDefaults(
+  defineProps<{
+    variant?: VariantProps<typeof cardVariants>['variant']
+    class?: HTMLAttributes['class']
+  }>(),
+  {
+    variant: 'default',
+  }
+)
 </script>
 
 <template>
   <div
     data-slot="card"
-    :class="
-      cn(
-        'bg-card text-card-foreground flex flex-col gap-6 rounded-xl border py-6',
-        props.class,
-      )
-    "
+    :class="cn(cardVariants({ variant }), props.class)"
   >
     <slot />
   </div>
