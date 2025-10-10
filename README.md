@@ -55,7 +55,6 @@ some-mcp configure --api-key=xxx
 **After DeployStack:**
 
 ```json
-// VS Code settings.json - that's it!
 {
   "mcpServers": {
     "deploystack": {
