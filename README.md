@@ -2,7 +2,7 @@
 
 <p align="center">
     <a href="https://deploystack.io">
-        <img src="./.assets/deploystack-characteristics.webp" alt="DeployStack Logo" />
+        <img src="./.assets/deploystack-banner.png" alt="DeployStack Logo" />
     </a>
 </p>
 

@@ -105,6 +105,19 @@ const navigationItems = [
   // },
 ]
 
+// Helper function to check if a route is active
+const isRouteActive = (url: string) => {
+  const currentPath = router.currentRoute.value.path
+  
+  // Special case: '/teams' should only match exactly '/teams', not '/teams/manage/...'
+  if (url === '/teams') {
+    return currentPath === '/teams'
+  }
+  
+  // For all other routes, use startsWith for sub-route matching
+  return currentPath.startsWith(url)
+}
+
 // Fetch user data logic using UserService
 const fetchUserData = async (forceRefresh = false) => {
   try {
@@ -280,9 +293,8 @@ onUnmounted(() => {
             <SidebarMenuItem v-for="item in navigationItems" :key="item.title">
               <SidebarMenuButton
                 @click="navigateTo(item.url)"
-                :is-active="router.currentRoute.value.path === item.url"
+                :is-active="isRouteActive(item.url)"
                 class="w-full justify-start"
-                :aria-current="router.currentRoute.value.path === item.url ? 'page' : undefined"
               >
                 <component :is="item.icon" class="mr-2 h-4 w-4 shrink-0" />
                 <span>{{ item.title }}</span>
@@ -299,9 +311,8 @@ onUnmounted(() => {
             <SidebarMenuItem v-for="item in teamItems" :key="item.title">
               <SidebarMenuButton
                 @click="navigateTo(item.url)"
-                :is-active="router.currentRoute.value.path === item.url"
+                :is-active="isRouteActive(item.url)"
                 class="w-full justify-start"
-                :aria-current="router.currentRoute.value.path === item.url ? 'page' : undefined"
               >
                 <component :is="item.icon" class="mr-2 h-4 w-4 shrink-0" />
                 <span>{{ item.title }}</span>
@@ -319,9 +330,8 @@ onUnmounted(() => {
             <SidebarMenuItem>
               <SidebarMenuButton
                 @click="navigateTo('/admin/settings')"
-                :is-active="router.currentRoute.value.path === '/admin/settings'"
+                :is-active="router.currentRoute.value.path.startsWith('/admin/settings')"
                 class="w-full justify-start"
-                :aria-current="router.currentRoute.value.path === '/admin/settings' ? 'page' : undefined"
               >
                 <FileSliders class="mr-2 h-4 w-4 shrink-0" />
                 <span>{{ t('sidebar.adminArea.globalSettings') }}</span>
@@ -330,9 +340,8 @@ onUnmounted(() => {
             <SidebarMenuItem>
               <SidebarMenuButton
                 @click="navigateTo('/admin/users')"
-                :is-active="router.currentRoute.value.path === '/admin/users'"
+                :is-active="router.currentRoute.value.path.startsWith('/admin/users')"
                 class="w-full justify-start"
-                :aria-current="router.currentRoute.value.path === '/admin/users' ? 'page' : undefined"
               >
                 <Users class="mr-2 h-4 w-4 shrink-0" />
                 <span>{{ t('sidebar.adminArea.users') }}</span>
@@ -343,7 +352,6 @@ onUnmounted(() => {
                 @click="navigateTo('/admin/mcp-server-catalog')"
                 :is-active="router.currentRoute.value.path.startsWith('/admin/mcp-server-catalog')"
                 class="w-full justify-start"
-                :aria-current="router.currentRoute.value.path.startsWith('/admin/mcp-server-catalog') ? 'page' : undefined"
               >
                 <Server class="mr-2 h-4 w-4 shrink-0" />
                 <span>{{ t('sidebar.adminArea.mcpCatalog') }}</span>
@@ -354,7 +362,6 @@ onUnmounted(() => {
                 @click="navigateTo('/admin/mcp-categories')"
                 :is-active="router.currentRoute.value.path.startsWith('/admin/mcp-categories')"
                 class="w-full justify-start"
-                :aria-current="router.currentRoute.value.path.startsWith('/admin/mcp-categories') ? 'page' : undefined"
               >
                 <FolderTree class="mr-2 h-4 w-4 shrink-0" />
                 <span>{{ t('sidebar.adminArea.mcpCategories') }}</span>
@@ -365,7 +372,6 @@ onUnmounted(() => {
                 @click="navigateTo('/admin/satellites')"
                 :is-active="router.currentRoute.value.path.startsWith('/admin/satellites')"
                 class="w-full justify-start"
-                :aria-current="router.currentRoute.value.path.startsWith('/admin/satellites') ? 'page' : undefined"
               >
                 <Satellite class="mr-2 h-4 w-4 shrink-0" />
                 <span>{{ t('sidebar.adminArea.satellites') }}</span>
@@ -376,7 +382,6 @@ onUnmounted(() => {
                 @click="navigateTo('/admin/jobs')"
                 :is-active="router.currentRoute.value.path.startsWith('/admin/jobs')"
                 class="w-full justify-start"
-                :aria-current="router.currentRoute.value.path.startsWith('/admin/jobs') ? 'page' : undefined"
               >
                 <ListTodo class="mr-2 h-4 w-4 shrink-0" />
                 <span>{{ t('sidebar.adminArea.backgroundJobs') }}</span>
