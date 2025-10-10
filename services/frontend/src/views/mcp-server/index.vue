@@ -8,6 +8,7 @@ import { Plus } from 'lucide-vue-next'
 import { toast } from 'vue-sonner'
 import { useEventBus } from '@/composables/useEventBus'
 import McpInstallationsCard from '@/components/mcp-server/McpInstallationsCard.vue'
+import McpStats from '@/components/mcp-server/McpStats.vue'
 import ClientConfigurationModal from '@/components/gateway-config/ClientConfigurationModal.vue'
 import UserWalkthroughPopover from '@/components/walkthrough/UserWalkthroughPopover.vue'
 import type { McpInstallation } from '@/types/mcp-installations'
@@ -99,7 +100,7 @@ const checkWalkthroughSetting = async (): Promise<boolean> => {
   try {
     // Step 1: Check if walkthrough is globally enabled
     const globalWalkthroughEnabled = await GlobalSettingsService.shouldShowUserWalkthrough()
-    
+
     if (!globalWalkthroughEnabled) {
       return false
     }
@@ -107,16 +108,16 @@ const checkWalkthroughSetting = async (): Promise<boolean> => {
     // Step 2: Check user's personal walkthrough completion status via API
     const userPreferences = await UserPreferencesService.getUserPreferences()
     const isWalkthroughCompleted = userPreferences.walkthrough_completed || false
-    
+
     if (isWalkthroughCompleted) {
       // Also sync to local storage for consistency
       eventBus.setState('walkthrough_completed', true)
       return false
     }
-    
+
     // Step 3: Return true if walkthrough should be shown
     return true
-    
+
   } catch (error) {
     console.error('Error checking walkthrough setting:', error)
     return false
@@ -132,10 +133,10 @@ const fetchInstallations = async (): Promise<void> => {
     error.value = null
 
     installations.value = await McpInstallationService.getTeamInstallations(selectedTeam.value.id)
-    
+
     // UPDATED: Check and show walkthrough after installations are loaded
     await checkAndShowWalkthrough()
-    
+
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'An unknown error occurred'
     installations.value = []
@@ -155,7 +156,7 @@ const checkAndShowWalkthrough = async (): Promise<void> => {
 
     // Check if walkthrough should be shown
     const shouldShowWalkthrough = await checkWalkthroughSetting()
-    
+
     if (!shouldShowWalkthrough) {
       showUserWalkthrough.value = false
       return
@@ -163,7 +164,7 @@ const checkAndShowWalkthrough = async (): Promise<void> => {
 
     // Wait for DOM to update with the installations list
     await nextTick()
-    
+
     // Add a small delay to ensure the list is fully rendered
     setTimeout(() => {
       // Verify the target element exists before showing walkthrough
@@ -177,7 +178,7 @@ const checkAndShowWalkthrough = async (): Promise<void> => {
         showUserWalkthrough.value = false
       }
     }, 100)
-    
+
   } catch (error) {
     console.error('Error checking and showing walkthrough:', error)
     showUserWalkthrough.value = false
@@ -274,37 +275,37 @@ const handleWalkthroughFinish = async () => {
   try {
     // Step 1: Use generic preference endpoint (avoids Content-Type header issue)
     await UserPreferencesService.setUserPreference('walkthrough_completed', true)
-    
+
     // Step 2: Update local storage for consistency
     eventBus.setState('walkthrough_completed', true)
-    
+
     // Step 3: Hide all walkthrough UI elements
     showUserWalkthrough.value = false
     showWalkthroughStep2.value = false
     showStep2ButtonHighZIndex.value = false
     walkthroughStep.value = 1
-    
+
     // Step 4: Emit completion event for any listening components
     eventBus.emit('walkthrough-completed')
-    
+
     // Optional: Show success toast
     toast.success('Welcome tour completed!')
-    
+
   } catch (error) {
     console.error('Error updating walkthrough completion status:', error)
-    
+
     // Still update local storage as fallback
     eventBus.setState('walkthrough_completed', true)
-    
+
     // Hide walkthrough UI
     showUserWalkthrough.value = false
     showWalkthroughStep2.value = false
     showStep2ButtonHighZIndex.value = false
     walkthroughStep.value = 1
-    
+
     // Emit completion event
     eventBus.emit('walkthrough-completed')
-    
+
     // Show error toast
     toast.error('Walkthrough completed, but failed to save preference')
   }
@@ -408,7 +409,6 @@ onUnmounted(() => {
       <!-- Header -->
       <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div class="flex-1">
-          <p class="text-muted-foreground">{{ t('mcpInstallations.description') }}</p>
         </div>
         <div v-if="selectedTeam" class="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
           <Button
@@ -450,7 +450,9 @@ onUnmounted(() => {
       </div>
 
       <!-- Main Content -->
-      <div v-else>
+      <div v-else class="space-y-6">
+        <McpStats />
+
         <McpInstallationsCard
           :installations="installations"
           :has-installations="hasInstallations"

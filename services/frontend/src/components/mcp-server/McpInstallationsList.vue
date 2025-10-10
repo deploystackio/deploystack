@@ -209,8 +209,8 @@ onUnmounted(() => {
     class="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-[9998]"
   />
 
-  <div class="min-h-screen bg-gray-50">
-    <div class="mx-auto max-w-4xl space-y-8 py-16">
+  <div class="min-h-screen">
+    <div>
       <!-- Installations List -->
       <div v-if="sortedInstallations.length > 0" class="relative">
         <ul

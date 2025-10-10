@@ -76,12 +76,14 @@ const handleRemoveInstallation = (installationId: string) => {
   </div>
 
   <!-- Installations List -->
-  <McpInstallationsList
-    v-else
-    :installations="installations"
-    :show-walkthrough="showWalkthrough"
-    @view-installation="handleViewInstallation"
-    @manage-installation="handleManageInstallation"
-    @remove-installation="handleRemoveInstallation"
-  />
+   <div v-else class="mt-18">
+      <McpInstallationsList
+        :installations="installations"
+        :show-walkthrough="showWalkthrough"
+        @view-installation="handleViewInstallation"
+        @manage-installation="handleManageInstallation"
+        @remove-installation="handleRemoveInstallation"
+      />
+   </div>
+
 </template>
