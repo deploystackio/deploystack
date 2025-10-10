@@ -76,16 +76,21 @@ const isPythonServer = (runtime: string | null | undefined) => {
   if (!runtime) return false
   return runtime.toLowerCase() === 'python'
 }
+
+const truncateServerName = (name: string, maxLength: number = 30) => {
+  if (name.length <= maxLength) return name
+  return name.substring(0, maxLength) + '...'
+}
 </script>
 
 <template>
   <div>
     <h2 class="sr-only">Server Details</h2>
-    <div class="rounded-lg bg-gray-50 border-[6px] border-gray-200">
+    <div class="rounded-lg bg-white border-[6px] border-gray-200">
       <dl class="flex flex-wrap">
         <div class="flex-auto pt-6 pl-6">
           <dt
-            class="text-sm/6 font-semibold text-gray-900 cursor-pointer hover:text-teal-700 transition-colors flex items-center gap-2"
+            class="text-sm/6 font-semibold text-gray-900 cursor-pointer hover:text-teal-700 transition-colors flex items-center gap-2 truncate"
             @click="handleServerClick"
             :title="`View ${server.name} details`"
           >
@@ -96,7 +101,7 @@ const isPythonServer = (runtime: string | null | undefined) => {
               class="h-8 w-8 rounded-md flex-shrink-0"
               @error="($event.target as HTMLImageElement).style.display = 'none'"
             />
-            {{ server.name }}
+            <span class="truncate">{{ truncateServerName(server.name) }}</span>
           </dt>
         </div>
         <div class="flex-none pt-6 pr-6">

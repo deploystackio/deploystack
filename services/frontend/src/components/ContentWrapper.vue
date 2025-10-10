@@ -14,7 +14,7 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  maxWidth: 'lg',
+  maxWidth: '2xl',
   background: true,
   padding: 'lg',
   noCard: false
@@ -35,9 +35,9 @@ const maxWidthClasses = computed(() => {
 // Compute padding classes
 const paddingClasses = computed(() => {
   const paddingMap = {
-    'sm': 'py-8',
-    'md': 'py-12',
-    'lg': 'py-16'
+    'sm': 'py-4',
+    'md': 'py-4',
+    'lg': 'py-4'
   }
   return paddingMap[props.padding]
 })
@@ -45,7 +45,8 @@ const paddingClasses = computed(() => {
 // Compute container classes
 const containerClasses = computed(() => {
   const baseClasses = props.background
-    ? 'bg-muted/50 rounded-lg sm:rounded-lg'
+    // ? 'bg-muted/50 rounded-lg sm:rounded-lg'
+    ? ''
     : ''
   return baseClasses
 })
@@ -54,10 +55,10 @@ const containerClasses = computed(() => {
 <template>
   <div :class="containerClasses">
     <div :class="paddingClasses">
-      <div class="mx-auto max-w-7xl sm:px-2 lg:px-8">
+      <div class="mx-auto max-w-7xl">
         <div :class="['mx-auto px-4 lg:px-0', maxWidthClasses]">
           <!-- White Card wrapper (default) -->
-          <Card v-if="!noCard" class="bg-white shadow-sm py-3">
+          <Card v-if="!noCard" class="bg-white py-3">
             <CardContent class="p-6">
               <slot />
             </CardContent>

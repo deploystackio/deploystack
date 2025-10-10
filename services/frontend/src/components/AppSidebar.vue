@@ -218,7 +218,7 @@ onUnmounted(() => {
         <SidebarMenuItem>
           <DropdownMenu>
             <DropdownMenuTrigger as-child>
-              <SidebarMenuButton size="lg" class="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground">
+              <SidebarMenuButton size="lg" class="bg-white border border-sidebar-foreground/20 data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground">
                 <div class="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
                   <Users class="size-4" />
                 </div>

@@ -179,7 +179,7 @@ onUnmounted(() => {
       </Alert>
 
       <!-- Team Management with Tabs -->
-      <div v-else-if="team" class="space-y-6">
+      <div v-else-if="team">
         <DsTabs v-model="activeTab">
           <DsTabsItem value="team-info" label="Team Info">
             <Info class="h-4 w-4" />

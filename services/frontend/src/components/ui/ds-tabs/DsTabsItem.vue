@@ -148,7 +148,7 @@ const tabClasses = computed(() => {
       baseClasses.push(
         'rounded-md transition-colors',
         isActive.value
-          ? 'bg-background text-foreground shadow-sm border border-border'
+          ? 'bg-white text-foreground shadow-sm border border-border'
           : 'text-muted-foreground hover:text-foreground hover:bg-muted'
       )
       break
@@ -156,8 +156,8 @@ const tabClasses = computed(() => {
       baseClasses.push(
         'rounded-md transition-colors',
         isActive.value
-          ? 'bg-muted text-foreground'
-          : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+          ? 'bg-primary text-white border border-primary'
+          : 'bg-white text-muted-foreground hover:text-foreground hover:bg-muted/50 border border-transparent'
       )
   }
 
