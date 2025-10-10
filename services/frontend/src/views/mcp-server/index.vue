@@ -8,6 +8,7 @@ import { Plus } from 'lucide-vue-next'
 import { toast } from 'vue-sonner'
 import { useEventBus } from '@/composables/useEventBus'
 import McpInstallationsCard from '@/components/mcp-server/McpInstallationsCard.vue'
+import McpClientConnectionsCard from '@/components/mcp-server/McpClientConnectionsCard.vue'
 import McpStats from '@/components/mcp-server/McpStats.vue'
 import ClientConfigurationModal from '@/components/gateway-config/ClientConfigurationModal.vue'
 import UserWalkthroughPopover from '@/components/walkthrough/UserWalkthroughPopover.vue'
@@ -450,18 +451,25 @@ onUnmounted(() => {
       </div>
 
       <!-- Main Content -->
-      <div v-else class="space-y-6">
+      <div v-else>
         <McpStats />
 
-        <McpInstallationsCard
-          :installations="installations"
-          :has-installations="hasInstallations"
-          :show-walkthrough="showUserWalkthrough"
-          @install-server="handleInstallServer"
-          @view-installation="handleViewInstallation"
-          @manage-installation="handleManageInstallation"
-          @remove-installation="handleRemoveInstallation"
-        />
+        <div class="flex gap-6 mt-18">
+          <div class="flex-[0.7]">
+            <McpInstallationsCard
+              :installations="installations"
+              :has-installations="hasInstallations"
+              :show-walkthrough="showUserWalkthrough"
+              @install-server="handleInstallServer"
+              @view-installation="handleViewInstallation"
+              @manage-installation="handleManageInstallation"
+              @remove-installation="handleRemoveInstallation"
+            />
+          </div>
+          <div class="flex-[0.3]">
+            <McpClientConnectionsCard />
+          </div>
+        </div>
       </div>
 
     </div>
