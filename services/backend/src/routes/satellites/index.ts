@@ -5,6 +5,7 @@ import satelliteConfigRoute from './config';
 import satelliteRegisterRoute from './register';
 import satelliteManageRoutes from './manage';
 import registrationTokenRoutes from './registration-tokens';
+import satelliteEventsRoute from './events';
 
 export default async function satellitesRoute(server: FastifyInstance) {
   await server.register(satelliteRegisterRoute);
@@ -13,4 +14,5 @@ export default async function satellitesRoute(server: FastifyInstance) {
   await server.register(satelliteConfigRoute);
   await server.register(satelliteManageRoutes);
   await server.register(registrationTokenRoutes);
+  await server.register(satelliteEventsRoute);
 }
