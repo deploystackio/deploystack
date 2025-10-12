@@ -20,6 +20,7 @@ import { DynamicConfigManager } from './services/dynamic-config-manager';
 import { CommandProcessor } from './services/command-processor';
 import { TokenIntrospectionService } from './services/token-introspection-service';
 import { TeamAwareMcpHandler } from './services/team-aware-mcp-handler';
+import { JobManager, HeartbeatJob } from './jobs';
 
 /**
  * Validate registration token format and availability
@@ -633,7 +634,7 @@ export async function createServer() {
     }, 'OAuth authentication and team-aware MCP services initialized');
   }
   
-  // Start heartbeat service
+  // Initialize heartbeat service
   const heartbeatService = new HeartbeatService(
     satelliteId,
     apiKey,
@@ -668,14 +669,23 @@ export async function createServer() {
       // Store heartbeat service on server instance for potential future access
       server.decorate('heartbeatService', heartbeatService);
 
-      // Start the heartbeat service
-      heartbeatService.start();
+      // Initialize job manager and register jobs
+      const jobManager = new JobManager(server.log);
+      
+      jobManager.register(new HeartbeatJob(heartbeatService));
+      
+      // Store job manager on server instance
+      server.decorate('jobManager', jobManager);
+      
+      // Start all registered jobs
+      await jobManager.startAll();
 
       server.log.info({
-        operation: 'heartbeat_service_started',
+        operation: 'job_system_initialized',
         satellite_id: satelliteId,
-        interval_seconds: 30
-      }, 'Heartbeat service started (30s interval)');
+        registered_jobs: jobManager.getRegisteredJobs(),
+        job_count: jobManager.getRegisteredJobs().length
+      }, `Job system initialized with ${jobManager.getRegisteredJobs().length} jobs`);
 
       // Fetch initial configuration from backend
       server.log.info({
