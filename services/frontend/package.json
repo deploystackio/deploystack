@@ -22,7 +22,7 @@
     "clsx": "^2.1.1",
     "echarts": "^6.0.0",
     "lucide-vue-next": "^0.544.0",
-    "marked": "^16.3.0",
+    "marked": "^16.4.0",
     "mitt": "^3.0.1",
     "pinia": "^3.0.3",
     "prismjs": "^1.30.0",
