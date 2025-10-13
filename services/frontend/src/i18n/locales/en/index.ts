@@ -16,6 +16,7 @@ import credentialsMessages from './credentials'
 import mcpCatalogMessages from './mcp-catalog'
 import mcpCategoriesMessages from './mcp-categories'
 import mcpInstallationsMessages from './mcp-installations'
+import mcpServerMessages from './mcp-server'
 import oauthMessages from './oauth'
 import registerMessages from './register'
 import loginMessages from './login'
@@ -43,6 +44,7 @@ export default {
   ...mcpCategoriesMessages,
   mcpCatalog: mcpCatalogMessages,
   mcpInstallations: mcpInstallationsMessages,
+  mcpServer: mcpServerMessages,
   oauth: oauthMessages,
   register: registerMessages,
   login: loginMessages,
