@@ -28,7 +28,7 @@
     "@libsql/client": "^0.15.15",
     "@lucia-auth/adapter-drizzle": "^1.1.0",
     "@node-rs/argon2": "^2.0.2",
-    "@octokit/auth-app": "^8.0.2",
+    "@octokit/auth-app": "^8.1.1",
     "@octokit/request": "^10.0.5",
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
