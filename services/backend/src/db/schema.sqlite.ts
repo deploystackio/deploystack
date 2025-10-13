@@ -627,6 +627,64 @@ export const queueJobs = sqliteTable('queueJobs', {
   batchIdIdx: index('jobs_batch_id_idx').on(table.batch_id),
 }));
 
+// MCP Client Activity Tracking - Personal dashboard feature tracking user's active MCP clients
+export const mcpClientActivity = sqliteTable('mcpClientActivity', {
+  id: text('id').primaryKey(),
+  
+  // Who and where
+  user_id: text('user_id').notNull().references(() => authUser.id, { onDelete: 'cascade' }),
+  team_id: text('team_id').notNull().references(() => teams.id, { onDelete: 'cascade' }),
+  satellite_id: text('satellite_id').notNull().references(() => satellites.id, { onDelete: 'cascade' }),
+  
+  // Authentication (extensible for future)
+  auth_type: text('auth_type', { enum: ['oauth', 'api_key'] }).notNull(),
+  oauth_client_id: text('oauth_client_id'), // References dynamicOauthClients.client_id (nullable for API keys)
+  api_key_id: text('api_key_id'), // Future: references to API key table (nullable for OAuth)
+  auth_identifier: text('auth_identifier').notNull(), // Computed: 'oauth:{client_id}' or 'apikey:{key_id}'
+  
+  // Client identification
+  client_name: text('client_name'), // "VS Code", "Cursor", "Claude.ai" (derived from dynamicOauthClients.client_name)
+  user_agent: text('user_agent'),
+  ip_address: text('ip_address'),
+  
+  // Session tracking (optional - for debugging with Mcp-Session-Id header)
+  current_session_id: text('current_session_id'), // Latest Mcp-Session-Id if provided by client (debug only)
+  
+  // Activity tracking
+  first_seen_at: integer('first_seen_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  last_activity_at: integer('last_activity_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  total_requests: integer('total_requests').notNull().default(0),
+  total_tool_calls: integer('total_tool_calls').notNull().default(0),
+  
+  // Metadata
+  created_at: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  updated_at: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+}, (table) => ({
+  // Primary indexes for dashboard queries
+  userTeamSatelliteIdx: index('mcp_activity_user_team_satellite_idx').on(
+    table.user_id, table.team_id, table.satellite_id
+  ),
+  lastActivityIdx: index('mcp_activity_last_activity_idx').on(table.last_activity_at),
+  teamActivityIdx: index('mcp_activity_team_activity_idx').on(table.team_id, table.last_activity_at),
+  
+  // Auth lookup indexes
+  oauthClientIdx: index('mcp_activity_oauth_client_idx').on(table.oauth_client_id),
+  apiKeyIdx: index('mcp_activity_api_key_idx').on(table.api_key_id),
+  authTypeIdx: index('mcp_activity_auth_type_idx').on(table.auth_type),
+  authIdentifierIdx: index('mcp_activity_auth_identifier_idx').on(table.auth_identifier),
+  
+  // Session tracking (debug only)
+  sessionIdx: index('mcp_activity_session_idx').on(table.current_session_id),
+  
+  // Unique constraint: one row per user/team/auth_identifier/satellite
+  uniqueUserTeamAuthSatellite: index('mcp_activity_unique_user_team_auth_satellite').on(
+    table.user_id, 
+    table.team_id, 
+    table.auth_identifier, // Always non-NULL (computed field)
+    table.satellite_id
+  ),
+}));
+
 // Plugin table definitions - populated dynamically by the plugin system
 // This object will hold definitions for plugin tables, to be populated dynamically.
 // Key: Table name (e.g., 'myPlugin_myTable')

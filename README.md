@@ -161,6 +161,9 @@ VS Code → HTTPS Request → DeployStack Satellite → MCP Server Process → E
 
 - **[Done]** **Multi-Transport Support** - SSE, Streamable HTTP, Direct HTTP protocols
 - **[Done]** **Real-Time Command Orchestration** - instant status feedback
+- **[Done]** **Satellite Job System** - recurring background task management with JobManager, abstract BaseJob class, automatic error handling, execution metrics tracking, and extensible architecture for health checks, cleanup tasks, and periodic maintenance operations
+- **[Done]** **Satellite Backend Events System** - real-time event processing with convention-based auto-discovery handler pattern, batch processing (1-100 events), partial success handling, JSON schema validation per event type, and extensible architecture supporting MCP client connections, tool executions, server crashes, and custom event types
+- **[Done]** **MCP Client Activity Tracking** - personal dashboard feature tracking active MCP clients per user across all components (backend database with mcpClientActivity table, satellite in-memory tracker with 30-second background job reporting via event system, dashboard API endpoint with dual authentication and pagination, client name detection from OAuth/headers/user-agent)
 - **[To Do]** **Comprehensive Monitoring** - satellite health and usage analytics
 - **[To Do]** **Enterprise Security** - audit logging and compliance features
 

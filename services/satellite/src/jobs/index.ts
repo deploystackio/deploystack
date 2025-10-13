@@ -219,3 +219,4 @@ export class JobManager {
 export { Job, JobStats } from './base-job';
 export { BaseJob } from './base-job';
 export { HeartbeatJob } from './heartbeat-job';
+export { McpActivityReportJob } from './mcp-activity-report-job';

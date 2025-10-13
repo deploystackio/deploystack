@@ -9,6 +9,7 @@ import getUsersByRoleRoute from './getUsersByRole';
 import getCurrentUserRoute from './getCurrentUser';
 import getCurrentUserTeamsRoute from './getCurrentUserTeams';
 import getUserTeamsRoute from './getUserTeams';
+import getMcpClientActivityRoute from './getMcpClientActivity';
 import preferencesRoutes from './preferences';
 import satelliteRoutes from './satellite';
 
@@ -24,6 +25,7 @@ export default async function usersRoute(server: FastifyInstance) {
   await server.register(getCurrentUserRoute);
   await server.register(getCurrentUserTeamsRoute);
   await server.register(getUserTeamsRoute);
+  await server.register(getMcpClientActivityRoute);
   await server.register(preferencesRoutes);
   await server.register(satelliteRoutes);
 }

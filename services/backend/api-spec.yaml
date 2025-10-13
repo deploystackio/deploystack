@@ -2539,6 +2539,189 @@ paths:
                   - success
                   - error
                 description: Internal Server Error
+  /api/users/me/mcp/client-activity:
+    get:
+      summary: Get current user's active MCP clients
+      tags:
+        - Users
+        - MCP
+      description: Returns the current user's active MCP clients (VS Code, Cursor,
+        etc.) based on recent activity. This is a PERSONAL dashboard endpoint -
+        users see ONLY their own clients, not their team members' activity.
+      parameters:
+        - schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          in: query
+          name: limit
+          required: false
+          description: Number of results per page (1-100)
+        - schema:
+            type: integer
+            minimum: 0
+            default: 0
+          in: query
+          name: offset
+          required: false
+          description: Pagination offset
+        - schema:
+            type: integer
+            minimum: 1
+            maximum: 1440
+            default: 30
+          in: query
+          name: active_within_minutes
+          required: false
+          description: Show clients active within N minutes (1-1440)
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Current user's active MCP clients
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: true
+                  data:
+                    type: object
+                    properties:
+                      activities:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                              description: Activity record ID
+                            client_name:
+                              type:
+                                - "null"
+                                - string
+                              description: Client name (VS Code, Cursor, etc.)
+                            satellite:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                  description: Satellite ID
+                                name:
+                                  type: string
+                                  description: Satellite name
+                              required:
+                                - id
+                                - name
+                            last_activity_at:
+                              type: string
+                              format: date-time
+                              description: Last activity timestamp
+                            total_requests:
+                              type: integer
+                              description: Total request count
+                            total_tool_calls:
+                              type: integer
+                              description: Total tool call count
+                            user_agent:
+                              type:
+                                - "null"
+                                - string
+                              description: Client user agent
+                            first_seen_at:
+                              type: string
+                              format: date-time
+                              description: First seen timestamp
+                          required:
+                            - id
+                            - client_name
+                            - satellite
+                            - last_activity_at
+                            - total_requests
+                            - total_tool_calls
+                            - first_seen_at
+                      pagination:
+                        type: object
+                        properties:
+                          total:
+                            type: integer
+                            description: Total number of activity records
+                          limit:
+                            type: integer
+                            description: Page size limit
+                          offset:
+                            type: integer
+                            description: Current offset
+                          has_more:
+                            type: boolean
+                            description: Whether more results exist
+                        required:
+                          - total
+                          - limit
+                          - offset
+                          - has_more
+                    required:
+                      - activities
+                      - pagination
+                required:
+                  - success
+                  - data
+                description: Current user's active MCP clients
+        "400":
+          description: Bad Request - Invalid query parameters
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - success
+                  - error
+                description: Bad Request - Invalid query parameters
+        "401":
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - success
+                  - error
+                description: Unauthorized - Authentication required
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - success
+                  - error
+                description: Internal Server Error
   /api/users/me/preferences:
     get:
       summary: Get user preferences
@@ -20533,6 +20716,154 @@ paths:
                   - success
                   - error
                 description: Internal Server Error
+  /api/satellites/{satelliteId}/events:
+    post:
+      summary: Process batch of satellite events
+      tags:
+        - Satellite Events
+      description: "Receives and processes batched events from satellites for
+        real-time tracking and analytics. Satellites send 1-100 events per
+        request. Requires Content-Type: application/json header when sending
+        request body."
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                events:
+                  type: array
+                  minItems: 1
+                  maxItems: 100
+                  items:
+                    type: object
+                    properties:
+                      type:
+                        type: string
+                        minLength: 1
+                        description: Event type identifier (e.g., mcp.client.connected)
+                      timestamp:
+                        type: string
+                        format: date-time
+                        description: Event timestamp in ISO 8601 format
+                      data:
+                        type: object
+                        description: Event-specific data payload
+                    required:
+                      - type
+                      - timestamp
+                      - data
+                    additionalProperties: false
+                  description: Array of events to process (1-100 events per batch)
+              required:
+                - events
+              additionalProperties: false
+        required: true
+      parameters:
+        - schema:
+            type: string
+            minLength: 1
+          in: path
+          name: satelliteId
+          required: true
+          description: Unique satellite identifier
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Batch processed (may include partial failures)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Overall batch processing success
+                  processed:
+                    type: number
+                    description: Number of events successfully processed
+                  failed:
+                    type: number
+                    description: Number of events that failed processing
+                  event_ids:
+                    type: array
+                    items:
+                      type: string
+                    description: Generated event IDs for successfully processed events
+                  failures:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        index:
+                          type: number
+                          description: Event index in the batch that failed
+                        type:
+                          type: string
+                          description: Event type that failed
+                        error:
+                          type: string
+                          description: Error message describing the failure
+                      required:
+                        - index
+                        - type
+                        - error
+                    description: Details of failed events (only present if failures occurred)
+                required:
+                  - success
+                  - processed
+                  - failed
+                  - event_ids
+                description: Batch processed (may include partial failures)
+        "400":
+          description: Bad Request - Invalid batch structure or size
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - success
+                  - error
+                description: Bad Request - Invalid batch structure or size
+        "401":
+          description: Unauthorized - Invalid satellite API key
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - success
+                  - error
+                description: Unauthorized - Invalid satellite API key
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - success
+                  - error
+                description: Internal server error
   /api/auth/email/register:
     post:
       summary: User registration via email

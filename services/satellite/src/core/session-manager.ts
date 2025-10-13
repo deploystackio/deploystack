@@ -1,6 +1,7 @@
 import { randomBytes } from 'crypto';
 import { ServerResponse } from 'http';
 import { FastifyBaseLogger } from 'fastify';
+import type { EventBus } from '../services/event-bus';
 
 export interface SessionInfo {
   id: string;
@@ -20,9 +21,11 @@ export class SessionManager {
   private sessions = new Map<string, SessionInfo>();
   private readonly SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes
   private logger: FastifyBaseLogger;
+  private eventBus?: EventBus;
 
-  constructor(logger: FastifyBaseLogger) {
+  constructor(logger: FastifyBaseLogger, eventBus?: EventBus) {
     this.logger = logger.child({ component: 'SessionManager' });
+    this.eventBus = eventBus;
   }
 
   /**
@@ -44,9 +47,21 @@ export class SessionManager {
   }
 
   /**
+   * Detect client type from user agent string
+   */
+  private detectClientType(userAgent?: string): 'vscode' | 'cursor' | 'claude' | 'unknown' {
+    if (!userAgent) return 'unknown';
+    const ua = userAgent.toLowerCase();
+    if (ua.includes('vscode') || ua.includes('vs code')) return 'vscode';
+    if (ua.includes('cursor')) return 'cursor';
+    if (ua.includes('claude')) return 'claude';
+    return 'unknown';
+  }
+
+  /**
    * Create a new session with SSE stream
    */
-  createSession(sseStream: ServerResponse, userAgent?: string, remoteAddress?: string): string {
+  createSession(sseStream: ServerResponse, userAgent?: string, remoteAddress?: string, teamId?: string): string {
     const sessionId = this.generateSessionId();
     const now = Date.now();
     
@@ -73,6 +88,20 @@ export class SessionManager {
       userAgent,
       remoteAddress
     }, 'Session created');
+    
+    // Emit mcp.client.connected event
+    try {
+      this.eventBus?.emit('mcp.client.connected', {
+        session_id: sessionId,
+        client_type: this.detectClientType(userAgent),
+        user_agent: userAgent || 'unknown',
+        team_id: teamId || 'unknown',
+        transport: 'sse',
+        ip_address: remoteAddress || 'unknown'
+      });
+    } catch (error) {
+      this.logger.warn({ error }, 'Failed to emit mcp.client.connected event (non-fatal)');
+    }
     
     return sessionId;
   }
@@ -193,9 +222,11 @@ export class SessionManager {
   /**
    * Clean up session and associated resources
    */
-  cleanupSession(sessionId: string): void {
+  cleanupSession(sessionId: string, disconnectReason?: 'client_close' | 'timeout' | 'error'): void {
     const session = this.sessions.get(sessionId);
     if (!session) return;
+
+    const connectionDuration = Math.round((Date.now() - session.createdAt) / 1000);
 
     try {
       if (!session.sseStream.destroyed) {
@@ -214,6 +245,19 @@ export class SessionManager {
       requestCount: session.requestCount,
       errorCount: session.errorCount
     }, 'Session cleaned up');
+    
+    // Emit mcp.client.disconnected event
+    try {
+      this.eventBus?.emit('mcp.client.disconnected', {
+        session_id: sessionId,
+        team_id: 'unknown', // We don't track team_id in session currently
+        connection_duration_seconds: connectionDuration,
+        tool_execution_count: session.requestCount,
+        disconnect_reason: disconnectReason || 'client_close'
+      });
+    } catch (error) {
+      this.logger.warn({ error }, 'Failed to emit mcp.client.disconnected event (non-fatal)');
+    }
   }
 
   /**
@@ -228,7 +272,7 @@ export class SessionManager {
         inactiveTime: Date.now() - session.lastActivity
       }, 'Session expired');
       
-      this.cleanupSession(sessionId);
+      this.cleanupSession(sessionId, 'timeout');
     }
   }
 

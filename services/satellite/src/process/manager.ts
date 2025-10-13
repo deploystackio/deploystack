@@ -3,6 +3,7 @@ import { EventEmitter } from 'events';
 import { v4 as uuidv4 } from 'uuid';
 import { Logger } from 'pino';
 import { MCPServerConfig, ProcessInfo } from './types';
+import type { EventBus } from '../services/event-bus';
 
 /**
  * Process Manager for MCP server subprocesses
@@ -14,10 +15,12 @@ export class ProcessManager extends EventEmitter {
   private processIdsByName = new Map<string, string>();
   private logger: Logger;
   private restartAttempts = new Map<string, number[]>(); // installationName -> crash timestamps
+  private eventBus?: EventBus;
 
-  constructor(logger: Logger) {
+  constructor(logger: Logger, eventBus?: EventBus) {
     super();
     this.logger = logger;
+    this.eventBus = eventBus;
     
     // Listen for process exits to detect crashes and attempt restart
     this.on('processExit', (processInfo, code, signal) => {
@@ -59,8 +62,27 @@ export class ProcessManager extends EventEmitter {
       uptime_ms: uptime
     }, `MCP process crashed: ${installationName}`);
 
-    // Check if we should attempt restart
+    // Emit mcp.server.crashed event
+    const crashCount = (this.restartAttempts.get(installationName) || []).length;
     const canRestart = this.shouldAttemptRestart(installationName, uptime);
+    
+    try {
+      this.eventBus?.emit('mcp.server.crashed', {
+        server_id: processInfo.config.installation_id,
+        server_slug: processInfo.config.installation_name,
+        team_id: processInfo.config.team_id,
+        process_id: processInfo.process.pid || 0,
+        exit_code: code || 0,
+        signal: signal || 'none',
+        uptime_seconds: Math.round(uptime / 1000),
+        crash_count: crashCount + 1,
+        will_restart: canRestart
+      });
+    } catch (error) {
+      this.logger.warn({ error }, 'Failed to emit mcp.server.crashed event (non-fatal)');
+    }
+
+    // Check if we should attempt restart
     
     if (!canRestart) {
       this.logger.error({
@@ -69,6 +91,20 @@ export class ProcessManager extends EventEmitter {
         team_id: processInfo.config.team_id,
         max_attempts: 3
       }, `Max restart attempts (3) exceeded for ${installationName} - marking as permanently failed`);
+      
+      // Emit mcp.server.permanently_failed event
+      try {
+        this.eventBus?.emit('mcp.server.permanently_failed', {
+          server_id: processInfo.config.installation_id,
+          server_slug: processInfo.config.installation_name,
+          team_id: processInfo.config.team_id,
+          total_crashes: (this.restartAttempts.get(installationName) || []).length,
+          last_error: `Exit code: ${code}, signal: ${signal}`,
+          failed_at: new Date().toISOString()
+        });
+      } catch (error) {
+        this.logger.warn({ error }, 'Failed to emit mcp.server.permanently_failed event (non-fatal)');
+      }
       
       // Mark as permanently failed (process already removed from maps in exit handler)
       // Emit event so RuntimeState can update status
@@ -108,6 +144,21 @@ export class ProcessManager extends EventEmitter {
         team_id: processInfo.config.team_id,
         new_pid: newProcessInfo.process.pid
       }, `Automatic restart successful for ${installationName}`);
+
+      // Emit mcp.server.restarted event
+      try {
+        this.eventBus?.emit('mcp.server.restarted', {
+          server_id: processInfo.config.installation_id,
+          server_slug: processInfo.config.installation_name,
+          team_id: processInfo.config.team_id,
+          old_process_id: processInfo.process.pid || 0,
+          new_process_id: newProcessInfo.process.pid || 0,
+          restart_reason: 'crash',
+          attempt_number: (this.restartAttempts.get(installationName) || []).length
+        });
+      } catch (error) {
+        this.logger.warn({ error }, 'Failed to emit mcp.server.restarted event (non-fatal)');
+      }
 
       this.emit('processRestarted', newProcessInfo, processInfo);
       
@@ -274,6 +325,22 @@ export class ProcessManager extends EventEmitter {
           process_id: processId,
           pid: childProcess.pid
         }, `MCP server ready: ${config.installation_name}`);
+        
+        // Emit mcp.server.started event
+        const spawnDuration = Date.now() - processInfo.startTime;
+        try {
+          this.eventBus?.emit('mcp.server.started', {
+            server_id: config.installation_id,
+            server_slug: config.installation_name,
+            team_id: config.team_id,
+            process_id: childProcess.pid || 0,
+            transport: 'stdio',
+            tool_count: 0, // Will be updated by tool discovery
+            spawn_duration_ms: spawnDuration
+          });
+        } catch (error) {
+          this.logger.warn({ error }, 'Failed to emit mcp.server.started event (non-fatal)');
+        }
       } catch (error) {
         processInfo.status = 'failed';
         

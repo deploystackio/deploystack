@@ -1,5 +1,7 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import { TokenIntrospectionService, TokenValidationResult } from '../services/token-introspection-service';
+import { McpActivityTracker } from '../services/mcp-activity-tracker';
+import { deriveClientName, extractSessionId, extractIpAddress } from '../services/client-name-detector';
 
 // Extend FastifyRequest to include authentication context
 declare module 'fastify' {
@@ -23,8 +25,14 @@ declare module 'fastify' {
 
 /**
  * Middleware to require valid OAuth2 Bearer token for multi-team access
+ * 
+ * @param introspectionService - Service for validating OAuth tokens
+ * @param activityTracker - Optional tracker for MCP client activity (for personal dashboard)
  */
-export function requireAuthentication(introspectionService: TokenIntrospectionService) {
+export function requireAuthentication(
+  introspectionService: TokenIntrospectionService,
+  activityTracker?: McpActivityTracker
+) {
   return async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const authHeader = request.headers.authorization;
@@ -63,6 +71,55 @@ export function requireAuthentication(introspectionService: TokenIntrospectionSe
         clientId: request.auth.client_id,
         scopes: request.auth.scopes
       }, 'Authentication successful');
+
+      // Track MCP client activity for personal dashboard (if tracker provided)
+      if (activityTracker && request.auth.client_id) {
+        try {
+          const clientName = deriveClientName(request.headers as Record<string, string | string[] | undefined>);
+          const sessionId = extractSessionId(request.headers as Record<string, string | string[] | undefined>);
+          const ipAddress = extractIpAddress(
+            request.headers as Record<string, string | string[] | undefined>,
+            request.socket.remoteAddress
+          );
+          const userAgent = request.headers['user-agent'] || 'unknown';
+          
+          // Check if this is a tool call (mcp.tool.executed)
+          // This is a simple heuristic - more sophisticated detection can be added later
+          let isToolCall = false;
+          if (request.url.includes('tools/call')) {
+            isToolCall = true;
+          } else if (request.body && typeof request.body === 'object' && 'method' in request.body) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            isToolCall = (request.body as any).method === 'tools/call';
+          }
+
+          activityTracker.trackRequest(
+            request.auth.user.id,
+            request.auth.team.id,
+            request.auth.client_id,
+            clientName,
+            userAgent,
+            ipAddress,
+            sessionId,
+            isToolCall
+          );
+
+          request.log.debug({
+            operation: 'activity_tracked',
+            userId: request.auth.user.id,
+            teamId: request.auth.team.id,
+            clientId: request.auth.client_id,
+            clientName,
+            isToolCall
+          }, 'MCP client activity tracked');
+        } catch (error) {
+          // Activity tracking failure is non-fatal
+          request.log.warn({
+            operation: 'activity_tracking_failed',
+            error: error instanceof Error ? error.message : String(error)
+          }, 'Failed to track MCP client activity (non-fatal)');
+        }
+      }
 
     } catch (error) {
       request.log.error({

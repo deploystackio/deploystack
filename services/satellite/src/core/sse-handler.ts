@@ -82,7 +82,7 @@ export class SSEHandler {
         sessionId
       }, 'SSE connection closed');
       
-      this.sessionManager.cleanupSession(sessionId);
+      this.sessionManager.cleanupSession(sessionId, 'client_close');
     });
 
     stream.on('error', (error) => {
@@ -92,7 +92,7 @@ export class SSEHandler {
         error: error.message
       }, 'SSE connection error');
       
-      this.sessionManager.cleanupSession(sessionId);
+      this.sessionManager.cleanupSession(sessionId, 'error');
     });
 
     // Handle client disconnect
@@ -102,7 +102,7 @@ export class SSEHandler {
         sessionId
       }, 'SSE connection finished');
       
-      this.sessionManager.cleanupSession(sessionId);
+      this.sessionManager.cleanupSession(sessionId, 'client_close');
     });
   }
 

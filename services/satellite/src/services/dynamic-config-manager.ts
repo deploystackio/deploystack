@@ -1,6 +1,7 @@
 import { FastifyBaseLogger } from 'fastify';
 import { McpServerConfig, ConfigurationUpdate } from './command-polling-service';
 import { McpServersConfig } from '../types/mcp-server';
+import type { EventBus } from './event-bus';
 
 export interface DynamicMcpServersConfig {
   defaultTimeout: number;
@@ -21,9 +22,11 @@ export class DynamicConfigManager {
   private logger: FastifyBaseLogger;
   private currentConfig: DynamicMcpServersConfig;
   private onConfigurationChanged?: (config: DynamicMcpServersConfig, changes?: ConfigurationChanges) => Promise<void>;
+  private eventBus?: EventBus;
 
-  constructor(logger: FastifyBaseLogger) {
+  constructor(logger: FastifyBaseLogger, eventBus?: EventBus) {
     this.logger = logger;
+    this.eventBus = eventBus;
     
     // Initialize with default configuration (fallback)
     this.currentConfig = {
@@ -152,6 +155,19 @@ export class DynamicConfigManager {
 
         // Update current configuration
         this.currentConfig = newConfig;
+        
+        // Emit config.refreshed event
+        try {
+          this.eventBus?.emit('config.refreshed', {
+            config_hash: changes.configHash,
+            server_count: newServerCount,
+            teams_count: new Set(Object.values(newConfig.servers).map(s => s.team_id || 'unknown')).size,
+            change_detected: true,
+            fetch_duration_ms: 0 // Not tracked here
+          });
+        } catch (error) {
+          this.logger.warn({ error }, 'Failed to emit config.refreshed event (non-fatal)');
+        }
 
         // Notify configuration change handler
         if (this.onConfigurationChanged) {
@@ -163,6 +179,19 @@ export class DynamicConfigManager {
           server_count: Object.keys(newConfig.servers).length,
           unchanged_servers: changes.unchangedServers
         }, 'Configuration update received but no changes detected');
+        
+        // Emit config.refreshed event even when no changes
+        try {
+          this.eventBus?.emit('config.refreshed', {
+            config_hash: changes.configHash,
+            server_count: Object.keys(newConfig.servers).length,
+            teams_count: new Set(Object.values(newConfig.servers).map(s => s.team_id || 'unknown')).size,
+            change_detected: false,
+            fetch_duration_ms: 0
+          });
+        } catch (error) {
+          this.logger.warn({ error }, 'Failed to emit config.refreshed event (non-fatal)');
+        }
       }
 
     } catch (error) {
@@ -172,6 +201,18 @@ export class DynamicConfigManager {
         operation: 'config_update_failed',
         error: errorMessage
       }, `Failed to update configuration: ${errorMessage}`);
+      
+      // Emit config.error event
+      try {
+        this.eventBus?.emit('config.error', {
+          error_type: 'server_error',
+          error_message: errorMessage,
+          status_code: null,
+          retry_in: 60 // Default retry interval
+        });
+      } catch (err) {
+        this.logger.warn({ error: err }, 'Failed to emit config.error event (non-fatal)');
+      }
       
       throw error;
     }

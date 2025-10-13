@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import fastify from 'fastify';
 import fastifySwagger from '@fastify/swagger';
 import fastifySwaggerUi from '@fastify/swagger-ui';
@@ -20,12 +21,14 @@ import { DynamicConfigManager } from './services/dynamic-config-manager';
 import { CommandProcessor } from './services/command-processor';
 import { TokenIntrospectionService } from './services/token-introspection-service';
 import { TeamAwareMcpHandler } from './services/team-aware-mcp-handler';
-import { JobManager, HeartbeatJob } from './jobs';
+import { JobManager, HeartbeatJob, McpActivityReportJob } from './jobs';
+import { EventBus } from './services/event-bus';
+import { McpActivityTracker } from './services/mcp-activity-tracker';
 
 /**
  * Validate registration token format and availability
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 function validateRegistrationToken(token: string | undefined, logger?: any): void {
   if (!token) {
     const errorMsg = 'DEPLOYSTACK_REGISTRATION_TOKEN is required. Please set the DEPLOYSTACK_REGISTRATION_TOKEN environment variable. You can generate a registration token in the DeployStack Backend Admin Interface.';
@@ -78,7 +81,7 @@ function validateRegistrationToken(token: string | undefined, logger?: any): voi
 /**
  * Validate satellite name according to strict rules
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 function validateSatelliteName(name: string | undefined, logger?: any): void {
   if (!name) {
     const errorMsg = 'DEPLOYSTACK_SATELLITE_NAME is required. Please set the DEPLOYSTACK_SATELLITE_NAME environment variable. Example: DEPLOYSTACK_SATELLITE_NAME=dev-satellite-001';
@@ -121,11 +124,22 @@ function validateSatelliteName(name: string | undefined, logger?: any): void {
 }
 
 export async function createServer() {
+  // Add global error handlers to catch unhandled errors
+  process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+    process.exit(1);
+  });
+  
+  process.on('uncaughtException', (error) => {
+    console.error('Uncaught Exception:', error);
+    process.exit(1);
+  });
+  
   // Create a temporary logger for early validation
   const tempLogger = {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    
     info: (obj: any, msg: string) => process.stdout.write(`INFO: ${msg}\n`),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    
     fatal: (obj: any, msg: string) => process.stderr.write(`FATAL: ${msg}\n`)
   };
   
@@ -193,28 +207,39 @@ export async function createServer() {
     transformSpecificationClone: true
   });
 
-  // Initialize MCP Transport handlers
+  // Initialize Backend Client (needed by EventBus)
+  const backendUrl = process.env.DEPLOYSTACK_BACKEND_URL || 'http://localhost:3000';
+  const backendClient = new BackendClient(backendUrl, server.log);
+  
+  // Initialize MCP Activity Tracker for personal dashboard feature
+  const activityTracker = new McpActivityTracker(server.log);
+  server.decorate('activityTracker', activityTracker);
+  
+  server.log.info({
+    operation: 'activity_tracker_initialized'
+  }, 'MCP Activity Tracker initialized for personal dashboard');
+  
+  // Note: EventBus will be initialized later after satelliteId is available
+  // We'll pass it to services after registration
+  
+  // Initialize MCP Transport handlers (EventBus will be added after registration)
   const sessionManager = new SessionManager(server.log);
   const sseHandler = new SSEHandler(sessionManager, server.log);
   const streamableHandler = new StreamableHTTPHandler(server.log);
 
-  // Initialize Backend Client
-  const backendUrl = process.env.DEPLOYSTACK_BACKEND_URL || 'http://localhost:3000';
-  const backendClient = new BackendClient(backendUrl, server.log);
-
-  // Initialize Dynamic Configuration Manager
+  // Initialize Dynamic Configuration Manager (EventBus will be added after registration)
   const dynamicConfigManager = new DynamicConfigManager(server.log);
 
   // Initialize HTTP Proxy Manager with dynamic config
   const httpProxyManager = new HttpProxyManager(server, server.log);
   httpProxyManager.setConfigManager(dynamicConfigManager);
 
-  // Initialize Process Manager and Runtime State for stdio subprocess servers
+  // Initialize Process Manager and Runtime State for stdio subprocess servers (EventBus will be added after registration)
   const runtimeState = new RuntimeState();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  
   const processManager = new ProcessManager(server.log as any); // Fastify logger is compatible with pino Logger
 
-  // Initialize Remote Tool Discovery Manager for HTTP/SSE remote servers
+  // Initialize Remote Tool Discovery Manager for HTTP/SSE remote servers (EventBus will be added after registration)
   const remoteToolDiscoveryManager = new RemoteToolDiscoveryManager(server.log);
   remoteToolDiscoveryManager.setConfigManager(dynamicConfigManager);
 
@@ -222,7 +247,7 @@ export async function createServer() {
   const stdioToolDiscoveryManager = new StdioToolDiscoveryManager(
     processManager,
     runtimeState,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    
     server.log as any // Fastify logger is compatible with pino Logger
   );
 
@@ -611,6 +636,44 @@ export async function createServer() {
     satellite_id: satelliteId
   }, 'Proceeding with satellite service initialization...');
   
+  // If satellite was already registered (skipRegistration), EventBus initialization happens here
+  if (skipRegistration && satelliteId && apiKey) {
+    // Initialize Event Bus for existing satellites
+    const eventBus = new EventBus(
+      satelliteId,
+      backendClient,
+      server.log,
+      {
+        batchIntervalMs: parseInt(process.env.EVENT_BATCH_INTERVAL_MS || '3000', 10),
+        maxBatchSize: parseInt(process.env.EVENT_MAX_BATCH_SIZE || '100', 10),
+        maxQueueSize: parseInt(process.env.EVENT_MAX_QUEUE_SIZE || '10000', 10),
+        flushTimeoutMs: parseInt(process.env.EVENT_FLUSH_TIMEOUT_MS || '5000', 10)
+      }
+    );
+
+    // Store event bus on server instance
+    server.decorate('eventBus', eventBus);
+
+    // Start event bus
+    eventBus.start();
+
+    server.log.info({
+      operation: 'event_bus_initialized_existing',
+      satellite_id: satelliteId
+    }, 'Event bus initialized for existing satellite');
+    
+    // Update services with EventBus
+    (processManager as any).eventBus = eventBus;
+    (sessionManager as any).eventBus = eventBus;
+    (dynamicConfigManager as any).eventBus = eventBus;
+    (remoteToolDiscoveryManager as any).eventBus = eventBus;
+    
+    server.log.info({
+      operation: 'event_bus_services_configured_existing',
+      satellite_id: satelliteId
+    }, 'All services configured with EventBus');
+  }
+  
   // Initialize OAuth services if not already done (for existing satellites)
   if (skipRegistration) {
     // Initialize Token Introspection Service for OAuth authentication
@@ -646,7 +709,7 @@ export async function createServer() {
       heartbeatService.setCommandProcessor(commandProcessor);
 
       // Initialize HeartbeatDataBuilder for normalized heartbeat data
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      
       const teamIsolationService = (server as any).teamIsolationService;
       const heartbeatDataBuilder = new (await import('./services/heartbeat-data-builder')).HeartbeatDataBuilder(
         processManager,
@@ -654,7 +717,7 @@ export async function createServer() {
         toolDiscoveryManager,
         dynamicConfigManager,
         teamIsolationService,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        
         server.log as any
       );
 
@@ -677,6 +740,8 @@ export async function createServer() {
       // Store job manager on server instance
       server.decorate('jobManager', jobManager);
       
+      // Note: McpActivityReportJob will be registered after EventBus initialization
+      
       // Start all registered jobs
       await jobManager.startAll();
 
@@ -686,6 +751,98 @@ export async function createServer() {
         registered_jobs: jobManager.getRegisteredJobs(),
         job_count: jobManager.getRegisteredJobs().length
       }, `Job system initialized with ${jobManager.getRegisteredJobs().length} jobs`);
+
+      // Initialize Event Bus for real-time event emission (ONLY if not already initialized)
+      if (!skipRegistration) {
+        const eventBus = new EventBus(
+          satelliteId,
+          backendClient,
+          server.log,
+          {
+            batchIntervalMs: parseInt(process.env.EVENT_BATCH_INTERVAL_MS || '3000', 10),
+            maxBatchSize: parseInt(process.env.EVENT_MAX_BATCH_SIZE || '100', 10),
+            maxQueueSize: parseInt(process.env.EVENT_MAX_QUEUE_SIZE || '10000', 10),
+            flushTimeoutMs: parseInt(process.env.EVENT_FLUSH_TIMEOUT_MS || '5000', 10)
+          }
+        );
+
+        // Store event bus on server instance
+        server.decorate('eventBus', eventBus);
+
+        // Start event bus
+        eventBus.start();
+
+        server.log.info({
+          operation: 'event_bus_initialized',
+          satellite_id: satelliteId,
+          batch_interval_ms: parseInt(process.env.EVENT_BATCH_INTERVAL_MS || '3000', 10),
+          max_batch_size: parseInt(process.env.EVENT_MAX_BATCH_SIZE || '100', 10),
+          max_queue_size: parseInt(process.env.EVENT_MAX_QUEUE_SIZE || '10000', 10)
+        }, 'Event bus initialized and started');
+      } // End of !skipRegistration block
+      
+      // Get EventBus from server instance (initialized in either block above)
+      const eventBus = (server as any).eventBus as EventBus;
+      
+      if (!eventBus) {
+        server.log.fatal({ operation: 'event_bus_missing' }, 'EventBus not found on server instance!');
+        throw new Error('EventBus not found on server instance');
+      }
+      
+      server.log.info({ operation: 'about_to_configure_services' }, 'About to configure services with EventBus...');
+      
+      // Now that EventBus is initialized, update services to use it
+      // Update ProcessManager with EventBus
+      (processManager as any).eventBus = eventBus;
+      server.log.debug({ operation: 'process_manager_event_bus_set' }, 'ProcessManager configured with EventBus');
+      
+      // Update SessionManager with EventBus
+      (sessionManager as any).eventBus = eventBus;
+      server.log.debug({ operation: 'session_manager_event_bus_set' }, 'SessionManager configured with EventBus');
+      
+      // Update DynamicConfigManager with EventBus
+      (dynamicConfigManager as any).eventBus = eventBus;
+      server.log.debug({ operation: 'config_manager_event_bus_set' }, 'DynamicConfigManager configured with EventBus');
+      
+      // Update RemoteToolDiscoveryManager with EventBus
+      (remoteToolDiscoveryManager as any).eventBus = eventBus;
+      server.log.debug({ operation: 'tool_discovery_event_bus_set' }, 'RemoteToolDiscoveryManager configured with EventBus');
+      
+      server.log.info({
+        operation: 'event_bus_services_configured',
+        satellite_id: satelliteId
+      }, 'All services configured with EventBus for real-time event emission');
+      
+      server.log.info({ operation: 'about_to_register_activity_job' }, 'About to register MCP Activity Report Job...');
+      
+      // Now that EventBus is initialized, register MCP Activity Report Job
+      const retrievedJobManager = (server as any).jobManager as JobManager;
+      
+      server.log.info({ 
+        operation: 'job_manager_retrieved',
+        has_job_manager: !!retrievedJobManager 
+      }, 'JobManager retrieved from server instance');
+      
+      if (!retrievedJobManager) {
+        server.log.fatal({ operation: 'job_manager_missing' }, 'JobManager not found on server instance!');
+        throw new Error('JobManager not found on server instance');
+      }
+      
+      retrievedJobManager.register(new McpActivityReportJob(
+        server.log,
+        eventBus,
+        activityTracker
+      ));
+      
+      server.log.info({ operation: 'activity_job_registered' }, 'MCP Activity Report Job registered');
+      
+      // Start the newly registered job
+      retrievedJobManager.start('mcp-activity-report');
+      
+      server.log.info({
+        operation: 'mcp_activity_report_job_registered',
+        satellite_id: satelliteId
+      }, 'MCP Activity Report Job registered and started');
 
       // Fetch initial configuration from backend
       server.log.info({
@@ -850,6 +1007,61 @@ export async function createServer() {
 
   // Register all routes
   registerRoutes(server);
+
+  // Set up graceful shutdown handlers
+  const gracefulShutdown = async (signal: string) => {
+    server.log.info({
+      operation: 'graceful_shutdown_start',
+      signal
+    }, `Received ${signal} - starting graceful shutdown`);
+
+    try {
+      // Stop job manager
+      
+      const jobManager = (server as any).jobManager as JobManager;
+      if (jobManager) {
+        server.log.info({ operation: 'shutdown_jobs' }, 'Stopping job manager...');
+        await jobManager.stopAll();
+      }
+
+      // Stop event bus and flush events
+      
+      const eventBus = (server as any).eventBus as EventBus | undefined;
+      if (eventBus) {
+        server.log.info({ operation: 'shutdown_events' }, 'Stopping event bus and flushing events...');
+        await eventBus.stop();
+      }
+
+      // Stop command polling service
+      
+      const commandPollingService = (server as any).commandPollingService as CommandPollingService | undefined;
+      if (commandPollingService) {
+        server.log.info({ operation: 'shutdown_polling' }, 'Stopping command polling service...');
+        commandPollingService.stop();
+      }
+
+      // Close server
+      server.log.info({ operation: 'shutdown_server' }, 'Closing server...');
+      await server.close();
+
+      server.log.info({
+        operation: 'graceful_shutdown_complete',
+        signal
+      }, 'Graceful shutdown completed');
+
+      process.exit(0);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      server.log.error({
+        operation: 'graceful_shutdown_error',
+        error: errorMessage
+      }, `Error during graceful shutdown: ${errorMessage}`);
+      process.exit(1);
+    }
+  };
+
+  process.on('SIGTERM', () => void gracefulShutdown('SIGTERM'));
+  process.on('SIGINT', () => void gracefulShutdown('SIGINT'));
 
   return server;
 }

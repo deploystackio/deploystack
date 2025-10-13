@@ -2,6 +2,7 @@ import { FastifyBaseLogger } from 'fastify';
 import { platform, arch, totalmem } from 'os';
 import { readFile, writeFile, access } from 'fs/promises';
 import { join } from 'path';
+import { SatelliteEvent } from '../events/registry';
 
 export interface BackendConnectionStatus {
   backend_url: string;
@@ -67,6 +68,20 @@ export interface PersistedSatelliteData {
   satellite_name: string | null;
   registered_at: string | null;
   last_verified: string | null;
+}
+
+export interface SendEventsResult {
+  success: boolean;
+  processed?: number;
+  failed?: number;
+  event_ids?: string[];
+  response_time_ms?: number;
+  error?: string;
+  failures?: Array<{
+    index: number;
+    type: string;
+    error: string;
+  }>;
 }
 
 export class BackendClient {
@@ -536,6 +551,130 @@ export class BackendClient {
         error: error instanceof Error ? error.message : 'Unknown error'
       }, 'Failed to clear persistent storage');
       throw error;
+    }
+  }
+
+  /**
+   * Send batch of events to backend
+   */
+  async sendEvents(satelliteId: string, events: SatelliteEvent[]): Promise<SendEventsResult> {
+    const startTime = Date.now();
+    
+    try {
+      if (events.length === 0) {
+        return {
+          success: true,
+          processed: 0,
+          failed: 0,
+          event_ids: [],
+          response_time_ms: 0
+        };
+      }
+
+      if (events.length > 100) {
+        this.logger.warn({
+          operation: 'events_batch_too_large',
+          event_count: events.length,
+          max_batch_size: 100
+        }, 'Event batch exceeds maximum size of 100');
+        return {
+          success: false,
+          error: 'Batch size exceeds maximum of 100 events'
+        };
+      }
+
+      this.logger.debug({
+        operation: 'events_send',
+        backend_url: this.backendUrl,
+        satellite_id: satelliteId,
+        event_count: events.length,
+        has_api_key: !!this.apiKey
+      }, 'Sending event batch to backend');
+
+      const response = await fetch(`${this.backendUrl}/api/satellites/${satelliteId}/events`, {
+        method: 'POST',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify({ events }),
+        signal: AbortSignal.timeout(10000)
+      });
+
+      const responseTime = Date.now() - startTime;
+      const responseText = await response.text();
+
+      if (response.ok) {
+        let result;
+        try {
+          result = JSON.parse(responseText);
+        } catch {
+          result = { success: true, processed: events.length };
+        }
+
+        this.logger.info({
+          operation: 'events_send_success',
+          backend_url: this.backendUrl,
+          satellite_id: satelliteId,
+          event_count: events.length,
+          processed: result.processed || events.length,
+          failed: result.failed || 0,
+          response_time_ms: responseTime,
+          status_code: response.status
+        }, 'Event batch sent successfully');
+
+        return {
+          success: true,
+          processed: result.processed || events.length,
+          failed: result.failed || 0,
+          event_ids: result.event_ids || [],
+          response_time_ms: responseTime,
+          failures: result.failures || []
+        };
+      } else {
+        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        
+        try {
+          const errorResult = JSON.parse(responseText);
+          if (errorResult.error) {
+            errorMessage = errorResult.error;
+          }
+        } catch {
+          // Use HTTP status if JSON parsing fails
+        }
+
+        this.logger.warn({
+          operation: 'events_send_error',
+          backend_url: this.backendUrl,
+          satellite_id: satelliteId,
+          event_count: events.length,
+          status_code: response.status,
+          error_message: errorMessage,
+          response_time_ms: responseTime
+        }, 'Event batch failed with HTTP error');
+
+        return {
+          success: false,
+          response_time_ms: responseTime,
+          error: errorMessage
+        };
+      }
+
+    } catch (error) {
+      const responseTime = Date.now() - startTime;
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+      this.logger.error({
+        operation: 'events_send_failed',
+        backend_url: this.backendUrl,
+        satellite_id: satelliteId,
+        event_count: events.length,
+        error: errorMessage,
+        response_time_ms: responseTime
+      }, 'Event batch failed with exception');
+
+      return {
+        success: false,
+        response_time_ms: responseTime,
+        error: `Events send failed: ${errorMessage}`
+      };
     }
   }
 }

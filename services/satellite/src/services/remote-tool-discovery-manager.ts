@@ -2,6 +2,7 @@
 import { FastifyBaseLogger } from 'fastify';
 import { DynamicConfigManager, DynamicMcpServersConfig, ConfigurationChanges } from './dynamic-config-manager';
 import { McpServerConfig } from './command-polling-service';
+import type { EventBus } from './event-bus';
 
 /**
  * Cached tool information with namespacing
@@ -35,9 +36,11 @@ export class RemoteToolDiscoveryManager {
   private isInitialized: boolean = false;
   private logger: FastifyBaseLogger;
   private configManager?: DynamicConfigManager;
+  private eventBus?: EventBus;
 
-  constructor(logger: FastifyBaseLogger) {
+  constructor(logger: FastifyBaseLogger, eventBus?: EventBus) {
     this.logger = logger.child({ component: 'RemoteToolDiscoveryManager' });
+    this.eventBus = eventBus;
   }
 
   /**
@@ -104,6 +107,22 @@ export class RemoteToolDiscoveryManager {
           tool_count: serverTools.length,
           tools: serverTools.map(t => t.originalName)
         }, `Discovered ${serverTools.length} tools from ${serverName}`);
+        
+        // Emit mcp.tools.discovered event
+        try {
+          const serverConfig = enabledServers[serverName];
+          this.eventBus?.emit('mcp.tools.discovered', {
+            server_id: serverConfig.installation_id || serverName,
+            server_slug: serverConfig.server_slug || serverName,
+            team_id: serverConfig.team_id || 'unknown',
+            tool_count: serverTools.length,
+            tool_names: serverTools.map(t => t.originalName),
+            discovery_duration_ms: 0, // Not tracked in initial discovery
+            previous_tool_count: 0
+          });
+        } catch (error) {
+          this.logger.warn({ error }, 'Failed to emit mcp.tools.discovered event (non-fatal)');
+        }
 
       } catch (error) {
         failureCount++;
@@ -507,6 +526,44 @@ export class RemoteToolDiscoveryManager {
             tools: serverTools.map(t => t.originalName),
             discovery_type: configChanges.addedServers.includes(serverName) ? 'new' : 'modified'
           }, `Discovered ${serverTools.length} tools from ${serverName}`);
+          
+          // Emit mcp.tools.discovered or mcp.tools.updated event
+          try {
+            const serverConfig = config.servers[serverName];
+            const isNew = configChanges.addedServers.includes(serverName);
+            
+            if (isNew) {
+              this.eventBus?.emit('mcp.tools.discovered', {
+                server_id: serverConfig.installation_id || serverName,
+                server_slug: serverConfig.server_slug || serverName,
+                team_id: serverConfig.team_id || 'unknown',
+                tool_count: serverTools.length,
+                tool_names: serverTools.map(t => t.originalName),
+                discovery_duration_ms: 0,
+                previous_tool_count: 0
+              });
+            } else {
+              // For modified servers, calculate what changed
+              const oldState = this.serverToolStates.get(serverName);
+              const oldTools = oldState?.tools.map(t => t.originalName) || [];
+              const newTools = serverTools.map(t => t.originalName);
+              const addedTools = newTools.filter(t => !oldTools.includes(t));
+              const removedTools = oldTools.filter(t => !newTools.includes(t));
+              
+              if (addedTools.length > 0 || removedTools.length > 0) {
+                this.eventBus?.emit('mcp.tools.updated', {
+                  server_id: serverConfig.installation_id || serverName,
+                  server_slug: serverConfig.server_slug || serverName,
+                  team_id: serverConfig.team_id || 'unknown',
+                  added_tools: addedTools,
+                  removed_tools: removedTools,
+                  total_tools: serverTools.length
+                });
+              }
+            }
+          } catch (error) {
+            this.logger.warn({ error }, 'Failed to emit tool discovery event (non-fatal)');
+          }
 
         } catch (error) {
           failureCount++;

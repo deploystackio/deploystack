@@ -100,6 +100,7 @@ export default async function mcpRoute(server: FastifyInstance) {
   // Get handlers from server instance (initialized in server.ts)
   const streamableHandler = (server as any).streamableHandler;
   const tokenIntrospectionService = (server as any).tokenIntrospectionService;
+  const activityTracker = (server as any).activityTracker;
 
   if (!streamableHandler) {
     throw new Error('Streamable HTTP handler must be initialized before registering MCP routes');
@@ -109,10 +110,14 @@ export default async function mcpRoute(server: FastifyInstance) {
     throw new Error('Token introspection service must be initialized before registering MCP routes');
   }
 
+  if (!activityTracker) {
+    throw new Error('MCP Activity Tracker must be initialized before registering MCP routes');
+  }
+
   // GET endpoint for SSE stream establishment
   server.get('/mcp', {
     preValidation: [
-      requireAuthentication(tokenIntrospectionService),
+      requireAuthentication(tokenIntrospectionService, activityTracker),
       requireScope('mcp:read')
     ],
     schema: {
@@ -186,7 +191,7 @@ export default async function mcpRoute(server: FastifyInstance) {
   // POST endpoint for JSON-RPC messages
   server.post('/mcp', {
     preValidation: [
-      requireAuthentication(tokenIntrospectionService),
+      requireAuthentication(tokenIntrospectionService, activityTracker),
       requireScope('mcp:tools:execute')
     ],
     schema: {

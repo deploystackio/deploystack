@@ -99,6 +99,12 @@ DEPLOYSTACK_STATUS_SHOW_VERSION=true    # Show version info in status endpoint (
 
 # Debug Endpoint Configuration (Optional)
 DEPLOYSTACK_STATUS_SHOW_MCP_DEBUG_ROUTE=true  # Enable debug endpoint (default: true, disable in production)
+
+# Event Bus Configuration (Optional)
+EVENT_BATCH_INTERVAL_MS=3000        # Event batching interval in milliseconds (default: 3000)
+EVENT_MAX_BATCH_SIZE=100            # Maximum events per batch (default: 100)
+EVENT_MAX_QUEUE_SIZE=10000          # Maximum events in memory queue (default: 10000)
+EVENT_FLUSH_TIMEOUT_MS=5000         # Graceful shutdown flush timeout in milliseconds (default: 5000)
 ```
 
 ### Required Environment Variables
