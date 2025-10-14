@@ -3,6 +3,7 @@ import { FastifyBaseLogger } from 'fastify';
 import { HttpProxyManager } from './http-proxy-manager';
 import { UnifiedToolDiscoveryManager } from './unified-tool-discovery-manager';
 import { ProxyRequestContext } from '../types/mcp-server';
+import { ProcessManager } from '../process/manager';
 
 /**
  * MCP Protocol Handler
@@ -12,10 +13,17 @@ export class McpProtocolHandler {
   private logger: FastifyBaseLogger;
   private httpProxyManager: HttpProxyManager;
   private toolDiscoveryManager: UnifiedToolDiscoveryManager;
+  private processManager: ProcessManager;
 
-  constructor(httpProxyManager: HttpProxyManager, toolDiscoveryManager: UnifiedToolDiscoveryManager, logger: FastifyBaseLogger) {
+  constructor(
+    httpProxyManager: HttpProxyManager, 
+    toolDiscoveryManager: UnifiedToolDiscoveryManager, 
+    processManager: ProcessManager,
+    logger: FastifyBaseLogger
+  ) {
     this.httpProxyManager = httpProxyManager;
     this.toolDiscoveryManager = toolDiscoveryManager;
+    this.processManager = processManager;
     this.logger = logger.child({ component: 'McpProtocolHandler' });
   }
 
@@ -162,8 +170,8 @@ export class McpProtocolHandler {
   }
 
   /**
-   * Handle tools/call request - route namespaced tool calls to appropriate remote MCP server
-   * Uses OAuth team context to resolve the correct server instance
+   * Handle tools/call request - route namespaced tool calls to appropriate MCP server
+   * Routes to stdio ProcessManager or HTTP proxy based on transport type
    */
   private async handleToolsCall(params: any, requestId: any, teamId?: string): Promise<any> {
     const { name: namespacedToolName, arguments: toolArgs } = params;
@@ -195,11 +203,9 @@ export class McpProtocolHandler {
       throw new Error(`Tool not found: ${namespacedToolName}. Available tools: ${allTools.map(t => t.namespacedName).join(', ')}`);
     }
 
-    // Use OAuth team context to find the correct server instance
-    // The serverName in cachedTool contains the full server name (e.g., "context7-john-R36no6FGoMFEZO9nWJJLT")
-    // We need to verify this server belongs to the requesting team
     const serverName = cachedTool.serverName;
     const originalToolName = cachedTool.originalName;
+    const transport = cachedTool.transport;
 
     this.logger.info({
       operation: 'mcp_tools_call_routing',
@@ -207,11 +213,12 @@ export class McpProtocolHandler {
       server_slug: serverSlug,
       original_tool_name: originalToolName,
       namespaced_tool_name: namespacedToolName,
+      transport: transport,
       request_id: requestId,
       team_id: teamId
-    }, `Routing tool call to server: ${serverName}, tool: ${originalToolName}`);
+    }, `Routing tool call to ${transport} server: ${serverName}, tool: ${originalToolName}`);
 
-    // Create JSON-RPC request for external server with original tool name
+    // Create JSON-RPC request with original tool name
     const jsonRpcRequest = {
       jsonrpc: '2.0',
       id: requestId,
@@ -222,6 +229,83 @@ export class McpProtocolHandler {
       }
     };
 
+    // Route based on transport type
+    if (transport === 'stdio') {
+      return this.handleStdioToolCall(serverName, originalToolName, namespacedToolName, jsonRpcRequest, requestId);
+    } else {
+      return this.handleHttpToolCall(serverName, originalToolName, namespacedToolName, jsonRpcRequest, requestId);
+    }
+  }
+
+  /**
+   * Handle tool call for stdio MCP servers via ProcessManager
+   */
+  private async handleStdioToolCall(
+    serverName: string,
+    originalToolName: string,
+    namespacedToolName: string,
+    jsonRpcRequest: any,
+    requestId: any
+  ): Promise<any> {
+    const startTime = Date.now();
+
+    this.logger.debug({
+      operation: 'mcp_stdio_tool_call',
+      server_name: serverName,
+      original_tool_name: originalToolName,
+      request_id: requestId
+    }, `Sending tool call to stdio process: ${serverName}`);
+
+    // Get process info from ProcessManager
+    const processInfo = this.processManager.getProcessByName(serverName);
+    
+    if (!processInfo) {
+      throw new Error(`stdio MCP server process not found: ${serverName}`);
+    }
+
+    if (processInfo.status !== 'running') {
+      throw new Error(`stdio MCP server not running: ${serverName} (status: ${processInfo.status})`);
+    }
+
+    // Send JSON-RPC request via stdin and await response
+    const response = await this.processManager.sendMessage(processInfo, jsonRpcRequest);
+    
+    const responseTime = Date.now() - startTime;
+
+    if (response.error) {
+      this.logger.error({
+        operation: 'mcp_stdio_tool_call_error',
+        server_name: serverName,
+        original_tool_name: originalToolName,
+        request_id: requestId,
+        error: response.error.message
+      }, `stdio tool call failed: ${response.error.message}`);
+      
+      throw new Error(`stdio MCP server error: ${response.error.message}`);
+    }
+
+    this.logger.info({
+      operation: 'mcp_stdio_tool_call_success',
+      server_name: serverName,
+      original_tool_name: originalToolName,
+      namespaced_tool_name: namespacedToolName,
+      request_id: requestId,
+      response_time_ms: responseTime
+    }, `stdio tool call successful: ${namespacedToolName} -> ${serverName}.${originalToolName} (${responseTime}ms)`);
+
+    return response.result || response;
+  }
+
+  /**
+   * Handle tool call for HTTP/SSE MCP servers via HttpProxyManager
+   */
+  private async handleHttpToolCall(
+    serverName: string,
+    originalToolName: string,
+    namespacedToolName: string,
+    jsonRpcRequest: any,
+    requestId: any
+  ): Promise<any> {
     // Create proxy context
     const proxyContext: ProxyRequestContext = {
       method: 'tools/call',
@@ -242,7 +326,6 @@ export class McpProtocolHandler {
     }
 
     // Return the result from the external MCP server
-    // The external server should return a JSON-RPC response, we want just the result
     const externalResponse = proxyResult.data as any;
     
     if (externalResponse.error) {
@@ -250,15 +333,14 @@ export class McpProtocolHandler {
     }
 
     this.logger.info({
-      operation: 'mcp_tools_call_success',
+      operation: 'mcp_http_tool_call_success',
       server_name: serverName,
       original_tool_name: originalToolName,
       namespaced_tool_name: namespacedToolName,
       request_id: requestId,
       response_time_ms: proxyResult.responseTime
-    }, `Tool call successful: ${namespacedToolName} -> ${serverName}.${originalToolName} (${proxyResult.responseTime}ms)`);
+    }, `HTTP tool call successful: ${namespacedToolName} -> ${serverName}.${originalToolName} (${proxyResult.responseTime}ms)`);
 
-    // Return the result from the external server
     return externalResponse.result || externalResponse;
   }
 

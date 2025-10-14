@@ -15,47 +15,54 @@ export const EVENT_TYPE = 'mcp.server.started';
 export const SCHEMA = {
   type: 'object',
   properties: {
-    processId: {
+    server_id: {
       type: 'string',
       minLength: 1,
-      description: 'Unique process identifier in satelliteProcesses table'
+      description: 'MCP server identifier (installation_id)'
     },
-    serverId: {
+    server_slug: {
       type: 'string',
       minLength: 1,
-      description: 'MCP server identifier'
+      description: 'MCP server slug (installation_name)'
     },
-    serverName: {
-      type: 'string',
-      minLength: 1,
-      description: 'Human-readable MCP server name'
-    },
-    teamId: {
+    team_id: {
       type: 'string',
       minLength: 1,
       description: 'Team identifier'
     },
-    pid: {
+    process_id: {
       type: 'number',
       description: 'Operating system process ID'
     },
-    localPort: {
+    transport: {
+      type: 'string',
+      enum: ['stdio', 'http'],
+      description: 'Transport protocol type'
+    },
+    tool_count: {
       type: 'number',
-      description: 'Local port for HTTP communication'
+      minimum: 0,
+      description: 'Number of tools discovered'
+    },
+    spawn_duration_ms: {
+      type: 'number',
+      minimum: 0,
+      description: 'Time taken to spawn process in milliseconds'
     }
   },
-  required: ['processId', 'serverId', 'serverName', 'teamId'],
+  required: ['server_id', 'server_slug', 'team_id', 'process_id', 'transport', 'tool_count', 'spawn_duration_ms'],
   additionalProperties: true
 } as const;
 
 // TypeScript interface for type safety
 interface ServerStartedData {
-  processId: string;
-  serverId: string;
-  serverName: string;
-  teamId: string;
-  pid?: number;
-  localPort?: number;
+  server_id: string;
+  server_slug: string;
+  team_id: string;
+  process_id: number;
+  transport: 'stdio' | 'http';
+  tool_count: number;
+  spawn_duration_ms: number;
 }
 
 /**
@@ -77,11 +84,10 @@ export async function handle(
     .update(satelliteProcesses)
     .set({
       status: 'running',
-      process_pid: data.pid || null,
-      local_port: data.localPort || null,
+      process_pid: data.process_id,
       health_status: 'healthy',
       started_at: eventTimestamp,
       updated_at: new Date()
     })
-    .where(eq(satelliteProcesses.id, data.processId));
+    .where(eq(satelliteProcesses.id, data.server_id));
 }

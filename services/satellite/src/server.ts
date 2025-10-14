@@ -368,8 +368,8 @@ export async function createServer() {
   }, 'Automatic stdio tool discovery handler registered for process spawn events');
 
 
-  // Initialize MCP Protocol Handler (after HTTP Proxy Manager and Tool Discovery Manager)
-  const mcpProtocolHandler = new McpProtocolHandler(httpProxyManager, toolDiscoveryManager, server.log);
+  // Initialize MCP Protocol Handler (after HTTP Proxy Manager, Tool Discovery Manager, and Process Manager)
+  const mcpProtocolHandler = new McpProtocolHandler(httpProxyManager, toolDiscoveryManager, processManager, server.log);
 
   // Initialize Command Processor with stdio process management dependencies
   const commandProcessor = new CommandProcessor(
