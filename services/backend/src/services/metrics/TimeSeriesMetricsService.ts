@@ -116,6 +116,7 @@ export abstract class TimeSeriesMetricsService {
   }
 
   validateInterval(interval: string): void {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     if (!VALID_INTERVALS.includes(interval as any)) {
       throw new Error(
         `Invalid interval: '${interval}'. Supported: ${VALID_INTERVALS.join(', ')}`

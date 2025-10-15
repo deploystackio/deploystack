@@ -12,6 +12,7 @@ import getUserTeamsRoute from './getUserTeams';
 import getMcpClientActivityRoute from './getMcpClientActivity';
 import preferencesRoutes from './preferences';
 import satelliteRoutes from './satellite';
+import metricsRoutes from './me/metrics';
 
 export default async function usersRoute(server: FastifyInstance) {
   // Register individual user route handlers
@@ -28,4 +29,5 @@ export default async function usersRoute(server: FastifyInstance) {
   await server.register(getMcpClientActivityRoute);
   await server.register(preferencesRoutes);
   await server.register(satelliteRoutes);
+  await server.register(metricsRoutes, { prefix: '/me/metrics' });
 }

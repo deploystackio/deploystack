@@ -3563,6 +3563,211 @@ paths:
                   - success
                   - error
                 description: Internal Server Error
+  /api/me/metrics/mcp/client-activity:
+    get:
+      summary: Get user MCP client activity metrics
+      tags:
+        - Users
+        - Metrics
+        - MCP
+      description: Returns time-series metrics for the authenticated user's MCP client
+        activity including request counts, tool calls, and active clients over
+        time. Supports multiple time ranges and bucket intervals for detailed
+        activity analysis.
+      parameters:
+        - schema:
+            type: string
+            minLength: 1
+          in: query
+          name: team_id
+          required: true
+          description: Team ID to filter metrics
+        - schema:
+            type: string
+            enum:
+              - 1h
+              - 3h
+              - 6h
+              - 12h
+              - 24h
+              - 7d
+              - 30d
+          in: query
+          name: time_range
+          required: false
+          description: Time range for metrics (e.g., 3h, 24h, 7d)
+        - schema:
+            type: string
+            enum:
+              - 15m
+              - 1h
+          in: query
+          name: interval
+          required: false
+          description: Bucket interval for aggregation
+        - schema:
+            type: string
+          in: query
+          name: satellite_id
+          required: false
+          description: Optional satellite ID to filter metrics
+        - schema:
+            type: string
+          in: query
+          name: auth_identifier
+          required: false
+          description: Optional auth identifier to filter metrics
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Successful operation - metrics returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Indicates if the operation was successful
+                  data:
+                    type: object
+                    properties:
+                      metric_type:
+                        type: string
+                        description: Type of metric returned
+                      time_range:
+                        type: object
+                        properties:
+                          start:
+                            type: string
+                            format: date-time
+                            description: Start of time range (ISO 8601)
+                          end:
+                            type: string
+                            format: date-time
+                            description: End of time range (ISO 8601)
+                          interval:
+                            type: string
+                            description: Bucket interval used
+                        required:
+                          - start
+                          - end
+                          - interval
+                      filters:
+                        type: object
+                        description: Applied filters
+                        additionalProperties: true
+                      buckets:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            timestamp:
+                              type: string
+                              format: date-time
+                              description: Bucket timestamp (ISO 8601)
+                            request_count:
+                              type: number
+                              description: Number of requests in bucket
+                            tool_call_count:
+                              type: number
+                              description: Number of tool calls in bucket
+                            active_client_count:
+                              type: number
+                              description: Number of active clients in bucket
+                          required:
+                            - timestamp
+                            - request_count
+                            - tool_call_count
+                            - active_client_count
+                        description: Time-series buckets with metrics
+                      summary:
+                        type: object
+                        description: Summary statistics across all buckets
+                        additionalProperties: true
+                    required:
+                      - metric_type
+                      - time_range
+                      - filters
+                      - buckets
+                      - summary
+                required:
+                  - success
+                  - data
+                description: Successful operation - metrics returned
+        "400":
+          description: Bad Request - Invalid query parameters
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates failure
+                  error:
+                    type: string
+                    description: Error message detailing what went wrong
+                required:
+                  - success
+                  - error
+                description: Bad Request - Invalid query parameters
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates failure
+                  error:
+                    type: string
+                    description: Error message detailing what went wrong
+                required:
+                  - success
+                  - error
+                description: Unauthorized
+        "403":
+          description: Forbidden - Insufficient permissions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates failure
+                  error:
+                    type: string
+                    description: Error message detailing what went wrong
+                required:
+                  - success
+                  - error
+                description: Forbidden - Insufficient permissions
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates failure
+                  error:
+                    type: string
+                    description: Error message detailing what went wrong
+                required:
+                  - success
+                  - error
+                description: Internal Server Error
   /api/settings:
     get:
       summary: List all global settings

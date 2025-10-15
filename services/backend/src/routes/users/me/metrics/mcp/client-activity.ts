@@ -1,7 +1,7 @@
 import { type FastifyInstance } from 'fastify';
-import { requirePermission } from '../../middleware/roleMiddleware';
-import { getDb } from '../../db';
-import { McpClientActivityMetricsService } from '../../services/metrics/McpClientActivityMetricsService';
+import { requirePermission } from '../../../../../middleware/roleMiddleware';
+import { getDb } from '../../../../../db';
+import { McpClientActivityMetricsService } from '../../../../../services/metrics/McpClientActivityMetricsService';
 
 const QUERY_PARAMS_SCHEMA = {
   type: 'object',
@@ -142,12 +142,12 @@ interface ErrorResponse {
 }
 
 export default async function mcpClientActivityMetricsRoute(server: FastifyInstance) {
-  server.get('/mcp-client-activity', {
+  server.get('/client-activity', {
     preValidation: requirePermission('metrics.mcp_client_activity_metrics.view'),
     schema: {
-      tags: ['Metrics'],
-      summary: 'Get MCP client activity metrics',
-      description: 'Returns time-series metrics for MCP client activity including request counts, tool calls, and active clients over time. Supports multiple time ranges and bucket intervals for detailed activity analysis.',
+      tags: ['Users', 'Metrics', 'MCP'],
+      summary: 'Get user MCP client activity metrics',
+      description: 'Returns time-series metrics for the authenticated user\'s MCP client activity including request counts, tool calls, and active clients over time. Supports multiple time ranges and bucket intervals for detailed activity analysis.',
       security: [{ cookieAuth: [] }],
       
       querystring: QUERY_PARAMS_SCHEMA,
