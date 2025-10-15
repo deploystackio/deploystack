@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useEventBus } from '@/composables/useEventBus'
 import Card from '@/components/ui/card/Card.vue'
 import { Item } from '@/components/ui/item'
 import { McpClientActivityService } from '@/services/mcpClientActivityService'
 import type { McpClientActivity } from '@/services/mcpClientActivityService'
 
 const { t } = useI18n()
+const eventBus = useEventBus()
 
 const activities = ref<McpClientActivity[]>([])
 const isLoading = ref(false)
@@ -33,11 +35,20 @@ function getRelativeTime(isoString: string): string {
 }
 
 async function fetchClientActivity() {
+  // Get teamId from storage (selected team)
+  const teamId = eventBus.getState<string>('selected_team_id')
+  
+  if (!teamId) {
+    error.value = 'No team selected'
+    console.warn('No team selected - please select a team first')
+    return
+  }
+  
   try {
     isLoading.value = true
     error.value = null
     
-    const response = await McpClientActivityService.getMyClientActivity({
+    const response = await McpClientActivityService.getMyClientActivity(teamId, {
       limit: 20,
       active_within_minutes: 30
     })
@@ -67,6 +78,11 @@ function stopPolling() {
 onMounted(async () => {
   await fetchClientActivity()
   startPolling()
+  
+  // Listen for team selection changes and refresh activity
+  eventBus.on('team-selected', async () => {
+    await fetchClientActivity()
+  })
 })
 
 onUnmounted(() => {
