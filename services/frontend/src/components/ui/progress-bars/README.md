@@ -122,7 +122,6 @@ function handleStepClick(step, index) {
 | `showSteps` | `boolean` | `true` | Whether to show step labels |
 | `hideTitle` | `boolean` | `false` | Hide title visually (keeps for screen readers) |
 | `interactive` | `boolean` | `false` | Enable step click interactions |
-| `styled` | `boolean` | `false` | Add styled container with background and padding |
 
 ### ProgressStep Interface
 

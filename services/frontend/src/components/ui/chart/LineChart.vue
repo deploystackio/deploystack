@@ -59,7 +59,6 @@ const chartOption = computed<EChartsOption>(() => ({
     right: '4%',
     bottom: '3%',
     top: '10%',
-    containLabel: true,
   },
   xAxis: {
     type: 'category',

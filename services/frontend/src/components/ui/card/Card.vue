@@ -10,6 +10,7 @@ const cardVariants = cva(
       variant: {
         default: 'bg-card',
         gray: 'bg-zinc-100',
+        white: 'bg-white',
       },
     },
     defaultVariants: {
