@@ -8,6 +8,11 @@ import { requireAuthenticationAny } from '../../middleware/oauthMiddleware';
 const QUERY_PARAMS_SCHEMA = {
   type: 'object',
   properties: {
+    team_id: {
+      type: 'string',
+      minLength: 1,
+      description: 'Team ID to filter activity by (required for team-aware filtering)'
+    },
     limit: {
       type: 'integer',
       minimum: 1,
@@ -29,6 +34,7 @@ const QUERY_PARAMS_SCHEMA = {
       description: 'Show clients active within N minutes (1-1440)'
     }
   },
+  required: ['team_id'],
   additionalProperties: false
 } as const;
 
@@ -93,6 +99,7 @@ const ERROR_RESPONSE_SCHEMA = {
 
 // TypeScript interfaces
 interface QueryParams {
+  team_id: string;
   limit?: number;
   offset?: number;
   active_within_minutes?: number;
@@ -147,8 +154,8 @@ export default async function getMcpClientActivityRoute(server: FastifyInstance)
     preValidation: [requireAuthenticationAny()],
     schema: {
       tags: ['Users', 'MCP'],
-      summary: 'Get current user\'s active MCP clients',
-      description: 'Returns the current user\'s active MCP clients (VS Code, Cursor, etc.) based on recent activity. This is a PERSONAL dashboard endpoint - users see ONLY their own clients, not their team members\' activity.',
+      summary: 'Get current user\'s active MCP clients for a specific team',
+      description: 'Returns the current user\'s active MCP clients (VS Code, Cursor, etc.) based on recent activity for the specified team. This is a TEAM-AWARE PERSONAL dashboard endpoint - users see ONLY their own clients within the specified team, not their team members\' activity. Requires team_id query parameter.',
       security: [
         { cookieAuth: [] },
         { bearerAuth: [] }
@@ -181,6 +188,7 @@ export default async function getMcpClientActivityRoute(server: FastifyInstance)
       const userId = request.user!.id;
       const query = request.query as QueryParams;
       
+      const teamId = query.team_id;
       const limit = query.limit || 20;
       const offset = query.offset || 0;
       const activeWithinMinutes = query.active_within_minutes || 30;
@@ -188,20 +196,21 @@ export default async function getMcpClientActivityRoute(server: FastifyInstance)
       // Calculate cutoff timestamp (X minutes ago)
       const cutoffTime = new Date(Date.now() - activeWithinMinutes * 60 * 1000);
       
-      // Get total count for pagination
+      // Get total count for pagination (team-aware)
       const countResult = await db
         .select({ count: sql<number>`count(*)` })
         .from(mcpClientActivity)
         .where(
           and(
             eq(mcpClientActivity.user_id, userId),
+            eq(mcpClientActivity.team_id, teamId),
             gt(mcpClientActivity.last_activity_at, cutoffTime)
           )
         );
       
       const total = Number(countResult[0]?.count || 0);
       
-      // Get activity records with satellite information
+      // Get activity records with satellite information (team-aware)
       const activityRecords = await db
         .select({
           id: mcpClientActivity.id,
@@ -219,6 +228,7 @@ export default async function getMcpClientActivityRoute(server: FastifyInstance)
         .where(
           and(
             eq(mcpClientActivity.user_id, userId),
+            eq(mcpClientActivity.team_id, teamId),
             gt(mcpClientActivity.last_activity_at, cutoffTime)
           )
         )

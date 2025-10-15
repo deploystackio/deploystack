@@ -2541,14 +2541,23 @@ paths:
                 description: Internal Server Error
   /api/users/me/mcp/client-activity:
     get:
-      summary: Get current user's active MCP clients
+      summary: Get current user's active MCP clients for a specific team
       tags:
         - Users
         - MCP
       description: Returns the current user's active MCP clients (VS Code, Cursor,
-        etc.) based on recent activity. This is a PERSONAL dashboard endpoint -
-        users see ONLY their own clients, not their team members' activity.
+        etc.) based on recent activity for the specified team. This is a
+        TEAM-AWARE PERSONAL dashboard endpoint - users see ONLY their own
+        clients within the specified team, not their team members' activity.
+        Requires team_id query parameter.
       parameters:
+        - schema:
+            type: string
+            minLength: 1
+          in: query
+          name: team_id
+          required: true
+          description: Team ID to filter activity by (required for team-aware filtering)
         - schema:
             type: integer
             minimum: 1
