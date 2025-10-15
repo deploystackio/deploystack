@@ -466,6 +466,48 @@ export class McpCatalogService {
   static async updateStatus(serverId: string, status: 'active' | 'deprecated' | 'maintenance'): Promise<McpServer> {
     return this.updateGlobalServer(serverId, { status })
   }
+
+  /**
+   * Get all unique runtime environments
+   */
+  static async getRuntimes(): Promise<string[]> {
+    const response = await fetch(`${this.baseUrl}/api/mcp/servers/runtimes`, {
+      method: 'GET',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.message || `Failed to fetch runtimes: ${response.status}`)
+    }
+
+    const data = await response.json()
+    return data.data?.runtimes || []
+  }
+
+  /**
+   * Get all unique programming languages
+   */
+  static async getLanguages(): Promise<string[]> {
+    const response = await fetch(`${this.baseUrl}/api/mcp/servers/languages`, {
+      method: 'GET',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.message || `Failed to fetch languages: ${response.status}`)
+    }
+
+    const data = await response.json()
+    return data.data?.languages || []
+  }
 }
 
 // Export McpCategoriesCache for backward compatibility

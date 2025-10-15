@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter, useRoute } from 'vue-router'
 import { toast } from 'vue-sonner'
@@ -58,6 +58,10 @@ const selectedRuntime = ref('all')
 const selectedFeatured = ref<'true' | 'false' | 'all'>('all')
 const selectedAutoInstall = ref<'true' | 'false' | 'all'>('all')
 
+// Available runtimes (fetched from API)
+const availableRuntimes = ref<string[]>([])
+const availableLanguages = ref<string[]>([])
+
 // Sync state
 const isSyncModalOpen = ref(false)
 const isSyncing = ref(false)
@@ -105,25 +109,22 @@ const statusOptions = [
   { value: 'maintenance', label: t('mcpCatalog.filters.status.maintenance') }
 ]
 
-const languageOptions = [
+const languageOptions = computed(() => [
   { value: 'all', label: t('mcpCatalog.filters.language.all') },
-  { value: 'TypeScript', label: 'TypeScript' },
-  { value: 'JavaScript', label: 'JavaScript' },
-  { value: 'Python', label: 'Python' },
-  { value: 'Go', label: 'Go' },
-  { value: 'Rust', label: 'Rust' },
-  { value: 'Java', label: 'Java' },
-  { value: 'C#', label: 'C#' },
-  { value: 'Ruby', label: 'Ruby' }
-]
+  ...availableLanguages.value.map(language => ({
+    value: language,
+    label: language
+  }))
+])
 
-const runtimeOptions = [
+// Computed runtime options (dynamic from API)
+const runtimeOptions = computed(() => [
   { value: 'all', label: t('mcpCatalog.filters.runtime.all') },
-  { value: 'node', label: 'Node.js' },
-  { value: 'python', label: 'Python' },
-  { value: 'docker', label: 'Docker' },
-  { value: 'binary', label: 'Binary' }
-]
+  ...availableRuntimes.value.map(runtime => ({
+    value: runtime,
+    label: runtime
+  }))
+])
 
 const featuredOptions = [
   { value: 'all', label: t('mcpCatalog.filters.featured.all') },
@@ -437,9 +438,33 @@ const handleServerCreated = () => {
   toast.success(t('mcpCatalog.messages.createSuccess'))
 }
 
+// Fetch available runtimes
+const fetchRuntimes = async () => {
+  try {
+    availableRuntimes.value = await McpCatalogService.getRuntimes()
+  } catch (err) {
+    console.error('Failed to fetch runtimes:', err)
+    availableRuntimes.value = []
+  }
+}
+
+// Fetch available languages
+const fetchLanguages = async () => {
+  try {
+    availableLanguages.value = await McpCatalogService.getLanguages()
+  } catch (err) {
+    console.error('Failed to fetch languages:', err)
+    availableLanguages.value = []
+  }
+}
+
 // Load data on component mount
 onMounted(async () => {
-  await fetchServers()
+  await Promise.all([
+    fetchServers(),
+    fetchRuntimes(),
+    fetchLanguages()
+  ])
 
   // Check for delete success message from query parameters
   const deletedServerName = route.query.deleted as string
