@@ -10648,6 +10648,168 @@ paths:
                   - success
                   - error
                 description: Internal Server Error
+  /api/mcp/servers/languages:
+    get:
+      summary: Get all unique programming languages
+      tags:
+        - MCP Servers
+      description: Retrieve all unique programming languages from MCP servers using
+        DISTINCT query for optimal performance. Results are sorted
+        alphabetically.
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Languages retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Indicates successful languages retrieval
+                  data:
+                    type: object
+                    properties:
+                      languages:
+                        type: array
+                        items:
+                          type: string
+                        description: Array of unique programming languages sorted alphabetically
+                      total:
+                        type: number
+                        description: Total number of unique languages
+                    required:
+                      - languages
+                      - total
+                    additionalProperties: false
+                required:
+                  - success
+                  - data
+                additionalProperties: false
+                description: Languages retrieved successfully
+        "401":
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates the operation failed
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                  details:
+                    description: Additional error details
+                required:
+                  - success
+                  - error
+                description: Unauthorized - Authentication required
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates the operation failed
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                  details:
+                    description: Additional error details
+                required:
+                  - success
+                  - error
+                description: Internal Server Error
+  /api/mcp/servers/runtimes:
+    get:
+      summary: Get all unique runtime environments
+      tags:
+        - MCP Servers
+      description: Retrieve all unique runtime environments from MCP servers using
+        DISTINCT query for optimal performance. Results are sorted
+        alphabetically.
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Runtimes retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Indicates successful runtimes retrieval
+                  data:
+                    type: object
+                    properties:
+                      runtimes:
+                        type: array
+                        items:
+                          type: string
+                        description: Array of unique runtime environments sorted alphabetically
+                      total:
+                        type: number
+                        description: Total number of unique runtimes
+                    required:
+                      - runtimes
+                      - total
+                    additionalProperties: false
+                required:
+                  - success
+                  - data
+                additionalProperties: false
+                description: Runtimes retrieved successfully
+        "401":
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates the operation failed
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                  details:
+                    description: Additional error details
+                required:
+                  - success
+                  - error
+                description: Unauthorized - Authentication required
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates the operation failed
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                  details:
+                    description: Additional error details
+                required:
+                  - success
+                  - error
+                description: Internal Server Error
   /api/mcp/servers/global:
     post:
       summary: Create global MCP server (Global Admin only)

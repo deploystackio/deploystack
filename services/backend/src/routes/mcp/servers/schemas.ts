@@ -1040,6 +1040,62 @@ export const GET_TAGS_SUCCESS_RESPONSE_SCHEMA = {
   additionalProperties: false
 } as const;
 
+export const GET_LANGUAGES_SUCCESS_RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    success: {
+      type: 'boolean',
+      description: 'Indicates successful languages retrieval'
+    },
+    data: {
+      type: 'object',
+      properties: {
+        languages: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Array of unique programming languages sorted alphabetically'
+        },
+        total: {
+          type: 'number',
+          description: 'Total number of unique languages'
+        }
+      },
+      required: ['languages', 'total'],
+      additionalProperties: false
+    }
+  },
+  required: ['success', 'data'],
+  additionalProperties: false
+} as const;
+
+export const GET_RUNTIMES_SUCCESS_RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    success: {
+      type: 'boolean',
+      description: 'Indicates successful runtimes retrieval'
+    },
+    data: {
+      type: 'object',
+      properties: {
+        runtimes: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Array of unique runtime environments sorted alphabetically'
+        },
+        total: {
+          type: 'number',
+          description: 'Total number of unique runtimes'
+        }
+      },
+      required: ['runtimes', 'total'],
+      additionalProperties: false
+    }
+  },
+  required: ['success', 'data'],
+  additionalProperties: false
+} as const;
+
 // =============================================================================
 // TYPESCRIPT INTERFACES - CONSOLIDATED
 // =============================================================================
@@ -1301,6 +1357,22 @@ export interface GetTagsSuccessResponse {
   success: boolean;
   data: {
     tags: string[];
+    total: number;
+  };
+}
+
+export interface GetLanguagesSuccessResponse {
+  success: boolean;
+  data: {
+    languages: string[];
+    total: number;
+  };
+}
+
+export interface GetRuntimesSuccessResponse {
+  success: boolean;
+  data: {
+    runtimes: string[];
     total: number;
   };
 }
