@@ -5,6 +5,7 @@ import { type AnyDatabase } from '../db'
 import type SqliteDriver from 'better-sqlite3'
 import { type PluginManager } from '../plugin-system'
 import { type DeployStackEventBus } from '../events'
+import { type CronManager } from '../cron/cronManager'
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -27,6 +28,9 @@ declare module 'fastify' {
     // Methods for re-initializing database services after setup
     reinitializeDatabaseServices: () => Promise<boolean>
     reinitializePluginsWithDatabase: () => Promise<void>
+    
+    // Cron manager for scheduled jobs
+    cronManager?: CronManager
   }
   
   interface FastifyReply {

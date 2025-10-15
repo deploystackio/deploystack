@@ -197,6 +197,40 @@ export async function initializeDatabaseDependentServices(
         server.log.warn('⚠️ Continuing without Job Queue System due to error');
       }
 
+      // Initialize and start Cron Job System (after Job Queue System)
+      try {
+        server.log.debug('🔄 Initializing Cron Job System...');
+        const { initializeCronJobs } = await import('./cron');
+        
+        // Check if jobQueueService exists before initializing cron
+        if ((server as any).jobQueueService) {
+          const cronManager = initializeCronJobs((server as any).jobQueueService, server.log);
+          server.log.debug('✅ Cron jobs registered');
+          
+          // Start all cron jobs
+          cronManager.start();
+          server.log.info('✅ Cron Job System started and jobs scheduled');
+          
+          // Decorate server with cron manager for graceful shutdown
+          if (!server.hasDecorator('cronManager')) {
+            server.decorate('cronManager', cronManager);
+          } else {
+            (server as any).cronManager = cronManager;
+          }
+        } else {
+          server.log.warn('⚠️ Job Queue Service not available, skipping Cron Job System initialization');
+        }
+        
+      } catch (cronError) {
+        server.log.error({
+          error: cronError,
+          message: cronError instanceof Error ? cronError.message : 'Unknown error',
+          stack: cronError instanceof Error ? cronError.stack : 'No stack trace'
+        }, '❌ Cron Job System failed to initialize:');
+        // Don't throw - continue with startup but log the error
+        server.log.warn('⚠️ Continuing without Cron Job System due to error');
+      }
+
       // Start Token Cleanup Service (only after database is ready)
       try {
         server.log.debug('Starting Token Cleanup Service...');
@@ -601,7 +635,14 @@ export const createServer = async () => {
   server.log.info('Authentication routes registered under /api/auth.');
   
   server.addHook('onClose', async () => {
-    // Stop job processor first to gracefully finish current jobs
+    // Stop cron jobs first
+    if ((server as any).cronManager) {
+      server.log.info('Stopping cron jobs...');
+      (server as any).cronManager.stop();
+      server.log.info('Cron jobs stopped.');
+    }
+    
+    // Stop job processor to gracefully finish current jobs
     if ((server as any).jobProcessorService) {
       server.log.info('Stopping job processor...');
       await (server as any).jobProcessorService.stop();
