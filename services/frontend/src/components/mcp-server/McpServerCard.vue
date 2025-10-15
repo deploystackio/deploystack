@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Info, Download } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
-import CategoryDisplay from '@/components/mcp-server/CategoryDisplay.vue'
+import Card from '@/components/ui/card/Card.vue'
 
 const { t } = useI18n()
 
@@ -22,7 +22,6 @@ interface Props {
   showDetailsButton?: boolean
   installButtonText?: string
   detailsButtonText?: string
-  containerClass?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -30,8 +29,7 @@ const props = withDefaults(defineProps<Props>(), {
   showInstallButton: true,
   showDetailsButton: true,
   installButtonText: '',
-  detailsButtonText: '',
-  containerClass: 'bg-muted/50 px-4 py-6 sm:rounded-lg sm:p-6 md:flex md:items-center md:justify-between md:space-x-6 lg:space-x-8'
+  detailsButtonText: ''
 })
 
 const emit = defineEmits<{
@@ -62,12 +60,28 @@ const handleInstallClick = () => {
 const handleDetailsClick = () => {
   emit('details', props.server)
 }
+
+const getGitHubAvatarUrl = (server: typeof props.server) => {
+  if (!server.github_account_id) return null
+  return `https://avatars.githubusercontent.com/u/${server.github_account_id}?v=4&s=64`
+}
 </script>
 
 <template>
-  <div :class="containerClass">
+  <Card variant="white">
+    <div class="px-6 md:flex md:items-center md:justify-between md:space-x-6 lg:space-x-8">
+    <!-- Avatar Image -->
+    <div v-if="getGitHubAvatarUrl(server)" class="flex-shrink-0 mb-4 md:mb-0">
+      <img
+        :src="getGitHubAvatarUrl(server)!"
+        :alt="`${server.name} GitHub avatar`"
+        class="h-18 w-18 rounded-lg"
+        @error="($event.target as HTMLImageElement).style.display = 'none'"
+      />
+    </div>
+
     <!-- Server Information Grid -->
-    <dl class="flex-auto divide-y divide-gray-200 text-sm text-gray-600 md:grid md:grid-cols-3 md:gap-x-6 md:divide-y-0 lg:w-1/2 lg:flex-none lg:gap-x-8">
+    <dl class="flex-auto divide-y divide-gray-200 text-sm text-gray-600 md:grid md:grid-cols-2 md:gap-x-6 md:divide-y-0 md:w-80 md:flex-none lg:gap-x-8">
       <!-- Server Name -->
       <div class="max-md:flex max-md:justify-between max-md:py-4 max-md:first:pt-0 max-md:last:pb-0">
         <dt class="font-medium text-gray-900">{{ t('mcpInstallations.wizard.server.name') }}</dt>
@@ -79,23 +93,10 @@ const handleDetailsClick = () => {
         <dt class="font-medium text-gray-900">{{ t('mcpInstallations.wizard.server.author') }}</dt>
         <dd class="md:mt-1">{{ server.author_name || t('mcpInstallations.wizard.server.unknownAuthor') }}</dd>
       </div>
-
-      <!-- Category -->
-      <div class="max-md:flex max-md:justify-between max-md:py-4 max-md:first:pt-0 max-md:last:pb-0">
-        <dt class="font-medium text-gray-900">{{ t('mcpInstallations.wizard.server.category') }}</dt>
-        <dd class="md:mt-1">
-          <CategoryDisplay
-            :category-id="server.category_id"
-            :show-not-provided="true"
-            text-class="text-sm"
-            icon-class="h-4 w-4 text-gray-600"
-          />
-        </dd>
-      </div>
     </dl>
 
-    <!-- Description (if provided) -->
-    <div v-if="server.description" class="mt-4 md:mt-0 md:ml-6 lg:w-1/2">
+    <!-- Description -->
+    <div v-if="server.description" class="mt-4 md:mt-0 md:ml-6 lg:flex-1">
       <p class="text-sm text-gray-600">{{ server.description }}</p>
     </div>
 
@@ -130,5 +131,6 @@ const handleDetailsClick = () => {
         <span class="sr-only">{{ server.name }}</span>
       </Button>
     </div>
-  </div>
+    </div>
+  </Card>
 </template>
