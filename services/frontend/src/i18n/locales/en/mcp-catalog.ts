@@ -771,6 +771,39 @@ export default {
     next: 'Next'
   },
 
+  filters: {
+    clear: 'Clear Filters',
+    activeSearch: 'Search active - {count} results',
+    filtersApplied: 'Filters applied - {count} results',
+    status: {
+      label: 'Status',
+      all: 'All Statuses',
+      active: 'Active',
+      deprecated: 'Deprecated',
+      maintenance: 'Maintenance'
+    },
+    language: {
+      label: 'Language',
+      all: 'All Languages'
+    },
+    runtime: {
+      label: 'Runtime',
+      all: 'All Runtimes'
+    },
+    featured: {
+      label: 'Featured',
+      all: 'All Servers',
+      yes: 'Featured Only',
+      no: 'Non-Featured'
+    },
+    autoInstall: {
+      label: 'Auto Install',
+      all: 'All Servers',
+      yes: 'Auto Install Enabled',
+      no: 'Auto Install Disabled'
+    }
+  },
+
   registrySync: {
     button: 'Sync Registry',
     modal: {

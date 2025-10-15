@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter, useRoute } from 'vue-router'
 import { toast } from 'vue-sonner'
@@ -7,6 +7,19 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Button } from '@/components/ui/button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from '@/components/ui/field'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,13 +30,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { Plus, RefreshCw, ExternalLink } from 'lucide-vue-next'
+import { Plus, RefreshCw, ExternalLink, X } from 'lucide-vue-next'
 import DashboardLayout from '@/components/DashboardLayout.vue'
 import { McpCatalogService, type PaginationMeta } from '@/services/mcpCatalogService'
 import { useEventBus } from '@/composables/useEventBus'
 import McpServerTableColumns from './McpServerTableColumns.vue'
 import PaginationControls from '@/components/ui/pagination/PaginationControls.vue'
-import type { McpServer, McpServerFilters } from './types'
+import type { McpServer } from './types'
+import type { McpServerSearchParams } from '@/types/mcp-catalog'
 import { getEnv } from '@/utils/env'
 
 const { t, tm } = useI18n()
@@ -35,7 +49,14 @@ const eventBus = useEventBus()
 const servers = ref<McpServer[]>([])
 const isLoading = ref(true)
 const error = ref<string | null>(null)
+
+// Search and filter state
 const searchQuery = ref('')
+const selectedStatus = ref<'active' | 'deprecated' | 'maintenance' | 'all'>('all')
+const selectedLanguage = ref('all')
+const selectedRuntime = ref('all')
+const selectedFeatured = ref<'true' | 'false' | 'all'>('all')
+const selectedAutoInstall = ref<'true' | 'false' | 'all'>('all')
 
 // Sync state
 const isSyncModalOpen = ref(false)
@@ -76,36 +97,45 @@ const pagination = ref<PaginationMeta>({
   has_more: false
 })
 
-// Filters
-const filters = ref<McpServerFilters>({
-  visibility: 'global' // Only show global servers in admin catalog
-})
+// Available filter options (using 'all' instead of empty string for shadcn-vue compatibility)
+const statusOptions = [
+  { value: 'all', label: t('mcpCatalog.filters.status.all') },
+  { value: 'active', label: t('mcpCatalog.filters.status.active') },
+  { value: 'deprecated', label: t('mcpCatalog.filters.status.deprecated') },
+  { value: 'maintenance', label: t('mcpCatalog.filters.status.maintenance') }
+]
 
-// For search, we'll use client-side filtering since the backend pagination
-// doesn't support search yet. In the future, this could be moved to server-side
-const filteredServers = computed(() => {
-  if (!searchQuery.value) {
-    return servers.value
-  }
-  const query = searchQuery.value.toLowerCase()
-  return servers.value.filter(server =>
-    server.name.toLowerCase().includes(query) ||
-    server.description.toLowerCase().includes(query) ||
-    (server.tags && server.tags.some(tag => tag.toLowerCase().includes(query))) ||
-    (server.author_name && server.author_name.toLowerCase().includes(query)) ||
-    server.language.toLowerCase().includes(query)
-  )
-})
+const languageOptions = [
+  { value: 'all', label: t('mcpCatalog.filters.language.all') },
+  { value: 'TypeScript', label: 'TypeScript' },
+  { value: 'JavaScript', label: 'JavaScript' },
+  { value: 'Python', label: 'Python' },
+  { value: 'Go', label: 'Go' },
+  { value: 'Rust', label: 'Rust' },
+  { value: 'Java', label: 'Java' },
+  { value: 'C#', label: 'C#' },
+  { value: 'Ruby', label: 'Ruby' }
+]
 
-// Computed values for pagination display
-const displayedServers = computed(() => {
-  // If searching, show filtered results without pagination
-  if (searchQuery.value) {
-    return filteredServers.value
-  }
-  // Otherwise show paginated results
-  return servers.value
-})
+const runtimeOptions = [
+  { value: 'all', label: t('mcpCatalog.filters.runtime.all') },
+  { value: 'node', label: 'Node.js' },
+  { value: 'python', label: 'Python' },
+  { value: 'docker', label: 'Docker' },
+  { value: 'binary', label: 'Binary' }
+]
+
+const featuredOptions = [
+  { value: 'all', label: t('mcpCatalog.filters.featured.all') },
+  { value: 'true', label: t('mcpCatalog.filters.featured.yes') },
+  { value: 'false', label: t('mcpCatalog.filters.featured.no') }
+]
+
+const autoInstallOptions = [
+  { value: 'all', label: t('mcpCatalog.filters.autoInstall.all') },
+  { value: 'true', label: t('mcpCatalog.filters.autoInstall.yes') },
+  { value: 'false', label: t('mcpCatalog.filters.autoInstall.no') }
+]
 
 
 // Navigation handlers
@@ -237,15 +267,97 @@ onUnmounted(() => {
 })
 
 
-// Fetch servers from API with pagination
+// Check if any filters are active
+const hasActiveFilters = () => {
+  return !!searchQuery.value || 
+         selectedStatus.value !== 'all' || 
+         selectedLanguage.value !== 'all' || 
+         selectedRuntime.value !== 'all' || 
+         selectedFeatured.value !== 'all' || 
+         selectedAutoInstall.value !== 'all'
+}
+
+// Check if text search is active
+const hasTextSearch = () => {
+  return !!searchQuery.value && searchQuery.value.trim().length > 0
+}
+
+// Fetch servers using search API (only when text query exists)
+const searchServers = async (): Promise<void> => {
+  try {
+    isLoading.value = true
+    error.value = null
+
+    const offset = (currentPage.value - 1) * pageSize.value
+    
+    const searchParams: McpServerSearchParams = {
+      q: searchQuery.value.trim(), // Use actual search query
+      limit: pageSize.value,
+      offset
+    }
+
+    // Add filters if selected (skip 'all' values)
+    if (selectedStatus.value !== 'all') {
+      searchParams.status = selectedStatus.value
+    }
+    if (selectedLanguage.value !== 'all') {
+      searchParams.language = selectedLanguage.value
+    }
+    if (selectedRuntime.value !== 'all') {
+      searchParams.runtime = selectedRuntime.value
+    }
+    if (selectedFeatured.value !== 'all') {
+      searchParams.featured = selectedFeatured.value === 'true'
+    }
+    // Note: auto_install_new_default_team is not in the search API yet,
+    // but we keep the UI ready for when it's added
+
+    const response = await McpCatalogService.searchServers(searchParams)
+
+    servers.value = response.servers
+    pagination.value = response.pagination
+    totalItems.value = response.pagination.total
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : 'An unknown error occurred'
+    servers.value = []
+    totalItems.value = 0
+  } finally {
+    isLoading.value = false
+  }
+}
+
+// Fetch servers from API with pagination and filters (non-search)
 const fetchServers = async (): Promise<void> => {
   try {
     isLoading.value = true
     error.value = null
 
     const offset = (currentPage.value - 1) * pageSize.value
+    
+    // Build filters object
+    const filters: Record<string, string> = {
+      visibility: 'global'
+    }
+    
+    // Add active filters
+    if (selectedStatus.value !== 'all') {
+      filters.status = selectedStatus.value
+    }
+    if (selectedLanguage.value !== 'all') {
+      filters.language = selectedLanguage.value
+    }
+    if (selectedRuntime.value !== 'all') {
+      filters.runtime = selectedRuntime.value
+    }
+    if (selectedFeatured.value !== 'all') {
+      filters.featured = selectedFeatured.value
+    }
+    if (selectedAutoInstall.value !== 'all') {
+      filters.auto_install_new_default_team = selectedAutoInstall.value
+    }
+    
     const response = await McpCatalogService.getGlobalServersPaginated(
-      filters.value,
+      filters,
       { limit: pageSize.value, offset }
     )
 
@@ -261,16 +373,62 @@ const fetchServers = async (): Promise<void> => {
   }
 }
 
+// Debounced search execution
+let searchTimeout: ReturnType<typeof setTimeout> | null = null
+
+const executeSearch = () => {
+  if (searchTimeout) {
+    clearTimeout(searchTimeout)
+  }
+
+  searchTimeout = setTimeout(() => {
+    currentPage.value = 1 // Reset to first page on new search
+    
+    // Use search API only when there's a text query
+    // Otherwise use regular list API with filters
+    if (hasTextSearch()) {
+      searchServers()
+    } else {
+      fetchServers()
+    }
+  }, 300) // 300ms debounce
+}
+
+// Clear all filters
+const clearFilters = () => {
+  searchQuery.value = ''
+  selectedStatus.value = 'all'
+  selectedLanguage.value = 'all'
+  selectedRuntime.value = 'all'
+  selectedFeatured.value = 'all'
+  selectedAutoInstall.value = 'all'
+  currentPage.value = 1
+  fetchServers()
+}
+
+// Watch for filter changes
+watch([searchQuery, selectedStatus, selectedLanguage, selectedRuntime, selectedFeatured, selectedAutoInstall], () => {
+  executeSearch()
+})
+
 // Pagination event handlers
 const handlePageChange = async (page: number) => {
   currentPage.value = page
-  await fetchServers()
+  if (hasTextSearch()) {
+    await searchServers()
+  } else {
+    await fetchServers()
+  }
 }
 
 const handlePageSizeChange = async (newPageSize: number) => {
   pageSize.value = newPageSize
-  currentPage.value = 1 // Reset to first page when changing page size
-  await fetchServers()
+  currentPage.value = 1
+  if (hasTextSearch()) {
+    await searchServers()
+  } else {
+    await fetchServers()
+  }
 }
 
 // Handle server creation success from add page
@@ -356,24 +514,155 @@ onUnmounted(() => {
 
       <!-- Data Table -->
       <div v-else class="space-y-4">
-        <!-- Search Input -->
-        <div class="flex items-center py-4">
-          <Input
-            :placeholder="t('mcpCatalog.table.search.placeholder')"
-            v-model="searchQuery"
-            class="max-w-sm"
-          />
+        <!-- Search and Filters -->
+        <div class="space-y-4">
+          <!-- Search Input -->
+          <div class="flex items-center gap-2">
+            <Input
+              :placeholder="t('mcpCatalog.table.search.placeholder')"
+              v-model="searchQuery"
+              class="max-w-sm"
+            />
+            <Button
+              v-if="hasActiveFilters()"
+              variant="ghost"
+              size="sm"
+              @click="clearFilters"
+              class="flex items-center gap-2"
+            >
+              <X class="h-4 w-4" />
+              {{ t('mcpCatalog.filters.clear') }}
+            </Button>
+          </div>
+
+          <!-- Filter Fields -->
+          <FieldGroup>
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+              <!-- Status Filter -->
+              <Field>
+                <FieldLabel for="filter-status">
+                  {{ t('mcpCatalog.filters.status.label') }}
+                </FieldLabel>
+                <Select v-model="selectedStatus">
+                  <SelectTrigger id="filter-status">
+                    <SelectValue :placeholder="t('mcpCatalog.filters.status.all')" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem
+                      v-for="option in statusOptions"
+                      :key="option.value"
+                      :value="option.value"
+                    >
+                      {{ option.label }}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </Field>
+
+              <!-- Language Filter -->
+              <Field>
+                <FieldLabel for="filter-language">
+                  {{ t('mcpCatalog.filters.language.label') }}
+                </FieldLabel>
+                <Select v-model="selectedLanguage">
+                  <SelectTrigger id="filter-language">
+                    <SelectValue :placeholder="t('mcpCatalog.filters.language.all')" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem
+                      v-for="option in languageOptions"
+                      :key="option.value"
+                      :value="option.value"
+                    >
+                      {{ option.label }}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </Field>
+
+              <!-- Runtime Filter -->
+              <Field>
+                <FieldLabel for="filter-runtime">
+                  {{ t('mcpCatalog.filters.runtime.label') }}
+                </FieldLabel>
+                <Select v-model="selectedRuntime">
+                  <SelectTrigger id="filter-runtime">
+                    <SelectValue :placeholder="t('mcpCatalog.filters.runtime.all')" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem
+                      v-for="option in runtimeOptions"
+                      :key="option.value"
+                      :value="option.value"
+                    >
+                      {{ option.label }}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </Field>
+
+              <!-- Featured Filter -->
+              <Field>
+                <FieldLabel for="filter-featured">
+                  {{ t('mcpCatalog.filters.featured.label') }}
+                </FieldLabel>
+                <Select v-model="selectedFeatured">
+                  <SelectTrigger id="filter-featured">
+                    <SelectValue :placeholder="t('mcpCatalog.filters.featured.all')" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem
+                      v-for="option in featuredOptions"
+                      :key="option.value"
+                      :value="option.value"
+                    >
+                      {{ option.label }}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </Field>
+
+              <!-- Auto Install Filter -->
+              <Field>
+                <FieldLabel for="filter-auto-install">
+                  {{ t('mcpCatalog.filters.autoInstall.label') }}
+                </FieldLabel>
+                <Select v-model="selectedAutoInstall">
+                  <SelectTrigger id="filter-auto-install">
+                    <SelectValue :placeholder="t('mcpCatalog.filters.autoInstall.all')" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem
+                      v-for="option in autoInstallOptions"
+                      :key="option.value"
+                      :value="option.value"
+                    >
+                      {{ option.label }}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </Field>
+            </div>
+
+            <!-- Active Filters Info -->
+            <FieldDescription v-if="hasTextSearch()">
+              {{ t('mcpCatalog.filters.activeSearch', { count: totalItems }) }}
+            </FieldDescription>
+            <FieldDescription v-else-if="hasActiveFilters()">
+              {{ t('mcpCatalog.filters.filtersApplied', { count: totalItems }) }}
+            </FieldDescription>
+          </FieldGroup>
         </div>
 
         <!-- Servers Table Component -->
         <McpServerTableColumns
-          :servers="displayedServers"
+          :servers="servers"
           :on-edit-server="handleEditServer"
         />
 
-        <!-- Pagination Controls (only show when not searching) -->
+        <!-- Pagination Controls -->
         <PaginationControls
-          v-if="!searchQuery && totalItems > 0"
+          v-if="totalItems > 0"
           :current-page="currentPage"
           :page-size="pageSize"
           :total-items="totalItems"
@@ -381,15 +670,6 @@ onUnmounted(() => {
           @page-change="handlePageChange"
           @page-size-change="handlePageSizeChange"
         />
-
-        <!-- Search Results Info (show when searching) -->
-        <div v-if="searchQuery" class="text-sm text-muted-foreground py-4">
-          {{ t('mcpCatalog.pagination.showing', {
-            start: filteredServers.length > 0 ? 1 : 0,
-            end: filteredServers.length,
-            total: filteredServers.length
-          }) }}
-        </div>
       </div>
     </div>
 
