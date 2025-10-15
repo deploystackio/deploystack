@@ -66,6 +66,7 @@ export const ROLE_DEFINITIONS = {
     'preferences.view',
     'preferences.edit',
     'gateway.config:read',
+    'metrics.mcp_client_activity_metrics.view',
   ],
   team_admin: [
     'teams.view',

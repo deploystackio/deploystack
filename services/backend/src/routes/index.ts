@@ -27,6 +27,8 @@ import adminRoutes from './admin'
 import gatewayRoutes from './gateway'
 // Import satellite routes
 import satellitesRoutes from './satellites'
+// Import metrics routes
+import metricsRoutes from './metrics'
 
 // Response schema for the root health check endpoint
 const healthCheckResponseSchema = z.object({
@@ -73,6 +75,9 @@ export const registerRoutes = (server: FastifyInstance): void => {
     
     // Register satellite routes
     await apiInstance.register(satellitesRoutes);
+    
+    // Register metrics routes
+    await apiInstance.register(metricsRoutes);
   }, { prefix: '/api' });
 
 

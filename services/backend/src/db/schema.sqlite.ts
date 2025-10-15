@@ -685,6 +685,56 @@ export const mcpClientActivity = sqliteTable('mcpClientActivity', {
   ),
 }));
 
+// MCP Client Activity Metrics - Time-series metrics for activity tracking
+export const mcpClientActivityMetrics = sqliteTable('mcpClientActivityMetrics', {
+  id: text('id').primaryKey(),
+  
+  // Context
+  user_id: text('user_id').notNull().references(() => authUser.id, { onDelete: 'cascade' }),
+  team_id: text('team_id').notNull().references(() => teams.id, { onDelete: 'cascade' }),
+  satellite_id: text('satellite_id').notNull().references(() => satellites.id, { onDelete: 'cascade' }),
+  auth_identifier: text('auth_identifier').notNull(),
+  
+  // Time bucket
+  bucket_timestamp: integer('bucket_timestamp').notNull(),
+  bucket_interval: text('bucket_interval', { enum: ['15m', '1h'] }).notNull(),
+  
+  // Metrics
+  request_count: integer('request_count').notNull().default(0),
+  tool_call_count: integer('tool_call_count').notNull().default(0),
+  active_client_count: integer('active_client_count').notNull().default(0),
+  
+  // Timestamps
+  created_at: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+}, (table) => ({
+  // Primary index for fast lookups by user/team/time
+  lookupIdx: index('mcp_activity_metrics_lookup_idx').on(
+    table.user_id,
+    table.team_id,
+    table.bucket_timestamp,
+    table.bucket_interval
+  ),
+  
+  // Time-based index for range queries and cleanup
+  timeIdx: index('mcp_activity_metrics_time_idx').on(table.bucket_timestamp),
+  
+  // Satellite index for satellite-specific queries
+  satelliteIdx: index('mcp_activity_metrics_satellite_idx').on(
+    table.satellite_id,
+    table.bucket_timestamp
+  ),
+  
+  // Composite unique constraint
+  uniqueBucket: index('mcp_activity_metrics_unique_bucket').on(
+    table.user_id,
+    table.team_id,
+    table.satellite_id,
+    table.auth_identifier,
+    table.bucket_timestamp,
+    table.bucket_interval
+  ),
+}));
+
 // Plugin table definitions - populated dynamically by the plugin system
 // This object will hold definitions for plugin tables, to be populated dynamically.
 // Key: Table name (e.g., 'myPlugin_myTable')

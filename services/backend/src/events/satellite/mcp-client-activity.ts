@@ -1,6 +1,7 @@
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
-import { mcpClientActivity } from '../../db/schema.sqlite';
-import { eq, and } from 'drizzle-orm';
+import { mcpClientActivity, mcpClientActivityMetrics } from '../../db/schema.sqlite';
+import { eq, and, sql } from 'drizzle-orm';
+import { nanoid } from 'nanoid';
 
 export const EVENT_TYPE = 'mcp.client.activity';
 
@@ -78,18 +79,25 @@ interface McpClientActivityData {
   last_activity_at: string;
 }
 
-export async function handle(
-  satelliteId: string,
-  eventData: Record<string, unknown>,
+const BUCKET_INTERVALS = ['15m', '1h'] as const;
+const INTERVAL_SECONDS: Record<string, number> = {
+  '15m': 900,
+  '1h': 3600
+};
+
+function calculateBucketTimestamp(activityTimestamp: Date, intervalSeconds: number): number {
+  const timestampSeconds = Math.floor(activityTimestamp.getTime() / 1000);
+  return Math.floor(timestampSeconds / intervalSeconds) * intervalSeconds;
+}
+
+async function updateCumulativeActivity(
   db: LibSQLDatabase,
+  satelliteId: string,
+  data: McpClientActivityData,
+  authIdentifier: string,
+  activityTimestamp: Date,
   eventTimestamp: Date
 ): Promise<void> {
-  const data = eventData as unknown as McpClientActivityData;
-  
-  // Compute auth_identifier (always non-NULL for proper unique constraint)
-  const authIdentifier = `oauth:${data.oauth_client_id}`;
-  
-  // Check if record exists for this user/team/auth_identifier/satellite combination
   const existing = await db.select()
     .from(mcpClientActivity)
     .where(and(
@@ -101,10 +109,9 @@ export async function handle(
     .limit(1);
   
   if (existing.length > 0) {
-    // UPDATE existing record: increment counters, update timestamps
     await db.update(mcpClientActivity)
       .set({
-        last_activity_at: new Date(data.last_activity_at),
+        last_activity_at: activityTimestamp,
         total_requests: existing[0].total_requests + data.request_count,
         total_tool_calls: existing[0].total_tool_calls + data.tool_call_count,
         current_session_id: data.session_id,
@@ -114,7 +121,6 @@ export async function handle(
       })
       .where(eq(mcpClientActivity.id, existing[0].id));
   } else {
-    // INSERT new record
     await db.insert(mcpClientActivity).values({
       id: `mcp_activity_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       user_id: data.user_id,
@@ -128,12 +134,96 @@ export async function handle(
       user_agent: data.user_agent || null,
       ip_address: data.ip_address || null,
       current_session_id: data.session_id || null,
-      first_seen_at: new Date(data.last_activity_at),
-      last_activity_at: new Date(data.last_activity_at),
+      first_seen_at: activityTimestamp,
+      last_activity_at: activityTimestamp,
       total_requests: data.request_count,
       total_tool_calls: data.tool_call_count,
       created_at: eventTimestamp,
       updated_at: eventTimestamp
+    });
+  }
+}
+
+async function writeTimeSeriesMetrics(
+  db: LibSQLDatabase,
+  satelliteId: string,
+  data: McpClientActivityData,
+  authIdentifier: string,
+  activityTimestamp: Date,
+  eventTimestamp: Date
+): Promise<void> {
+  for (const interval of BUCKET_INTERVALS) {
+    const intervalSeconds = INTERVAL_SECONDS[interval];
+    const bucketTimestamp = calculateBucketTimestamp(activityTimestamp, intervalSeconds);
+
+    await db
+      .insert(mcpClientActivityMetrics)
+      .values({
+        id: nanoid(),
+        user_id: data.user_id,
+        team_id: data.team_id,
+        satellite_id: satelliteId,
+        auth_identifier: authIdentifier,
+        bucket_timestamp: bucketTimestamp,
+        bucket_interval: interval,
+        request_count: data.request_count,
+        tool_call_count: data.tool_call_count,
+        active_client_count: 1,
+        created_at: eventTimestamp
+      })
+      .onConflictDoUpdate({
+        target: [
+          mcpClientActivityMetrics.user_id,
+          mcpClientActivityMetrics.team_id,
+          mcpClientActivityMetrics.satellite_id,
+          mcpClientActivityMetrics.auth_identifier,
+          mcpClientActivityMetrics.bucket_timestamp,
+          mcpClientActivityMetrics.bucket_interval
+        ],
+        set: {
+          request_count: sql`${mcpClientActivityMetrics.request_count} + ${data.request_count}`,
+          tool_call_count: sql`${mcpClientActivityMetrics.tool_call_count} + ${data.tool_call_count}`
+        }
+      });
+  }
+}
+
+export async function handle(
+  satelliteId: string,
+  eventData: Record<string, unknown>,
+  db: LibSQLDatabase,
+  eventTimestamp: Date
+): Promise<void> {
+  const data = eventData as unknown as McpClientActivityData;
+  const authIdentifier = `oauth:${data.oauth_client_id}`;
+  const activityTimestamp = new Date(data.last_activity_at);
+
+  await updateCumulativeActivity(
+    db,
+    satelliteId,
+    data,
+    authIdentifier,
+    activityTimestamp,
+    eventTimestamp
+  );
+
+  try {
+    await writeTimeSeriesMetrics(
+      db,
+      satelliteId,
+      data,
+      authIdentifier,
+      activityTimestamp,
+      eventTimestamp
+    );
+  } catch (error) {
+    console.error('Failed to write time-series metrics (non-fatal):', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      satelliteId,
+      userId: data.user_id,
+      teamId: data.team_id,
+      requestCount: data.request_count,
+      toolCallCount: data.tool_call_count
     });
   }
 }
