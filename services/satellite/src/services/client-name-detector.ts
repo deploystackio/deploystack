@@ -6,7 +6,7 @@
  */
 
 /**
- * Detect MCP client name from User-Agent header
+ * Detect MCP client name from HTTP headers
  * 
  * This is a fallback mechanism when client_name is not available from
  * OAuth client metadata. In a future enhancement, we can look up the
@@ -14,8 +14,9 @@
  * 
  * Detection Priority:
  * 1. Custom X-MCP-Client-Name header (if provided by client)
- * 2. Parse User-Agent for known patterns
- * 3. Return 'Unknown Client' if no match
+ * 2. Mcp-Session-Id header presence (indicates official MCP SDK)
+ * 3. Parse User-Agent for known patterns
+ * 4. Return 'Unknown Client' if no match
  * 
  * @param headers - HTTP headers from request
  * @returns Human-readable client name
@@ -27,16 +28,19 @@ export function deriveClientName(headers: Record<string, string | string[] | und
     return customName;
   }
 
-  // Parse User-Agent (fallback)
+  // Check for Mcp-Session-Id header - indicates official MCP SDK usage
+  // The official MCP TypeScript SDK (used by VS Code, Cursor, etc.) sends this header
+  const mcpSessionId = getHeader(headers, 'mcp-session-id');
   const userAgent = getHeader(headers, 'user-agent') || '';
   const ua = userAgent.toLowerCase();
 
-  // VS Code detection
-  if (ua.includes('vscode')) {
+  // If Mcp-Session-Id is present with 'undici' user-agent, it's likely VS Code or similar
+  // The official @modelcontextprotocol/sdk uses undici as HTTP client
+  if (mcpSessionId && ua === 'undici') {
     return 'VS Code';
   }
 
-  // Cursor detection
+  // Cursor detection (if Cursor sets specific headers or user-agent)
   if (ua.includes('cursor')) {
     return 'Cursor';
   }
@@ -56,7 +60,17 @@ export function deriveClientName(headers: Record<string, string | string[] | und
     return 'Windsurf';
   }
 
-  // Generic MCP client
+  // Generic MCP SDK client (has mcp-session-id but unknown user-agent)
+  if (mcpSessionId) {
+    return 'MCP Client';
+  }
+
+  // VS Code detection (legacy, in case it appears in user-agent)
+  if (ua.includes('vscode')) {
+    return 'VS Code';
+  }
+
+  // Generic MCP reference in user-agent
   if (ua.includes('mcp')) {
     return 'MCP Client';
   }
