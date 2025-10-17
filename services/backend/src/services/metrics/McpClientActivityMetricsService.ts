@@ -29,6 +29,14 @@ export class McpClientActivityMetricsService extends TimeSeriesMetricsService {
     return 'mcp_client_activity';
   }
 
+  getDefaultMetricFields(): Record<string, number> {
+    return {
+      request_count: 0,
+      tool_call_count: 0,
+      active_client_count: 0
+    };
+  }
+
   async queryBuckets(params: McpActivityQueryParams): Promise<BucketData[]> {
     this.logger.debug({
       operation: 'query_buckets',
@@ -143,7 +151,11 @@ export class McpClientActivityMetricsService extends TimeSeriesMetricsService {
 
     const expectedTimestamps = this.generateBucketTimestamps(start, end, interval);
 
-    const filledBuckets = this.fillMissingBuckets(buckets, expectedTimestamps);
+    const filledBuckets = this.fillMissingBuckets(
+      buckets,
+      expectedTimestamps,
+      this.getDefaultMetricFields()
+    );
 
     const summary = this.calculateSummary(filledBuckets);
 

@@ -154,7 +154,11 @@ export abstract class TimeSeriesMetricsService {
     return timestamps;
   }
 
-  fillMissingBuckets(buckets: BucketData[], timestamps: number[]): BucketData[] {
+  fillMissingBuckets(
+    buckets: BucketData[],
+    timestamps: number[],
+    defaultFields?: Record<string, number>
+  ): BucketData[] {
     const bucketMap = new Map<number, BucketData>();
     
     for (const bucket of buckets) {
@@ -169,7 +173,9 @@ export abstract class TimeSeriesMetricsService {
       } else {
         const zeroBucket: BucketData = { timestamp };
         
-        if (buckets.length > 0) {
+        if (defaultFields) {
+          Object.assign(zeroBucket, defaultFields);
+        } else if (buckets.length > 0) {
           const sampleBucket = buckets[0];
           for (const key of Object.keys(sampleBucket)) {
             if (key !== 'timestamp') {
@@ -186,7 +192,8 @@ export abstract class TimeSeriesMetricsService {
       operation: 'fill_missing_buckets',
       expectedBuckets: timestamps.length,
       actualBuckets: buckets.length,
-      filledBuckets: filledBuckets.length
+      filledBuckets: filledBuckets.length,
+      defaultFieldsProvided: !!defaultFields
     }, 'Filled missing buckets');
 
     return filledBuckets;
