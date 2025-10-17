@@ -154,9 +154,9 @@ export class RemoteToolDiscoveryManager {
    */
   getCachedTools(): CachedTool[] {
     if (!this.isInitialized) {
-      this.logger.warn({
+      this.logger.debug({
         operation: 'tools_requested_before_init'
-      }, 'Tools requested before initialization - returning empty array');
+      }, 'Tools requested before initialization - returning empty array (normal during startup)');
       return [];
     }
 

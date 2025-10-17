@@ -18,6 +18,8 @@ export type EventType =
   | 'mcp.server.restarted'
   | 'mcp.server.stopped'
   | 'mcp.server.permanently_failed'
+  | 'mcp.server.dormant'
+  | 'mcp.server.respawned'
   | 'mcp.tools.discovered'
   | 'mcp.tools.updated'
   | 'config.refreshed'
@@ -110,6 +112,24 @@ export interface EventDataMap {
     failed_at: string;
   };
 
+  'mcp.server.dormant': {
+    server_id: string;
+    server_slug: string;
+    team_id: string;
+    process_id: number;
+    idle_duration_seconds: number;
+    last_activity_at: string;
+  };
+
+  'mcp.server.respawned': {
+    server_id: string;
+    server_slug: string;
+    team_id: string;
+    process_id: number;
+    dormant_duration_seconds: number;
+    respawn_duration_ms: number;
+  };
+
   'mcp.tools.discovered': {
     server_id: string;
     server_slug: string;
@@ -196,6 +216,8 @@ export function isValidEventType(type: string): type is EventType {
     'mcp.server.restarted',
     'mcp.server.stopped',
     'mcp.server.permanently_failed',
+    'mcp.server.dormant',
+    'mcp.server.respawned',
     'mcp.tools.discovered',
     'mcp.tools.updated',
     'config.refreshed',

@@ -156,18 +156,18 @@ export class DynamicConfigManager {
         // Update current configuration
         this.currentConfig = newConfig;
         
-        // Emit config.refreshed event
-        try {
-          this.eventBus?.emit('config.refreshed', {
-            config_hash: changes.configHash,
-            server_count: newServerCount,
-            teams_count: new Set(Object.values(newConfig.servers).map(s => s.team_id || 'unknown')).size,
-            change_detected: true,
-            fetch_duration_ms: 0 // Not tracked here
-          });
-        } catch (error) {
-          this.logger.warn({ error }, 'Failed to emit config.refreshed event (non-fatal)');
-        }
+        // TODO: Emit config.refreshed event when backend supports it
+        // try {
+        //   this.eventBus?.emit('config.refreshed', {
+        //     config_hash: changes.configHash,
+        //     server_count: newServerCount,
+        //     teams_count: new Set(Object.values(newConfig.servers).map(s => s.team_id || 'unknown')).size,
+        //     change_detected: true,
+        //     fetch_duration_ms: 0
+        //   });
+        // } catch (error) {
+        //   this.logger.warn({ error }, 'Failed to emit config.refreshed event (non-fatal)');
+        // }
 
         // Notify configuration change handler
         if (this.onConfigurationChanged) {
@@ -180,18 +180,18 @@ export class DynamicConfigManager {
           unchanged_servers: changes.unchangedServers
         }, 'Configuration update received but no changes detected');
         
-        // Emit config.refreshed event even when no changes
-        try {
-          this.eventBus?.emit('config.refreshed', {
-            config_hash: changes.configHash,
-            server_count: Object.keys(newConfig.servers).length,
-            teams_count: new Set(Object.values(newConfig.servers).map(s => s.team_id || 'unknown')).size,
-            change_detected: false,
-            fetch_duration_ms: 0
-          });
-        } catch (error) {
-          this.logger.warn({ error }, 'Failed to emit config.refreshed event (non-fatal)');
-        }
+        // TODO: Emit config.refreshed event when backend supports it
+        // try {
+        //   this.eventBus?.emit('config.refreshed', {
+        //     config_hash: changes.configHash,
+        //     server_count: Object.keys(newConfig.servers).length,
+        //     teams_count: new Set(Object.values(newConfig.servers).map(s => s.team_id || 'unknown')).size,
+        //     change_detected: false,
+        //     fetch_duration_ms: 0
+        //   });
+        // } catch (error) {
+        //   this.logger.warn({ error }, 'Failed to emit config.refreshed event (non-fatal)');
+        // }
       }
 
     } catch (error) {

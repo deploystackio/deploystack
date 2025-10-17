@@ -55,6 +55,7 @@ export interface ProcessInfo {
   messageCount: number;                 // Total messages sent
   errorCount: number;                   // Total errors encountered
   activeRequests: Map<string, PendingRequest>; // Pending JSON-RPC requests
+  isDormantShutdown?: boolean;          // Flag for intentional idle termination (skip crash detection)
 }
 
 /**

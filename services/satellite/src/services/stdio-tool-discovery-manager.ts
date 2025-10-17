@@ -19,7 +19,8 @@ export interface CachedStdioTool {
  * 
  * Manages tool discovery and caching for stdio-based MCP servers.
  * Tools are discovered after successful process spawn and handshake.
- * Tools are automatically cleared when process terminates.
+ * Tools remain cached even when processes go dormant for fast respawn.
+ * Tools are only cleared when servers are explicitly uninstalled.
  */
 export class StdioToolDiscoveryManager {
   private toolCache = new Map<string, CachedStdioTool>();
@@ -30,10 +31,10 @@ export class StdioToolDiscoveryManager {
     private runtimeState: RuntimeState,
     private logger: Logger
   ) {
-    // Listen for process termination to clean up tools
-    this.processManager.on('processTerminated', (processInfo) => {
-      this.clearServerTools(processInfo.config.installation_name);
-    });
+    // NOTE: We do NOT clear tools on process termination
+    // Tools remain cached even when processes go dormant
+    // This allows instant tool calls - the process will respawn automatically
+    // Only clear tools when explicitly requested (e.g., server uninstalled)
   }
 
   /**
@@ -188,7 +189,8 @@ export class StdioToolDiscoveryManager {
   }
 
   /**
-   * Clear tools for a specific server (called on process termination)
+   * Clear tools for a specific server (called when server is uninstalled or config changes)
+   * NOT called on dormant termination - tools remain cached for fast respawn
    */
   clearServerTools(installationName: string): void {
     const toolSet = this.toolsByServer.get(installationName);

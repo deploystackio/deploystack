@@ -1,5 +1,5 @@
 import { EventEmitter } from 'events';
-import { ProcessInfo, RuntimeProcessInfo, RuntimeStateSnapshot } from './types';
+import { ProcessInfo, RuntimeProcessInfo, RuntimeStateSnapshot, MCPServerConfig } from './types';
 
 /**
  * Runtime state management for MCP server processes
@@ -11,6 +11,7 @@ export class RuntimeState extends EventEmitter {
   private processesByName = new Map<string, string>();
   private processesByTeam = new Map<string, Set<string>>();
   private permanentlyFailedProcesses = new Map<string, RuntimeProcessInfo>(); // Keep failed processes for reporting
+  private dormantProcessConfigs = new Map<string, MCPServerConfig>(); // Keep configs for respawning dormant processes
 
   constructor() {
     super();
@@ -312,5 +313,51 @@ export class RuntimeState extends EventEmitter {
     }
 
     return stats;
+  }
+
+  /**
+   * Mark a process as dormant and store its config for respawning
+   */
+  markProcessDormant(installationName: string, config: MCPServerConfig): void {
+    this.dormantProcessConfigs.set(installationName, config);
+    this.emit('processDormant', installationName, config);
+  }
+
+  /**
+   * Get dormant process config by installation name
+   */
+  getDormantConfig(installationName: string): MCPServerConfig | null {
+    return this.dormantProcessConfigs.get(installationName) || null;
+  }
+
+  /**
+   * Remove dormant process config (after respawning)
+   */
+  removeDormantConfig(installationName: string): void {
+    this.dormantProcessConfigs.delete(installationName);
+  }
+
+  /**
+   * Get count of dormant processes
+   */
+  getDormantCount(): number {
+    return this.dormantProcessConfigs.size;
+  }
+
+  /**
+   * Get all dormant process names
+   */
+  getAllDormantProcessNames(): string[] {
+    return Array.from(this.dormantProcessConfigs.keys());
+  }
+
+  /**
+   * Get all dormant process configs
+   */
+  getAllDormantConfigs(): Array<{ installationName: string; config: MCPServerConfig }> {
+    return Array.from(this.dormantProcessConfigs.entries()).map(([name, config]) => ({
+      installationName: name,
+      config
+    }));
   }
 }

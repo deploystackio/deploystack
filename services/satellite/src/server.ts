@@ -21,7 +21,7 @@ import { DynamicConfigManager } from './services/dynamic-config-manager';
 import { CommandProcessor } from './services/command-processor';
 import { TokenIntrospectionService } from './services/token-introspection-service';
 import { TeamAwareMcpHandler } from './services/team-aware-mcp-handler';
-import { JobManager, HeartbeatJob, McpActivityReportJob } from './jobs';
+import { JobManager, HeartbeatJob, McpActivityReportJob, IdleProcessCleanupJob } from './jobs';
 import { EventBus } from './services/event-bus';
 import { McpActivityTracker } from './services/mcp-activity-tracker';
 
@@ -237,7 +237,10 @@ export async function createServer() {
   // Initialize Process Manager and Runtime State for stdio subprocess servers (EventBus will be added after registration)
   const runtimeState = new RuntimeState();
   
-  const processManager = new ProcessManager(server.log as any); // Fastify logger is compatible with pino Logger
+  const processManager = new ProcessManager(server.log as any, undefined, runtimeState); // Fastify logger is compatible with pino Logger
+  
+  // Set up RuntimeState to listen for restart limit exceeded events
+  runtimeState.listenToProcessManager(processManager);
 
   // Initialize Remote Tool Discovery Manager for HTTP/SSE remote servers (EventBus will be added after registration)
   const remoteToolDiscoveryManager = new RemoteToolDiscoveryManager(server.log);
@@ -736,6 +739,7 @@ export async function createServer() {
       const jobManager = new JobManager(server.log);
       
       jobManager.register(new HeartbeatJob(heartbeatService));
+      jobManager.register(new IdleProcessCleanupJob(processManager, runtimeState, server.log));
       
       // Store job manager on server instance
       server.decorate('jobManager', jobManager);

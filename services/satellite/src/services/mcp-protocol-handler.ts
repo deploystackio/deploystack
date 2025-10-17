@@ -135,11 +135,15 @@ export class McpProtocolHandler {
 
   /**
    * Handle tools/list request - returns cached discovered tools from both stdio and remote MCP servers
+   * Automatically respawns dormant stdio processes before returning tool list
    */
   private async handleToolsList(): Promise<any> {
     this.logger.debug({
       operation: 'mcp_tools_list'
     }, 'Listing cached discovered tools from stdio and remote MCP servers');
+
+    // Check for dormant stdio processes and respawn them
+    await this.respawnDormantProcesses();
 
     const cachedTools = this.toolDiscoveryManager.getAllTools();
     
@@ -167,6 +171,63 @@ export class McpProtocolHandler {
     }, 'Debug: tools/list result object');
 
     return result;
+  }
+
+  /**
+   * Check for dormant stdio processes and respawn them before tool discovery
+   * This ensures tools/list returns complete tool list even if processes were idle
+   */
+  private async respawnDormantProcesses(): Promise<void> {
+    // Get all dormant process configs from RuntimeState
+    // We can't rely on tool list since tools are cleared when processes go dormant
+    const dormantServers = this.processManager.getAllDormantProcessNames();
+
+    if (dormantServers.length === 0) {
+      return; // No dormant processes
+    }
+
+    // Respawn dormant processes if any found
+    if (dormantServers.length > 0) {
+      this.logger.info({
+        operation: 'respawning_dormant_processes',
+        dormant_count: dormantServers.length,
+        dormant_servers: dormantServers
+      }, `Found ${dormantServers.length} dormant stdio processes - respawning before tools/list`);
+
+      const respawnPromises = dormantServers.map(async (serverName) => {
+        try {
+          const startTime = Date.now();
+          
+          // This will check dormant map and respawn if needed
+          const processInfo = await this.processManager.getOrRespawnProcess(serverName);
+          
+          const duration = Date.now() - startTime;
+          
+          this.logger.info({
+            operation: 'dormant_process_respawned_for_tools_list',
+            server_name: serverName,
+            respawn_duration_ms: duration,
+            pid: processInfo.process.pid
+          }, `Respawned dormant process for tools/list: ${serverName} (${duration}ms)`);
+          
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          this.logger.error({
+            operation: 'dormant_process_respawn_failed',
+            server_name: serverName,
+            error: errorMessage
+          }, `Failed to respawn dormant process for tools/list: ${errorMessage}`);
+        }
+      });
+
+      // Wait for all respawns to complete
+      await Promise.all(respawnPromises);
+
+      this.logger.info({
+        operation: 'dormant_processes_respawned',
+        respawned_count: dormantServers.length
+      }, `Completed respawning ${dormantServers.length} dormant processes`);
+    }
   }
 
   /**
@@ -256,12 +317,8 @@ export class McpProtocolHandler {
       request_id: requestId
     }, `Sending tool call to stdio process: ${serverName}`);
 
-    // Get process info from ProcessManager
-    const processInfo = this.processManager.getProcessByName(serverName);
-    
-    if (!processInfo) {
-      throw new Error(`stdio MCP server process not found: ${serverName}`);
-    }
+    // Get or respawn process if dormant
+    const processInfo = await this.processManager.getOrRespawnProcess(serverName);
 
     if (processInfo.status !== 'running') {
       throw new Error(`stdio MCP server not running: ${serverName} (status: ${processInfo.status})`);
