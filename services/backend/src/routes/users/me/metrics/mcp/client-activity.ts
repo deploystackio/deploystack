@@ -13,13 +13,13 @@ const QUERY_PARAMS_SCHEMA = {
     },
     time_range: {
       type: 'string',
-      enum: ['1h', '3h', '6h', '12h', '24h', '7d', '30d'],
-      description: 'Time range for metrics (e.g., 3h, 24h, 7d)'
+      enum: ['1h', '3h', '6h', '12h', '24h', '3d'],
+      description: 'Time range for metrics (maximum 3 days for MCP client activity)'
     },
     interval: {
       type: 'string',
-      enum: ['15m', '1h'],
-      description: 'Bucket interval for aggregation'
+      enum: ['15m'],
+      description: 'Bucket interval for aggregation (only 15m supported for MCP client activity)'
     },
     satellite_id: {
       type: 'string',

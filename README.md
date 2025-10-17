@@ -148,6 +148,7 @@ VS Code → HTTPS Request → DeployStack Satellite → MCP Server Process → E
 - **[Done]** **Resource Management** - process isolation (remote MCP) and limits
 - **[Done]** **GitHub README and Stars Integration** - automatic GitHub data fetching, secure storage, XSS prevention, DoS protection, and comprehensive audit logging for MCP server catalog enhancement
 - **[Done]** **Background Job Queue System** - complete 4-phase custom SQLite-based job queue with worker infrastructure, admin API, frontend monitoring UI, and comprehensive documentation for long-running tasks
+- **[Done]** **Cron Job Scheduling System** - recurring task scheduler using node-cron with integration into the job queue system, standard cron expression support, automatic lifecycle management, and complete separation of scheduling logic from execution for reliability and monitoring
 - **[Done]** **Frontend Syntax Highlighting** - reusable CodeHighlight component with Prism.js for JSON, JavaScript, TypeScript, Bash, and YAML code blocks
 - **[Done]** **Resource Management** - process isolation (stdio) and limits
 - **[Done]** **MCP Registry** - integration of the official MCP Registry
@@ -164,6 +165,7 @@ VS Code → HTTPS Request → DeployStack Satellite → MCP Server Process → E
 - **[Done]** **Satellite Job System** - recurring background task management with JobManager, abstract BaseJob class, automatic error handling, execution metrics tracking, and extensible architecture for health checks, cleanup tasks, and periodic maintenance operations
 - **[Done]** **Satellite Backend Events System** - real-time event processing with convention-based auto-discovery handler pattern, batch processing (1-100 events), partial success handling, JSON schema validation per event type, and extensible architecture supporting MCP client connections, tool executions, server crashes, and custom event types
 - **[Done]** **MCP Client Activity Tracking** - personal dashboard feature tracking active MCP clients per user across all components (backend database with mcpClientActivity table, satellite in-memory tracker with 30-second background job reporting via event system, dashboard API endpoint with dual authentication and pagination, client name detection from OAuth/headers/user-agent)
+- **[Done]** **Time-Series Metrics System** - production-ready metrics infrastructure with 15-minute bucket aggregation, 3-day retention, automated cleanup
 - **[To Do]** **Comprehensive Monitoring** - satellite health and usage analytics
 - **[To Do]** **Enterprise Security** - audit logging and compliance features
 

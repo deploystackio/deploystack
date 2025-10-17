@@ -4,6 +4,7 @@ import type { JobProcessorService } from '../services/jobProcessorService';
 import { McpServerSyncWorker } from './mcpServerSyncWorker';
 import { RegistryCoordinatorWorker } from './registryCoordinatorWorker';
 import { EmailWorker } from './emailWorker';
+import { McpClientActivityMetricsCleanupWorker } from './mcpClientActivityMetricsCleanupWorker';
 
 /**
  * Register all workers with the job processor
@@ -49,7 +50,16 @@ export function registerWorkers(
     new McpServerSyncWorker(db, logger)
   );
 
+  // Register MCP Client Activity Metrics Cleanup Worker
+  processor.registerWorker(
+    'cleanup_mcp_client_activity_metrics',
+    new McpClientActivityMetricsCleanupWorker(db, logger)
+  );
+
+  // Log all registered workers dynamically
+  const registeredWorkers = processor.getRegisteredWorkerTypes();
   logger.info({
-    workers: ['send_email', 'coordinate_registry_sync', 'sync_mcp_server']
+    workers: registeredWorkers,
+    count: registeredWorkers.length
   }, 'Job queue workers registered successfully');
 }

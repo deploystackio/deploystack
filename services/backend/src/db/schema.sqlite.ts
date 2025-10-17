@@ -13,7 +13,7 @@
 //
 // DO NOT create or edit schema.ts - this file has been removed to avoid confusion.
 
-import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, index, unique } from 'drizzle-orm/sqlite-core';
 import { nanoid } from 'nanoid';
 
 // Define tables with proper foreign key relationships
@@ -725,7 +725,7 @@ export const mcpClientActivityMetrics = sqliteTable('mcpClientActivityMetrics', 
   ),
   
   // Composite unique constraint
-  uniqueBucket: index('mcp_activity_metrics_unique_bucket').on(
+  uniqueBucket: unique('mcp_activity_metrics_unique_bucket').on(
     table.user_id,
     table.team_id,
     table.satellite_id,

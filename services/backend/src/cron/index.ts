@@ -1,6 +1,7 @@
 import type { FastifyBaseLogger } from 'fastify';
 import type { JobQueueService } from '../services/jobQueueService';
 import { CronManager } from './cronManager';
+import { createMcpClientActivityMetricsCleanupJob } from './jobs/mcpClientActivityMetricsCleanup';
 // import { createExampleCronJob } from './jobs/exampleJob';
 
 /**
@@ -21,6 +22,9 @@ export function initializeCronJobs(
   logger: FastifyBaseLogger
 ): CronManager {
   const cronManager = new CronManager(logger);
+
+  // MCP client activity metrics cleanup (every 30 minutes)
+  cronManager.register(createMcpClientActivityMetricsCleanupJob(jobQueueService));
 
   // Example cron job - commented out, uncomment to test
   // cronManager.register(createExampleCronJob(jobQueueService));

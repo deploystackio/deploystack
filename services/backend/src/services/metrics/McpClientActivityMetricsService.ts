@@ -107,7 +107,24 @@ export class McpClientActivityMetricsService extends TimeSeriesMetricsService {
       authIdentifier
     }, 'Getting MCP client activity metrics');
 
+    // MCP client activity specific validation: only 15m interval supported
+    if (interval !== '15m') {
+      throw new Error(
+        `Invalid interval for MCP client activity: '${interval}'. Only '15m' is supported.`
+      );
+    }
+
     const { start, end } = this.parseTimeRange(timeRange);
+    
+    // MCP client activity specific validation: maximum 3 days retention
+    const maxRetentionMs = 3 * 24 * 60 * 60 * 1000; // 3 days in milliseconds
+    const requestedRangeMs = end.getTime() - start.getTime();
+    if (requestedRangeMs > maxRetentionMs) {
+      throw new Error(
+        `Time range exceeds maximum retention for MCP client activity (3 days). Requested: ${Math.ceil(requestedRangeMs / (24 * 60 * 60 * 1000))} days.`
+      );
+    }
+    
     this.validateInterval(interval);
 
     const queryParams: McpActivityQueryParams = {

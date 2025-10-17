@@ -5203,27 +5203,25 @@
                 "6h",
                 "12h",
                 "24h",
-                "7d",
-                "30d"
+                "3d"
               ]
             },
             "in": "query",
             "name": "time_range",
             "required": false,
-            "description": "Time range for metrics (e.g., 3h, 24h, 7d)"
+            "description": "Time range for metrics (maximum 3 days for MCP client activity)"
           },
           {
             "schema": {
               "type": "string",
               "enum": [
-                "15m",
-                "1h"
+                "15m"
               ]
             },
             "in": "query",
             "name": "interval",
             "required": false,
-            "description": "Bucket interval for aggregation"
+            "description": "Bucket interval for aggregation (only 15m supported for MCP client activity)"
           },
           {
             "schema": {

@@ -35,7 +35,6 @@ function getRelativeTime(isoString: string): string {
 }
 
 async function fetchClientActivity() {
-  // Get teamId from storage (selected team)
   const teamId = eventBus.getState<string>('selected_team_id')
   
   if (!teamId) {
@@ -79,7 +78,6 @@ onMounted(async () => {
   await fetchClientActivity()
   startPolling()
   
-  // Listen for team selection changes and refresh activity
   eventBus.on('team-selected', async () => {
     await fetchClientActivity()
   })

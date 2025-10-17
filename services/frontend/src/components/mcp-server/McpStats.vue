@@ -1,8 +1,13 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useEventBus } from '@/composables/useEventBus'
 import { LineChart } from '@/components/ui/chart'
+import { McpClientActivityMetricsService } from '@/services/mcpClientActivityMetricsService'
+
+const eventBus = useEventBus()
 
 const isLoading = ref(true)
+const error = ref<string | null>(null)
 const requestData = ref<number[]>([])
 const timeLabels = ref<string[]>([])
 
@@ -22,32 +27,51 @@ const peakRequests = computed(() =>
     : 0
 )
 
-const generateDummyData = () => {
-  const now = new Date()
-  const data: number[] = []
-  const labels: string[] = []
-
-  for (let i = 11; i >= 0; i--) {
-    const time = new Date(now.getTime() - i * 5 * 60 * 1000)
-    const hour = time.getHours().toString().padStart(2, '0')
-    const minute = time.getMinutes().toString().padStart(2, '0')
-    labels.push(`${hour}:${minute}`)
-    
-    const baseValue = 20 + Math.random() * 30
-    const variation = Math.sin(i / 2) * 15
-    data.push(Math.max(0, Math.round(baseValue + variation)))
-  }
-
-  return { data, labels }
+function formatTimeLabel(timestamp: string): string {
+  const date = new Date(timestamp)
+  const hour = date.getHours().toString().padStart(2, '0')
+  const minute = date.getMinutes().toString().padStart(2, '0')
+  return `${hour}:${minute}`
 }
 
-onMounted(() => {
-  setTimeout(() => {
-    const { data, labels } = generateDummyData()
-    requestData.value = data
-    timeLabels.value = labels
+async function fetchMetrics() {
+  const teamId = eventBus.getState<string>('selected_team_id')
+  
+  if (!teamId) {
+    error.value = 'No team selected'
+    console.warn('No team selected - cannot fetch metrics')
     isLoading.value = false
-  }, 500)
+    return
+  }
+  
+  try {
+    isLoading.value = true
+    error.value = null
+    
+    const response = await McpClientActivityMetricsService.getMetrics({
+      team_id: teamId,
+      time_range: '3h',
+      interval: '15m'
+    })
+    
+    requestData.value = response.data.buckets.map(bucket => bucket.request_count)
+    timeLabels.value = response.data.buckets.map(bucket => formatTimeLabel(bucket.timestamp))
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : 'Failed to fetch metrics'
+    console.error('Failed to fetch MCP metrics:', err)
+    requestData.value = []
+    timeLabels.value = []
+  } finally {
+    isLoading.value = false
+  }
+}
+
+onMounted(async () => {
+  await fetchMetrics()
+  
+  eventBus.on('team-selected', async () => {
+    await fetchMetrics()
+  })
 })
 </script>
 
@@ -57,7 +81,17 @@ onMounted(() => {
       <h3 class="text-lg font-semibold">MCP Server Usage</h3>
     </div>
 
-    <div class="grid grid-cols-1 gap-4 lg:grid-cols-[75%_1fr]">
+    <div v-if="error" class="text-center py-8">
+      <p class="text-sm text-destructive mb-2">{{ error }}</p>
+      <button 
+        @click="fetchMetrics" 
+        class="text-sm text-primary hover:underline"
+      >
+        Retry
+      </button>
+    </div>
+
+    <div v-else class="grid grid-cols-1 gap-4 lg:grid-cols-[75%_1fr]">
       <LineChart
         :data="requestData"
         :labels="timeLabels"

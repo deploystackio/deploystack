@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Logger } from 'pino';
 import { MCPServerConfig, ProcessInfo } from './types';
 import type { EventBus } from '../services/event-bus';
+import { nsjailConfig } from '../config/nsjail';
 
 /**
  * Process Manager for MCP server subprocesses
@@ -745,16 +746,17 @@ export class ProcessManager extends EventEmitter {
       operation: 'spawn_nsjail',
       installation_name: config.installation_name,
       team_id: config.team_id,
-      memory_limit: '100MB',
-      cpu_limit: '60s'
+      memory_limit_mb: nsjailConfig.memoryLimitMB,
+      cpu_time_limit_seconds: nsjailConfig.cpuTimeLimitSeconds,
+      max_processes: nsjailConfig.maxProcesses
     }, 'Spawning process with nsjail isolation');
 
     // Build nsjail arguments
     const nsjailArgs = [
       '-Mo',                         // Mount mode: once, don't remount
-      '--rlimit_as', '100',          // Memory limit: 100MB
-      '--rlimit_cpu', '60',           // CPU time limit: 60 seconds
-      '--rlimit_nproc', '50',         // Max processes: 50
+      '--rlimit_as', String(nsjailConfig.memoryLimitMB), // Memory limit (MB)
+      '--rlimit_cpu', String(nsjailConfig.cpuTimeLimitSeconds), // CPU time limit (seconds)
+      '--rlimit_nproc', String(nsjailConfig.maxProcesses), // Max processes
       '--time_limit', '0',            // No wall-clock time limit
       '--user', '99999',              // Non-root user
       '--group', '99999',             // Non-root group

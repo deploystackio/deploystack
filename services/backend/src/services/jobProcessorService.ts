@@ -254,4 +254,11 @@ export class JobProcessorService {
       workerCount: this.workers.size,
     };
   }
+
+  /**
+   * Get list of registered worker types
+   */
+  getRegisteredWorkerTypes(): string[] {
+    return Array.from(this.workers.keys());
+  }
 }

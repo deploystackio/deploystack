@@ -105,7 +105,40 @@ EVENT_BATCH_INTERVAL_MS=3000        # Event batching interval in milliseconds (d
 EVENT_MAX_BATCH_SIZE=100            # Maximum events per batch (default: 100)
 EVENT_MAX_QUEUE_SIZE=10000          # Maximum events in memory queue (default: 10000)
 EVENT_FLUSH_TIMEOUT_MS=5000         # Graceful shutdown flush timeout in milliseconds (default: 5000)
+
+# nsjail Resource Limits (Production Linux only)
+NSJAIL_MEMORY_LIMIT_MB=50           # Memory limit per MCP server process in MB (default: 50)
+NSJAIL_CPU_TIME_LIMIT_SECONDS=60    # CPU time limit per MCP server process in seconds (default: 60)
+NSJAIL_MAX_PROCESSES=50             # Maximum number of processes per MCP server (default: 50)
 ```
+
+### nsjail Resource Limits
+
+**Platform**: Production Linux only (applies when `NODE_ENV=production` and `platform=linux`)
+
+These limits control resource allocation for MCP server processes running in nsjail isolation:
+
+**NSJAIL_MEMORY_LIMIT_MB** (Default: 50)
+- Memory limit per MCP server process in megabytes
+- Prevents memory exhaustion attacks
+- Recommended range: 50-500 MB depending on MCP server requirements
+- Example: Set to 100 for memory-intensive MCP servers
+
+**NSJAIL_CPU_TIME_LIMIT_SECONDS** (Default: 60)
+- CPU time limit per MCP server process in seconds
+- Protects against CPU-bound infinite loops
+- Recommended range: 30-300 seconds
+- Note: This is CPU time, not wall-clock time
+
+**NSJAIL_MAX_PROCESSES** (Default: 50)
+- Maximum number of child processes per MCP server
+- Prevents fork bombs and process exhaustion
+- Recommended range: 10-100 depending on MCP server needs
+
+**Development Mode:**
+- These limits are **not enforced** in development mode (direct spawn without isolation)
+- Allows easier debugging on macOS, Windows, and Linux
+- Full isolation only active in production Linux deployments
 
 ### Required Environment Variables
 

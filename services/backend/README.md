@@ -91,8 +91,7 @@ npm run start
 npm run lint
 
 # Database migrations
-npm run db:generate  # Generate new migrations
-npm run db:up        # Apply migrations
+npm run db:generate  # Generate new migrations (applied automatically on server startup)
 
 # API documentation
 npm run api:spec      # Generate OpenAPI spec

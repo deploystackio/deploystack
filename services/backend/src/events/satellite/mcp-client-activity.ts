@@ -79,7 +79,7 @@ interface McpClientActivityData {
   last_activity_at: string;
 }
 
-const BUCKET_INTERVALS = ['15m', '1h'] as const;
+const BUCKET_INTERVALS = ['15m'] as const;
 const INTERVAL_SECONDS: Record<string, number> = {
   '15m': 900,
   '1h': 3600

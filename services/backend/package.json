@@ -10,7 +10,6 @@
     "lint": "eslint --config eslint.config.ts 'src/**/*.ts' --fix",
     "check:no-console": "node scripts/check-no-console.js",
     "db:generate": "drizzle-kit generate",
-    "db:up": "drizzle-kit up",
     "release": "release-it --config=.release-it.js",
     "test:e2e": "jest",
     "test:unit": "vitest",

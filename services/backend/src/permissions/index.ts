@@ -52,6 +52,7 @@ export const ROLE_DEFINITIONS = {
     'jobs.monitor',
     'jobs.manage',
     'mcp.registry.sync',
+    'metrics.mcp_client_activity_metrics.view',
   ],
   global_user: [
     'profile.view',
