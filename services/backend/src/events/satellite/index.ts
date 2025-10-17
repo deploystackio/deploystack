@@ -39,7 +39,7 @@ addFormats(ajv);
 /**
  * Build event handler registry by loading all handler modules
  */
-async function buildEventRegistry(): Promise<EventHandlerRegistry> {
+async function buildEventRegistry(logger?: FastifyBaseLogger): Promise<EventHandlerRegistry> {
   const registry: EventHandlerRegistry = {};
   
   for (const loadHandler of handlerModules) {
@@ -48,7 +48,12 @@ async function buildEventRegistry(): Promise<EventHandlerRegistry> {
       
       // Validate handler exports required fields
       if (!handler.EVENT_TYPE || !handler.SCHEMA || !handler.handle) {
-        console.error('Invalid event handler - missing required exports:', handler);
+        if (logger) {
+          logger.error({
+            operation: 'build_event_registry',
+            handler: handler?.EVENT_TYPE || 'unknown'
+          }, 'Invalid event handler - missing required exports');
+        }
         continue;
       }
       
@@ -58,7 +63,12 @@ async function buildEventRegistry(): Promise<EventHandlerRegistry> {
         handle: handler.handle
       };
     } catch (error) {
-      console.error('Failed to load event handler:', error);
+      if (logger) {
+        logger.error({
+          operation: 'build_event_registry',
+          error: error instanceof Error ? error.message : 'Unknown error'
+        }, 'Failed to load event handler');
+      }
     }
   }
   
@@ -71,9 +81,9 @@ let eventRegistry: EventHandlerRegistry | null = null;
 /**
  * Get or initialize event handler registry
  */
-async function getEventRegistry(): Promise<EventHandlerRegistry> {
+async function getEventRegistry(logger?: FastifyBaseLogger): Promise<EventHandlerRegistry> {
   if (!eventRegistry) {
-    eventRegistry = await buildEventRegistry();
+    eventRegistry = await buildEventRegistry(logger);
   }
   return eventRegistry;
 }
@@ -88,7 +98,7 @@ async function processEvent(
   logger: FastifyBaseLogger
 ): Promise<EventProcessingResult> {
   try {
-    const registry = await getEventRegistry();
+    const registry = await getEventRegistry(logger);
     
     // Check if event type is registered
     const handler = registry[event.type];
@@ -126,7 +136,7 @@ async function processEvent(
     }
     
     // Execute handler
-    await handler.handle(satelliteId, event.data, db, eventTimestamp);
+    await handler.handle(satelliteId, event.data, db, eventTimestamp, logger);
     
     logger.info({ 
       satelliteId, 

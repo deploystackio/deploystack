@@ -3,6 +3,7 @@
  */
 
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
+import type { FastifyBaseLogger } from 'fastify';
 
 /**
  * Base event structure that all events must conform to
@@ -54,7 +55,8 @@ export interface EventHandler {
     satelliteId: string,
     eventData: Record<string, unknown>,
     db: LibSQLDatabase,
-    eventTimestamp: Date
+    eventTimestamp: Date,
+    logger: FastifyBaseLogger
   ) => Promise<void>;
 }
 

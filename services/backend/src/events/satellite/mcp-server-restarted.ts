@@ -5,6 +5,7 @@
  */
 
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
+import type { FastifyBaseLogger } from 'fastify';
 import { satelliteProcesses } from '../../db/schema.sqlite';
 import { eq } from 'drizzle-orm';
 
@@ -75,7 +76,8 @@ export async function handle(
   satelliteId: string,
   eventData: Record<string, unknown>,
   db: LibSQLDatabase,
-  eventTimestamp: Date
+  eventTimestamp: Date,
+  _logger: FastifyBaseLogger
 ): Promise<void> {
   const data = eventData as unknown as ServerRestartedData;
   

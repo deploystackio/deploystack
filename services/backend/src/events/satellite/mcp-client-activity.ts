@@ -1,4 +1,5 @@
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
+import type { FastifyBaseLogger } from 'fastify';
 import { mcpClientActivity, mcpClientActivityMetrics } from '../../db/schema.sqlite';
 import { eq, and, sql } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
@@ -192,7 +193,8 @@ export async function handle(
   satelliteId: string,
   eventData: Record<string, unknown>,
   db: LibSQLDatabase,
-  eventTimestamp: Date
+  eventTimestamp: Date,
+  logger: FastifyBaseLogger
 ): Promise<void> {
   const data = eventData as unknown as McpClientActivityData;
   const authIdentifier = `oauth:${data.oauth_client_id}`;
@@ -217,13 +219,14 @@ export async function handle(
       eventTimestamp
     );
   } catch (error) {
-    console.error('Failed to write time-series metrics (non-fatal):', {
+    logger.error({
+      operation: 'write_time_series_metrics',
       error: error instanceof Error ? error.message : 'Unknown error',
       satelliteId,
       userId: data.user_id,
       teamId: data.team_id,
       requestCount: data.request_count,
       toolCallCount: data.tool_call_count
-    });
+    }, 'Failed to write time-series metrics (non-fatal)');
   }
 }
