@@ -1079,10 +1079,7 @@ export async function startServer() {
   try {
     await server.listen({ port: PORT, host: HOST });
     server.log.info(`DeployStack Satellite running on http://${HOST}:${PORT}`);
-    server.log.info(`API Documentation: http://${HOST}:${PORT}/documentation`);
-    server.log.info(`Hello World: http://${HOST}:${PORT}/api/health/hello`);
     server.log.info(`Backend Status: http://${HOST}:${PORT}/api/status/backend`);
-    server.log.info(`Proxy Status: http://${HOST}:${PORT}/api/status/proxy`);
     server.log.info(`SSE Transport: http://${HOST}:${PORT}/sse`);
     server.log.info(`Message Transport: http://${HOST}:${PORT}/message`);
     server.log.info(`MCP Transport: http://${HOST}:${PORT}/mcp`);
