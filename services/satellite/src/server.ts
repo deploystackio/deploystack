@@ -125,13 +125,17 @@ function validateSatelliteName(name: string | undefined, logger?: any): void {
 
 export async function createServer() {
   // Add global error handlers to catch unhandled errors
+  // Note: These run before Fastify logger is initialized, so we write to stderr directly
   process.on('unhandledRejection', (reason, promise) => {
-    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+    const errorMessage = reason instanceof Error ? reason.message : String(reason);
+    process.stderr.write(`FATAL: Unhandled Rejection at: ${String(promise)} reason: ${errorMessage}\n`);
     process.exit(1);
   });
   
   process.on('uncaughtException', (error) => {
-    console.error('Uncaught Exception:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorStack = error instanceof Error ? error.stack : '';
+    process.stderr.write(`FATAL: Uncaught Exception: ${errorMessage}\n${errorStack || ''}\n`);
     process.exit(1);
   });
   
