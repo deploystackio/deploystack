@@ -29,6 +29,9 @@ RUN git clone --depth 1 https://github.com/google/nsjail.git /tmp/nsjail && \
     rm -rf /tmp/nsjail
 
 # Clean up build dependencies to reduce image size
+# Note: For nsjail to work with unprivileged user namespaces, the HOST system must have:
+# kernel.unprivileged_userns_clone=1
+# This cannot be set from inside the container. See README for deployment instructions.
 RUN apt-get remove -y \
     autoconf \
     bison \
@@ -41,9 +44,6 @@ RUN apt-get remove -y \
     pkg-config && \
     apt-get autoremove -y && \
     rm -rf /var/lib/apt/lists/*
-
-# Enable unprivileged user namespaces (required for nsjail)
-RUN echo "kernel.unprivileged_userns_clone=1" > /etc/sysctl.d/00-local-userns.conf
 
 WORKDIR /app
 
