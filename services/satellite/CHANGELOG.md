@@ -2,6 +2,15 @@
 
 ## 0.5.0 (2025-10-18)
 
+* chore(frontend): release v0.32.0 ([0b61a0a](https://github.com/deploystackio/deploystack/commit/0b61a0a))
+* chore(frontend): release v0.32.0 ([873adff](https://github.com/deploystackio/deploystack/commit/873adff))
+* chore(frontend): update modules ([1b371f8](https://github.com/deploystackio/deploystack/commit/1b371f8))
+* chore(satellite): release v0.5.0 ([8a5c148](https://github.com/deploystackio/deploystack/commit/8a5c148))
+* chore(satellite): remove unprivileged user namespace configuration ([1bd5eb4](https://github.com/deploystackio/deploystack/commit/1bd5eb4))
+* fix(satellite): improve error handling for unhandled rejections and exceptions ([8d16c9f](https://github.com/deploystackio/deploystack/commit/8d16c9f))
+
+## 0.5.0 (2025-10-18)
+
 * fix(satellite): improve error handling for unhandled rejections and exceptions ([8d16c9f](https://github.com/deploystackio/deploystack/commit/8d16c9f))
 * chore(all): bump @commitlint/cli from 19.8.1 to 20.1.0 ([9eb3189](https://github.com/deploystackio/deploystack/commit/9eb3189))
 * chore(all): bump @octokit/request from 10.0.3 to 10.0.5 ([d93fabf](https://github.com/deploystackio/deploystack/commit/d93fabf))
