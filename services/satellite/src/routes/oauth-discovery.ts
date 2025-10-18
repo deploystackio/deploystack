@@ -7,7 +7,7 @@ import { type FastifyInstance } from 'fastify';
  */
 export default async function oauthDiscoveryRoutes(server: FastifyInstance) {
   const backendUrl = process.env.DEPLOYSTACK_BACKEND_URL || 'http://localhost:3000';
-  const satelliteUrl = `http://localhost:${process.env.PORT || 3001}`;
+  const satelliteUrl = process.env.DEPLOYSTACK_SATELLITE_URL || `http://localhost:${process.env.PORT || 3001}`;
 
   // RFC 9728: OAuth 2.0 Protected Resource Metadata
   server.get('/.well-known/oauth-protected-resource', {

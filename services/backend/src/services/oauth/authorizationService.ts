@@ -125,8 +125,9 @@ export class AuthorizationService {
       /^vscode:\/\/.*\/auth\/callback$/,
       // Cursor patterns
       /^cursor:\/\/.*\/oauth\/callback$/,
-      // Claude.ai custom connector patterns
-      /^https:\/\/claude\.ai\/mcp\/auth\/callback$/
+      // Claude.ai MCP OAuth callback patterns (RFC 9728 compliant)
+      /^https:\/\/claude\.ai\/api\/mcp\/auth_callback$/,
+      /^https:\/\/claude\.com\/api\/mcp\/auth_callback$/  // Future-proofing for domain migration
     ];
     
     return allowedPatterns.some(pattern => pattern.test(redirectUri));
