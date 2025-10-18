@@ -5,6 +5,7 @@ import { McpServerSyncWorker } from './mcpServerSyncWorker';
 import { RegistryCoordinatorWorker } from './registryCoordinatorWorker';
 import { EmailWorker } from './emailWorker';
 import { McpClientActivityMetricsCleanupWorker } from './mcpClientActivityMetricsCleanupWorker';
+import { CleanupOldJobsWorker } from './cleanupOldJobsWorker';
 
 /**
  * Register all workers with the job processor
@@ -54,6 +55,12 @@ export function registerWorkers(
   processor.registerWorker(
     'cleanup_mcp_client_activity_metrics',
     new McpClientActivityMetricsCleanupWorker(db, logger)
+  );
+
+  // Register Cleanup Old Jobs Worker
+  processor.registerWorker(
+    'cleanup_old_jobs',
+    new CleanupOldJobsWorker(db, logger)
   );
 
   // Log all registered workers dynamically
