@@ -11,7 +11,8 @@ export default {
     noCategory: 'No category assigned',
     openMenu: 'Open menu',
     search: {
-      placeholder: 'Search servers by name, description, or tags...'
+      placeholder: 'Search servers by name, description, or tags...',
+      button: 'Search'
     },
     columns: {
       name: 'Name',

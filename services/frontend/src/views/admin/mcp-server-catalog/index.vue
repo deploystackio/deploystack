@@ -48,6 +48,7 @@ const eventBus = useEventBus()
 // State
 const servers = ref<McpServer[]>([])
 const isLoading = ref(true)
+const isSearching = ref(false)
 const error = ref<string | null>(null)
 
 // Search and filter state
@@ -239,19 +240,19 @@ const startProgressPolling = (batchId: string) => {
         if (pollInterval) clearInterval(pollInterval)
         syncPhase.value = 'completed'
         isSyncModalOpen.value = false
-        
+
         toast.success(t('mcpCatalog.registrySync.messages.completed'), {
           description: t('mcpCatalog.registrySync.messages.completedDescription', {
             count: progress.completed
           })
         })
-        
+
         // Refresh catalog
         setTimeout(() => fetchServers(), 1000)
       } else if (batch.status === 'failed') {
         if (pollInterval) clearInterval(pollInterval)
         syncPhase.value = 'failed'
-        
+
         toast.error(t('mcpCatalog.registrySync.messages.failed'))
       }
     } catch (error) {
@@ -270,11 +271,11 @@ onUnmounted(() => {
 
 // Check if any filters are active
 const hasActiveFilters = () => {
-  return !!searchQuery.value || 
-         selectedStatus.value !== 'all' || 
-         selectedLanguage.value !== 'all' || 
-         selectedRuntime.value !== 'all' || 
-         selectedFeatured.value !== 'all' || 
+  return !!searchQuery.value ||
+         selectedStatus.value !== 'all' ||
+         selectedLanguage.value !== 'all' ||
+         selectedRuntime.value !== 'all' ||
+         selectedFeatured.value !== 'all' ||
          selectedAutoInstall.value !== 'all'
 }
 
@@ -290,7 +291,7 @@ const searchServers = async (): Promise<void> => {
     error.value = null
 
     const offset = (currentPage.value - 1) * pageSize.value
-    
+
     const searchParams: McpServerSearchParams = {
       q: searchQuery.value.trim(), // Use actual search query
       limit: pageSize.value,
@@ -334,12 +335,12 @@ const fetchServers = async (): Promise<void> => {
     error.value = null
 
     const offset = (currentPage.value - 1) * pageSize.value
-    
+
     // Build filters object
     const filters: Record<string, string> = {
       visibility: 'global'
     }
-    
+
     // Add active filters
     if (selectedStatus.value !== 'all') {
       filters.status = selectedStatus.value
@@ -356,7 +357,7 @@ const fetchServers = async (): Promise<void> => {
     if (selectedAutoInstall.value !== 'all') {
       filters.auto_install_new_default_team = selectedAutoInstall.value
     }
-    
+
     const response = await McpCatalogService.getGlobalServersPaginated(
       filters,
       { limit: pageSize.value, offset }
@@ -374,29 +375,27 @@ const fetchServers = async (): Promise<void> => {
   }
 }
 
-// Debounced search execution
-let searchTimeout: ReturnType<typeof setTimeout> | null = null
 
-const executeSearch = () => {
-  if (searchTimeout) {
-    clearTimeout(searchTimeout)
-  }
+const executeSearch = async () => {
+  isSearching.value = true
+  currentPage.value = 1 // Reset to first page on new search
 
-  searchTimeout = setTimeout(() => {
-    currentPage.value = 1 // Reset to first page on new search
-    
+  try {
     // Use search API only when there's a text query
     // Otherwise use regular list API with filters
     if (hasTextSearch()) {
-      searchServers()
+      await searchServers()
     } else {
-      fetchServers()
+      await fetchServers()
     }
-  }, 300) // 300ms debounce
+  } finally {
+    isSearching.value = false
+  }
 }
 
 // Clear all filters
-const clearFilters = () => {
+const clearFilters = async () => {
+  isSearching.value = true
   searchQuery.value = ''
   selectedStatus.value = 'all'
   selectedLanguage.value = 'all'
@@ -404,13 +403,16 @@ const clearFilters = () => {
   selectedFeatured.value = 'all'
   selectedAutoInstall.value = 'all'
   currentPage.value = 1
-  fetchServers()
+
+  try {
+    await fetchServers()
+  } finally {
+    isSearching.value = false
+  }
 }
 
-// Watch for filter changes
-watch([searchQuery, selectedStatus, selectedLanguage, selectedRuntime, selectedFeatured, selectedAutoInstall], () => {
-  executeSearch()
-})
+// Note: Removed automatic watch-based search execution
+// Search now requires explicit button click via executeSearch()
 
 // Pagination event handlers
 const handlePageChange = async (page: number) => {
@@ -547,12 +549,22 @@ onUnmounted(() => {
               :placeholder="t('mcpCatalog.table.search.placeholder')"
               v-model="searchQuery"
               class="max-w-sm"
+              @keyup.enter="executeSearch"
             />
+            <Button
+              @click="executeSearch"
+              :loading="isSearching"
+              loading-text="Searching..."
+              class="flex items-center gap-2"
+            >
+              {{ t('mcpCatalog.table.search.button') }}
+            </Button>
             <Button
               v-if="hasActiveFilters()"
               variant="ghost"
               size="sm"
               @click="clearFilters"
+              :disabled="isSearching"
               class="flex items-center gap-2"
             >
               <X class="h-4 w-4" />
@@ -789,7 +801,7 @@ onUnmounted(() => {
                 <p class="text-sm text-muted-foreground">{{ syncProgress.completed }} / {{ syncProgress.total }}</p>
               </div>
               <div class="w-full bg-muted rounded-full h-2">
-                <div 
+                <div
                   class="bg-primary h-2 rounded-full transition-all duration-300"
                   :style="{ width: `${(syncProgress.completed / syncProgress.total * 100)}%` }"
                 ></div>
