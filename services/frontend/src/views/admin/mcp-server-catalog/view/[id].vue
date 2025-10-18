@@ -102,12 +102,12 @@ const displayRemotes = computed(() => {
   if (!server.value?.remotes) return []
   // Handle both array and JSON string formats
   if (Array.isArray(server.value.remotes)) {
-    return server.value.remotes.filter(remote => remote != null)
+    return server.value.remotes.filter(remote => remote != null && typeof remote === 'object' && remote.url)
   }
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const parsed = JSON.parse(server.value.remotes as any)
-    return Array.isArray(parsed) ? parsed.filter(remote => remote != null) : []
+    return Array.isArray(parsed) ? parsed.filter(remote => remote != null && typeof remote === 'object' && remote.url) : []
   } catch {
     return []
   }

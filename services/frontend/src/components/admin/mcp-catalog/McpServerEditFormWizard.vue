@@ -238,17 +238,21 @@ const initializeStorageWithData = (data: McpServerFormData) => {
   let serverConfig: any = null
 
   if (technicalData.remotes && Array.isArray(technicalData.remotes) && technicalData.remotes.length > 0) {
-    // HTTP/SSE server from remotes
-    const remote = technicalData.remotes[0]
-    serverConfig = {
-      url: remote.url,
-      type: remote.type || 'sse',
-      headers: remote.headers || {}
+    // HTTP/SSE server from remotes - find first valid remote with url
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const remote = technicalData.remotes.find((r: any) => r && typeof r === 'object' && r.url)
+    if (remote) {
+      serverConfig = {
+        url: remote.url,
+        type: remote.type || 'sse',
+        headers: remote.headers || {}
+      }
     }
   } else if (technicalData.packages && Array.isArray(technicalData.packages) && technicalData.packages.length > 0) {
-    // STDIO server from packages
-    const pkg = technicalData.packages[0]
-    if (pkg.transport) {
+    // STDIO server from packages - find first valid package
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const pkg = technicalData.packages.find((p: any) => p && typeof p === 'object')
+    if (pkg && pkg.transport) {
       serverConfig = {
         command: pkg.transport.command || 'npx',
         args: pkg.transport.args || [],
