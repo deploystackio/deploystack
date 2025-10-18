@@ -122,23 +122,27 @@ MCP_PROCESS_IDLE_TIMEOUT_SECONDS=180 # Idle timeout in seconds before terminatin
 These limits control resource allocation for MCP server processes running in nsjail isolation:
 
 **NSJAIL_MEMORY_LIMIT_MB** (Default: 50)
+
 - Memory limit per MCP server process in megabytes
 - Prevents memory exhaustion attacks
 - Recommended range: 50-500 MB depending on MCP server requirements
 - Example: Set to 100 for memory-intensive MCP servers
 
 **NSJAIL_CPU_TIME_LIMIT_SECONDS** (Default: 60)
+
 - CPU time limit per MCP server process in seconds
 - Protects against CPU-bound infinite loops
 - Recommended range: 30-300 seconds
 - Note: This is CPU time, not wall-clock time
 
 **NSJAIL_MAX_PROCESSES** (Default: 50)
+
 - Maximum number of child processes per MCP server
 - Prevents fork bombs and process exhaustion
 - Recommended range: 10-100 depending on MCP server needs
 
 **Development Mode:**
+
 - These limits are **not enforced** in development mode (direct spawn without isolation)
 - Allows easier debugging on macOS, Windows, and Linux
 - Full isolation only active in production Linux deployments
@@ -150,30 +154,35 @@ These limits control resource allocation for MCP server processes running in nsj
 Automatically terminates idle stdio MCP server processes to save resources. Dormant processes are transparently respawned when API calls arrive.
 
 **How It Works:**
+
 - Background job checks all stdio processes every 30 seconds
 - Processes idle longer than threshold are gracefully terminated
 - Process configurations stored in memory for automatic respawning
 - When API call arrives for dormant process, it respawns automatically (1-3s latency)
 
 **Benefits:**
+
 - **Memory Savings**: ~50-100MB per dormant process
 - **CPU Savings**: Zero overhead for idle processes
 - **Transparent**: MCP clients unaware of sleep/wake cycle
 - **Team Isolation**: Maintained (separate processes per team)
 
 **Configuration Options:**
+
 - `180` (default): 3 minutes idle timeout
 - `60`: 1 minute idle timeout (aggressive, for high-density deployments)
 - `600`: 10 minutes idle timeout (conservative, for frequently-used servers)
 - `0`: Disable idle timeout (processes never sleep)
 
 **Edge Cases Handled:**
+
 - Only terminates processes with `status=running`
 - Skips processes with active requests in flight
 - Prevents concurrent respawn attempts
 - Dormant processes excluded from heartbeat reports
 
 **Monitoring:**
+
 ```bash
 # Check idle process activity
 grep "idle_process_check_completed" logs/satellite.log
@@ -186,6 +195,7 @@ grep "dormant_process_respawned" logs/satellite.log
 ```
 
 **When to Adjust:**
+
 - **High-density deployments**: Lower timeout (60-120s) to maximize resource savings
 - **Frequently-used servers**: Higher timeout (300-600s) to avoid unnecessary respawns
 - **Development/testing**: Disable (0) to avoid respawn delays during debugging
