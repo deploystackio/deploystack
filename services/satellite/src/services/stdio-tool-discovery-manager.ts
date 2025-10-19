@@ -85,26 +85,8 @@ export class StdioToolDiscoveryManager {
         full_response: JSON.stringify(response)
       }, `Received response from ${installationName}`);
 
-      // FIXED: Send shutdown notification for clean completion (per MCP spec)
-      // This ensures the server flushes all tool definitions before we finish discovery
-      try {
-        await this.processManager.sendMessage(processInfo, {
-          jsonrpc: '2.0',
-          method: 'notifications/shutdown'
-        }, 5000);
-        
-        this.logger.debug({
-          operation: 'stdio_tool_discovery_shutdown_sent',
-          installation_name: installationName
-        }, `Sent shutdown notification to ${installationName}`);
-      } catch (error) {
-        // Ignore shutdown notification errors - not all servers support it
-        this.logger.debug({
-          operation: 'stdio_tool_discovery_shutdown_ignored',
-          installation_name: installationName,
-          error: error instanceof Error ? error.message : String(error)
-        }, `Shutdown notification not supported by ${installationName}`);
-      }
+      // The process should remain running for tool execution.
+      // Shutdown is only sent when the process is being intentionally terminated.
 
       if (!response || !response.tools || !Array.isArray(response.tools)) {
         this.logger.warn({
