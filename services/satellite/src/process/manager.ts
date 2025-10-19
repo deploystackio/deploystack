@@ -36,6 +36,33 @@ export class ProcessManager extends EventEmitter {
   }
   
   /**
+   * Resolve command to full path for nsjail execution
+   * nsjail has limited PATH, so we need full paths for common commands
+   */
+  private resolveCommandPath(command: string): string {
+    // Map of common commands to their full paths
+    const commandPaths: Record<string, string> = {
+      'npx': '/usr/bin/npx',
+      'node': '/usr/bin/node',
+      'python': '/usr/bin/python',
+      'python3': '/usr/bin/python3'
+    };
+    
+    // If command is in our map, return full path
+    if (commandPaths[command]) {
+      return commandPaths[command];
+    }
+    
+    // If command already starts with /, assume it's a full path
+    if (command.startsWith('/')) {
+      return command;
+    }
+    
+    // Otherwise, try /usr/bin/ as default
+    return `/usr/bin/${command}`;
+  }
+
+  /**
    * Handle process exit - determine if crash and attempt restart
    */
   private async handleProcessExit(
@@ -982,6 +1009,15 @@ export class ProcessManager extends EventEmitter {
     const uid = process.getuid ? process.getuid() : 1000;
     const gid = process.getgid ? process.getgid() : 1000;
 
+    // Resolve command to full path (nsjail requires full paths)
+    const fullCommandPath = this.resolveCommandPath(config.command);
+    
+    this.logger.debug({
+      operation: 'command_path_resolved',
+      original_command: config.command,
+      resolved_command: fullCommandPath
+    }, `Resolved command path: ${config.command} -> ${fullCommandPath}`);
+
     // Build nsjail arguments based on working production configuration
     const nsjailArgs = [
       '-Mo',                                    // Mount mode: once, don't remount
@@ -1019,7 +1055,7 @@ export class ProcessManager extends EventEmitter {
       '--disable_no_new_privs',                // May be needed for some packages
       '--hostname', `mcp-${config.team_id}`,   // Team-specific hostname
       '--',                                     // End of nsjail args
-      config.command,                           // MCP server command (e.g., /usr/bin/npx)
+      fullCommandPath,                          // MCP server command with full path (e.g., /usr/bin/npx)
       ...config.args                            // MCP server arguments
     ];
 
