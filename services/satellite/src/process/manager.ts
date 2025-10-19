@@ -86,6 +86,19 @@ export class ProcessManager extends EventEmitter {
       return;
     }
     
+    // Check if this is an intentional uninstall shutdown (skip crash detection)
+    if (processInfo.isUninstallShutdown) {
+      this.logger.info({
+        operation: 'process_exit_uninstall',
+        installation_name: installationName,
+        team_id: processInfo.config.team_id,
+        exit_code: code,
+        signal: signal,
+        uptime_ms: uptime
+      }, `Process terminated for uninstall (not a crash): ${installationName}`);
+      return;
+    }
+    
     // Determine if this was a crash (non-zero exit code) or intentional shutdown
     const wasCrash = code !== 0 && code !== null && processInfo.status !== 'terminating';
     
@@ -470,6 +483,9 @@ export class ProcessManager extends EventEmitter {
         process_id: processInfo.id,
         status: processInfo.status
       }, `Terminating active process: ${installationName}`);
+
+      // Mark as intentional uninstall shutdown to skip crash detection
+      processInfo.isUninstallShutdown = true;
 
       await this.terminateProcess(processInfo, timeout);
       result.active = true;
