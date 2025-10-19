@@ -270,6 +270,39 @@ export async function createServer() {
 
   // Set up configuration change handler for tool discovery
   dynamicConfigManager.setConfigurationChangeHandler(async (config, changes) => {
+    // CLEANUP: Handle removed servers - terminate processes and clear tools
+    if (changes && changes.removedServers.length > 0) {
+      for (const serverName of changes.removedServers) {
+        try {
+          server.log.info({
+            operation: 'cleanup_removed_server',
+            server_name: serverName
+          }, `Cleaning up removed server: ${serverName}`);
+
+          // Remove server completely (handles both active and dormant)
+          const removed = await processManager.removeServerCompletely(serverName);
+
+          // Clear tools from cache
+          stdioToolDiscoveryManager.clearServerTools(serverName);
+
+          server.log.info({
+            operation: 'cleanup_removed_server_success',
+            server_name: serverName,
+            removed_active: removed.active,
+            removed_dormant: removed.dormant
+          }, `Server cleanup complete: ${serverName} (active: ${removed.active}, dormant: ${removed.dormant})`);
+
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          server.log.error({
+            operation: 'cleanup_removed_server_failed',
+            server_name: serverName,
+            error: errorMessage
+          }, `Failed to cleanup removed server: ${errorMessage}`);
+        }
+      }
+    }
+
     // Notify HTTP proxy manager of configuration changes
     await httpProxyManager.handleConfigurationUpdate(config);
 
