@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { ProcessManager } from '../../process/manager';
 import { RuntimeState } from '../../process/runtime-state';
@@ -5,10 +6,59 @@ import { UnifiedToolDiscoveryManager } from '../../services/unified-tool-discove
 import { DynamicConfigManager } from '../../services/dynamic-config-manager';
 import { TeamIsolationService } from '../../services/team-isolation-service';
 
+interface ServerInfo {
+  installation_name: string;
+  installation_id: string;
+  team_id: string;
+  team_slug: string;
+  server_slug: string;
+  transport_type: string;
+  status: string;
+  command: string;
+  args: string[];
+  pid?: number;
+  uptime_ms?: number;
+  message_count?: number;
+  error_count?: number;
+  last_activity?: string;
+  restart_count?: number;
+  url?: string;
+  message?: string;
+}
+
+interface TeamServers {
+  running: ServerInfo[];
+  dormant: ServerInfo[];
+  configured: ServerInfo[];
+}
+
+const serverInfoSchema = {
+  type: 'object',
+  properties: {
+    installation_name: { type: 'string' },
+    installation_id: { type: 'string' },
+    team_id: { type: 'string' },
+    team_slug: { type: 'string' },
+    server_slug: { type: 'string' },
+    transport_type: { type: 'string' },
+    status: { type: 'string' },
+    command: { type: 'string' },
+    args: { type: 'array', items: { type: 'string' } },
+    pid: { type: 'number' },
+    uptime_ms: { type: 'number' },
+    message_count: { type: 'number' },
+    error_count: { type: 'number' },
+    last_activity: { type: 'string' },
+    restart_count: { type: 'number' },
+    url: { type: 'string' },
+    message: { type: 'string' }
+  }
+};
+
 const debugSchema = {
   tags: ['Debug'],
-  summary: 'Get comprehensive debug information',
-  description: 'Returns detailed information about running MCP servers, discovered tools, team isolation, and system state. Requires DEPLOYSTACK_STATUS_SHOW_MCP_DEBUG_ROUTE=true.',
+  summary: 'Get comprehensive debug information grouped by team',
+  description: 'Returns detailed information about MCP servers grouped by team, showing running, dormant, and configured servers separately. Includes discovered tools and system state. Requires DEPLOYSTACK_STATUS_SHOW_MCP_DEBUG_ROUTE=true.',
   response: {
     200: {
       type: 'object',
@@ -22,33 +72,34 @@ const debugSchema = {
             uptime_ms: { type: 'number' }
           }
         },
-        mcp_servers: {
+        servers_by_team: {
           type: 'object',
-          properties: {
-            total_configured: { type: 'number' },
-            total_running: { type: 'number' },
-            servers: {
-              type: 'array',
-              items: {
-                type: 'object',
-                properties: {
-                  installation_name: { type: 'string' },
-                  installation_id: { type: 'string' },
-                  team_id: { type: 'string' },
-                  team_slug: { type: 'string' },
-                  server_slug: { type: 'string' },
-                  transport_type: { type: 'string' },
-                  status: { type: 'string' },
-                  pid: { type: 'number' },
-                  uptime_ms: { type: 'number' },
-                  message_count: { type: 'number' },
-                  error_count: { type: 'number' },
-                  command: { type: 'string' },
-                  args: { type: 'array', items: { type: 'string' } },
-                  url: { type: 'string' }
-                }
+          additionalProperties: {
+            type: 'object',
+            properties: {
+              running: {
+                type: 'array',
+                items: serverInfoSchema
+              },
+              dormant: {
+                type: 'array',
+                items: serverInfoSchema
+              },
+              configured: {
+                type: 'array',
+                items: serverInfoSchema
               }
             }
+          }
+        },
+        summary: {
+          type: 'object',
+          properties: {
+            total_teams: { type: 'number' },
+            total_running: { type: 'number' },
+            total_dormant: { type: 'number' },
+            total_configured: { type: 'number' },
+            total_servers: { type: 'number' }
           }
         },
         tools: {
@@ -110,27 +161,20 @@ const debugSchema = {
 };
 
 export async function registerDebugRoutes(server: FastifyInstance) {
-  // Get services from server instance
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const processManager = (server as any).processManager as ProcessManager | undefined;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const runtimeState = (server as any).runtimeState as RuntimeState | undefined;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const toolDiscoveryManager = (server as any).toolDiscoveryManager as UnifiedToolDiscoveryManager | undefined;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const dynamicConfigManager = (server as any).dynamicConfigManager as DynamicConfigManager | undefined;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const teamIsolationService = (server as any).teamIsolationService as TeamIsolationService | undefined;
 
   if (!processManager || !runtimeState || !toolDiscoveryManager || !dynamicConfigManager) {
-    server.log.error('Required services not found on server instance (processManager, runtimeState, toolDiscoveryManager, or dynamicConfigManager)');
+    server.log.error('Required services not found on server instance');
     throw new Error('Required services not initialized');
   }
 
   server.get('/api/status/debug', {
     schema: debugSchema
   }, async (request: FastifyRequest, reply: FastifyReply) => {
-    // Check if debug route is enabled via environment variable
     const debugRouteEnabled = process.env.DEPLOYSTACK_STATUS_SHOW_MCP_DEBUG_ROUTE === 'true';
 
     if (!debugRouteEnabled) {
@@ -152,49 +196,55 @@ export async function registerDebugRoutes(server: FastifyInstance) {
     }, 'Debug information requested');
 
     try {
-      // Get all running processes
       const allProcesses = processManager.getAllProcesses();
       const allRuntimeProcesses = runtimeState.getAllProcesses();
+      const dormantConfigs = runtimeState.getAllDormantConfigs();
+      const currentConfig = dynamicConfigManager.getCurrentConfiguration();
+      const configStats = dynamicConfigManager.getStats();
+      const toolStats = toolDiscoveryManager.getStats();
+      const allTools = toolDiscoveryManager.getAllTools();
+
       const runtimeStatus: Record<string, { status: string; restart_count?: number }> = {};
       allRuntimeProcesses.forEach(proc => {
         runtimeStatus[proc.installationName] = {
           status: proc.status,
-          restart_count: 0 // RuntimeState doesn't track restart count
+          restart_count: 0
         };
       });
 
-      // Get current configuration
-      const currentConfig = dynamicConfigManager.getCurrentConfiguration();
-      const configStats = dynamicConfigManager.getStats();
-
-      // Get tool discovery stats
-      const toolStats = toolDiscoveryManager.getStats();
-      const allTools = toolDiscoveryManager.getAllTools();
-
-      // Build server information
-      const servers = allProcesses.map(processInfo => {
-        const status = runtimeStatus[processInfo.config.installation_name];
-        let teamInfo = { serverSlug: 'unknown', teamSlug: 'unknown', installationId: 'unknown' };
-        
+      const extractTeamInfoSafely = (installationName: string) => {
         try {
           if (teamIsolationService) {
-            teamInfo = teamIsolationService.extractTeamInfo(processInfo.config.installation_name);
+            return teamIsolationService.extractTeamInfo(installationName);
           }
         } catch (error) {
           request.log.debug({
             operation: 'debug_team_info_extraction_failed',
-            installation_name: processInfo.config.installation_name,
+            installation_name: installationName,
             error: error instanceof Error ? error.message : String(error)
           }, 'Failed to extract team info');
         }
+        return { serverSlug: 'unknown', teamSlug: 'unknown', installationId: 'unknown' };
+      };
 
-        return {
+      const serversByTeam: Record<string, TeamServers> = {};
+
+      for (const processInfo of allProcesses) {
+        const teamId = processInfo.config.team_id;
+        if (!serversByTeam[teamId]) {
+          serversByTeam[teamId] = { running: [], dormant: [], configured: [] };
+        }
+
+        const status = runtimeStatus[processInfo.config.installation_name];
+        const teamInfo = extractTeamInfoSafely(processInfo.config.installation_name);
+
+        serversByTeam[teamId].running.push({
           installation_name: processInfo.config.installation_name,
           installation_id: processInfo.config.installation_id,
           team_id: processInfo.config.team_id,
           team_slug: teamInfo.teamSlug,
           server_slug: teamInfo.serverSlug,
-          transport_type: 'stdio', // ProcessManager only handles stdio processes
+          transport_type: 'stdio',
           status: status?.status || processInfo.status,
           pid: processInfo.process.pid,
           uptime_ms: Date.now() - processInfo.startTime,
@@ -204,51 +254,69 @@ export async function registerDebugRoutes(server: FastifyInstance) {
           args: processInfo.config.args,
           last_activity: new Date(processInfo.lastActivity).toISOString(),
           restart_count: status?.restart_count || 0
-        };
-      });
+        });
+      }
 
-      // Add configured but not running servers
+      for (const { installationName, config } of dormantConfigs) {
+        const teamId = config.team_id;
+        if (!serversByTeam[teamId]) {
+          serversByTeam[teamId] = { running: [], dormant: [], configured: [] };
+        }
+
+        const teamInfo = extractTeamInfoSafely(installationName);
+
+        serversByTeam[teamId].dormant.push({
+          installation_name: installationName,
+          installation_id: config.installation_id,
+          team_id: config.team_id,
+          team_slug: teamInfo.teamSlug,
+          server_slug: teamInfo.serverSlug,
+          transport_type: 'stdio',
+          status: 'dormant',
+          command: config.command,
+          args: config.args,
+          message: 'Process terminated due to inactivity, will respawn on next request'
+        });
+      }
+
       const runningNames = new Set(allProcesses.map(p => p.config.installation_name));
-      const configuredServers = Object.entries(currentConfig.servers)
-        .filter(([_, config]) => config.enabled !== false)
-        .map(([serverName, serverConfig]) => {
-          if (runningNames.has(serverName)) {
-            return null; // Already included in running servers
-          }
+      const dormantNames = new Set(dormantConfigs.map(d => d.installationName));
 
-          const status = runtimeStatus[serverName];
-          let teamInfo = { serverSlug: 'unknown', teamSlug: 'unknown', installationId: 'unknown' };
-          
-          try {
-            if (teamIsolationService) {
-              teamInfo = teamIsolationService.extractTeamInfo(serverName);
-            }
-          } catch {
-            // Ignore extraction errors for non-running servers
-          }
+      for (const [serverName, serverConfig] of Object.entries(currentConfig.servers)) {
+        if (serverConfig.enabled === false) continue;
+        if (runningNames.has(serverName) || dormantNames.has(serverName)) continue;
 
-          return {
-            installation_name: serverName,
-            installation_id: serverConfig.installation_id || 'unknown',
-            team_id: serverConfig.team_id || 'unknown',
-            team_slug: teamInfo.teamSlug,
-            server_slug: teamInfo.serverSlug,
-            transport_type: serverConfig.transport_type || serverConfig.type || 'unknown',
-            status: status?.status || 'configured',
-            uptime_ms: 0,
-            message_count: 0,
-            error_count: 0,
-            command: serverConfig.command || serverConfig.url || '',
-            args: serverConfig.args || [],
-            url: serverConfig.url,
-            restart_count: status?.restart_count || 0
-          };
-        })
-        .filter(Boolean);
+        const teamId = serverConfig.team_id || 'unknown';
+        if (!serversByTeam[teamId]) {
+          serversByTeam[teamId] = { running: [], dormant: [], configured: [] };
+        }
 
-      const allServers = [...servers, ...configuredServers];
+        const teamInfo = extractTeamInfoSafely(serverName);
 
-      // Build tools information
+        serversByTeam[teamId].configured.push({
+          installation_name: serverName,
+          installation_id: serverConfig.installation_id || 'unknown',
+          team_id: teamId,
+          team_slug: teamInfo.teamSlug,
+          server_slug: teamInfo.serverSlug,
+          transport_type: serverConfig.transport_type || serverConfig.type || 'unknown',
+          status: 'configured',
+          command: serverConfig.command || serverConfig.url || '',
+          args: serverConfig.args || [],
+          url: serverConfig.url,
+          message: 'Server configured but not yet started'
+        });
+      }
+
+      let totalRunning = 0;
+      let totalDormant = 0;
+      let totalConfigured = 0;
+      for (const teamData of Object.values(serversByTeam)) {
+        totalRunning += teamData.running.length;
+        totalDormant += teamData.dormant.length;
+        totalConfigured += teamData.configured.length;
+      }
+
       const toolsData = allTools.map(tool => ({
         namespaced_name: tool.namespacedName,
         original_name: tool.originalName,
@@ -258,17 +326,14 @@ export async function registerDebugRoutes(server: FastifyInstance) {
         discovered_at: tool.discoveredAt?.toISOString()
       }));
 
-      // Count tools by transport
       const httpTools = allTools.filter(t => t.transport === 'http').length;
       const stdioTools = allTools.filter(t => t.transport === 'stdio').length;
 
-      // Count servers by transport type
       const httpServers = Object.values(currentConfig.servers)
         .filter(s => s.enabled !== false && (s.transport_type === 'http' || s.type === 'http')).length;
       const stdioServers = Object.values(currentConfig.servers)
         .filter(s => s.enabled !== false && (s.transport_type === 'stdio' || s.type === 'stdio')).length;
 
-      // Build response
       const debugInfo = {
         timestamp: new Date().toISOString(),
         satellite_info: {
@@ -276,12 +341,13 @@ export async function registerDebugRoutes(server: FastifyInstance) {
           version: '1.0.0',
           uptime_ms: process.uptime() * 1000
         },
-        mcp_servers: {
-          total_configured: Object.keys(currentConfig.servers).filter(k => 
-            currentConfig.servers[k].enabled !== false
-          ).length,
-          total_running: allProcesses.length,
-          servers: allServers
+        servers_by_team: serversByTeam,
+        summary: {
+          total_teams: Object.keys(serversByTeam).length,
+          total_running: totalRunning,
+          total_dormant: totalDormant,
+          total_configured: totalConfigured,
+          total_servers: totalRunning + totalDormant + totalConfigured
         },
         tools: {
           total_tools: allTools.length,
@@ -299,15 +365,16 @@ export async function registerDebugRoutes(server: FastifyInstance) {
           servers_by_transport: {
             http: httpServers,
             stdio: stdioServers
-          },
-          last_update: new Date().toISOString() // ConfigStats doesn't track last_update timestamp
+          }
         }
       };
 
       request.log.info({
         operation: 'debug_endpoint_success',
-        total_servers: allServers.length,
-        running_servers: allProcesses.length,
+        total_teams: Object.keys(serversByTeam).length,
+        total_running: totalRunning,
+        total_dormant: totalDormant,
+        total_configured: totalConfigured,
         total_tools: allTools.length
       }, 'Debug information retrieved successfully');
 
