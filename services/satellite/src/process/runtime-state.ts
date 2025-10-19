@@ -74,6 +74,7 @@ export class RuntimeState extends EventEmitter {
 
   /**
    * Remove a process from runtime state
+   * Also cleans up dormant config if process was in dormant state
    */
   removeProcess(processId: string): RuntimeProcessInfo | null {
     const processInfo = this.processes.get(processId);
@@ -92,6 +93,9 @@ export class RuntimeState extends EventEmitter {
         this.processesByTeam.delete(processInfo.teamId);
       }
     }
+
+    // BUGFIX: Clean up dormant config if exists
+    this.dormantProcessConfigs.delete(processInfo.installationName);
 
     this.emit('processRemoved', processInfo);
     return processInfo;
@@ -331,10 +335,33 @@ export class RuntimeState extends EventEmitter {
   }
 
   /**
-   * Remove dormant process config (after respawning)
+   * Remove dormant process config (after respawning or uninstall)
    */
   removeDormantConfig(installationName: string): void {
     this.dormantProcessConfigs.delete(installationName);
+  }
+
+  /**
+   * Remove a server completely by installation name (handles both active and dormant)
+   * This is the method to call when a server is being uninstalled
+   */
+  removeServerByName(installationName: string): { active: boolean; dormant: boolean } {
+    const result = { active: false, dormant: false };
+
+    // Check if active process exists
+    const processId = this.processesByName.get(installationName);
+    if (processId) {
+      this.removeProcess(processId);
+      result.active = true;
+    }
+
+    // Check if dormant config exists
+    if (this.dormantProcessConfigs.has(installationName)) {
+      this.dormantProcessConfigs.delete(installationName);
+      result.dormant = true;
+    }
+
+    return result;
   }
 
   /**

@@ -447,6 +447,63 @@ export class ProcessManager extends EventEmitter {
   }
 
   /**
+   * Remove a server completely (handles both active and dormant states)
+   * This is the method to call when a server is being uninstalled
+   * Returns info about what was removed
+   */
+  async removeServerCompletely(
+    installationName: string,
+    timeout: number = 10000
+  ): Promise<{ active: boolean; dormant: boolean }> {
+    this.logger.info({ operation: 'remove_server_completely_start',
+      installation_name: installationName
+    }, `Removing server completely: ${installationName}`);
+
+    const result = { active: false, dormant: false };
+
+    // Check if active process exists and terminate it
+    const processInfo = this.getProcessByName(installationName);
+    if (processInfo) {
+      this.logger.info({
+        operation: 'remove_server_terminating_active',
+        installation_name: installationName,
+        process_id: processInfo.id,
+        status: processInfo.status
+      }, `Terminating active process: ${installationName}`);
+
+      await this.terminateProcess(processInfo, timeout);
+      result.active = true;
+    }
+
+    // Check if dormant config exists and remove it
+    if (this.runtimeState) {
+      const dormantConfig = this.runtimeState.getDormantConfig(installationName);
+      if (dormantConfig) {
+        this.logger.info({
+          operation: 'remove_server_clearing_dormant',
+          installation_name: installationName,
+          team_id: dormantConfig.team_id
+        }, `Clearing dormant config: ${installationName}`);
+
+        this.runtimeState.removeDormantConfig(installationName);
+        result.dormant = true;
+      }
+    }
+
+    // Clean up restart attempts tracking
+    this.restartAttempts.delete(installationName);
+
+    this.logger.info({
+      operation: 'remove_server_completely_success',
+      installation_name: installationName,
+      removed_active: result.active,
+      removed_dormant: result.dormant
+    }, `Server removed completely: ${installationName} (active: ${result.active}, dormant: ${result.dormant})`);
+
+    return result;
+  }
+
+  /**
    * Get or respawn a process if it's dormant
    * This method checks active processes first, then dormant configs, and respawns if needed
    * Prevents concurrent respawn attempts for the same process
