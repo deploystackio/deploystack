@@ -79,18 +79,26 @@ export class RemoteToolDiscoveryManager {
     const enabledServers = this.configManager.getEnabledMcpServers();
     const serverNames = Object.keys(enabledServers);
 
+    // Filter out stdio servers - they don't have URLs and are handled by StdioToolDiscoveryManager
+    const httpServers = serverNames.filter(name => {
+      const config = enabledServers[name];
+      return config.transport_type !== 'stdio';
+    });
+
     this.logger.info({
       operation: 'tool_discovery_servers',
-      server_count: serverNames.length,
-      servers: serverNames
-    }, `Discovering tools from ${serverNames.length} remote MCP servers`);
+      server_count: httpServers.length,
+      total_servers: serverNames.length,
+      stdio_servers_filtered: serverNames.length - httpServers.length,
+      servers: httpServers
+    }, `Discovering tools from ${httpServers.length} remote HTTP/SSE MCP servers (${serverNames.length - httpServers.length} stdio servers filtered out)`);
 
-    // Discover tools from each enabled server
+    // Discover tools from each enabled HTTP/SSE server (stdio servers filtered out)
     const allDiscoveredTools: CachedTool[] = [];
     let successCount = 0;
     let failureCount = 0;
 
-    for (const serverName of serverNames) {
+    for (const serverName of httpServers) {
       try {
         const serverConfig = enabledServers[serverName];
         const serverTools = await this.discoverServerTools(serverName);
@@ -502,6 +510,17 @@ export class RemoteToolDiscoveryManager {
               server_name: serverName,
               reason: 'disabled_or_missing'
             }, `Skipping discovery for disabled/missing server: ${serverName}`);
+            continue;
+          }
+
+          // Skip stdio servers - they are handled by StdioToolDiscoveryManager
+          if (serverConfig.transport_type === 'stdio') {
+            this.logger.debug({
+              operation: 'server_discovery_skipped',
+              server_name: serverName,
+              reason: 'stdio_transport',
+              transport_type: serverConfig.transport_type
+            }, `Skipping stdio server in remote discovery: ${serverName}`);
             continue;
           }
 
