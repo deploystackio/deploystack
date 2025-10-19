@@ -1,6 +1,9 @@
 # Production image - Debian base required for nsjail
 FROM node:24-bookworm-slim
 
+# Create deploystack user with home directory (simulating production setup)
+RUN useradd -m -d /opt/deploystack -s /bin/bash deploystack
+
 # Install build dependencies and runtime dependencies for nsjail
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
@@ -45,6 +48,10 @@ RUN apt-get remove -y \
     apt-get autoremove -y && \
     rm -rf /var/lib/apt/lists/*
 
+# Create mcp-cache base directory with proper ownership
+RUN mkdir -p /opt/deploystack/mcp-cache && \
+    chown -R deploystack:deploystack /opt/deploystack
+
 WORKDIR /app
 
 # Copy package files
@@ -63,7 +70,7 @@ RUN echo "NODE_ENV=production" > .env && \
 
 EXPOSE 3001
 
-# Run as non-root user for security
-USER node
+# Run as deploystack user (simulating production setup)
+USER deploystack
 
 CMD ["node", "--env-file=.env", "dist/index.js"]

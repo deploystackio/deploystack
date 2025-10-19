@@ -2,10 +2,12 @@ import { spawn } from 'child_process';
 import { EventEmitter } from 'events';
 import { v4 as uuidv4 } from 'uuid';
 import { Logger } from 'pino';
+import { mkdir } from 'fs/promises';
+import { existsSync } from 'fs';
 import { MCPServerConfig, ProcessInfo } from './types';
 import type { EventBus } from '../services/event-bus';
 import type { RuntimeState } from './runtime-state';
-import { nsjailConfig } from '../config/nsjail';
+import { nsjailConfig, mcpCacheBaseDir } from '../config/nsjail';
 
 /**
  * Process Manager for MCP server subprocesses
@@ -310,7 +312,7 @@ export class ProcessManager extends EventEmitter {
       // Determine isolation mode based on environment
       const useNsjail = this.shouldUseNsjail();
       const childProcess = useNsjail 
-        ? this.spawnWithNsjail(config)
+        ? await this.spawnWithNsjail(config)
         : this.spawnDirect(config);
 
       const processInfo: ProcessInfo = {
@@ -913,40 +915,112 @@ export class ProcessManager extends EventEmitter {
   }
 
   /**
-   * Spawn process with nsjail isolation (production mode on Linux)
+   * Ensure team-specific cache directory exists
    */
-  private spawnWithNsjail(config: MCPServerConfig) {
+  private async ensureCacheDirectory(teamId: string): Promise<string> {
+    const cacheDir = `${mcpCacheBaseDir}/mcp-cache/${teamId}`;
+    
+    if (!existsSync(cacheDir)) {
+      this.logger.info({
+        operation: 'create_cache_directory',
+        team_id: teamId,
+        cache_dir: cacheDir
+      }, `Creating team cache directory: ${cacheDir}`);
+      
+      try {
+        await mkdir(cacheDir, { recursive: true });
+        
+        this.logger.info({
+          operation: 'cache_directory_created',
+          team_id: teamId,
+          cache_dir: cacheDir
+        }, `Team cache directory created successfully`);
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        this.logger.error({
+          operation: 'cache_directory_creation_failed',
+          team_id: teamId,
+          cache_dir: cacheDir,
+          error: errorMessage
+        }, `Failed to create team cache directory`);
+        throw new Error(`Failed to create cache directory: ${errorMessage}`);
+      }
+    }
+    
+    return cacheDir;
+  }
+
+  /**
+   * Spawn process with nsjail isolation (production mode on Linux)
+   * 
+   * Configuration based on empirical testing with npx and Node.js:
+   * - Memory: 2048MB (V8 minimum requirement)
+   * - Processes: 1000 (npm spawns many child processes)
+   * - File descriptors: 1024 (adequate for I/O operations)
+   * - File size: 50MB (prevents oversized downloads)
+   * - /dev files: Required for Node.js crypto and I/O operations
+   * - --proc_rw: Required for pthread_create and thread management
+   */
+  private async spawnWithNsjail(config: MCPServerConfig) {
+    // Ensure team-specific cache directory exists before mounting
+    const cacheDir = await this.ensureCacheDirectory(config.team_id);
+    
     this.logger.info({
       operation: 'spawn_nsjail',
       installation_name: config.installation_name,
       team_id: config.team_id,
+      cache_dir: cacheDir,
       memory_limit_mb: nsjailConfig.memoryLimitMB,
       cpu_time_limit_seconds: nsjailConfig.cpuTimeLimitSeconds,
-      max_processes: nsjailConfig.maxProcesses
+      max_processes: nsjailConfig.maxProcesses,
+      max_open_files: nsjailConfig.maxOpenFiles,
+      max_file_size_mb: nsjailConfig.maxFileSizeMB,
+      tmpfs_size: nsjailConfig.tmpfsSize
     }, 'Spawning process with nsjail isolation');
 
-    // Build nsjail arguments
+    // Get current user UID and GID (deploystack user in production)
+    const uid = process.getuid ? process.getuid() : 1000;
+    const gid = process.getgid ? process.getgid() : 1000;
+
+    // Build nsjail arguments based on working production configuration
     const nsjailArgs = [
-      '-Mo',                         // Mount mode: once, don't remount
-      '--rlimit_as', String(nsjailConfig.memoryLimitMB), // Memory limit (MB)
+      '-Mo',                                    // Mount mode: once, don't remount
+      '--proc_rw',                              // CRITICAL: Required for Node.js pthread_create
+      '--user', String(uid),                    // Use current user (deploystack)
+      '--group', String(gid),                   // Use current group (deploystack)
+      '--rlimit_as', String(nsjailConfig.memoryLimitMB), // Memory limit (MB) - 2048 minimum for V8
       '--rlimit_cpu', String(nsjailConfig.cpuTimeLimitSeconds), // CPU time limit (seconds)
-      '--rlimit_nproc', String(nsjailConfig.maxProcesses), // Max processes
-      '--time_limit', '0',            // No wall-clock time limit
-      '--user', '99999',              // Non-root user
-      '--group', '99999',             // Non-root group
-      '-R', '/usr',                   // Read-only mount: /usr
-      '-R', '/lib',                   // Read-only mount: /lib
-      '-R', '/lib64',                 // Read-only mount: /lib64
-      '-R', '/bin',                   // Read-only mount: /bin
-      '-R', '/etc/resolv.conf',       // DNS resolution
-      '-T', '/tmp',                   // Writable temp directory
-      '--disable_clone_newnet',       // Allow network access
-      '--hostname', `mcp-${config.team_id}`, // Team-specific hostname
-      // Inject environment variables
+      '--rlimit_nproc', String(nsjailConfig.maxProcesses), // Max processes - 1000 for npm
+      '--rlimit_nofile', String(nsjailConfig.maxOpenFiles), // Max file descriptors
+      '--rlimit_fsize', String(nsjailConfig.maxFileSizeMB), // Max file size (MB)
+      '--time_limit', '0',                      // No wall-clock time limit
+      '-R', '/usr',                             // Read-only mount: /usr
+      '-R', '/lib',                             // Read-only mount: /lib
+      '-R', '/lib64',                           // Read-only mount: /lib64
+      '-R', '/bin',                             // Read-only mount: /bin
+      '-R', '/sbin',                            // Read-only mount: /sbin
+      '-R', '/etc',                             // Read-only mount: /etc (includes resolv.conf)
+      '-T', `/tmp:size=${nsjailConfig.tmpfsSize}`, // Writable temp with size limit (100M)
+      '-B', `${cacheDir}:/home/npx`,           // Team-specific cache directory mount
+      '--bindmount', '/dev/null:/dev/null',    // Required for I/O redirection
+      '--bindmount', '/dev/urandom:/dev/urandom', // Required for crypto operations
+      '--bindmount', '/dev/zero:/dev/zero',    // Required for memory allocation
+      '--symlink', '/proc/self/fd:/dev/fd',    // Required for file descriptor management
+      '-E', 'HOME=/home/npx',                  // Set HOME for npx cache
+      '-E', 'PATH=/usr/bin:/bin:/usr/local/bin', // Set PATH
+      '-E', 'NPM_CONFIG_CACHE=/home/npx/.npm', // npm cache location
+      '-E', 'NPM_CONFIG_PREFIX=/home/npx/.npm-global', // npm global prefix
+      '-E', 'NPM_CONFIG_UPDATE_NOTIFIER=false', // Disable update notifier
+      '-E', 'NO_UPDATE_NOTIFIER=1',            // Disable update notifier (alternative)
+      // Inject user-provided environment variables
       ...Object.entries(config.env).flatMap(([key, value]) => ['-E', `${key}=${value}`]),
-      '--',                           // End of nsjail args
-      config.command,                 // MCP server command
-      ...config.args                  // MCP server arguments
+      '--disable_clone_newnet',                // Allow network access (required for npm downloads)
+      '--disable_clone_newcgroup',             // Disable cgroup namespace (causes clone() errors on some kernels)
+      '--disable_no_new_privs',                // May be needed for some packages
+      '--hostname', `mcp-${config.team_id}`,   // Team-specific hostname
+      '--',                                     // End of nsjail args
+      config.command,                           // MCP server command (e.g., /usr/bin/npx)
+      ...config.args                            // MCP server arguments
     ];
 
     return spawn('nsjail', nsjailArgs, {

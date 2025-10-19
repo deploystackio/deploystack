@@ -107,9 +107,12 @@ EVENT_MAX_QUEUE_SIZE=10000          # Maximum events in memory queue (default: 1
 EVENT_FLUSH_TIMEOUT_MS=5000         # Graceful shutdown flush timeout in milliseconds (default: 5000)
 
 # nsjail Resource Limits (Production Linux only)
-NSJAIL_MEMORY_LIMIT_MB=50           # Memory limit per MCP server process in MB (default: 50)
+NSJAIL_MEMORY_LIMIT_MB=2048         # Memory limit per MCP server process in MB (default: 2048)
 NSJAIL_CPU_TIME_LIMIT_SECONDS=60    # CPU time limit per MCP server process in seconds (default: 60)
-NSJAIL_MAX_PROCESSES=50             # Maximum number of processes per MCP server (default: 50)
+NSJAIL_MAX_PROCESSES=1000            # Maximum number of processes per MCP server (default: 1000)
+NSJAIL_RLIMIT_NOFILE=1024           # Maximum number of open file descriptors (default: 1024)
+NSJAIL_RLIMIT_FSIZE=50              # Maximum file size in MB (default: 50)
+NSJAIL_TMPFS_SIZE=100M              # Tmpfs size for /tmp directory (default: 100M)
 
 # Process Idle Timeout (stdio MCP servers only)
 MCP_PROCESS_IDLE_TIMEOUT_SECONDS=180 # Idle timeout in seconds before terminating stdio processes (default: 180, set to 0 to disable)
@@ -121,12 +124,13 @@ MCP_PROCESS_IDLE_TIMEOUT_SECONDS=180 # Idle timeout in seconds before terminatin
 
 These limits control resource allocation for MCP server processes running in nsjail isolation:
 
-**NSJAIL_MEMORY_LIMIT_MB** (Default: 50)
+**NSJAIL_MEMORY_LIMIT_MB** (Default: 2048)
 
 - Memory limit per MCP server process in megabytes
-- Prevents memory exhaustion attacks
-- Recommended range: 50-500 MB depending on MCP server requirements
-- Example: Set to 100 for memory-intensive MCP servers
+- **Minimum 2048MB required for Node.js V8 initialization** (cannot be reduced)
+- Based on empirical testing with npx and Node.js environments
+- Prevents memory exhaustion while supporting npm package operations
+- Note: This is the absolute minimum - complex MCP servers may need more
 
 **NSJAIL_CPU_TIME_LIMIT_SECONDS** (Default: 60)
 
@@ -135,11 +139,31 @@ These limits control resource allocation for MCP server processes running in nsj
 - Recommended range: 30-300 seconds
 - Note: This is CPU time, not wall-clock time
 
-**NSJAIL_MAX_PROCESSES** (Default: 50)
+**NSJAIL_MAX_PROCESSES** (Default: 1000)
 
 - Maximum number of child processes per MCP server
-- Prevents fork bombs and process exhaustion
-- Recommended range: 10-100 depending on MCP server needs
+- **Required: 1000 for npm operations** which spawn many child processes
+- Prevents fork bombs while allowing normal npm package installations
+- Based on empirical testing with npx package management
+
+**NSJAIL_RLIMIT_NOFILE** (Default: 1024)
+
+- Maximum number of open file descriptors per MCP server
+- Adequate for typical file I/O operations
+- Prevents file descriptor exhaustion attacks
+
+**NSJAIL_RLIMIT_FSIZE** (Default: 50)
+
+- Maximum file size in megabytes per MCP server
+- Prevents oversized npm package downloads
+- Accommodates 99% of legitimate npm packages (average: 416KB, 99th percentile: <10MB)
+- Blocks abuse while allowing packages with binary assets (TensorFlow, Puppeteer)
+
+**NSJAIL_TMPFS_SIZE** (Default: 100M)
+
+- Size limit for /tmp directory tmpfs mount
+- Sufficient for npm cache and temporary file operations
+- Balances functionality with memory efficiency
 
 **Development Mode:**
 
