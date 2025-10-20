@@ -28,7 +28,7 @@
     "@types/node": "^24.7.0",
     "@types/uuid": "^10.0.0",
     "@typescript-eslint/eslint-plugin": "^8.46.0",
-    "@typescript-eslint/parser": "^8.46.0",
+    "@typescript-eslint/parser": "^8.46.2",
     "copy-webpack-plugin": "^13.0.1",
     "eslint": "^9.37.0",
     "node-loader": "^2.1.0",
