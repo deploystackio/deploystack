@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.38.0 (2025-10-21)
+
+* feat(all): Add shared types and components for configuration schema management ([231e4f9](https://github.com/deploystackio/deploystack/commit/231e4f9))
+* feat(backend): add cleanup old jobs cron and worker functionality ([2f63f81](https://github.com/deploystackio/deploystack/commit/2f63f81))
+* feat(frontend): add search button and manual execution for server search ([0fb2c8e](https://github.com/deploystackio/deploystack/commit/0fb2c8e))
+* feat(satellite): add uninstall shutdown handling to skip crash detection ([f34fef8](https://github.com/deploystackio/deploystack/commit/f34fef8))
+* feat(satellite): enhance debug route to group servers by team ([be24451](https://github.com/deploystackio/deploystack/commit/be24451))
+* feat(satellite): enhance nsjail resource limits and cache directory management ([d0e38e1](https://github.com/deploystackio/deploystack/commit/d0e38e1))
+* feat(satellite): filter out stdio servers during tool discovery ([b5317e2](https://github.com/deploystackio/deploystack/commit/b5317e2))
+* feat(satellite): handle cleanup of removed servers during config changes ([785b73c](https://github.com/deploystackio/deploystack/commit/785b73c))
+* feat(satellite): implement server removal handling for active and dormant states ([593a9a7](https://github.com/deploystackio/deploystack/commit/593a9a7))
+* feat(satellite): resolve command paths for nsjail execution ([a253bc6](https://github.com/deploystackio/deploystack/commit/a253bc6))
+* fix(backend): update redirect URI patterns for Claude.ai MCP OAuth ([22383da](https://github.com/deploystackio/deploystack/commit/22383da))
+* fix(frontend): validate remote objects in server configuration ([0f1ee1b](https://github.com/deploystackio/deploystack/commit/0f1ee1b))
+* fix(satellite): adjust shutdown notification handling during tool discovery ([1896108](https://github.com/deploystackio/deploystack/commit/1896108))
+* fix(satellite): improve error handling for unhandled rejections and exceptions ([8d16c9f](https://github.com/deploystackio/deploystack/commit/8d16c9f))
+* chore(frontend): release v0.32.0 ([0b61a0a](https://github.com/deploystackio/deploystack/commit/0b61a0a))
+* chore(frontend): release v0.32.0 ([873adff](https://github.com/deploystackio/deploystack/commit/873adff))
+* chore(frontend): update modules ([1b371f8](https://github.com/deploystackio/deploystack/commit/1b371f8))
+* chore(satellite): release v0.5.0 ([e8098dd](https://github.com/deploystackio/deploystack/commit/e8098dd))
+* chore(satellite): release v0.5.0 ([8a5c148](https://github.com/deploystackio/deploystack/commit/8a5c148))
+* chore(satellite): remove unprivileged user namespace configuration ([1bd5eb4](https://github.com/deploystackio/deploystack/commit/1bd5eb4))
+
 ## 0.37.0 (2025-10-18)
 
 * docs(all): update README to clarify adoption friction and data ([c0e3a79](https://github.com/deploystackio/deploystack/commit/c0e3a79))
