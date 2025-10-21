@@ -14,6 +14,7 @@ export interface McpUserConfiguration {
   user_id: string;
   user_args?: Record<string, string>;
   user_env?: Record<string, string>;
+  user_headers?: Record<string, string>;
   created_at: Date;
   updated_at: Date;
   last_used_at?: Date;
@@ -29,6 +30,7 @@ export interface McpUserConfiguration {
       description: string;
       user_args_schema?: any[];
       user_env_schema?: any[];
+      user_headers_schema?: any[];
     };
   };
 }
@@ -36,11 +38,13 @@ export interface McpUserConfiguration {
 export interface CreateUserConfigRequest {
   user_args?: Record<string, string>;
   user_env?: Record<string, string>;
+  user_headers?: Record<string, string>;
 }
 
 export interface UpdateUserConfigRequest {
   user_args?: Record<string, string>;
   user_env?: Record<string, string>;
+  user_headers?: Record<string, string>;
 }
 
 export class McpUserConfigurationService {
@@ -106,6 +110,7 @@ export class McpUserConfigurationService {
     for (const row of configurations) {
       const userArgsSchema = this.parseJsonField(row.server?.user_args_schema, []);
       const userEnvSchema = this.parseJsonField(row.server?.user_env_schema, []);
+      const userHeadersSchema = this.parseJsonField(row.server?.user_headers_schema, []);
 
       const userArgs = row.config.user_args 
         ? await McpArgsStorage.retrieveUserArgs(
@@ -125,10 +130,20 @@ export class McpUserConfigurationService {
           )
         : undefined;
 
+      const userHeaders = row.config.user_headers 
+        ? await McpEnvStorage.retrieveUserEnv(
+            row.config.user_headers,
+            userHeadersSchema,
+            { maskSecrets: true },
+            this.logger
+          )
+        : undefined;
+
       processedConfigurations.push({
         ...row.config,
         user_args: userArgs,
         user_env: userEnv,
+        user_headers: userHeaders,
         installation: row.installation ? {
           id: row.installation.id,
           installation_name: row.installation.installation_name,
@@ -139,7 +154,8 @@ export class McpUserConfigurationService {
             name: row.server.name,
             description: row.server.description,
             user_args_schema: userArgsSchema,
-            user_env_schema: userEnvSchema
+            user_env_schema: userEnvSchema,
+            user_headers_schema: userHeadersSchema
           } : undefined
         } : undefined
       });
@@ -192,6 +208,7 @@ export class McpUserConfigurationService {
 
     const userArgsSchema = this.parseJsonField(server?.user_args_schema, []);
     const userEnvSchema = this.parseJsonField(server?.user_env_schema, []);
+    const userHeadersSchema = this.parseJsonField(server?.user_headers_schema, []);
 
     const userArgs = config.user_args 
       ? await McpArgsStorage.retrieveUserArgs(
@@ -211,10 +228,20 @@ export class McpUserConfigurationService {
         )
       : undefined;
 
+    const userHeaders = config.user_headers 
+      ? await McpEnvStorage.retrieveUserEnv(
+          config.user_headers,
+          userHeadersSchema,
+          { maskSecrets: true },
+          this.logger
+        )
+      : undefined;
+
     return {
       ...config,
       user_args: userArgs,
       user_env: userEnv,
+      user_headers: userHeaders,
       installation: installation ? {
         id: installation.id,
         installation_name: installation.installation_name,
@@ -225,7 +252,8 @@ export class McpUserConfigurationService {
           name: server.name,
           description: server.description,
           user_args_schema: userArgsSchema,
-          user_env_schema: userEnvSchema
+          user_env_schema: userEnvSchema,
+          user_headers_schema: userHeadersSchema
         } : undefined
       } : undefined
     };
@@ -275,6 +303,9 @@ export class McpUserConfigurationService {
       if (data.user_env) {
         this.validateUserEnv(data.user_env, this.parseJsonField(serverInfo.user_env_schema, []));
       }
+      if (data.user_headers) {
+        this.validateUserHeaders(data.user_headers, this.parseJsonField(serverInfo.user_headers_schema, []));
+      }
     }
 
     const configId = nanoid();
@@ -292,6 +323,11 @@ export class McpUserConfigurationService {
       user_env: data.user_env ? await McpEnvStorage.storeUserEnv(
         data.user_env, 
         this.parseJsonField(serverInfo?.user_env_schema, []), 
+        this.logger
+      ) : null,
+      user_headers: data.user_headers ? await McpEnvStorage.storeUserEnv(
+        data.user_headers, 
+        this.parseJsonField(serverInfo?.user_headers_schema, []), 
         this.logger
       ) : null,
       created_at: now,
@@ -344,6 +380,9 @@ export class McpUserConfigurationService {
       if (data.user_env !== undefined) {
         this.validateUserEnv(data.user_env, existing.installation.server.user_env_schema || []);
       }
+      if (data.user_headers !== undefined) {
+        this.validateUserHeaders(data.user_headers, existing.installation.server.user_headers_schema || []);
+      }
     }
 
 
@@ -364,6 +403,14 @@ export class McpUserConfigurationService {
       updateData.user_env = data.user_env ? await McpEnvStorage.storeUserEnv(
         data.user_env, 
         existing.installation?.server?.user_env_schema || [], 
+        this.logger
+      ) : null;
+    }
+
+    if (data.user_headers !== undefined) {
+      updateData.user_headers = data.user_headers ? await McpEnvStorage.storeUserEnv(
+        data.user_headers, 
+        existing.installation?.server?.user_headers_schema || [], 
         this.logger
       ) : null;
     }
@@ -492,6 +539,24 @@ export class McpUserConfigurationService {
         
         // Additional type validation can be added here in the future
         // e.g., if (schemaEntry.type === 'number' && isNaN(Number(envVarValue)))
+      }
+      // Note: We don't validate fields that aren't in the schema - allowing flexibility
+    }
+  }
+
+  private validateUserHeaders(userHeaders: Record<string, string>, schema: any[]): void {
+    // Validate user headers against schema
+    // Only validate the fields that are actually being sent, not all required fields
+    for (const [headerName, headerValue] of Object.entries(userHeaders)) {
+      const schemaEntry = schema.find((header: any) => header.name === headerName)
+      
+      if (schemaEntry) {
+        // If this field is required and the sent value is empty, throw error
+        if (schemaEntry.required && (!headerValue || headerValue.trim() === '')) {
+          throw new Error(`Required header '${headerName}' is missing or empty`)
+        }
+        
+        // Additional type validation can be added here in the future
       }
       // Note: We don't validate fields that aren't in the schema - allowing flexibility
     }

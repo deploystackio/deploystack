@@ -3,6 +3,7 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useEventBus } from '@/composables/useEventBus'
 import { Textarea } from '@/components/ui/textarea'
+import { Input } from '@/components/ui/input'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -47,6 +48,29 @@ const localData = ref<TechnicalFormData>({
   transport_type: isEditMode.value ? 'stdio' : 'auto'
 })
 
+// URL field for HTTP/SSE servers
+const remoteUrl = ref('')
+
+// Watch remoteUrl changes and save to storage
+watch(remoteUrl, (newUrl) => {
+  eventBus.setState('technical_remote_url', newUrl)
+
+  // Update remotes in localData if URL is valid
+  if (newUrl && isRemoteTransport.value) {
+    // Map transport_type to correct remotes type
+    // transport_type 'http' -> remotes type 'streamable-http'
+    // transport_type 'sse' -> remotes type 'sse'
+    const remotesType = localData.value.transport_type === 'sse' ? 'sse' : 'streamable-http'
+
+    updateField('remotes', [{
+      type: remotesType,
+      url: newUrl,
+      headers: {}
+    }])
+    updateField('packages', null)
+  }
+})
+
 // Local state for Claude Desktop config
 const jsonInput = ref('')
 const validationError = ref<string | null>(null)
@@ -64,6 +88,66 @@ const extractedType = ref<string>('')
 const extractedHeaders = ref<Record<string, string>>({})
 const extractedHeaderKeys = ref<string[]>([])
 const isHttpServer = ref(false)
+
+// Computed property to check if runtime is HTTP (remote server)
+const isHttpRuntime = computed(() => {
+  return localData.value.runtime === 'http'
+})
+
+// Computed property to determine if transport is remote (HTTP/SSE)
+const isRemoteTransport = computed(() => {
+  return localData.value.transport_type === 'http' || localData.value.transport_type === 'sse'
+})
+
+// Computed property to determine if transport is stdio
+const isStdioTransport = computed(() => {
+  return localData.value.transport_type === 'stdio'
+})
+
+// Watch runtime changes and auto-set transport_type in edit mode
+watch(() => localData.value.runtime, (newRuntime) => {
+  if (isEditMode.value) {
+    if (newRuntime === 'http') {
+      // For HTTP runtime, default to 'sse' if not already http/sse
+      if (localData.value.transport_type !== 'http' && localData.value.transport_type !== 'sse') {
+        updateField('transport_type', 'sse')
+      }
+    } else {
+      // For any other runtime, transport must be stdio
+      if (localData.value.transport_type !== 'stdio') {
+        updateField('transport_type', 'stdio')
+      }
+    }
+  }
+})
+
+// Watch transport_type changes for HTTP runtime and update remotes accordingly
+watch(() => localData.value.transport_type, (newTransportType) => {
+  if (isHttpRuntime.value && (newTransportType === 'http' || newTransportType === 'sse')) {
+    // Map transport_type to correct remotes type
+    // transport_type 'http' -> remotes type 'streamable-http'
+    // transport_type 'sse' -> remotes type 'sse'
+    const remotesType = newTransportType === 'sse' ? 'sse' : 'streamable-http'
+
+    // Update remotes with correct type while preserving URL and headers
+    if (localData.value.remotes && localData.value.remotes.length > 0) {
+      const currentRemote = localData.value.remotes[0]
+      // Direct mutation of the remotes array
+      localData.value.remotes = [{
+        type: remotesType,
+        url: currentRemote.url || remoteUrl.value || '',
+        headers: currentRemote.headers || {}
+      }]
+    } else if (remoteUrl.value) {
+      // Create new remotes array if it doesn't exist
+      localData.value.remotes = [{
+        type: remotesType,
+        url: remoteUrl.value,
+        headers: {}
+      }]
+    }
+  }
+}, { flush: 'sync' }) // Execute synchronously BEFORE the deep watcher on localData
 
 const isUpdatingFromStorage = ref(false)
 
@@ -164,6 +248,15 @@ const exampleConfig = `{
 onMounted(() => {
   // Load technical data from storage
   loadFromStorage()
+
+  // Load remote URL from storage
+  const storedUrl = eventBus.getState<string>('technical_remote_url')
+  if (storedUrl) {
+    remoteUrl.value = storedUrl
+  } else if (props.formData?.technical?.remotes && props.formData.technical.remotes.length > 0) {
+    // Load from existing data in edit mode
+    remoteUrl.value = props.formData.technical.remotes[0]?.url || ''
+  }
 
   // Always load the latest config from storage first
   loadLatestConfigFromStorage()
@@ -401,6 +494,13 @@ const validateJson = (jsonString: string) => {
 
 // Watch for input changes and validate
 watch(jsonInput, (newValue) => {
+  // Skip validation for HTTP runtime (remote servers don't need Claude config)
+  if (isHttpRuntime.value) {
+    validationError.value = null
+    isValid.value = true
+    return
+  }
+
   // Don't save to storage if we're updating from storage (prevent recursion)
   if (!isUpdatingFromStorage.value) {
     eventBus.setState(CLAUDE_CONFIG_KEY, newValue)
@@ -581,6 +681,24 @@ onUnmounted(() => {
   <!-- Structured Form Fields -->
   <div class="mt-6 border-t border-gray-100">
     <dl class="divide-y divide-gray-100">
+      <!-- Runtime (Read-only in edit mode) -->
+      <div v-if="isEditMode" class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+        <dt class="text-sm/6 font-medium text-gray-900">Runtime</dt>
+        <dd class="mt-1 sm:col-span-2 sm:mt-0">
+          <div class="flex items-center gap-2">
+            <Badge variant="outline" class="text-base">
+              {{ localData.runtime }}
+            </Badge>
+            <span class="text-sm text-muted-foreground">
+              {{ isHttpRuntime ? '(Remote MCP Server)' : '(Local MCP Server)' }}
+            </span>
+          </div>
+          <p class="text-xs text-muted-foreground mt-1">
+            Runtime determines available transport types and configuration options
+          </p>
+        </dd>
+      </div>
+
       <!-- Language Selection -->
       <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
         <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.technical.language.label') }}</dt>
@@ -593,22 +711,22 @@ onUnmounted(() => {
               <SelectValue :placeholder="t('mcpCatalog.form.technical.language.placeholder')" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="JavaScript">
+              <SelectItem value="javascript">
                 {{ t('mcpCatalog.form.technical.language.options.javascript') }}
               </SelectItem>
-              <SelectItem value="TypeScript">
+              <SelectItem value="typescript">
                 {{ t('mcpCatalog.form.technical.language.options.typescript') }}
               </SelectItem>
-              <SelectItem value="Python">
+              <SelectItem value="python">
                 {{ t('mcpCatalog.form.technical.language.options.python') }}
               </SelectItem>
-              <SelectItem value="Go">
+              <SelectItem value="go">
                 {{ t('mcpCatalog.form.technical.language.options.go') }}
               </SelectItem>
-              <SelectItem value="C#">
+              <SelectItem value="csharp">
                 {{ t('mcpCatalog.form.technical.language.options.csharp') }}
               </SelectItem>
-              <SelectItem value="C++">
+              <SelectItem value="cpp">
                 {{ t('mcpCatalog.form.technical.language.options.cpp') }}
               </SelectItem>
             </SelectContent>
@@ -623,39 +741,54 @@ onUnmounted(() => {
       <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
         <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.technical.transportType.label') }}</dt>
         <dd class="mt-1 sm:col-span-2 sm:mt-0">
+          <!-- For HTTP runtime: show dropdown with http/sse options only -->
           <Select
+            v-if="isHttpRuntime"
             :model-value="localData.transport_type"
-            @update:model-value="(value: any) => updateField('transport_type', String(value || 'auto'))"
+            @update:model-value="(value: any) => updateField('transport_type', String(value || 'sse'))"
           >
-            <SelectTrigger>
-              <SelectValue :placeholder="t('mcpCatalog.form.technical.transportType.placeholder')" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem v-if="!isEditMode" value="auto">
-                {{ t('mcpCatalog.form.technical.transportType.options.auto') }}
-              </SelectItem>
-              <SelectItem value="stdio">
-                {{ t('mcpCatalog.form.technical.transportType.options.stdio') }}
-              </SelectItem>
-              <SelectItem value="http">
-                {{ t('mcpCatalog.form.technical.transportType.options.http') }}
-              </SelectItem>
-              <SelectItem value="sse">
-                {{ t('mcpCatalog.form.technical.transportType.options.sse') }}
-              </SelectItem>
-            </SelectContent>
-          </Select>
+          <SelectTrigger>
+            <SelectValue :placeholder="t('mcpCatalog.form.technical.transportType.placeholder')" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="http">
+              {{ t('mcpCatalog.form.technical.transportType.options.http') }}
+            </SelectItem>
+            <SelectItem value="sse">
+              {{ t('mcpCatalog.form.technical.transportType.options.sse') }}
+            </SelectItem>
+          </SelectContent>
+        </Select>
+
+        <!-- For non-HTTP runtime: show fixed stdio (no message) -->
+        <Badge v-else variant="secondary">stdio</Badge>
+
+        <p class="text-xs text-muted-foreground mt-1">
+          {{ isHttpRuntime
+            ? 'Choose HTTP or SSE transport for remote MCP server'
+            : 'Local MCP servers use stdio transport by default'
+        }}
+        </p>
+        </dd>
+      </div>
+
+      <!-- URL Input (only for HTTP/SSE) -->
+      <div v-if="isRemoteTransport" class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+        <dt class="text-sm/6 font-medium text-gray-900">Server URL</dt>
+        <dd class="mt-1 sm:col-span-2 sm:mt-0">
+          <Input
+            v-model="remoteUrl"
+            type="url"
+            placeholder="https://your-mcp-server.com/mcp"
+          />
           <p class="text-xs text-muted-foreground mt-1">
-            {{ isEditMode ?
-              t('mcpCatalog.form.technical.transportType.editDescription') :
-              t('mcpCatalog.form.technical.transportType.description')
-            }}
+            Enter the URL of your remote MCP server endpoint
           </p>
         </dd>
       </div>
 
-      <!-- Claude Desktop Configuration -->
-      <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+      <!-- Claude Desktop Configuration (only for stdio) -->
+      <div v-if="isStdioTransport" class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
         <dt class="text-sm/6 font-medium text-gray-900">
           {{ t('mcpCatalog.form.technical.claudeConfig.label') }}
         </dt>
@@ -801,8 +934,8 @@ onUnmounted(() => {
     </dl>
   </div>
 
-  <!-- Validation Error Alert -->
-  <Alert v-if="validationError" variant="destructive" class="mt-6">
+  <!-- Validation Error Alert (only for stdio servers) -->
+  <Alert v-if="validationError && isStdioTransport" variant="destructive" class="mt-6">
     <AlertCircle class="h-4 w-4" />
     <AlertDescription>
       {{ validationError }}

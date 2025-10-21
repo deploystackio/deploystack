@@ -389,8 +389,10 @@ const submitForm = async () => {
       if (serverConfig) {
         if (serverConfig.url) {
           // HTTP/SSE server - use remotes
+          // Map 'http' to 'streamable-http' for MCP spec compliance
+          const remoteType = serverConfig.type === 'http' ? 'streamable-http' : (serverConfig.type || 'sse');
           extractedRemotes = [{
-            type: serverConfig.type || 'sse',
+            type: remoteType,
             url: serverConfig.url,
             headers: serverConfig.headers || {}
           }];

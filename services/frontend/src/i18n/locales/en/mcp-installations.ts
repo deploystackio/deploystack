@@ -420,6 +420,11 @@ export default {
         title: 'User Environment Variables',
         description: 'Personal environment variables for your MCP server configuration',
         userConfigured: 'Configured'
+      },
+      userHeaders: {
+        title: 'User Headers',
+        description: 'Personal HTTP headers for your MCP server configuration',
+        userConfigured: 'Configured'
       }
     },
 
@@ -432,6 +437,13 @@ export default {
     },
 
     table: {
+      columns: {
+        name: 'Name',
+        type: 'Type',
+        required: 'Required',
+        value: 'Value',
+        actions: 'Actions'
+      },
       labels: {
         required: 'Required:',
         type: 'Type:',
@@ -447,6 +459,7 @@ export default {
         notSet: 'Not set'
       },
       actions: {
+        edit: 'Edit',
         editValue: 'Edit Value'
       }
     },
@@ -466,6 +479,7 @@ export default {
         labels: {
           argument: 'Argument:',
           variable: 'Variable:',
+          header: 'Header:',
           userValue: 'Your Value'
         },
         placeholders: {

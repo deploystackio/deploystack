@@ -4,7 +4,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { toast } from 'vue-sonner'
-import { Settings, Eye, EyeOff, Edit } from 'lucide-vue-next'
+import { Settings, Eye, EyeOff } from 'lucide-vue-next'
 import { McpCatalogService } from '@/services/mcpCatalogService'
 import { McpInstallationService } from '@/services/mcpInstallationService'
 import { Button } from '@/components/ui/button'
@@ -12,14 +12,7 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+
 import {
   AlertDialog,
   AlertDialogContent,
@@ -62,7 +55,7 @@ const isLoadingUserConfig = ref(true)
 const isEditModalOpen = ref(false)
 const editingItem = ref<any>(null)
 const editingValue = ref('')
-const editingType = ref<'arg' | 'env'>('env')
+const editingType = ref<'arg' | 'env' | 'header'>('env')
 const showPassword = ref(false)
 const isSubmitting = ref(false)
 const formErrors = ref<Record<string, string>>({})
@@ -131,6 +124,16 @@ const userEnvSchema = computed(() => {
   }
 })
 
+const userHeadersSchema = computed(() => {
+  const schema = props.installation.server?.user_headers_schema || serverData.value?.user_headers_schema
+  if (!schema) return []
+  try {
+    return Array.isArray(schema) ? schema : JSON.parse(schema)
+  } catch {
+    return []
+  }
+})
+
 // Get current user configuration values
 const currentUserArgs = computed(() => {
   return (currentUserConfig.value?.user_args as Record<string, any>) || {}
@@ -138,6 +141,10 @@ const currentUserArgs = computed(() => {
 
 const currentUserEnv = computed(() => {
   return (currentUserConfig.value?.user_env as Record<string, any>) || {}
+})
+
+const currentUserHeaders = computed(() => {
+  return (currentUserConfig.value?.user_headers as Record<string, any>) || {}
 })
 
 // Prepare user arguments with current values
@@ -156,9 +163,16 @@ const userEnvWithData = computed(() => {
   }))
 })
 
+const userHeadersWithData = computed(() => {
+  return userHeadersSchema.value.map((headerSchema: any) => ({
+    ...headerSchema,
+    currentValue: currentUserHeaders.value[headerSchema.name] || ''
+  }))
+})
+
 // Check if there's any user configuration schema
 const hasUserConfiguration = computed(() => {
-  return userArgsSchema.value.length > 0 || userEnvSchema.value.length > 0
+  return userArgsSchema.value.length > 0 || userEnvSchema.value.length > 0 || userHeadersSchema.value.length > 0
 })
 
 // Check if loading
@@ -167,18 +181,20 @@ const isLoading = computed(() => {
 })
 
 // Get current user configuration value for an item
-const getUserValue = (item: any, type: 'arg' | 'env') => {
+const getUserValue = (item: any, type: 'arg' | 'env' | 'header') => {
   if (!currentUserConfig.value) return ''
 
   if (type === 'arg') {
     return currentUserArgs.value[item.name] || ''
-  } else {
+  } else if (type === 'env') {
     return currentUserEnv.value[item.name] || ''
+  } else {
+    return currentUserHeaders.value[item.name] || ''
   }
 }
 
 // Modal functions
-const openEditModal = (item: any, type: 'arg' | 'env') => {
+const openEditModal = (item: any, type: 'arg' | 'env' | 'header') => {
   editingItem.value = item
   editingType.value = type
   editingValue.value = getUserValue(item, type)
@@ -201,7 +217,7 @@ const togglePasswordVisibility = () => {
 }
 
 const getInputType = (item: any) => {
-  if (item.type === 'password' && !showPassword.value) {
+  if ((item.type === 'password' || item.type === 'secret') && !showPassword.value) {
     return 'password'
   }
   return 'text'
@@ -238,8 +254,12 @@ const handleEdit = async () => {
         createData.user_args = {
           [editingItem.value.name]: editingValue.value
         }
-      } else {
+      } else if (editingType.value === 'env') {
         createData.user_env = {
+          [editingItem.value.name]: editingValue.value
+        }
+      } else {
+        createData.user_headers = {
           [editingItem.value.name]: editingValue.value
         }
       }
@@ -260,10 +280,14 @@ const handleEdit = async () => {
         const updatedArgs = { ...(currentUserConfig.value.user_args as Record<string, any> || {}) }
         updatedArgs[editingItem.value.name] = editingValue.value
         updateData.user_args = updatedArgs
-      } else {
+      } else if (editingType.value === 'env') {
         const updatedEnv = { ...(currentUserConfig.value.user_env as Record<string, any> || {}) }
         updatedEnv[editingItem.value.name] = editingValue.value
         updateData.user_env = updatedEnv
+      } else {
+        const updatedHeaders = { ...(currentUserConfig.value.user_headers as Record<string, any> || {}) }
+        updatedHeaders[editingItem.value.name] = editingValue.value
+        updateData.user_headers = updatedHeaders
       }
 
       const updatedConfig = await McpInstallationService.updateUserConfiguration(
@@ -345,46 +369,53 @@ const modalTitle = computed(() => {
             <p class="text-xs text-gray-500">{{ t('mcpInstallations.userConfiguration.sections.userArgs.description') }}</p>
           </div>
 
-          <div class="border rounded-md bg-white">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead class="text-xs">{{ t('mcpInstallations.userConfiguration.table.columns.name') }}</TableHead>
-                  <TableHead class="text-xs">{{ t('mcpInstallations.userConfiguration.table.columns.type') }}</TableHead>
-                  <TableHead class="text-xs">{{ t('mcpInstallations.userConfiguration.table.columns.required') }}</TableHead>
-                  <TableHead class="text-xs">{{ t('mcpInstallations.userConfiguration.table.columns.value') }}</TableHead>
-                  <TableHead class="text-xs w-24">{{ t('mcpInstallations.userConfiguration.table.columns.actions') }}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                <TableRow v-for="arg in userArgsWithData" :key="arg.name">
-                  <TableCell class="text-xs">
-                    <div class="font-mono font-semibold">{{ arg.name }}</div>
-                    <div v-if="arg.description" class="text-gray-500 text-xs mt-1">{{ arg.description }}</div>
-                  </TableCell>
-                  <TableCell class="text-xs">{{ arg.type || 'string' }}</TableCell>
-                  <TableCell class="text-xs">
-                    <Badge v-if="arg.required" variant="default" class="text-xs">{{ t('common.labels.yes') }}</Badge>
-                    <span v-else class="text-gray-500">{{ t('common.labels.no') }}</span>
-                  </TableCell>
-                  <TableCell class="text-xs font-mono">
-                    {{ arg.currentValue || t('mcpInstallations.userConfiguration.table.values.notSet') }}
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      class="h-7 text-xs"
-                      @click="openEditModal(arg, 'arg')"
-                    >
-                      <Edit class="h-3 w-3 mr-1" />
-                      {{ t('mcpInstallations.userConfiguration.table.actions.edit') }}
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
-          </div>
+          <ul role="list" class="space-y-3">
+            <li v-for="arg in userArgsWithData" :key="arg.name" class="flex items-center justify-between gap-x-6 py-5 bg-muted/50 rounded-lg px-4">
+              <div class="min-w-0 flex-1">
+                <div class="flex items-start gap-x-3">
+                  <p class="text-sm/6 font-semibold text-gray-900 font-mono">
+                    {{ arg.name }}
+                  </p>
+                </div>
+                <div class="mt-1 text-xs/5 text-gray-700">
+                  <span class="font-medium text-gray-800">{{ t('mcpInstallations.userConfiguration.table.labels.required') }}</span>
+                  <span class="ml-1">{{ arg.required ? t('common.labels.yes') : t('common.labels.no') }}</span>
+                </div>
+              </div>
+
+              <div class="flex-1 min-w-0">
+                <div class="space-y-1 text-xs/5 text-gray-700">
+                  <div v-if="arg.type">
+                    <span class="font-medium text-gray-800">{{ t('mcpInstallations.userConfiguration.table.labels.type') }}</span>
+                    <span class="ml-1">{{ arg.type }}</span>
+                  </div>
+                  <div v-if="arg.description">
+                    <span class="font-medium text-gray-800">{{ t('mcpInstallations.userConfiguration.table.labels.description') }}</span>
+                    <span class="ml-1">{{ arg.description }}</span>
+                  </div>
+                  <div>
+                    <span class="font-medium text-gray-800">{{ t('mcpInstallations.userConfiguration.table.labels.value') }}</span>
+                    <span v-if="arg.type === 'password' || arg.type === 'secret'" class="ml-1 font-mono">
+                      {{ arg.currentValue ? '••••••••' : t('mcpInstallations.userConfiguration.table.values.notSet') }}
+                    </span>
+                    <span v-else class="ml-1 font-mono">
+                      {{ arg.currentValue || t('mcpInstallations.userConfiguration.table.values.notSet') }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="flex flex-none items-center gap-x-4">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  @click="openEditModal(arg, 'arg')"
+                >
+                  {{ t('mcpInstallations.userConfiguration.table.actions.editValue') }}
+                </Button>
+              </div>
+            </li>
+          </ul>
         </div>
 
         <!-- User Environment Variables Section -->
@@ -394,51 +425,109 @@ const modalTitle = computed(() => {
             <p class="text-xs text-gray-500">{{ t('mcpInstallations.userConfiguration.sections.userEnv.description') }}</p>
           </div>
 
-          <div class="border rounded-md bg-white">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead class="text-xs">{{ t('mcpInstallations.userConfiguration.table.columns.name') }}</TableHead>
-                  <TableHead class="text-xs">{{ t('mcpInstallations.userConfiguration.table.columns.type') }}</TableHead>
-                  <TableHead class="text-xs">{{ t('mcpInstallations.userConfiguration.table.columns.required') }}</TableHead>
-                  <TableHead class="text-xs">{{ t('mcpInstallations.userConfiguration.table.columns.value') }}</TableHead>
-                  <TableHead class="text-xs w-24">{{ t('mcpInstallations.userConfiguration.table.columns.actions') }}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                <TableRow v-for="envVar in userEnvWithData" :key="envVar.name">
-                  <TableCell class="text-xs">
-                    <div class="font-mono font-semibold">{{ envVar.name }}</div>
-                    <div v-if="envVar.description" class="text-gray-500 text-xs mt-1">{{ envVar.description }}</div>
-                  </TableCell>
-                  <TableCell class="text-xs">{{ envVar.type || 'string' }}</TableCell>
-                  <TableCell class="text-xs">
-                    <Badge v-if="envVar.required" variant="default" class="text-xs">{{ t('common.labels.yes') }}</Badge>
-                    <span v-else class="text-gray-500">{{ t('common.labels.no') }}</span>
-                  </TableCell>
-                  <TableCell class="text-xs font-mono">
-                    <span v-if="envVar.type === 'password'">
+          <ul role="list" class="space-y-3">
+            <li v-for="envVar in userEnvWithData" :key="envVar.name" class="flex items-center justify-between gap-x-6 py-5 bg-muted/50 rounded-lg px-4">
+              <div class="min-w-0 flex-1">
+                <div class="flex items-start gap-x-3">
+                  <p class="text-sm/6 font-semibold text-gray-900 font-mono">
+                    {{ envVar.name }}
+                  </p>
+                </div>
+                <div class="mt-1 text-xs/5 text-gray-700">
+                  <span class="font-medium text-gray-800">{{ t('mcpInstallations.userConfiguration.table.labels.required') }}</span>
+                  <span class="ml-1">{{ envVar.required ? t('common.labels.yes') : t('common.labels.no') }}</span>
+                </div>
+              </div>
+
+              <div class="flex-1 min-w-0">
+                <div class="space-y-1 text-xs/5 text-gray-700">
+                  <div>
+                    <span class="font-medium text-gray-800">{{ t('mcpInstallations.userConfiguration.table.labels.type') }}</span>
+                    <span class="ml-1">{{ envVar.type || t('mcpInstallations.userConfiguration.table.labels.defaultType') }}</span>
+                  </div>
+                  <div v-if="envVar.description">
+                    <span class="font-medium text-gray-800">{{ t('mcpInstallations.userConfiguration.table.labels.description') }}</span>
+                    <span class="ml-1">{{ envVar.description }}</span>
+                  </div>
+                  <div>
+                    <span class="font-medium text-gray-800">{{ t('mcpInstallations.userConfiguration.table.labels.value') }}</span>
+                    <span v-if="envVar.type === 'password' || envVar.type === 'secret'" class="ml-1 font-mono">
                       {{ envVar.currentValue ? '••••••••' : t('mcpInstallations.userConfiguration.table.values.notSet') }}
                     </span>
-                    <span v-else>
+                    <span v-else class="ml-1 font-mono">
                       {{ envVar.currentValue || t('mcpInstallations.userConfiguration.table.values.notSet') }}
                     </span>
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      class="h-7 text-xs"
-                      @click="openEditModal(envVar, 'env')"
-                    >
-                      <Edit class="h-3 w-3 mr-1" />
-                      {{ t('mcpInstallations.userConfiguration.table.actions.edit') }}
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
+                  </div>
+                </div>
+              </div>
+
+              <div class="flex flex-none items-center gap-x-4">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  @click="openEditModal(envVar, 'env')"
+                >
+                  {{ t('mcpInstallations.userConfiguration.table.actions.editValue') }}
+                </Button>
+              </div>
+            </li>
+          </ul>
+        </div>
+
+        <!-- User Headers Section -->
+        <div v-if="userHeadersSchema.length > 0">
+          <div class="mb-4">
+            <h4 class="text-sm font-semibold text-gray-900">{{ t('mcpInstallations.userConfiguration.sections.userHeaders.title') }}</h4>
+            <p class="text-xs text-gray-500">{{ t('mcpInstallations.userConfiguration.sections.userHeaders.description') }}</p>
           </div>
+
+          <ul role="list" class="space-y-3">
+            <li v-for="header in userHeadersWithData" :key="header.name" class="flex items-center justify-between gap-x-6 py-5 bg-muted/50 rounded-lg px-4">
+              <div class="min-w-0 flex-1">
+                <div class="flex items-start gap-x-3">
+                  <p class="text-sm/6 font-semibold text-gray-900 font-mono">
+                    {{ header.name }}
+                  </p>
+                </div>
+                <div class="mt-1 text-xs/5 text-gray-700">
+                  <span class="font-medium text-gray-800">{{ t('mcpInstallations.userConfiguration.table.labels.required') }}</span>
+                  <span class="ml-1">{{ header.required ? t('common.labels.yes') : t('common.labels.no') }}</span>
+                </div>
+              </div>
+
+              <div class="flex-1 min-w-0">
+                <div class="space-y-1 text-xs/5 text-gray-700">
+                  <div>
+                    <span class="font-medium text-gray-800">{{ t('mcpInstallations.userConfiguration.table.labels.type') }}</span>
+                    <span class="ml-1">{{ header.type || t('mcpInstallations.userConfiguration.table.labels.defaultType') }}</span>
+                  </div>
+                  <div v-if="header.description">
+                    <span class="font-medium text-gray-800">{{ t('mcpInstallations.userConfiguration.table.labels.description') }}</span>
+                    <span class="ml-1">{{ header.description }}</span>
+                  </div>
+                  <div>
+                    <span class="font-medium text-gray-800">{{ t('mcpInstallations.userConfiguration.table.labels.value') }}</span>
+                    <span v-if="header.type === 'password' || header.type === 'secret'" class="ml-1 font-mono">
+                      {{ header.currentValue ? '••••••••' : t('mcpInstallations.userConfiguration.table.values.notSet') }}
+                    </span>
+                    <span v-else class="ml-1 font-mono">
+                      {{ header.currentValue || t('mcpInstallations.userConfiguration.table.values.notSet') }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="flex flex-none items-center gap-x-4">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  @click="openEditModal(header, 'header')"
+                >
+                  {{ t('mcpInstallations.userConfiguration.table.actions.editValue') }}
+                </Button>
+              </div>
+            </li>
+          </ul>
         </div>
       </div>
 
@@ -469,7 +558,7 @@ const modalTitle = computed(() => {
           <div v-if="editingItem" class="bg-gray-50 rounded-lg p-4 space-y-2">
             <div class="flex items-center gap-2">
               <span class="text-sm font-medium text-gray-700">
-                {{ editingType === 'arg' ? t('mcpInstallations.userConfiguration.editModal.form.labels.argument') : t('mcpInstallations.userConfiguration.editModal.form.labels.variable') }}
+                {{ editingType === 'arg' ? t('mcpInstallations.userConfiguration.editModal.form.labels.argument') : editingType === 'env' ? t('mcpInstallations.userConfiguration.editModal.form.labels.variable') : t('mcpInstallations.userConfiguration.editModal.form.labels.header') }}
               </span>
               <code class="bg-gray-200 text-gray-800 px-2 py-1 rounded font-mono text-xs font-semibold">
                 {{ editingItem.name }}
@@ -517,7 +606,7 @@ const modalTitle = computed(() => {
 
               <!-- Password toggle -->
               <Button
-                v-if="editingItem?.type === 'password'"
+                v-if="editingItem?.type === 'password' || editingItem?.type === 'secret'"
                 type="button"
                 variant="ghost"
                 size="sm"

@@ -58,6 +58,7 @@ some-mcp configure --api-key=xxx
 {
   "mcpServers": {
     "deploystack": {
+      "type": "http",
       "url": "https://satellite.deploystack.io/mcp"
     }
   }

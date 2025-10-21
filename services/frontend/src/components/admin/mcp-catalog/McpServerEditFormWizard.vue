@@ -27,7 +27,8 @@ import ConfigurationSchemaStepEdit from '@/components/admin/mcp-catalog/steps/Co
 import RepositoryStep from '@/components/admin/mcp-catalog/RepositoryStep.vue'
 import ReviewStep from '@/components/admin/mcp-catalog/ReviewStep.vue'
 import type {
-  McpServerFormData
+  McpServerFormData,
+  ConfigurationSchemaFormData
 } from '@/views/admin/mcp-server-catalog/types'
 
 // Props interface
@@ -628,7 +629,7 @@ const submitForm = async () => {
     const freshRepositoryData = eventBus.getState('edit_repository_data')
     const freshRepositorySetupData = eventBus.getState('edit_repository_setup_data')
     const freshTechnicalData = eventBus.getState('edit_technical_data')
-    const freshConfigurationSchema = eventBus.getState('edit_configuration_schema')
+    const freshConfigurationSchema = eventBus.getState<ConfigurationSchemaFormData>('edit_configuration_schema')
 
     const freshClaudeConfig = eventBus.getState<string>('edit_claude_config')
 

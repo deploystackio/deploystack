@@ -964,8 +964,7 @@ export const LIST_SERVERS_SUCCESS_RESPONSE_SCHEMA = {
 } as const;
 
 // Update request schema - all fields from CREATE_GLOBAL_SERVER_REQUEST_SCHEMA but optional
-export const UPDATE_GLOBAL_SERVER_REQUEST_SCHEMA = {
-  type: 'object',
+export const UPDATE_GLOBAL_SERVER_REQUEST_SCHEMA = { type: 'object',
   properties: {
     // All fields from SERVER_FIELDS but optional
     name: SERVER_FIELDS.name,
@@ -1005,7 +1004,53 @@ export const UPDATE_GLOBAL_SERVER_REQUEST_SCHEMA = {
     tags: SERVER_FIELDS.tags,
     status: SERVER_FIELDS.status,
     featured: SERVER_FIELDS.featured,
-    auto_install_new_default_team: SERVER_FIELDS.auto_install_new_default_team
+    auto_install_new_default_team: SERVER_FIELDS.auto_install_new_default_team,
+    // Three-tier configuration schema - CRITICAL FIX
+    template_args: { 
+      type: 'array',
+      items: TEMPLATE_ARG_SCHEMA,
+      description: 'Template-level arguments'
+    },
+    template_env: { 
+      type: 'array',
+      items: TEMPLATE_ENV_SCHEMA,
+      description: 'Template-level environment variables'
+    },
+    template_headers: { 
+      type: 'array',
+      items: TEMPLATE_HEADER_SCHEMA,
+      description: 'Template-level headers'
+    },
+    team_args_schema: { 
+      type: 'array',
+      items: TEAM_ARG_SCHEMA,
+      description: 'Team-level argument schema definitions'
+    },
+    team_env_schema: { 
+      type: 'array',
+      items: TEAM_ENV_SCHEMA,
+      description: 'Team-level environment variable schema definitions'
+    },
+    team_headers_schema: { 
+      type: 'array',
+      items: TEAM_HEADER_SCHEMA,
+      description: 'Team-level header schema definitions'
+    },
+    user_args_schema: { 
+      type: 'array',
+      items: USER_ARG_SCHEMA,
+      description: 'User-level argument schema definitions'
+    },
+    user_env_schema: { 
+      type: 'array',
+      items: USER_ENV_SCHEMA,
+      description: 'User-level environment variable schema definitions'
+    },
+    user_headers_schema: { 
+      type: 'array',
+      items: USER_HEADER_SCHEMA,
+      description: 'User-level header schema definitions'
+    }
   },
   additionalProperties: false
 } as const;

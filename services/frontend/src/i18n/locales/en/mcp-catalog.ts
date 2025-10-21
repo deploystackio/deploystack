@@ -141,6 +141,10 @@ export default {
     configurationSchema: {
       title: 'Configuration Schema',
       description: 'Categorize arguments and environment variables into Template, Team, or User configurations.',
+      serverTypeIndicator: {
+        http: 'HTTP/SSE-Based Server - Configuring remote connection',
+        stdio: 'STDIO-Based Server - Configuring local execution'
+      },
       arguments: {
         title: 'Arguments Configuration',
         description: 'Configure command-line arguments for this MCP server',
@@ -148,6 +152,15 @@ export default {
         emptyState: {
           title: 'No arguments configured',
           description: 'Command-line arguments control how your MCP server is launched.'
+        }
+      },
+      connection: {
+        title: 'Connection Configuration',
+        description: 'Configure connection parameters for this HTTP-based MCP server',
+        addButton: 'Add Connection Parameter',
+        emptyState: {
+          title: 'No connection parameters configured',
+          description: 'Connection parameters define how to connect to your remote MCP server.'
         }
       },
       environment: {

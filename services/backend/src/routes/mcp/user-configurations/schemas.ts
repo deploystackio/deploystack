@@ -57,6 +57,11 @@ export const CREATE_USER_CONFIG_REQUEST_SCHEMA = {
       type: 'object',
       additionalProperties: { type: 'string' },
       description: 'User-specific environment variables'
+    },
+    user_headers: {
+      type: 'object',
+      additionalProperties: { type: 'string' },
+      description: 'User-specific HTTP headers'
     }
   },
   additionalProperties: false
@@ -78,6 +83,11 @@ export const UPDATE_USER_CONFIG_REQUEST_SCHEMA = {
       type: 'object',
       additionalProperties: { type: 'string' },
       description: 'User-specific environment variables'
+    },
+    user_headers: {
+      type: 'object',
+      additionalProperties: { type: 'string' },
+      description: 'User-specific HTTP headers'
     }
   },
   additionalProperties: false
@@ -126,6 +136,11 @@ export const USER_CONFIG_RESPONSE_SCHEMA = {
       type: 'object',
       additionalProperties: { type: 'string' },
       description: 'User-specific environment variables'
+    },
+    user_headers: {
+      type: 'object',
+      additionalProperties: { type: 'string' },
+      description: 'User-specific HTTP headers'
     },
     created_at: { type: 'string', format: 'date-time', description: 'Creation timestamp' },
     updated_at: { type: 'string', format: 'date-time', description: 'Last update timestamp' },
@@ -227,12 +242,14 @@ export interface CreateUserConfigRequest {
   device_id?: string;
   user_args?: Record<string, string>;
   user_env?: Record<string, string>;
+  user_headers?: Record<string, string>;
 }
 
 export interface UpdateUserConfigRequest {
   device_id?: string;
   user_args?: Record<string, string>;
   user_env?: Record<string, string>;
+  user_headers?: Record<string, string>;
 }
 
 export interface UpdateUserArgsRequest {
@@ -250,6 +267,7 @@ export interface UserConfigData {
   device_id?: string;
   user_args?: Record<string, string>;
   user_env?: Record<string, string>;
+  user_headers?: Record<string, string>;
   created_at: string;
   updated_at: string;
   last_used_at?: string;
@@ -415,6 +433,7 @@ export function formatUserConfigResponse(config: any): UserConfigData {
     device_id: config.device_id || undefined,
     user_args: safeJsonParse(config.user_args, undefined),
     user_env: safeJsonParse(config.user_env, undefined),
+    user_headers: safeJsonParse(config.user_headers, undefined),
     created_at: config.created_at.toISOString(),
     updated_at: config.updated_at.toISOString(),
     last_used_at: config.last_used_at ? config.last_used_at.toISOString() : undefined
