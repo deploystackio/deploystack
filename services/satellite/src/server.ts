@@ -247,6 +247,9 @@ export async function createServer() {
   runtimeState.listenToProcessManager(processManager);
 
   // Initialize Remote Tool Discovery Manager for HTTP/SSE remote servers (EventBus will be added after registration)
+  // NOTE: Do NOT call initialize() here - it will be called automatically after initial config is fetched
+  // The RemoteToolDiscoveryManager has smart fallback: handleConfigurationUpdate() will trigger
+  // full initialization if not yet initialized (see line 423-429 in remote-tool-discovery-manager.ts)
   const remoteToolDiscoveryManager = new RemoteToolDiscoveryManager(server.log);
   remoteToolDiscoveryManager.setConfigManager(dynamicConfigManager);
 

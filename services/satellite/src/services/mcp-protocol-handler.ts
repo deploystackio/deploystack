@@ -48,6 +48,14 @@ export class McpProtocolHandler {
           result = await this.handleInitialize(params);
           break;
         
+        case 'notifications/initialized':
+          // MCP notification - no response needed, just log and return null
+          this.logger.debug({
+            operation: 'mcp_notification_initialized',
+            session_id: sessionId
+          }, 'MCP client sent initialized notification');
+          return null; // Notifications don't get responses
+        
         case 'tools/list':
           result = await this.handleToolsList();
           break;
@@ -440,6 +448,7 @@ export class McpProtocolHandler {
   isSupportedMethod(method: string): boolean {
     const supportedMethods = [
       'initialize',
+      'notifications/initialized',
       'tools/list',
       'tools/call',
       'resources/list',
@@ -459,6 +468,7 @@ export class McpProtocolHandler {
     return {
       supported_methods: [
         'initialize',
+        'notifications/initialized',
         'tools/list',
         'tools/call',
         'resources/list',

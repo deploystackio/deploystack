@@ -309,35 +309,14 @@ export class StreamableHTTPHandler {
     // Set session ID header in response
     reply.header('Mcp-Session-Id', actualSessionId);
     
-    // Determine response mode
-    const wantsStreaming = acceptHeader.includes('text/event-stream');
+    // ALWAYS return JSON for initialize, even if Accept includes text/event-stream
+    // The SSE stream is established via separate GET request
+    reply.code(200).send(initResponse);
     
-    if (wantsStreaming) {
-      // Return SSE stream
-      reply.raw.writeHead(200, {
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive',
-        'Mcp-Session-Id': actualSessionId
-      });
-
-      const eventId = this.generateEventId();
-      reply.raw.write(`id: ${eventId}\nevent: message\ndata: ${JSON.stringify(initResponse)}\n\n`);
-      
-      this.logger.debug({
-        operation: 'mcp_initialize_sse_response_sent',
-        sessionId: actualSessionId,
-        eventId
-      }, 'Initialize SSE response sent');
-    } else {
-      // Return standard JSON response
-      reply.code(200).send(initResponse);
-      
-      this.logger.debug({
-        operation: 'mcp_initialize_json_response_sent',
-        sessionId: actualSessionId
-      }, 'Initialize JSON response sent');
-    }
+    this.logger.debug({
+      operation: 'mcp_initialize_json_response_sent',
+      sessionId: actualSessionId
+    }, 'Initialize JSON response sent');
   }
 
   /**
@@ -382,6 +361,17 @@ export class StreamableHTTPHandler {
     try {
       // Process the message using the MCP protocol handler
       const response = await mcpProtocolHandler.handleMcpRequest(message, sessionId);
+      
+      // Handle notifications (null response)
+      if (response === null) {
+        this.logger.debug({
+          operation: 'mcp_notification_handled',
+          sessionId,
+          method: message.method
+        }, 'MCP notification handled - no response sent');
+        // Don't send anything for notifications
+        return;
+      }
       
       this.logger.debug({
         operation: 'mcp_streaming_response_before_send',
@@ -460,6 +450,18 @@ export class StreamableHTTPHandler {
     try {
       // Process the message using the MCP protocol handler
       const response = await mcpProtocolHandler.handleMcpRequest(message, sessionId);
+      
+      // Handle notifications (null response)
+      if (response === null) {
+        this.logger.debug({
+          operation: 'mcp_notification_handled',
+          sessionId,
+          method: message.method
+        }, 'MCP notification handled - no response sent');
+        // Don't send anything for notifications
+        reply.code(204).send(); // 204 No Content
+        return;
+      }
       
       this.logger.debug({
         operation: 'mcp_response_before_send',
