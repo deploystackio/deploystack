@@ -4,9 +4,7 @@ import fastifySwagger from '@fastify/swagger';
 import fastifySwaggerUi from '@fastify/swagger-ui';
 import { loggerConfig } from './fastify/config/logger';
 import { registerRoutes } from './routes';
-import { SessionManager } from './core/session-manager';
-import { SSEHandler } from './core/sse-handler';
-import { StreamableHTTPHandler } from './core/streamable-http-handler';
+import { McpServerWrapper } from './core/mcp-server-wrapper';
 import { BackendClient } from './services/backend-client';
 import { HeartbeatService } from './services/heartbeat-service';
 import { HttpProxyManager } from './services/http-proxy-manager';
@@ -15,12 +13,10 @@ import { StdioToolDiscoveryManager } from './services/stdio-tool-discovery-manag
 import { UnifiedToolDiscoveryManager } from './services/unified-tool-discovery-manager';
 import { ProcessManager } from './process/manager';
 import { RuntimeState } from './process/runtime-state';
-import { McpProtocolHandler } from './services/mcp-protocol-handler';
 import { CommandPollingService, ConfigurationUpdate } from './services/command-polling-service';
 import { DynamicConfigManager } from './services/dynamic-config-manager';
 import { CommandProcessor } from './services/command-processor';
 import { TokenIntrospectionService } from './services/token-introspection-service';
-import { TeamAwareMcpHandler } from './services/team-aware-mcp-handler';
 import { JobManager, HeartbeatJob, McpActivityReportJob, IdleProcessCleanupJob } from './jobs';
 import { EventBus } from './services/event-bus';
 import { McpActivityTracker } from './services/mcp-activity-tracker';
@@ -226,11 +222,6 @@ export async function createServer() {
   // Note: EventBus will be initialized later after satelliteId is available
   // We'll pass it to services after registration
   
-  // Initialize MCP Transport handlers (EventBus will be added after registration)
-  const sessionManager = new SessionManager(server.log);
-  const sseHandler = new SSEHandler(sessionManager, server.log);
-  const streamableHandler = new StreamableHTTPHandler(server.log);
-
   // Initialize Dynamic Configuration Manager (EventBus will be added after registration)
   const dynamicConfigManager = new DynamicConfigManager(server.log);
 
@@ -270,6 +261,10 @@ export async function createServer() {
     server.log
   );
   toolDiscoveryManager.setConfigManager(dynamicConfigManager);
+
+  // Initialize MCP Server Wrapper with official SDK (replaces custom transport handlers)
+  const mcpServerWrapper = new McpServerWrapper(server.log);
+  mcpServerWrapper.setDependencies(toolDiscoveryManager, processManager);
 
   // Set up configuration change handler for tool discovery
   dynamicConfigManager.setConfigurationChangeHandler(async (config, changes) => {
@@ -411,9 +406,6 @@ export async function createServer() {
   }, 'Automatic stdio tool discovery handler registered for process spawn events');
 
 
-  // Initialize MCP Protocol Handler (after HTTP Proxy Manager, Tool Discovery Manager, and Process Manager)
-  const mcpProtocolHandler = new McpProtocolHandler(httpProxyManager, toolDiscoveryManager, processManager, server.log);
-
   // Initialize Command Processor with stdio process management dependencies
   const commandProcessor = new CommandProcessor(
     server.log,
@@ -431,14 +423,11 @@ export async function createServer() {
   // Initialize Command Polling Service (will be started after registration)
   let commandPollingService: CommandPollingService | undefined;
 
-  // Store handlers on server instance for access by routes
-  server.decorate('sessionManager', sessionManager);
-  server.decorate('sseHandler', sseHandler);
-  server.decorate('streamableHandler', streamableHandler);
+  // Store handlers on server instance for access by routes  
   server.decorate('backendClient', backendClient);
   server.decorate('httpProxyManager', httpProxyManager);
   server.decorate('toolDiscoveryManager', toolDiscoveryManager);
-  server.decorate('mcpProtocolHandler', mcpProtocolHandler);
+  server.decorate('mcpServerWrapper', mcpServerWrapper);
   server.decorate('dynamicConfigManager', dynamicConfigManager);
   server.decorate('commandProcessor', commandProcessor);
   server.decorate('processManager', processManager);
@@ -446,8 +435,9 @@ export async function createServer() {
 
   server.log.info({
     operation: 'handlers_initialized',
-    backend_url: backendUrl
-  }, 'MCP Transport handlers, Backend Client, and HTTP Proxy Manager initialized');
+    backend_url: backendUrl,
+    mcp_sdk_integration: true
+  }, 'MCP SDK Server Wrapper, Backend Client, and HTTP Proxy Manager initialized');
 
   // Test backend connection on startup - REQUIRED for satellite operation
   server.log.info({
@@ -631,17 +621,8 @@ export async function createServer() {
       // Initialize Token Introspection Service for OAuth authentication
       const tokenIntrospectionService = new TokenIntrospectionService(backendClient, server.log);
       
-      // Initialize Team-Aware MCP Handler for team-filtered tool access
-      const teamAwareMcpHandler = new TeamAwareMcpHandler(
-        mcpProtocolHandler,
-        dynamicConfigManager,
-        toolDiscoveryManager,
-        server.log
-      );
-
       // Store OAuth services on server instance for access by routes
       server.decorate('tokenIntrospectionService', tokenIntrospectionService);
-      server.decorate('teamAwareMcpHandler', teamAwareMcpHandler);
 
       server.log.info({
         operation: 'oauth_services_initialized',
@@ -707,7 +688,6 @@ export async function createServer() {
     
     // Update services with EventBus
     (processManager as any).eventBus = eventBus;
-    (sessionManager as any).eventBus = eventBus;
     (dynamicConfigManager as any).eventBus = eventBus;
     (remoteToolDiscoveryManager as any).eventBus = eventBus;
     
@@ -722,17 +702,8 @@ export async function createServer() {
     // Initialize Token Introspection Service for OAuth authentication
     const tokenIntrospectionService = new TokenIntrospectionService(backendClient, server.log);
     
-    // Initialize Team-Aware MCP Handler for team-filtered tool access
-    const teamAwareMcpHandler = new TeamAwareMcpHandler(
-      mcpProtocolHandler,
-      dynamicConfigManager,
-      toolDiscoveryManager,
-      server.log
-    );
-
     // Store OAuth services on server instance for access by routes
     server.decorate('tokenIntrospectionService', tokenIntrospectionService);
-    server.decorate('teamAwareMcpHandler', teamAwareMcpHandler);
 
     server.log.info({
       operation: 'oauth_services_initialized',
@@ -840,9 +811,7 @@ export async function createServer() {
       (processManager as any).eventBus = eventBus;
       server.log.debug({ operation: 'process_manager_event_bus_set' }, 'ProcessManager configured with EventBus');
       
-      // Update SessionManager with EventBus
-      (sessionManager as any).eventBus = eventBus;
-      server.log.debug({ operation: 'session_manager_event_bus_set' }, 'SessionManager configured with EventBus');
+      // Note: SessionManager removed - now using MCP SDK for session management
       
       // Update DynamicConfigManager with EventBus
       (dynamicConfigManager as any).eventBus = eventBus;
@@ -1049,7 +1018,15 @@ export async function createServer() {
     operation: 'dynamic_config_ready'
   }, 'Dynamic configuration system ready - initial config loaded, command polling active');
 
-  // Register all routes
+  // Setup MCP Server Wrapper routes (replaces custom MCP transport routes)
+  mcpServerWrapper.setupRoutes(server);
+
+  server.log.info({
+    operation: 'mcp_sdk_routes_setup',
+    satellite_id: satelliteId
+  }, 'MCP SDK routes setup - official MCP transport now active');
+
+  // Register all other routes
   registerRoutes(server);
 
   // Set up graceful shutdown handlers

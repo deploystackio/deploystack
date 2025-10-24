@@ -77,12 +77,7 @@ export class StdioToolDiscoveryManager {
         operation: 'stdio_tool_discovery_response_received',
         installation_name: installationName,
         request_id: request.id,
-        has_response: !!response,
-        has_tools: !!(response && response.tools),
-        tools_is_array: !!(response && response.tools && Array.isArray(response.tools)),
-        tools_count: response && response.tools ? response.tools.length : 0,
-        response_keys: response ? Object.keys(response) : [],
-        full_response: JSON.stringify(response)
+        tools_count: response && response.tools ? response.tools.length : 0
       }, `Received response from ${installationName}`);
 
       // The process should remain running for tool execution.

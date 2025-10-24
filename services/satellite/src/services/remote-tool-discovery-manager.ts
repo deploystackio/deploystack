@@ -1,5 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { FastifyBaseLogger } from 'fastify';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { DynamicConfigManager, DynamicMcpServersConfig, ConfigurationChanges } from './dynamic-config-manager';
 import { McpServerConfig } from './command-polling-service';
 import type { EventBus } from './event-bus';
@@ -188,7 +190,7 @@ export class RemoteToolDiscoveryManager {
   }
 
   /**
-   * Discover tools from a specific remote MCP server
+   * Discover tools from a specific remote MCP server using official MCP SDK
    */
   private async discoverServerTools(serverName: string): Promise<CachedTool[]> {
     if (!this.configManager) {
@@ -204,82 +206,48 @@ export class RemoteToolDiscoveryManager {
       operation: 'server_discovery_start',
       server_name: serverName,
       server_url: config.url
-    }, `Starting tool discovery for ${serverName}`);
+    }, `Starting tool discovery for ${serverName} using MCP SDK`);
 
-    // Prepare JSON-RPC request for tools/list
-    const jsonRpcRequest = {
-      jsonrpc: '2.0',
-      id: `discovery-${serverName}-${Date.now()}`,
-      method: 'tools/list',
-      params: {}
-    };
-
-    // Prepare headers
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json, text/event-stream',
-      'User-Agent': 'DeployStack-Satellite/0.1.0',
-      'X-Discovery-Request': 'true'
-    };
-
-    // Add custom headers from config
-    if (config.headers) {
-      for (const [key, value] of Object.entries(config.headers)) {
-        const processedValue = this.processHeaderValue(value);
-        headers[key] = processedValue;
-      }
+    // Validate URL for HTTP/SSE transport
+    if (!config.url) {
+      throw new Error(`MCP server '${serverName}' has no URL configured (required for tool discovery)`);
     }
 
     const startTime = Date.now();
 
+    // Create MCP client with official SDK
+    const client = new Client({
+      name: 'deploystack-satellite',
+      version: '1.0.0'
+    });
+
+    // Create transport for the remote server
+    const transport = new StreamableHTTPClientTransport(new URL(config.url));
+
     try {
-      // Validate URL for HTTP/SSE transport
-      if (!config.url) {
-        throw new Error(`MCP server '${serverName}' has no URL configured (required for tool discovery)`);
-      }
+      // Connect to remote MCP server
+      await client.connect(transport);
 
-      // Make HTTP request to remote MCP server
-      const response = await fetch(config.url, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(jsonRpcRequest),
-        signal: AbortSignal.timeout(config.timeout || 30000)
-      });
+      this.logger.debug({
+        operation: 'mcp_client_connected',
+        server_name: serverName,
+        server_url: config.url
+      }, `Connected to MCP server: ${serverName}`);
 
+      // List tools using official SDK
+      const response = await client.listTools();
       const responseTime = Date.now() - startTime;
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      // Handle both JSON and SSE responses
-      const contentType = response.headers.get('content-type') || '';
-      let responseData: any;
-
-      if (contentType.includes('text/event-stream')) {
-        // Parse SSE response
-        const sseText = await response.text();
-        responseData = this.parseSSEResponse(sseText);
-      } else {
-        // Parse JSON response
-        responseData = await response.json() as any;
-      }
-
-      // Check for JSON-RPC error
-      if (responseData.error) {
-        throw new Error(`JSON-RPC error: ${responseData.error.message} (code: ${responseData.error.code})`);
-      }
-
-      // Extract tools from response
-      const tools = responseData.result?.tools || [];
-      
-      if (!Array.isArray(tools)) {
-        throw new Error('Invalid response: tools is not an array');
-      }
+      this.logger.debug({
+        operation: 'mcp_tools_listed',
+        server_name: serverName,
+        response_time_ms: responseTime,
+        tool_count: response.tools.length
+      }, `Listed ${response.tools.length} tools from ${serverName} via SDK`);
 
       // Convert to cached tools with namespacing using server_slug for friendly names
       const discoveredAt = new Date();
-      const cachedTools: CachedTool[] = tools.map((tool: any) => {
+      const cachedTools: CachedTool[] = response.tools.map((tool: any) => {
         // Use server_slug from config for friendly namespacing, fallback to server_name
         const friendlyServerName = config.server_slug || config.server_name || serverName;
         
@@ -297,8 +265,9 @@ export class RemoteToolDiscoveryManager {
         operation: 'server_discovery_success',
         server_name: serverName,
         response_time_ms: responseTime,
-        tool_count: cachedTools.length
-      }, `Successfully discovered ${cachedTools.length} tools from ${serverName} in ${responseTime}ms`);
+        tool_count: cachedTools.length,
+        sdk_used: true
+      }, `Successfully discovered ${cachedTools.length} tools from ${serverName} using MCP SDK in ${responseTime}ms`);
 
       return cachedTools;
 
@@ -311,36 +280,26 @@ export class RemoteToolDiscoveryManager {
         server_name: serverName,
         server_url: config.url,
         response_time_ms: responseTime,
-        error: errorMessage
-      }, `Tool discovery failed for ${serverName} after ${responseTime}ms`);
+        error: errorMessage,
+        sdk_used: true
+      }, `Tool discovery failed for ${serverName} after ${responseTime}ms using MCP SDK: ${errorMessage}`);
 
       throw error;
-    }
-  }
-
-  /**
-   * Parse SSE response format
-   */
-  private parseSSEResponse(sseText: string): any {
-    // Parse SSE format: "event: message\ndata: {...}\n\n"
-    const lines = sseText.split('\n');
-    let dataLine = '';
-    
-    for (const line of lines) {
-      if (line.startsWith('data: ')) {
-        dataLine = line.substring(6); // Remove "data: " prefix
-        break;
+    } finally {
+      // Always clean up the client connection
+      try {
+        await client.close();
+        this.logger.debug({
+          operation: 'mcp_client_closed',
+          server_name: serverName
+        }, `Closed MCP client connection for ${serverName}`);
+      } catch (closeError) {
+        this.logger.warn({
+          operation: 'mcp_client_close_failed',
+          server_name: serverName,
+          error: closeError instanceof Error ? closeError.message : String(closeError)
+        }, `Failed to close MCP client connection for ${serverName}`);
       }
-    }
-    
-    if (!dataLine) {
-      throw new Error('No data found in SSE response');
-    }
-    
-    try {
-      return JSON.parse(dataLine);
-    } catch (error) {
-      throw new Error(`Failed to parse SSE data as JSON: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 

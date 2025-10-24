@@ -1,9 +1,6 @@
 import { type FastifyInstance } from 'fastify';
 
 // Import route handlers
-import sseRoute from './sse';
-import messageRoute from './message';
-import mcpRoute from './mcp';
 import oauthDiscoveryRoutes from './oauth-discovery';
 import { registerBackendStatusRoutes } from './status/backend';
 import { registerDebugRoutes } from './status/debug';
@@ -17,15 +14,6 @@ export const registerRoutes = (server: FastifyInstance): void => {
     
     // Satellite service status - GET /
     await registerSatelliteStatusRoutes(rootInstance);
-    
-    // SSE Transport - GET /sse
-    await rootInstance.register(sseRoute);
-    
-    // SSE Message Transport - POST /message
-    await rootInstance.register(messageRoute);
-    
-    // Streamable HTTP Transport - GET/POST /mcp
-    await rootInstance.register(mcpRoute);
   });
 
   // Register Status routes
