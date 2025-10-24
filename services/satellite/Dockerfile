@@ -1,52 +1,15 @@
-# Production image - Debian base required for nsjail
+# Development/Team-Only image - simplified without nsjail
+# For production multi-tenant deployment, see docs for nsjail setup
 FROM node:24-bookworm-slim
 
-# Create deploystack user with home directory (simulating production setup)
+# Create deploystack user with home directory
 RUN useradd -m -d /opt/deploystack -s /bin/bash deploystack
 
-# Install build dependencies and runtime dependencies for nsjail
+# Install only essential runtime dependencies
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-    autoconf \
-    bison \
-    flex \
-    gcc \
-    g++ \
-    git \
-    libprotobuf-dev \
-    libnl-route-3-dev \
-    libtool \
-    make \
-    pkg-config \
-    protobuf-compiler \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
-
-# Build nsjail from source
-RUN git clone --depth 1 https://github.com/google/nsjail.git /tmp/nsjail && \
-    cd /tmp/nsjail && \
-    make && \
-    cp nsjail /usr/local/bin/ && \
-    chmod +x /usr/local/bin/nsjail && \
-    cd / && \
-    rm -rf /tmp/nsjail
-
-# Clean up build dependencies to reduce image size
-# Note: For nsjail to work with unprivileged user namespaces, the HOST system must have:
-# kernel.unprivileged_userns_clone=1
-# This cannot be set from inside the container. See README for deployment instructions.
-RUN apt-get remove -y \
-    autoconf \
-    bison \
-    flex \
-    gcc \
-    g++ \
-    git \
-    libtool \
-    make \
-    pkg-config && \
-    apt-get autoremove -y && \
-    rm -rf /var/lib/apt/lists/*
 
 # Create mcp-cache base directory with proper ownership
 RUN mkdir -p /opt/deploystack/mcp-cache && \
@@ -63,14 +26,15 @@ RUN npm install --omit=dev --no-package-lock
 # Copy pre-built files
 COPY services/satellite/dist ./dist
 
-# Create a default .env file with production defaults
-RUN echo "NODE_ENV=production" > .env && \
+# Create a default .env file with development defaults
+# NODE_ENV=development ensures no nsjail isolation is used
+RUN echo "NODE_ENV=development" > .env && \
     echo "PORT=3001" >> .env && \
     echo "LOG_LEVEL=info" >> .env
 
 EXPOSE 3001
 
-# Run as deploystack user (simulating production setup)
+# Run as deploystack user
 USER deploystack
 
 CMD ["node", "--env-file=.env", "dist/index.js"]
