@@ -306,8 +306,21 @@ export class McpServerWrapper {
    * Setup Fastify routes for MCP transport
    */
   setupRoutes(fastify: FastifyInstance): void {
+    // Get authentication middleware from server instance
+    const tokenIntrospectionService = (fastify as any).tokenIntrospectionService;
+    const activityTracker = (fastify as any).activityTracker;
+
     // Handle POST requests for client-to-server communication
-    fastify.post('/mcp', async (request: FastifyRequest, reply: FastifyReply) => {
+    fastify.post('/mcp', {
+      preValidation: async (request: FastifyRequest, reply: FastifyReply) => {
+        // Apply authentication middleware
+        if (tokenIntrospectionService && activityTracker) {
+          const { requireAuthentication } = await import('../middleware/auth-middleware');
+          const authMiddleware = requireAuthentication(tokenIntrospectionService, activityTracker);
+          await authMiddleware(request, reply);
+        }
+      }
+    }, async (request: FastifyRequest, reply: FastifyReply) => {
       const sessionId = request.headers['mcp-session-id'] as string | undefined;
       let transport: StreamableHTTPServerTransport;
       let server: Server;
@@ -373,6 +386,11 @@ export class McpServerWrapper {
         });
         return;
       }
+
+      // Track activity before handling request (redundant now - auth middleware does this)
+      // const requestBody = request.body as any;
+      // const isToolCall = requestBody?.method === 'tools/call';
+      // await this.trackActivity(request, sessionId, isToolCall);
 
       // Handle the request
       await transport.handleRequest(request.raw, reply.raw, request.body);

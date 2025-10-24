@@ -626,8 +626,9 @@ export async function createServer() {
 
       server.log.info({
         operation: 'oauth_services_initialized',
-        satellite_id: satelliteId
-      }, 'OAuth authentication and team-aware MCP services initialized');
+        satellite_id: satelliteId,
+        activity_tracking_enabled: true
+      }, 'OAuth authentication, team-aware MCP services, and activity tracking initialized');
     } else {
       server.log.error({
         operation: 'satellite_registration_failed',
@@ -707,8 +708,9 @@ export async function createServer() {
 
     server.log.info({
       operation: 'oauth_services_initialized',
-      satellite_id: satelliteId
-    }, 'OAuth authentication and team-aware MCP services initialized');
+      satellite_id: satelliteId,
+      activity_tracking_enabled: true
+    }, 'OAuth authentication, team-aware MCP services, and activity tracking initialized');
   }
   
   // Initialize heartbeat service
