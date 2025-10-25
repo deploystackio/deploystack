@@ -9973,6 +9973,12 @@ paths:
                             auto_install_new_default_team:
                               type: boolean
                               description: Auto-install for new default teams
+                            source:
+                              type: string
+                              enum:
+                                - official_registry
+                                - manual
+                              description: Source of the MCP server
                             created_at:
                               type: string
                               format: date-time
@@ -10273,6 +10279,12 @@ paths:
                       auto_install_new_default_team:
                         type: boolean
                         description: Auto-install for new default teams
+                      source:
+                        type: string
+                        enum:
+                          - official_registry
+                          - manual
+                        description: Source of the MCP server
                       created_at:
                         type: string
                         format: date-time
@@ -10652,6 +10664,12 @@ paths:
                             auto_install_new_default_team:
                               type: boolean
                               description: Auto-install for new default teams
+                            source:
+                              type: string
+                              enum:
+                                - official_registry
+                                - manual
+                              description: Source of the MCP server
                             created_at:
                               type: string
                               format: date-time
@@ -11701,6 +11719,12 @@ paths:
                       auto_install_new_default_team:
                         type: boolean
                         description: Auto-install for new default teams
+                      source:
+                        type: string
+                        enum:
+                          - official_registry
+                          - manual
+                        description: Source of the MCP server
                       created_at:
                         type: string
                         format: date-time
@@ -12004,6 +12028,306 @@ paths:
                 auto_install_new_default_team:
                   type: boolean
                   description: Auto-install for new default teams
+                template_args:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      value:
+                        type: string
+                        description: Template argument value
+                      locked:
+                        type: boolean
+                        description: Whether this template argument is locked
+                      description:
+                        type: string
+                        description: Optional description of the template argument
+                    required:
+                      - value
+                      - locked
+                    additionalProperties: false
+                  description: Template-level arguments
+                template_env:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                        description: Environment variable name
+                      value:
+                        type: string
+                        nullable: true
+                        description: Environment variable value (can be null)
+                      locked:
+                        type: boolean
+                        description: Whether this environment variable is locked
+                      description:
+                        type: string
+                        description: Optional description of the environment variable
+                    required:
+                      - name
+                      - value
+                      - locked
+                    additionalProperties: false
+                  description: Template-level environment variables
+                template_headers:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                        description: Header name
+                      value:
+                        type: string
+                        nullable: true
+                        description: Header value (can be null)
+                      locked:
+                        type: boolean
+                        description: Whether this header is locked
+                      description:
+                        type: string
+                        description: Optional description of the header
+                    required:
+                      - name
+                      - value
+                      - locked
+                    additionalProperties: false
+                  description: Template-level headers
+                team_args_schema:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                        description: team argument name
+                      type:
+                        type: string
+                        enum:
+                          - string
+                          - number
+                          - boolean
+                          - secret
+                        description: Configuration data type
+                      description:
+                        type: string
+                        description: team argument description
+                      required:
+                        type: boolean
+                        description: Whether this team argument is required
+                      locked:
+                        type: boolean
+                        description: Whether this team argument is locked
+                      default_team_locked:
+                        type: boolean
+                        description: Whether this configuration is locked at team level by default
+                      visible_to_users:
+                        type: boolean
+                        description: Whether this configuration is visible to team users
+                      min_items:
+                        type: number
+                        description: Minimum number of items (for arrays)
+                      max_items:
+                        type: number
+                        description: Maximum number of items (for arrays)
+                    required:
+                      - name
+                      - type
+                      - description
+                      - required
+                      - locked
+                      - default_team_locked
+                    additionalProperties: false
+                  description: Team-level argument schema definitions
+                team_env_schema:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                        description: team environment variable name
+                      type:
+                        type: string
+                        enum:
+                          - string
+                          - number
+                          - boolean
+                          - secret
+                        description: Configuration data type
+                      description:
+                        type: string
+                        description: team environment variable description
+                      required:
+                        type: boolean
+                        description: Whether this team environment variable is required
+                      locked:
+                        type: boolean
+                        description: Whether this team environment variable is locked
+                      default_team_locked:
+                        type: boolean
+                        description: Whether this configuration is locked at team level by default
+                      visible_to_users:
+                        type: boolean
+                        description: Whether this configuration is visible to team users
+                    required:
+                      - name
+                      - type
+                      - description
+                      - required
+                      - locked
+                      - default_team_locked
+                      - visible_to_users
+                    additionalProperties: false
+                  description: Team-level environment variable schema definitions
+                team_headers_schema:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                        description: team header name
+                      type:
+                        type: string
+                        enum:
+                          - string
+                          - number
+                          - boolean
+                          - secret
+                        description: Configuration data type
+                      description:
+                        type: string
+                        description: team header description
+                      required:
+                        type: boolean
+                        description: Whether this team header is required
+                      locked:
+                        type: boolean
+                        description: Whether this team header is locked
+                      default_team_locked:
+                        type: boolean
+                        description: Whether this configuration is locked at team level by default
+                      visible_to_users:
+                        type: boolean
+                        description: Whether this configuration is visible to team users
+                    required:
+                      - name
+                      - type
+                      - description
+                      - required
+                      - locked
+                      - default_team_locked
+                      - visible_to_users
+                    additionalProperties: false
+                  description: Team-level header schema definitions
+                user_args_schema:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                        description: user argument name
+                      type:
+                        type: string
+                        enum:
+                          - string
+                          - number
+                          - boolean
+                          - secret
+                        description: Configuration data type
+                      description:
+                        type: string
+                        description: user argument description
+                      required:
+                        type: boolean
+                        description: Whether this user argument is required
+                      locked:
+                        type: boolean
+                        description: Whether this user argument is locked
+                      min_items:
+                        type: number
+                        description: Minimum number of items (for arrays)
+                      max_items:
+                        type: number
+                        description: Maximum number of items (for arrays)
+                    required:
+                      - name
+                      - type
+                      - description
+                      - required
+                      - locked
+                    additionalProperties: false
+                  description: User-level argument schema definitions
+                user_env_schema:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                        description: user environment variable name
+                      type:
+                        type: string
+                        enum:
+                          - string
+                          - number
+                          - boolean
+                          - secret
+                        description: Configuration data type
+                      description:
+                        type: string
+                        description: user environment variable description
+                      required:
+                        type: boolean
+                        description: Whether this user environment variable is required
+                      locked:
+                        type: boolean
+                        description: Whether this user environment variable is locked
+                    required:
+                      - name
+                      - type
+                      - description
+                      - required
+                      - locked
+                    additionalProperties: false
+                  description: User-level environment variable schema definitions
+                user_headers_schema:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                        description: user header name
+                      type:
+                        type: string
+                        enum:
+                          - string
+                          - number
+                          - boolean
+                          - secret
+                        description: Configuration data type
+                      description:
+                        type: string
+                        description: user header description
+                      required:
+                        type: boolean
+                        description: Whether this user header is required
+                      locked:
+                        type: boolean
+                        description: Whether this user header is locked
+                    required:
+                      - name
+                      - type
+                      - description
+                      - required
+                      - locked
+                    additionalProperties: false
+                  description: User-level header schema definitions
               additionalProperties: false
       parameters:
         - schema:
@@ -12190,6 +12514,12 @@ paths:
                       auto_install_new_default_team:
                         type: boolean
                         description: Auto-install for new default teams
+                      source:
+                        type: string
+                        enum:
+                          - official_registry
+                          - manual
+                        description: Source of the MCP server
                       created_at:
                         type: string
                         format: date-time
@@ -15217,6 +15547,11 @@ paths:
                   additionalProperties:
                     type: string
                   description: User-specific environment variables
+                user_headers:
+                  type: object
+                  additionalProperties:
+                    type: string
+                  description: User-specific HTTP headers
               additionalProperties: false
       parameters:
         - schema:
@@ -15272,6 +15607,11 @@ paths:
                         additionalProperties:
                           type: string
                         description: User-specific environment variables
+                      user_headers:
+                        type: object
+                        additionalProperties:
+                          type: string
+                        description: User-specific HTTP headers
                       created_at:
                         type: string
                         format: date-time
@@ -15454,6 +15794,11 @@ paths:
                           additionalProperties:
                             type: string
                           description: User-specific environment variables
+                        user_headers:
+                          type: object
+                          additionalProperties:
+                            type: string
+                          description: User-specific HTTP headers
                         created_at:
                           type: string
                           format: date-time
@@ -15641,6 +15986,11 @@ paths:
                         additionalProperties:
                           type: string
                         description: User-specific environment variables
+                      user_headers:
+                        type: object
+                        additionalProperties:
+                          type: string
+                        description: User-specific HTTP headers
                       created_at:
                         type: string
                         format: date-time
@@ -15777,6 +16127,11 @@ paths:
                   additionalProperties:
                     type: string
                   description: User-specific environment variables
+                user_headers:
+                  type: object
+                  additionalProperties:
+                    type: string
+                  description: User-specific HTTP headers
               additionalProperties: false
       parameters:
         - schema:
@@ -15839,6 +16194,11 @@ paths:
                         additionalProperties:
                           type: string
                         description: User-specific environment variables
+                      user_headers:
+                        type: object
+                        additionalProperties:
+                          type: string
+                        description: User-specific HTTP headers
                       created_at:
                         type: string
                         format: date-time
@@ -16175,6 +16535,11 @@ paths:
                         additionalProperties:
                           type: string
                         description: User-specific environment variables
+                      user_headers:
+                        type: object
+                        additionalProperties:
+                          type: string
+                        description: User-specific HTTP headers
                       created_at:
                         type: string
                         format: date-time
@@ -16378,6 +16743,11 @@ paths:
                         additionalProperties:
                           type: string
                         description: User-specific environment variables
+                      user_headers:
+                        type: object
+                        additionalProperties:
+                          type: string
+                        description: User-specific HTTP headers
                       created_at:
                         type: string
                         format: date-time

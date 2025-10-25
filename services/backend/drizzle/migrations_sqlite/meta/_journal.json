@@ -71,6 +71,13 @@
       "when": 1760706876179,
       "tag": "0009_naive_tigra",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1761404984204,
+      "tag": "0010_furry_nick_fury",
+      "breakpoints": true
     }
   ]
 }

@@ -816,6 +816,11 @@ export const SERVER_ENTITY_SCHEMA = {
       type: 'boolean',
       description: 'Auto-install for new default teams'
     },
+    source: {
+      type: 'string',
+      enum: ['official_registry', 'manual'],
+      description: 'Source of the MCP server'
+    },
     created_at: { 
       type: 'string', 
       format: 'date-time',
@@ -1218,6 +1223,7 @@ export interface ServerEntity {
   status: 'active' | 'deprecated' | 'maintenance';
   featured: boolean;
   auto_install_new_default_team: boolean;
+  source: 'official_registry' | 'manual';
   
   // Official Registry Sync Tracking
   official_name: string | null;
@@ -1489,6 +1495,7 @@ export function formatServerResponse(server: any): ServerEntity {
     status: server.status,
     featured: server.featured,
     auto_install_new_default_team: server.auto_install_new_default_team,
+    source: server.source || 'manual',
     
     // Official Registry Sync Tracking
     official_name: server.official_name || null,

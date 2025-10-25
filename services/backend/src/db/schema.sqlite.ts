@@ -230,6 +230,9 @@ export const mcpServers = sqliteTable('mcpServers', {
   featured: integer('featured', { mode: 'boolean' }).notNull().default(false),
   auto_install_new_default_team: integer('auto_install_new_default_team', { mode: 'boolean' }).notNull().default(false),
   
+  // Source Tracking
+  source: text('source', { enum: ['official_registry', 'manual'] }).notNull().default('manual'),
+  
   // Official Registry Sync Tracking
   synced_from_official_registry: integer('synced_from_official_registry', { mode: 'boolean' }).notNull().default(false),
   official_registry_server_id: text('official_registry_server_id'),
@@ -247,6 +250,7 @@ export const mcpServers = sqliteTable('mcpServers', {
   statusIdx: index('mcp_servers_status_idx').on(table.status),
   ownerTeamIdx: index('mcp_servers_owner_team_idx').on(table.owner_team_id),
   officialNameIdx: index('mcp_servers_official_name_idx').on(table.official_name),
+  sourceIdx: index('mcp_servers_source_idx').on(table.source),
   syncedFlagIdx: index('mcp_servers_synced_flag_idx').on(table.synced_from_official_registry),
   registryServerIdIdx: index('mcp_servers_registry_server_id_idx').on(table.official_registry_server_id),
   repositoryUrlIdx: index('mcp_servers_repository_url_idx').on(table.repository_url),

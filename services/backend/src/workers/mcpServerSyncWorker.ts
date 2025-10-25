@@ -142,6 +142,9 @@ export class McpServerSyncWorker implements Worker {
         user_env_schema: configuration_schema?.user_env_schema || [],
         user_headers_schema: configuration_schema?.user_headers_schema || [],
         
+        // Source tracking
+        source: 'official_registry' as const, // Always 'official_registry' for synced servers
+        
         // Registry tracking fields
         official_name: registryMetadata.official_name,
         synced_from_official_registry: registryMetadata.synced_from_official_registry,
