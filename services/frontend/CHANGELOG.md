@@ -4,6 +4,14 @@
 
 * chore(all): bump tailwindcss from 4.1.14 to 4.1.15 ([8365aa2](https://github.com/deploystackio/deploystack/commit/8365aa2))
 * chore(all): update dependencies across services ([1b1aba7](https://github.com/deploystackio/deploystack/commit/1b1aba7))
+* chore(backend): release v0.39.0 ([2518339](https://github.com/deploystackio/deploystack/commit/2518339))
+* chore(backend): release v0.39.0 ([3c783bb](https://github.com/deploystackio/deploystack/commit/3c783bb))
+* chore(frontend): release v0.34.0 ([fe6aec7](https://github.com/deploystackio/deploystack/commit/fe6aec7))
+
+## 0.34.0 (2025-10-25)
+
+* chore(all): bump tailwindcss from 4.1.14 to 4.1.15 ([8365aa2](https://github.com/deploystackio/deploystack/commit/8365aa2))
+* chore(all): update dependencies across services ([1b1aba7](https://github.com/deploystackio/deploystack/commit/1b1aba7))
 * chore(backend): release v0.38.0 ([1bcf0db](https://github.com/deploystackio/deploystack/commit/1bcf0db))
 * chore(backend): release v0.38.0 ([27fd535](https://github.com/deploystackio/deploystack/commit/27fd535))
 * chore(backend): release v0.39.0 ([2518339](https://github.com/deploystackio/deploystack/commit/2518339))
