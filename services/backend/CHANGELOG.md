@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.39.0 (2025-10-24)
+
+* chore(deps): bump actions/setup-node from 5 to 6 ([5050cee](https://github.com/deploystackio/deploystack/commit/5050cee))
+* chore(frontend): release v0.33.0 ([068f29a](https://github.com/deploystackio/deploystack/commit/068f29a))
+* chore(satellite): release v0.6.0 ([764cce4](https://github.com/deploystackio/deploystack/commit/764cce4))
+* chore(satellite): release v0.6.0 ([ae2b514](https://github.com/deploystackio/deploystack/commit/ae2b514))
+* refactor(satellite): satellite service to integrate MCP SDK and remove custom transport handlers ([ec92ba4](https://github.com/deploystackio/deploystack/commit/ec92ba4))
+* refactor(satellite): simplify Dockerfile for development environment ([45e31c7](https://github.com/deploystackio/deploystack/commit/45e31c7))
+* feat(satellite): add authentication middleware to MCP routes for stats ([c292d86](https://github.com/deploystackio/deploystack/commit/c292d86))
+* feat(satellite): enhance MCP protocol to handle initialized notifications ([9b95a08](https://github.com/deploystackio/deploystack/commit/9b95a08))
+
 ## 0.38.0 (2025-10-21)
 
 * chore(backend): release v0.38.0 ([27fd535](https://github.com/deploystackio/deploystack/commit/27fd535))
