@@ -518,6 +518,18 @@ const goBack = () => {
                       {{ t(`mcpCatalog.status.${server.status}`) }}
                     </Badge>
                   </div>
+                  <div class="flex items-center gap-2">
+                    <span class="font-medium">Source:</span>
+                    <Badge
+                      :variant="server.source === 'official_registry' ? 'default' : 'secondary'"
+                      :class="{
+                        'bg-blue-100 text-blue-800 border-blue-200': server.source === 'official_registry',
+                        'bg-gray-100 text-gray-800 border-gray-200': server.source === 'manual'
+                      }"
+                    >
+                      {{ server.source === 'official_registry' ? 'Official Registry' : 'Manual' }}
+                    </Badge>
+                  </div>
                   <div><span class="font-medium">{{ t('mcpCatalog.edit.values.visibility') }}</span> {{ server.visibility }}</div>
                 </div>
               </dd>

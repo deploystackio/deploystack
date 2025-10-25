@@ -47,6 +47,7 @@ export interface McpServer {
   status: 'active' | 'deprecated' | 'maintenance'
   featured: boolean
   auto_install_new_default_team: boolean
+  source: 'official_registry' | 'manual'
   created_at: string
   updated_at: string
   last_sync_at?: string

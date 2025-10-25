@@ -110,6 +110,7 @@ export interface CreateMcpServerRequest {
   tags?: string[];
   featured?: boolean;
   auto_install_new_default_team?: boolean;
+  source?: 'official_registry' | 'manual';
   
   // Official Registry Sync Tracking
   official_name?: string;
@@ -460,6 +461,7 @@ export class McpCatalogService {
       status: 'active',
       featured: userRole === 'global_admin' ? (data.featured || false) : false,
       auto_install_new_default_team: userRole === 'global_admin' ? (data.auto_install_new_default_team || false) : false,
+      source: (data as any).source || 'manual',
       
       // Official Registry Sync Tracking
       official_name: (data as any).official_name || null,
