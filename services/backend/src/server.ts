@@ -446,12 +446,36 @@ export const createServer = async () => {
 
   // Create and configure the plugin manager
   const isDevelopment = process.env.NODE_ENV !== 'production';
+  
+  // Determine plugin path based on where we're running from
+  let pluginPath: string;
+  if (process.env.PLUGINS_PATH) {
+    pluginPath = process.env.PLUGINS_PATH;
+  } else if (isDevelopment) {
+    // Development: src/plugins
+    pluginPath = path.join(process.cwd(), 'src', 'plugins');
+  } else {
+    // Production: need to find dist/plugins relative to the compiled file
+    // __dirname when running from dist/ is: /path/to/project/dist (or similar)
+    // We need to go to dist/plugins
+    const currentDir = __dirname;
+    
+    // Check if we're in a nested dist structure (e.g., dist/some/path)
+    // Find the dist directory root
+    const distMatch = currentDir.match(/^(.+?\/dist)(?:\/|$)/);
+    if (distMatch) {
+      // We found /dist/ in the path, use that as the base
+      pluginPath = path.join(distMatch[1], 'plugins');
+    } else {
+      // Fallback: assume dist is at current directory
+      pluginPath = path.join(currentDir, 'plugins');
+    }
+  }
+  
+  server.log.info(`Plugin path resolved to: ${pluginPath}`);
+  
   const pluginManager = new PluginManager({
-    paths: [
-      process.env.PLUGINS_PATH || (isDevelopment 
-        ? path.join(process.cwd(), 'src', 'plugins')
-        : path.join(__dirname, '..', 'plugins')),
-    ],
+    paths: [pluginPath],
     plugins: {}
   })
   

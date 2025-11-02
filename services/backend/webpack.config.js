@@ -25,6 +25,20 @@ module.exports = {
             dot: true, // Include dotfiles if any
           },
         },
+        // Copy plugin package.json files to dist directory
+        {
+          from: 'src/plugins/**/package.json',
+          to: ({ context, absoluteFilename }) => {
+            // Extract the plugin directory name from the absolute filename
+            // e.g., from 'src/plugins/send-discord-message-on-register/package.json'
+            // we want 'plugins/send-discord-message-on-register/package.json'
+            const relativePath = path.relative(path.join(context, 'src'), absoluteFilename);
+            return relativePath;
+          },
+          globOptions: {
+            dot: true,
+          },
+        },
       ],
     }),
   ],

@@ -199,17 +199,12 @@ export class PluginManager {
                 await fsPromises.access(packageJsonPath);
                 this.logger?.debug(`Found package.json in: ${entryPath}`);
                 
-                // Check if we're running from dist directory
+                // Determine file extension based on whether we're running from dist
                 const isRunningFromDist = __dirname.includes('/dist/');
+                const pluginExtension = isRunningFromDist ? 'js' : 'ts';
                 
-                // Determine the appropriate plugin file path and extension
-                let pluginBasePath = entryPath;
-                let pluginExtension = isRunningFromDist ? 'js' : 'ts';
-                
-                // If running from dist and looking at a source path, redirect to dist
-                if (isRunningFromDist && pluginBasePath.includes('/src/')) {
-                  pluginBasePath = pluginBasePath.replace('/src/', '/dist/');
-                }
+                // Use entryPath as-is since server.ts now provides the correct path
+                const pluginBasePath = entryPath;
                 
                 const mainPath = path.join(pluginBasePath, `index.${pluginExtension}`);
                 
