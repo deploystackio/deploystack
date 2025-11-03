@@ -20,6 +20,7 @@ import { TokenIntrospectionService } from './services/token-introspection-servic
 import { JobManager, HeartbeatJob, McpActivityReportJob, IdleProcessCleanupJob } from './jobs';
 import { EventBus } from './services/event-bus';
 import { McpActivityTracker } from './services/mcp-activity-tracker';
+import { ToolSearchService } from './services/tool-search-service';
 
 /**
  * Validate registration token format and availability
@@ -262,9 +263,16 @@ export async function createServer() {
   );
   toolDiscoveryManager.setConfigManager(dynamicConfigManager);
 
+  // Initialize Tool Search Service for hierarchical router (discover_mcp_tools meta-tool)
+  const toolSearchService = new ToolSearchService(toolDiscoveryManager, server.log);
+  
+  server.log.info({
+    operation: 'tool_search_service_initialized'
+  }, 'Tool Search Service initialized for hierarchical MCP router');
+
   // Initialize MCP Server Wrapper with official SDK (replaces custom transport handlers)
   const mcpServerWrapper = new McpServerWrapper(server.log);
-  mcpServerWrapper.setDependencies(toolDiscoveryManager, processManager);
+  mcpServerWrapper.setDependencies(toolDiscoveryManager, processManager, toolSearchService, dynamicConfigManager);
 
   // Set up configuration change handler for tool discovery
   dynamicConfigManager.setConfigurationChangeHandler(async (config, changes) => {
@@ -889,8 +897,10 @@ export async function createServer() {
 
           server.log.info({
             operation: 'initial_config_applied',
-            satellite_id: satelliteId
-          }, 'Initial configuration applied successfully - satellite ready');
+            satellite_id: satelliteId,
+            searchable_tools: toolSearchService.getStats().total_tools,
+            tools_by_transport: toolSearchService.getStats().tools_by_transport
+          }, `Initial configuration applied successfully - ${toolSearchService.getStats().total_tools} tools available for search`);
 
         } else {
           server.log.warn({

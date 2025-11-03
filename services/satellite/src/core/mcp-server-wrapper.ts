@@ -10,6 +10,10 @@ import { FastifyBaseLogger, FastifyRequest, FastifyReply, FastifyInstance } from
 import { randomUUID } from 'crypto';
 import { UnifiedToolDiscoveryManager } from '../services/unified-tool-discovery-manager';
 import { ProcessManager } from '../process/manager';
+import { ToolSearchService } from '../services/tool-search-service';
+import { DynamicConfigManager } from '../services/dynamic-config-manager';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 
 /**
  * MCP Server Wrapper
@@ -19,6 +23,8 @@ export class McpServerWrapper {
   private logger: FastifyBaseLogger;
   private toolDiscoveryManager?: UnifiedToolDiscoveryManager;
   private processManager?: ProcessManager;
+  private toolSearchService?: ToolSearchService;
+  private dynamicConfigManager?: DynamicConfigManager;
   private transports = new Map<string, { transport: StreamableHTTPServerTransport; server: Server }>();
   private registeredTools = new Set<string>();
 
@@ -35,10 +41,14 @@ export class McpServerWrapper {
    */
   setDependencies(
     toolDiscoveryManager: UnifiedToolDiscoveryManager,
-    processManager: ProcessManager
+    processManager: ProcessManager,
+    toolSearchService: ToolSearchService,
+    dynamicConfigManager: DynamicConfigManager
   ): void {
     this.toolDiscoveryManager = toolDiscoveryManager;
     this.processManager = processManager;
+    this.toolSearchService = toolSearchService;
+    this.dynamicConfigManager = dynamicConfigManager;
     
     this.logger.debug({
       operation: 'mcp_dependencies_set'
@@ -46,62 +56,190 @@ export class McpServerWrapper {
   }
 
   /**
-   * Setup low-level MCP server with manual request handlers
-   * This bypasses registerTool to avoid Zod validation issues with dynamic schemas
+   * Setup hierarchical MCP server with only 2 meta-tools
    */
   private setupMcpServer(server: Server): void {
-    if (!this.toolDiscoveryManager) {
+    if (!this.toolDiscoveryManager || !this.toolSearchService) {
       return;
     }
 
-    const cachedTools = this.toolDiscoveryManager.getAllTools();
-    
     this.logger.debug({
-      operation: 'mcp_server_setup',
-      tool_count: cachedTools.length
-    }, `Setting up low-level MCP server with ${cachedTools.length} tools`);
+      operation: 'mcp_server_setup_hierarchical',
+      mode: 'hierarchical'
+    }, 'Setting up hierarchical MCP server with 2 meta-tools');
 
-    // Handle tools/list - return JSON Schema directly
+    // Handle tools/list - return only 2 meta-tools
     server.setRequestHandler(ListToolsRequestSchema, async () => {
       this.logger.debug({
-        operation: 'tools_list_request'
-      }, 'Handling tools/list request');
+        operation: 'tools_list_request_hierarchical'
+      }, 'Handling tools/list request (hierarchical mode)');
 
-      // Check for dormant stdio processes and respawn them
-      await this.respawnDormantProcesses();
-
-      const tools = this.toolDiscoveryManager!.getAllTools().map(tool => ({
-        name: tool.namespacedName,
-        description: tool.description,
-        inputSchema: tool.inputSchema  // Return JSON Schema as-is
-      }));
+      const metaTools = [
+        {
+          name: 'discover_mcp_tools',
+          description: 'Search for MCP tools using 1-3 keywords only. Examples: "markdown", "github create", "database query". Avoid long descriptions. Use tool name or main function as keywords. Returns tool paths for execute_mcp_tool.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              query: {
+                type: 'string',
+                description: 'Short search query with 1-3 keywords (e.g., "markdown", "github", "database postgres"). Avoid full sentences.'
+              },
+              limit: {
+                type: 'number',
+                description: 'Maximum number of results to return (default: 10)',
+                default: 10
+              }
+            },
+            required: ['query']
+          }
+        },
+        {
+          name: 'execute_mcp_tool',
+          description: 'Execute a discovered MCP tool by its path. Use after discovering tools with discover_mcp_tools. The tool_path format is "serverName:toolName" (e.g., "figma:get_file", "github:create_issue").',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              tool_path: {
+                type: 'string',
+                description: 'Full tool path from discover_mcp_tools (format: serverName:toolName, e.g., "github:create_issue")'
+              },
+              arguments: {
+                type: 'object',
+                description: 'Arguments to pass to the tool (schema varies by tool - check tool description from discovery)'
+              }
+            },
+            required: ['tool_path', 'arguments']
+          }
+        }
+      ];
 
       this.logger.info({
-        operation: 'tools_list_response',
-        tool_count: tools.length
-      }, `Returning ${tools.length} tools`);
+        operation: 'tools_list_response_hierarchical',
+        tool_count: metaTools.length,
+        actual_tools_available: this.toolDiscoveryManager!.getAllTools().length
+      }, `Returning ${metaTools.length} meta-tools (${this.toolDiscoveryManager!.getAllTools().length} actual tools available via discovery)`);
 
-      return { tools };
+      return { tools: metaTools };
     });
 
-    // Handle tools/call - no validation, direct proxy
+    // Handle tools/call - route to meta-tool handlers
     server.setRequestHandler(CallToolRequestSchema, async (request: any) => {
       const toolName = request.params?.name;
       const toolArgs = request.params?.arguments || {};
 
       this.logger.info({
-        operation: 'tools_call_request',
+        operation: 'tools_call_request_hierarchical',
         tool_name: toolName,
         args: toolArgs
-      }, `Handling tools/call for ${toolName}`);
+      }, `Handling hierarchical tools/call for ${toolName}`);
 
-      return await this.executeToolCall(toolName, toolArgs);
+      if (toolName === 'discover_mcp_tools') {
+        return await this.handleDiscoverTools(toolArgs);
+      } else if (toolName === 'execute_mcp_tool') {
+        return await this.handleExecuteTool(toolArgs);
+      } else {
+        throw new Error(`Unknown meta-tool: ${toolName}. Available tools: discover_mcp_tools, execute_mcp_tool`);
+      }
     });
 
     this.logger.info({
-      operation: 'mcp_server_setup_complete',
-      tool_count: cachedTools.length
-    }, `MCP server setup complete with ${cachedTools.length} tools`);
+      operation: 'mcp_server_setup_complete_hierarchical',
+      mode: 'hierarchical',
+      meta_tools: 2,
+      actual_tools_available: this.toolDiscoveryManager.getAllTools().length
+    }, `Hierarchical MCP server setup complete with 2 meta-tools (${this.toolDiscoveryManager.getAllTools().length} tools available)`);
+  }
+
+  /**
+   * Handle discover_mcp_tools meta-tool
+   */
+  private async handleDiscoverTools(args: any): Promise<any> {
+    if (!this.toolSearchService) {
+      throw new Error('Tool search service not available');
+    }
+
+    const query = args.query;
+    const limit = args.limit || 10;
+
+    if (!query || typeof query !== 'string') {
+      throw new Error('Invalid query parameter - must be a non-empty string');
+    }
+
+    this.logger.info({
+      operation: 'discover_mcp_tools',
+      query: query,
+      limit: limit
+    }, `Discovering tools with query: "${query}"`);
+
+    const startTime = Date.now();
+    const results = this.toolSearchService.search(query, limit);
+    const searchTime = Date.now() - startTime;
+
+    const response = {
+      tools: results.map(result => ({
+        tool_path: result.tool_path,
+        description: result.description,
+        server_name: result.server_name,
+        transport: result.transport,
+        relevance_score: result.score
+      })),
+      total_found: results.length,
+      search_time_ms: searchTime,
+      query: query
+    };
+
+    this.logger.info({
+      operation: 'discover_mcp_tools_success',
+      query: query,
+      results_count: results.length,
+      search_time_ms: searchTime
+    }, `Discovery complete: found ${results.length} tools in ${searchTime}ms`);
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(response, null, 2)
+        }
+      ]
+    };
+  }
+
+  /**
+   * Handle execute_mcp_tool meta-tool
+   */
+  private async handleExecuteTool(args: any): Promise<any> {
+    if (!this.toolDiscoveryManager) {
+      throw new Error('Tool discovery manager not available');
+    }
+
+    const toolPath = args.tool_path;
+    const toolArguments = args.arguments || {};
+
+    if (!toolPath || typeof toolPath !== 'string') {
+      throw new Error('Invalid tool_path parameter - must be a non-empty string in format "serverName:toolName"');
+    }
+
+    // Parse tool_path from "serverName:toolName" format to "serverName-toolName" (internal namespaced format)
+    const colonIndex = toolPath.indexOf(':');
+    if (colonIndex <= 0) {
+      throw new Error(`Invalid tool_path format: ${toolPath}. Expected format: "serverName:toolName" (e.g., "github:create_issue")`);
+    }
+
+    const serverSlug = toolPath.substring(0, colonIndex);
+    const toolName = toolPath.substring(colonIndex + 1);
+    const namespacedToolName = `${serverSlug}-${toolName}`;
+
+    this.logger.info({
+      operation: 'execute_mcp_tool',
+      tool_path: toolPath,
+      namespaced_tool_name: namespacedToolName,
+      arguments: toolArguments
+    }, `Executing tool: ${toolPath} (internal: ${namespacedToolName})`);
+
+    // Route to existing executeToolCall with namespaced format
+    return await this.executeToolCall(namespacedToolName, toolArguments);
   }
 
   /**
@@ -278,11 +416,13 @@ export class McpServerWrapper {
     serverName: string,
     originalToolName: string,
     namespacedToolName: string,
-    _jsonRpcRequest: any
+    jsonRpcRequest: any
   ): Promise<any> {
-    if (!this.toolDiscoveryManager) {
-      throw new Error('Tool discovery manager not available');
+    if (!this.toolDiscoveryManager || !this.dynamicConfigManager) {
+      throw new Error('Tool discovery manager or config manager not available');
     }
+
+    const startTime = Date.now();
 
     this.logger.debug({
       operation: 'mcp_http_tool_call',
@@ -290,16 +430,92 @@ export class McpServerWrapper {
       original_tool_name: originalToolName
     }, `Sending tool call to HTTP server: ${serverName}`);
 
-    // Get server configuration for URL
     const cachedTool = this.toolDiscoveryManager.getTool(namespacedToolName);
     if (!cachedTool) {
       throw new Error(`Tool not found in cache: ${namespacedToolName}`);
     }
 
-    // We need to get the server URL from configuration
-    // This is a bit tricky since we don't have direct access to config manager
-    // For now, we'll use a placeholder approach that should be replaced with proper config access
-    throw new Error(`HTTP tool calls require configuration access refactoring: ${namespacedToolName}`);
+    const config = this.dynamicConfigManager.getMcpServerConfig(serverName);
+    if (!config || !config.url) {
+      throw new Error(`No URL configured for HTTP server: ${serverName}`);
+    }
+
+    this.logger.info({
+      operation: 'mcp_http_tool_call',
+      server_name: serverName,
+      original_tool_name: originalToolName,
+      server_url: config.url
+    }, `Sending tool call to HTTP server: ${serverName}`);
+
+    const client = new Client({
+      name: 'deploystack-satellite',
+      version: '1.0.0'
+    });
+
+    const transport = new StreamableHTTPClientTransport(new URL(config.url));
+
+    try {
+      await client.connect(transport);
+
+      this.logger.debug({
+        operation: 'mcp_http_client_connected',
+        server_name: serverName,
+        server_url: config.url
+      }, `Connected to HTTP MCP server: ${serverName}`);
+
+      const response = await client.callTool({
+        name: originalToolName,
+        arguments: jsonRpcRequest.params.arguments
+      });
+
+      const responseTime = Date.now() - startTime;
+
+      this.logger.info({
+        operation: 'mcp_http_tool_call_success',
+        server_name: serverName,
+        original_tool_name: originalToolName,
+        namespaced_tool_name: namespacedToolName,
+        response_time_ms: responseTime
+      }, `HTTP tool call successful: ${namespacedToolName} -> ${serverName}.${originalToolName} (${responseTime}ms)`);
+
+      return response;
+
+    } catch (error) {
+      const responseTime = Date.now() - startTime;
+      const errorMessage = error instanceof Error ? error.message : String(error);
+
+      this.logger.error({
+        operation: 'mcp_http_tool_call_error',
+        server_name: serverName,
+        original_tool_name: originalToolName,
+        error: errorMessage,
+        response_time_ms: responseTime
+      }, `HTTP tool call failed: ${errorMessage}`);
+
+      if (errorMessage.includes('ECONNREFUSED')) {
+        throw new Error(`Cannot connect to HTTP MCP server: ${serverName}`);
+      }
+      if (errorMessage.includes('ETIMEDOUT')) {
+        throw new Error(`HTTP MCP server timeout: ${serverName}`);
+      }
+
+      throw new Error(`HTTP MCP server error: ${errorMessage}`);
+
+    } finally {
+      try {
+        await client.close();
+        this.logger.debug({
+          operation: 'mcp_http_client_closed',
+          server_name: serverName
+        }, `Closed HTTP MCP client connection for ${serverName}`);
+      } catch (closeError) {
+        this.logger.warn({
+          operation: 'mcp_http_client_close_failed',
+          server_name: serverName,
+          error: closeError instanceof Error ? closeError.message : String(closeError)
+        }, `Failed to close HTTP client connection for ${serverName}`);
+      }
+    }
   }
 
   /**
@@ -347,7 +563,7 @@ export class McpServerWrapper {
         // Check for dormant stdio processes and respawn them
         await this.respawnDormantProcesses();
 
-        // Setup MCP server with discovered tools
+        // Setup MCP server with hierarchical router (2 meta-tools)
         this.setupMcpServer(server);
 
         transport = new StreamableHTTPServerTransport({
@@ -387,11 +603,6 @@ export class McpServerWrapper {
         return;
       }
 
-      // Track activity before handling request (redundant now - auth middleware does this)
-      // const requestBody = request.body as any;
-      // const isToolCall = requestBody?.method === 'tools/call';
-      // await this.trackActivity(request, sessionId, isToolCall);
-
       // Handle the request
       await transport.handleRequest(request.raw, reply.raw, request.body);
     });
@@ -422,10 +633,8 @@ export class McpServerWrapper {
 
     this.logger.info({
       operation: 'mcp_routes_setup'
-    }, 'MCP transport routes setup with official SDK');
+    }, 'MCP transport routes setup with official SDK (hierarchical mode)');
   }
-
-
 
   /**
    * Get transport statistics
@@ -437,7 +646,7 @@ export class McpServerWrapper {
         name: 'deploystack-satellite',
         version: '1.0.0',
         sdk_version: '@modelcontextprotocol/sdk@1.20.1',
-        mode: 'low-level-server'
+        mode: 'hierarchical-router'
       }
     };
   }

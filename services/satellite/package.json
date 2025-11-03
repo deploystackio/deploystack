@@ -20,6 +20,7 @@
     "@modelcontextprotocol/sdk": "^1.20.2",
     "dotenv": "^17.2.3",
     "fastify": "^5.6.1",
+    "fuse.js": "^7.1.0",
     "pino": "^10.1.0",
     "pino-pretty": "^13.1.2",
     "uuid": "^13.0.0",
