@@ -37,7 +37,7 @@
     "drizzle-orm": "^0.44.6",
     "fastify": "^5.6.1",
     "fastify-favicon": "^5.0.0",
-    "isomorphic-dompurify": "^2.28.0",
+    "isomorphic-dompurify": "^2.31.0",
     "lucia": "^3.2.2",
     "nanoid": "^5.1.6",
     "node-cron": "^4.2.1",
