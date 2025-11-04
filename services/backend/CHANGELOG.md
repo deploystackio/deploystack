@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.40.0 (2025-11-04)
+
+* feat(all): added support for claude code ([6b2e8a7](https://github.com/deploystackio/deploystack/commit/6b2e8a7))
+* feat(backend): added mcp server source type ([a9429a6](https://github.com/deploystackio/deploystack/commit/a9429a6))
+* feat(backend): resolve plugin path determination for production environment ([bb0f504](https://github.com/deploystackio/deploystack/commit/bb0f504))
+* feat(frontend): add source field to MCP server and display in details ([2461f88](https://github.com/deploystackio/deploystack/commit/2461f88))
+* feat(satellite): implement hierarchical tool search with Fuse.js ([5545c20](https://github.com/deploystackio/deploystack/commit/5545c20))
+* chore(all): bump tailwindcss from 4.1.14 to 4.1.15 ([8365aa2](https://github.com/deploystackio/deploystack/commit/8365aa2))
+* chore(all): update dependencies across services ([1b1aba7](https://github.com/deploystackio/deploystack/commit/1b1aba7))
+* chore(frontend): release v0.34.0 ([f0e29de](https://github.com/deploystackio/deploystack/commit/f0e29de))
+* chore(frontend): release v0.34.0 ([fe6aec7](https://github.com/deploystackio/deploystack/commit/fe6aec7))
+* chore(satellite): release v0.7.0 ([3aaf75c](https://github.com/deploystackio/deploystack/commit/3aaf75c))
+* chore(satellite): release v0.7.0 ([b94bbbd](https://github.com/deploystackio/deploystack/commit/b94bbbd))
+* docs(all): update README to clarify management chaos and token reduction ([d5e5000](https://github.com/deploystackio/deploystack/commit/d5e5000))
+* docs(all): update README to clarify MCP challenges and solutions ([46ce1e9](https://github.com/deploystackio/deploystack/commit/46ce1e9))
+* fix(backend): update welcome email instructions for MCP client setup ([2da79a9](https://github.com/deploystackio/deploystack/commit/2da79a9))
+
 ## 0.39.0 (2025-10-25)
 
 * chore(backend): release v0.39.0 ([3c783bb](https://github.com/deploystackio/deploystack/commit/3c783bb))
