@@ -4,6 +4,13 @@
 
 * chore(backend): release v0.40.0 ([f9a5850](https://github.com/deploystackio/deploystack/commit/f9a5850))
 * chore(backend): release v0.40.0 ([58435ff](https://github.com/deploystackio/deploystack/commit/58435ff))
+* chore(frontend): release v0.35.0 ([37f88a6](https://github.com/deploystackio/deploystack/commit/37f88a6))
+* feat(all): added support for claude code ([6b2e8a7](https://github.com/deploystackio/deploystack/commit/6b2e8a7))
+
+## 0.35.0 (2025-11-04)
+
+* chore(backend): release v0.40.0 ([f9a5850](https://github.com/deploystackio/deploystack/commit/f9a5850))
+* chore(backend): release v0.40.0 ([58435ff](https://github.com/deploystackio/deploystack/commit/58435ff))
 * chore(satellite): release v0.7.0 ([3aaf75c](https://github.com/deploystackio/deploystack/commit/3aaf75c))
 * chore(satellite): release v0.7.0 ([b94bbbd](https://github.com/deploystackio/deploystack/commit/b94bbbd))
 * feat(all): added support for claude code ([6b2e8a7](https://github.com/deploystackio/deploystack/commit/6b2e8a7))
