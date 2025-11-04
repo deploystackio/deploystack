@@ -22,12 +22,14 @@ DeployStack is **The First MCP-as-a-Service Platform**. We turn MCP from "comple
 MCP changes how AI agents use tools, but it has created two critical challenges:
 
 ### Problem 1: Management Chaos
+
 - **Credential Sprawl**: Developers copy and paste sensitive API keys and tokens into insecure local configuration files, creating a huge security risk.
 - **No Governance**: Who is using which tools? Which agent is accessing sensitive customer data? Without a central control plane, companies are blind.
 - **Developer Friction**: Developers spend hours managing complex configurations for dozens of tools, a process that is both tedious and error-prone. Onboarding a new developer is a nightmare of configuration management.
 - **Inconsistent Environments**: Every developer has a slightly different local setup, leading to "it works on my machine" problems and configuration drift.
 
 ### Problem 2: Context Window Consumption Crisis
+
 - **Token Bloat**: Each MCP server adds 5-15 tools to context. With 10 servers, that's 75,000+ tokens consumed before any work begins.
 - **Performance Degradation**: LLM accuracy drops significantly after 20-40 tools are loaded.
 - **Hard Limits**: Tools like Cursor enforce a 40-tool maximum, forcing developers to disable useful servers.
@@ -81,17 +83,20 @@ some-mcp configure --api-key=xxx
 DeployStack includes a **hierarchical router** that reduces MCP token consumption by 90%+:
 
 **Traditional Approach:**
+
 - 10 MCP servers × 15 tools = 150 tools loaded
 - 150 tools × 500 tokens = 75,000 tokens consumed
 - Result: 37.5% of context window gone before you start
 
 **DeployStack Hierarchical Router:**
+
 - Exposes only 2 meta-tools: `discover_mcp_tools` and `execute_mcp_tool`
 - 2 tools × 175 tokens = 350 tokens consumed
 - Result: 0.175% of context window used
 - **Token Reduction: 99.5%** ✅
 
 **How it works:**
+
 1. LLM calls `discover_mcp_tools(query)` - "Find GitHub tools"
 2. Router searches across all team MCP servers, returns relevant tool paths
 3. LLM calls `execute_mcp_tool(path, args)` with selected tool
@@ -102,6 +107,7 @@ This means you can scale from 3 to 100+ MCP servers without degrading LLM perfor
 ### 🚀 Zero Installation Experience
 
 **Before DeployStack:**
+
 ```bash
 npm install -g some-mcp-cli
 some-mcp configure --api-key=xxx
@@ -109,6 +115,7 @@ some-mcp configure --api-key=xxx
 ```
 
 **After DeployStack:**
+
 ```json
 {
   "mcpServers": {
