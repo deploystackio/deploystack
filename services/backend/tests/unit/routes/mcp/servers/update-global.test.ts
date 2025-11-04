@@ -225,6 +225,7 @@ describe('MCP Servers - Update Global', () => {
         status: 'active',
         featured: false,
         transport_type: null,
+        source: 'manual',
         created_at: new Date('2024-01-01T00:00:00.000Z'),
         updated_at: new Date('2024-01-02T00:00:00.000Z'),
         last_sync_at: null,
@@ -309,6 +310,7 @@ describe('MCP Servers - Update Global', () => {
           status: 'active',
           featured: false,
           transport_type: null,
+          source: 'manual',
           // Official Registry Sync Tracking
           official_name: null,
           synced_from_official_registry: false,
@@ -529,6 +531,7 @@ describe('MCP Servers - Update Global', () => {
         status: 'active',
         featured: true,
         transport_type: null,
+        source: 'manual',
         created_at: new Date('2024-01-01T00:00:00.000Z'),
         updated_at: new Date('2024-01-02T00:00:00.000Z'),
         last_sync_at: new Date('2024-01-03T00:00:00.000Z'),
@@ -636,6 +639,7 @@ describe('MCP Servers - Update Global', () => {
           status: 'active',
           featured: true,
           transport_type: null,
+          source: 'manual',
           // Official Registry Sync Tracking
           official_name: null,
           synced_from_official_registry: false,

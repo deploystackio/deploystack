@@ -231,7 +231,8 @@ describe('MCP Servers - Get Server', () => {
         runtime: 'node',
         status: 'active',
         featured: false,
-        auto_install_new_default_team: false
+        auto_install_new_default_team: false,
+        source: 'manual'
       };
 
       mockMcpService.getServerById.mockResolvedValue(mockServer);
@@ -288,6 +289,7 @@ describe('MCP Servers - Get Server', () => {
             status: 'active',
             featured: false,
             auto_install_new_default_team: false,
+            source: 'manual',
             official_name: null,
             synced_from_official_registry: false,
             official_registry_server_id: null,
@@ -362,7 +364,8 @@ describe('MCP Servers - Get Server', () => {
         runtime: 'node',
         status: 'active',
         featured: false,
-        auto_install_new_default_team: false
+        auto_install_new_default_team: false,
+        source: 'manual'
       };
 
       mockMcpService.getServerById.mockResolvedValue(mockServer);
@@ -418,6 +421,7 @@ describe('MCP Servers - Get Server', () => {
             status: 'active',
             featured: false,
             auto_install_new_default_team: false,
+            source: 'manual',
             official_name: null,
             synced_from_official_registry: false,
             official_registry_server_id: null,
@@ -465,7 +469,8 @@ describe('MCP Servers - Get Server', () => {
         runtime: 'node',
         status: 'active',
         featured: false,
-        auto_install_new_default_team: false
+        auto_install_new_default_team: false,
+        source: 'manual'
       };
 
       mockMcpService.getServerById.mockResolvedValue(mockServer);
@@ -521,6 +526,7 @@ describe('MCP Servers - Get Server', () => {
             status: 'active',
             featured: false,
             auto_install_new_default_team: false,
+            source: 'manual',
             official_name: null,
             synced_from_official_registry: false,
             official_registry_server_id: null,
@@ -581,7 +587,8 @@ describe('MCP Servers - Get Server', () => {
         runtime: 'node',
         status: 'active',
         featured: false,
-        auto_install_new_default_team: false
+        auto_install_new_default_team: false,
+        source: 'manual'
       };
 
       mockMcpService.getServerById.mockResolvedValue(mockServer);
@@ -637,6 +644,7 @@ describe('MCP Servers - Get Server', () => {
             status: 'active',
             featured: false,
             auto_install_new_default_team: false,
+            source: 'manual',
             official_name: null,
             synced_from_official_registry: false,
             official_registry_server_id: null,
@@ -697,7 +705,8 @@ describe('MCP Servers - Get Server', () => {
         runtime: 'node',
         status: 'active',
         featured: false,
-        auto_install_new_default_team: false
+        auto_install_new_default_team: false,
+        source: 'manual'
       };
 
       mockMcpService.getServerById.mockResolvedValue(mockServer);

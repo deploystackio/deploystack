@@ -15,6 +15,11 @@ vi.mock('../../../src/routes/globalSettings');
 vi.mock('../../../src/routes/teams');
 vi.mock('../../../src/routes/cloud-credentials');
 vi.mock('../../../src/routes/health');
+vi.mock('../../../src/routes/mcp');
+vi.mock('../../../src/routes/oauth2');
+vi.mock('../../../src/routes/admin');
+vi.mock('../../../src/routes/gateway');
+vi.mock('../../../src/routes/satellites');
 
 // Mock the GlobalSettings helper
 vi.mock('../../../src/global-settings/helpers', () => ({
@@ -32,6 +37,11 @@ import globalSettingsRoute from '../../../src/routes/globalSettings';
 import teamsRoute from '../../../src/routes/teams';
 import cloudCredentialsRoute from '../../../src/routes/cloud-credentials';
 import healthRoute from '../../../src/routes/health';
+import mcpRoutes from '../../../src/routes/mcp';
+import { oauth2DiscoveryRoutes, oauth2ApiRoutes } from '../../../src/routes/oauth2';
+import adminRoutes from '../../../src/routes/admin';
+import gatewayRoutes from '../../../src/routes/gateway';
+import satellitesRoutes from '../../../src/routes/satellites';
 import { GlobalSettings } from '../../../src/global-settings/helpers';
 
 // Type the mocked functions
@@ -43,6 +53,12 @@ const mockGlobalSettingsRoute = globalSettingsRoute as MockedFunction<typeof glo
 const mockTeamsRoute = teamsRoute as MockedFunction<typeof teamsRoute>;
 const mockCloudCredentialsRoute = cloudCredentialsRoute as MockedFunction<typeof cloudCredentialsRoute>;
 const mockHealthRoute = healthRoute as MockedFunction<typeof healthRoute>;
+const mockMcpRoutes = mcpRoutes as MockedFunction<typeof mcpRoutes>;
+const mockOAuth2DiscoveryRoutes = oauth2DiscoveryRoutes as MockedFunction<typeof oauth2DiscoveryRoutes>;
+const mockOAuth2ApiRoutes = oauth2ApiRoutes as MockedFunction<typeof oauth2ApiRoutes>;
+const mockAdminRoutes = adminRoutes as MockedFunction<typeof adminRoutes>;
+const mockGatewayRoutes = gatewayRoutes as MockedFunction<typeof gatewayRoutes>;
+const mockSatellitesRoutes = satellitesRoutes as MockedFunction<typeof satellitesRoutes>;
 
 describe('Main Routes Registration', () => {
   let mockFastify: Partial<FastifyInstance> & { db?: any };
@@ -92,6 +108,12 @@ describe('Main Routes Registration', () => {
     mockTeamsRoute.mockResolvedValue(undefined);
     mockCloudCredentialsRoute.mockResolvedValue(undefined);
     mockHealthRoute.mockResolvedValue(undefined);
+    mockMcpRoutes.mockResolvedValue(undefined);
+    mockOAuth2DiscoveryRoutes.mockResolvedValue(undefined);
+    mockOAuth2ApiRoutes.mockResolvedValue(undefined);
+    mockAdminRoutes.mockResolvedValue(undefined);
+    mockGatewayRoutes.mockResolvedValue(undefined);
+    mockSatellitesRoutes.mockResolvedValue(undefined);
   });
 
   describe('Version Management', () => {
@@ -106,19 +128,20 @@ describe('Main Routes Registration', () => {
     it('should register all route modules', async () => {
       await registerRoutes(mockFastify as FastifyInstance);
 
-      // Main server should register the API plugin once
-      expect(mockFastify.register).toHaveBeenCalledTimes(1);
-      
+      // Main server should register OAuth2 discovery routes and API routes (2 times)
+      expect(mockFastify.register).toHaveBeenCalledTimes(2);
+
       // The API instance should register routes
       expect(mockApiInstance.register).toHaveBeenCalled();
-      
+
       // Verify that the core routes are being registered
-      // Note: Due to mocking limitations, not all routes may be captured in tests
+      // OAuth2 discovery routes + health route + dbStatusRoute = 3 minimum
+      expect(mockApiInstance.register).toHaveBeenCalledWith(oauth2DiscoveryRoutes);
       expect(mockApiInstance.register).toHaveBeenCalledWith(healthRoute);
       expect(mockApiInstance.register).toHaveBeenCalledWith(dbStatusRoute);
-      
-      // Verify that the register function was called at least twice (for the routes we can confirm)
-      expect(mockApiInstance.register).toHaveBeenCalledTimes(2);
+
+      // Verify that the register function was called at least 3 times (for the routes we can confirm)
+      expect(mockApiInstance.register).toHaveBeenCalledTimes(3);
     });
 
     it('should register health check route', async () => {
@@ -301,9 +324,9 @@ describe('Main Routes Registration', () => {
       // Test that the function completes without throwing
       const result = await registerRoutes(mockFastify as FastifyInstance);
       expect(result).toBeUndefined();
-      
-      // Verify main API plugin was registered
-      expect(mockFastify.register).toHaveBeenCalledTimes(1);
+
+      // Verify OAuth2 discovery routes and API routes were registered (2 times)
+      expect(mockFastify.register).toHaveBeenCalledTimes(2);
     });
 
     it('should register health check route regardless of other routes', async () => {
@@ -319,20 +342,29 @@ describe('Main Routes Registration', () => {
       await registerRoutes(mockFastify as FastifyInstance);
 
       const apiRegisterCalls = (mockApiInstance.register as any).mock.calls;
-      
+
       // Verify that at least some routes are registered and in the expected order
       expect(apiRegisterCalls.length).toBeGreaterThan(0);
-      
-      // Check the first few routes that should be registered
+
+      // OAuth2 discovery routes are registered first, followed by API routes
+      // Check that oauth2DiscoveryRoutes is registered first
       if (apiRegisterCalls.length > 0) {
-        expect(apiRegisterCalls[0][0]).toBe(healthRoute);
+        expect(apiRegisterCalls[0][0]).toBe(oauth2DiscoveryRoutes);
       }
+
+      // Then healthRoute should be registered (as first route in API instance)
       if (apiRegisterCalls.length > 1) {
-        expect(apiRegisterCalls[1][0]).toBe(dbStatusRoute);
+        expect(apiRegisterCalls[1][0]).toBe(healthRoute);
       }
-      
+
+      // Then dbStatusRoute
+      if (apiRegisterCalls.length > 2) {
+        expect(apiRegisterCalls[2][0]).toBe(dbStatusRoute);
+      }
+
       // Verify that the main routes we expect are present in the calls
       const registeredRoutes = apiRegisterCalls.map((call: any) => call[0]);
+      expect(registeredRoutes).toContain(oauth2DiscoveryRoutes);
       expect(registeredRoutes).toContain(healthRoute);
       expect(registeredRoutes).toContain(dbStatusRoute);
     });

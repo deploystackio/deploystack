@@ -314,7 +314,7 @@ export default async function authorizationRoute(server: FastifyInstance) {
       }, 'Client validation result');
 
       // Validate other parameters
-      const isValidRedirectUri = AuthorizationService.validateRedirectUri(redirect_uri);
+      const isValidRedirectUri = await AuthorizationService.validateRedirectUri(redirect_uri, client_id, request.log);
       const isValidScope = AuthorizationService.validateScope(scope);
       const isValidResponseType = response_type === 'code';
 
@@ -506,7 +506,7 @@ export default async function authorizationRoute(server: FastifyInstance) {
       }
 
       // Validate redirect_uri
-      if (!AuthorizationService.validateRedirectUri(redirect_uri)) {
+      if (!await AuthorizationService.validateRedirectUri(redirect_uri, client_id, request.log)) {
         request.log.warn({
           operation: 'oauth2_authorization',
           clientId: client_id,

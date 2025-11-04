@@ -108,10 +108,59 @@ export class AuthorizationService {
   }
 
   /**
-   * Validate redirect URI - Updated for MCP clients
+   * Validate redirect URI - Updated for MCP clients with dynamic client support
+   * For static clients: validates against hardcoded patterns
+   * For dynamic clients: validates against registered redirect_uris in database
    */
-  static validateRedirectUri(redirectUri: string): boolean {
-    // Allow flexible localhost patterns for MCP clients
+  static async validateRedirectUri(redirectUri: string, clientId: string, logger?: FastifyBaseLogger): Promise<boolean> {
+    // For dynamically registered clients (RFC 7591), check database
+    if (clientId.startsWith('dyn_')) {
+      try {
+        const { db, schema } = this.getDbAndSchema();
+
+        // Query the dynamic_oauth_clients table for this client
+        const clients = await (db as any)
+          .select({
+            redirect_uris: schema.dynamicOauthClients.redirect_uris,
+          })
+          .from(schema.dynamicOauthClients)
+          .where(eq(schema.dynamicOauthClients.client_id, clientId))
+          .limit(1);
+
+        if (clients.length === 0) {
+          logger?.warn({
+            operation: 'validate_redirect_uri',
+            clientId,
+            redirectUri,
+            reason: 'client_not_found',
+          }, 'Dynamic client not found in database');
+          return false;
+        }
+
+        const registeredUris = JSON.parse(clients[0].redirect_uris);
+        const isValid = registeredUris.includes(redirectUri);
+
+        logger?.debug({
+          operation: 'validate_redirect_uri',
+          clientId,
+          redirectUri,
+          registeredUris,
+          isValid,
+        }, 'Dynamic client redirect URI validation');
+
+        return isValid;
+      } catch (error) {
+        logger?.error({
+          operation: 'validate_redirect_uri',
+          clientId,
+          redirectUri,
+          error: error instanceof Error ? error.message : String(error),
+        }, 'Dynamic client redirect URI validation error');
+        return false;
+      }
+    }
+
+    // For static clients: validate against hardcoded patterns
     const allowedPatterns = [
       // Legacy Gateway pattern (can be removed later)
       /^http:\/\/(localhost|127\.0\.0\.1):8976\/oauth\/callback$/,
@@ -129,8 +178,18 @@ export class AuthorizationService {
       /^https:\/\/claude\.ai\/api\/mcp\/auth_callback$/,
       /^https:\/\/claude\.com\/api\/mcp\/auth_callback$/  // Future-proofing for domain migration
     ];
-    
-    return allowedPatterns.some(pattern => pattern.test(redirectUri));
+
+    const isValid = allowedPatterns.some(pattern => pattern.test(redirectUri));
+
+    logger?.debug({
+      operation: 'validate_redirect_uri',
+      clientId,
+      redirectUri,
+      clientType: 'static',
+      isValid,
+    }, 'Static client redirect URI validation');
+
+    return isValid;
   }
 
   /**

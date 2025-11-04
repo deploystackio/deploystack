@@ -2,7 +2,7 @@
 
 // Supported MCP client types
 // export const CLIENT_TYPES = ['claude-desktop', 'cline', 'vscode', 'cursor', 'windsurf'] as const;
-export const CLIENT_TYPES = ['claude-desktop', 'vscode'] as const;
+export const CLIENT_TYPES = ['claude-desktop', 'vscode', 'claude-code'] as const;
 
 export type ClientType = typeof CLIENT_TYPES[number];
 
@@ -68,6 +68,17 @@ export const SUCCESS_RESPONSE_SCHEMA = {
           description: { type: 'string' }
         },
         required: ['type', 'content'],
+        additionalProperties: false
+      },
+      {
+        type: 'object',
+        properties: {
+          type: { type: 'string', enum: ['command'] },
+          command: { type: 'string' },
+          title: { type: 'string' },
+          description: { type: 'string' }
+        },
+        required: ['type', 'command'],
         additionalProperties: false
       }
     ]
@@ -166,5 +177,12 @@ export interface TextAction {
   description?: string;
 }
 
-export type ConfigAction = JsonAction | LinkAction | TextAction;
+export interface CommandAction {
+  type: 'command';
+  command: string;
+  title?: string;
+  description?: string;
+}
+
+export type ConfigAction = JsonAction | LinkAction | TextAction | CommandAction;
 export type ClientConfigResponse = ConfigAction[];

@@ -93,4 +93,98 @@ export default async function discoveryRoute(server: FastifyInstance) {
       return reply.status(500).type('application/json').send(jsonString);
     }
   });
+
+  // OpenID Connect Discovery (for broader MCP client compatibility)
+  // Some MCP clients check this endpoint first before oauth-authorization-server
+  server.get('/.well-known/openid-configuration', {
+    schema: {
+      tags: ['OAuth2'],
+      summary: 'OpenID Connect Discovery',
+      description: 'OpenID Connect discovery endpoint for MCP client compatibility (returns OAuth2 metadata)',
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            issuer: { type: 'string' },
+            authorization_endpoint: { type: 'string' },
+            token_endpoint: { type: 'string' },
+            userinfo_endpoint: { type: 'string' },
+            introspection_endpoint: { type: 'string' },
+            scopes_supported: {
+              type: 'array',
+              items: { type: 'string' }
+            },
+            response_types_supported: {
+              type: 'array',
+              items: { type: 'string' }
+            },
+            grant_types_supported: {
+              type: 'array',
+              items: { type: 'string' }
+            },
+            code_challenge_methods_supported: {
+              type: 'array',
+              items: { type: 'string' }
+            },
+            registration_endpoint: { type: 'string' }
+          }
+        },
+        500: {
+          type: 'object',
+          properties: {
+            error: { type: 'string' },
+            error_description: { type: 'string' }
+          }
+        }
+      }
+    }
+  }, async (request, reply) => {
+    try {
+      // Get backend URL dynamically
+      const backendUrl = await GlobalSettingsInitService.getBackendUrl();
+
+      // Return same metadata as oauth-authorization-server for compatibility
+      const metadata = {
+        issuer: backendUrl,
+        authorization_endpoint: `${backendUrl}/api/oauth2/auth`,
+        token_endpoint: `${backendUrl}/api/oauth2/token`,
+        userinfo_endpoint: `${backendUrl}/api/oauth2/userinfo`,
+        introspection_endpoint: `${backendUrl}/api/oauth2/introspect`,
+        scopes_supported: [
+          'mcp:read',           // Tool discovery within team
+          'mcp:tools:execute',  // Tool execution within team
+          'offline_access'      // Refresh tokens
+        ],
+        response_types_supported: ['code'],
+        grant_types_supported: ['authorization_code', 'refresh_token'],
+        code_challenge_methods_supported: ['S256'],
+        token_endpoint_auth_methods_supported: ['none'], // Public clients (PKCE)
+
+        // RFC 7591 Dynamic Client Registration
+        registration_endpoint: `${backendUrl}/api/oauth2/register`
+      };
+
+      request.log.debug({
+        operation: 'openid_configuration_discovery',
+        backendUrl,
+        registration_endpoint: metadata.registration_endpoint,
+      }, 'OpenID Connect discovery metadata requested');
+
+      const jsonString = JSON.stringify(metadata);
+      return reply.status(200).type('application/json').send(jsonString);
+
+    } catch (error) {
+      request.log.error({
+        operation: 'openid_configuration_discovery',
+        error,
+      }, 'OpenID Connect discovery error');
+
+      const errorResponse = {
+        error: 'server_error',
+        error_description: 'Failed to retrieve OpenID Connect discovery metadata'
+      };
+      const jsonString = JSON.stringify(errorResponse);
+      return reply.status(500).type('application/json').send(jsonString);
+    }
+  });
 }

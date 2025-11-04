@@ -20,7 +20,7 @@ import healthRoute from './health'
 // Import MCP routes
 import mcpRoutes from './mcp'
 // Import OAuth2 routes
-import oauth2Routes from './oauth2'
+import { oauth2DiscoveryRoutes, oauth2ApiRoutes } from './oauth2'
 // Import admin routes
 import adminRoutes from './admin'
 // Import gateway routes (transitional - config moved to satellite)
@@ -37,6 +37,13 @@ const healthCheckResponseSchema = z.object({
 });
 
 export const registerRoutes = (server: FastifyInstance): void => {
+  // Register OAuth2 discovery routes at ROOT level (RFC 8414 requirement)
+  // These MUST be at the root path: /.well-known/oauth-authorization-server
+  // NOT under /api prefix, as MCP clients expect standard OAuth discovery paths
+  server.register(async (rootInstance) => {
+    await rootInstance.register(oauth2DiscoveryRoutes);
+  });
+
   // Register all API routes with centralized /api prefix
   server.register(async (apiInstance) => {
     // Register health check route
@@ -45,32 +52,32 @@ export const registerRoutes = (server: FastifyInstance): void => {
     // Register the individual database setup routes
     await apiInstance.register(dbStatusRoute);
     await apiInstance.register(dbSetupRoute);
-      
+
     // Register role and user management routes
     await apiInstance.register(rolesRoute);
     await apiInstance.register(usersRoute);
-    
+
     // Register global settings routes
     await apiInstance.register(globalSettingsRoute);
-    
+
     // Register teams routes
     await apiInstance.register(teamsRoute);
-    
+
     // Register cloud credentials routes
     await apiInstance.register(cloudCredentialsRoute);
-    
+
     // Register MCP routes
     await apiInstance.register(mcpRoutes);
-    
-    // Register OAuth2 routes
-    await apiInstance.register(oauth2Routes);
-    
+
+    // Register OAuth2 API routes (functional endpoints)
+    await apiInstance.register(oauth2ApiRoutes);
+
     // Register admin routes
     await apiInstance.register(adminRoutes);
-    
+
     // Register remaining gateway routes (transitional)
     await apiInstance.register(gatewayRoutes);
-    
+
     // Register satellite routes
     await apiInstance.register(satellitesRoutes);
   }, { prefix: '/api' });

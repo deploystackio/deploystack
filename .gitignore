@@ -11,6 +11,10 @@ desktop.ini
 *.sln
 *.sw?
 
+# AI
+CLAUDE.md
+.claude/
+
 # Node.js dependencies
 node_modules
 dist

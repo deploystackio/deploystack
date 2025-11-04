@@ -47,7 +47,14 @@ export interface TextAction {
   description?: string
 }
 
-export type ConfigAction = JsonAction | LinkAction | TextAction
+export interface CommandAction {
+  type: 'command'
+  command: string
+  title?: string
+  description?: string
+}
+
+export type ConfigAction = JsonAction | LinkAction | TextAction | CommandAction
 export type ClientConfigResponse = ConfigAction[]
 
 interface ClientsListResponse {
@@ -113,9 +120,25 @@ export class GatewayConfigService {
     return response.find(action => action.type === 'text') as TextAction || null
   }
 
-  // Helper method to get formatted content for display (JSON or text)
+  // Helper method to extract command actions from the response
+  static getCommandActions(response: ClientConfigResponse): CommandAction[] {
+    return response.filter(action => action.type === 'command') as CommandAction[]
+  }
+
+  // Helper method to get the primary command action
+  static getCommandAction(response: ClientConfigResponse): CommandAction | null {
+    return response.find(action => action.type === 'command') as CommandAction || null
+  }
+
+  // Helper method to get formatted content for display (JSON, text, or command)
   static getFormattedContent(response: ClientConfigResponse): string {
-    // Check for text action first
+    // Check for command action first
+    const commandAction = this.getCommandAction(response)
+    if (commandAction) {
+      return commandAction.command
+    }
+
+    // Check for text action
     const textAction = this.getTextAction(response)
     if (textAction) {
       return textAction.content

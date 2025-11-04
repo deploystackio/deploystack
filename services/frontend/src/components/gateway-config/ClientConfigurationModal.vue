@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
-import { GatewayConfigService, type ClientConfigResponse, type LinkAction, type TextAction } from '@/services/satelliteConfigService'
+import { GatewayConfigService, type ClientConfigResponse, type LinkAction, type TextAction, type CommandAction } from '@/services/satelliteConfigService'
 import { toast } from 'vue-sonner'
 import { ExternalLink } from 'lucide-vue-next'
 
@@ -39,7 +39,8 @@ const selectedClient = ref('')
 const configContent = ref('')
 const linkActions = ref<LinkAction[]>([])
 const textActions = ref<TextAction[]>([])
-const contentType = ref<'json' | 'text' | 'empty'>('empty')
+const commandActions = ref<CommandAction[]>([])
+const contentType = ref<'json' | 'text' | 'command' | 'empty'>('empty')
 const isLoading = ref(false)
 const isCopying = ref(false)
 const supportedClients = ref<string[]>([])
@@ -85,29 +86,33 @@ async function loadConfiguration(client: string) {
   isLoading.value = true
   try {
     const response: ClientConfigResponse = await GatewayConfigService.getClientConfig(client)
-    
-    // Extract formatted content for display (text or JSON)
+
+    // Extract formatted content for display (command, text, or JSON)
     configContent.value = GatewayConfigService.getFormattedContent(response)
-    
+
     // Extract different action types
     linkActions.value = GatewayConfigService.getLinkActions(response)
     textActions.value = GatewayConfigService.getTextActions(response)
-    
+    commandActions.value = GatewayConfigService.getCommandActions(response)
+
     // Determine content type for UI styling
-    if (textActions.value.length > 0) {
+    if (commandActions.value.length > 0) {
+      contentType.value = 'command'
+    } else if (textActions.value.length > 0) {
       contentType.value = 'text'
     } else if (GatewayConfigService.getJsonConfig(response)) {
       contentType.value = 'json'
     } else {
       contentType.value = 'empty'
     }
-    
+
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Failed to load configuration'
     toast.error(errorMessage)
     configContent.value = `Error: ${errorMessage}`
     linkActions.value = []
     textActions.value = []
+    commandActions.value = []
     contentType.value = 'empty'
   } finally {
     isLoading.value = false
@@ -154,9 +159,12 @@ async function handleCopyAndClose() {
     handleClose()
     // Show success toast after modal closes
     setTimeout(() => {
-      const messageKey = contentType.value === 'text' 
-        ? 'satelliteConfig.messages.copyInstructionsSuccess'
-        : 'satelliteConfig.messages.copySuccess'
+      let messageKey = 'satelliteConfig.messages.copySuccess'
+      if (contentType.value === 'text') {
+        messageKey = 'satelliteConfig.messages.copyInstructionsSuccess'
+      } else if (contentType.value === 'command') {
+        messageKey = 'satelliteConfig.messages.copyCommandSuccess'
+      }
       toast.success(t(messageKey))
     }, 100)
   } catch {
@@ -186,6 +194,9 @@ function hasInstallButtons(): boolean {
 
 // Get appropriate label for the configuration content
 function getConfigLabel(): string {
+  if (contentType.value === 'command') {
+    return t('satelliteConfig.modal.commandLabel')
+  }
   if (contentType.value === 'text') {
     return t('satelliteConfig.modal.instructionsLabel')
   }
@@ -194,6 +205,9 @@ function getConfigLabel(): string {
 
 // Get appropriate copy button text
 function getCopyButtonText(): string {
+  if (contentType.value === 'command') {
+    return t('satelliteConfig.button.copyCommandAndClose')
+  }
   if (contentType.value === 'text') {
     return t('satelliteConfig.button.copyInstructionsAndClose')
   }
@@ -205,6 +219,9 @@ function getTextareaClasses(): string {
   const baseClasses = 'min-h-[200px]'
   if (contentType.value === 'text') {
     return `${baseClasses} font-sans text-sm leading-relaxed`
+  }
+  if (contentType.value === 'command') {
+    return `${baseClasses} font-mono text-sm bg-gray-50 dark:bg-gray-900`
   }
   return `${baseClasses} font-mono text-sm`
 }

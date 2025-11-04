@@ -73,6 +73,114 @@ paths:
                     - timestamp
                   additionalProperties: false
                 components: {}
+  /.well-known/oauth-authorization-server:
+    get:
+      summary: OAuth2 Authorization Server Metadata
+      tags:
+        - OAuth2
+      description: RFC 8414 compliant OAuth2 authorization server metadata for MCP
+        client discovery
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  issuer:
+                    type: string
+                  authorization_endpoint:
+                    type: string
+                  token_endpoint:
+                    type: string
+                  userinfo_endpoint:
+                    type: string
+                  introspection_endpoint:
+                    type: string
+                  scopes_supported:
+                    type: array
+                    items:
+                      type: string
+                  response_types_supported:
+                    type: array
+                    items:
+                      type: string
+                  grant_types_supported:
+                    type: array
+                    items:
+                      type: string
+                  code_challenge_methods_supported:
+                    type: array
+                    items:
+                      type: string
+                  registration_endpoint:
+                    type: string
+        "500":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  error_description:
+                    type: string
+  /.well-known/openid-configuration:
+    get:
+      summary: OpenID Connect Discovery
+      tags:
+        - OAuth2
+      description: OpenID Connect discovery endpoint for MCP client compatibility
+        (returns OAuth2 metadata)
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  issuer:
+                    type: string
+                  authorization_endpoint:
+                    type: string
+                  token_endpoint:
+                    type: string
+                  userinfo_endpoint:
+                    type: string
+                  introspection_endpoint:
+                    type: string
+                  scopes_supported:
+                    type: array
+                    items:
+                      type: string
+                  response_types_supported:
+                    type: array
+                    items:
+                      type: string
+                  grant_types_supported:
+                    type: array
+                    items:
+                      type: string
+                  code_challenge_methods_supported:
+                    type: array
+                    items:
+                      type: string
+                  registration_endpoint:
+                    type: string
+        "500":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  error_description:
+                    type: string
   /api/health:
     get:
       summary: Simple API health check
@@ -3360,6 +3468,7 @@ paths:
             enum:
               - claude-desktop
               - vscode
+              - claude-code
           in: path
           name: client
           required: true
@@ -3436,6 +3545,22 @@ paths:
                         - type
                         - content
                       additionalProperties: false
+                    - type: object
+                      properties:
+                        type:
+                          type: string
+                          enum:
+                            - command
+                        command:
+                          type: string
+                        title:
+                          type: string
+                        description:
+                          type: string
+                      required:
+                        - type
+                        - command
+                      additionalProperties: false
         "400":
           description: Bad Request - Invalid client type
           content:
@@ -3510,6 +3635,7 @@ paths:
                       enum:
                         - claude-desktop
                         - vscode
+                        - claude-code
                     description: List of supported MCP client types
                 required:
                   - clients
@@ -16865,60 +16991,6 @@ paths:
                   - error
                 additionalProperties: false
                 description: Internal Server Error
-  /api/.well-known/oauth-authorization-server:
-    get:
-      summary: OAuth2 Authorization Server Metadata
-      tags:
-        - OAuth2
-      description: RFC 8414 compliant OAuth2 authorization server metadata for MCP
-        client discovery
-      responses:
-        "200":
-          description: Default Response
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  issuer:
-                    type: string
-                  authorization_endpoint:
-                    type: string
-                  token_endpoint:
-                    type: string
-                  userinfo_endpoint:
-                    type: string
-                  introspection_endpoint:
-                    type: string
-                  scopes_supported:
-                    type: array
-                    items:
-                      type: string
-                  response_types_supported:
-                    type: array
-                    items:
-                      type: string
-                  grant_types_supported:
-                    type: array
-                    items:
-                      type: string
-                  code_challenge_methods_supported:
-                    type: array
-                    items:
-                      type: string
-                  registration_endpoint:
-                    type: string
-        "500":
-          description: Default Response
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                  error_description:
-                    type: string
   /api/oauth2/register:
     post:
       summary: OAuth 2.0 Dynamic Client Registration

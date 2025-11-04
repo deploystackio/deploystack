@@ -11,7 +11,8 @@ module.exports = {
     publish: false
   },
   github: {
-    release: false
+    release: true,
+    releaseName: 'Satellite v${version}'
   },
   plugins: {
     '@release-it/conventional-changelog': {

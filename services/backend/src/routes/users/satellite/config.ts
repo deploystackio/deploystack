@@ -1,14 +1,15 @@
 import { type FastifyInstance } from 'fastify';
 import { requireAuthenticationAny, requireOAuthScope } from '../../../middleware/oauthMiddleware';
-import { 
-  CLIENT_PARAM_SCHEMA, 
-  SUCCESS_RESPONSE_SCHEMA, 
+import {
+  CLIENT_PARAM_SCHEMA,
+  SUCCESS_RESPONSE_SCHEMA,
   ERROR_RESPONSE_SCHEMA,
   type ClientParams,
   type ErrorResponse,
   type JsonAction,
   // type LinkAction,
   type TextAction,
+  type CommandAction,
   type ClientConfigResponse
 } from './schemas';
 
@@ -25,6 +26,7 @@ function generateClientConfig(clientType: string): ClientConfigResponse {
   // Base configuration for different action types
   let jsonConfig: JsonAction;
   let textConfig: TextAction;
+  let commandConfig: CommandAction;
   
   switch (clientType) {
     case 'claude-desktop':
@@ -65,7 +67,17 @@ function generateClientConfig(clientType: string): ClientConfigResponse {
       };
       actions.push(jsonConfig);
       break;
-    
+
+    case 'claude-code':
+      commandConfig = {
+        type: 'command',
+        command: `claude mcp add --transport http deploystack ${satelliteUrl}/mcp`,
+        title: 'Claude Code CLI Command',
+        description: 'Run this command in your terminal to configure Claude Code with DeployStack'
+      };
+      actions.push(commandConfig);
+      break;
+
     // case 'cursor':
     //   // JSON configuration for Cursor
     //   jsonConfig = {
