@@ -27365,6 +27365,270 @@
         }
       }
     },
+    "/api/admin/teams/{id}": {
+      "put": {
+        "summary": "Update team (Global Admin)",
+        "tags": [
+          "Admin - Teams"
+        ],
+        "description": "Allows global administrators to update any team's name, description, and non-HTTP MCP server limit.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100,
+                    "description": "Team name (1-100 characters)"
+                  },
+                  "description": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "nullable": true,
+                    "description": "Team description (max 500 characters, optional)"
+                  },
+                  "non_http_mcp_limit": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Maximum number of non-HTTP (stdio) MCP servers the team can install"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "description": "Team ID"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Team updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates operation success"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Success message"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "Team unique identifier"
+                        },
+                        "name": {
+                          "type": "string",
+                          "description": "Team name"
+                        },
+                        "slug": {
+                          "type": "string",
+                          "description": "Team URL slug"
+                        },
+                        "description": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Team description"
+                        },
+                        "owner_id": {
+                          "type": "string",
+                          "description": "Team owner user ID"
+                        },
+                        "is_default": {
+                          "type": "boolean",
+                          "description": "Whether this is the default team"
+                        },
+                        "non_http_mcp_limit": {
+                          "type": "integer",
+                          "description": "Non-HTTP MCP server limit"
+                        },
+                        "created_at": {
+                          "type": "string",
+                          "description": "ISO8601 timestamp"
+                        },
+                        "updated_at": {
+                          "type": "string",
+                          "description": "ISO8601 timestamp"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name",
+                        "slug",
+                        "owner_id",
+                        "is_default",
+                        "non_http_mcp_limit",
+                        "created_at",
+                        "updated_at"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "message",
+                    "data"
+                  ],
+                  "description": "Team updated successfully"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates operation failure"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Bad Request - Invalid input"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates operation failure"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Unauthorized"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Global admin required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates operation failure"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Forbidden - Global admin required"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Team not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates operation failure"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Team not found"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates operation failure"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Internal Server Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/gateway/me/mcp-configurations": {
       "get": {
         "summary": "Get merged MCP configurations for gateway",

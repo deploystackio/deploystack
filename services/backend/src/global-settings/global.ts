@@ -88,6 +88,14 @@ export const globalSettings: GlobalSettingsModule = {
       description: 'Show user walkthrough flow when users log in. When enabled, users who have not completed or cancelled the walkthrough will see the walkthrough process in the frontend.',
       encrypted: false,
       required: false
+    },
+    {
+      key: 'global.default_non_http_mcp_limit',
+      defaultValue: 1,
+      type: 'number',
+      description: 'Default maximum number of non-HTTP (stdio) MCP servers that can be installed per team. This limit is applied when a new team is created. HTTP and SSE MCP servers are not affected by this limit.',
+      encrypted: false,
+      required: false
     }
   ]
 };

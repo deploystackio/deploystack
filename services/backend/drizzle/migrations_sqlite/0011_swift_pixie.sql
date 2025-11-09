@@ -1,0 +1,1 @@
+ALTER TABLE `teams` ADD `non_http_mcp_limit` integer DEFAULT 1 NOT NULL;

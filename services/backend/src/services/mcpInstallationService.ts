@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { eq, and, desc } from 'drizzle-orm';
-import { mcpServerInstallations, mcpServers } from '../db/schema.sqlite';
+import { mcpServerInstallations, mcpServers, teams } from '../db/schema.sqlite';
 import type { AnyDatabase } from '../db';
 import type { FastifyBaseLogger } from 'fastify';
 import { nanoid } from 'nanoid';
@@ -279,6 +279,85 @@ export class McpInstallationService {
 
     if (server.length === 0) {
       throw new Error('Server not found');
+    }
+
+    // Check non-HTTP MCP installation limit (stdio servers only)
+    if (server[0].transport_type === 'stdio') {
+      this.logger.debug({
+        operation: 'create_installation',
+        step: 'check_non_http_limit',
+        teamId,
+        serverId: data.server_id,
+        transportType: server[0].transport_type
+      }, 'Checking non-HTTP MCP installation limit');
+
+      // Get team data to access the limit
+      const teamResult = await this.db
+        .select()
+        .from(teams)
+        .where(eq(teams.id, teamId))
+        .limit(1);
+
+      if (teamResult.length === 0) {
+        throw new Error('Team not found');
+      }
+
+      const team = teamResult[0];
+      const limit = team.non_http_mcp_limit;
+
+      this.logger.debug({
+        operation: 'create_installation',
+        step: 'check_non_http_limit',
+        teamId,
+        limit
+      }, `Team non-HTTP MCP limit: ${limit}`);
+
+      // Count current non-HTTP (stdio) installations for this team
+      const currentInstallations = await this.db
+        .select({
+          installation: mcpServerInstallations,
+          server: mcpServers
+        })
+        .from(mcpServerInstallations)
+        .leftJoin(mcpServers, eq(mcpServerInstallations.server_id, mcpServers.id))
+        .where(eq(mcpServerInstallations.team_id, teamId));
+
+      // Count only stdio servers
+      const nonHttpCount = currentInstallations.filter(
+        (row: any) => row.server?.transport_type === 'stdio'
+      ).length;
+
+      this.logger.debug({
+        operation: 'create_installation',
+        step: 'check_non_http_limit',
+        teamId,
+        nonHttpCount,
+        limit
+      }, `Current non-HTTP installations: ${nonHttpCount}/${limit}`);
+
+      // Check if limit would be exceeded
+      if (nonHttpCount >= limit) {
+        const errorMessage = `Team has reached the maximum limit of ${limit} non-HTTP (stdio) MCP server${limit === 1 ? '' : 's'}. HTTP and SSE servers are not affected by this limit. Contact your administrator to increase the limit.`;
+
+        this.logger.warn({
+          operation: 'create_installation',
+          step: 'check_non_http_limit',
+          teamId,
+          nonHttpCount,
+          limit,
+          serverId: data.server_id
+        }, 'Non-HTTP MCP installation limit exceeded');
+
+        throw new Error(errorMessage);
+      }
+
+      this.logger.info({
+        operation: 'create_installation',
+        step: 'check_non_http_limit',
+        teamId,
+        nonHttpCount,
+        limit
+      }, 'Non-HTTP MCP installation limit check passed');
     }
 
     // Validate team environment variables against server schema
