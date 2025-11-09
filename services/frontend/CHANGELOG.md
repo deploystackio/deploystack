@@ -8,6 +8,29 @@
 * chore(all): bump lucide-vue-next from 0.546.0 to 0.552.0 ([b6058de](https://github.com/deploystackio/deploystack/commit/b6058de))
 * chore(all): update node version to 24 in workflow files ([147192d](https://github.com/deploystackio/deploystack/commit/147192d))
 * chore(backend): update dependencies in package.json ([e3f9c05](https://github.com/deploystackio/deploystack/commit/e3f9c05))
+* chore(frontend): release v0.36.0 ([347024b](https://github.com/deploystackio/deploystack/commit/347024b))
+* chore(frontend): update dependencies in frontend package.json ([4fa9043](https://github.com/deploystackio/deploystack/commit/4fa9043))
+* chore(satellite): bump @types/uuid in /services/satellite ([319a8cf](https://github.com/deploystackio/deploystack/commit/319a8cf))
+* chore(satellite): bump zod from 3.25.76 to 4.1.12 in /services/satellite ([f6f825d](https://github.com/deploystackio/deploystack/commit/f6f825d))
+* feat(all): add teams management functionality for global admins ([d3a9926](https://github.com/deploystackio/deploystack/commit/d3a9926))
+* feat(backend): implement admin team update route with validation and response schemas ([09ae873](https://github.com/deploystackio/deploystack/commit/09ae873))
+
+
+
+## v0.35.0 (2025-11-04)
+
+* chore(frontend): bump lucide-vue-next in /services/frontend ([cb55024](https://github.com/deploystackio/deploystack/commit/cb55024))
+* chore(frontend): release v0.35.0 ([f9bfa86](https://github.com/deploystackio/deploystack/commit/f9bfa86))
+* chore(frontend): release v0.35.0 ([37f88a6](https://github.com/deploystackio/deploystack/commit/37f88a6))
+
+## 0.36.0 (2025-11-09)
+
+* chore(all): bump @modelcontextprotocol/sdk from 1.20.2 to 1.21.0 ([7c81126](https://github.com/deploystackio/deploystack/commit/7c81126))
+* chore(all): bump @types/node from 24.8.1 to 24.10.0 ([3467f4b](https://github.com/deploystackio/deploystack/commit/3467f4b))
+* chore(all): bump @types/uuid from 10.0.0 to 11.0.0 ([5ee2773](https://github.com/deploystackio/deploystack/commit/5ee2773))
+* chore(all): bump lucide-vue-next from 0.546.0 to 0.552.0 ([b6058de](https://github.com/deploystackio/deploystack/commit/b6058de))
+* chore(all): update node version to 24 in workflow files ([147192d](https://github.com/deploystackio/deploystack/commit/147192d))
+* chore(backend): update dependencies in package.json ([e3f9c05](https://github.com/deploystackio/deploystack/commit/e3f9c05))
 * chore(frontend): bump lucide-vue-next in /services/frontend ([cb55024](https://github.com/deploystackio/deploystack/commit/cb55024))
 * chore(frontend): update dependencies in frontend package.json ([4fa9043](https://github.com/deploystackio/deploystack/commit/4fa9043))
 * chore(satellite): bump @types/uuid in /services/satellite ([319a8cf](https://github.com/deploystackio/deploystack/commit/319a8cf))
