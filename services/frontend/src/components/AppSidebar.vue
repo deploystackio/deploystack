@@ -349,6 +349,16 @@ onUnmounted(() => {
             </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton
+                @click="navigateTo('/admin/teams')"
+                :is-active="router.currentRoute.value.path.startsWith('/admin/teams')"
+                class="w-full justify-start"
+              >
+                <Users class="mr-2 h-4 w-4 shrink-0" />
+                <span>{{ t('sidebar.adminArea.teams') }}</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
                 @click="navigateTo('/admin/mcp-server-catalog')"
                 :is-active="router.currentRoute.value.path.startsWith('/admin/mcp-server-catalog')"
                 class="w-full justify-start"

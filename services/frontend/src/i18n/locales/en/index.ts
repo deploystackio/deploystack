@@ -7,6 +7,7 @@ import globalSettingsMessages from './globalSettings'
 import notFoundMessages from './notFound'
 import unauthorizedMessages from './unauthorized'
 import adminUsersMessages from './adminUsers'
+import adminTeamsMessages from './adminTeams'
 import sidebarMessages from './sidebar'
 import verifyEmailMessages from './verifyEmail'
 import forgotPasswordMessages from './forgotPassword'
@@ -35,6 +36,7 @@ export default {
   ...notFoundMessages,
   ...unauthorizedMessages,
   ...adminUsersMessages,
+  ...adminTeamsMessages,
   ...sidebarMessages,
   verifyEmail: verifyEmailMessages,
   ...forgotPasswordMessages,

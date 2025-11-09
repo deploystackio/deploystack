@@ -11,6 +11,7 @@ export default {
       title: 'Admin Area',
       globalSettings: 'Global Settings',
       users: 'Users',
+      teams: 'Teams',
       mcpCatalog: 'MCP Catalog',
       mcpCategories: 'MCP Categories',
       satellites: 'Satellites',

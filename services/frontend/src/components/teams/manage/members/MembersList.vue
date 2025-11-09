@@ -59,8 +59,8 @@ const getDisplayName = (user: User | TeamMember): string => {
 const members = computed(() => {
   if (isDefaultTeam.value && currentUser.value) {
     // For default teams, show only the current user
-    const joinedAtString = props.team.created_at instanceof Date
-      ? props.team.created_at.toISOString()
+    const joinedAtString = typeof props.team.created_at === 'string'
+      ? props.team.created_at
       : new Date(props.team.created_at).toISOString()
 
     return [{

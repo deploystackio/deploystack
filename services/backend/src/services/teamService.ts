@@ -38,6 +38,7 @@ export interface UpdateTeamData {
   name?: string;
   slug?: string;
   description?: string | null;
+  non_http_mcp_limit?: number;
 }
 
 export interface TeamMemberWithUser {
@@ -187,6 +188,18 @@ export class TeamService {
   }
 
   /**
+   * Get all teams (for global admin)
+   */
+  static async getAllTeams(): Promise<Team[]> {
+    const { db, schema } = this.getDbAndSchema();
+    const result = await (db as any)
+      .select()
+      .from(schema.teams);
+
+    return result;
+  }
+
+  /**
    * Get all teams for a user
    */
   static async getUserTeams(userId: string): Promise<Team[]> {
@@ -246,6 +259,7 @@ export class TeamService {
     if (data.name !== undefined) updateData.name = data.name;
     if (data.slug !== undefined) updateData.slug = data.slug;
     if (data.description !== undefined) updateData.description = data.description;
+    if (data.non_http_mcp_limit !== undefined) updateData.non_http_mcp_limit = data.non_http_mcp_limit;
 
     await (db as any)
       .update(schema.teams)

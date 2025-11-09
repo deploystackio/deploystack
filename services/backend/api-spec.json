@@ -27365,7 +27365,384 @@
         }
       }
     },
+    "/api/admin/teams": {
+      "get": {
+        "summary": "List all teams (Global Admin)",
+        "tags": [
+          "Admin - Teams"
+        ],
+        "description": "Allows global administrators to retrieve a list of all teams in the system.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of all teams",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates operation success"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "Team unique identifier"
+                          },
+                          "name": {
+                            "type": "string",
+                            "description": "Team name"
+                          },
+                          "slug": {
+                            "type": "string",
+                            "description": "Team URL slug"
+                          },
+                          "description": {
+                            "type": "string",
+                            "nullable": true,
+                            "description": "Team description"
+                          },
+                          "owner_id": {
+                            "type": "string",
+                            "description": "Team owner user ID"
+                          },
+                          "is_default": {
+                            "type": "boolean",
+                            "description": "Whether this is the default team"
+                          },
+                          "non_http_mcp_limit": {
+                            "type": "integer",
+                            "description": "Non-HTTP MCP server limit"
+                          },
+                          "created_at": {
+                            "type": "string",
+                            "description": "ISO8601 timestamp"
+                          },
+                          "updated_at": {
+                            "type": "string",
+                            "description": "ISO8601 timestamp"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "slug",
+                          "owner_id",
+                          "is_default",
+                          "non_http_mcp_limit",
+                          "created_at",
+                          "updated_at"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "description": "List of all teams"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates operation failure"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Unauthorized"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Global admin required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates operation failure"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Forbidden - Global admin required"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates operation failure"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Internal Server Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/admin/teams/{id}": {
+      "get": {
+        "summary": "Get team by ID (Global Admin)",
+        "tags": [
+          "Admin - Teams"
+        ],
+        "description": "Allows global administrators to retrieve a specific team by ID.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "description": "Team ID"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Team retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates operation success"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Success message"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "Team unique identifier"
+                        },
+                        "name": {
+                          "type": "string",
+                          "description": "Team name"
+                        },
+                        "slug": {
+                          "type": "string",
+                          "description": "Team URL slug"
+                        },
+                        "description": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Team description"
+                        },
+                        "owner_id": {
+                          "type": "string",
+                          "description": "Team owner user ID"
+                        },
+                        "is_default": {
+                          "type": "boolean",
+                          "description": "Whether this is the default team"
+                        },
+                        "non_http_mcp_limit": {
+                          "type": "integer",
+                          "description": "Non-HTTP MCP server limit"
+                        },
+                        "created_at": {
+                          "type": "string",
+                          "description": "ISO8601 timestamp"
+                        },
+                        "updated_at": {
+                          "type": "string",
+                          "description": "ISO8601 timestamp"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name",
+                        "slug",
+                        "owner_id",
+                        "is_default",
+                        "non_http_mcp_limit",
+                        "created_at",
+                        "updated_at"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "message",
+                    "data"
+                  ],
+                  "description": "Team retrieved successfully"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates operation failure"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Unauthorized"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Global admin required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates operation failure"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Forbidden - Global admin required"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Team not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates operation failure"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Team not found"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates operation failure"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Internal Server Error"
+                }
+              }
+            }
+          }
+        }
+      },
       "put": {
         "summary": "Update team (Global Admin)",
         "tags": [

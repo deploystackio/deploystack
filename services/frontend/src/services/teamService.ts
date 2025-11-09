@@ -9,8 +9,9 @@ export const TeamSchema = z.object({
   description: z.string().nullable(),
   owner_id: z.string(),
   is_default: z.boolean(),
-  created_at: z.date(),
-  updated_at: z.date(),
+  non_http_mcp_limit: z.number(),
+  created_at: z.string(),
+  updated_at: z.string(),
   role: z.enum(['team_admin', 'team_user']).optional(),
   is_admin: z.boolean().optional(),
   is_owner: z.boolean().optional(),
@@ -364,6 +365,90 @@ export class TeamService {
       }
     } catch (error) {
       console.error('Error fetching default team:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Get team by ID as global admin
+   */
+  static async getTeamAsAdmin(teamId: string): Promise<Team> {
+    try {
+      const apiUrl = this.getApiUrl()
+
+      const response = await fetch(`${apiUrl}/api/admin/teams/${teamId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+      })
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Unauthorized - please log in')
+        }
+        if (response.status === 403) {
+          throw new Error('Forbidden - Global admin access required')
+        }
+        if (response.status === 404) {
+          throw new Error('Team not found')
+        }
+        throw new Error(`Failed to fetch team: ${response.status}`)
+      }
+
+      const data = await response.json()
+
+      if (data.success && data.data) {
+        return data.data
+      } else {
+        throw new Error('Invalid response format')
+      }
+    } catch (error) {
+      console.error('Error fetching team as admin:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Update team as global admin
+   */
+  static async updateTeamAsAdmin(teamId: string, teamData: { name?: string; description?: string | null; non_http_mcp_limit?: number }): Promise<Team> {
+    try {
+      const apiUrl = this.getApiUrl()
+
+      const response = await fetch(`${apiUrl}/api/admin/teams/${teamId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(teamData),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        if (response.status === 401) {
+          throw new Error('Unauthorized - please log in')
+        }
+        if (response.status === 403) {
+          throw new Error('Forbidden - Global admin access required')
+        }
+        if (response.status === 404) {
+          throw new Error('Team not found')
+        }
+        throw new Error(errorData.error || `Failed to update team: ${response.status}`)
+      }
+
+      const data = await response.json()
+
+      if (data.success && data.data) {
+        return data.data
+      } else {
+        throw new Error('Invalid response format')
+      }
+    } catch (error) {
+      console.error('Error updating team as admin:', error)
       throw error
     }
   }

@@ -59,6 +59,18 @@ export const ERROR_RESPONSE_SCHEMA = {
   required: ['success', 'error']
 } as const;
 
+export const LIST_TEAMS_RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    success: { type: 'boolean', description: 'Indicates operation success' },
+    data: {
+      type: 'array',
+      items: TEAM_RESPONSE_SCHEMA
+    }
+  },
+  required: ['success', 'data']
+} as const;
+
 // TypeScript interfaces
 export interface UpdateTeamAdminRequest {
   name?: string;
@@ -82,6 +94,11 @@ export interface SuccessResponse {
   success: boolean;
   message: string;
   data: TeamResponse;
+}
+
+export interface ListTeamsResponse {
+  success: boolean;
+  data: TeamResponse[];
 }
 
 export interface ErrorResponse {
