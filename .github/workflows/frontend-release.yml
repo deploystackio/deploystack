@@ -28,20 +28,11 @@ jobs:
       - name: Setup node
         uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
-      
+
       - name: Install dependencies
-        run: |
-          npm ci || {
-            echo "npm ci failed, trying clean install with rollup fix..."
-            rm -rf node_modules services/frontend/node_modules
-            npm install --no-optional
-          }
-          
-      - name: Fix Rollup platform package
-        run: |
-          npm install @rollup/rollup-linux-x64-gnu --save-optional || echo "Rollup package already installed"
+        run: npm ci
           
       - name: Create Release
         working-directory: services/frontend
@@ -122,15 +113,7 @@ jobs:
         working-directory: services/frontend
         env:
           VITE_DEPLOYSTACK_APP_VERSION: ${{ steps.package-version.outputs.current-version }}
-        run: |
-          npm run build || {
-            echo "Build failed, attempting rollup fix..."
-            cd ../..
-            npm install @rollup/rollup-linux-x64-gnu --save-optional --force
-            cd services/frontend
-            npm run build
-          }
-          ls -al ./dist
+        run: npm run build
       
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
