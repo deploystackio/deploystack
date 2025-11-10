@@ -34,12 +34,15 @@ export interface McpServer {
   template_args?: TemplateArg[] | string
   template_env?: TemplateEnvVar[] | string
   template_headers?: TemplateHeaderVar[] | string
+  template_url_query_params?: TemplateUrlQueryParam[] | string
   team_args_schema?: TeamArgsSchema[] | string
   team_env_schema?: TeamEnvSchema[] | string
   team_headers_schema?: TeamHeadersSchema[] | string
+  team_url_query_params_schema?: TeamUrlQueryParamsSchema[] | string
   user_args_schema?: UserArgsSchema[] | string
   user_env_schema?: UserEnvSchema[] | string
   user_headers_schema?: UserHeadersSchema[] | string
+  user_url_query_params_schema?: UserUrlQueryParamsSchema[] | string
 
   dependencies?: Record<string, any>
   category_id?: string
@@ -118,6 +121,13 @@ export interface TemplateHeaderVar {
   description?: string
 }
 
+export interface TemplateUrlQueryParam {
+  name: string
+  value: string
+  locked: boolean
+  description?: string
+}
+
 export interface TeamArgsSchema {
   name: string
   type: 'string' | 'number' | 'boolean'
@@ -149,6 +159,17 @@ export interface TeamHeadersSchema {
   default_value?: string
 }
 
+export interface TeamUrlQueryParamsSchema {
+  name: string
+  type: 'string' | 'number' | 'boolean' | 'secret'
+  description?: string
+  required: boolean
+  locked: boolean
+  default_team_locked?: boolean
+  visible_to_users?: boolean
+  default_value?: string
+}
+
 export interface UserArgsSchema {
   name: string
   type: 'string' | 'number' | 'boolean' | 'secret'
@@ -168,6 +189,15 @@ export interface UserEnvSchema {
 }
 
 export interface UserHeadersSchema {
+  name: string
+  type: 'string' | 'number' | 'boolean' | 'secret'
+  description?: string
+  required: boolean
+  locked: boolean
+  default_value?: string
+}
+
+export interface UserUrlQueryParamsSchema {
   name: string
   type: 'string' | 'number' | 'boolean' | 'secret'
   description?: string
@@ -206,12 +236,15 @@ export interface CreateMcpServerRequest {
   template_args?: TemplateArg[]
   template_env?: TemplateEnvVar[]
   template_headers?: TemplateHeaderVar[]
+  template_url_query_params?: TemplateUrlQueryParam[]
   team_args_schema?: TeamArgsSchema[]
   team_env_schema?: TeamEnvSchema[]
   team_headers_schema?: TeamHeadersSchema[]
+  team_url_query_params_schema?: TeamUrlQueryParamsSchema[]
   user_args_schema?: UserArgsSchema[]
   user_env_schema?: UserEnvSchema[]
   user_headers_schema?: UserHeadersSchema[]
+  user_url_query_params_schema?: UserUrlQueryParamsSchema[]
 
   dependencies?: Record<string, any>
   category_id?: string
@@ -251,12 +284,15 @@ export interface UpdateMcpServerRequest {
   template_args?: TemplateArg[]
   template_env?: TemplateEnvVar[]
   template_headers?: TemplateHeaderVar[]
+  template_url_query_params?: TemplateUrlQueryParam[]
   team_args_schema?: TeamArgsSchema[]
   team_env_schema?: TeamEnvSchema[]
   team_headers_schema?: TeamHeadersSchema[]
+  team_url_query_params_schema?: TeamUrlQueryParamsSchema[]
   user_args_schema?: UserArgsSchema[]
   user_env_schema?: UserEnvSchema[]
   user_headers_schema?: UserHeadersSchema[]
+  user_url_query_params_schema?: UserUrlQueryParamsSchema[]
 
   dependencies?: Record<string, any>
   category_id?: string
@@ -326,12 +362,15 @@ export interface ConfigurationSchemaFormData {
   template_args?: TemplateArg[]
   template_env?: TemplateEnvVar[]
   template_headers?: TemplateHeaderVar[]
+  template_url_query_params?: TemplateUrlQueryParam[]
   team_args_schema?: TeamArgsSchema[]
   team_env_schema?: TeamEnvSchema[]
   team_headers_schema?: TeamHeadersSchema[]
+  team_url_query_params_schema?: TeamUrlQueryParamsSchema[]
   user_args_schema?: UserArgsSchema[]
   user_env_schema?: UserEnvSchema[]
   user_headers_schema?: UserHeadersSchema[]
+  user_url_query_params_schema?: UserUrlQueryParamsSchema[]
 }
 
 export interface McpServerFormData {

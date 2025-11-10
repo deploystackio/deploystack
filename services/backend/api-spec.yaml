@@ -10132,9 +10132,11 @@ paths:
                             - template_args
                             - template_env
                             - template_headers
+                            - template_url_query_params
                             - team_args_schema
                             - team_env_schema
                             - team_headers_schema
+                            - team_url_query_params_schema
                             - user_args_schema
                             - status
                             - featured
@@ -10442,9 +10444,11 @@ paths:
                       - template_args
                       - template_env
                       - template_headers
+                      - template_url_query_params
                       - team_args_schema
                       - team_env_schema
                       - team_headers_schema
+                      - team_url_query_params_schema
                       - user_args_schema
                       - status
                       - featured
@@ -10823,9 +10827,11 @@ paths:
                             - template_args
                             - template_env
                             - template_headers
+                            - template_url_query_params
                             - team_args_schema
                             - team_env_schema
                             - team_headers_schema
+                            - team_url_query_params_schema
                             - user_args_schema
                             - status
                             - featured
@@ -11271,6 +11277,30 @@ paths:
                           - locked
                         additionalProperties: false
                       description: Template-level headers
+                    template_url_query_params:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          name:
+                            type: string
+                            description: URL query parameter name
+                          value:
+                            type: string
+                            nullable: true
+                            description: URL query parameter value (can be null)
+                          locked:
+                            type: boolean
+                            description: Whether this URL query parameter is locked
+                          description:
+                            type: string
+                            description: Optional description of the URL query parameter
+                        required:
+                          - name
+                          - value
+                          - locked
+                        additionalProperties: false
+                      description: Template-level URL query parameters
                     team_args_schema:
                       type: array
                       items:
@@ -11399,6 +11429,47 @@ paths:
                           - visible_to_users
                         additionalProperties: false
                       description: Team-level header schema definitions
+                    team_url_query_params_schema:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          name:
+                            type: string
+                            description: team URL query parameter name
+                          type:
+                            type: string
+                            enum:
+                              - string
+                              - number
+                              - boolean
+                              - secret
+                            description: Configuration data type
+                          description:
+                            type: string
+                            description: team URL query parameter description
+                          required:
+                            type: boolean
+                            description: Whether this team URL query parameter is required
+                          locked:
+                            type: boolean
+                            description: Whether this team URL query parameter is locked
+                          default_team_locked:
+                            type: boolean
+                            description: Whether this configuration is locked at team level by default
+                          visible_to_users:
+                            type: boolean
+                            description: Whether this configuration is visible to team users
+                        required:
+                          - name
+                          - type
+                          - description
+                          - required
+                          - locked
+                          - default_team_locked
+                          - visible_to_users
+                        additionalProperties: false
+                      description: Team-level URL query parameter schema definitions
                     user_args_schema:
                       type: array
                       items:
@@ -11504,6 +11575,39 @@ paths:
                           - locked
                         additionalProperties: false
                       description: User-level header schema definitions
+                    user_url_query_params_schema:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          name:
+                            type: string
+                            description: user URL query parameter name
+                          type:
+                            type: string
+                            enum:
+                              - string
+                              - number
+                              - boolean
+                              - secret
+                            description: Configuration data type
+                          description:
+                            type: string
+                            description: user URL query parameter description
+                          required:
+                            type: boolean
+                            description: Whether this user URL query parameter is required
+                          locked:
+                            type: boolean
+                            description: Whether this user URL query parameter is locked
+                        required:
+                          - name
+                          - type
+                          - description
+                          - required
+                          - locked
+                        additionalProperties: false
+                      description: User-level URL query parameter schema definitions
                   additionalProperties: false
                 transport_type:
                   type: string
@@ -11878,9 +11982,11 @@ paths:
                       - template_args
                       - template_env
                       - template_headers
+                      - template_url_query_params
                       - team_args_schema
                       - team_env_schema
                       - team_headers_schema
+                      - team_url_query_params_schema
                       - user_args_schema
                       - status
                       - featured
@@ -12221,6 +12327,30 @@ paths:
                       - locked
                     additionalProperties: false
                   description: Template-level headers
+                template_url_query_params:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                        description: URL query parameter name
+                      value:
+                        type: string
+                        nullable: true
+                        description: URL query parameter value (can be null)
+                      locked:
+                        type: boolean
+                        description: Whether this URL query parameter is locked
+                      description:
+                        type: string
+                        description: Optional description of the URL query parameter
+                    required:
+                      - name
+                      - value
+                      - locked
+                    additionalProperties: false
+                  description: Template-level URL query parameters
                 team_args_schema:
                   type: array
                   items:
@@ -12349,6 +12479,47 @@ paths:
                       - visible_to_users
                     additionalProperties: false
                   description: Team-level header schema definitions
+                team_url_query_params_schema:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                        description: team URL query parameter name
+                      type:
+                        type: string
+                        enum:
+                          - string
+                          - number
+                          - boolean
+                          - secret
+                        description: Configuration data type
+                      description:
+                        type: string
+                        description: team URL query parameter description
+                      required:
+                        type: boolean
+                        description: Whether this team URL query parameter is required
+                      locked:
+                        type: boolean
+                        description: Whether this team URL query parameter is locked
+                      default_team_locked:
+                        type: boolean
+                        description: Whether this configuration is locked at team level by default
+                      visible_to_users:
+                        type: boolean
+                        description: Whether this configuration is visible to team users
+                    required:
+                      - name
+                      - type
+                      - description
+                      - required
+                      - locked
+                      - default_team_locked
+                      - visible_to_users
+                    additionalProperties: false
+                  description: Team-level URL query parameter schema definitions
                 user_args_schema:
                   type: array
                   items:
@@ -12454,6 +12625,39 @@ paths:
                       - locked
                     additionalProperties: false
                   description: User-level header schema definitions
+                user_url_query_params_schema:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                        description: user URL query parameter name
+                      type:
+                        type: string
+                        enum:
+                          - string
+                          - number
+                          - boolean
+                          - secret
+                        description: Configuration data type
+                      description:
+                        type: string
+                        description: user URL query parameter description
+                      required:
+                        type: boolean
+                        description: Whether this user URL query parameter is required
+                      locked:
+                        type: boolean
+                        description: Whether this user URL query parameter is locked
+                    required:
+                      - name
+                      - type
+                      - description
+                      - required
+                      - locked
+                    additionalProperties: false
+                  description: User-level URL query parameter schema definitions
               additionalProperties: false
       parameters:
         - schema:
@@ -12673,9 +12877,11 @@ paths:
                       - template_args
                       - template_env
                       - template_headers
+                      - template_url_query_params
                       - team_args_schema
                       - team_env_schema
                       - team_headers_schema
+                      - team_url_query_params_schema
                       - user_args_schema
                       - status
                       - featured
@@ -13250,6 +13456,21 @@ paths:
                   additionalProperties:
                     type: string
                   description: Team-level shared headers
+                team_url_query_params:
+                  type: object
+                  additionalProperties:
+                    type: string
+                  description: Team-level shared URL query parameters
+                user_environment_variables:
+                  type: object
+                  additionalProperties:
+                    type: string
+                  description: User-level environment variables
+                user_url_query_params:
+                  type: object
+                  additionalProperties:
+                    type: string
+                  description: User-level URL query parameters
               required:
                 - server_id
                 - installation_name
@@ -15188,6 +15409,314 @@ paths:
                   - success
                   - error
                 description: Internal Server Error
+  /api/teams/{teamId}/mcp/installations/{installationId}/query-params:
+    patch:
+      summary: Update MCP installation query parameters
+      tags:
+        - MCP Installations
+      description: "Updates the URL query parameters for an existing MCP server
+        installation. This endpoint specifically handles query parameters
+        updates only. Requires Content-Type: application/json header when
+        sending request body. Supports both cookie-based authentication (for web
+        users) and OAuth2 Bearer token authentication (for CLI users). Requires
+        mcp:read scope for OAuth2 access."
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                team_url_query_params:
+                  type: object
+                  additionalProperties:
+                    type: string
+                  description: Team-level URL query parameters to update
+              required:
+                - team_url_query_params
+              additionalProperties: false
+        required: true
+      parameters:
+        - schema:
+            type: string
+            minLength: 1
+          in: path
+          name: teamId
+          required: true
+          description: Team ID that owns the installation
+        - schema:
+            type: string
+            minLength: 1
+          in: path
+          name: installationId
+          required: true
+          description: Installation ID
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Query parameters updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Indicates if the operation was successful
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        description: Unique installation ID
+                      team_id:
+                        type: string
+                        description: Team ID that owns this installation
+                      server_id:
+                        type: string
+                        description: MCP server ID that was installed
+                      created_by:
+                        type: string
+                        description: User ID who created this installation
+                      installation_name:
+                        type: string
+                        description: Custom name for this installation
+                      installation_type:
+                        type: string
+                        enum:
+                          - global
+                          - team
+                        description: Installation type
+                      team_args:
+                        type: array
+                        items:
+                          type: string
+                        nullable: true
+                        description: Team-level shared command line arguments
+                      team_env:
+                        type: object
+                        additionalProperties:
+                          type: string
+                        nullable: true
+                        description: Team-level shared environment variables
+                      team_headers:
+                        type: object
+                        additionalProperties:
+                          type: string
+                        nullable: true
+                        description: Team-level shared headers
+                      created_at:
+                        type: string
+                        format: date-time
+                        description: Installation creation timestamp
+                      updated_at:
+                        type: string
+                        format: date-time
+                        description: Last update timestamp
+                      last_used_at:
+                        type: string
+                        format: date-time
+                        nullable: true
+                        description: Last usage timestamp
+                      server:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                            description: Server ID
+                          name:
+                            type: string
+                            description: Server name
+                          description:
+                            type: string
+                            description: Server description
+                          repository_url:
+                            type: string
+                            nullable: true
+                            description: Repository URL
+                          repository_source:
+                            type: string
+                            nullable: true
+                            description: Repository platform (github, gitlab, bitbucket)
+                          repository_id:
+                            type: string
+                            nullable: true
+                            description: Platform-specific repository identifier
+                          repository_subfolder:
+                            type: string
+                            nullable: true
+                            description: Subfolder path for monorepos
+                          website_url:
+                            type: string
+                            nullable: true
+                            description: Website URL
+                          author_name:
+                            type: string
+                            nullable: true
+                            description: Author name
+                          github_stars:
+                            type: number
+                            nullable: true
+                            description: Number of GitHub stars
+                          language:
+                            type: string
+                            description: Programming language
+                          runtime:
+                            type: string
+                            description: Runtime environment
+                          status:
+                            type: string
+                            enum:
+                              - active
+                              - deprecated
+                              - maintenance
+                            description: Server status
+                          tags:
+                            type: array
+                            items:
+                              type: string
+                            nullable: true
+                            description: Server tags
+                          environment_variables:
+                            type: array
+                            items: {}
+                            nullable: true
+                            description: Server environment variables
+                          args:
+                            type: array
+                            items: {}
+                            nullable: true
+                            description: Server command line arguments
+                          packages:
+                            type: array
+                            items: {}
+                            description: MCP Registry packages array
+                          remotes:
+                            type: array
+                            items: {}
+                            nullable: true
+                            description: MCP Registry remotes array for HTTP/SSE
+                          category_id:
+                            type: string
+                            nullable: true
+                            description: Category ID
+                          transport_type:
+                            type: string
+                            enum:
+                              - stdio
+                              - http
+                              - sse
+                            description: MCP transport type
+                        description: Optional server details if included
+                    required:
+                      - id
+                      - team_id
+                      - server_id
+                      - created_by
+                      - installation_name
+                      - installation_type
+                      - created_at
+                      - updated_at
+                      - last_used_at
+                  message:
+                    type: string
+                    description: Success message
+                required:
+                  - success
+                  - data
+                  - message
+                description: Query parameters updated successfully
+        "400":
+          description: Bad Request - Invalid input or validation error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates the operation failed
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                required:
+                  - success
+                  - error
+                description: Bad Request - Invalid input or validation error
+        "401":
+          description: Unauthorized - Authentication required or invalid token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates the operation failed
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                required:
+                  - success
+                  - error
+                description: Unauthorized - Authentication required or invalid token
+        "403":
+          description: Forbidden - Insufficient permissions or scope
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates the operation failed
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                required:
+                  - success
+                  - error
+                description: Forbidden - Insufficient permissions or scope
+        "404":
+          description: Not Found - Resource not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates the operation failed
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                required:
+                  - success
+                  - error
+                description: Not Found - Resource not found
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates the operation failed
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                required:
+                  - success
+                  - error
+                description: Internal Server Error
   /api/teams/{teamId}/mcp/installations/{installationId}/args:
     patch:
       summary: Update MCP installation command line arguments
@@ -16258,6 +16787,11 @@ paths:
                   additionalProperties:
                     type: string
                   description: User-specific HTTP headers
+                user_url_query_params:
+                  type: object
+                  additionalProperties:
+                    type: string
+                  description: User-specific URL query parameters
               additionalProperties: false
       parameters:
         - schema:
@@ -16806,6 +17340,422 @@ paths:
                   description: User-specific environment variables
               required:
                 - env
+              additionalProperties: false
+        required: true
+      parameters:
+        - schema:
+            type: string
+            minLength: 1
+          in: path
+          name: teamId
+          required: true
+          description: Team ID
+        - schema:
+            type: string
+            minLength: 1
+          in: path
+          name: installationId
+          required: true
+          description: Installation ID
+        - schema:
+            type: string
+            minLength: 1
+          in: path
+          name: configId
+          required: true
+          description: User configuration ID
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: true
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        description: User configuration ID
+                      installation_id:
+                        type: string
+                        description: Installation ID
+                      user_id:
+                        type: string
+                        description: User ID
+                      device_id:
+                        type: string
+                        description: Device ID
+                      user_args:
+                        type: object
+                        additionalProperties:
+                          type: string
+                        description: User argument mappings (placeholder -> actual value)
+                      user_env:
+                        type: object
+                        additionalProperties:
+                          type: string
+                        description: User-specific environment variables
+                      user_headers:
+                        type: object
+                        additionalProperties:
+                          type: string
+                        description: User-specific HTTP headers
+                      created_at:
+                        type: string
+                        format: date-time
+                        description: Creation timestamp
+                      updated_at:
+                        type: string
+                        format: date-time
+                        description: Last update timestamp
+                      last_used_at:
+                        type: string
+                        format: date-time
+                        description: Last used timestamp
+                    required:
+                      - id
+                      - installation_id
+                      - user_id
+                      - created_at
+                      - updated_at
+                    additionalProperties: false
+                  message:
+                    type: string
+                    description: Success message
+                required:
+                  - success
+                  - data
+                  - message
+                additionalProperties: false
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - success
+                  - error
+                additionalProperties: false
+                description: Bad Request
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - success
+                  - error
+                additionalProperties: false
+                description: Unauthorized
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - success
+                  - error
+                additionalProperties: false
+                description: Forbidden
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - success
+                  - error
+                additionalProperties: false
+                description: Not Found
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - success
+                  - error
+                additionalProperties: false
+                description: Internal Server Error
+  /api/teams/{teamId}/mcp/installations/{installationId}/user-configs/{configId}/headers:
+    patch:
+      summary: Update user configuration headers
+      tags:
+        - MCP User Configurations
+      description: "Updates the user-specific HTTP headers for an MCP server
+        installation configuration. Requires Content-Type: application/json
+        header when sending request body. Supports both cookie-based
+        authentication (for web users) and OAuth2 Bearer token authentication
+        (for CLI users)."
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                headers:
+                  type: object
+                  additionalProperties:
+                    type: string
+                  description: User-specific HTTP headers
+              required:
+                - headers
+              additionalProperties: false
+        required: true
+      parameters:
+        - schema:
+            type: string
+            minLength: 1
+          in: path
+          name: teamId
+          required: true
+          description: Team ID
+        - schema:
+            type: string
+            minLength: 1
+          in: path
+          name: installationId
+          required: true
+          description: Installation ID
+        - schema:
+            type: string
+            minLength: 1
+          in: path
+          name: configId
+          required: true
+          description: User configuration ID
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: true
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        description: User configuration ID
+                      installation_id:
+                        type: string
+                        description: Installation ID
+                      user_id:
+                        type: string
+                        description: User ID
+                      device_id:
+                        type: string
+                        description: Device ID
+                      user_args:
+                        type: object
+                        additionalProperties:
+                          type: string
+                        description: User argument mappings (placeholder -> actual value)
+                      user_env:
+                        type: object
+                        additionalProperties:
+                          type: string
+                        description: User-specific environment variables
+                      user_headers:
+                        type: object
+                        additionalProperties:
+                          type: string
+                        description: User-specific HTTP headers
+                      created_at:
+                        type: string
+                        format: date-time
+                        description: Creation timestamp
+                      updated_at:
+                        type: string
+                        format: date-time
+                        description: Last update timestamp
+                      last_used_at:
+                        type: string
+                        format: date-time
+                        description: Last used timestamp
+                    required:
+                      - id
+                      - installation_id
+                      - user_id
+                      - created_at
+                      - updated_at
+                    additionalProperties: false
+                  message:
+                    type: string
+                    description: Success message
+                required:
+                  - success
+                  - data
+                  - message
+                additionalProperties: false
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - success
+                  - error
+                additionalProperties: false
+                description: Bad Request
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - success
+                  - error
+                additionalProperties: false
+                description: Unauthorized
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - success
+                  - error
+                additionalProperties: false
+                description: Forbidden
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - success
+                  - error
+                additionalProperties: false
+                description: Not Found
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - success
+                  - error
+                additionalProperties: false
+                description: Internal Server Error
+  /api/teams/{teamId}/mcp/installations/{installationId}/user-configs/{configId}/query-params:
+    patch:
+      summary: Update user configuration URL query parameters
+      tags:
+        - MCP User Configurations
+      description: "Updates the user-specific URL query parameters for an MCP server
+        installation configuration. Requires Content-Type: application/json
+        header when sending request body. Supports both cookie-based
+        authentication (for web users) and OAuth2 Bearer token authentication
+        (for CLI users)."
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                query_params:
+                  type: object
+                  additionalProperties:
+                    type: string
+                  description: User-specific URL query parameters
+              required:
+                - query_params
               additionalProperties: false
         required: true
       parameters:

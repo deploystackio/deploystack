@@ -222,6 +222,34 @@ export class McpInstallationService {
   }
 
   /**
+   * Update team-level URL query parameters for an MCP installation
+   */
+  static async updateTeamQueryParams(
+    teamId: string,
+    installationId: string,
+    teamQueryParams: Record<string, string>
+  ): Promise<McpInstallation> {
+    const response = await fetch(`${this.baseUrl}/api/teams/${teamId}/mcp/installations/${installationId}/query-params`, {
+      method: 'PATCH',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        team_url_query_params: teamQueryParams
+      }),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.message || `Failed to update team query parameters: ${response.status}`)
+    }
+
+    const data = await response.json()
+    return data.data || data
+  }
+
+  /**
    * Get installation configuration for a specific client (claude-desktop, vscode, cursor)
    */
   static async getInstallationConfig(
@@ -362,6 +390,66 @@ export class McpInstallationService {
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))
       throw new Error(errorData.message || `Failed to update user configuration: ${response.status}`)
+    }
+
+    const data = await response.json()
+    return data.data
+  }
+
+  /**
+   * Update user configuration headers
+   */
+  static async updateUserHeaders(
+    teamId: string,
+    installationId: string,
+    configId: string,
+    headers: Record<string, string>
+  ): Promise<UserConfiguration> {
+    const response = await fetch(
+      `${this.baseUrl}/api/teams/${teamId}/mcp/installations/${installationId}/user-configs/${configId}/headers`,
+      {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ headers }),
+      }
+    )
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.message || `Failed to update user headers: ${response.status}`)
+    }
+
+    const data = await response.json()
+    return data.data
+  }
+
+  /**
+   * Update user configuration URL query parameters
+   */
+  static async updateUserQueryParams(
+    teamId: string,
+    installationId: string,
+    configId: string,
+    queryParams: Record<string, string>
+  ): Promise<UserConfiguration> {
+    const response = await fetch(
+      `${this.baseUrl}/api/teams/${teamId}/mcp/installations/${installationId}/user-configs/${configId}/query-params`,
+      {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ query_params: queryParams }),
+      }
+    )
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.message || `Failed to update user query parameters: ${response.status}`)
     }
 
     const data = await response.json()

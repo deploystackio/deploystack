@@ -74,12 +74,15 @@ export default async function createGlobalServer(server: FastifyInstance) {
       const finalTemplateArgs = requestData.configuration_schema?.template_args || [];
       const finalTemplateEnv = requestData.configuration_schema?.template_env || [];
       const finalTemplateHeaders = requestData.configuration_schema?.template_headers || [];
+      const finalTemplateUrlQueryParams = requestData.configuration_schema?.template_url_query_params || [];
       const finalTeamArgsSchema = requestData.configuration_schema?.team_args_schema || [];
       const finalTeamEnvSchema = requestData.configuration_schema?.team_env_schema || [];
       const finalTeamHeadersSchema = requestData.configuration_schema?.team_headers_schema || [];
+      const finalTeamUrlQueryParamsSchema = requestData.configuration_schema?.team_url_query_params_schema || [];
       const finalUserArgsSchema = requestData.configuration_schema?.user_args_schema || [];
       const finalUserEnvSchema = requestData.configuration_schema?.user_env_schema || [];
       const finalUserHeadersSchema = requestData.configuration_schema?.user_headers_schema || [];
+      const finalUserUrlQueryParamsSchema = requestData.configuration_schema?.user_url_query_params_schema || [];
       
       // Fetch GitHub data if repository_url points to GitHub (non-blocking)
       let githubReadmeBase64: string | null = null;
@@ -204,12 +207,15 @@ export default async function createGlobalServer(server: FastifyInstance) {
         template_args: finalTemplateArgs || [],
         template_env: finalTemplateEnv || [], // Store as array format (not converted to object)
         template_headers: finalTemplateHeaders || [], // Store as array format (not converted to object)
+        template_url_query_params: finalTemplateUrlQueryParams || [],
         team_args_schema: finalTeamArgsSchema || [],
         team_env_schema: finalTeamEnvSchema || [],
         team_headers_schema: finalTeamHeadersSchema || [],
+        team_url_query_params_schema: finalTeamUrlQueryParamsSchema || [],
         user_args_schema: finalUserArgsSchema || [],
         user_env_schema: finalUserEnvSchema || [],
         user_headers_schema: finalUserHeadersSchema || [],
+        user_url_query_params_schema: finalUserUrlQueryParamsSchema || [],
         dependencies: requestData.dependencies,
         category_id: requestData.category_id,
         tags: requestData.tags,

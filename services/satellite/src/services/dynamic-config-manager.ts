@@ -2,6 +2,7 @@ import { FastifyBaseLogger } from 'fastify';
 import { McpServerConfig, ConfigurationUpdate } from './command-polling-service';
 import { McpServersConfig } from '../types/mcp-server';
 import type { EventBus } from './event-bus';
+import { maskUrlForLogging } from '../utils/log-masker';
 
 export interface DynamicMcpServersConfig {
   defaultTimeout: number;
@@ -113,7 +114,7 @@ export class DynamicConfigManager {
           this.logger.info({
             operation: 'config_server_added',
             server_name: serverName,
-            server_url: serverConfig.url,
+            server_url: maskUrlForLogging(serverConfig.url, serverConfig.secret_metadata?.query_params),
             enabled: serverConfig.enabled
           }, `Added MCP server configuration: ${serverName}`);
         });
@@ -123,7 +124,7 @@ export class DynamicConfigManager {
           this.logger.info({
             operation: 'config_server_modified',
             server_name: serverName,
-            server_url: serverConfig.url,
+            server_url: maskUrlForLogging(serverConfig.url, serverConfig.secret_metadata?.query_params),
             enabled: serverConfig.enabled
           }, `Modified MCP server configuration: ${serverName}`);
         });
@@ -271,7 +272,7 @@ export class DynamicConfigManager {
         this.logger.warn({
           operation: 'config_validation_failed',
           server_name: serverName,
-          url: config.url,
+          url: maskUrlForLogging(config.url, config.secret_metadata?.query_params),
           reason: 'invalid_url_format'
         }, `Server ${serverName}: Invalid URL format`);
         return false;
@@ -281,7 +282,7 @@ export class DynamicConfigManager {
         operation: 'config_validation_success',
         server_name: serverName,
         transport_type: transportType,
-        url: config.url
+        url: maskUrlForLogging(config.url, config.secret_metadata?.query_params)
       }, `Server ${serverName}: ${transportType} transport validation passed`);
 
     } else {
@@ -392,7 +393,7 @@ export class DynamicConfigManager {
           {
             name: config.name,
             type: config.type,
-            url: config.url,
+            url: maskUrlForLogging(config.url, config.secret_metadata?.query_params),
             description: config.description,
             timeout: config.timeout,
             enabled: config.enabled,

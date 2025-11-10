@@ -49,7 +49,7 @@ const isLoadingServer = ref(true)
 const isEditModalOpen = ref(false)
 const editingItem = ref<any>(null)
 const editingValue = ref('')
-const editingType = ref<'arg' | 'env' | 'header'>('env')
+const editingType = ref<'arg' | 'env' | 'header' | 'query_param'>('env')
 const showPassword = ref(false)
 const isSubmitting = ref(false)
 const formErrors = ref<Record<string, string>>({})
@@ -99,7 +99,15 @@ const teamHeadersSchema = computed(() => {
   }
 })
 
-
+const teamQueryParamsSchema = computed(() => {
+  const schema = props.installation.server?.team_url_query_params_schema || serverData.value?.team_url_query_params_schema
+  if (!schema) return []
+  try {
+    return Array.isArray(schema) ? schema : JSON.parse(schema)
+  } catch {
+    return []
+  }
+})
 
 // Get current team configuration values
 const currentTeamArgs = computed(() => {
@@ -112,6 +120,10 @@ const currentTeamEnv = computed(() => {
 
 const currentTeamHeaders = computed(() => {
   return props.installation.team_headers || {}
+})
+
+const currentTeamQueryParams = computed(() => {
+  return props.installation.team_url_query_params || {}
 })
 
 // Prepare team arguments with current values
@@ -139,13 +151,21 @@ const teamHeadersWithData = computed(() => {
   }))
 })
 
+// Prepare team query params with current values
+const teamQueryParamsWithData = computed(() => {
+  return teamQueryParamsSchema.value.map((paramSchema: any) => ({
+    ...paramSchema,
+    currentValue: currentTeamQueryParams.value[paramSchema.name] || ''
+  }))
+})
+
 // Check if there's any team configuration
 const hasTeamConfiguration = computed(() => {
-  return teamArgsSchema.value.length > 0 || teamEnvSchema.value.length > 0 || teamHeadersSchema.value.length > 0
+  return teamArgsSchema.value.length > 0 || teamEnvSchema.value.length > 0 || teamHeadersSchema.value.length > 0 || teamQueryParamsSchema.value.length > 0
 })
 
 // Modal functions
-const openEditModal = (item: any, type: 'arg' | 'env' | 'header') => {
+const openEditModal = (item: any, type: 'arg' | 'env' | 'header' | 'query_param') => {
   if (!props.canEdit) return
 
   editingItem.value = item
@@ -223,6 +243,18 @@ const handleSubmit = async () => {
         props.installation.id,
         updatedHeaders
       )
+    } else if (editingType.value === 'query_param') {
+      // Update team query parameters
+      const updatedQueryParams = {
+        ...currentTeamQueryParams.value,
+        [editingItem.value.name]: editingValue.value
+      }
+
+      updatedInstallation = await McpInstallationService.updateTeamQueryParams(
+        props.teamId,
+        props.installation.id,
+        updatedQueryParams
+      )
     } else {
       // Update team environment variables
       const updatedEnv = {
@@ -265,6 +297,8 @@ const modalTitle = computed(() => {
     return t('mcpInstallations.teamConfiguration.editModal.titleArg', { name: argName })
   } else if (editingType.value === 'header') {
     return `Edit Team Header: ${editingItem.value.name}`
+  } else if (editingType.value === 'query_param') {
+    return `Edit Team Query Parameter: ${editingItem.value.name}`
   } else {
     return t('mcpInstallations.teamConfiguration.editModal.titleEnv', { name: editingItem.value.name })
   }
@@ -469,6 +503,72 @@ const modalTitle = computed(() => {
                   size="sm"
                   variant="outline"
                   @click="openEditModal(header, 'header')"
+                >
+                  {{ t('mcpInstallations.teamConfiguration.table.actions.editValue') }}
+                </Button>
+                <Button
+                  v-else
+                  size="sm"
+                  variant="outline"
+                  disabled
+                  class="cursor-not-allowed opacity-50"
+                >
+                  {{ t('mcpInstallations.teamConfiguration.table.actions.editValue') }}
+                </Button>
+              </div>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Team Query Parameters Section -->
+        <div v-if="teamQueryParamsSchema.length > 0">
+          <div class="mb-4">
+            <h4 class="text-sm font-semibold text-gray-900">Team URL Query Parameters</h4>
+            <p class="text-xs text-gray-500">Configure URL query parameters that will be shared across all team members for this MCP server installation.</p>
+          </div>
+
+          <ul role="list" class="space-y-3">
+            <li v-for="param in teamQueryParamsWithData" :key="param.name" class="flex items-center justify-between gap-x-6 py-5 bg-yellow-50 rounded-lg px-4">
+              <div class="min-w-0 flex-1">
+                <div class="flex items-start gap-x-3">
+                  <p class="text-sm/6 font-semibold text-gray-900 font-mono">
+                    {{ param.name }}
+                  </p>
+                </div>
+                <div class="mt-1 text-xs/5 text-gray-700">
+                  <span class="font-medium text-gray-800">{{ t('mcpInstallations.teamConfiguration.table.labels.required') }}</span>
+                  <span class="ml-1">{{ param.required ? t('common.labels.yes') : t('common.labels.no') }}</span>
+                </div>
+              </div>
+
+              <div class="flex-1 min-w-0">
+                <div class="space-y-1 text-xs/5 text-gray-700">
+                  <div>
+                    <span class="font-medium text-gray-800">{{ t('mcpInstallations.teamConfiguration.table.labels.type') }}</span>
+                    <span class="ml-1">{{ param.type || t('mcpInstallations.teamConfiguration.table.labels.defaultType') }}</span>
+                  </div>
+                  <div v-if="param.visible_to_users === false">
+                    <span class="font-medium text-gray-800">{{ t('mcpInstallations.teamConfiguration.table.labels.hiddenFromUsers') }}</span>
+                    <span class="ml-1">{{ t('common.labels.yes') }}</span>
+                  </div>
+                  <div>
+                    <span class="font-medium text-gray-800">{{ t('mcpInstallations.teamConfiguration.table.labels.value') }}</span>
+                    <span v-if="param.type === 'password' || param.type === 'secret'" class="ml-1 font-mono">
+                      {{ param.currentValue ? '••••••••' : t('mcpInstallations.teamConfiguration.table.values.notSet') }}
+                    </span>
+                    <span v-else class="ml-1 font-mono">
+                      {{ param.currentValue || t('mcpInstallations.teamConfiguration.table.values.notSet') }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="flex flex-none items-center gap-x-4">
+                <Button
+                  v-if="canEdit && (userRole === 'team_admin' || userRole === null)"
+                  size="sm"
+                  variant="outline"
+                  @click="openEditModal(param, 'query_param')"
                 >
                   {{ t('mcpInstallations.teamConfiguration.table.actions.editValue') }}
                 </Button>

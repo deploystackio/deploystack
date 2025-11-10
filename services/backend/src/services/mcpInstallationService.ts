@@ -18,6 +18,7 @@ export interface McpInstallation {
   team_args?: string[] | null; // Team-level shared arguments
   team_env?: Record<string, string> | null; // Team-level shared environment variables (decrypted for response)
   team_headers?: Record<string, string> | null; // Team-level shared headers (decrypted for response)
+  team_url_query_params?: Record<string, string> | null; // Team-level shared URL query parameters
   created_at: Date;
   updated_at: Date;
   last_used_at?: Date;
@@ -41,10 +42,16 @@ export interface McpInstallation {
     // Three-tier schema fields
     template_args: any[] | null;
     template_env: Record<string, string> | null;
+    template_headers: any[] | null;
+    template_url_query_params: any[] | null;
     team_args_schema: any[] | null;
     team_env_schema: any[] | null;
+    team_headers_schema: any[] | null;
+    team_url_query_params_schema: any[] | null;
     user_args_schema: any[] | null;
     user_env_schema: any[] | null;
+    user_headers_schema: any[] | null;
+    user_url_query_params_schema: any[] | null;
     transport_type: 'stdio' | 'http' | 'sse';
   };
 }
@@ -56,6 +63,7 @@ export interface CreateMcpInstallationRequest {
   team_args?: string[];
   team_env?: Record<string, string>;
   team_headers?: Record<string, string>;
+  team_url_query_params?: Record<string, string>;
 }
 
 export interface UpdateMcpInstallationRequest {
@@ -63,6 +71,7 @@ export interface UpdateMcpInstallationRequest {
   team_args?: string[];
   team_env?: Record<string, string>;
   team_headers?: Record<string, string>;
+  team_url_query_params?: Record<string, string>;
 }
 
 export interface ClientConfig {
@@ -123,8 +132,11 @@ export class McpInstallationService {
         ...row.installation,
         team_args: teamArgs,
         team_env: teamEnv,
-        team_headers: row.installation.team_headers 
+        team_headers: row.installation.team_headers
           ? this.parseJsonField(row.installation.team_headers, {})
+          : null,
+        team_url_query_params: row.installation.team_url_query_params
+          ? this.parseJsonField(row.installation.team_url_query_params, {})
           : null,
         server: row.server ? {
           id: row.server.id,
@@ -144,12 +156,16 @@ export class McpInstallationService {
           remotes: this.parseJsonField(row.server.remotes, null),
           template_args: this.parseJsonField(row.server.template_args, []),
           template_env: this.parseJsonField(row.server.template_env, {}),
+          template_headers: this.parseJsonField(row.server.template_headers, []),
+          template_url_query_params: this.parseJsonField(row.server.template_url_query_params, []),
           team_args_schema: this.parseJsonField(row.server.team_args_schema, []),
           team_env_schema: this.parseJsonField(row.server.team_env_schema, []),
           team_headers_schema: this.parseJsonField(row.server.team_headers_schema, []),
+          team_url_query_params_schema: this.parseJsonField(row.server.team_url_query_params_schema, []),
           user_args_schema: this.parseJsonField(row.server.user_args_schema, []),
           user_env_schema: this.parseJsonField(row.server.user_env_schema, []),
           user_headers_schema: this.parseJsonField(row.server.user_headers_schema, []),
+          user_url_query_params_schema: this.parseJsonField(row.server.user_url_query_params_schema, []),
           transport_type: row.server.transport_type
         } : undefined
       });
@@ -203,14 +219,17 @@ export class McpInstallationService {
     return {
       ...installation,
       team_args: teamArgs,
-      team_env: installation.team_env 
+      team_env: installation.team_env
         ? await this.maskEnvironmentVariables(
-            installation.team_env, 
+            installation.team_env,
             this.parseJsonField(server?.team_env_schema, [])
           )
         : null,
-      team_headers: installation.team_headers 
+      team_headers: installation.team_headers
         ? this.parseJsonField(installation.team_headers, {})
+        : null,
+      team_url_query_params: installation.team_url_query_params
+        ? this.parseJsonField(installation.team_url_query_params, {})
         : null,
       server: server ? {
         id: server.id,
@@ -230,12 +249,16 @@ export class McpInstallationService {
         remotes: this.parseJsonField(server.remotes, null),
         template_args: this.parseJsonField(server.template_args, []),
         template_env: this.parseJsonField(server.template_env, {}),
+        template_headers: this.parseJsonField(server.template_headers, []),
+        template_url_query_params: this.parseJsonField(server.template_url_query_params, []),
         team_args_schema: this.parseJsonField(server.team_args_schema, []),
         team_env_schema: this.parseJsonField(server.team_env_schema, []),
         team_headers_schema: this.parseJsonField(server.team_headers_schema, []),
+        team_url_query_params_schema: this.parseJsonField(server.team_url_query_params_schema, []),
         user_args_schema: this.parseJsonField(server.user_args_schema, []),
         user_env_schema: this.parseJsonField(server.user_env_schema, []),
         user_headers_schema: this.parseJsonField(server.user_headers_schema, []),
+        user_url_query_params_schema: this.parseJsonField(server.user_url_query_params_schema, []),
         transport_type: server.transport_type
       } : undefined
     };
@@ -384,14 +407,17 @@ export class McpInstallationService {
             this.parseJsonField(server[0].team_args_schema, [])
           )
         : null,
-      team_env: data.team_env 
+      team_env: data.team_env
         ? await this.encryptEnvironmentVariables(
-            data.team_env, 
+            data.team_env,
             this.parseJsonField(server[0].team_env_schema, [])
           )
         : null,
-      team_headers: data.team_headers 
+      team_headers: data.team_headers
         ? JSON.stringify(data.team_headers)
+        : null,
+      team_url_query_params: data.team_url_query_params
+        ? JSON.stringify(data.team_url_query_params)
         : null,
       created_at: now,
       updated_at: now,
@@ -489,6 +515,12 @@ export class McpInstallationService {
     if (data.team_headers !== undefined) {
       updateData.team_headers = data.team_headers
         ? JSON.stringify(data.team_headers)
+        : null;
+    }
+
+    if (data.team_url_query_params !== undefined) {
+      updateData.team_url_query_params = data.team_url_query_params
+        ? JSON.stringify(data.team_url_query_params)
         : null;
     }
 

@@ -41,7 +41,16 @@ const CONFIG_RESPONSE_SCHEMA = {
           env: { type: 'object', description: 'Environment variables' },
           headers: { type: 'object', description: 'HTTP headers for HTTP/SSE transport' },
           timeout: { type: 'integer', description: 'Timeout in milliseconds' },
-          enabled: { type: 'boolean', description: 'Whether this server is enabled' }
+          enabled: { type: 'boolean', description: 'Whether this server is enabled' },
+          secret_metadata: {
+            type: 'object',
+            properties: {
+              query_params: { type: 'array', items: { type: 'string' }, description: 'Names of query parameters that are secrets (should be masked in logs)' },
+              headers: { type: 'array', items: { type: 'string' }, description: 'Names of headers that are secrets (should be masked in logs)' },
+              env: { type: 'array', items: { type: 'string' }, description: 'Names of environment variables that are secrets (should be masked in logs)' }
+            },
+            description: 'Metadata about which fields contain secrets and should be masked in satellite logs'
+          }
         },
         required: ['installation_id', 'team_id', 'server_name', 'transport_type', 'enabled']
       },
@@ -142,8 +151,14 @@ interface McpServerConfig {
   args?: string[];
   env?: Record<string, string>;
   headers?: Record<string, string>;
+  url_query_params?: Record<string, string>;
   timeout?: number;
   enabled: boolean;
+  secret_metadata?: {
+    query_params?: string[];
+    headers?: string[];
+    env?: string[];
+  };
 }
 
 interface ConfigResponse {
@@ -353,32 +368,65 @@ export default async function satelliteConfigRoute(server: FastifyInstance) {
           // Create unique process identifier: {server_slug}-{team_slug}-{installation_id}
           const processId = `${server.slug}-${team_slug}-${installation.id}`;
 
-          // Parse base configuration from packages (like gateway)
-          const packages = JSON.parse(server.packages || '[]');
-          
-          if (!packages || packages.length === 0) {
-            request.log.warn({
-              serverId: server.id,
-              serverName: server.name
-            }, 'No packages configuration found');
-            continue;
-          }
+          // Initialize configuration variables
+          let finalCommand: string | undefined;
+          let finalArgs: string[] = [];
+          let finalEnv: Record<string, string> = {};
+          let finalUrl: string | undefined;
+          let finalHeaders: Record<string, string> = {};
 
-          const packageConfig = packages[0];
-          if (!packageConfig.transport) {
-            request.log.warn({
-              serverId: server.id,
-              serverName: server.name
-            }, 'No transport configuration in package');
-            continue;
-          }
+          // Parse base configuration based on transport type
+          if (server.transport_type === 'stdio') {
+            // For stdio, use packages
+            const packages = JSON.parse(server.packages || '[]');
 
-          // Start with base configuration from package transport
-          let finalCommand = packageConfig.transport.command || 'npx';
-          let finalArgs = [...(packageConfig.transport.args || [])];
-          let finalEnv = { ...(packageConfig.transport.env || {}) };
-          let finalUrl = packageConfig.transport.url; // Extract real URL from package transport
-          let finalHeaders = { ...(packageConfig.transport.headers || {}) };
+            if (!packages || packages.length === 0) {
+              request.log.warn({
+                serverId: server.id,
+                serverName: server.name
+              }, 'No packages configuration found for stdio transport');
+              continue;
+            }
+
+            const packageConfig = packages[0];
+            if (!packageConfig || !packageConfig.transport) {
+              request.log.warn({
+                serverId: server.id,
+                serverName: server.name,
+                hasPackageConfig: !!packageConfig
+              }, 'No transport configuration in package');
+              continue;
+            }
+
+            finalCommand = packageConfig.transport.command || 'npx';
+            finalArgs = [...(packageConfig.transport.args || [])];
+            finalEnv = { ...(packageConfig.transport.env || {}) };
+          } else if (server.transport_type === 'http' || server.transport_type === 'sse') {
+            // For HTTP/SSE, use remotes
+            const remotes = JSON.parse(server.remotes || '[]');
+
+            if (!remotes || remotes.length === 0) {
+              request.log.warn({
+                serverId: server.id,
+                serverName: server.name,
+                transportType: server.transport_type
+              }, 'No remotes configuration found for HTTP/SSE transport');
+              continue;
+            }
+
+            const remoteConfig = remotes[0];
+            if (!remoteConfig || !remoteConfig.url) {
+              request.log.warn({
+                serverId: server.id,
+                serverName: server.name,
+                hasRemoteConfig: !!remoteConfig
+              }, 'No URL in remote configuration');
+              continue;
+            }
+
+            finalUrl = remoteConfig.url;
+            finalHeaders = { ...(remoteConfig.headers || {}) };
+          }
 
           // Apply team configuration with proper decryption (like gateway)
           if (installation.team_args) {
@@ -456,20 +504,134 @@ export default async function satelliteConfigRoute(server: FastifyInstance) {
             
             // Apply headers from installation method and team configuration
             serverConfig.headers = finalHeaders;
-            
+
             if (installation.team_headers) {
               try {
-                // eslint-disable-next-line @typescript-eslint/no-unused-vars
                 const teamHeadersSchema = JSON.parse(server.team_headers_schema || '[]');
-                // TODO: Add proper header decryption like args/env
-                const teamHeaders = JSON.parse(installation.team_headers);
-                serverConfig.headers = { ...serverConfig.headers, ...teamHeaders };
+                const decryptedTeamHeaders = await McpEnvStorage.retrieveTeamEnv(
+                  installation.team_headers,
+                  teamHeadersSchema,
+                  { maskSecrets: false }, // Decrypt secrets for satellite
+                  request.log
+                );
+                serverConfig.headers = { ...serverConfig.headers, ...decryptedTeamHeaders };
               } catch (error) {
                 request.log.warn({
                   serverId: server.id,
                   error: error instanceof Error ? error.message : String(error)
-                }, 'Failed to parse team_headers');
+                }, 'Failed to decrypt and parse team_headers');
               }
+            }
+
+            // Handle team URL query params with decryption
+            let finalQueryParams: Record<string, string> = {};
+            if (installation.team_url_query_params) {
+              try {
+                const teamUrlQueryParamsSchema = JSON.parse(server.team_url_query_params_schema || '[]');
+                const decryptedTeamQueryParams = await McpEnvStorage.retrieveTeamEnv(
+                  installation.team_url_query_params,
+                  teamUrlQueryParamsSchema,
+                  { maskSecrets: false }, // Decrypt secrets for satellite
+                  request.log
+                );
+                finalQueryParams = { ...finalQueryParams, ...decryptedTeamQueryParams };
+              } catch (error) {
+                request.log.warn({
+                  serverId: server.id,
+                  error: error instanceof Error ? error.message : String(error)
+                }, 'Failed to decrypt and parse team_url_query_params');
+              }
+            }
+
+            // Apply query params to URL if any exist
+            if (finalUrl && Object.keys(finalQueryParams).length > 0) {
+              try {
+                const url = new URL(finalUrl);
+                Object.entries(finalQueryParams).forEach(([key, value]) => {
+                  url.searchParams.set(key, value);
+                });
+                serverConfig.url = url.toString();
+              } catch (error) {
+                request.log.warn({
+                  serverId: server.id,
+                  error: error instanceof Error ? error.message : String(error)
+                }, 'Failed to apply query params to URL');
+                serverConfig.url = finalUrl; // Fall back to original URL
+              }
+            }
+
+            // Extract secret metadata for satellite logging
+            const secretQueryParams: string[] = [];
+            const secretHeaders: string[] = [];
+
+            // Extract secret query params from schema
+            if (installation.team_url_query_params) {
+              try {
+                const teamUrlQueryParamsSchema = JSON.parse(server.team_url_query_params_schema || '[]');
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                teamUrlQueryParamsSchema.forEach((field: any) => {
+                  if (field.type === 'secret' || field.type === 'password') {
+                    secretQueryParams.push(field.name);
+                  }
+                });
+              } catch (error) {
+                request.log.debug({
+                  serverId: server.id,
+                  error: error instanceof Error ? error.message : String(error)
+                }, 'Failed to extract secret query param metadata');
+              }
+            }
+
+            // Extract secret headers from schema
+            if (installation.team_headers) {
+              try {
+                const teamHeadersSchema = JSON.parse(server.team_headers_schema || '[]');
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                teamHeadersSchema.forEach((field: any) => {
+                  if (field.type === 'secret' || field.type === 'password') {
+                    secretHeaders.push(field.name);
+                  }
+                });
+              } catch (error) {
+                request.log.debug({
+                  serverId: server.id,
+                  error: error instanceof Error ? error.message : String(error)
+                }, 'Failed to extract secret header metadata');
+              }
+            }
+
+            // Add secret metadata to config if any secrets found
+            if (secretQueryParams.length > 0 || secretHeaders.length > 0) {
+              serverConfig.secret_metadata = {
+                query_params: secretQueryParams.length > 0 ? secretQueryParams : undefined,
+                headers: secretHeaders.length > 0 ? secretHeaders : undefined
+              };
+            }
+          }
+
+          // Extract secret env vars metadata for stdio transport
+          if (server.transport_type === 'stdio' && installation.team_env) {
+            const secretEnvVars: string[] = [];
+            try {
+              const teamEnvSchema = JSON.parse(server.team_env_schema || '[]');
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              teamEnvSchema.forEach((field: any) => {
+                if (field.type === 'secret' || field.type === 'password') {
+                  secretEnvVars.push(field.name);
+                }
+              });
+
+              if (secretEnvVars.length > 0) {
+                serverConfig.secret_metadata = {
+                  ...serverConfig.secret_metadata,
+                  env: secretEnvVars
+                };
+              }
+            } catch (error) {
+              request.log.debug({
+                serverId: server.id,
+                error: error instanceof Error ? error.message : String(error)
+              }, 'Failed to extract secret env metadata');
             }
           }
 

@@ -55,7 +55,7 @@ const isLoadingUserConfig = ref(true)
 const isEditModalOpen = ref(false)
 const editingItem = ref<any>(null)
 const editingValue = ref('')
-const editingType = ref<'arg' | 'env' | 'header'>('env')
+const editingType = ref<'arg' | 'env' | 'header' | 'query_param'>('env')
 const showPassword = ref(false)
 const isSubmitting = ref(false)
 const formErrors = ref<Record<string, string>>({})
@@ -134,6 +134,16 @@ const userHeadersSchema = computed(() => {
   }
 })
 
+const userQueryParamsSchema = computed(() => {
+  const schema = props.installation.server?.user_url_query_params_schema || serverData.value?.user_url_query_params_schema
+  if (!schema) return []
+  try {
+    return Array.isArray(schema) ? schema : JSON.parse(schema)
+  } catch {
+    return []
+  }
+})
+
 // Get current user configuration values
 const currentUserArgs = computed(() => {
   return (currentUserConfig.value?.user_args as Record<string, any>) || {}
@@ -145,6 +155,10 @@ const currentUserEnv = computed(() => {
 
 const currentUserHeaders = computed(() => {
   return (currentUserConfig.value?.user_headers as Record<string, any>) || {}
+})
+
+const currentUserQueryParams = computed(() => {
+  return (currentUserConfig.value?.user_url_query_params as Record<string, any>) || {}
 })
 
 // Prepare user arguments with current values
@@ -170,9 +184,16 @@ const userHeadersWithData = computed(() => {
   }))
 })
 
+const userQueryParamsWithData = computed(() => {
+  return userQueryParamsSchema.value.map((queryParamSchema: any) => ({
+    ...queryParamSchema,
+    currentValue: currentUserQueryParams.value[queryParamSchema.name] || ''
+  }))
+})
+
 // Check if there's any user configuration schema
 const hasUserConfiguration = computed(() => {
-  return userArgsSchema.value.length > 0 || userEnvSchema.value.length > 0 || userHeadersSchema.value.length > 0
+  return userArgsSchema.value.length > 0 || userEnvSchema.value.length > 0 || userHeadersSchema.value.length > 0 || userQueryParamsSchema.value.length > 0
 })
 
 // Check if loading
@@ -181,20 +202,22 @@ const isLoading = computed(() => {
 })
 
 // Get current user configuration value for an item
-const getUserValue = (item: any, type: 'arg' | 'env' | 'header') => {
+const getUserValue = (item: any, type: 'arg' | 'env' | 'header' | 'query_param') => {
   if (!currentUserConfig.value) return ''
 
   if (type === 'arg') {
     return currentUserArgs.value[item.name] || ''
   } else if (type === 'env') {
     return currentUserEnv.value[item.name] || ''
-  } else {
+  } else if (type === 'header') {
     return currentUserHeaders.value[item.name] || ''
+  } else {
+    return currentUserQueryParams.value[item.name] || ''
   }
 }
 
 // Modal functions
-const openEditModal = (item: any, type: 'arg' | 'env' | 'header') => {
+const openEditModal = (item: any, type: 'arg' | 'env' | 'header' | 'query_param') => {
   editingItem.value = item
   editingType.value = type
   editingValue.value = getUserValue(item, type)
@@ -258,8 +281,12 @@ const handleEdit = async () => {
         createData.user_env = {
           [editingItem.value.name]: editingValue.value
         }
-      } else {
+      } else if (editingType.value === 'header') {
         createData.user_headers = {
+          [editingItem.value.name]: editingValue.value
+        }
+      } else {
+        createData.user_url_query_params = {
           [editingItem.value.name]: editingValue.value
         }
       }
@@ -273,29 +300,46 @@ const handleEdit = async () => {
       userConfigurations.value.push(newConfig)
       currentUserConfig.value = newConfig
     } else {
-      // Update existing configuration
-      const updateData: any = {}
+      // Update existing configuration using specific endpoints
+      let updatedConfig: any
 
       if (editingType.value === 'arg') {
         const updatedArgs = { ...(currentUserConfig.value.user_args as Record<string, any> || {}) }
         updatedArgs[editingItem.value.name] = editingValue.value
-        updateData.user_args = updatedArgs
+        updatedConfig = await McpInstallationService.updateUserConfiguration(
+          props.teamId,
+          props.installation.id,
+          currentUserConfig.value.id,
+          { user_args: updatedArgs }
+        )
       } else if (editingType.value === 'env') {
         const updatedEnv = { ...(currentUserConfig.value.user_env as Record<string, any> || {}) }
         updatedEnv[editingItem.value.name] = editingValue.value
-        updateData.user_env = updatedEnv
-      } else {
+        updatedConfig = await McpInstallationService.updateUserConfiguration(
+          props.teamId,
+          props.installation.id,
+          currentUserConfig.value.id,
+          { user_env: updatedEnv }
+        )
+      } else if (editingType.value === 'header') {
         const updatedHeaders = { ...(currentUserConfig.value.user_headers as Record<string, any> || {}) }
         updatedHeaders[editingItem.value.name] = editingValue.value
-        updateData.user_headers = updatedHeaders
+        updatedConfig = await McpInstallationService.updateUserHeaders(
+          props.teamId,
+          props.installation.id,
+          currentUserConfig.value.id,
+          updatedHeaders
+        )
+      } else {
+        const updatedQueryParams = { ...(currentUserConfig.value.user_url_query_params as Record<string, any> || {}) }
+        updatedQueryParams[editingItem.value.name] = editingValue.value
+        updatedConfig = await McpInstallationService.updateUserQueryParams(
+          props.teamId,
+          props.installation.id,
+          currentUserConfig.value.id,
+          updatedQueryParams
+        )
       }
-
-      const updatedConfig = await McpInstallationService.updateUserConfiguration(
-        props.teamId,
-        props.installation.id,
-        currentUserConfig.value.id,
-        updateData
-      )
 
       // Update local state
       const configIndex = userConfigurations.value.findIndex(c => c.id === currentUserConfig.value!.id)
@@ -305,7 +349,9 @@ const handleEdit = async () => {
       currentUserConfig.value = updatedConfig
     }
 
-    emit('configuration-updated', currentUserConfig.value)
+    if (currentUserConfig.value) {
+      emit('configuration-updated', currentUserConfig.value)
+    }
 
     // Show success toast
     toast.success(t('mcpInstallations.userConfiguration.editModal.messages.saveSuccess'), {
@@ -529,6 +575,62 @@ const modalTitle = computed(() => {
             </li>
           </ul>
         </div>
+
+        <!-- User Query Parameters Section -->
+        <div v-if="userQueryParamsSchema.length > 0">
+          <div class="mb-4">
+            <h4 class="text-sm font-semibold text-gray-900">{{ t('mcpInstallations.userConfiguration.sections.userQueryParams.title') }}</h4>
+            <p class="text-xs text-gray-500">{{ t('mcpInstallations.userConfiguration.sections.userQueryParams.description') }}</p>
+          </div>
+
+          <ul role="list" class="space-y-3">
+            <li v-for="queryParam in userQueryParamsWithData" :key="queryParam.name" class="flex items-center justify-between gap-x-6 py-5 bg-yellow-50 rounded-lg px-4">
+              <div class="min-w-0 flex-1">
+                <div class="flex items-start gap-x-3">
+                  <p class="text-sm/6 font-semibold text-gray-900 font-mono">
+                    {{ queryParam.name }}
+                  </p>
+                </div>
+                <div class="mt-1 text-xs/5 text-gray-700">
+                  <span class="font-medium text-gray-800">{{ t('mcpInstallations.userConfiguration.table.labels.required') }}</span>
+                  <span class="ml-1">{{ queryParam.required ? t('common.labels.yes') : t('common.labels.no') }}</span>
+                </div>
+              </div>
+
+              <div class="flex-1 min-w-0">
+                <div class="space-y-1 text-xs/5 text-gray-700">
+                  <div>
+                    <span class="font-medium text-gray-800">{{ t('mcpInstallations.userConfiguration.table.labels.type') }}</span>
+                    <span class="ml-1">{{ queryParam.type || t('mcpInstallations.userConfiguration.table.labels.defaultType') }}</span>
+                  </div>
+                  <div v-if="queryParam.description">
+                    <span class="font-medium text-gray-800">{{ t('mcpInstallations.userConfiguration.table.labels.description') }}</span>
+                    <span class="ml-1">{{ queryParam.description }}</span>
+                  </div>
+                  <div>
+                    <span class="font-medium text-gray-800">{{ t('mcpInstallations.userConfiguration.table.labels.value') }}</span>
+                    <span v-if="queryParam.type === 'password' || queryParam.type === 'secret'" class="ml-1 font-mono">
+                      {{ queryParam.currentValue ? '••••••••' : t('mcpInstallations.userConfiguration.table.values.notSet') }}
+                    </span>
+                    <span v-else class="ml-1 font-mono">
+                      {{ queryParam.currentValue || t('mcpInstallations.userConfiguration.table.values.notSet') }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="flex flex-none items-center gap-x-4">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  @click="openEditModal(queryParam, 'query_param')"
+                >
+                  {{ t('mcpInstallations.userConfiguration.table.actions.editValue') }}
+                </Button>
+              </div>
+            </li>
+          </ul>
+        </div>
       </div>
 
       <!-- Empty State -->
@@ -558,7 +660,7 @@ const modalTitle = computed(() => {
           <div v-if="editingItem" class="bg-gray-50 rounded-lg p-4 space-y-2">
             <div class="flex items-center gap-2">
               <span class="text-sm font-medium text-gray-700">
-                {{ editingType === 'arg' ? t('mcpInstallations.userConfiguration.editModal.form.labels.argument') : editingType === 'env' ? t('mcpInstallations.userConfiguration.editModal.form.labels.variable') : t('mcpInstallations.userConfiguration.editModal.form.labels.header') }}
+                {{ editingType === 'arg' ? t('mcpInstallations.userConfiguration.editModal.form.labels.argument') : editingType === 'env' ? t('mcpInstallations.userConfiguration.editModal.form.labels.variable') : editingType === 'header' ? t('mcpInstallations.userConfiguration.editModal.form.labels.header') : t('mcpInstallations.userConfiguration.editModal.form.labels.queryParam') }}
               </span>
               <code class="bg-gray-200 text-gray-800 px-2 py-1 rounded font-mono text-xs font-semibold">
                 {{ editingItem.name }}

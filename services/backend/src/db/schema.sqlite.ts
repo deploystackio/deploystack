@@ -205,16 +205,19 @@ export const mcpServers = sqliteTable('mcpServers', {
   template_args: text('template_args'), // JSON: [{"value":"-y", "locked":true, "description":"..."}]
   template_env: text('template_env'), // JSON: [{"name":"FIXED_VAR", "value":"fixed_value", "locked":true, "description":"..."}]
   template_headers: text('template_headers'), // JSON: [{"name":"Authorization", "value":"Bearer token", "locked":true, "description":"..."}]
-  
+  template_url_query_params: text('template_url_query_params'), // JSON: [{"name":"token", "value":"fixed_token_value", "locked":true, "description":"..."}]
+
   // Team Level Schema (what teams can configure)
   team_args_schema: text('team_args_schema'), // JSON: [{name, type, required, description}]
   team_env_schema: text('team_env_schema'), // JSON: [{name, type, required, description}]
   team_headers_schema: text('team_headers_schema'), // JSON: [{name, type, required, description}]
-  
+  team_url_query_params_schema: text('team_url_query_params_schema'), // JSON: [{name, type, required, description}]
+
   // User Level Schema (what individual users can configure)
   user_args_schema: text('user_args_schema'), // JSON: [{name, type, required, description, min_items, max_items}]
   user_env_schema: text('user_env_schema'), // JSON: [{name, type, required, description}]
   user_headers_schema: text('user_headers_schema'), // JSON: [{name, type, required, description}]
+  user_url_query_params_schema: text('user_url_query_params_schema'), // JSON: [{name, type, required, description}]
   
   // Legacy fields - REMOVED (zero backward compatibility)
   // environment_variables: text('environment_variables'), // REMOVED
@@ -289,6 +292,7 @@ export const mcpServerInstallations = sqliteTable('mcpServerInstallations', {
   team_args: text('team_args'), // JSON: ["shared-config-value"] - team-wide argument values
   team_env: text('team_env'), // JSON: {"SHARED_API_KEY": "team-secret"} - team-wide environment variables
   team_headers: text('team_headers'), // JSON: {"Authorization": "Bearer team_token"} - team-wide headers
+  team_url_query_params: text('team_url_query_params'), // JSON: {"token": "team_api_token"} - team-wide URL query parameters
   
   // Legacy fields - REMOVED (zero backward compatibility)
   // user_environment_variables: text('user_environment_variables'), // REMOVED - moved to mcpUserConfigurations
@@ -319,6 +323,7 @@ export const mcpUserConfigurations = sqliteTable('mcpUserConfigurations', {
   user_args: text('user_args'), // JSON: ["/Users/john/Desktop", "/Users/john/Projects"] - variable length arrays
   user_env: text('user_env'), // JSON: {"MEMORY_FILE_PATH": "/Users/john/memory.json", "DEBUG_MODE": "true"}
   user_headers: text('user_headers'), // JSON: {"Authorization": "Bearer user_personal_token"} - user-specific headers
+  user_url_query_params: text('user_url_query_params'), // JSON: {"api_key": "user_personal_api_key"} - user-specific URL query parameters
   
   // Metadata
   created_at: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),

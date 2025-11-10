@@ -24,9 +24,11 @@ export interface McpServer {
   team_args_schema?: any[] | null
   team_env_schema?: any[] | null
   team_headers_schema?: any[] | null
+  team_url_query_params_schema?: any[] | null
   user_args_schema?: any[] | null
   user_env_schema?: any[] | null
   user_headers_schema?: any[] | null
+  user_url_query_params_schema?: any[] | null
 }
 
 export interface EnvironmentVariable {
@@ -48,6 +50,7 @@ export interface McpInstallation {
   team_args?: string[]
   team_env?: Record<string, string>
   team_headers?: Record<string, string>
+  team_url_query_params?: Record<string, string>
   team_id: string
   user_id: string
   created_at: string
@@ -68,24 +71,27 @@ export interface UserConfiguration {
   user_id: string
   device_id: string
   device_name?: string
-  user_args: string[]
-  user_env: Record<string, string>
-  user_headers: Record<string, string>
+  user_args?: Record<string, string>
+  user_env?: Record<string, string>
+  user_headers?: Record<string, string>
+  user_url_query_params?: Record<string, string>
   created_at: string
   updated_at: string
   last_used_at?: string
 }
 
 export interface CreateUserConfigRequest {
-  device_id: string
-  user_args: string[]
-  user_env: Record<string, string>
-  user_headers: Record<string, string>
+  device_id?: string
+  user_args?: Record<string, string>
+  user_env?: Record<string, string>
+  user_headers?: Record<string, string>
+  user_url_query_params?: Record<string, string>
 }
 
 export interface UpdateUserConfigRequest {
   device_id?: string
-  user_args: string[]
-  user_env: Record<string, string>
-  user_headers: Record<string, string>
+  user_args?: Record<string, string>
+  user_env?: Record<string, string>
+  user_headers?: Record<string, string>
+  user_url_query_params?: Record<string, string>
 }

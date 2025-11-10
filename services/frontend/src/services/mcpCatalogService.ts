@@ -87,12 +87,15 @@ export class McpCatalogService {
       template_args: safeJsonParse(server.template_args, []),
       template_env: safeJsonParse(server.template_env, []),
       template_headers: safeJsonParse(server.template_headers, []),
+      template_url_query_params: safeJsonParse(server.template_url_query_params, []),
       team_args_schema: safeJsonParse(server.team_args_schema, []),
       team_env_schema: safeJsonParse(server.team_env_schema, []),
       team_headers_schema: safeJsonParse(server.team_headers_schema, []),
+      team_url_query_params_schema: safeJsonParse(server.team_url_query_params_schema, []),
       user_args_schema: safeJsonParse(server.user_args_schema, []),
       user_env_schema: safeJsonParse(server.user_env_schema, []),
-      user_headers_schema: safeJsonParse(server.user_headers_schema, [])
+      user_headers_schema: safeJsonParse(server.user_headers_schema, []),
+      user_url_query_params_schema: safeJsonParse(server.user_url_query_params_schema, [])
     }
   }
 

@@ -190,6 +190,51 @@ const displayUserHeadersSchema = computed(() => {
   }
 })
 
+const displayTemplateQueryParams = computed(() => {
+  if (!server.value?.template_url_query_params) return []
+  // Handle both array and JSON string formats
+  if (Array.isArray(server.value.template_url_query_params)) {
+    return server.value.template_url_query_params.filter(param => param != null)
+  }
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const parsed = JSON.parse(server.value.template_url_query_params as any)
+    return Array.isArray(parsed) ? parsed.filter(param => param != null) : []
+  } catch {
+    return []
+  }
+})
+
+const displayTeamQueryParamsSchema = computed(() => {
+  if (!server.value?.team_url_query_params_schema) return []
+  // Handle both array and JSON string formats
+  if (Array.isArray(server.value.team_url_query_params_schema)) {
+    return server.value.team_url_query_params_schema.filter(param => param != null)
+  }
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const parsed = JSON.parse(server.value.team_url_query_params_schema as any)
+    return Array.isArray(parsed) ? parsed.filter(param => param != null) : []
+  } catch {
+    return []
+  }
+})
+
+const displayUserQueryParamsSchema = computed(() => {
+  if (!server.value?.user_url_query_params_schema) return []
+  // Handle both array and JSON string formats
+  if (Array.isArray(server.value.user_url_query_params_schema)) {
+    return server.value.user_url_query_params_schema.filter(param => param != null)
+  }
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const parsed = JSON.parse(server.value.user_url_query_params_schema as any)
+    return Array.isArray(parsed) ? parsed.filter(param => param != null) : []
+  } catch {
+    return []
+  }
+})
+
 const displayTemplateHeaders = computed(() => {
   if (!server.value?.template_headers) return []
   // Handle both array and JSON string formats
@@ -887,6 +932,104 @@ const goBack = () => {
                             <span class="text-xs text-gray-500">Type: {{ header.type }}</span>
                           </div>
                           <span v-if="header.description" class="truncate text-xs text-gray-500 mt-1">{{ header.description }}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+                </ul>
+              </dd>
+            </div>
+
+            <!-- Template Query Parameters -->
+            <div v-if="displayTemplateQueryParams.length > 0" class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+              <dt class="text-sm/6 font-medium text-gray-900">Static URL Query Parameters</dt>
+              <dd class="mt-2 text-sm text-gray-900 sm:col-span-2 sm:mt-0">
+                <ul role="list" class="divide-y divide-gray-100 rounded-md border border-gray-200">
+                  <li
+                    v-for="(param, index) in displayTemplateQueryParams"
+                    :key="index"
+                    class="flex items-center justify-between py-4 pr-5 pl-4 text-sm/6"
+                  >
+                    <div class="flex w-0 flex-1 items-center">
+                      <Terminal class="size-5 shrink-0 text-gray-400" aria-hidden="true" />
+                      <div class="ml-4 flex min-w-0 flex-1 gap-2">
+                        <div class="flex flex-col">
+                          <div class="flex items-center gap-2">
+                            <code class="bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs font-mono">{{ param.name }}</code>
+                            <Lock v-if="param.locked" class="h-3 w-3 text-red-500" title="Locked by global admin" />
+                            <Unlock v-else class="h-3 w-3 text-green-500" title="Configurable" />
+                          </div>
+                          <div v-if="param.value" class="mt-1">
+                            <code class="bg-gray-50 text-gray-600 px-2 py-1 rounded text-xs font-mono">{{ param.value }}</code>
+                          </div>
+                          <span v-if="param.description" class="truncate text-xs text-gray-500 mt-1">{{ param.description }}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+                </ul>
+              </dd>
+            </div>
+
+            <!-- Team Query Parameters -->
+            <div v-if="displayTeamQueryParamsSchema.length > 0" class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+              <dt class="text-sm/6 font-medium text-gray-900">Team URL Query Parameters</dt>
+              <dd class="mt-2 text-sm text-gray-900 sm:col-span-2 sm:mt-0">
+                <ul role="list" class="divide-y divide-gray-100 rounded-md border border-gray-200">
+                  <li
+                    v-for="(param, index) in displayTeamQueryParamsSchema"
+                    :key="index"
+                    class="flex items-center justify-between py-4 pr-5 pl-4 text-sm/6"
+                  >
+                    <div class="flex w-0 flex-1 items-center">
+                      <Users class="size-5 shrink-0 text-gray-400" aria-hidden="true" />
+                      <div class="ml-4 flex min-w-0 flex-1 gap-2">
+                        <div class="flex flex-col">
+                          <div class="flex items-center gap-2">
+                            <code class="bg-yellow-50 text-yellow-700 px-2 py-1 rounded text-xs font-mono">{{ param.name }}</code>
+                            <Badge v-if="param.required" variant="default" class="text-xs">Required</Badge>
+                            <Badge v-else variant="secondary" class="text-xs">Optional</Badge>
+                            <Lock v-if="param.locked" class="h-3 w-3 text-red-500" title="Locked by global admin" />
+                            <Unlock v-else class="h-3 w-3 text-green-500" title="Team configurable" />
+                          </div>
+                          <div class="flex items-center gap-2 mt-1">
+                            <span class="text-xs text-gray-500">Type: {{ param.type }}</span>
+                            <span v-if="!param.visible_to_users" class="text-xs text-orange-600">(Hidden from users)</span>
+                          </div>
+                          <span v-if="param.description" class="truncate text-xs text-gray-500 mt-1">{{ param.description }}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+                </ul>
+              </dd>
+            </div>
+
+            <!-- User Query Parameters -->
+            <div v-if="displayUserQueryParamsSchema.length > 0" class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+              <dt class="text-sm/6 font-medium text-gray-900">User URL Query Parameters</dt>
+              <dd class="mt-2 text-sm text-gray-900 sm:col-span-2 sm:mt-0">
+                <ul role="list" class="divide-y divide-gray-100 rounded-md border border-gray-200">
+                  <li
+                    v-for="(param, index) in displayUserQueryParamsSchema"
+                    :key="index"
+                    class="flex items-center justify-between py-4 pr-5 pl-4 text-sm/6"
+                  >
+                    <div class="flex w-0 flex-1 items-center">
+                      <User class="size-5 shrink-0 text-gray-400" aria-hidden="true" />
+                      <div class="ml-4 flex min-w-0 flex-1 gap-2">
+                        <div class="flex flex-col">
+                          <div class="flex items-center gap-2">
+                            <code class="bg-pink-50 text-pink-700 px-2 py-1 rounded text-xs font-mono">{{ param.name }}</code>
+                            <Badge v-if="param.required" variant="default" class="text-xs">Required</Badge>
+                            <Badge v-else variant="secondary" class="text-xs">Optional</Badge>
+                            <Lock v-if="param.locked" class="h-3 w-3 text-red-500" title="Locked by team admin" />
+                            <Unlock v-else class="h-3 w-3 text-green-500" title="User configurable" />
+                          </div>
+                          <div class="flex items-center gap-2 mt-1">
+                            <span class="text-xs text-gray-500">Type: {{ param.type }}</span>
+                          </div>
+                          <span v-if="param.description" class="truncate text-xs text-gray-500 mt-1">{{ param.description }}</span>
                         </div>
                       </div>
                     </div>

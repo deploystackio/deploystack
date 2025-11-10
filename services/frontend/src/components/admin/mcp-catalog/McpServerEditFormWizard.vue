@@ -223,12 +223,15 @@ const initializeStorageWithData = (data: McpServerFormData) => {
       template_args: data.configuration_schema.template_args || [],
       template_env: data.configuration_schema.template_env || [],
       template_headers: data.configuration_schema.template_headers || [],
+      template_url_query_params: data.configuration_schema.template_url_query_params || [],
       team_args_schema: data.configuration_schema.team_args_schema || [],
       team_env_schema: data.configuration_schema.team_env_schema || [],
       team_headers_schema: data.configuration_schema.team_headers_schema || [],
+      team_url_query_params_schema: data.configuration_schema.team_url_query_params_schema || [],
       user_args_schema: data.configuration_schema.user_args_schema || [],
       user_env_schema: data.configuration_schema.user_env_schema || [],
       user_headers_schema: data.configuration_schema.user_headers_schema || [],
+      user_url_query_params_schema: data.configuration_schema.user_url_query_params_schema || [],
     }
 
     eventBus.setState('edit_configuration_schema', fullConfigSchema)

@@ -12,12 +12,15 @@ import type {
   TemplateArg,
   TemplateEnv,
   TemplateHeader,
+  TemplateUrlQueryParam,
   TeamArg,
   TeamEnv,
   TeamHeader,
+  TeamUrlQueryParam,
   UserArg,
   UserEnv,
   UserHeader,
+  UserUrlQueryParam,
   CreateGlobalServerRequest
 } from '../../routes/mcp/servers/schemas';
 import { GitHubService } from '../githubService';
@@ -422,6 +425,115 @@ export function mapHeadersToThreeTier(
 }
 
 /**
+ * Map URL query parameters to DeployStack's 3-tier configuration system
+ *
+ * Parses URLs from remotes to extract query parameters and categorizes them:
+ * - Fixed literal values → Template Level (locked)
+ * - Template variables like {API_KEY} → Team Level (secrets/required)
+ * - Optional parameters → User Level (customizable)
+ *
+ * @param remotes - Official remotes array (HTTP/SSE only)
+ * @returns DeployStack ConfigurationSchema URL query param configuration + cleaned base URL
+ */
+export function mapUrlQueryParamsToThreeTier(
+  remotes?: OfficialRemote[]
+): {
+  baseUrl: string | null;
+  template_url_query_params: TemplateUrlQueryParam[];
+  team_url_query_params_schema: TeamUrlQueryParam[];
+  user_url_query_params_schema: UserUrlQueryParam[];
+} {
+  const templateUrlQueryParams: TemplateUrlQueryParam[] = [];
+  const teamUrlQueryParamsSchema: TeamUrlQueryParam[] = [];
+  const userUrlQueryParamsSchema: UserUrlQueryParam[] = [];
+
+  // Only process if we have remotes (HTTP/SSE transports)
+  if (!remotes || remotes.length === 0) {
+    return {
+      baseUrl: null,
+      template_url_query_params: templateUrlQueryParams,
+      team_url_query_params_schema: teamUrlQueryParamsSchema,
+      user_url_query_params_schema: userUrlQueryParamsSchema
+    };
+  }
+
+  // Parse URL from first remote
+  const urlString = remotes[0].url;
+  let parsedUrl: URL;
+
+  try {
+    parsedUrl = new URL(urlString);
+  } catch {
+    // Invalid URL - return empty arrays with original URL
+    return {
+      baseUrl: urlString,
+      template_url_query_params: templateUrlQueryParams,
+      team_url_query_params_schema: teamUrlQueryParamsSchema,
+      user_url_query_params_schema: userUrlQueryParamsSchema
+    };
+  }
+
+  // Extract base URL without query params
+  const baseUrl = `${parsedUrl.protocol}//${parsedUrl.host}${parsedUrl.pathname}`;
+
+  // Parse query parameters
+  const queryParams = parsedUrl.searchParams;
+
+  // Pattern to detect template variables: {VARIABLE_NAME}
+  const templateVariablePattern = /^\{([A-Z_][A-Z0-9_]*)\}$/;
+
+  for (const [paramName, paramValue] of queryParams.entries()) {
+    // Check if value is a template variable
+    const templateMatch = paramValue.match(templateVariablePattern);
+
+    if (templateMatch) {
+      // Template variable like {API_KEY} → Team Level
+      const variableName = templateMatch[1];
+
+      // Detect if it's a secret based on name patterns
+      const secretPatterns = /^(.*_)?(KEY|TOKEN|SECRET|PASSWORD|CREDENTIAL|AUTH)(_.*)?$/i;
+      const isSecret = secretPatterns.test(variableName);
+
+      teamUrlQueryParamsSchema.push({
+        name: paramName,
+        type: isSecret ? 'secret' : 'string',
+        required: true, // Template variables are typically required
+        description: `${paramName} (from template variable: ${variableName})`,
+        locked: false,
+        default_team_locked: isSecret, // Lock secrets at team level
+        visible_to_users: !isSecret, // Hide secrets from users
+      });
+    } else if (paramValue && paramValue.trim() !== '') {
+      // Fixed literal value → Template Level (locked)
+      templateUrlQueryParams.push({
+        name: paramName,
+        value: paramValue,
+        locked: true,
+        description: `Fixed query parameter: ${paramName}=${paramValue}`,
+        type: 'string',
+        required: true
+      });
+    } else {
+      // Empty or optional parameter → User Level
+      userUrlQueryParamsSchema.push({
+        name: paramName,
+        type: 'string',
+        required: false,
+        description: `Optional query parameter: ${paramName}`,
+        locked: false,
+      });
+    }
+  }
+
+  return {
+    baseUrl,
+    template_url_query_params: templateUrlQueryParams,
+    team_url_query_params_schema: teamUrlQueryParamsSchema,
+    user_url_query_params_schema: userUrlQueryParamsSchema
+  };
+}
+
+/**
  * Map official runtime/package arguments to DeployStack's 3-tier args system
  * 
  * IMPORTANT: For STDIO packages, we need to infer command/args if not provided
@@ -542,18 +654,39 @@ export async function transformOfficialToDeployStack(
     }
   }
   const headerConfig = mapHeadersToThreeTier(allHeaders);
-  
+
+  // Extract 3-tier configurations from URL query parameters
+  const urlQueryParamConfig = mapUrlQueryParamsToThreeTier(officialServer.remotes);
+
+  // Clean remotes array - replace URLs with base URLs (without query params)
+  let cleanedRemotes = officialServer.remotes;
+  if (officialServer.remotes && officialServer.remotes.length > 0 && urlQueryParamConfig.baseUrl) {
+    cleanedRemotes = officialServer.remotes.map((remote, index) => {
+      // Only clean the first remote URL (where we extracted query params from)
+      if (index === 0) {
+        return {
+          ...remote,
+          url: urlQueryParamConfig.baseUrl as string
+        };
+      }
+      return remote;
+    });
+  }
+
   // Combine into full ConfigurationSchema
   const configurationSchema: ConfigurationSchema = {
     template_args: argsConfig.template_args,
     template_env: envConfig.template_env,
     template_headers: headerConfig.template_headers,
+    template_url_query_params: urlQueryParamConfig.template_url_query_params,
     team_args_schema: argsConfig.team_args_schema,
     team_env_schema: envConfig.team_env_schema,
     team_headers_schema: headerConfig.team_headers_schema,
+    team_url_query_params_schema: urlQueryParamConfig.team_url_query_params_schema,
     user_args_schema: argsConfig.user_args_schema,
     user_env_schema: envConfig.user_env_schema,
     user_headers_schema: headerConfig.user_headers_schema,
+    user_url_query_params_schema: urlQueryParamConfig.user_url_query_params_schema,
   };
   
   // Create friendly name (slug auto-generated by McpCatalogService)
@@ -590,8 +723,9 @@ export async function transformOfficialToDeployStack(
     
     // Official format storage (will be JSON stringified by create-global.ts)
     // Use packagesCopy which now has inferred command/args
+    // Use cleanedRemotes which has base URLs without query params (query params moved to three-tier config)
     packages: packagesCopy,
-    remotes: officialServer.remotes,
+    remotes: cleanedRemotes,
     
     // Derived DeployStack fields
     transport_type: transportType,

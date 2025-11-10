@@ -301,6 +301,14 @@ export default {
         individualConfig: 'These variables will be configured by individual users after installation.',
         perMemberConfig: 'Each team member will set their own values for these variables.',
         userConfigured: 'User configured'
+      },
+      teamQueryParams: {
+        title: 'Team Query Parameters',
+        description: 'URL query parameters shared across the team',
+        counter: {
+          single: 'query parameter',
+          plural: 'query parameters'
+        }
       }
     },
 
@@ -425,6 +433,11 @@ export default {
         title: 'User Headers',
         description: 'Personal HTTP headers for your MCP server configuration',
         userConfigured: 'Configured'
+      },
+      userQueryParams: {
+        title: 'User Query Parameters',
+        description: 'Personal URL query parameters for your MCP server configuration',
+        userConfigured: 'Configured'
       }
     },
 
@@ -480,6 +493,7 @@ export default {
           argument: 'Argument:',
           variable: 'Variable:',
           header: 'Header:',
+          queryParam: 'Query Parameter:',
           userValue: 'Your Value'
         },
         placeholders: {

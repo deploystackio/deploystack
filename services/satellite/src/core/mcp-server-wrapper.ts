@@ -355,6 +355,24 @@ export class McpServerWrapper {
   }
 
   /**
+   * Build MCP server URL with query parameters
+   */
+  private buildMcpServerUrl(baseUrl: string, queryParams?: Record<string, string>): string {
+    if (!queryParams || Object.keys(queryParams).length === 0) {
+      return baseUrl;
+    }
+
+    const url = new URL(baseUrl);
+
+    // Append each query parameter
+    Object.entries(queryParams).forEach(([key, value]) => {
+      url.searchParams.set(key, value);
+    });
+
+    return url.toString();
+  }
+
+  /**
    * Handle tool call for stdio MCP servers via ProcessManager
    */
   private async handleStdioToolCall(
@@ -444,7 +462,9 @@ export class McpServerWrapper {
       operation: 'mcp_http_tool_call',
       server_name: serverName,
       original_tool_name: originalToolName,
-      server_url: config.url
+      server_url: config.url,
+      has_query_params: !!config.url_query_params,
+      query_param_count: config.url_query_params ? Object.keys(config.url_query_params).length : 0
     }, `Sending tool call to HTTP server: ${serverName}`);
 
     const client = new Client({
@@ -452,7 +472,10 @@ export class McpServerWrapper {
       version: '1.0.0'
     });
 
-    const transport = new StreamableHTTPClientTransport(new URL(config.url));
+    // Build URL with query parameters
+    const finalUrl = this.buildMcpServerUrl(config.url, config.url_query_params);
+
+    const transport = new StreamableHTTPClientTransport(new URL(finalUrl));
 
     try {
       await client.connect(transport);

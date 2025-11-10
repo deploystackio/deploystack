@@ -181,6 +181,24 @@ export default {
           description: 'HTTP headers provide authentication and configuration for URL-based MCP servers.'
         }
       },
+      queryParams: {
+        title: 'URL Query Parameters Configuration',
+        description: 'Configure URL query parameters for HTTP-based MCP servers',
+        addButton: 'Add Query Parameter',
+        emptyState: {
+          title: 'No query parameters configured',
+          description: 'URL query parameters provide configuration and authentication for HTTP-based MCP servers.'
+        }
+      },
+      urlQueryParams: {
+        title: 'URL Query Parameters Configuration',
+        description: 'Configure URL query parameters for HTTP-based MCP servers',
+        addButton: 'Add Query Parameter',
+        emptyState: {
+          title: 'No query parameters configured',
+          description: 'URL query parameters provide configuration and authentication for HTTP-based MCP servers.'
+        }
+      },
       table: {
         columns: {
           name: 'Name',
@@ -216,18 +234,21 @@ export default {
         add: {
           argument: 'Add Argument',
           environment: 'Add Environment Variable',
-          header: 'Add Header'
+          header: 'Add Header',
+          queryParam: 'Add Query Parameter'
         },
         edit: {
           argument: 'Edit Argument',
           environment: 'Edit Environment Variable',
-          header: 'Edit Header'
+          header: 'Edit Header',
+          queryParam: 'Edit Query Parameter'
         },
         description: 'Configure how this {type} should be managed across your organization.',
         types: {
           argument: 'argument',
           environment: 'environment variable',
-          header: 'header'
+          header: 'header',
+          queryParam: 'query parameter'
         },
         fields: {
           name: {
@@ -241,6 +262,10 @@ export default {
           headerName: {
             label: 'Header Name',
             placeholder: 'e.g., Authorization, Content-Type'
+          },
+          queryParamName: {
+            label: 'Query Parameter Name',
+            placeholder: 'e.g., api_key, token, user_id'
           },
           argument: {
             label: 'Argument',

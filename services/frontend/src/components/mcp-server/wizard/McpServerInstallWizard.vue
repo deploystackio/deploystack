@@ -46,7 +46,9 @@ interface InstallationFormData {
     team_args: string[]
     team_env: Record<string, string>
     team_headers: Record<string, string>
+    team_url_query_params: Record<string, string>
     user_env: Record<string, string>
+    user_url_query_params: Record<string, string>
   }
   platform: {
     installation_type: string
@@ -128,7 +130,9 @@ const formData = ref<InstallationFormData>({
     team_args: [],
     team_env: {},
     team_headers: {},
-    user_env: {}
+    team_url_query_params: {},
+    user_env: {},
+    user_url_query_params: {}
   },
   platform: {
     installation_type: 'global'
@@ -268,7 +272,9 @@ const submitInstallation = async () => {
       team_args: formData.value.environment.team_args,
       team_env: formData.value.environment.team_env,
       team_headers: formData.value.environment.team_headers,
+      team_url_query_params: formData.value.environment.team_url_query_params,
       user_environment_variables: formData.value.environment.user_env,
+      user_url_query_params: formData.value.environment.user_url_query_params,
       installation_name: formData.value.server.server_data?.name || 'Unknown Server'
     }
 
@@ -427,7 +433,7 @@ onMounted(async () => {
     currentStep.value = 0
     formData.value = {
       server: { server_id: '' },
-      environment: { team_args: [], team_env: {}, team_headers: {}, user_env: {} },
+      environment: { team_args: [], team_env: {}, team_headers: {}, team_url_query_params: {}, user_env: {}, user_url_query_params: {} },
       platform: { installation_type: 'global' }
     }
   })

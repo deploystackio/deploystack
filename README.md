@@ -209,6 +209,8 @@ VS Code → HTTPS Request → DeployStack Satellite → MCP Server Process → E
 - **[Done]** Three-Tier MCP Configuration Architecture - complete database schema redesign separating template, team, and user-level configurations
 - **[Done]** Multi-User Configuration Management - support for multiple users within teams, each with personalized device-specific configurations
 - **[Done]** Advanced MCP Argument & Environment Variable Handling - comprehensive service layer with schema validation and runtime configuration assembly
+- **[Done]** HTTP Headers & URL Query Parameters Support - three-tier configuration for HTTP/SSE transport with intelligent URL parsing, automatic secret detection, and transport type validation
+- **[Done]** Selective Secret Masking in Satellite Logs - backend sends secret metadata to satellites for selective masking of sensitive query parameters, headers, and environment variables in logs (first 3 chars + *****), preventing credential exposure in log files and monitoring systems
 
 ### **Phase 3: Satellite Infrastructure** (Completed)
 

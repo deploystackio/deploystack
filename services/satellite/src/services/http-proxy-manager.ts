@@ -1,6 +1,7 @@
 import { FastifyInstance, FastifyBaseLogger } from 'fastify';
 import { ProxyRequestContext, ProxyResponse } from '../types/mcp-server';
 import { DynamicConfigManager, DynamicMcpServersConfig } from './dynamic-config-manager';
+import { maskUrlForLogging } from '../utils/log-masker';
 
 /**
  * HTTP Proxy Manager
@@ -55,7 +56,7 @@ export class HttpProxyManager {
       this.logger.debug({
         operation: 'mcp_server_registered',
         server_name: serverName,
-        upstream_url: config.url,
+        upstream_url: maskUrlForLogging(config.url, config.secret_metadata?.query_params),
         has_headers: !!config.headers
       }, `Registered MCP server for JSON-RPC proxy: ${serverName}`);
     }

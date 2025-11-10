@@ -83,19 +83,19 @@ export const CLIENT_CONFIG_PARAMS_SCHEMA = {
 export const CREATE_INSTALLATION_REQUEST_SCHEMA = {
   type: 'object',
   properties: {
-    server_id: { 
-      type: 'string', 
+    server_id: {
+      type: 'string',
       minLength: 1,
       description: 'MCP server ID to install'
     },
-    installation_name: { 
-      type: 'string', 
-      minLength: 1, 
+    installation_name: {
+      type: 'string',
+      minLength: 1,
       maxLength: 100,
       description: 'Custom name for this installation'
     },
-    installation_type: { 
-      type: 'string', 
+    installation_type: {
+      type: 'string',
       enum: ['global', 'team'],
       description: 'Installation type (defaults to global)'
     },
@@ -104,15 +104,30 @@ export const CREATE_INSTALLATION_REQUEST_SCHEMA = {
       items: { type: 'string' },
       description: 'Team-level shared command line arguments'
     },
-    team_env: { 
+    team_env: {
       type: 'object',
       additionalProperties: { type: 'string' },
       description: 'Team-level shared environment variables'
     },
-    team_headers: { 
+    team_headers: {
       type: 'object',
       additionalProperties: { type: 'string' },
       description: 'Team-level shared headers'
+    },
+    team_url_query_params: {
+      type: 'object',
+      additionalProperties: { type: 'string' },
+      description: 'Team-level shared URL query parameters'
+    },
+    user_environment_variables: {
+      type: 'object',
+      additionalProperties: { type: 'string' },
+      description: 'User-level environment variables'
+    },
+    user_url_query_params: {
+      type: 'object',
+      additionalProperties: { type: 'string' },
+      description: 'User-level URL query parameters'
     }
   },
   required: ['server_id', 'installation_name'],
@@ -177,6 +192,19 @@ export const UPDATE_HEADERS_REQUEST_SCHEMA = {
     }
   },
   required: ['team_headers'],
+  additionalProperties: false
+} as const;
+
+export const UPDATE_QUERY_PARAMS_REQUEST_SCHEMA = {
+  type: 'object',
+  properties: {
+    team_url_query_params: {
+      type: 'object',
+      additionalProperties: { type: 'string' },
+      description: 'Team-level URL query parameters to update'
+    }
+  },
+  required: ['team_url_query_params'],
   additionalProperties: false
 } as const;
 
@@ -499,6 +527,9 @@ export interface CreateInstallationRequest {
   team_args?: string[];
   team_env?: Record<string, string>;
   team_headers?: Record<string, string>;
+  team_url_query_params?: Record<string, string>;
+  user_environment_variables?: Record<string, string>;
+  user_url_query_params?: Record<string, string>;
 }
 
 export interface UpdateInstallationRequest {
@@ -517,6 +548,10 @@ export interface UpdateArgsRequest {
 
 export interface UpdateHeadersRequest {
   team_headers: Record<string, string>;
+}
+
+export interface UpdateQueryParamsRequest {
+  team_url_query_params: Record<string, string>;
 }
 
 export interface ServerDetails {

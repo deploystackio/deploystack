@@ -88,6 +88,11 @@ export const UPDATE_USER_CONFIG_REQUEST_SCHEMA = {
       type: 'object',
       additionalProperties: { type: 'string' },
       description: 'User-specific HTTP headers'
+    },
+    user_url_query_params: {
+      type: 'object',
+      additionalProperties: { type: 'string' },
+      description: 'User-specific URL query parameters'
     }
   },
   additionalProperties: false
@@ -116,6 +121,32 @@ export const UPDATE_USER_ENV_REQUEST_SCHEMA = {
     }
   },
   required: ['env'],
+  additionalProperties: false
+} as const;
+
+export const UPDATE_USER_HEADERS_REQUEST_SCHEMA = {
+  type: 'object',
+  properties: {
+    headers: {
+      type: 'object',
+      additionalProperties: { type: 'string' },
+      description: 'User-specific HTTP headers'
+    }
+  },
+  required: ['headers'],
+  additionalProperties: false
+} as const;
+
+export const UPDATE_USER_QUERY_PARAMS_REQUEST_SCHEMA = {
+  type: 'object',
+  properties: {
+    query_params: {
+      type: 'object',
+      additionalProperties: { type: 'string' },
+      description: 'User-specific URL query parameters'
+    }
+  },
+  required: ['query_params'],
   additionalProperties: false
 } as const;
 
@@ -250,6 +281,7 @@ export interface UpdateUserConfigRequest {
   user_args?: Record<string, string>;
   user_env?: Record<string, string>;
   user_headers?: Record<string, string>;
+  user_url_query_params?: Record<string, string>;
 }
 
 export interface UpdateUserArgsRequest {
@@ -260,6 +292,14 @@ export interface UpdateUserEnvRequest {
   env: Record<string, string>;
 }
 
+export interface UpdateUserHeadersRequest {
+  headers: Record<string, string>;
+}
+
+export interface UpdateUserQueryParamsRequest {
+  query_params: Record<string, string>;
+}
+
 export interface UserConfigData {
   id: string;
   installation_id: string;
@@ -268,6 +308,7 @@ export interface UserConfigData {
   user_args?: Record<string, string>;
   user_env?: Record<string, string>;
   user_headers?: Record<string, string>;
+  user_url_query_params?: Record<string, string>;
   created_at: string;
   updated_at: string;
   last_used_at?: string;
@@ -372,6 +413,26 @@ export const updateUserEnvSchema = {
   security: DUAL_AUTH_SECURITY
 } as const;
 
+export const updateUserHeadersSchema = {
+  params: TEAM_AND_INSTALLATION_AND_CONFIG_PARAMS_SCHEMA,
+  body: UPDATE_USER_HEADERS_REQUEST_SCHEMA,
+  response: {
+    200: USER_CONFIG_UPDATE_SUCCESS_RESPONSE_SCHEMA,
+    ...COMMON_ERROR_RESPONSES
+  },
+  security: DUAL_AUTH_SECURITY
+} as const;
+
+export const updateUserQueryParamsSchema = {
+  params: TEAM_AND_INSTALLATION_AND_CONFIG_PARAMS_SCHEMA,
+  body: UPDATE_USER_QUERY_PARAMS_REQUEST_SCHEMA,
+  response: {
+    200: USER_CONFIG_UPDATE_SUCCESS_RESPONSE_SCHEMA,
+    ...COMMON_ERROR_RESPONSES
+  },
+  security: DUAL_AUTH_SECURITY
+} as const;
+
 // Request interfaces for Fastify
 export interface GetUserConfigurationByIdRequest {
   Params: TeamAndInstallationAndConfigParams;
@@ -405,6 +466,16 @@ export interface UpdateUserEnvRouteRequest {
   Body: UpdateUserEnvRequest;
 }
 
+export interface UpdateUserHeadersRouteRequest {
+  Params: TeamAndInstallationAndConfigParams;
+  Body: UpdateUserHeadersRequest;
+}
+
+export interface UpdateUserQueryParamsRouteRequest {
+  Params: TeamAndInstallationAndConfigParams;
+  Body: UpdateUserQueryParamsRequest;
+}
+
 // Helper function to format user config response
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function formatUserConfigResponse(config: any): UserConfigData {
@@ -434,6 +505,7 @@ export function formatUserConfigResponse(config: any): UserConfigData {
     user_args: safeJsonParse(config.user_args, undefined),
     user_env: safeJsonParse(config.user_env, undefined),
     user_headers: safeJsonParse(config.user_headers, undefined),
+    user_url_query_params: safeJsonParse(config.user_url_query_params, undefined),
     created_at: config.created_at.toISOString(),
     updated_at: config.updated_at.toISOString(),
     last_used_at: config.last_used_at ? config.last_used_at.toISOString() : undefined

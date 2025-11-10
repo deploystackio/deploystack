@@ -15,6 +15,7 @@ export interface McpUserConfiguration {
   user_args?: Record<string, string>;
   user_env?: Record<string, string>;
   user_headers?: Record<string, string>;
+  user_url_query_params?: Record<string, string>;
   created_at: Date;
   updated_at: Date;
   last_used_at?: Date;
@@ -31,6 +32,7 @@ export interface McpUserConfiguration {
       user_args_schema?: any[];
       user_env_schema?: any[];
       user_headers_schema?: any[];
+      user_url_query_params_schema?: any[];
     };
   };
 }
@@ -39,12 +41,14 @@ export interface CreateUserConfigRequest {
   user_args?: Record<string, string>;
   user_env?: Record<string, string>;
   user_headers?: Record<string, string>;
+  user_url_query_params?: Record<string, string>;
 }
 
 export interface UpdateUserConfigRequest {
   user_args?: Record<string, string>;
   user_env?: Record<string, string>;
   user_headers?: Record<string, string>;
+  user_url_query_params?: Record<string, string>;
 }
 
 export class McpUserConfigurationService {
@@ -111,8 +115,9 @@ export class McpUserConfigurationService {
       const userArgsSchema = this.parseJsonField(row.server?.user_args_schema, []);
       const userEnvSchema = this.parseJsonField(row.server?.user_env_schema, []);
       const userHeadersSchema = this.parseJsonField(row.server?.user_headers_schema, []);
+      const userUrlQueryParamsSchema = this.parseJsonField(row.server?.user_url_query_params_schema, []);
 
-      const userArgs = row.config.user_args 
+      const userArgs = row.config.user_args
         ? await McpArgsStorage.retrieveUserArgs(
             row.config.user_args,
             userArgsSchema,
@@ -121,7 +126,7 @@ export class McpUserConfigurationService {
           )
         : undefined;
 
-      const userEnv = row.config.user_env 
+      const userEnv = row.config.user_env
         ? await McpEnvStorage.retrieveUserEnv(
             row.config.user_env,
             userEnvSchema,
@@ -130,10 +135,19 @@ export class McpUserConfigurationService {
           )
         : undefined;
 
-      const userHeaders = row.config.user_headers 
+      const userHeaders = row.config.user_headers
         ? await McpEnvStorage.retrieveUserEnv(
             row.config.user_headers,
             userHeadersSchema,
+            { maskSecrets: true },
+            this.logger
+          )
+        : undefined;
+
+      const userUrlQueryParams = row.config.user_url_query_params
+        ? await McpEnvStorage.retrieveUserEnv(
+            row.config.user_url_query_params,
+            userUrlQueryParamsSchema,
             { maskSecrets: true },
             this.logger
           )
@@ -144,6 +158,7 @@ export class McpUserConfigurationService {
         user_args: userArgs,
         user_env: userEnv,
         user_headers: userHeaders,
+        user_url_query_params: userUrlQueryParams,
         installation: row.installation ? {
           id: row.installation.id,
           installation_name: row.installation.installation_name,
@@ -155,7 +170,8 @@ export class McpUserConfigurationService {
             description: row.server.description,
             user_args_schema: userArgsSchema,
             user_env_schema: userEnvSchema,
-            user_headers_schema: userHeadersSchema
+            user_headers_schema: userHeadersSchema,
+            user_url_query_params_schema: userUrlQueryParamsSchema
           } : undefined
         } : undefined
       });
@@ -209,8 +225,9 @@ export class McpUserConfigurationService {
     const userArgsSchema = this.parseJsonField(server?.user_args_schema, []);
     const userEnvSchema = this.parseJsonField(server?.user_env_schema, []);
     const userHeadersSchema = this.parseJsonField(server?.user_headers_schema, []);
+    const userUrlQueryParamsSchema = this.parseJsonField(server?.user_url_query_params_schema, []);
 
-    const userArgs = config.user_args 
+    const userArgs = config.user_args
       ? await McpArgsStorage.retrieveUserArgs(
           config.user_args,
           userArgsSchema,
@@ -219,7 +236,7 @@ export class McpUserConfigurationService {
         )
       : undefined;
 
-    const userEnv = config.user_env 
+    const userEnv = config.user_env
       ? await McpEnvStorage.retrieveUserEnv(
           config.user_env,
           userEnvSchema,
@@ -228,10 +245,19 @@ export class McpUserConfigurationService {
         )
       : undefined;
 
-    const userHeaders = config.user_headers 
+    const userHeaders = config.user_headers
       ? await McpEnvStorage.retrieveUserEnv(
           config.user_headers,
           userHeadersSchema,
+          { maskSecrets: true },
+          this.logger
+        )
+      : undefined;
+
+    const userUrlQueryParams = config.user_url_query_params
+      ? await McpEnvStorage.retrieveUserEnv(
+          config.user_url_query_params,
+          userUrlQueryParamsSchema,
           { maskSecrets: true },
           this.logger
         )
@@ -242,6 +268,7 @@ export class McpUserConfigurationService {
       user_args: userArgs,
       user_env: userEnv,
       user_headers: userHeaders,
+      user_url_query_params: userUrlQueryParams,
       installation: installation ? {
         id: installation.id,
         installation_name: installation.installation_name,
@@ -253,7 +280,8 @@ export class McpUserConfigurationService {
           description: server.description,
           user_args_schema: userArgsSchema,
           user_env_schema: userEnvSchema,
-          user_headers_schema: userHeadersSchema
+          user_headers_schema: userHeadersSchema,
+          user_url_query_params_schema: userUrlQueryParamsSchema
         } : undefined
       } : undefined
     };
@@ -306,6 +334,9 @@ export class McpUserConfigurationService {
       if (data.user_headers) {
         this.validateUserHeaders(data.user_headers, this.parseJsonField(serverInfo.user_headers_schema, []));
       }
+      if (data.user_url_query_params) {
+        this.validateUserUrlQueryParams(data.user_url_query_params, this.parseJsonField(serverInfo.user_url_query_params_schema, []));
+      }
     }
 
     const configId = nanoid();
@@ -326,8 +357,13 @@ export class McpUserConfigurationService {
         this.logger
       ) : null,
       user_headers: data.user_headers ? await McpEnvStorage.storeUserEnv(
-        data.user_headers, 
-        this.parseJsonField(serverInfo?.user_headers_schema, []), 
+        data.user_headers,
+        this.parseJsonField(serverInfo?.user_headers_schema, []),
+        this.logger
+      ) : null,
+      user_url_query_params: data.user_url_query_params ? await McpEnvStorage.storeUserEnv(
+        data.user_url_query_params,
+        this.parseJsonField(serverInfo?.user_url_query_params_schema, []),
         this.logger
       ) : null,
       created_at: now,
@@ -383,6 +419,9 @@ export class McpUserConfigurationService {
       if (data.user_headers !== undefined) {
         this.validateUserHeaders(data.user_headers, existing.installation.server.user_headers_schema || []);
       }
+      if (data.user_url_query_params !== undefined) {
+        this.validateUserUrlQueryParams(data.user_url_query_params, existing.installation.server.user_url_query_params_schema || []);
+      }
     }
 
 
@@ -409,8 +448,16 @@ export class McpUserConfigurationService {
 
     if (data.user_headers !== undefined) {
       updateData.user_headers = data.user_headers ? await McpEnvStorage.storeUserEnv(
-        data.user_headers, 
-        existing.installation?.server?.user_headers_schema || [], 
+        data.user_headers,
+        existing.installation?.server?.user_headers_schema || [],
+        this.logger
+      ) : null;
+    }
+
+    if (data.user_url_query_params !== undefined) {
+      updateData.user_url_query_params = data.user_url_query_params ? await McpEnvStorage.storeUserEnv(
+        data.user_url_query_params,
+        existing.installation?.server?.user_url_query_params_schema || [],
         this.logger
       ) : null;
     }
@@ -503,6 +550,40 @@ export class McpUserConfigurationService {
     return await this.updateUserConfiguration(configId, userId, teamId, { user_env: env });
   }
 
+  async updateUserHeaders(
+    configId: string,
+    userId: string,
+    teamId: string,
+    headers: Record<string, string>
+  ): Promise<McpUserConfiguration | null> {
+    this.logger.debug({
+      operation: 'update_user_headers',
+      configId,
+      userId,
+      teamId,
+      headerCount: Object.keys(headers).length
+    }, 'Updating user configuration headers');
+
+    return await this.updateUserConfiguration(configId, userId, teamId, { user_headers: headers });
+  }
+
+  async updateUserQueryParams(
+    configId: string,
+    userId: string,
+    teamId: string,
+    queryParams: Record<string, string>
+  ): Promise<McpUserConfiguration | null> {
+    this.logger.debug({
+      operation: 'update_user_query_params',
+      configId,
+      userId,
+      teamId,
+      queryParamCount: Object.keys(queryParams).length
+    }, 'Updating user configuration URL query parameters');
+
+    return await this.updateUserConfiguration(configId, userId, teamId, { user_url_query_params: queryParams });
+  }
+
   private validateUserArgs(userArgs: Record<string, string>, schema: any[]): void {
     // Validate user args against schema if provided
     // Args are now key-value mappings (placeholder -> actual value)
@@ -549,13 +630,31 @@ export class McpUserConfigurationService {
     // Only validate the fields that are actually being sent, not all required fields
     for (const [headerName, headerValue] of Object.entries(userHeaders)) {
       const schemaEntry = schema.find((header: any) => header.name === headerName)
-      
+
       if (schemaEntry) {
         // If this field is required and the sent value is empty, throw error
         if (schemaEntry.required && (!headerValue || headerValue.trim() === '')) {
           throw new Error(`Required header '${headerName}' is missing or empty`)
         }
-        
+
+        // Additional type validation can be added here in the future
+      }
+      // Note: We don't validate fields that aren't in the schema - allowing flexibility
+    }
+  }
+
+  private validateUserUrlQueryParams(userUrlQueryParams: Record<string, string>, schema: any[]): void {
+    // Validate user URL query params against schema
+    // Only validate the fields that are actually being sent, not all required fields
+    for (const [paramName, paramValue] of Object.entries(userUrlQueryParams)) {
+      const schemaEntry = schema.find((param: any) => param.name === paramName)
+
+      if (schemaEntry) {
+        // If this field is required and the sent value is empty, throw error
+        if (schemaEntry.required && (!paramValue || paramValue.trim() === '')) {
+          throw new Error(`Required URL query parameter '${paramName}' is missing or empty`)
+        }
+
         // Additional type validation can be added here in the future
       }
       // Note: We don't validate fields that aren't in the schema - allowing flexibility

@@ -56,12 +56,23 @@ export interface McpServerConfig {
   timeout?: number;
   enabled: boolean;
   headers?: Record<string, string>;
+  url_query_params?: Record<string, string>;
   installation_id?: string;
   team_id?: string;
   team_slug?: string;
   server_name?: string;
   server_slug?: string;
   installation_name?: string;
+
+  /** Metadata about which fields contain secrets (for secure logging) */
+  secret_metadata?: {
+    /** Names of query parameters that are secrets */
+    query_params?: string[];
+    /** Names of headers that are secrets */
+    headers?: string[];
+    /** Names of environment variables that are secrets */
+    env?: string[];
+  };
 }
 
 export interface ConfigurationUpdate {

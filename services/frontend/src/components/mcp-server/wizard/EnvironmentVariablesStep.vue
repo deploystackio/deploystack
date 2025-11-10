@@ -36,6 +36,15 @@ interface HeaderSchema {
   visible_to_users?: boolean
 }
 
+interface QueryParamSchema {
+  name: string
+  type?: string
+  description?: string
+  placeholder?: string
+  required?: boolean
+  visible_to_users?: boolean
+}
+
 interface ServerData {
   id: string
   name: string
@@ -45,9 +54,11 @@ interface ServerData {
   team_args_schema?: string | ArgumentSchema[]
   team_env_schema?: string | EnvironmentVariable[]
   team_headers_schema?: string | HeaderSchema[]
+  team_url_query_params_schema?: string | QueryParamSchema[]
   user_args_schema?: string | ArgumentSchema[]
   user_env_schema?: string | EnvironmentVariable[]
   user_headers_schema?: string | HeaderSchema[]
+  user_url_query_params_schema?: string | QueryParamSchema[]
   [key: string]: unknown
 }
 
@@ -55,7 +66,9 @@ const modelValue = defineModel<{
   team_args: string[]
   team_env: Record<string, string>
   team_headers: Record<string, string>
+  team_url_query_params: Record<string, string>
   user_env: Record<string, string>
+  user_url_query_params: Record<string, string>
 }>({ required: true })
 
 interface Props {
@@ -97,18 +110,22 @@ const parseArgsSchema = (schema: string | ArgumentSchema[] | undefined): Argumen
 const teamArgsSchema = computed(() => parseArgsSchema(props.serverData?.team_args_schema))
 const teamEnvSchema = computed(() => parseEnvSchema(props.serverData?.team_env_schema))
 const teamHeadersSchema = computed(() => parseEnvSchema(props.serverData?.team_headers_schema))
+const teamQueryParamsSchema = computed(() => parseEnvSchema(props.serverData?.team_url_query_params_schema))
 const userArgsSchema = computed(() => parseArgsSchema(props.serverData?.user_args_schema))
 const userEnvSchema = computed(() => parseEnvSchema(props.serverData?.user_env_schema))
 const userHeadersSchema = computed(() => parseEnvSchema(props.serverData?.user_headers_schema))
+const userQueryParamsSchema = computed(() => parseEnvSchema(props.serverData?.user_url_query_params_schema))
 
 const hasTeamArgs = computed(() => teamArgsSchema.value.length > 0)
 const hasTeamEnvVars = computed(() => teamEnvSchema.value.length > 0)
 const hasTeamHeaders = computed(() => teamHeadersSchema.value.length > 0)
+const hasTeamQueryParams = computed(() => teamQueryParamsSchema.value.length > 0)
 const hasUserArgs = computed(() => userArgsSchema.value.length > 0)
 const hasUserEnvVars = computed(() => userEnvSchema.value.length > 0)
 const hasUserHeaders = computed(() => userHeadersSchema.value.length > 0)
-const hasUserConfiguration = computed(() => hasUserArgs.value || hasUserEnvVars.value || hasUserHeaders.value)
-const hasAnyConfiguration = computed(() => hasTeamArgs.value || hasTeamEnvVars.value || hasTeamHeaders.value || hasUserConfiguration.value)
+const hasUserQueryParams = computed(() => userQueryParamsSchema.value.length > 0)
+const hasUserConfiguration = computed(() => hasUserArgs.value || hasUserEnvVars.value || hasUserHeaders.value || hasUserQueryParams.value)
+const hasAnyConfiguration = computed(() => hasTeamArgs.value || hasTeamEnvVars.value || hasTeamHeaders.value || hasTeamQueryParams.value || hasUserConfiguration.value)
 
 const validateConfiguration = () => {
   const missingFields: string[] = []
@@ -138,6 +155,14 @@ const validateConfiguration = () => {
     }
   })
 
+  // Validate team query params
+  teamQueryParamsSchema.value.forEach((param) => {
+    if (param.required && !modelValue.value.team_url_query_params[param.name]?.trim()) {
+      missingFields.push(param.name)
+      isValid = false
+    }
+  })
+
   emit('validation-change', isValid, missingFields)
   return isValid
 }
@@ -154,17 +179,25 @@ watch(() => modelValue.value.team_headers, () => {
   validateConfiguration()
 }, { deep: true })
 
+watch(() => modelValue.value.team_url_query_params, () => {
+  validateConfiguration()
+}, { deep: true })
+
 watch(() => props.serverData, (newData) => {
   if (newData) {
     const newTeamArgs: string[] = []
     const newTeamEnv: Record<string, string> = {}
     const newTeamHeaders: Record<string, string> = {}
+    const newTeamQueryParams: Record<string, string> = {}
     const newUserEnv: Record<string, string> = {}
+    const newUserQueryParams: Record<string, string> = {}
 
     const argsSchema = parseArgsSchema(newData.team_args_schema)
     const teamSchema = parseEnvSchema(newData.team_env_schema)
     const teamHeadersSchema = parseEnvSchema(newData.team_headers_schema)
+    const teamQueryParamsSchemaData = parseEnvSchema(newData.team_url_query_params_schema)
     const userSchema = parseEnvSchema(newData.user_env_schema)
+    const userQueryParamsSchemaData = parseEnvSchema(newData.user_url_query_params_schema)
 
     // Initialize team arguments array
     argsSchema.forEach((arg, index) => {
@@ -179,15 +212,25 @@ watch(() => props.serverData, (newData) => {
       newTeamHeaders[header.name] = modelValue.value.team_headers?.[header.name] || ''
     })
 
+    teamQueryParamsSchemaData.forEach((param) => {
+      newTeamQueryParams[param.name] = modelValue.value.team_url_query_params?.[param.name] || ''
+    })
+
     userSchema.forEach((env) => {
       newUserEnv[env.name] = ''
+    })
+
+    userQueryParamsSchemaData.forEach((param) => {
+      newUserQueryParams[param.name] = ''
     })
 
     modelValue.value = {
       team_args: newTeamArgs,
       team_env: newTeamEnv,
       team_headers: newTeamHeaders,
-      user_env: newUserEnv
+      team_url_query_params: newTeamQueryParams,
+      user_env: newUserEnv,
+      user_url_query_params: newUserQueryParams
     }
 
     validateConfiguration()
@@ -408,6 +451,66 @@ const isTextarea = (envVar: EnvironmentVariable) => {
 
               <div v-if="header.type" class="text-xs text-gray-500">
                 {{ t('mcpInstallations.teamConfiguration.userEnvDetails.typeLabel') }} <code class="bg-gray-100 px-1 rounded">{{ header.type }}</code>
+              </div>
+            </div>
+          </Item>
+        </div>
+        </div>
+      </Card>
+
+      <!-- Team URL Query Parameters Section -->
+      <Card v-if="hasTeamQueryParams" variant="gray">
+        <div class="px-6">
+          <div class="mb-4">
+            <h3 class="text-lg font-semibold">
+              Team URL Query Parameters
+            </h3>
+            <p class="text-sm text-muted-foreground mt-1">
+              {{ teamQueryParamsSchema.length }} {{ teamQueryParamsSchema.length === 1 ? 'query parameter' : 'query parameters' }}
+            </p>
+          </div>
+          <p class="text-sm text-muted-foreground mb-6">
+            Configure URL query parameters that will be shared across all team members for this MCP server installation.
+          </p>
+
+        <div class="space-y-3">
+          <Item
+            v-for="param in teamQueryParamsSchema"
+            :key="param.name"
+            variant="filled"
+          >
+            <div class="space-y-2 w-full">
+              <div class="flex items-center gap-2">
+                <Label :for="`team_query_param_${param.name}`" class="flex items-center gap-2">
+                  {{ param.name }}
+                  <span v-if="param.required" class="text-xs text-gray-500">
+                    {{ t('mcpInstallations.teamConfiguration.userEnvDetails.required') }}
+                  </span>
+                  <span v-else class="text-xs text-gray-500">
+                    {{ t('mcpInstallations.teamConfiguration.userEnvDetails.optional') }}
+                  </span>
+                  <span v-if="param.visible_to_users === false" class="text-xs text-gray-500">
+                    {{ t('mcpInstallations.teamConfiguration.table.values.hiddenFromUsers') }}
+                  </span>
+                </Label>
+              </div>
+
+              <div v-if="param.description" class="text-sm text-gray-600">
+                {{ param.description }}
+              </div>
+
+              <div class="relative">
+                <Input
+                  :id="`team_query_param_${param.name}`"
+                  :type="getInputType(param)"
+                  v-model="modelValue.team_url_query_params[param.name]"
+                  :placeholder="param.placeholder || 'Enter query parameter value'"
+                  :required="param.required"
+                />
+              </div>
+
+              <div v-if="param.type" class="text-xs text-gray-500">
+                {{ t('mcpInstallations.teamConfiguration.userEnvDetails.typeLabel') }} <code class="bg-gray-100 px-1 rounded">{{ param.type }}</code>
               </div>
             </div>
           </Item>

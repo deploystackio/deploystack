@@ -14,6 +14,7 @@ import { useI18n } from 'vue-i18n'
 import { Terminal, Users, User, Globe } from 'lucide-vue-next'
 import ConfigurationSchemaEnvironmentSection from './ConfigurationSchemaEnvironmentSection.vue'
 import ConfigurationSchemaHeadersSection from './ConfigurationSchemaHeadersSection.vue'
+import ConfigurationSchemaQueryParamsSection from './ConfigurationSchemaQueryParamsSection.vue'
 import ConfigurationSchemaArgumentsSection from './ConfigurationSchemaArgumentsSection.vue'
 import ConfigItemModal from './ConfigurationSchemaStepAdd/ConfigItemModal.vue'
 import type {
@@ -71,7 +72,7 @@ const formDataLocal = ref<ConfigItem>({
   required: false,
   locked: false,
   default_team_locked: false,
-  visible_to_users: false
+  visible_to_users: true
 })
 
 const formErrors = ref<Record<string, string>>({})
@@ -188,6 +189,43 @@ const parseHeadersIntelligently = (rawHeaders: Record<string, string>): ConfigIt
   return items
 }
 
+// Parse URL query parameters for URL-based servers
+const parseQueryParamsIntelligently = (url: string): ConfigItem[] => {
+  const items: ConfigItem[] = []
+
+  try {
+    const urlObj = new URL(url)
+    const params = urlObj.searchParams
+
+    params.forEach((value, key) => {
+      const isPlaceholder = isPlaceholderValue(value)
+      const isSecret = /^(.*_)?(KEY|TOKEN|SECRET|PASSWORD|CREDENTIAL|AUTH)(_.*)?$/i.test(key) ||
+                       /^(.*_)?(KEY|TOKEN|SECRET|PASSWORD|CREDENTIAL|AUTH)(_.*)?$/i.test(value)
+
+      items.push({
+        id: `query_param_${key}`,
+        type: 'query_param',
+        category: isPlaceholder ? 'team' : 'user',
+        name: key,
+        value: value,
+        description: isPlaceholder
+          ? `Team-configurable query parameter (placeholder: ${value})`
+          : `Query parameter configuration`,
+        dataType: isSecret ? 'secret' : 'string',
+        required: true,
+        locked: false,
+        default_team_locked: false,
+        visible_to_users: true,
+      })
+    })
+  } catch (error) {
+    // Invalid URL, skip query param parsing
+    console.warn('Could not parse URL for query parameters:', error)
+  }
+
+  return items
+}
+
 // Parse and categorize items from Claude Desktop config
 const parseFromClaudeConfig = () => {
   const config = props.claudeConfig?.claude_desktop_config?.mcpServers
@@ -205,6 +243,12 @@ const parseFromClaudeConfig = () => {
     const rawHeaders = serverConfig.headers || {}
     const headerItems = parseHeadersIntelligently(rawHeaders)
     items.push(...headerItems)
+
+    // Parse URL query parameters
+    if (serverConfig.url) {
+      const queryParamItems = parseQueryParamsIntelligently(serverConfig.url)
+      items.push(...queryParamItems)
+    }
 
   } else {
     // Handle command-based servers
@@ -366,6 +410,50 @@ const loadFromExistingSchema = () => {
     })
   })
 
+  // Load URL query params
+  ;(schema.template_url_query_params || []).forEach((param, index) => {
+    items.push({
+      id: `template_query_param_${index}`,
+      type: 'query_param',
+      category: 'template',
+      name: param.name,
+      value: param.value,
+      description: param.description || '',
+      dataType: 'string',
+      required: true,
+      locked: param.locked,
+      default_team_locked: false,
+    })
+  })
+
+  ;(schema.team_url_query_params_schema || []).forEach((param, index) => {
+    items.push({
+      id: `team_query_param_${index}`,
+      type: 'query_param',
+      category: 'team',
+      name: param.name,
+      description: param.description || '',
+      dataType: param.type || 'string',
+      required: param.required || false,
+      locked: param.locked || false,
+      default_team_locked: param.default_team_locked || false,
+      visible_to_users: param.visible_to_users || false,
+    })
+  })
+
+  ;(schema.user_url_query_params_schema || []).forEach((param, index) => {
+    items.push({
+      id: `user_query_param_${index}`,
+      type: 'query_param',
+      category: 'user',
+      name: param.name,
+      description: param.description || '',
+      dataType: param.type || 'string',
+      required: param.required || false,
+      locked: param.locked || false,
+    })
+  })
+
   isInternalUpdate.value = true
   localData.value = items
   nextTick(() => {
@@ -379,12 +467,15 @@ const assembleSchemaAndEmit = () => {
     template_args: [],
     template_env: [],
     template_headers: [],
+    template_url_query_params: [],
     team_args_schema: [],
     team_env_schema: [],
     team_headers_schema: [],
+    team_url_query_params_schema: [],
     user_args_schema: [],
     user_env_schema: [],
     user_headers_schema: [],
+    user_url_query_params_schema: [],
   }
 
   localData.value.forEach(item => {
@@ -460,6 +551,33 @@ const assembleSchemaAndEmit = () => {
           locked: item.locked
         })
       }
+    } else if (item.type === 'query_param') {
+      if (item.category === 'template') {
+        schema.template_url_query_params!.push({
+          name: item.name,
+          value: item.value || '',
+          locked: item.locked,
+          description: item.description
+        })
+      } else if (item.category === 'team') {
+        schema.team_url_query_params_schema!.push({
+          name: item.name,
+          type: item.dataType,
+          description: item.description,
+          required: item.required,
+          locked: item.locked,
+          default_team_locked: item.default_team_locked,
+          visible_to_users: item.visible_to_users
+        })
+      } else if (item.category === 'user') {
+        schema.user_url_query_params_schema!.push({
+          name: item.name,
+          type: item.dataType,
+          description: item.description,
+          required: item.required,
+          locked: item.locked
+        })
+      }
     }
   })
 
@@ -476,6 +594,7 @@ const emitModelValue = () => {
 const argumentItems = computed(() => localData.value.filter(item => item.type === 'arg'))
 const environmentItems = computed(() => localData.value.filter(item => item.type === 'env'))
 const headerItems = computed(() => localData.value.filter(item => item.type === 'header'))
+const queryParamItems = computed(() => localData.value.filter(item => item.type === 'query_param'))
 
 const isFormValid = computed(() => {
   return formDataLocal.value.name.trim() !== '' && Object.keys(formErrors.value).length === 0
@@ -492,6 +611,8 @@ const openAddModal = (type: ItemType) => {
   } else if (type === 'env') {
     formDataLocal.value.category = 'team'
   } else if (type === 'header') {
+    formDataLocal.value.category = 'team'
+  } else if (type === 'query_param') {
     formDataLocal.value.category = 'team'
   }
   isModalOpen.value = true
@@ -525,7 +646,7 @@ const resetForm = () => {
     required: false,
     locked: false,
     default_team_locked: false,
-    visible_to_users: false
+    visible_to_users: true
   }
   formErrors.value = {}
 }
@@ -616,6 +737,11 @@ const availableCategoryOptions = computed(() => {
       { value: 'team', label: computed(() => t('mcpCatalog.form.configurationSchema.categories.team')), icon: Users, color: 'green' },
       { value: 'user', label: computed(() => t('mcpCatalog.form.configurationSchema.categories.user')), icon: User, color: 'purple' },
     ]
+  } else if (formDataLocal.value.type === 'query_param') {
+    return [
+      { value: 'team', label: computed(() => t('mcpCatalog.form.configurationSchema.categories.team')), icon: Users, color: 'green' },
+      { value: 'user', label: computed(() => t('mcpCatalog.form.configurationSchema.categories.user')), icon: User, color: 'purple' },
+    ]
   }
   return argCategoryOptions
 })
@@ -660,6 +786,20 @@ const handleHeaderDelete = (index: number) => {
   const headerItem = headerItems.value[index]
   if (!headerItem) return
   const globalIndex = localData.value.findIndex(item => item.id === headerItem.id)
+  handleDelete(globalIndex)
+}
+
+const handleQueryParamAdd = () => openAddModal('query_param')
+const handleQueryParamEdit = (index: number) => {
+  const queryParamItem = queryParamItems.value[index]
+  if (!queryParamItem) return
+  const globalIndex = localData.value.findIndex(item => item.id === queryParamItem.id)
+  openEditModal(globalIndex)
+}
+const handleQueryParamDelete = (index: number) => {
+  const queryParamItem = queryParamItems.value[index]
+  if (!queryParamItem) return
+  const globalIndex = localData.value.findIndex(item => item.id === queryParamItem.id)
   handleDelete(globalIndex)
 }
 
@@ -742,6 +882,16 @@ watch(localData, () => {
       @add="handleHeaderAdd"
       @edit="handleHeaderEdit"
       @delete="handleHeaderDelete"
+    />
+
+    <!-- URL Query Parameters Configuration Section - Always show for HTTP servers -->
+    <ConfigurationSchemaQueryParamsSection
+      v-if="isHttpBasedServer"
+      :items="queryParamItems"
+      :get-category-info="getCategoryInfo"
+      @add="handleQueryParamAdd"
+      @edit="handleQueryParamEdit"
+      @delete="handleQueryParamDelete"
     />
 
     <!-- Add/Edit Modal -->

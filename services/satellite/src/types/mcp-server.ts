@@ -27,7 +27,10 @@ export interface McpServerConfig {
   
   /** Optional HTTP headers to include in requests (for http/sse) */
   headers?: Record<string, string>;
-  
+
+  /** URL query parameters to append to URL (for http/sse) */
+  url_query_params?: Record<string, string>;
+
   /** Request timeout in milliseconds (default: 30000) */
   timeout?: number;
   
@@ -54,6 +57,16 @@ export interface McpServerConfig {
   
   /** Installation name from backend */
   installation_name?: string;
+
+  /** Metadata about which fields contain secrets (for secure logging) */
+  secret_metadata?: {
+    /** Names of query parameters that are secrets */
+    query_params?: string[];
+    /** Names of headers that are secrets */
+    headers?: string[];
+    /** Names of environment variables that are secrets */
+    env?: string[];
+  };
 }
 
 export interface McpServersConfig {

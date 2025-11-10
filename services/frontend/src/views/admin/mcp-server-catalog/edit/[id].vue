@@ -132,12 +132,15 @@ const convertServerToFormData = (server: McpServer): Partial<McpServerFormData> 
     template_args: parseSchemaField(server.template_args, []),
     template_env: parseSchemaField(server.template_env, []),
     template_headers: parseSchemaField(server.template_headers, []),
+    template_url_query_params: parseSchemaField(server.template_url_query_params, []),
     team_args_schema: parseSchemaField(server.team_args_schema, []),
     team_env_schema: parseSchemaField(server.team_env_schema, []),
     team_headers_schema: parseSchemaField(server.team_headers_schema, []),
+    team_url_query_params_schema: parseSchemaField(server.team_url_query_params_schema, []),
     user_args_schema: parseSchemaField(server.user_args_schema, []),
     user_env_schema: parseSchemaField(server.user_env_schema, []),
-    user_headers_schema: parseSchemaField(server.user_headers_schema, [])
+    user_headers_schema: parseSchemaField(server.user_headers_schema, []),
+    user_url_query_params_schema: parseSchemaField(server.user_url_query_params_schema, [])
   }
 
   return {
@@ -270,12 +273,15 @@ const handleSubmit = async (formData: McpServerFormData) => {
     template_args: finalConfigurationSchema.template_args,
     template_env: finalConfigurationSchema.template_env,
     template_headers: finalConfigurationSchema.template_headers,
+    template_url_query_params: finalConfigurationSchema.template_url_query_params,
     team_args_schema: finalConfigurationSchema.team_args_schema,
     team_env_schema: finalConfigurationSchema.team_env_schema,
     team_headers_schema: finalConfigurationSchema.team_headers_schema,
+    team_url_query_params_schema: finalConfigurationSchema.team_url_query_params_schema,
     user_args_schema: finalConfigurationSchema.user_args_schema,
     user_env_schema: finalConfigurationSchema.user_env_schema,
     user_headers_schema: finalConfigurationSchema.user_headers_schema,
+    user_url_query_params_schema: finalConfigurationSchema.user_url_query_params_schema,
 
     // Resources and prompts (from server data)
     resources: parsedResources.length > 0 ? parsedResources : undefined,

@@ -251,22 +251,47 @@ export const TEMPLATE_ENV_SCHEMA = {
 export const TEMPLATE_HEADER_SCHEMA = {
   type: 'object',
   properties: {
-    name: { 
+    name: {
       type: 'string',
       description: 'Header name'
     },
-    value: { 
-      type: 'string', 
+    value: {
+      type: 'string',
       nullable: true,
       description: 'Header value (can be null)'
     },
-    locked: { 
+    locked: {
       type: 'boolean',
       description: 'Whether this header is locked'
     },
-    description: { 
+    description: {
       type: 'string',
       description: 'Optional description of the header'
+    }
+  },
+  required: ['name', 'value', 'locked'],
+  additionalProperties: false
+} as const;
+
+export const TEMPLATE_URL_QUERY_PARAM_SCHEMA = {
+  type: 'object',
+  properties: {
+    name: {
+      type: 'string',
+      description: 'URL query parameter name'
+    },
+    value: {
+      type: 'string',
+      nullable: true,
+      description: 'URL query parameter value (can be null)'
+    },
+    locked: {
+      type: 'boolean',
+      description: 'Whether this URL query parameter is locked'
+    },
+    description: {
+      type: 'string',
+      description: 'Optional description of the URL query parameter'
     }
   },
   required: ['name', 'value', 'locked'],
@@ -289,6 +314,8 @@ export const TEAM_ENV_SCHEMA = createConfigSchema('team environment variable', T
 
 export const TEAM_HEADER_SCHEMA = createConfigSchema('team header', TEAM_ADDITIONAL_FIELDS, ['default_team_locked', 'visible_to_users']);
 
+export const TEAM_URL_QUERY_PARAM_SCHEMA = createConfigSchema('team URL query parameter', TEAM_ADDITIONAL_FIELDS, ['default_team_locked', 'visible_to_users']);
+
 // User level - basic structure
 export const USER_ARG_SCHEMA = createConfigSchema('user argument', {
   min_items: COMMON_FIELDS.min_items,
@@ -298,6 +325,8 @@ export const USER_ARG_SCHEMA = createConfigSchema('user argument', {
 export const USER_ENV_SCHEMA = createConfigSchema('user environment variable');
 
 export const USER_HEADER_SCHEMA = createConfigSchema('user header');
+
+export const USER_URL_QUERY_PARAM_SCHEMA = createConfigSchema('user URL query parameter');
 
 export const CONFIGURATION_SCHEMA = {
   type: 'object',
@@ -312,40 +341,55 @@ export const CONFIGURATION_SCHEMA = {
       items: TEMPLATE_ENV_SCHEMA,
       description: 'Template-level environment variables'
     },
-    template_headers: { 
+    template_headers: {
       type: 'array',
       items: TEMPLATE_HEADER_SCHEMA,
       description: 'Template-level headers'
     },
-    team_args_schema: { 
+    template_url_query_params: {
+      type: 'array',
+      items: TEMPLATE_URL_QUERY_PARAM_SCHEMA,
+      description: 'Template-level URL query parameters'
+    },
+    team_args_schema: {
       type: 'array',
       items: TEAM_ARG_SCHEMA,
       description: 'Team-level argument schema definitions'
     },
-    team_env_schema: { 
+    team_env_schema: {
       type: 'array',
       items: TEAM_ENV_SCHEMA,
       description: 'Team-level environment variable schema definitions'
     },
-    team_headers_schema: { 
+    team_headers_schema: {
       type: 'array',
       items: TEAM_HEADER_SCHEMA,
       description: 'Team-level header schema definitions'
     },
-    user_args_schema: { 
+    team_url_query_params_schema: {
+      type: 'array',
+      items: TEAM_URL_QUERY_PARAM_SCHEMA,
+      description: 'Team-level URL query parameter schema definitions'
+    },
+    user_args_schema: {
       type: 'array',
       items: USER_ARG_SCHEMA,
       description: 'User-level argument schema definitions'
     },
-    user_env_schema: { 
+    user_env_schema: {
       type: 'array',
       items: USER_ENV_SCHEMA,
       description: 'User-level environment variable schema definitions'
     },
-    user_headers_schema: { 
+    user_headers_schema: {
       type: 'array',
       items: USER_HEADER_SCHEMA,
       description: 'User-level header schema definitions'
+    },
+    user_url_query_params_schema: {
+      type: 'array',
+      items: USER_URL_QUERY_PARAM_SCHEMA,
+      description: 'User-level URL query parameter schema definitions'
     }
   },
   additionalProperties: false
@@ -838,7 +882,7 @@ export const SERVER_ENTITY_SCHEMA = {
       description: 'Last sync timestamp'
     }
   },
-  required: ['id', 'name', 'slug', 'description', 'language', 'runtime', 'packages', 'visibility', 'created_by', 'transport_type', 'template_args', 'template_env', 'template_headers', 'team_args_schema', 'team_env_schema', 'team_headers_schema', 'user_args_schema', 'status', 'featured', 'auto_install_new_default_team', 'created_at', 'updated_at']
+  required: ['id', 'name', 'slug', 'description', 'language', 'runtime', 'packages', 'visibility', 'created_by', 'transport_type', 'template_args', 'template_env', 'template_headers', 'template_url_query_params', 'team_args_schema', 'team_env_schema', 'team_headers_schema', 'team_url_query_params_schema', 'user_args_schema', 'status', 'featured', 'auto_install_new_default_team', 'created_at', 'updated_at']
 } as const;
 
 // Extended schema for GET endpoint only
@@ -1021,40 +1065,55 @@ export const UPDATE_GLOBAL_SERVER_REQUEST_SCHEMA = { type: 'object',
       items: TEMPLATE_ENV_SCHEMA,
       description: 'Template-level environment variables'
     },
-    template_headers: { 
+    template_headers: {
       type: 'array',
       items: TEMPLATE_HEADER_SCHEMA,
       description: 'Template-level headers'
     },
-    team_args_schema: { 
+    template_url_query_params: {
+      type: 'array',
+      items: TEMPLATE_URL_QUERY_PARAM_SCHEMA,
+      description: 'Template-level URL query parameters'
+    },
+    team_args_schema: {
       type: 'array',
       items: TEAM_ARG_SCHEMA,
       description: 'Team-level argument schema definitions'
     },
-    team_env_schema: { 
+    team_env_schema: {
       type: 'array',
       items: TEAM_ENV_SCHEMA,
       description: 'Team-level environment variable schema definitions'
     },
-    team_headers_schema: { 
+    team_headers_schema: {
       type: 'array',
       items: TEAM_HEADER_SCHEMA,
       description: 'Team-level header schema definitions'
     },
-    user_args_schema: { 
+    team_url_query_params_schema: {
+      type: 'array',
+      items: TEAM_URL_QUERY_PARAM_SCHEMA,
+      description: 'Team-level URL query parameter schema definitions'
+    },
+    user_args_schema: {
       type: 'array',
       items: USER_ARG_SCHEMA,
       description: 'User-level argument schema definitions'
     },
-    user_env_schema: { 
+    user_env_schema: {
       type: 'array',
       items: USER_ENV_SCHEMA,
       description: 'User-level environment variable schema definitions'
     },
-    user_headers_schema: { 
+    user_headers_schema: {
       type: 'array',
       items: USER_HEADER_SCHEMA,
       description: 'User-level header schema definitions'
+    },
+    user_url_query_params_schema: {
+      type: 'array',
+      items: USER_URL_QUERY_PARAM_SCHEMA,
+      description: 'User-level URL query parameter schema definitions'
     }
   },
   additionalProperties: false
@@ -1211,12 +1270,15 @@ export interface ServerEntity {
   template_args: any[];
   template_env: any[];
   template_headers: any[];
+  template_url_query_params: any[];
   team_args_schema: any[];
   team_env_schema: any[];
   team_headers_schema: any[];
+  team_url_query_params_schema: any[];
   user_args_schema: any[];
   user_env_schema: any[] | null;
   user_headers_schema: any[] | null;
+  user_url_query_params_schema: any[] | null;
   dependencies: Record<string, any> | null;
   category_id: string | null;
   tags: string[] | null;
@@ -1266,6 +1328,10 @@ export interface TemplateHeader extends BaseConfig {
   value: string | null;
 }
 
+export interface TemplateUrlQueryParam extends BaseConfig {
+  value: string | null;
+}
+
 export interface TeamConfig extends BaseConfig {
   default_team_locked: boolean;
   visible_to_users: boolean;
@@ -1276,9 +1342,10 @@ export interface TeamArg extends TeamConfig {
   max_items?: number;
 }
 
-// TeamEnv and TeamHeader are just aliases for TeamConfig
+// TeamEnv, TeamHeader, and TeamUrlQueryParam are just aliases for TeamConfig
 export type TeamEnv = TeamConfig;
 export type TeamHeader = TeamConfig;
+export type TeamUrlQueryParam = TeamConfig;
 
 export interface UserConfig extends BaseConfig {
   min_items?: number;
@@ -1287,20 +1354,24 @@ export interface UserConfig extends BaseConfig {
 
 // UserArg is just an alias for UserConfig
 export type UserArg = UserConfig;
-// UserEnv and UserHeader omit the array-specific fields
+// UserEnv, UserHeader, and UserUrlQueryParam omit the array-specific fields
 export type UserEnv = Omit<UserConfig, 'min_items' | 'max_items'>;
 export type UserHeader = Omit<UserConfig, 'min_items' | 'max_items'>;
+export type UserUrlQueryParam = Omit<UserConfig, 'min_items' | 'max_items'>;
 
 export interface ConfigurationSchema {
   template_args?: TemplateArg[];
   template_env?: TemplateEnv[];
   template_headers?: TemplateHeader[];
+  template_url_query_params?: TemplateUrlQueryParam[];
   team_args_schema?: TeamArg[];
   team_env_schema?: TeamEnv[];
   team_headers_schema?: TeamHeader[];
+  team_url_query_params_schema?: TeamUrlQueryParam[];
   user_args_schema?: UserArg[];
   user_env_schema?: UserEnv[];
   user_headers_schema?: UserHeader[];
+  user_url_query_params_schema?: UserUrlQueryParam[];
 }
 
 export interface Tool {
@@ -1483,12 +1554,15 @@ export function formatServerResponse(server: any): ServerEntity {
     template_args: safeJsonParse(server.template_args, []),
     template_env: safeJsonParse(server.template_env, []),
     template_headers: safeJsonParse(server.template_headers, []),
+    template_url_query_params: safeJsonParse(server.template_url_query_params, []),
     team_args_schema: safeJsonParse(server.team_args_schema, []),
     team_env_schema: safeJsonParse(server.team_env_schema, []),
     team_headers_schema: safeJsonParse(server.team_headers_schema, []),
+    team_url_query_params_schema: safeJsonParse(server.team_url_query_params_schema, []),
     user_args_schema: safeJsonParse(server.user_args_schema, []),
     user_env_schema: safeJsonParse(server.user_env_schema, null),
     user_headers_schema: safeJsonParse(server.user_headers_schema, null),
+    user_url_query_params_schema: safeJsonParse(server.user_url_query_params_schema, null),
     dependencies: safeJsonParse(server.dependencies, null),
     category_id: server.category_id || null,
     tags: safeJsonParse(server.tags, null),

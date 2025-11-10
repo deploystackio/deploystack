@@ -8,6 +8,8 @@ import updateUserConfigurationRoute from './update';
 import deleteUserConfigurationRoute from './delete';
 import updateUserArgsRoute from './updateArgs';
 import updateUserEnvRoute from './updateEnv';
+import updateUserHeadersRoute from './updateHeaders';
+import updateUserQueryParamsRoute from './updateQueryParams';
 
 export default async function userConfigurationsRoutes(fastify: FastifyInstance) {
   // Register all user configuration routes
@@ -18,4 +20,6 @@ export default async function userConfigurationsRoutes(fastify: FastifyInstance)
   await fastify.register(deleteUserConfigurationRoute);
   await fastify.register(updateUserArgsRoute);
   await fastify.register(updateUserEnvRoute);
+  await fastify.register(updateUserHeadersRoute);
+  await fastify.register(updateUserQueryParamsRoute);
 }

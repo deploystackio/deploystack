@@ -5,6 +5,7 @@ import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/
 import { DynamicConfigManager, DynamicMcpServersConfig, ConfigurationChanges } from './dynamic-config-manager';
 import { McpServerConfig } from './command-polling-service';
 import type { EventBus } from './event-bus';
+import { maskUrlForLogging } from '../utils/log-masker';
 
 /**
  * Cached tool information with namespacing
@@ -205,7 +206,9 @@ export class RemoteToolDiscoveryManager {
     this.logger.debug({
       operation: 'server_discovery_start',
       server_name: serverName,
-      server_url: config.url
+      server_url: maskUrlForLogging(config.url, config.secret_metadata?.query_params),
+      has_query_params: !!config.url_query_params,
+      query_param_count: config.url_query_params ? Object.keys(config.url_query_params).length : 0
     }, `Starting tool discovery for ${serverName} using MCP SDK`);
 
     // Validate URL for HTTP/SSE transport
@@ -221,8 +224,11 @@ export class RemoteToolDiscoveryManager {
       version: '1.0.0'
     });
 
+    // Build URL with query parameters
+    const finalUrl = this.buildMcpServerUrl(config.url, config.url_query_params);
+
     // Create transport for the remote server
-    const transport = new StreamableHTTPClientTransport(new URL(config.url));
+    const transport = new StreamableHTTPClientTransport(new URL(finalUrl));
 
     try {
       // Connect to remote MCP server
@@ -231,7 +237,7 @@ export class RemoteToolDiscoveryManager {
       this.logger.debug({
         operation: 'mcp_client_connected',
         server_name: serverName,
-        server_url: config.url
+        server_url: maskUrlForLogging(config.url, config.secret_metadata?.query_params)
       }, `Connected to MCP server: ${serverName}`);
 
       // List tools using official SDK
@@ -278,7 +284,7 @@ export class RemoteToolDiscoveryManager {
       this.logger.error({
         operation: 'server_discovery_failed',
         server_name: serverName,
-        server_url: config.url,
+        server_url: maskUrlForLogging(config.url, config.secret_metadata?.query_params),
         response_time_ms: responseTime,
         error: errorMessage,
         sdk_used: true
@@ -301,6 +307,24 @@ export class RemoteToolDiscoveryManager {
         }, `Failed to close MCP client connection for ${serverName}`);
       }
     }
+  }
+
+  /**
+   * Build MCP server URL with query parameters
+   */
+  private buildMcpServerUrl(baseUrl: string, queryParams?: Record<string, string>): string {
+    if (!queryParams || Object.keys(queryParams).length === 0) {
+      return baseUrl;
+    }
+
+    const url = new URL(baseUrl);
+
+    // Append each query parameter
+    Object.entries(queryParams).forEach(([key, value]) => {
+      url.searchParams.set(key, value);
+    });
+
+    return url.toString();
   }
 
   /**
@@ -349,6 +373,7 @@ export class RemoteToolDiscoveryManager {
       url: config.url,
       transport_type: config.transport_type,
       headers: config.headers,
+      url_query_params: config.url_query_params,
       timeout: config.timeout,
       enabled: config.enabled
     };

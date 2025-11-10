@@ -32,6 +32,7 @@ import {
 import { Terminal, Users, User } from 'lucide-vue-next'
 import ConfigurationSchemaEnvironmentSection from './ConfigurationSchemaEnvironmentSection.vue'
 import ConfigurationSchemaHeadersSection from './ConfigurationSchemaHeadersSection.vue'
+import ConfigurationSchemaQueryParamsSection from './ConfigurationSchemaQueryParamsSection.vue'
 import ConfigurationSchemaArgumentsSection from './ConfigurationSchemaArgumentsSection.vue'
 
 const { t } = useI18n()
@@ -45,12 +46,13 @@ const TECHNICAL_STORAGE_KEY = 'edit_technical_data'
 type ArgCategory = 'template' | 'team' | 'user'
 type EnvCategory = 'team' | 'user'
 type HeaderCategory = 'template' | 'team' | 'user'
-type ItemType = 'arg' | 'env' | 'header'
+type QueryParamCategory = 'template' | 'team' | 'user'
+type ItemType = 'arg' | 'env' | 'header' | 'query_param'
 
 interface ConfigItem {
   id: string
   type: ItemType
-  category: ArgCategory | EnvCategory | HeaderCategory
+  category: ArgCategory | EnvCategory | HeaderCategory | QueryParamCategory
   name: string
   value?: string // For template args
   description: string
@@ -58,19 +60,22 @@ interface ConfigItem {
   required: boolean
   locked: boolean
   default_team_locked?: boolean
-  visible_to_users?: boolean // For env vars only
+  visible_to_users?: boolean // For env vars, headers, and query params
 }
 
 interface ConfigurationSchema {
   template_args?: TemplateArg[]
   template_env?: TemplateEnvVar[]
   template_headers?: TemplateHeaderVar[]
+  template_url_query_params?: TemplateUrlQueryParam[]
   team_args_schema?: TeamArgsSchema[]
   team_env_schema?: TeamEnvSchema[]
   team_headers_schema?: TeamHeadersSchema[]
+  team_url_query_params_schema?: TeamUrlQueryParamsSchema[]
   user_args_schema?: UserArgsSchema[]
   user_env_schema?: UserEnvSchema[]
   user_headers_schema?: UserHeadersSchema[]
+  user_url_query_params_schema?: UserUrlQueryParamsSchema[]
 }
 
 interface TemplateArg {
@@ -87,6 +92,13 @@ interface TemplateEnvVar {
 }
 
 interface TemplateHeaderVar {
+  name: string
+  value: string
+  locked: boolean
+  description?: string
+}
+
+interface TemplateUrlQueryParam {
   name: string
   value: string
   locked: boolean
@@ -122,6 +134,16 @@ interface TeamHeadersSchema {
   visible_to_users?: boolean
 }
 
+interface TeamUrlQueryParamsSchema {
+  name: string
+  type: string
+  description?: string
+  required: boolean
+  locked: boolean
+  default_team_locked?: boolean
+  visible_to_users?: boolean
+}
+
 interface UserArgsSchema {
   name: string
   type: string
@@ -139,6 +161,14 @@ interface UserEnvSchema {
 }
 
 interface UserHeadersSchema {
+  name: string
+  type: string
+  description?: string
+  required: boolean
+  locked: boolean
+}
+
+interface UserUrlQueryParamsSchema {
   name: string
   type: string
   description?: string
@@ -183,6 +213,12 @@ const argCategoryOptions = [
 ]
 
 const headerCategoryOptions = [
+  { value: 'template', label: computed(() => t('mcpCatalog.form.configurationSchema.categories.template')), icon: Terminal, color: 'blue' },
+  { value: 'team', label: computed(() => t('mcpCatalog.form.configurationSchema.categories.team')), icon: Users, color: 'green' },
+  { value: 'user', label: computed(() => t('mcpCatalog.form.configurationSchema.categories.user')), icon: User, color: 'purple' },
+]
+
+const queryParamCategoryOptions = [
   { value: 'template', label: computed(() => t('mcpCatalog.form.configurationSchema.categories.template')), icon: Terminal, color: 'blue' },
   { value: 'team', label: computed(() => t('mcpCatalog.form.configurationSchema.categories.team')), icon: Users, color: 'green' },
   { value: 'user', label: computed(() => t('mcpCatalog.form.configurationSchema.categories.user')), icon: User, color: 'purple' },
@@ -296,6 +332,52 @@ const loadFromStorageSchema = () => {
     })
   })
 
+  // Convert template URL query params
+  ;(storedSchema.template_url_query_params || []).forEach((param, index) => {
+    items.push({
+      id: `template_query_param_${index}`,
+      type: 'query_param',
+      category: 'template',
+      name: param.name,
+      value: param.value,
+      description: param.description || '',
+      dataType: 'string',
+      required: true,
+      locked: param.locked,
+      default_team_locked: false,
+    })
+  })
+
+  // Convert team URL query params schema
+  ;(storedSchema.team_url_query_params_schema || []).forEach((param, index) => {
+    items.push({
+      id: `team_query_param_${index}`,
+      type: 'query_param',
+      category: 'team',
+      name: param.name,
+      description: param.description || '',
+      dataType: param.type || 'string',
+      required: param.required || false,
+      locked: param.locked || false,
+      default_team_locked: param.default_team_locked || false,
+      visible_to_users: param.visible_to_users || false,
+    })
+  })
+
+  // Convert user URL query params schema
+  ;(storedSchema.user_url_query_params_schema || []).forEach((param, index) => {
+    items.push({
+      id: `user_query_param_${index}`,
+      type: 'query_param',
+      category: 'user',
+      name: param.name,
+      description: param.description || '',
+      dataType: param.type || 'string',
+      required: param.required || false,
+      locked: param.locked || false,
+    })
+  })
+
   // Convert team env schema
   ;(storedSchema.team_env_schema || []).forEach((env, index) => {
     items.push({
@@ -335,12 +417,15 @@ const assembleSchemaAndSave = () => {
     template_args: [],
     template_env: [],
     template_headers: [],
+    template_url_query_params: [],
     team_args_schema: [],
     team_env_schema: [],
     team_headers_schema: [],
+    team_url_query_params_schema: [],
     user_args_schema: [],
     user_env_schema: [],
     user_headers_schema: [],
+    user_url_query_params_schema: [],
   }
 
   localData.value.forEach(item => {
@@ -416,6 +501,33 @@ const assembleSchemaAndSave = () => {
           locked: item.locked
         })
       }
+    } else if (item.type === 'query_param') {
+      if (item.category === 'template') {
+        schema.template_url_query_params!.push({
+          name: item.name,
+          value: item.value || '',
+          locked: item.locked,
+          description: item.description
+        })
+      } else if (item.category === 'team') {
+        schema.team_url_query_params_schema!.push({
+          name: item.name,
+          type: item.dataType,
+          description: item.description,
+          required: item.required,
+          locked: item.locked,
+          default_team_locked: item.default_team_locked,
+          visible_to_users: item.visible_to_users
+        })
+      } else if (item.category === 'user') {
+        schema.user_url_query_params_schema!.push({
+          name: item.name,
+          type: item.dataType,
+          description: item.description,
+          required: item.required,
+          locked: item.locked
+        })
+      }
     }
   })
 
@@ -435,6 +547,10 @@ const environmentItems = computed(() => {
 
 const headerItems = computed(() => {
   return localData.value.filter(item => item.type === 'header')
+})
+
+const queryParamItems = computed(() => {
+  return localData.value.filter(item => item.type === 'query_param')
 })
 
 // Check if transport type supports HTTP headers
@@ -673,6 +789,31 @@ const handleHeaderDelete = (index: number) => {
   handleDelete(globalIndex)
 }
 
+// URL Query Parameters event handlers
+const handleQueryParamAdd = () => {
+  if (!isHttpTransport.value) {
+    console.warn('URL query parameters are only available for HTTP transport types')
+    return
+  }
+  openAddModal('query_param')
+}
+
+const handleQueryParamEdit = (index: number) => {
+  const queryParamItems = localData.value.filter(item => item.type === 'query_param')
+  const queryParamItem = queryParamItems[index]
+  if (!queryParamItem) return
+  const globalIndex = localData.value.findIndex(item => item.id === queryParamItem.id)
+  openEditModal(globalIndex)
+}
+
+const handleQueryParamDelete = (index: number) => {
+  const queryParamItems = localData.value.filter(item => item.type === 'query_param')
+  const queryParamItem = queryParamItems[index]
+  if (!queryParamItem) return
+  const globalIndex = localData.value.findIndex(item => item.id === queryParamItem.id)
+  handleDelete(globalIndex)
+}
+
 // Get available category options for current type
 const availableCategoryOptions = computed(() => {
   if (formDataLocal.value.type === 'arg') {
@@ -684,6 +825,8 @@ const availableCategoryOptions = computed(() => {
     ]
   } else if (formDataLocal.value.type === 'header' && isHttpTransport.value) {
     return headerCategoryOptions
+  } else if (formDataLocal.value.type === 'query_param' && isHttpTransport.value) {
+    return queryParamCategoryOptions
   }
   return []
 })
@@ -813,6 +956,16 @@ onUnmounted(() => {
       @delete="handleHeaderDelete"
     />
 
+    <!-- URL Query Parameters Section - Now using shared component -->
+    <ConfigurationSchemaQueryParamsSection
+      v-if="isHttpTransport"
+      :items="queryParamItems"
+      :get-category-info="getCategoryInfo"
+      @add="handleQueryParamAdd"
+      @edit="handleQueryParamEdit"
+      @delete="handleQueryParamDelete"
+    />
+
     <!-- Environment Variables Section - Now using shared component -->
     <ConfigurationSchemaEnvironmentSection
       :items="environmentItems"
@@ -839,11 +992,12 @@ onUnmounted(() => {
               <span v-if="formDataLocal.type === 'arg'">Argument</span>
               <span v-else-if="formDataLocal.type === 'env'">Environment Variable</span>
               <span v-else-if="formDataLocal.type === 'header'">Header Name</span>
+              <span v-else-if="formDataLocal.type === 'query_param'">Query Parameter Name</span>
             </Label>
             <Input
               id="item-name"
               v-model="formDataLocal.name"
-              :placeholder="formDataLocal.type === 'arg' ? 'e.g. --api-key or -y' : formDataLocal.type === 'env' ? 'e.g. API_KEY' : 'e.g. Authorization'"
+              :placeholder="formDataLocal.type === 'arg' ? 'e.g. --api-key or -y' : formDataLocal.type === 'env' ? 'e.g. API_KEY' : formDataLocal.type === 'header' ? 'e.g. Authorization' : 'e.g. api_key'"
               :class="{ 'border-destructive': formErrors.name }"
               class="font-mono"
               required
@@ -860,6 +1014,16 @@ onUnmounted(() => {
               id="item-value"
               v-model="formDataLocal.value"
               :placeholder="'e.g. Bearer YOUR_TOKEN'"
+              class="font-mono"
+            />
+          </div>
+
+          <div v-if="formDataLocal.category === 'template' && formDataLocal.type === 'query_param'" class="space-y-2">
+            <Label for="item-value">Query Parameter Value</Label>
+            <Input
+              id="item-value"
+              v-model="formDataLocal.value"
+              :placeholder="'e.g. your_api_key_here'"
               class="font-mono"
             />
           </div>
@@ -937,7 +1101,7 @@ onUnmounted(() => {
               <Label for="item-default-team-locked">{{ $t('mcpCatalog.form.configurationSchema.modal.fields.options.defaultTeamLocked') }}</Label>
             </div>
 
-            <div class="flex items-center space-x-2" v-if="formDataLocal.type === 'env' && formDataLocal.category === 'team'">
+            <div class="flex items-center space-x-2" v-if="(formDataLocal.type === 'env' || formDataLocal.type === 'header' || formDataLocal.type === 'query_param') && formDataLocal.category === 'team'">
               <Switch
                 id="item-visible-to-users"
                 :model-value="formDataLocal.visible_to_users"

@@ -53,6 +53,8 @@ const modalTitle = computed(() => {
     typeKey = 'environment'
   } else if (props.formData.type === 'header') {
     typeKey = 'header'
+  } else if (props.formData.type === 'query_param') {
+    typeKey = 'queryParam'
   }
   return t(`mcpCatalog.form.configurationSchema.modal.${modalKey}.${typeKey}`)
 })
@@ -82,7 +84,9 @@ const updateFormField = (field: keyof ConfigItem, value: any) => {
                 ? $t('mcpCatalog.form.configurationSchema.modal.fields.argument.label')
                 : formData.type === 'env'
                   ? $t('mcpCatalog.form.configurationSchema.modal.fields.name.label')
-                  : $t('mcpCatalog.form.configurationSchema.modal.fields.headerName.label')
+                  : formData.type === 'header'
+                    ? $t('mcpCatalog.form.configurationSchema.modal.fields.headerName.label')
+                    : $t('mcpCatalog.form.configurationSchema.modal.fields.queryParamName.label')
             }}
           </Label>
           <Input
@@ -94,7 +98,9 @@ const updateFormField = (field: keyof ConfigItem, value: any) => {
                 ? $t('mcpCatalog.form.configurationSchema.modal.fields.argument.placeholder')
                 : formData.type === 'env'
                   ? $t('mcpCatalog.form.configurationSchema.modal.fields.name.placeholders.environment')
-                  : $t('mcpCatalog.form.configurationSchema.modal.fields.name.placeholders.header')
+                  : formData.type === 'header'
+                    ? $t('mcpCatalog.form.configurationSchema.modal.fields.name.placeholders.header')
+                    : $t('mcpCatalog.form.configurationSchema.modal.fields.queryParamName.placeholder')
             "
             :class="{ 'border-destructive': formErrors.name }"
             class="font-mono"
@@ -179,7 +185,7 @@ const updateFormField = (field: keyof ConfigItem, value: any) => {
             <Label for="item-default-team-locked">{{ $t('mcpCatalog.form.configurationSchema.modal.fields.options.defaultTeamLocked') }}</Label>
           </div>
 
-          <div class="flex items-center space-x-2" v-if="(formData.type === 'env' || formData.type === 'header') && formData.category === 'team'">
+          <div class="flex items-center space-x-2" v-if="(formData.type === 'env' || formData.type === 'header' || formData.type === 'query_param') && formData.category === 'team'">
             <Switch
               id="item-visible-to-users"
               :model-value="formData.visible_to_users"

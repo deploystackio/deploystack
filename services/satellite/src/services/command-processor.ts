@@ -5,6 +5,7 @@ import { ProcessManager } from '../process/manager';
 import { RuntimeState } from '../process/runtime-state';
 import { StdioToolDiscoveryManager } from './stdio-tool-discovery-manager';
 import { MCPServerConfig } from '../process/types';
+import { maskUrlForLogging } from '../utils/log-masker';
 
 export interface ProcessInfo {
   id: string;
@@ -262,7 +263,7 @@ export class CommandProcessor {
       command_id: command.id,
       server_name: serverName,
       process_id: processId,
-      server_url: serverConfig.url,
+      server_url: maskUrlForLogging(serverConfig.url, serverConfig.secret_metadata?.query_params),
       installation_id: command.payload.installation_id
     }, `HTTP MCP server proxy ready: ${serverName}`);
 
@@ -272,7 +273,7 @@ export class CommandProcessor {
       result: {
         process_id: processId,
         server_type: 'http_proxy',
-        server_url: serverConfig.url,
+        server_url: maskUrlForLogging(serverConfig.url, serverConfig.secret_metadata?.query_params),
         startup_time_ms: 0 // HTTP proxies are immediately available
       }
     };
@@ -503,7 +504,7 @@ export class CommandProcessor {
       command_id: command.id,
       server_name: serverName,
       process_id: processId,
-      server_url: serverConfig.url,
+      server_url: maskUrlForLogging(serverConfig.url, serverConfig.secret_metadata?.query_params),
       installation_id: command.payload.installation_id
     }, `HTTP MCP server proxy restarted: ${serverName}`);
 
@@ -513,7 +514,7 @@ export class CommandProcessor {
       result: {
         process_id: processId,
         server_name: serverName,
-        server_url: serverConfig.url,
+        server_url: maskUrlForLogging(serverConfig.url, serverConfig.secret_metadata?.query_params),
         restart_time_ms: 0 // HTTP proxies restart immediately
       }
     };
