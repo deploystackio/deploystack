@@ -24,7 +24,7 @@
     "lucide-vue-next": "^0.553.0",
     "marked": "^17.0.0",
     "mitt": "^3.0.1",
-    "pinia": "^3.0.3",
+    "pinia": "^3.0.4",
     "prismjs": "^1.30.0",
     "reka-ui": "^2.6.0",
     "tailwind-merge": "^3.3.1",
