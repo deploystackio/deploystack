@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.37.0 (2025-11-11)
+
+* chore(all): bump @octokit/auth-app from 8.1.1 to 8.1.2 ([b9e93c6](https://github.com/deploystackio/deploystack/commit/b9e93c6))
+* chore(all): bump @octokit/request from 10.0.5 to 10.0.6 ([67fcd1b](https://github.com/deploystackio/deploystack/commit/67fcd1b))
+* chore(all): bump marked from 16.4.1 to 17.0.0 ([aa37cf6](https://github.com/deploystackio/deploystack/commit/aa37cf6))
+* chore(all): bump release-it from 19.0.5 to 19.0.6 ([d2fdb5c](https://github.com/deploystackio/deploystack/commit/d2fdb5c))
+* chore(backend): release v0.41.0 ([f79fcfb](https://github.com/deploystackio/deploystack/commit/f79fcfb))
+* chore(backend): release v0.41.0 ([ddc0084](https://github.com/deploystackio/deploystack/commit/ddc0084))
+* feat(all): Add support for URL query parameters in MCP server configuration ([bce275a](https://github.com/deploystackio/deploystack/commit/bce275a))
+* feat(all): added new route for MCP client config ([1d7fb4a](https://github.com/deploystackio/deploystack/commit/1d7fb4a))
+
 ## 0.36.0 (2025-11-09)
 
 * chore(all): bump @modelcontextprotocol/sdk from 1.20.2 to 1.21.0 ([7c81126](https://github.com/deploystackio/deploystack/commit/7c81126))
