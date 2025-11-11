@@ -2,6 +2,12 @@
 
 ## 0.8.0 (2025-11-11)
 
+* chore(backend): release v0.42.0 ([9588de4](https://github.com/deploystackio/deploystack/commit/9588de4))
+* chore(backend): release v0.42.0 ([9d96581](https://github.com/deploystackio/deploystack/commit/9d96581))
+* chore(satellite): release v0.8.0 ([109792a](https://github.com/deploystackio/deploystack/commit/109792a))
+
+## 0.8.0 (2025-11-11)
+
 * chore(all): bump @modelcontextprotocol/sdk from 1.20.2 to 1.21.0 ([7c81126](https://github.com/deploystackio/deploystack/commit/7c81126))
 * chore(all): bump @octokit/auth-app from 8.1.1 to 8.1.2 ([b9e93c6](https://github.com/deploystackio/deploystack/commit/b9e93c6))
 * chore(all): bump @octokit/request from 10.0.5 to 10.0.6 ([67fcd1b](https://github.com/deploystackio/deploystack/commit/67fcd1b))
