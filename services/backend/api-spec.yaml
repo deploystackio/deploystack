@@ -3631,12 +3631,20 @@ paths:
                   clients:
                     type: array
                     items:
-                      type: string
-                      enum:
-                        - claude-desktop
-                        - vscode
-                        - claude-code
-                    description: List of supported MCP client types
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        name:
+                          type: string
+                        iconPath:
+                          type: string
+                      required:
+                        - id
+                        - name
+                        - iconPath
+                      additionalProperties: false
+                    description: List of supported MCP client types with metadata
                 required:
                   - clients
                 additionalProperties: false
@@ -21796,6 +21804,28 @@ paths:
                         enabled:
                           type: boolean
                           description: Whether this server is enabled
+                        secret_metadata:
+                          type: object
+                          properties:
+                            query_params:
+                              type: array
+                              items:
+                                type: string
+                              description: Names of query parameters that are secrets (should be masked in
+                                logs)
+                            headers:
+                              type: array
+                              items:
+                                type: string
+                              description: Names of headers that are secrets (should be masked in logs)
+                            env:
+                              type: array
+                              items:
+                                type: string
+                              description: Names of environment variables that are secrets (should be masked
+                                in logs)
+                          description: Metadata about which fields contain secrets and should be masked in
+                            satellite logs
                       required:
                         - installation_id
                         - team_id

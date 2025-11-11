@@ -4,7 +4,8 @@ import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { toast } from 'vue-sonner'
 import { useEventBus } from '@/composables/useEventBus'
-import GlobalSettingsSidebarNav, { type GlobalSettingGroup, type Setting } from '@/components/globalSettings/GlobalSettingsSidebarNav.vue'
+import { SidebarNav, type NavItem } from '@/components/ui/sidebar-nav'
+import type { GlobalSettingGroup, Setting } from '@/components/globalSettings/GlobalSettingsSidebarNav.vue'
 import DashboardLayout from '@/components/DashboardLayout.vue'
 import { getEnv } from '@/utils/env'
 import { Button } from '@/components/ui/button'
@@ -82,6 +83,14 @@ const selectedGroup = computed(() => {
   }
   const group = settingGroups.value.find(g => g.id === currentGroupId.value)
   return group
+})
+
+// Transform setting groups to nav items for SidebarNav component
+const sidebarNavItems = computed((): NavItem[] => {
+  return settingGroups.value.map(group => ({
+    title: group.name,
+    href: `/admin/settings/${group.id}`
+  }))
 })
 
 // Check if the selected group has a custom component
@@ -322,7 +331,7 @@ async function handleSubmit(event: Event) {
       <div class="flex flex-col space-y-8 md:flex-row md:space-x-12 md:space-y-0">
         <!-- Desktop Sidebar Navigation -->
         <aside class="hidden md:block md:w-1/5">
-          <GlobalSettingsSidebarNav :groups="settingGroups" />
+          <SidebarNav :items="sidebarNavItems" />
         </aside>
 
         <!-- Content Area -->

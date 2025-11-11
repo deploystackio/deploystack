@@ -4,6 +4,7 @@ export default {
       dashboard: 'Dashboard',
       title: 'Navigation',
       mcpServer: 'MCP Server',
+      clientConfiguration: 'Client Configuration',
       provider: 'Provider',
       credentials: 'Credentials',
     },

@@ -57,8 +57,14 @@ export interface CommandAction {
 export type ConfigAction = JsonAction | LinkAction | TextAction | CommandAction
 export type ClientConfigResponse = ConfigAction[]
 
+export interface ClientInfo {
+  id: string
+  name: string
+  iconPath: string
+}
+
 interface ClientsListResponse {
-  clients: string[]
+  clients: ClientInfo[]
 }
 
 export class GatewayConfigService {
@@ -83,7 +89,7 @@ export class GatewayConfigService {
   }
 
   // Updated to use the new satellite clients endpoint
-  static async getSupportedClients(): Promise<string[]> {
+  static async getSupportedClients(): Promise<ClientInfo[]> {
     const response = await fetch(`${this.baseUrl}/api/me/satellite/clients`, {
       method: 'GET',
       headers: {

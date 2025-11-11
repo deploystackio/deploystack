@@ -29,7 +29,10 @@ export default {
     getConfiguration: 'Get Client Configuration',
     copyAndClose: 'Copy to clipboard and close',
     copyInstructionsAndClose: 'Copy Instructions & Close',
-    copyCommandAndClose: 'Copy Command & Close'
+    copyCommandAndClose: 'Copy Command & Close',
+    copy: 'Copy to clipboard',
+    copyInstructions: 'Copy Instructions',
+    copyCommand: 'Copy Command'
   },
 
   messages: {

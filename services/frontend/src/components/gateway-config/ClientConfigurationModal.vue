@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
-import { GatewayConfigService, type ClientConfigResponse, type LinkAction, type TextAction, type CommandAction } from '@/services/satelliteConfigService'
+import { GatewayConfigService, type ClientConfigResponse, type LinkAction, type TextAction, type CommandAction, type ClientInfo } from '@/services/satelliteConfigService'
 import { toast } from 'vue-sonner'
 import { ExternalLink } from 'lucide-vue-next'
 
@@ -43,7 +43,7 @@ const commandActions = ref<CommandAction[]>([])
 const contentType = ref<'json' | 'text' | 'command' | 'empty'>('empty')
 const isLoading = ref(false)
 const isCopying = ref(false)
-const supportedClients = ref<string[]>([])
+const supportedClients = ref<ClientInfo[]>([])
 const isLoadingClients = ref(false)
 
 // Load supported clients when modal opens
@@ -70,7 +70,7 @@ async function loadSupportedClients() {
     if (!selectedClient.value && clients.length > 0) {
       const firstClient = clients[0]
       if (firstClient) {
-        selectedClient.value = firstClient
+        selectedClient.value = firstClient.id
       }
     }
   } catch (error) {
@@ -117,28 +117,6 @@ async function loadConfiguration(client: string) {
   } finally {
     isLoading.value = false
   }
-}
-
-// Get display name for client (with fallback)
-function getClientDisplayName(client: string): string {
-  // Convert client name to camelCase for i18n key matching
-  const clientKey = client.split('-').map((word, index) => {
-    if (index === 0) {
-      return word.toLowerCase()
-    }
-    return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
-  }).join('')
-
-  const translationKey = `satelliteConfig.clients.${clientKey}`
-  const translated = t(translationKey)
-
-  // If translation returns the key itself, it means translation doesn't exist
-  // Fall back to a capitalized version of the client name
-  if (translated === translationKey) {
-    return client.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
-  }
-
-  return translated
 }
 
 function handleClose() {
@@ -252,10 +230,10 @@ function getTextareaClasses(): string {
             <SelectContent>
               <SelectItem
                 v-for="client in supportedClients"
-                :key="client"
-                :value="client"
+                :key="client.id"
+                :value="client.id"
               >
-                {{ getClientDisplayName(client) }}
+                {{ client.name }}
               </SelectItem>
             </SelectContent>
           </Select>
@@ -265,29 +243,16 @@ function getTextareaClasses(): string {
         <div v-if="hasInstallButtons()" class="space-y-3">
           <label class="text-sm font-medium">{{ t('satelliteConfig.modal.oneClickInstall') }}</label>
           <div class="flex flex-wrap gap-2">
-            <button
+            <Button
               v-for="action in linkActions"
               :key="action.url"
               @click="handleInstallClick(action)"
-              class="inline-flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded"
+              variant="outline"
+              class="flex items-center gap-2"
             >
-              <!-- Cursor install button -->
-              <img
-                v-if="action.url.includes('cursor')"
-                src="/images/provider/cursor-mcp-install-dark.svg"
-                :alt="action.name || 'Install'"
-                class="h-8 w-auto cursor-pointer"
-              />
-              <!-- Generic install button for other providers -->
-              <Button
-                v-else
-                variant="outline"
-                class="flex items-center gap-2"
-              >
-                <ExternalLink class="h-4 w-4" />
-                {{ action.name || 'Install' }}
-              </Button>
-            </button>
+              <ExternalLink class="h-4 w-4" />
+              {{ action.name || 'Install' }}
+            </Button>
           </div>
           <p class="text-sm text-muted-foreground">
             {{ t('satelliteConfig.modal.oneClickDescription') }}

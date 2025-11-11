@@ -43,7 +43,8 @@ import {
   FileSliders,
   FolderTree,
   Satellite,
-  ListTodo
+  ListTodo,
+  Bot
 } from 'lucide-vue-next'
 
 // Define props, including variant
@@ -97,6 +98,11 @@ const navigationItems = [
     title: t('sidebar.navigation.mcpServer'),
     icon: Server,
     url: '/mcp-server',
+  },
+  {
+    title: t('sidebar.navigation.clientConfiguration'),
+    icon: Bot,
+    url: '/client-configuration',
   },
   // {
   //   title: t('sidebar.navigation.credentials'),

@@ -119,6 +119,18 @@ const routes = [
     meta: { requiresSetup: true },
   },
   {
+    path: '/client-configuration',
+    name: 'ClientConfiguration',
+    component: () => import('../views/client-configuration/index.vue'),
+    meta: { requiresSetup: true },
+  },
+  {
+    path: '/client-configuration/:client',
+    name: 'ClientConfigurationDetail',
+    component: () => import('../views/client-configuration/index.vue'),
+    meta: { requiresSetup: true },
+  },
+  {
     path: '/provider',
     name: 'Provider',
     component: () => import('../views/Provider.vue'),

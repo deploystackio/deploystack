@@ -1,10 +1,23 @@
 // Shared schemas for gateway configuration endpoints
 
-// Supported MCP client types
-// export const CLIENT_TYPES = ['claude-desktop', 'cline', 'vscode', 'cursor', 'windsurf'] as const;
-export const CLIENT_TYPES = ['claude-desktop', 'vscode', 'claude-code'] as const;
+// Client information with icons
+export interface ClientInfo {
+  id: string;
+  name: string;
+  iconPath: string;
+}
 
-export type ClientType = typeof CLIENT_TYPES[number];
+// Supported MCP client types with icon paths
+export const CLIENT_TYPES: readonly ClientInfo[] = [
+  { id: 'claude-desktop', name: 'Claude Desktop', iconPath: '/images/provider/claude.svg' },
+  { id: 'vscode', name: 'VS Code', iconPath: '/images/provider/vscode.svg' },
+  { id: 'claude-code', name: 'Claude Code', iconPath: '/images/provider/claude.svg' },
+] as const;
+
+// Extract client IDs for validation
+export const CLIENT_IDS = CLIENT_TYPES.map(client => client.id);
+
+export type ClientType = typeof CLIENT_IDS[number];
 
 // Reusable Schema Constants
 export const CLIENT_PARAM_SCHEMA = {
@@ -12,7 +25,7 @@ export const CLIENT_PARAM_SCHEMA = {
   properties: {
     client: {
       type: 'string',
-      enum: CLIENT_TYPES,
+      enum: CLIENT_IDS,
       description: 'The MCP client type'
     }
   },
@@ -91,10 +104,16 @@ export const CLIENTS_LIST_RESPONSE_SCHEMA = {
     clients: {
       type: 'array',
       items: {
-        type: 'string',
-        enum: CLIENT_TYPES
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+          name: { type: 'string' },
+          iconPath: { type: 'string' }
+        },
+        required: ['id', 'name', 'iconPath'],
+        additionalProperties: false
       },
-      description: 'List of supported MCP client types'
+      description: 'List of supported MCP client types with metadata'
     }
   },
   required: ['clients'],
@@ -116,7 +135,7 @@ export interface ClientParams {
 }
 
 export interface ClientsListResponse {
-  clients: readonly string[];
+  clients: readonly ClientInfo[];
 }
 
 export interface ErrorResponse {

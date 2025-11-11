@@ -55,8 +55,8 @@ const sidebarNavItems = computed((): NavItem[] => {
       as-child
       variant="ghost"
       :class="cn(
-        'w-full text-left justify-start',
-        route.path === item.href && 'bg-muted hover:bg-muted',
+        'w-full text-left justify-start border hover:bg-white',
+        route.path === item.href ? 'bg-white font-medium !border-primary' : 'border-sidebar-foreground/20',
       )"
     >
       <RouterLink :to="item.href">
