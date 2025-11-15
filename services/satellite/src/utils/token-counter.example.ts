@@ -53,10 +53,11 @@ export function exampleEstimateDiscoveredTools() {
 
   const estimate = estimateMcpServerTokens(server);
 
-  console.log(`Server ${estimate.serverName}:`);
-  console.log(`  Tools: ${estimate.toolCount}`);
-  console.log(`  Total Tokens: ${estimate.totalTokens}`);
-  console.log(`  Complexity: ${estimate.complexity}`);
+  // Example output:
+  // Server filesystem-team-abc123:
+  //   Tools: 2
+  //   Total Tokens: 150
+  //   Complexity: low
 
   return estimate;
 }
@@ -107,10 +108,11 @@ export function exampleAnalyzeMultipleTeams() {
   // Analyze with default 200k context window (Claude Sonnet 4.5)
   const analysis = analyzeContextWindowUsage([team1Server, team2Server]);
 
-  console.log(`Total servers: ${analysis.totalServers}`);
-  console.log(`Total tools: ${analysis.totalTools}`);
-  console.log(`Context usage: ${analysis.utilizationPercent}%`);
-  console.log(`Recommendation: ${analysis.recommendation}`);
+  // Example output:
+  // Total servers: 2
+  // Total tools: 2
+  // Context usage: 0.5%
+  // Recommendation: Excellent - context window usage is minimal
 
   return analysis;
 }
@@ -155,13 +157,16 @@ export function exampleCalculateHierarchicalSavings() {
 
   const savings = calculateHierarchicalSavings(servers);
 
-  console.log('Traditional approach:');
-  console.log(`  ${savings.traditionalApproach.totalTools} tools exposed`);
-  console.log(`  ${savings.traditionalApproach.totalTokens} tokens`);
-  console.log('\nHierarchical approach:');
-  console.log(`  ${savings.hierarchicalApproach.exposedTools} meta-tools exposed`);
-  console.log(`  ${savings.hierarchicalApproach.totalTokens} tokens`);
-  console.log(`\nSavings: ${savings.savings.percent}% reduction`);
+  // Example output:
+  // Traditional approach:
+  //   35 tools exposed
+  //   2500 tokens
+  //
+  // Hierarchical approach:
+  //   2 meta-tools exposed
+  //   350 tokens
+  //
+  // Savings: 86% reduction
 
   return savings;
 }
@@ -217,7 +222,8 @@ export async function exampleIntegrateWithToolDiscovery() {
   }
   */
 
-  console.log('See comments above for integration pattern');
+  // See comments above for integration pattern
+  return null;
 }
 
 /**
@@ -242,13 +248,15 @@ export function exampleCustomContextWindow() {
 
   // For Claude Sonnet 4.5 (200k)
   const claudeAnalysis = analyzeContextWindowUsage([server], 200000);
-  console.log(`Claude Sonnet 4.5: ${claudeAnalysis.utilizationPercent}%`);
+  // Example: Claude Sonnet 4.5: 0.05%
 
   // For GPT-4 (128k)
   const gpt4Analysis = analyzeContextWindowUsage([server], 128000);
-  console.log(`GPT-4: ${gpt4Analysis.utilizationPercent}%`);
+  // Example: GPT-4: 0.08%
 
   // For Gemini 2.0 (1M)
   const geminiAnalysis = analyzeContextWindowUsage([server], 1000000);
-  console.log(`Gemini 2.0: ${geminiAnalysis.utilizationPercent}%`);
+  // Example: Gemini 2.0: 0.01%
+
+  return { claudeAnalysis, gpt4Analysis, geminiAnalysis };
 }
