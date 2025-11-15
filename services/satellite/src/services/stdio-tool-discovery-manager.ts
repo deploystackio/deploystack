@@ -1,6 +1,7 @@
 import { Logger } from 'pino';
 import { ProcessManager } from '../process/manager';
 import { RuntimeState } from '../process/runtime-state';
+import type { EventBus } from './event-bus';
 
 /**
  * Cached tool from stdio MCP server
@@ -16,7 +17,7 @@ export interface CachedStdioTool {
 
 /**
  * StdioToolDiscoveryManager
- * 
+ *
  * Manages tool discovery and caching for stdio-based MCP servers.
  * Tools are discovered after successful process spawn and handshake.
  * Tools remain cached even when processes go dormant for fast respawn.
@@ -25,11 +26,12 @@ export interface CachedStdioTool {
 export class StdioToolDiscoveryManager {
   private toolCache = new Map<string, CachedStdioTool>();
   private toolsByServer = new Map<string, Set<string>>();
-  
+
   constructor(
     private processManager: ProcessManager,
     private runtimeState: RuntimeState,
-    private logger: Logger
+    private logger: Logger,
+    private eventBus?: EventBus
   ) {
     // NOTE: We do NOT clear tools on process termination
     // Tools remain cached even when processes go dormant
@@ -123,6 +125,50 @@ export class StdioToolDiscoveryManager {
         tool_count: cachedTools.length,
         tools: cachedTools.map(t => t.namespacedName)
       }, `Discovered ${cachedTools.length} tools from ${installationName}`);
+
+      // Emit mcp.tools.discovered event with token counts
+      try {
+        // Import token counter utilities
+        const { estimateMcpServerTokens } = await import('../utils/token-counter');
+
+        // Calculate token consumption
+        const mcpServer = {
+          name: installationName,
+          tools: cachedTools.map(t => ({
+            name: t.originalName,
+            description: t.description,
+            inputSchema: t.inputSchema
+          }))
+        };
+
+        const tokenEstimate = estimateMcpServerTokens(mcpServer);
+
+        // Build enhanced event payload
+        this.eventBus?.emit('mcp.tools.discovered', {
+          installation_id: processInfo.config.installation_id || installationName,
+          installation_name: installationName,
+          team_id: processInfo.config.team_id,
+          server_slug: serverSlug,
+          tool_count: cachedTools.length,
+          total_tokens: tokenEstimate.totalTokens,
+          tools: cachedTools.map((tool, index) => ({
+            tool_name: tool.originalName,
+            description: tool.description,
+            input_schema: tool.inputSchema,
+            token_count: tokenEstimate.tools[index]?.tokens || 0
+          })),
+          discovered_at: new Date().toISOString()
+        });
+
+        this.logger.info({
+          operation: 'stdio_tools_discovered_event_emitted',
+          installation_name: installationName,
+          tool_count: cachedTools.length,
+          total_tokens: tokenEstimate.totalTokens
+        }, `Tool discovery event emitted to backend for ${installationName}`);
+      } catch (error) {
+        this.logger.warn({ error }, 'Failed to emit mcp.tools.discovered event (non-fatal)');
+      }
 
       return cachedTools;
 

@@ -119,18 +119,48 @@ export class RemoteToolDiscoveryManager {
           tools: serverTools.map(t => t.originalName)
         }, `Discovered ${serverTools.length} tools from ${serverName}`);
         
-        // Emit mcp.tools.discovered event
+        // Emit mcp.tools.discovered event with token counts
         try {
           const serverConfig = enabledServers[serverName];
+
+          // Import token counter utilities at the top of this file
+          const { estimateMcpServerTokens } = await import('../utils/token-counter');
+
+          // Calculate token consumption using existing utility
+          const mcpServer = {
+            name: serverName,
+            tools: serverTools.map(t => ({
+              name: t.originalName,
+              description: t.description,
+              inputSchema: t.inputSchema
+            }))
+          };
+
+          const tokenEstimate = estimateMcpServerTokens(mcpServer);
+
+          // Build enhanced event payload
           this.eventBus?.emit('mcp.tools.discovered', {
-            server_id: serverConfig.installation_id || serverName,
-            server_slug: serverConfig.server_slug || serverName,
+            installation_id: serverConfig.installation_id || serverName,
+            installation_name: serverName,
             team_id: serverConfig.team_id || 'unknown',
+            server_slug: serverConfig.server_slug || serverName,
             tool_count: serverTools.length,
-            tool_names: serverTools.map(t => t.originalName),
-            discovery_duration_ms: 0, // Not tracked in initial discovery
-            previous_tool_count: 0
+            total_tokens: tokenEstimate.totalTokens,
+            tools: serverTools.map((tool, index) => ({
+              tool_name: tool.originalName,
+              description: tool.description,
+              input_schema: tool.inputSchema,
+              token_count: tokenEstimate.tools[index]?.tokens || 0
+            })),
+            discovered_at: new Date().toISOString()
           });
+
+          this.logger.info({
+            operation: 'remote_tools_discovered_event_emitted',
+            installation_name: serverName,
+            tool_count: serverTools.length,
+            total_tokens: tokenEstimate.totalTokens
+          }, `Tool discovery event emitted to backend for ${serverName}`);
         } catch (error) {
           this.logger.warn({ error }, 'Failed to emit mcp.tools.discovered event (non-fatal)');
         }
@@ -534,17 +564,45 @@ export class RemoteToolDiscoveryManager {
           try {
             const serverConfig = config.servers[serverName];
             const isNew = configChanges.addedServers.includes(serverName);
-            
+
+            // Import token counter utilities
+            const { estimateMcpServerTokens } = await import('../utils/token-counter');
+
+            // Calculate token consumption
+            const mcpServer = {
+              name: serverName,
+              tools: serverTools.map(t => ({
+                name: t.originalName,
+                description: t.description,
+                inputSchema: t.inputSchema
+              }))
+            };
+
+            const tokenEstimate = estimateMcpServerTokens(mcpServer);
+
             if (isNew) {
               this.eventBus?.emit('mcp.tools.discovered', {
-                server_id: serverConfig.installation_id || serverName,
-                server_slug: serverConfig.server_slug || serverName,
+                installation_id: serverConfig.installation_id || serverName,
+                installation_name: serverName,
                 team_id: serverConfig.team_id || 'unknown',
+                server_slug: serverConfig.server_slug || serverName,
                 tool_count: serverTools.length,
-                tool_names: serverTools.map(t => t.originalName),
-                discovery_duration_ms: 0,
-                previous_tool_count: 0
+                total_tokens: tokenEstimate.totalTokens,
+                tools: serverTools.map((tool, index) => ({
+                  tool_name: tool.originalName,
+                  description: tool.description,
+                  input_schema: tool.inputSchema,
+                  token_count: tokenEstimate.tools[index]?.tokens || 0
+                })),
+                discovered_at: new Date().toISOString()
               });
+
+              this.logger.info({
+                operation: 'remote_tools_discovered_event_emitted',
+                installation_name: serverName,
+                tool_count: serverTools.length,
+                total_tokens: tokenEstimate.totalTokens
+              }, `Tool discovery event emitted for new server: ${serverName}`);
             } else {
               // For modified servers, calculate what changed
               const oldState = this.serverToolStates.get(serverName);
@@ -552,7 +610,7 @@ export class RemoteToolDiscoveryManager {
               const newTools = serverTools.map(t => t.originalName);
               const addedTools = newTools.filter(t => !oldTools.includes(t));
               const removedTools = oldTools.filter(t => !newTools.includes(t));
-              
+
               if (addedTools.length > 0 || removedTools.length > 0) {
                 this.eventBus?.emit('mcp.tools.updated', {
                   server_id: serverConfig.installation_id || serverName,

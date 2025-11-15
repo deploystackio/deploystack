@@ -7887,6 +7887,184 @@ paths:
                   - success
                   - error
                 description: Internal Server Error
+  /api/teams/{teamId}/mcp/installations/{installationId}/tools:
+    get:
+      summary: Get installation tool metadata
+      tags:
+        - MCP Tools
+      description: Retrieves all discovered tools for a specific MCP installation with
+        token consumption data. Requires mcp.tools.view permission. Returns
+        empty array if no tools have been discovered yet.
+      parameters:
+        - schema:
+            type: string
+            minLength: 1
+          in: path
+          name: teamId
+          required: true
+          description: Team ID that owns the installation
+        - schema:
+            type: string
+            minLength: 1
+          in: path
+          name: installationId
+          required: true
+          description: Installation ID
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Tool metadata retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Indicates if the operation was successful
+                  data:
+                    type: object
+                    properties:
+                      installation_id:
+                        type: string
+                        description: Installation unique identifier
+                      installation_name:
+                        type: string
+                        description: Installation name
+                      team_id:
+                        type: string
+                        description: Team identifier
+                      server_slug:
+                        type: string
+                        description: MCP server slug
+                      tool_count:
+                        type: number
+                        description: Number of tools discovered
+                      total_tokens:
+                        type: number
+                        description: Total token count across all tools
+                      tools:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                              description: Tool metadata unique identifier
+                            tool_name:
+                              type: string
+                              description: Name of the tool
+                            description:
+                              type: string
+                              description: Tool description
+                            input_schema:
+                              type: object
+                              description: JSON Schema for tool input
+                            token_count:
+                              type: number
+                              description: Token count for this tool
+                            discovered_at:
+                              type: string
+                              description: ISO 8601 timestamp when tool was discovered
+                            updated_at:
+                              type: string
+                              description: ISO 8601 timestamp when tool was last updated
+                          required:
+                            - id
+                            - tool_name
+                            - description
+                            - input_schema
+                            - token_count
+                            - discovered_at
+                            - updated_at
+                        description: Array of discovered tools
+                    required:
+                      - installation_id
+                      - installation_name
+                      - team_id
+                      - server_slug
+                      - tool_count
+                      - total_tokens
+                      - tools
+                required:
+                  - success
+                  - data
+                description: Tool metadata retrieved successfully
+        "401":
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates failure
+                  error:
+                    type: string
+                    description: Error message detailing what went wrong
+                required:
+                  - success
+                  - error
+                description: Unauthorized - Authentication required
+        "403":
+          description: Forbidden - Insufficient permissions or not a team member
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates failure
+                  error:
+                    type: string
+                    description: Error message detailing what went wrong
+                required:
+                  - success
+                  - error
+                description: Forbidden - Insufficient permissions or not a team member
+        "404":
+          description: Not Found - Installation does not exist or does not belong to
+            specified team
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates failure
+                  error:
+                    type: string
+                    description: Error message detailing what went wrong
+                required:
+                  - success
+                  - error
+                description: Not Found - Installation does not exist or does not belong to
+                  specified team
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates failure
+                  error:
+                    type: string
+                    description: Error message detailing what went wrong
+                required:
+                  - success
+                  - error
+                description: Internal Server Error
   /api/teams/{teamId}/cloud-providers:
     get:
       summary: List available cloud providers

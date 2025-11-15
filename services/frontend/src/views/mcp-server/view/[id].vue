@@ -39,7 +39,7 @@ const goBack = () => {
 
 const installServer = () => {
   router.push({
-    path: '/mcp-server/add',
+    path: '/mcp-server/install',
     query: {
       serverId: serverId,
       step: '2'

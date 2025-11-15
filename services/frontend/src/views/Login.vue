@@ -111,7 +111,7 @@ const onSubmit = form.handleSubmit(async (values) => {
   try {
     // Use the UserService login method which handles cache clearing
     await UserService.login(values.login, values.password)
-    router.push('/mcp-server')
+    router.push('/dashboard')
 
   } catch (e) {
     console.error('Login error:', e);

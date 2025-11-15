@@ -140,6 +140,7 @@ export default {
     platform: {
       title: 'Select Installation Platform',
       description: 'Choose where you want to install and run your MCP server',
+      helpText: 'Select where you want to install and run your MCP server',
       features: 'Features',
       selected: 'You have selected {name} as your installation platform',
       recommendedChoice: 'This is the recommended choice for most users.',
@@ -578,6 +579,35 @@ export default {
   },
 
   details: {
+    mcpTools: {
+      title: 'MCP Tools',
+      description: 'Tools discovered from this MCP server installation',
+      loading: 'Loading tools...',
+      noTools: {
+        title: 'No Tools Discovered',
+        description: 'No tools have been discovered yet for this MCP server installation. Tools are discovered automatically when the satellite starts the MCP server.'
+      },
+      table: {
+        columns: {
+          toolName: 'Tool Name',
+          description: 'Description',
+          tokenCount: 'Token Count'
+        },
+        values: {
+          noDescription: 'No description provided'
+        }
+      },
+      summary: {
+        totalTools: 'Total Tools',
+        totalTokens: 'Total Tokens',
+        discoveredAt: 'Discovered'
+      },
+      error: {
+        title: 'Error Loading Tools',
+        description: 'Failed to load MCP tools: {error}'
+      }
+    },
+
     installationDetails: {
       title: 'Installation Details',
       description: 'Information about your MCP server installation',

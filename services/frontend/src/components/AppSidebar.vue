@@ -33,7 +33,7 @@ import { UserService, type User } from '@/services/userService'
 import { useEventBus } from '@/composables/useEventBus'
 import {
   Server,
-  // LayoutDashboard,
+  LayoutDashboard,
   // Key,
   ChevronDown,
   User as UserIcon,
@@ -89,11 +89,11 @@ const teamItems = [
 ]
 
 const navigationItems = [
-  // {
-  //   title: t('sidebar.navigation.dashboard'),
-  //   icon: LayoutDashboard,
-  //   url: '/dashboard',
-  // },
+  {
+    title: t('sidebar.navigation.dashboard'),
+    icon: LayoutDashboard,
+    url: '/dashboard',
+  },
   {
     title: t('sidebar.navigation.mcpServer'),
     icon: Server,

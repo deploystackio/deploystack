@@ -3,11 +3,11 @@ import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, Info, Settings, Shield, User } from 'lucide-vue-next'
+import { ArrowLeft, Info, Settings, Shield, User, Package } from 'lucide-vue-next'
 import { DsTabs, DsTabsItem } from '@/components/ui/ds-tabs'
 import DashboardLayout from '@/components/DashboardLayout.vue'
 import ContentWrapper from '@/components/ContentWrapper.vue'
-import { InstallationInfo, TeamConfiguration, UserConfiguration, DangerZone } from '@/components/mcp-server/installation'
+import { InstallationInfo, McpToolsTab, TeamConfiguration, UserConfiguration, DangerZone } from '@/components/mcp-server/installation'
 import { McpInstallationService } from '@/services/mcpInstallationService'
 import { TeamService, type Team } from '@/services/teamService'
 import { useEventBus } from '@/composables/useEventBus'
@@ -198,6 +198,9 @@ const loadAndSetInstallation = async () => {
           <DsTabsItem value="information" label="Installation Info">
             <Info class="h-4 w-4" />
           </DsTabsItem>
+          <DsTabsItem value="mcp-tools" :label="t('mcpInstallations.details.mcpTools.title')">
+            <Package class="h-4 w-4" />
+          </DsTabsItem>
           <DsTabsItem value="user-config" label="User Configuration">
             <User class="h-4 w-4" />
           </DsTabsItem>
@@ -218,6 +221,11 @@ const loadAndSetInstallation = async () => {
           <InstallationInfo
             v-if="activeTab === 'information'"
             :installation="installation"
+          />
+          <McpToolsTab
+            v-if="activeTab === 'mcp-tools'"
+            :installation="installation"
+            :team-id="currentTeam.id"
           />
           <TeamConfiguration
             v-if="activeTab === 'environment'"

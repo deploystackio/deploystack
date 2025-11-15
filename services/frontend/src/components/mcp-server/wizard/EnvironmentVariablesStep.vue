@@ -4,9 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import Card from '@/components/ui/card/Card.vue'
 import { Item } from '@/components/ui/item'
-import McpServerCard from '@/components/mcp-server/McpServerCard.vue'
 
 interface EnvironmentVariable {
   name: string
@@ -254,37 +252,20 @@ const isTextarea = (envVar: EnvironmentVariable) => {
 
 <template>
   <div class="space-y-6">
-    <div>
-      <h2 class="text-xl font-semibold text-gray-900 mb-2">
-        {{ t('mcpInstallations.wizard.environment.title') }}
-      </h2>
-      <p class="text-gray-600">
-        {{ t('mcpInstallations.wizard.environment.description') }}
-      </p>
-    </div>
-
-    <McpServerCard
-      v-if="serverData"
-      :server="serverData"
-      :show-install-button="false"
-      :show-details-button="false"
-    />
-
     <div v-if="hasAnyConfiguration" class="space-y-6">
       <!-- Team Arguments Section -->
-      <Card v-if="hasTeamArgs" variant="gray">
-        <div class="px-6">
-          <div class="mb-4">
-            <h3 class="text-lg font-semibold">
-              {{ t('mcpInstallations.teamConfiguration.sections.teamArgs.title') }}
-            </h3>
-            <p class="text-sm text-muted-foreground mt-1">
-              {{ teamArgsSchema.length }} {{ teamArgsSchema.length === 1 ? t('mcpInstallations.teamConfiguration.sections.teamArgs.counter.single') : t('mcpInstallations.teamConfiguration.sections.teamArgs.counter.plural') }}
-            </p>
-          </div>
-          <p class="text-sm text-muted-foreground mb-6">
-            {{ t('mcpInstallations.teamConfiguration.sections.teamArgs.description') }}
+      <div v-if="hasTeamArgs">
+        <div class="mb-4">
+          <h3 class="text-lg font-semibold">
+            {{ t('mcpInstallations.teamConfiguration.sections.teamArgs.title') }}
+          </h3>
+          <p class="text-sm text-muted-foreground mt-1">
+            {{ teamArgsSchema.length }} {{ teamArgsSchema.length === 1 ? t('mcpInstallations.teamConfiguration.sections.teamArgs.counter.single') : t('mcpInstallations.teamConfiguration.sections.teamArgs.counter.plural') }}
           </p>
+        </div>
+        <p class="text-sm text-muted-foreground mb-6">
+          {{ t('mcpInstallations.teamConfiguration.sections.teamArgs.description') }}
+        </p>
 
         <div class="space-y-3">
           <Item
@@ -325,23 +306,21 @@ const isTextarea = (envVar: EnvironmentVariable) => {
             </div>
           </Item>
         </div>
-        </div>
-      </Card>
+      </div>
 
       <!-- Team Environment Variables Section -->
-      <Card v-if="hasTeamEnvVars" variant="gray">
-        <div class="px-6">
-          <div class="mb-4">
-            <h3 class="text-lg font-semibold">
-              {{ t('mcpInstallations.teamConfiguration.sections.teamEnv.title') }}
-            </h3>
-            <p class="text-sm text-muted-foreground mt-1">
-              {{ teamEnvSchema.length }} {{ teamEnvSchema.length === 1 ? t('mcpInstallations.teamConfiguration.sections.teamEnv.counter.single') : t('mcpInstallations.teamConfiguration.sections.teamEnv.counter.plural') }}
-            </p>
-          </div>
-          <p class="text-sm text-muted-foreground mb-6">
-            {{ t('mcpInstallations.teamConfiguration.sections.teamEnv.description') }}
+      <div v-if="hasTeamEnvVars">
+        <div class="mb-4">
+          <h3 class="text-lg font-semibold">
+            {{ t('mcpInstallations.teamConfiguration.sections.teamEnv.title') }}
+          </h3>
+          <p class="text-sm text-muted-foreground mt-1">
+            {{ teamEnvSchema.length }} {{ teamEnvSchema.length === 1 ? t('mcpInstallations.teamConfiguration.sections.teamEnv.counter.single') : t('mcpInstallations.teamConfiguration.sections.teamEnv.counter.plural') }}
           </p>
+        </div>
+        <p class="text-sm text-muted-foreground mb-6">
+          {{ t('mcpInstallations.teamConfiguration.sections.teamEnv.description') }}
+        </p>
 
         <div class="space-y-3">
           <Item
@@ -395,23 +374,21 @@ const isTextarea = (envVar: EnvironmentVariable) => {
             </div>
           </Item>
         </div>
-        </div>
-      </Card>
+      </div>
 
       <!-- Team Headers Section -->
-      <Card v-if="hasTeamHeaders" variant="gray">
-        <div class="px-6">
-          <div class="mb-4">
-            <h3 class="text-lg font-semibold">
-              Team Headers
-            </h3>
-            <p class="text-sm text-muted-foreground mt-1">
-              {{ teamHeadersSchema.length }} {{ teamHeadersSchema.length === 1 ? 'header' : 'headers' }}
-            </p>
-          </div>
-          <p class="text-sm text-muted-foreground mb-6">
-            Configure HTTP headers that will be shared across all team members for this MCP server installation.
+      <div v-if="hasTeamHeaders">
+        <div class="mb-4">
+          <h3 class="text-lg font-semibold">
+            Team Headers
+          </h3>
+          <p class="text-sm text-muted-foreground mt-1">
+            {{ teamHeadersSchema.length }} {{ teamHeadersSchema.length === 1 ? 'header' : 'headers' }}
           </p>
+        </div>
+        <p class="text-sm text-muted-foreground mb-6">
+          Configure HTTP headers that will be shared across all team members for this MCP server installation.
+        </p>
 
         <div class="space-y-3">
           <Item
@@ -455,23 +432,21 @@ const isTextarea = (envVar: EnvironmentVariable) => {
             </div>
           </Item>
         </div>
-        </div>
-      </Card>
+      </div>
 
       <!-- Team URL Query Parameters Section -->
-      <Card v-if="hasTeamQueryParams" variant="gray">
-        <div class="px-6">
-          <div class="mb-4">
-            <h3 class="text-lg font-semibold">
-              Team URL Query Parameters
-            </h3>
-            <p class="text-sm text-muted-foreground mt-1">
-              {{ teamQueryParamsSchema.length }} {{ teamQueryParamsSchema.length === 1 ? 'query parameter' : 'query parameters' }}
-            </p>
-          </div>
-          <p class="text-sm text-muted-foreground mb-6">
-            Configure URL query parameters that will be shared across all team members for this MCP server installation.
+      <div v-if="hasTeamQueryParams">
+        <div class="mb-4">
+          <h3 class="text-lg font-semibold">
+            Team URL Query Parameters
+          </h3>
+          <p class="text-sm text-muted-foreground mt-1">
+            {{ teamQueryParamsSchema.length }} {{ teamQueryParamsSchema.length === 1 ? 'query parameter' : 'query parameters' }}
           </p>
+        </div>
+        <p class="text-sm text-muted-foreground mb-6">
+          Configure URL query parameters that will be shared across all team members for this MCP server installation.
+        </p>
 
         <div class="space-y-3">
           <Item
@@ -515,137 +490,130 @@ const isTextarea = (envVar: EnvironmentVariable) => {
             </div>
           </Item>
         </div>
-        </div>
-      </Card>
+      </div>
 
       <!-- User Arguments Section -->
-      <Card v-if="hasUserArgs" variant="gray">
-        <div class="px-6">
-          <div class="mb-4">
-            <h3 class="text-lg font-semibold">
-              {{ t('mcpInstallations.teamConfiguration.sections.userArgs.title') }}
-            </h3>
-            <p class="text-sm text-muted-foreground mt-1">
-              {{ userArgsSchema.length }} {{ userArgsSchema.length === 1 ? t('mcpInstallations.teamConfiguration.sections.userConfig.counter.single') : t('mcpInstallations.teamConfiguration.sections.userConfig.counter.plural') }}
-            </p>
-          </div>
+      <div v-if="hasUserArgs">
+        <div class="mb-4">
+          <h3 class="text-lg font-semibold">
+            {{ t('mcpInstallations.teamConfiguration.sections.userArgs.title') }}
+          </h3>
+          <p class="text-sm text-muted-foreground mt-1">
+            {{ userArgsSchema.length }} {{ userArgsSchema.length === 1 ? t('mcpInstallations.teamConfiguration.sections.userConfig.counter.single') : t('mcpInstallations.teamConfiguration.sections.userConfig.counter.plural') }}
+          </p>
+        </div>
 
-          <div class="mb-4 p-3 bg-muted/50 rounded-md">
-            <p class="text-sm text-muted-foreground">
-              <strong>{{ t('mcpInstallations.teamConfiguration.sections.userEnv.infoNote') }}</strong> {{ t('mcpInstallations.teamConfiguration.sections.userEnv.individualConfig') }}
-            </p>
-          </div>
+        <div class="mb-4 p-3 bg-muted/50 rounded-md">
+          <p class="text-sm text-muted-foreground">
+            <strong>{{ t('mcpInstallations.teamConfiguration.sections.userEnv.infoNote') }}</strong> {{ t('mcpInstallations.teamConfiguration.sections.userEnv.individualConfig') }}
+          </p>
+        </div>
 
-          <div class="space-y-3">
-            <div v-for="(arg, index) in userArgsSchema" :key="`user_arg_${index}`" class="bg-background p-4 rounded-lg border">
-              <div class="flex items-center gap-2 mb-2">
-                <span class="font-medium font-mono">{{ arg.name }}</span>
-                <span v-if="arg.required" class="text-xs text-muted-foreground">
-                  {{ t('mcpInstallations.teamConfiguration.userEnvDetails.required') }}
-                </span>
-                <span v-else class="text-xs text-muted-foreground">
-                  {{ t('mcpInstallations.teamConfiguration.userEnvDetails.optional') }}
-                </span>
-              </div>
+        <div class="space-y-3">
+          <div v-for="(arg, index) in userArgsSchema" :key="`user_arg_${index}`" class="bg-background p-4 rounded-lg border">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="font-medium font-mono">{{ arg.name }}</span>
+              <span v-if="arg.required" class="text-xs text-muted-foreground">
+                {{ t('mcpInstallations.teamConfiguration.userEnvDetails.required') }}
+              </span>
+              <span v-else class="text-xs text-muted-foreground">
+                {{ t('mcpInstallations.teamConfiguration.userEnvDetails.optional') }}
+              </span>
+            </div>
 
-              <div v-if="arg.description" class="text-sm text-muted-foreground mb-2">
-                {{ arg.description }}
-              </div>
+            <div v-if="arg.description" class="text-sm text-muted-foreground mb-2">
+              {{ arg.description }}
+            </div>
 
-              <div class="flex items-center gap-4 text-xs text-muted-foreground">
-                <span>{{ t('mcpInstallations.teamConfiguration.userEnvDetails.typeLabel') }} <code class="bg-muted px-1 rounded">{{ arg.type || 'string' }}</code></span>
-                <span v-if="arg.placeholder">{{ t('mcpInstallations.teamConfiguration.userEnvDetails.placeholderLabel') }} "{{ arg.placeholder }}"</span>
-              </div>
+            <div class="flex items-center gap-4 text-xs text-muted-foreground">
+              <span>{{ t('mcpInstallations.teamConfiguration.userEnvDetails.typeLabel') }} <code class="bg-muted px-1 rounded">{{ arg.type || 'string' }}</code></span>
+              <span v-if="arg.placeholder">{{ t('mcpInstallations.teamConfiguration.userEnvDetails.placeholderLabel') }} "{{ arg.placeholder }}"</span>
             </div>
           </div>
         </div>
-      </Card>
+      </div>
 
       <!-- User Environment Variables Section -->
-      <Card v-if="hasUserEnvVars" variant="gray">
-        <div class="px-6">
-          <div class="mb-4">
-            <h3 class="text-lg font-semibold">
-              {{ t('mcpInstallations.teamConfiguration.sections.userEnv.title') }}
-            </h3>
-            <p class="text-sm text-muted-foreground mt-1">
-              {{ userEnvSchema.length }} {{ userEnvSchema.length === 1 ? t('mcpInstallations.teamConfiguration.sections.userEnv.counter.single') : t('mcpInstallations.teamConfiguration.sections.userEnv.counter.plural') }}
-            </p>
-          </div>
+      <div v-if="hasUserEnvVars">
+        <div class="mb-4">
+          <h3 class="text-lg font-semibold">
+            {{ t('mcpInstallations.teamConfiguration.sections.userEnv.title') }}
+          </h3>
+          <p class="text-sm text-muted-foreground mt-1">
+            {{ userEnvSchema.length }} {{ userEnvSchema.length === 1 ? t('mcpInstallations.teamConfiguration.sections.userEnv.counter.single') : t('mcpInstallations.teamConfiguration.sections.userEnv.counter.plural') }}
+          </p>
+        </div>
 
-          <div class="mb-4 p-3 bg-muted/50 rounded-md">
-            <p class="text-sm text-muted-foreground">
-              <strong>{{ t('mcpInstallations.teamConfiguration.sections.userEnv.infoNote') }}</strong> {{ t('mcpInstallations.teamConfiguration.sections.userEnv.individualConfig') }}
-            </p>
-          </div>
+        <div class="mb-4 p-3 bg-muted/50 rounded-md">
+          <p class="text-sm text-muted-foreground">
+            <strong>{{ t('mcpInstallations.teamConfiguration.sections.userEnv.infoNote') }}</strong> {{ t('mcpInstallations.teamConfiguration.sections.userEnv.individualConfig') }}
+          </p>
+        </div>
 
-          <div class="space-y-3">
-            <div v-for="envVar in userEnvSchema" :key="envVar.name" class="bg-background p-4 rounded-lg border">
-              <div class="flex items-center gap-2 mb-2">
-                <span class="font-medium font-mono">{{ envVar.name }}</span>
-                <span v-if="envVar.required" class="text-xs text-muted-foreground">
-                  {{ t('mcpInstallations.teamConfiguration.userEnvDetails.required') }}
-                </span>
-                <span v-else class="text-xs text-muted-foreground">
-                  {{ t('mcpInstallations.teamConfiguration.userEnvDetails.optional') }}
-                </span>
-              </div>
+        <div class="space-y-3">
+          <div v-for="envVar in userEnvSchema" :key="envVar.name" class="bg-background p-4 rounded-lg border">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="font-medium font-mono">{{ envVar.name }}</span>
+              <span v-if="envVar.required" class="text-xs text-muted-foreground">
+                {{ t('mcpInstallations.teamConfiguration.userEnvDetails.required') }}
+              </span>
+              <span v-else class="text-xs text-muted-foreground">
+                {{ t('mcpInstallations.teamConfiguration.userEnvDetails.optional') }}
+              </span>
+            </div>
 
-              <div v-if="envVar.description" class="text-sm text-muted-foreground mb-2">
-                {{ envVar.description }}
-              </div>
+            <div v-if="envVar.description" class="text-sm text-muted-foreground mb-2">
+              {{ envVar.description }}
+            </div>
 
-              <div class="flex items-center gap-4 text-xs text-muted-foreground">
-                <span>{{ t('mcpInstallations.teamConfiguration.userEnvDetails.typeLabel') }} <code class="bg-muted px-1 rounded">{{ envVar.type || 'string' }}</code></span>
-                <span v-if="envVar.placeholder">{{ t('mcpInstallations.teamConfiguration.userEnvDetails.placeholderLabel') }} "{{ envVar.placeholder }}"</span>
-              </div>
+            <div class="flex items-center gap-4 text-xs text-muted-foreground">
+              <span>{{ t('mcpInstallations.teamConfiguration.userEnvDetails.typeLabel') }} <code class="bg-muted px-1 rounded">{{ envVar.type || 'string' }}</code></span>
+              <span v-if="envVar.placeholder">{{ t('mcpInstallations.teamConfiguration.userEnvDetails.placeholderLabel') }} "{{ envVar.placeholder }}"</span>
             </div>
           </div>
         </div>
-      </Card>
+      </div>
 
       <!-- User Headers Section -->
-      <Card v-if="hasUserHeaders" variant="gray">
-        <div class="px-6">
-          <div class="mb-4">
-            <h3 class="text-lg font-semibold">
-              User Headers
-            </h3>
-            <p class="text-sm text-muted-foreground mt-1">
-              {{ userHeadersSchema.length }} {{ userHeadersSchema.length === 1 ? 'header' : 'headers' }}
-            </p>
-          </div>
+      <div v-if="hasUserHeaders">
+        <div class="mb-4">
+          <h3 class="text-lg font-semibold">
+            User Headers
+          </h3>
+          <p class="text-sm text-muted-foreground mt-1">
+            {{ userHeadersSchema.length }} {{ userHeadersSchema.length === 1 ? 'header' : 'headers' }}
+          </p>
+        </div>
 
-          <div class="mb-4 p-3 bg-muted/50 rounded-md">
-            <p class="text-sm text-muted-foreground">
-              <strong>{{ t('mcpInstallations.teamConfiguration.sections.userEnv.infoNote') }}</strong> {{ t('mcpInstallations.teamConfiguration.sections.userEnv.individualConfig') }}
-            </p>
-          </div>
+        <div class="mb-4 p-3 bg-muted/50 rounded-md">
+          <p class="text-sm text-muted-foreground">
+            <strong>{{ t('mcpInstallations.teamConfiguration.sections.userEnv.infoNote') }}</strong> {{ t('mcpInstallations.teamConfiguration.sections.userEnv.individualConfig') }}
+          </p>
+        </div>
 
-          <div class="space-y-3">
-            <div v-for="header in userHeadersSchema" :key="header.name" class="bg-background p-4 rounded-lg border">
-              <div class="flex items-center gap-2 mb-2">
-                <span class="font-medium font-mono">{{ header.name }}</span>
-                <span v-if="header.required" class="text-xs text-muted-foreground">
-                  {{ t('mcpInstallations.teamConfiguration.userEnvDetails.required') }}
-                </span>
-                <span v-else class="text-xs text-muted-foreground">
-                  {{ t('mcpInstallations.teamConfiguration.userEnvDetails.optional') }}
-                </span>
-              </div>
+        <div class="space-y-3">
+          <div v-for="header in userHeadersSchema" :key="header.name" class="bg-background p-4 rounded-lg border">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="font-medium font-mono">{{ header.name }}</span>
+              <span v-if="header.required" class="text-xs text-muted-foreground">
+                {{ t('mcpInstallations.teamConfiguration.userEnvDetails.required') }}
+              </span>
+              <span v-else class="text-xs text-muted-foreground">
+                {{ t('mcpInstallations.teamConfiguration.userEnvDetails.optional') }}
+              </span>
+            </div>
 
-              <div v-if="header.description" class="text-sm text-muted-foreground mb-2">
-                {{ header.description }}
-              </div>
+            <div v-if="header.description" class="text-sm text-muted-foreground mb-2">
+              {{ header.description }}
+            </div>
 
-              <div class="flex items-center gap-4 text-xs text-muted-foreground">
-                <span>{{ t('mcpInstallations.teamConfiguration.userEnvDetails.typeLabel') }} <code class="bg-muted px-1 rounded">{{ header.type || 'string' }}</code></span>
-                <span v-if="header.placeholder">{{ t('mcpInstallations.teamConfiguration.userEnvDetails.placeholderLabel') }} "{{ header.placeholder }}"</span>
-              </div>
+            <div class="flex items-center gap-4 text-xs text-muted-foreground">
+              <span>{{ t('mcpInstallations.teamConfiguration.userEnvDetails.typeLabel') }} <code class="bg-muted px-1 rounded">{{ header.type || 'string' }}</code></span>
+              <span v-if="header.placeholder">{{ t('mcpInstallations.teamConfiguration.userEnvDetails.placeholderLabel') }} "{{ header.placeholder }}"</span>
             </div>
           </div>
         </div>
-      </Card>
+      </div>
     </div>
 
     <div v-else class="bg-gray-50 p-8 text-center">

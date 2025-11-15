@@ -34,7 +34,7 @@ const handleInstall = () => {
   emit('install', props.server)
 
   router.push({
-    path: '/mcp-server/add',
+    path: '/mcp-server/install',
     query: {
       serverId: props.server.id,
       step: '2'

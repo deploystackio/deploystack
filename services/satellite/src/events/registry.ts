@@ -131,13 +131,19 @@ export interface EventDataMap {
   };
 
   'mcp.tools.discovered': {
-    server_id: string;
-    server_slug: string;
+    installation_id: string;
+    installation_name: string;
     team_id: string;
+    server_slug: string;
     tool_count: number;
-    tool_names: string[];
-    discovery_duration_ms: number;
-    previous_tool_count: number;
+    total_tokens: number;
+    tools: Array<{
+      tool_name: string;
+      description: string;
+      input_schema: Record<string, unknown>;
+      token_count: number;
+    }>;
+    discovered_at: string;
   };
 
   'mcp.tools.updated': {

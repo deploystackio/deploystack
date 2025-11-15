@@ -337,6 +337,31 @@ export const mcpUserConfigurations = sqliteTable('mcpUserConfigurations', {
   uniqueUserInstallation: index('mcp_user_configs_unique_user_installation').on(table.installation_id, table.user_id),
 }));
 
+// MCP Tool Metadata - Stores discovered tools from MCP server installations
+export const mcpToolMetadata = sqliteTable('mcpToolMetadata', {
+  id: text('id').primaryKey(),
+
+  // References
+  installation_id: text('installation_id').notNull().references(() => mcpServerInstallations.id, { onDelete: 'cascade' }),
+  team_id: text('team_id').notNull().references(() => teams.id, { onDelete: 'cascade' }),
+
+  // Tool information
+  tool_name: text('tool_name').notNull(),
+  description: text('description').notNull().default(''),
+  input_schema: text('input_schema', { mode: 'json' }), // JSON object stored as text
+  token_count: integer('token_count').notNull().default(0),
+
+  // Timestamps
+  discovered_at: integer('discovered_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  updated_at: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+}, (table) => ({
+  // Indexes for fast lookups
+  installationIdx: index('mcp_tool_metadata_installation_idx').on(table.installation_id),
+  teamIdx: index('mcp_tool_metadata_team_idx').on(table.team_id),
+  // Unique constraint: one tool name per installation
+  uniqueInstallationTool: index('mcp_tool_metadata_unique_installation_tool').on(table.installation_id, table.tool_name),
+}));
+
 // OAuth2 Authorization Codes for PKCE flow (Team-Aware)
 export const oauthAuthorizationCodes = sqliteTable('oauth_authorization_codes', {
   id: text('id').primaryKey(),

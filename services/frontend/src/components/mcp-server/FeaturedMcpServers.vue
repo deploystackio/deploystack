@@ -50,7 +50,7 @@ const gridCols = computed(() => {
 })
 
 const shouldShowBrowseAllButton = computed(() => {
-  return route.path !== '/mcp-server/add'
+  return route.path !== '/mcp-server/install'
 })
 
 // Methods
@@ -139,7 +139,7 @@ onMounted(() => {
       <Button
         variant="ghost"
         size="sm"
-        @click="router.push('/mcp-server/add')"
+        @click="router.push('/mcp-server/install')"
         class="text-sm text-gray-600 hover:text-gray-900"
       >
         Browse all servers →

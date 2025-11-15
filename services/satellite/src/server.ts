@@ -249,7 +249,6 @@ export async function createServer() {
   const stdioToolDiscoveryManager = new StdioToolDiscoveryManager(
     processManager,
     runtimeState,
-    
     server.log as any // Fastify logger is compatible with pino Logger
   );
 
@@ -699,7 +698,8 @@ export async function createServer() {
     (processManager as any).eventBus = eventBus;
     (dynamicConfigManager as any).eventBus = eventBus;
     (remoteToolDiscoveryManager as any).eventBus = eventBus;
-    
+    (stdioToolDiscoveryManager as any).eventBus = eventBus;
+
     server.log.info({
       operation: 'event_bus_services_configured_existing',
       satellite_id: satelliteId
@@ -826,11 +826,15 @@ export async function createServer() {
       // Update DynamicConfigManager with EventBus
       (dynamicConfigManager as any).eventBus = eventBus;
       server.log.debug({ operation: 'config_manager_event_bus_set' }, 'DynamicConfigManager configured with EventBus');
-      
+
       // Update RemoteToolDiscoveryManager with EventBus
       (remoteToolDiscoveryManager as any).eventBus = eventBus;
       server.log.debug({ operation: 'tool_discovery_event_bus_set' }, 'RemoteToolDiscoveryManager configured with EventBus');
-      
+
+      // Update StdioToolDiscoveryManager with EventBus
+      (stdioToolDiscoveryManager as any).eventBus = eventBus;
+      server.log.debug({ operation: 'stdio_tool_discovery_event_bus_set' }, 'StdioToolDiscoveryManager configured with EventBus');
+
       server.log.info({
         operation: 'event_bus_services_configured',
         satellite_id: satelliteId

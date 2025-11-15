@@ -395,7 +395,7 @@ export const createServer = async () => {
   // Add global error handler for validation errors
   server.setErrorHandler(async (error, request, reply) => {
     // Handle Fastify validation errors
-    if (error.validation) {
+    if (typeof error === 'object' && error !== null && 'validation' in error && error.validation) {
       const errorResponse = {
         success: false,
         error: 'Validation error',

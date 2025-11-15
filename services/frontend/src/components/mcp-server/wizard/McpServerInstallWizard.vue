@@ -4,9 +4,8 @@ import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import { Button } from '@/components/ui/button'
-import { ProgressBars } from '@/components/ui/progress-bars'
+import { DsProgressSteps, type ProgressStep } from '@/components/ui/ds-progress-steps'
 import { toast } from 'vue-sonner'
-import { Server, Settings, Cloud } from 'lucide-vue-next'
 import { McpInstallationService } from '@/services/mcpInstallationService'
 import { TeamService } from '@/services/teamService'
 import { McpCatalogService } from '@/services/mcpCatalogService'
@@ -56,59 +55,42 @@ interface InstallationFormData {
   }
 }
 
-// Form steps configuration
-const steps = [
-  {
-    key: 'server' as const,
-    label: t('mcpInstallations.wizard.steps.selectServer'),
-    icon: Server,
-    component: McpServerSelectionStep
-  },
-  {
-    key: 'environment' as const,
-    label: t('mcpInstallations.wizard.steps.configureEnvironment'),
-    icon: Settings,
-    component: EnvironmentVariablesStep
-  },
-  {
-    key: 'platform' as const,
-    label: t('mcpInstallations.wizard.steps.selectPlatform'),
-    icon: Cloud,
-    component: PlatformSelectionStep
-  }
-]
-
-// Progress bar steps - convert steps to ProgressBars format
-const progressSteps = computed(() => {
-  return steps.map((step, index) => {
-    let status: 'completed' | 'current' | 'pending' = 'pending'
-
-    if (index < currentStep.value) {
-      status = 'completed'
-    } else if (index === currentStep.value) {
-      status = 'current'
+// Progress steps for DsProgressSteps component
+const progressSteps = computed<ProgressStep[]>(() => {
+  // Skip the first step (server selection) for progress display
+  const wizardSteps = [
+    {
+      id: 1,
+      title: t('mcpInstallations.wizard.steps.configureEnvironment'),
+      description: t('mcpInstallations.wizard.environment.helpText')
+    },
+    {
+      id: 2,
+      title: t('mcpInstallations.wizard.steps.selectPlatform'),
+      description: t('mcpInstallations.wizard.platform.helpText')
     }
+  ]
 
-    return {
-      id: step.key,
-      label: step.label,
-      status,
-      clickable: index < currentStep.value // Only allow clicking on completed steps
-    }
-  })
+  return wizardSteps
 })
 
-// Calculate progress percentage
-const progressPercentage = computed(() => {
-  return (currentStep.value / (steps.length - 1)) * 100
+// Completed steps for progress indicator
+const completedSteps = computed(() => {
+  const completed: number[] = []
+
+  // Environment step (index 0 in progress, step 1 in wizard)
+  if (currentStep.value > 1) {
+    completed.push(0)
+  }
+
+  return completed
 })
 
-// Handle step click from progress bar
-const handleStepClick = (step: any, index: number) => {
-  if (index < currentStep.value) {
-    goToStep(index)
-  }
-}
+// Current progress step (adjusted for skipped server selection)
+const currentProgressStep = computed(() => {
+  if (currentStep.value === 0) return -1 // Server selection, no progress shown
+  return currentStep.value - 1 // Adjust for 0-based progress index
+})
 
 // State
 const currentStep = ref(0)
@@ -140,14 +122,11 @@ const formData = ref<InstallationFormData>({
 })
 
 // Computed properties
+const totalSteps = 3 // Server selection (0), Environment (1), Platform (2)
 const isFirstStep = computed(() => currentStep.value === 0)
-const isLastStep = computed(() => currentStep.value === steps.length - 1)
+const isLastStep = computed(() => currentStep.value === totalSteps - 1)
 const canGoNext = computed(() => !isLastStep.value)
 const canGoPrevious = computed(() => !isFirstStep.value)
-
-const canProceedFromServer = computed(() => {
-  return formData.value.server.server_id !== ''
-})
 
 const canProceedFromEnvironment = computed(() => {
   // If no server is selected, can't proceed
@@ -164,13 +143,6 @@ const canSubmit = computed(() => {
          formData.value.platform.installation_type &&
          canProceedFromEnvironment.value
 })
-
-// Navigation methods
-const goToStep = (stepIndex: number) => {
-  if (stepIndex >= 0 && stepIndex < currentStep.value) {
-    currentStep.value = stepIndex
-  }
-}
 
 const nextStep = () => {
   // Mark environment step as touched when user tries to proceed from it
@@ -292,8 +264,8 @@ const submitInstallation = async () => {
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Failed to submit installation'
-    toast.error(t('mcpInstallations.notifications.installError', { error: errorMessage }), {
-      description: t('mcpInstallations.wizard.environment.helpText')
+    toast.error(t('mcpInstallations.notifications.installError'), {
+      description: errorMessage
     })
   } finally {
     isSubmitting.value = false
@@ -442,92 +414,124 @@ onMounted(async () => {
 
 <template>
   <div class="space-y-6">
-    <!-- Progress Navigation - Hidden on first step -->
-    <ProgressBars
-      v-if="currentStep > 0"
-      :steps="progressSteps"
-      :progress="progressPercentage"
-      :title="t('mcpInstallations.wizard.title')"
-      interactive
-      styled
-      @step-click="handleStepClick"
+    <!-- Server Selection Step (shown when currentStep === 0) -->
+    <McpServerSelectionStep
+      v-if="currentStep === 0"
+      v-model="formData.server.server_id"
+      @server-selected="handleServerSelected"
+      @next-step="nextStep"
     />
 
-
-
-    <!-- Step Content -->
-    <div>
-      <!-- Server Selection Step -->
-      <McpServerSelectionStep
-        v-if="currentStep === 0"
-        v-model="formData.server.server_id"
-        @server-selected="handleServerSelected"
-        @next-step="nextStep"
-      />
-
-      <!-- Environment Variables Step -->
-      <EnvironmentVariablesStep
-        v-else-if="currentStep === 1"
-        v-model="formData.environment"
-        :server-data="formData.server.server_data"
-        @validation-change="handleValidationChange"
-      />
-
-      <!-- Platform Selection Step -->
-      <PlatformSelectionStep
-        v-else-if="currentStep === 2"
-        v-model="formData.platform.installation_type"
-      />
-    </div>
-
-    <!-- Navigation Buttons -->
-    <div class="flex items-center justify-between">
-      <Button
-        v-if="canGoPrevious"
-        variant="outline"
-        @click="previousStep"
+    <!-- Server Info Header + Progress Steps (shown after server selection) -->
+    <template v-else>
+      <!-- Server Info Card -->
+      <div
+        v-if="formData.server.server_data"
+        data-slot="card"
+        class="text-card-foreground flex flex-col gap-6 rounded-xl border py-6 bg-white max-w-3xl mx-auto w-full"
       >
-        {{ t('navigation.previous') }}
-      </Button>
-      <div v-else></div>
+        <div class="px-6 md:flex md:items-center md:justify-between md:space-x-6 lg:space-x-8">
+          <!-- Avatar Image -->
+          <div class="flex-shrink-0 mb-4 md:mb-0">
+            <img
+              v-if="formData.server.server_data.github_account_id"
+              :src="`https://avatars.githubusercontent.com/u/${formData.server.server_data.github_account_id}?v=4&s=64`"
+              :alt="`${formData.server.server_data.name} GitHub avatar`"
+              class="h-18 w-18 rounded-lg"
+            />
+          </div>
 
-      <div class="flex items-center gap-2">
-        <Button
-          variant="ghost"
-          @click="handleCancel"
-        >
-          {{ t('navigation.cancel') }}
-        </Button>
+          <!-- Server Information Grid -->
+          <dl class="flex-auto divide-y divide-gray-200 text-sm text-gray-600 md:grid md:grid-cols-2 md:gap-x-6 md:divide-y-0 md:w-80 md:flex-none lg:gap-x-8">
+            <!-- Server Name -->
+            <div class="max-md:flex max-md:justify-between max-md:py-4 max-md:first:pt-0 max-md:last:pb-0">
+              <dt class="font-medium text-gray-900">{{ t('mcpInstallations.wizard.server.name') }}</dt>
+              <dd class="md:mt-1">{{ formData.server.server_data.name }}</dd>
+            </div>
 
-        <!-- Next button for server selection -->
-        <Button
-          v-if="currentStep === 0"
-          @click="nextStep"
-          :disabled="!canProceedFromServer"
-        >
-          {{ t('navigation.next') }}
-        </Button>
+            <!-- Author -->
+            <div class="max-md:flex max-md:justify-between max-md:py-4 max-md:first:pt-0 max-md:last:pb-0">
+              <dt class="font-medium text-gray-900">{{ t('mcpInstallations.wizard.server.author') }}</dt>
+              <dd class="md:mt-1">
+                {{ formData.server.server_data.organization || formData.server.server_data.author_name || 'Unknown' }}
+              </dd>
+            </div>
+          </dl>
 
-        <!-- Next button for environment variables -->
-        <Button
-          v-else-if="currentStep === 1"
-          @click="nextStep"
-          :disabled="!canProceedFromEnvironment"
-        >
-          {{ t('navigation.next') }}
-        </Button>
-
-        <!-- Install button for final step -->
-        <Button
-          v-else
-          @click="submitInstallation"
-          :disabled="!canSubmit"
-          :loading="isSubmitting"
-          :loading-text="t('mcpInstallations.wizard.installing')"
-        >
-          {{ t('mcpInstallations.wizard.install') }}
-        </Button>
+          <!-- Description -->
+          <div v-if="formData.server.server_data.description" class="mt-4 md:mt-0 md:ml-6 lg:flex-1">
+            <p class="text-sm text-gray-600">
+              {{ formData.server.server_data.description }}
+            </p>
+          </div>
+        </div>
       </div>
-    </div>
+
+      <!-- Progress Steps -->
+      <DsProgressSteps
+        :steps="progressSteps"
+        :current-step="currentProgressStep"
+        :completed-steps="completedSteps"
+        max-width="max-w-3xl"
+      >
+        <!-- Environment Variables Step Content -->
+        <template #step-content-0>
+          <EnvironmentVariablesStep
+            v-model="formData.environment"
+            :server-data="formData.server.server_data"
+            @validation-change="handleValidationChange"
+          />
+
+          <!-- Navigation Buttons for Environment Step -->
+          <div class="flex items-center justify-between mt-6">
+            <Button variant="outline" @click="previousStep">
+              {{ t('navigation.previous') }}
+            </Button>
+
+            <div class="flex items-center gap-2">
+              <Button variant="ghost" @click="handleCancel">
+                {{ t('navigation.cancel') }}
+              </Button>
+
+              <Button
+                @click="nextStep"
+                :disabled="!canProceedFromEnvironment"
+              >
+                {{ t('navigation.next') }}
+              </Button>
+            </div>
+          </div>
+        </template>
+
+        <!-- Platform Selection Step Content -->
+        <template #step-content-1>
+          <PlatformSelectionStep
+            v-model="formData.platform.installation_type"
+          />
+
+          <!-- Navigation Buttons for Platform Step -->
+          <div class="flex items-center justify-between mt-6">
+            <Button variant="outline" @click="previousStep">
+              {{ t('navigation.previous') }}
+            </Button>
+
+            <div class="flex items-center gap-2">
+              <Button variant="ghost" @click="handleCancel">
+                {{ t('navigation.cancel') }}
+              </Button>
+
+              <Button
+                @click="submitInstallation"
+                :disabled="!canSubmit"
+                :loading="isSubmitting"
+                :loading-text="t('mcpInstallations.wizard.installing')"
+              >
+                {{ t('mcpInstallations.wizard.install') }}
+              </Button>
+            </div>
+          </div>
+        </template>
+      </DsProgressSteps>
+    </template>
   </div>
 </template>

@@ -236,11 +236,13 @@ VS Code → HTTPS Request → DeployStack Satellite → MCP Server Process → E
 - **[Done]** **Tool Discovery API** - returns tool paths, descriptions, transport types, and relevance scores
 - **[Done]** **Smart Tool Execution** - automatic routing to stdio or HTTP/SSE backends with credential injection
 - **[Done]** **Performance Benchmarks** - achieved 99.5% token reduction (exceeded 90%+ target): 2 meta-tools (350 tokens) vs 150 tools (75,000 tokens)
+- **[Done]** **MCP Tool Metadata Collection** - automatic tool discovery with token counting, event-driven metadata sync from satellites to backend, per-installation tool storage with descriptions and input schemas
+- **[Done]** **Tool Display & Analytics API** - team-aware endpoints for fetching tool lists per installation and aggregated token savings across all team installations
 - **[To Do]** **Token Analytics Dashboard** - real-time monitoring UI of context window usage with before/after comparisons
 - **[To Do]** **Optimization Recommendations** - suggest which servers to disable based on usage patterns
 - **[To Do]** **Documentation & Case Study** - technical deep-dive blog post with real-world metrics
 
-**Result**: Teams can now scale from 3 to 100+ MCP servers without performance degradation. Context window consumption reduced from 37.5% to 0.175%.
+**Result**: Teams can now scale from 3 to 100+ MCP servers without performance degradation. Context window consumption reduced from 37.5% to 0.175%. Full visibility into tool availability and token usage per installation.
 
 ### **Phase 5: Advanced Governance** (Next 90 Days)
 

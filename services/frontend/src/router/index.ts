@@ -58,13 +58,12 @@ const routes = [
       title: 'Authorize Application'
     },
   },
-  // Dashboard temporarily disabled - redirect users to MCP Server instead
-  // {
-  //   path: '/dashboard',
-  //   name: 'Dashboard',
-  //   component: () => import('../views/Dashboard.vue'),
-  //   meta: { requiresSetup: true },
-  // },
+  {
+    path: '/dashboard',
+    name: 'Dashboard',
+    component: () => import('../views/dashboard/index.vue'),
+    meta: { requiresSetup: true },
+  },
   {
     path: '/plugin-demo',
     name: 'PluginDemo',
@@ -101,9 +100,9 @@ const routes = [
     meta: { requiresSetup: true },
   },
   {
-    path: '/mcp-server/add',
-    name: 'McpServerAdd',
-    component: () => import('../views/mcp-server/add.vue'),
+    path: '/mcp-server/install',
+    name: 'McpServerInstall',
+    component: () => import('../views/mcp-server/install.vue'),
     meta: { requiresSetup: true },
   },
   {
@@ -296,9 +295,9 @@ router.beforeEach(async (to, from, next) => {
     // currentUser remains null, proceed as unauthenticated for safety
   }
 
-  // If user is logged in and trying to access Login or Register, redirect to MCP Server
+  // If user is logged in and trying to access Login or Register, redirect to Dashboard
   if (currentUser && (to.name === 'Login' || to.name === 'Register')) {
-    next('/mcp-server');
+    next('/dashboard');
     return;
   }
 
