@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.43.0 (2025-11-15)
+
+* feat(all): MCP Tool Metadata Collection & Display ([8af4610](https://github.com/deploystackio/deploystack/commit/8af4610))
+* chore(all): update dependencies in backend, frontend, and satellite services ([94a274f](https://github.com/deploystackio/deploystack/commit/94a274f))
+* chore(satellite): release v0.8.0 ([8770637](https://github.com/deploystackio/deploystack/commit/8770637))
+* chore(satellite): release v0.8.0 ([109792a](https://github.com/deploystackio/deploystack/commit/109792a))
+
 ## 0.42.0 (2025-11-11)
 
 * chore(all): bump @octokit/auth-app from 8.1.1 to 8.1.2 ([b9e93c6](https://github.com/deploystackio/deploystack/commit/b9e93c6))
