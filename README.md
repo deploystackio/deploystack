@@ -91,10 +91,9 @@ DeployStack includes a **hierarchical router** that reduces MCP token consumptio
 **DeployStack Hierarchical Router:**
 
 - Exposes only 2 meta-tools: `discover_mcp_tools` and `execute_mcp_tool`
-- 2 tools × 175 tokens = 350 tokens consumed
-- Result: 0.175% of context window used
-- **Token Reduction: 99.5%** ✅
-
+- 2 tools × 686 tokens = 1372 tokens consumed
+- Result: 0.686% of context window used
+- **Token Reduction: 98.3%** ✅
 **How it works:**
 
 1. LLM calls `discover_mcp_tools(query)` - "Find GitHub tools"
