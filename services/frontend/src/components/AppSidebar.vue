@@ -44,7 +44,8 @@ import {
   FolderTree,
   Satellite,
   ListTodo,
-  Bot
+  Bot,
+  BarChart3
 } from 'lucide-vue-next'
 
 // Define props, including variant
@@ -103,6 +104,11 @@ const navigationItems = [
     title: t('sidebar.navigation.clientConfiguration'),
     icon: Bot,
     url: '/client-configuration',
+  },
+  {
+    title: t('sidebar.navigation.statistics'),
+    icon: BarChart3,
+    url: '/statistics',
   },
   // {
   //   title: t('sidebar.navigation.credentials'),

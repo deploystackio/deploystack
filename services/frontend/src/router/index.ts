@@ -130,6 +130,12 @@ const routes = [
     meta: { requiresSetup: true },
   },
   {
+    path: '/statistics',
+    name: 'Statistics',
+    component: () => import('../views/statistics/index.vue'),
+    meta: { requiresSetup: true },
+  },
+  {
     path: '/provider',
     name: 'Provider',
     component: () => import('../views/Provider.vue'),

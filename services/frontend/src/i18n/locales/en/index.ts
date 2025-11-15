@@ -25,6 +25,7 @@ import satelliteConfigMessages from './satelliteConfig'
 import satellitesMessages from './satellites'
 import userAccountMessages from './userAccount'
 import clientConfigurationMessages from './clientConfiguration'
+import statisticsMessages from './statistics'
 
 import walkthroughMessages from './walkthrough'
 
@@ -55,6 +56,7 @@ export default {
   satellites: satellitesMessages,
   userAccount: userAccountMessages,
   clientConfiguration: clientConfigurationMessages,
+  statistics: statisticsMessages,
   walkthrough: walkthroughMessages,
   common: commonMessages
 }

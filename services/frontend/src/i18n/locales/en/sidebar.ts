@@ -5,6 +5,7 @@ export default {
       title: 'Navigation',
       mcpServer: 'MCP Server',
       clientConfiguration: 'Client Configuration',
+      statistics: 'Statistics',
       provider: 'Provider',
       credentials: 'Credentials',
     },
