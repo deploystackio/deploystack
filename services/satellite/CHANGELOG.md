@@ -2,6 +2,13 @@
 
 ## 0.9.0 (2025-11-15)
 
+* chore(frontend): release v0.38.0 ([f11c7df](https://github.com/deploystackio/deploystack/commit/f11c7df))
+* chore(frontend): release v0.38.0 ([68958a3](https://github.com/deploystackio/deploystack/commit/68958a3))
+* chore(satellite): release v0.9.0 ([0c4a7c4](https://github.com/deploystackio/deploystack/commit/0c4a7c4))
+* docs(satellite): update example outputs in token counter utility ([a4de6d1](https://github.com/deploystackio/deploystack/commit/a4de6d1))
+
+## 0.9.0 (2025-11-15)
+
 * docs(satellite): update example outputs in token counter utility ([a4de6d1](https://github.com/deploystackio/deploystack/commit/a4de6d1))
 * chore(all): update dependencies in backend, frontend, and satellite services ([94a274f](https://github.com/deploystackio/deploystack/commit/94a274f))
 * chore(backend): release v0.43.0 ([e735cae](https://github.com/deploystackio/deploystack/commit/e735cae))
