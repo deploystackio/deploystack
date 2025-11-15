@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.9.0 (2025-11-15)
+
+* docs(satellite): update example outputs in token counter utility ([a4de6d1](https://github.com/deploystackio/deploystack/commit/a4de6d1))
+* chore(all): update dependencies in backend, frontend, and satellite services ([94a274f](https://github.com/deploystackio/deploystack/commit/94a274f))
+* chore(backend): release v0.43.0 ([e735cae](https://github.com/deploystackio/deploystack/commit/e735cae))
+* chore(backend): release v0.43.0 ([4c730dd](https://github.com/deploystackio/deploystack/commit/4c730dd))
+* chore(frontend): release v0.38.0 ([f11c7df](https://github.com/deploystackio/deploystack/commit/f11c7df))
+* chore(frontend): release v0.38.0 ([68958a3](https://github.com/deploystackio/deploystack/commit/68958a3))
+* feat(all): MCP Tool Metadata Collection & Display ([8af4610](https://github.com/deploystackio/deploystack/commit/8af4610))
+
 ## 0.8.0 (2025-11-11)
 
 * chore(backend): release v0.42.0 ([9588de4](https://github.com/deploystackio/deploystack/commit/9588de4))
