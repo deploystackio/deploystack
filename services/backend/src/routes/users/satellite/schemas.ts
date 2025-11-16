@@ -12,6 +12,7 @@ export const CLIENT_TYPES: readonly ClientInfo[] = [
   { id: 'claude-desktop', name: 'Claude Desktop', iconPath: '/images/provider/claude.svg' },
   { id: 'vscode', name: 'VS Code', iconPath: '/images/provider/vscode.svg' },
   { id: 'claude-code', name: 'Claude Code', iconPath: '/images/provider/claude.svg' },
+  { id: 'cursor', name: 'Cursor', iconPath: '/images/provider/cursor.svg' },
 ] as const;
 
 // Extract client IDs for validation
@@ -43,6 +44,7 @@ export const SUCCESS_RESPONSE_SCHEMA = {
         type: 'object',
         properties: {
           type: { type: 'string', enum: ['json'] },
+          category: { type: 'string' },
           mcpServers: {
             type: 'object',
             additionalProperties: {
@@ -56,18 +58,26 @@ export const SUCCESS_RESPONSE_SCHEMA = {
               },
               additionalProperties: true
             }
-          }
+          },
+          inputs: { type: 'array' },
+          servers: { type: 'object' },
+          title: { type: 'string' },
+          description: { type: 'string' },
+          inputType: { type: 'string', enum: ['input', 'textarea'] }
         },
-        required: ['type', 'mcpServers'],
+        required: ['type'],
         additionalProperties: false
       },
       {
         type: 'object',
         properties: {
           type: { type: 'string', enum: ['link'] },
+          category: { type: 'string' },
           url: { type: 'string', format: 'uri' },
           name: { type: 'string' },
-          description: { type: 'string' }
+          description: { type: 'string' },
+          imageUrl: { type: 'string' },
+          buttonText: { type: 'string' }
         },
         required: ['type', 'url'],
         additionalProperties: false
@@ -76,6 +86,7 @@ export const SUCCESS_RESPONSE_SCHEMA = {
         type: 'object',
         properties: {
           type: { type: 'string', enum: ['text'] },
+          category: { type: 'string' },
           content: { type: 'string' },
           title: { type: 'string' },
           description: { type: 'string' }
@@ -87,11 +98,37 @@ export const SUCCESS_RESPONSE_SCHEMA = {
         type: 'object',
         properties: {
           type: { type: 'string', enum: ['command'] },
+          category: { type: 'string' },
           command: { type: 'string' },
+          title: { type: 'string' },
+          description: { type: 'string' },
+          inputType: { type: 'string', enum: ['input', 'textarea'] }
+        },
+        required: ['type', 'command'],
+        additionalProperties: false
+      },
+      {
+        type: 'object',
+        properties: {
+          type: { type: 'string', enum: ['steps'] },
+          category: { type: 'string' },
+          steps: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                name: { type: 'string' },
+                required: { type: 'boolean' },
+                content: { type: 'string' }
+              },
+              required: ['name', 'required', 'content'],
+              additionalProperties: false
+            }
+          },
           title: { type: 'string' },
           description: { type: 'string' }
         },
-        required: ['type', 'command'],
+        required: ['type', 'steps'],
         additionalProperties: false
       }
     ]
@@ -146,6 +183,7 @@ export interface ErrorResponse {
 // New interfaces for action-based configuration
 export interface JsonAction {
   type: 'json';
+  category?: string;
   mcpServers?: {
     [key: string]: {
       url?: string;
@@ -180,17 +218,24 @@ export interface JsonAction {
       [key: string]: unknown;
     };
   };
+  title?: string;
+  description?: string;
+  inputType?: 'input' | 'textarea';
 }
 
 export interface LinkAction {
   type: 'link';
+  category?: string;
   url: string;
   name?: string;
   description?: string;
+  imageUrl?: string;
+  buttonText?: string;
 }
 
 export interface TextAction {
   type: 'text';
+  category?: string;
   content: string;
   title?: string;
   description?: string;
@@ -198,10 +243,26 @@ export interface TextAction {
 
 export interface CommandAction {
   type: 'command';
+  category?: string;
   command: string;
+  title?: string;
+  description?: string;
+  inputType?: 'input' | 'textarea';
+}
+
+export interface Step {
+  name: string;
+  required: boolean;
+  content: string;
+}
+
+export interface StepsAction {
+  type: 'steps';
+  category?: string;
+  steps: Step[];
   title?: string;
   description?: string;
 }
 
-export type ConfigAction = JsonAction | LinkAction | TextAction | CommandAction;
+export type ConfigAction = JsonAction | LinkAction | TextAction | CommandAction | StepsAction;
 export type ClientConfigResponse = ConfigAction[];

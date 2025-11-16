@@ -3469,6 +3469,7 @@ paths:
               - claude-desktop
               - vscode
               - claude-code
+              - cursor
           in: path
           name: client
           required: true
@@ -3492,6 +3493,8 @@ paths:
                           type: string
                           enum:
                             - json
+                        category:
+                          type: string
                         mcpServers:
                           type: object
                           additionalProperties:
@@ -3508,9 +3511,21 @@ paths:
                               type:
                                 type: string
                             additionalProperties: true
+                        inputs:
+                          type: array
+                        servers:
+                          type: object
+                        title:
+                          type: string
+                        description:
+                          type: string
+                        inputType:
+                          type: string
+                          enum:
+                            - input
+                            - textarea
                       required:
                         - type
-                        - mcpServers
                       additionalProperties: false
                     - type: object
                       properties:
@@ -3518,12 +3533,18 @@ paths:
                           type: string
                           enum:
                             - link
+                        category:
+                          type: string
                         url:
                           type: string
                           format: uri
                         name:
                           type: string
                         description:
+                          type: string
+                        imageUrl:
+                          type: string
+                        buttonText:
                           type: string
                       required:
                         - type
@@ -3535,6 +3556,8 @@ paths:
                           type: string
                           enum:
                             - text
+                        category:
+                          type: string
                         content:
                           type: string
                         title:
@@ -3551,15 +3574,54 @@ paths:
                           type: string
                           enum:
                             - command
+                        category:
+                          type: string
                         command:
                           type: string
                         title:
                           type: string
                         description:
                           type: string
+                        inputType:
+                          type: string
+                          enum:
+                            - input
+                            - textarea
                       required:
                         - type
                         - command
+                      additionalProperties: false
+                    - type: object
+                      properties:
+                        type:
+                          type: string
+                          enum:
+                            - steps
+                        category:
+                          type: string
+                        steps:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              name:
+                                type: string
+                              required:
+                                type: boolean
+                              content:
+                                type: string
+                            required:
+                              - name
+                              - required
+                              - content
+                            additionalProperties: false
+                        title:
+                          type: string
+                        description:
+                          type: string
+                      required:
+                        - type
+                        - steps
                       additionalProperties: false
         "400":
           description: Bad Request - Invalid client type
