@@ -85,7 +85,7 @@ export default async function listClients(server: FastifyInstance) {
         switch (categoryId) {
           case 'connection':
             name = 'Connection Setup';
-            description = 'Configure your AI client to connect to DeployStack satellite';
+            description = 'Configure MCP client settings and parameters';
             break;
           case 'ai-instructions':
             name = 'AI Instructions';

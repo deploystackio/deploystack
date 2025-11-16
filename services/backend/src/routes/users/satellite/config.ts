@@ -4,9 +4,11 @@ import fs from 'fs';
 import path from 'path';
 import {
   CLIENT_PARAM_SCHEMA,
+  CLIENT_CATEGORY_PARAM_SCHEMA,
   SUCCESS_RESPONSE_SCHEMA,
   ERROR_RESPONSE_SCHEMA,
   type ClientParams,
+  type ClientCategoryParams,
   type ErrorResponse,
   type JsonAction,
   type LinkAction,
@@ -44,13 +46,14 @@ export function generateClientConfig(clientType: string): ClientConfigResponse {
       jsonConfig = {
         type: 'json',
         category: 'connection',
-        inputs: [],
-        servers: {
-          deploystack: {
-            url: `${satelliteUrl}/mcp`,
-            type: 'http'
+        jsonContent: JSON.stringify({
+          mcpServers: {
+            deploystack: {
+              url: `${satelliteUrl}/mcp`,
+              type: 'http'
+            }
           }
-        },
+        }, null, 2),
         title: 'Claude Desktop Configuration',
         description: 'Add this configuration to your Claude Desktop settings file',
         inputType: 'textarea'
@@ -235,6 +238,63 @@ export function generateClientConfig(clientType: string): ClientConfigResponse {
 }
 
 export default async function getClientConfig(server: FastifyInstance) {
+  // New route with category filtering
+  server.get('/me/satellite/config/:category/:client', {
+    preValidation: [
+      requireAuthenticationAny(),
+      requireOAuthScope('mcp:read')
+    ],
+    schema: {
+      tags: ['User Satellite Configuration'],
+      summary: 'Get category-specific client configuration',
+      description: 'Returns configuration actions filtered by category (connection, ai-instructions) for the specified MCP client.',
+      security: [
+        { cookieAuth: [] },
+        { bearerAuth: [] }
+      ],
+      params: CLIENT_CATEGORY_PARAM_SCHEMA,
+      response: {
+        200: {
+          ...SUCCESS_RESPONSE_SCHEMA,
+          description: 'Category-filtered client configuration'
+        },
+        400: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Bad Request - Invalid client type or category'
+        },
+        401: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Unauthorized - Authentication required'
+        },
+        403: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Forbidden - Insufficient permissions'
+        }
+      }
+    }
+  }, async (request, reply) => {
+    try {
+      const { category, client } = request.params as ClientCategoryParams;
+
+      // Generate all client-specific configuration actions
+      const allActions = generateClientConfig(client);
+
+      // Filter by category
+      const filteredActions = allActions.filter(action => action.category === category);
+
+      const jsonString = JSON.stringify(filteredActions);
+      return reply.status(200).type('application/json').send(jsonString);
+    } catch (error) {
+      const errorResponse: ErrorResponse = {
+        success: false,
+        error: error instanceof Error ? error.message : 'Internal server error'
+      };
+      const jsonString = JSON.stringify(errorResponse);
+      return reply.status(400).type('application/json').send(jsonString);
+    }
+  });
+
+  // Keep legacy route for backward compatibility (returns all actions)
   server.get('/me/satellite/config/:client', {
     preValidation: [
       requireAuthenticationAny(),
@@ -242,8 +302,8 @@ export default async function getClientConfig(server: FastifyInstance) {
     ],
     schema: {
       tags: ['User Satellite Configuration'],
-      summary: 'Get client-specific satellite configuration',
-      description: 'Returns the appropriate configuration format for connecting the specified MCP client to the DeployStack Satellite service. Requires Content-Type: application/json header when sending request body.',
+      summary: 'Get client-specific satellite configuration (all categories)',
+      description: 'Returns all configuration actions for the specified MCP client. Consider using /config/:category/:client for filtered results.',
       security: [
         { cookieAuth: [] },
         { bearerAuth: [] }
@@ -271,10 +331,10 @@ export default async function getClientConfig(server: FastifyInstance) {
   }, async (request, reply) => {
     try {
       const { client } = request.params as ClientParams;
-      
+
       // Generate client-specific configuration actions
       const configActions = generateClientConfig(client);
-      
+
       const jsonString = JSON.stringify(configActions);
       return reply.status(200).type('application/json').send(jsonString);
     } catch (error) {

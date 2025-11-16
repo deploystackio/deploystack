@@ -249,6 +249,7 @@ VS Code → HTTPS Request → DeployStack Satellite → MCP Server Process → E
 - **[Done]** Develop Analytics dashboards for tool usage and performance
 - **[To Do]** Implement advanced policy controls (e.g., rate limiting, request validation)
 - **[Done]** Improve the searchable MCP Server Catalog within the cloud UI
+- **[Done]** AI Instructions - ready-to-copy instruction files for AI coding assistants
 - **[To Do]** Deeper integration with IDEs and AI agent frameworks
 - **[To Do]** Per-team token budgets and cost attribution
 - **[To Do]** AI-powered tool recommendations based on conversation context

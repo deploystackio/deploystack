@@ -22,25 +22,25 @@ export const CLIENT_TYPES: readonly ClientInfo[] = [
     id: 'claude-desktop',
     name: 'Claude Desktop',
     iconPath: '/images/provider/claude.svg',
-    description: 'Official Claude desktop application'
+    description: 'Configure MCP client settings and parameters'
   },
   {
     id: 'vscode',
     name: 'VS Code',
     iconPath: '/images/provider/vscode.svg',
-    description: 'Visual Studio Code with MCP extension'
+    description: 'Configure MCP client settings and parameters'
   },
   {
     id: 'claude-code',
     name: 'Claude Code',
     iconPath: '/images/provider/claude.svg',
-    description: 'Claude Code CLI tool'
+    description: 'Configure MCP client settings and parameters'
   },
   {
     id: 'cursor',
     name: 'Cursor',
     iconPath: '/images/provider/cursor.svg',
-    description: 'AI-powered code editor'
+    description: 'Configure MCP client settings and parameters'
   },
 ] as const;
 
@@ -60,6 +60,23 @@ export const CLIENT_PARAM_SCHEMA = {
     }
   },
   required: ['client'],
+  additionalProperties: false
+} as const;
+
+export const CLIENT_CATEGORY_PARAM_SCHEMA = {
+  type: 'object',
+  properties: {
+    category: {
+      type: 'string',
+      description: 'The configuration category (e.g., connection, ai-instructions)'
+    },
+    client: {
+      type: 'string',
+      enum: CLIENT_IDS,
+      description: 'The MCP client type'
+    }
+  },
+  required: ['category', 'client'],
   additionalProperties: false
 } as const;
 
@@ -214,6 +231,11 @@ export interface ClientParams {
   client: ClientType;
 }
 
+export interface ClientCategoryParams {
+  category: string;
+  client: ClientType;
+}
+
 export interface ClientsListResponse {
   categories: readonly ClientCategory[];
 }
@@ -227,6 +249,7 @@ export interface ErrorResponse {
 export interface JsonAction {
   type: 'json';
   category?: string;
+  jsonContent?: string;
   mcpServers?: {
     [key: string]: {
       url?: string;

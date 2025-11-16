@@ -5009,13 +5009,352 @@
         }
       }
     },
-    "/api/me/satellite/config/{client}": {
+    "/api/me/satellite/config/{category}/{client}": {
       "get": {
-        "summary": "Get client-specific satellite configuration",
+        "summary": "Get category-specific client configuration",
         "tags": [
           "User Satellite Configuration"
         ],
-        "description": "Returns the appropriate configuration format for connecting the specified MCP client to the DeployStack Satellite service. Requires Content-Type: application/json header when sending request body.",
+        "description": "Returns configuration actions filtered by category (connection, ai-instructions) for the specified MCP client.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "category",
+            "required": true,
+            "description": "The configuration category (e.g., connection, ai-instructions)"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "claude-desktop",
+                "vscode",
+                "claude-code",
+                "cursor"
+              ]
+            },
+            "in": "path",
+            "name": "client",
+            "required": true,
+            "description": "The MCP client type"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Category-filtered client configuration",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "description": "Category-filtered client configuration",
+                  "items": {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "enum": [
+                              "json"
+                            ]
+                          },
+                          "category": {
+                            "type": "string"
+                          },
+                          "mcpServers": {
+                            "type": "object",
+                            "additionalProperties": {
+                              "type": "object",
+                              "properties": {
+                                "url": {
+                                  "type": "string"
+                                },
+                                "name": {
+                                  "type": "string"
+                                },
+                                "description": {
+                                  "type": "string"
+                                },
+                                "transport": {
+                                  "type": "string"
+                                },
+                                "type": {
+                                  "type": "string"
+                                }
+                              },
+                              "additionalProperties": true
+                            }
+                          },
+                          "inputs": {
+                            "type": "array"
+                          },
+                          "servers": {
+                            "type": "object"
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "type": "string"
+                          },
+                          "inputType": {
+                            "type": "string",
+                            "enum": [
+                              "input",
+                              "textarea"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "type"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "enum": [
+                              "link"
+                            ]
+                          },
+                          "category": {
+                            "type": "string"
+                          },
+                          "url": {
+                            "type": "string",
+                            "format": "uri"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "type": "string"
+                          },
+                          "imageUrl": {
+                            "type": "string"
+                          },
+                          "buttonText": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "type",
+                          "url"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "enum": [
+                              "text"
+                            ]
+                          },
+                          "category": {
+                            "type": "string"
+                          },
+                          "content": {
+                            "type": "string"
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "type",
+                          "content"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "enum": [
+                              "command"
+                            ]
+                          },
+                          "category": {
+                            "type": "string"
+                          },
+                          "command": {
+                            "type": "string"
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "type": "string"
+                          },
+                          "inputType": {
+                            "type": "string",
+                            "enum": [
+                              "input",
+                              "textarea"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "type",
+                          "command"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "enum": [
+                              "steps"
+                            ]
+                          },
+                          "category": {
+                            "type": "string"
+                          },
+                          "steps": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "name": {
+                                  "type": "string"
+                                },
+                                "required": {
+                                  "type": "boolean"
+                                },
+                                "content": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "name",
+                                "required",
+                                "content"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "type",
+                          "steps"
+                        ],
+                        "additionalProperties": false
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - Invalid client type or category",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Bad Request - Invalid client type or category"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Unauthorized - Authentication required"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Insufficient permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Forbidden - Insufficient permissions"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/me/satellite/config/{client}": {
+      "get": {
+        "summary": "Get client-specific satellite configuration (all categories)",
+        "tags": [
+          "User Satellite Configuration"
+        ],
+        "description": "Returns all configuration actions for the specified MCP client. Consider using /config/:category/:client for filtered results.",
         "parameters": [
           {
             "schema": {

@@ -124,7 +124,7 @@ const routes = [
     meta: { requiresSetup: true },
   },
   {
-    path: '/client-configuration/:client',
+    path: '/client-configuration/:category/:client',
     name: 'ClientConfigurationDetail',
     component: () => import('../views/client-configuration/index.vue'),
     meta: { requiresSetup: true },
