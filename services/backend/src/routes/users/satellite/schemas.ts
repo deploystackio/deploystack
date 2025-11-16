@@ -1,18 +1,47 @@
 // Shared schemas for gateway configuration endpoints
 
-// Client information with icons
+// Client information with icons and metadata
 export interface ClientInfo {
   id: string;
   name: string;
   iconPath: string;
+  description?: string;
 }
 
-// Supported MCP client types with icon paths
+// Category information
+export interface ClientCategory {
+  id: string;
+  name: string;
+  description: string;
+  clients: readonly ClientInfo[];
+}
+
+// Supported MCP client types with icon paths and metadata
 export const CLIENT_TYPES: readonly ClientInfo[] = [
-  { id: 'claude-desktop', name: 'Claude Desktop', iconPath: '/images/provider/claude.svg' },
-  { id: 'vscode', name: 'VS Code', iconPath: '/images/provider/vscode.svg' },
-  { id: 'claude-code', name: 'Claude Code', iconPath: '/images/provider/claude.svg' },
-  { id: 'cursor', name: 'Cursor', iconPath: '/images/provider/cursor.svg' },
+  {
+    id: 'claude-desktop',
+    name: 'Claude Desktop',
+    iconPath: '/images/provider/claude.svg',
+    description: 'Official Claude desktop application'
+  },
+  {
+    id: 'vscode',
+    name: 'VS Code',
+    iconPath: '/images/provider/vscode.svg',
+    description: 'Visual Studio Code with MCP extension'
+  },
+  {
+    id: 'claude-code',
+    name: 'Claude Code',
+    iconPath: '/images/provider/claude.svg',
+    description: 'Claude Code CLI tool'
+  },
+  {
+    id: 'cursor',
+    name: 'Cursor',
+    iconPath: '/images/provider/cursor.svg',
+    description: 'AI-powered code editor'
+  },
 ] as const;
 
 // Extract client IDs for validation
@@ -138,22 +167,36 @@ export const SUCCESS_RESPONSE_SCHEMA = {
 export const CLIENTS_LIST_RESPONSE_SCHEMA = {
   type: 'object',
   properties: {
-    clients: {
+    categories: {
       type: 'array',
       items: {
         type: 'object',
         properties: {
           id: { type: 'string' },
           name: { type: 'string' },
-          iconPath: { type: 'string' }
+          description: { type: 'string' },
+          clients: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                id: { type: 'string' },
+                name: { type: 'string' },
+                iconPath: { type: 'string' },
+                description: { type: 'string' }
+              },
+              required: ['id', 'name', 'iconPath'],
+              additionalProperties: false
+            }
+          }
         },
-        required: ['id', 'name', 'iconPath'],
+        required: ['id', 'name', 'description', 'clients'],
         additionalProperties: false
       },
-      description: 'List of supported MCP client types with metadata'
+      description: 'Categorized list of supported MCP client types'
     }
   },
-  required: ['clients'],
+  required: ['categories'],
   additionalProperties: false
 } as const;
 
@@ -172,7 +215,7 @@ export interface ClientParams {
 }
 
 export interface ClientsListResponse {
-  clients: readonly ClientInfo[];
+  categories: readonly ClientCategory[];
 }
 
 export interface ErrorResponse {

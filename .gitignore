@@ -12,7 +12,7 @@ desktop.ini
 *.sw?
 
 # AI
-CLAUDE.md
+/CLAUDE.md
 .claude/
 
 # Node.js dependencies

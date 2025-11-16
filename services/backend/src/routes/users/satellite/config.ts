@@ -22,7 +22,7 @@ function createBase64Config(config: object): string {
 }
 
 // Client configuration generator - now returns array of actions
-function generateClientConfig(clientType: string): ClientConfigResponse {
+export function generateClientConfig(clientType: string): ClientConfigResponse {
   const satelliteUrl = 'https://satellite.deploystack.io';
   const actions: ClientConfigResponse = [];
 

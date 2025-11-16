@@ -3676,21 +3676,21 @@ paths:
       summary: List supported MCP client types
       tags:
         - User Satellite Configuration
-      description: Returns a list of all supported MCP client types that can be
-        configured with the DeployStack Satellite service. No Content-Type
-        header required for this GET request.
+      description: Returns a list of all supported MCP client types grouped by action
+        category (connection, ai-instructions). Categories are dynamically
+        extracted from client configurations.
       security:
         - cookieAuth: []
         - bearerAuth: []
       responses:
         "200":
-          description: List of supported MCP client types
+          description: List of supported MCP client types grouped by category
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  clients:
+                  categories:
                     type: array
                     items:
                       type: object
@@ -3699,18 +3699,37 @@ paths:
                           type: string
                         name:
                           type: string
-                        iconPath:
+                        description:
                           type: string
+                        clients:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              id:
+                                type: string
+                              name:
+                                type: string
+                              iconPath:
+                                type: string
+                              description:
+                                type: string
+                            required:
+                              - id
+                              - name
+                              - iconPath
+                            additionalProperties: false
                       required:
                         - id
                         - name
-                        - iconPath
+                        - description
+                        - clients
                       additionalProperties: false
-                    description: List of supported MCP client types with metadata
+                    description: Categorized list of supported MCP client types
                 required:
-                  - clients
+                  - categories
                 additionalProperties: false
-                description: List of supported MCP client types
+                description: List of supported MCP client types grouped by category
         "401":
           description: Unauthorized - Authentication required
           content:
