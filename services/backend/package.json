@@ -68,7 +68,7 @@
     "fs-extra": "^11.3.2",
     "jest": "^30.2.0",
     "node-loader": "^2.1.0",
-    "nodemon": "^3.1.10",
+    "nodemon": "^3.1.11",
     "release-it": "^19.0.6",
     "supertest": "^7.1.4",
     "ts-jest": "^29.4.5",
