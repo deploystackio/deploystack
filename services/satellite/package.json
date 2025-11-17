@@ -36,7 +36,7 @@
     "copy-webpack-plugin": "^13.0.1",
     "eslint": "^9.37.0",
     "node-loader": "^2.1.0",
-    "nodemon": "^3.1.10",
+    "nodemon": "^3.1.11",
     "release-it": "^19.0.6",
     "ts-loader": "^9.5.4",
     "ts-node": "^10.9.2",
