@@ -2,6 +2,12 @@
 
 ## 0.44.0 (2025-11-17)
 
+* chore(backend): release v0.44.0 ([1c71e34](https://github.com/deploystackio/deploystack/commit/1c71e34))
+* chore(frontend): release v0.39.0 ([2245bc8](https://github.com/deploystackio/deploystack/commit/2245bc8))
+* chore(frontend): release v0.39.0 ([fd6535a](https://github.com/deploystackio/deploystack/commit/fd6535a))
+
+## 0.44.0 (2025-11-17)
+
 * chore(all): bump @octokit/request from 10.0.6 to 10.0.7 ([ed81e3e](https://github.com/deploystackio/deploystack/commit/ed81e3e))
 * chore(all): bump nodemon from 3.1.10 to 3.1.11 ([653ab6e](https://github.com/deploystackio/deploystack/commit/653ab6e))
 * chore(frontend): release v0.38.0 ([f11c7df](https://github.com/deploystackio/deploystack/commit/f11c7df))
