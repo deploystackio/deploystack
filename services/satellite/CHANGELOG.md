@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.10.0 (2025-11-17)
+
+* feat(all): add category-specific client configuration API endpoint ([da6a24e](https://github.com/deploystackio/deploystack/commit/da6a24e))
+* feat(all): add OAuth 2.1 authentication for MCP servers ([ec98c8b](https://github.com/deploystackio/deploystack/commit/ec98c8b))
+* feat(all): implemented token usage statistics ([2fcd9cf](https://github.com/deploystackio/deploystack/commit/2fcd9cf))
+* feat(backend): enhance API specifications and add Cursor support ([a214653](https://github.com/deploystackio/deploystack/commit/a214653))
+* feat(backend): enhance MCP client types API with categorized response ([21e4833](https://github.com/deploystackio/deploystack/commit/21e4833))
+* feat(frontend): add statistics page with under construction message ([1ad3ab7](https://github.com/deploystackio/deploystack/commit/1ad3ab7))
+* chore(all): bump @octokit/request from 10.0.6 to 10.0.7 ([ed81e3e](https://github.com/deploystackio/deploystack/commit/ed81e3e))
+* chore(all): bump nodemon from 3.1.10 to 3.1.11 ([653ab6e](https://github.com/deploystackio/deploystack/commit/653ab6e))
+* fix(satellite): update markdown linting path for AI instructions ([8032166](https://github.com/deploystackio/deploystack/commit/8032166))
+* fix(satellite): update token consumption metrics in README ([b58e58b](https://github.com/deploystackio/deploystack/commit/b58e58b))
+
 ## 0.9.0 (2025-11-15)
 
 * chore(frontend): release v0.38.0 ([f11c7df](https://github.com/deploystackio/deploystack/commit/f11c7df))
