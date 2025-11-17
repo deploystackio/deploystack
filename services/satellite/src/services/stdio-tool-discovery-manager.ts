@@ -137,7 +137,7 @@ export class StdioToolDiscoveryManager {
           tools: cachedTools.map(t => ({
             name: t.originalName,
             description: t.description,
-            inputSchema: t.inputSchema
+            inputSchema: t.inputSchema || {}
           }))
         };
 

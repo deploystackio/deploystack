@@ -130,11 +130,14 @@ export interface HierarchicalSavings {
  * @returns Token estimate for the tool
  */
 export function estimateToolTokens(tool: MCPTool): ToolTokenEstimate {
+  // Validate and sanitize inputSchema to prevent undefined/null crashes
+  const safeInputSchema = tool.inputSchema || {};
+
   // Convert tool to JSON Schema format (similar to OpenAI function calling)
   const toolJson = JSON.stringify({
     name: tool.name,
     description: tool.description,
-    parameters: tool.inputSchema
+    parameters: safeInputSchema
   }, null, 2);
 
   const tokens = encode(toolJson);

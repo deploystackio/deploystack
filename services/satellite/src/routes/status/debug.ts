@@ -5,6 +5,7 @@ import { RuntimeState } from '../../process/runtime-state';
 import { UnifiedToolDiscoveryManager } from '../../services/unified-tool-discovery-manager';
 import { DynamicConfigManager } from '../../services/dynamic-config-manager';
 import { TeamIsolationService } from '../../services/team-isolation-service';
+import { getVersionString } from '../../config/version';
 
 interface ServerInfo {
   installation_name: string;
@@ -338,7 +339,7 @@ export async function registerDebugRoutes(server: FastifyInstance) {
         timestamp: new Date().toISOString(),
         satellite_info: {
           satellite_id: process.env.SATELLITE_ID || 'unknown',
-          version: '1.0.0',
+          version: getVersionString(),
           uptime_ms: process.uptime() * 1000
         },
         servers_by_team: serversByTeam,

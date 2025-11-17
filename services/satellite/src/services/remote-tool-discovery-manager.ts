@@ -132,7 +132,7 @@ export class RemoteToolDiscoveryManager {
             tools: serverTools.map(t => ({
               name: t.originalName,
               description: t.description,
-              inputSchema: t.inputSchema
+              inputSchema: t.inputSchema || {}
             }))
           };
 
@@ -574,7 +574,7 @@ export class RemoteToolDiscoveryManager {
               tools: serverTools.map(t => ({
                 name: t.originalName,
                 description: t.description,
-                inputSchema: t.inputSchema
+                inputSchema: t.inputSchema || {}
               }))
             };
 

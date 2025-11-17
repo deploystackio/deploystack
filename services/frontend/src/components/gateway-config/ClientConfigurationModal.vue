@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
   AlertDialog,
@@ -17,10 +17,12 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
-import { Textarea } from '@/components/ui/textarea'
-import { GatewayConfigService, type ClientConfigResponse, type LinkAction, type TextAction, type CommandAction, type ClientInfo } from '@/services/satelliteConfigService'
+import { GatewayConfigService, type ClientConfigResponse, type ClientInfo, type ConfigAction } from '@/services/satelliteConfigService'
 import { toast } from 'vue-sonner'
-import { ExternalLink } from 'lucide-vue-next'
+import LinkActionRenderer from '@/components/client-config/LinkActionRenderer.vue'
+import StepsActionRenderer from '@/components/client-config/StepsActionRenderer.vue'
+import CommandActionRenderer from '@/components/client-config/CommandActionRenderer.vue'
+import JsonActionRenderer from '@/components/client-config/JsonActionRenderer.vue'
 
 interface Props {
   open: boolean
@@ -36,15 +38,38 @@ const { t } = useI18n()
 
 // State
 const selectedClient = ref('')
-const configContent = ref('')
-const linkActions = ref<LinkAction[]>([])
-const textActions = ref<TextAction[]>([])
-const commandActions = ref<CommandAction[]>([])
-const contentType = ref<'json' | 'text' | 'command' | 'empty'>('empty')
+const actions = ref<ConfigAction[]>([])
 const isLoading = ref(false)
-const isCopying = ref(false)
 const supportedClients = ref<ClientInfo[]>([])
 const isLoadingClients = ref(false)
+const isCopying = ref(false)
+
+// Computed: Check if current actions have copyable content (JSON or command)
+const hasCopyableContent = computed(() => {
+  return actions.value.some(action => action.type === 'json' || action.type === 'command')
+})
+
+// Computed: Get the content to copy
+const copyableContent = computed(() => {
+  const action = actions.value.find(a => a.type === 'json' || a.type === 'command')
+  if (!action) return ''
+
+  if (action.type === 'command') {
+    return action.command
+  }
+
+  if (action.type === 'json') {
+    // Use pre-formatted jsonContent if available
+    if (action.jsonContent) {
+      return action.jsonContent
+    }
+    // Otherwise format the data fields
+    const data = action.servers || action.mcpServers || action.inputs
+    return JSON.stringify(data, null, 2)
+  }
+
+  return ''
+})
 
 // Load supported clients when modal opens
 watch(() => props.open, async (isOpen) => {
@@ -81,39 +106,16 @@ async function loadSupportedClients() {
   }
 }
 
-// Load configuration from API
+// Load configuration from API (only connection category)
 async function loadConfiguration(client: string) {
   isLoading.value = true
   try {
-    const response: ClientConfigResponse = await GatewayConfigService.getClientConfig(client)
-
-    // Extract formatted content for display (command, text, or JSON)
-    configContent.value = GatewayConfigService.getFormattedContent(response)
-
-    // Extract different action types
-    linkActions.value = GatewayConfigService.getLinkActions(response)
-    textActions.value = GatewayConfigService.getTextActions(response)
-    commandActions.value = GatewayConfigService.getCommandActions(response)
-
-    // Determine content type for UI styling
-    if (commandActions.value.length > 0) {
-      contentType.value = 'command'
-    } else if (textActions.value.length > 0) {
-      contentType.value = 'text'
-    } else if (GatewayConfigService.getJsonConfig(response)) {
-      contentType.value = 'json'
-    } else {
-      contentType.value = 'empty'
-    }
-
+    const response: ClientConfigResponse = await GatewayConfigService.getClientConfig(client, 'connection')
+    actions.value = response
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Failed to load configuration'
     toast.error(errorMessage)
-    configContent.value = `Error: ${errorMessage}`
-    linkActions.value = []
-    textActions.value = []
-    commandActions.value = []
-    contentType.value = 'empty'
+    actions.value = []
   } finally {
     isLoading.value = false
   }
@@ -123,85 +125,37 @@ function handleClose() {
   emit('update:open', false)
 }
 
-// Copy to clipboard and close
+// Handle copy and close
 async function handleCopyAndClose() {
-  if (!configContent.value.trim()) {
-    toast.error('No configuration to copy')
+  if (!copyableContent.value) {
+    toast.error('No content to copy')
     return
   }
 
   isCopying.value = true
 
   try {
-    await navigator.clipboard.writeText(configContent.value)
+    await navigator.clipboard.writeText(copyableContent.value)
     handleClose()
     // Show success toast after modal closes
     setTimeout(() => {
-      let messageKey = 'satelliteConfig.messages.copySuccess'
-      if (contentType.value === 'text') {
-        messageKey = 'satelliteConfig.messages.copyInstructionsSuccess'
-      } else if (contentType.value === 'command') {
-        messageKey = 'satelliteConfig.messages.copyCommandSuccess'
-      }
-      toast.success(t(messageKey))
+      toast.success(t('satelliteConfig.messages.copySuccess'))
     }, 100)
   } catch {
-    toast.error('Failed to copy configuration to clipboard')
+    toast.error('Failed to copy to clipboard')
   } finally {
     isCopying.value = false
   }
 }
 
-// Handle install button click
-function handleInstallClick(action: LinkAction) {
-  // For Cursor deeplinks, try to open directly
+// Handle link click from LinkActionRenderer
+function handleLinkClick(action: { url: string; name?: string }) {
   if (action.url.startsWith('cursor://')) {
     window.location.href = action.url
   } else {
-    // For other links, open in new tab
     window.open(action.url, '_blank')
   }
-  
   toast.success(action.name || 'Installation link opened')
-}
-
-// Check if current client has install buttons
-function hasInstallButtons(): boolean {
-  return linkActions.value.length > 0
-}
-
-// Get appropriate label for the configuration content
-function getConfigLabel(): string {
-  if (contentType.value === 'command') {
-    return t('satelliteConfig.modal.commandLabel')
-  }
-  if (contentType.value === 'text') {
-    return t('satelliteConfig.modal.instructionsLabel')
-  }
-  return t('satelliteConfig.modal.configLabel')
-}
-
-// Get appropriate copy button text
-function getCopyButtonText(): string {
-  if (contentType.value === 'command') {
-    return t('satelliteConfig.button.copyCommandAndClose')
-  }
-  if (contentType.value === 'text') {
-    return t('satelliteConfig.button.copyInstructionsAndClose')
-  }
-  return t('satelliteConfig.button.copyAndClose')
-}
-
-// Get CSS classes for textarea based on content type
-function getTextareaClasses(): string {
-  const baseClasses = 'min-h-[200px]'
-  if (contentType.value === 'text') {
-    return `${baseClasses} font-sans text-sm leading-relaxed`
-  }
-  if (contentType.value === 'command') {
-    return `${baseClasses} font-mono text-sm bg-gray-50 dark:bg-gray-900`
-  }
-  return `${baseClasses} font-mono text-sm`
 }
 </script>
 
@@ -239,37 +193,42 @@ function getTextareaClasses(): string {
           </Select>
         </div>
 
-        <!-- One-Click Install Buttons (shown for supported clients like Cursor) -->
-        <div v-if="hasInstallButtons()" class="space-y-3">
-          <label class="text-sm font-medium">{{ t('satelliteConfig.modal.oneClickInstall') }}</label>
-          <div class="flex flex-wrap gap-2">
-            <Button
-              v-for="action in linkActions"
-              :key="action.url"
-              @click="handleInstallClick(action)"
-              variant="outline"
-              class="flex items-center gap-2"
-            >
-              <ExternalLink class="h-4 w-4" />
-              {{ action.name || 'Install' }}
-            </Button>
-          </div>
-          <p class="text-sm text-muted-foreground">
-            {{ t('satelliteConfig.modal.oneClickDescription') }}
-          </p>
+        <!-- Loading State -->
+        <div v-if="isLoading" class="text-center py-8 text-muted-foreground">
+          {{ t('satelliteConfig.modal.loading') }}
         </div>
 
-        <!-- Configuration Content -->
-        <div class="space-y-2">
-          <label class="text-sm font-medium">{{ getConfigLabel() }}</label>
-          <Textarea
-            v-model="configContent"
-            :placeholder="isLoading ? t('satelliteConfig.modal.loading') : 
-              (contentType === 'text' ? t('satelliteConfig.modal.instructionsPlaceholder') : t('satelliteConfig.modal.configPlaceholder'))"
-            :disabled="isLoading"
-            :class="getTextareaClasses()"
-            readonly
-          />
+        <!-- Actions Rendering -->
+        <div v-else class="space-y-6">
+          <template v-for="(action, index) in actions" :key="index">
+            <!-- Link Actions (One-Click Install) -->
+            <div v-if="action.type === 'link'" class="space-y-2">
+              <label v-if="action.name" class="text-sm font-medium">{{ action.name }}</label>
+              <p v-if="action.description" class="text-sm text-muted-foreground">{{ action.description }}</p>
+              <LinkActionRenderer :action="action" @click="handleLinkClick" />
+            </div>
+
+            <!-- Steps Actions -->
+            <div v-else-if="action.type === 'steps'" class="space-y-2">
+              <label v-if="action.title" class="text-sm font-medium">{{ action.title }}</label>
+              <p v-if="action.description" class="text-sm text-muted-foreground">{{ action.description }}</p>
+              <StepsActionRenderer :action="action" />
+            </div>
+
+            <!-- Command Actions -->
+            <CommandActionRenderer
+              v-else-if="action.type === 'command'"
+              :action="action"
+              :show-copy-button="false"
+            />
+
+            <!-- JSON Actions -->
+            <JsonActionRenderer
+              v-else-if="action.type === 'json'"
+              :action="action"
+              :show-copy-button="false"
+            />
+          </template>
         </div>
       </div>
 
@@ -278,12 +237,13 @@ function getTextareaClasses(): string {
           {{ t('actions.close') }}
         </Button>
         <Button
+          v-if="hasCopyableContent"
           @click="handleCopyAndClose"
           :loading="isCopying"
           loading-text="Copying..."
-          :disabled="!configContent.trim() || isLoading || isLoadingClients"
+          :disabled="!copyableContent || isLoading || isLoadingClients"
         >
-          {{ getCopyButtonText() }}
+          {{ t('satelliteConfig.button.copyAndClose') }}
         </Button>
       </AlertDialogFooter>
     </AlertDialogContent>

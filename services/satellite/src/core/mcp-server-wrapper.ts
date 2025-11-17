@@ -1,10 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
-import { 
+import {
   ListToolsRequestSchema,
   CallToolRequestSchema,
-  isInitializeRequest 
+  isInitializeRequest
 } from '@modelcontextprotocol/sdk/types.js';
 import { FastifyBaseLogger, FastifyRequest, FastifyReply, FastifyInstance } from 'fastify';
 import { randomUUID } from 'crypto';
@@ -14,6 +14,7 @@ import { ToolSearchService } from '../services/tool-search-service';
 import { DynamicConfigManager } from '../services/dynamic-config-manager';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
+import { getVersionString } from '../config/version';
 
 /**
  * MCP Server Wrapper
@@ -469,7 +470,7 @@ export class McpServerWrapper {
 
     const client = new Client({
       name: 'deploystack-satellite',
-      version: '1.0.0'
+      version: getVersionString()
     });
 
     // Build URL with query parameters
@@ -561,6 +562,19 @@ export class McpServerWrapper {
       }
     }, async (request: FastifyRequest, reply: FastifyReply) => {
       const sessionId = request.headers['mcp-session-id'] as string | undefined;
+      const requestBody = request.body as any;
+      const isInitRequest = isInitializeRequest(requestBody);
+
+      // Debug logging to understand session handling
+      this.logger.info({
+        operation: 'mcp_request_received',
+        session_id: sessionId,
+        has_session_in_map: sessionId ? this.transports.has(sessionId) : false,
+        is_initialize_request: isInitRequest,
+        request_method: requestBody?.method || 'unknown',
+        total_active_sessions: this.transports.size
+      }, 'Processing MCP request');
+
       let transport: StreamableHTTPServerTransport;
       let server: Server;
 
@@ -569,12 +583,19 @@ export class McpServerWrapper {
         const session = this.transports.get(sessionId)!;
         transport = session.transport;
         server = session.server;
-      } else if (!sessionId && isInitializeRequest(request.body)) {
-        // New initialization request - create low-level Server
+      } else if (isInitializeRequest(request.body)) {
+        // New initialization request - create low-level Server (or recreate after restart)
+        if (sessionId) {
+          this.logger.info({
+            operation: 'mcp_session_restart',
+            old_session_id: sessionId,
+            reason: 'stale_session'
+          }, 'Recreating MCP session for stale session ID after satellite restart');
+        }
         server = new Server(
           {
             name: 'deploystack-satellite',
-            version: '1.0.0'
+            version: getVersionString()
           },
           {
             capabilities: {
@@ -613,13 +634,125 @@ export class McpServerWrapper {
         };
 
         await server.connect(transport);
+      } else if (sessionId) {
+        // Stale session ID - auto-resurrect the session transparently
+        this.logger.info({
+          operation: 'mcp_session_resurrection',
+          session_id: sessionId,
+          request_method: requestBody?.method || 'unknown'
+        }, 'Auto-resurrecting stale session after satellite restart');
+
+        // Create new server and transport, but reuse the old session ID
+        server = new Server(
+          {
+            name: 'deploystack-satellite',
+            version: getVersionString()
+          },
+          {
+            capabilities: {
+              tools: {}
+            }
+          }
+        );
+
+        // Check for dormant stdio processes and respawn them
+        await this.respawnDormantProcesses();
+
+        // Setup MCP server with hierarchical router
+        this.setupMcpServer(server);
+
+        // Create transport with fixed session ID generator
+        transport = new StreamableHTTPServerTransport({
+          sessionIdGenerator: () => sessionId, // Reuse the old session ID!
+          onsessioninitialized: (restoredSessionId) => {
+            this.transports.set(restoredSessionId, { transport, server });
+            this.logger.info({
+              operation: 'mcp_session_resurrected',
+              session_id: restoredSessionId
+            }, 'Session resurrected successfully - client can continue without reconnecting');
+          },
+          enableDnsRebindingProtection: false,
+        });
+
+        transport.onclose = () => {
+          if (transport.sessionId) {
+            this.transports.delete(transport.sessionId);
+            this.logger.debug({
+              operation: 'mcp_session_closed',
+              session_id: transport.sessionId
+            }, 'MCP session closed and cleaned up');
+          }
+        };
+
+        await server.connect(transport);
+
+        // Bootstrap the transport by processing a synthetic initialize request
+        // The transport only sets _initialized=true when it processes an initialize request
+        const syntheticInitRequest = {
+          jsonrpc: '2.0' as const,
+          id: 0,
+          method: 'initialize',
+          params: {
+            protocolVersion: '2024-11-05',
+            capabilities: {},
+            clientInfo: {
+              name: 'resurrected-session',
+              version: '1.0.0'
+            }
+          }
+        };
+
+        this.logger.debug({
+          operation: 'mcp_bootstrap_transport',
+          session_id: sessionId
+        }, 'Bootstrapping transport with synthetic initialize request');
+
+        // Create a minimal mock response that captures the initialize response
+        let initializeResponseSent = false;
+        const mockRes = {
+          writeHead: (_status: number, _headers?: any) => {
+            // Capture response but don't send to client
+            return mockRes;
+          },
+          write: (_chunk: any) => {
+            // Swallow the initialize response
+            return true;
+          },
+          end: (_data?: any) => {
+            initializeResponseSent = true;
+            return mockRes;
+          },
+          setHeader: (_name: string, _value: string | string[]) => {
+            return mockRes;
+          },
+          socket: request.raw.socket,
+          statusCode: 200,
+          statusMessage: 'OK',
+          headersSent: false,
+        };
+
+        // Process the synthetic initialize request using the actual request with synthetic body
+        await transport.handleRequest(request.raw as any, mockRes as any, syntheticInitRequest);
+
+        if (!initializeResponseSent) {
+          this.logger.warn({
+            operation: 'mcp_bootstrap_failed',
+            session_id: sessionId
+          }, 'Synthetic initialize request did not complete');
+        }
       } else {
-        // Invalid request
+        // No session ID at all - reject
+        this.logger.warn({
+          operation: 'mcp_request_rejected',
+          reason: 'missing_session_id',
+          request_method: requestBody?.method || 'unknown'
+        }, 'Rejecting MCP request - no session ID provided');
+
         reply.code(400).send({
           jsonrpc: '2.0',
           error: {
             code: -32000,
-            message: 'Bad Request: No valid session ID provided',
+            message: 'Bad Request: No session ID provided',
           },
           id: null,
         });
@@ -667,7 +800,7 @@ export class McpServerWrapper {
       active_sessions: this.transports.size,
       server_info: {
         name: 'deploystack-satellite',
-        version: '1.0.0',
+        version: getVersionString(),
         sdk_version: '@modelcontextprotocol/sdk@1.20.1',
         mode: 'hierarchical-router'
       }

@@ -11990,6 +11990,273 @@
         }
       }
     },
+    "/api/teams/{teamId}/mcp/tools/stats": {
+      "get": {
+        "summary": "Get team MCP tools statistics",
+        "tags": [
+          "MCP Tools"
+        ],
+        "description": "Retrieves aggregated statistics for all MCP tool installations in a team, including token consumption analysis and hierarchical routing savings calculations. Shows the value of DeployStack's hierarchical router vs traditional MCP tool exposure. Requires mcp.tools.stats.view permission.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "teamId",
+            "required": true,
+            "description": "Team ID"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Statistics retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "team_id": {
+                          "type": "string",
+                          "description": "Team identifier"
+                        },
+                        "total_installations": {
+                          "type": "number",
+                          "description": "Total number of installations with discovered tools"
+                        },
+                        "total_tools": {
+                          "type": "number",
+                          "description": "Total number of tools across all installations"
+                        },
+                        "total_tokens": {
+                          "type": "number",
+                          "description": "Total tokens consumed across all tools"
+                        },
+                        "traditional_approach": {
+                          "type": "object",
+                          "properties": {
+                            "total_tools": {
+                              "type": "number",
+                              "description": "Total number of tools exposed directly to LLM"
+                            },
+                            "total_tokens": {
+                              "type": "number",
+                              "description": "Total tokens consumed when exposing all tools"
+                            },
+                            "context_window_utilization_percent": {
+                              "type": "number",
+                              "description": "Percentage of context window consumed"
+                            }
+                          },
+                          "required": [
+                            "total_tools",
+                            "total_tokens",
+                            "context_window_utilization_percent"
+                          ]
+                        },
+                        "hierarchical_approach": {
+                          "type": "object",
+                          "properties": {
+                            "exposed_tools": {
+                              "type": "number",
+                              "description": "Number of meta-tools exposed (always 2)",
+                              "default": 2
+                            },
+                            "total_tokens": {
+                              "type": "number",
+                              "description": "Total tokens consumed by hierarchical router (always 1372)",
+                              "default": 1372
+                            },
+                            "context_window_utilization_percent": {
+                              "type": "number",
+                              "description": "Percentage of context window consumed"
+                            }
+                          },
+                          "required": [
+                            "exposed_tools",
+                            "total_tokens",
+                            "context_window_utilization_percent"
+                          ]
+                        },
+                        "savings": {
+                          "type": "object",
+                          "properties": {
+                            "tokens_saved": {
+                              "type": "number",
+                              "description": "Number of tokens saved by using hierarchical routing"
+                            },
+                            "reduction_percent": {
+                              "type": "number",
+                              "description": "Percentage reduction in token consumption"
+                            }
+                          },
+                          "required": [
+                            "tokens_saved",
+                            "reduction_percent"
+                          ]
+                        },
+                        "installations": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "installation_id": {
+                                "type": "string",
+                                "description": "Installation unique identifier"
+                              },
+                              "installation_name": {
+                                "type": "string",
+                                "description": "Installation name"
+                              },
+                              "server_slug": {
+                                "type": "string",
+                                "description": "MCP server slug"
+                              },
+                              "server_name": {
+                                "type": "string",
+                                "description": "MCP server name"
+                              },
+                              "tool_count": {
+                                "type": "number",
+                                "description": "Number of tools in this installation"
+                              },
+                              "total_tokens": {
+                                "type": "number",
+                                "description": "Total tokens consumed by all tools in this installation"
+                              },
+                              "average_tokens_per_tool": {
+                                "type": "number",
+                                "description": "Average tokens per tool"
+                              }
+                            },
+                            "required": [
+                              "installation_id",
+                              "installation_name",
+                              "server_slug",
+                              "server_name",
+                              "tool_count",
+                              "total_tokens",
+                              "average_tokens_per_tool"
+                            ]
+                          },
+                          "description": "Breakdown by installation"
+                        }
+                      },
+                      "required": [
+                        "team_id",
+                        "total_installations",
+                        "total_tools",
+                        "total_tokens",
+                        "traditional_approach",
+                        "hierarchical_approach",
+                        "savings",
+                        "installations"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "description": "Statistics retrieved successfully"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates failure"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message detailing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Unauthorized - Authentication required"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Insufficient permissions or not a team member",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates failure"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message detailing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Forbidden - Insufficient permissions or not a team member"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates failure"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message detailing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Internal Server Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/teams/{teamId}/cloud-providers": {
       "get": {
         "summary": "List available cloud providers",
