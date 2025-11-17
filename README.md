@@ -238,6 +238,7 @@ VS Code → HTTPS Request → DeployStack Satellite → MCP Server Process → E
 - **[Done]** **MCP Tool Metadata Collection** - automatic tool discovery with token counting, event-driven metadata sync from satellites to backend, per-installation tool storage with descriptions and input schemas
 - **[Done]** **Tool Display & Analytics API** - team-aware endpoints for fetching tool lists per installation and aggregated token savings across all team installations
 - **[Done]** **Token Analytics Dashboard** - complete statistics dashboard with visual token comparison (stacked bar chart), 4 summary cards (installations, tools, savings %, DeployStack usage), side-by-side traditional vs hierarchical comparison, and expandable installation breakdown table with per-tool token counts
+- **[To Do]** **OAuth 2.1 Authentication for MCP Servers** - enable DeployStack to connect to OAuth-protected MCP servers (Box, Linear, GitHub Copilot) with on-the-fly endpoint discovery, PKCE flow, encrypted token storage, automatic refresh, and browser popup authentication
 - **[To Do]** **Optimization Recommendations** - suggest which servers to disable based on usage patterns
 - **[To Do]** **Documentation & Case Study** - technical deep-dive blog post with real-world metrics
 
