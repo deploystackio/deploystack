@@ -55,7 +55,8 @@ export interface McpServer {
   status: 'active' | 'deprecated' | 'maintenance';
   featured: boolean;
   auto_install_new_default_team: boolean;
-  
+  requires_oauth: boolean;
+
   // Official Registry Sync Tracking
   official_name?: string | null;
   synced_from_official_registry?: boolean;
@@ -473,8 +474,9 @@ export class McpCatalogService {
       status: 'active',
       featured: userRole === 'global_admin' ? (data.featured || false) : false,
       auto_install_new_default_team: userRole === 'global_admin' ? (data.auto_install_new_default_team || false) : false,
+      requires_oauth: false, // Default to false, will be updated during installation if needed
       source: (data as any).source || 'manual',
-      
+
       // Official Registry Sync Tracking
       official_name: (data as any).official_name || null,
       synced_from_official_registry: (data as any).synced_from_official_registry || false,

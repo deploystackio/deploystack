@@ -244,6 +244,9 @@ export const mcpServers = sqliteTable('mcpServers', {
   official_registry_published_at: integer('official_registry_published_at', { mode: 'timestamp' }),
   official_registry_updated_at: integer('official_registry_updated_at', { mode: 'timestamp' }),
   
+  // OAuth Support
+  requires_oauth: integer({ mode: 'boolean' }).notNull().default(false),
+
   // Timestamps
   created_at: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
   updated_at: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
@@ -767,6 +770,42 @@ export const mcpClientActivityMetrics = sqliteTable('mcpClientActivityMetrics', 
     table.auth_identifier,
     table.bucket_timestamp,
     table.bucket_interval
+  ),
+}));
+
+// MCP OAuth Tokens - Stores encrypted OAuth tokens for MCP servers that require OAuth authentication
+export const mcpOauthTokens = sqliteTable('mcpOauthTokens', {
+  id: text('id').primaryKey(),
+
+  // Foreign Keys
+  installation_id: text('installation_id')
+    .notNull()
+    .references(() => mcpServerInstallations.id, { onDelete: 'cascade' }),
+  user_id: text('user_id')
+    .notNull()
+    .references(() => authUser.id, { onDelete: 'cascade' }),
+  team_id: text('team_id')
+    .notNull()
+    .references(() => teams.id, { onDelete: 'cascade' }),
+
+  // Token Data (encrypted using AES-256-GCM)
+  access_token: text('access_token').notNull(),
+  refresh_token: text('refresh_token'),
+
+  // Token Metadata
+  token_type: text('token_type').notNull().default('Bearer'),
+  expires_at: integer('expires_at', { mode: 'timestamp' }),
+  scope: text('scope'),
+
+  // Timestamps
+  created_at: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  updated_at: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date())
+}, (table) => ({
+  // Composite index for fast token lookups by installation+user+team
+  installationUserTeamIdx: index('mcp_oauth_tokens_installation_user_team_idx').on(
+    table.installation_id,
+    table.user_id,
+    table.team_id
   ),
 }));
 

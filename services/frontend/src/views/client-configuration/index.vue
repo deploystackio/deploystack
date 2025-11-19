@@ -8,7 +8,6 @@ import { GatewayConfigService, type ClientConfigResponse, type ConfigAction, typ
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
@@ -39,11 +38,6 @@ const selectedClientFromRoute = computed(() => {
 
 const selectedCategoryFromRoute = computed(() => {
   return route.params.category as string | undefined
-})
-
-const configDescription = computed(() => {
-  const firstAction = actions.value[0]
-  return firstAction?.description || t('clientConfiguration.description')
 })
 
 // Get display name for client ID
@@ -204,9 +198,6 @@ onMounted(async () => {
               <CardTitle class="text-xl">
                 {{ getClientDisplayName(selectedClient) }}
               </CardTitle>
-              <CardDescription>
-                {{ configDescription }}
-              </CardDescription>
             </CardHeader>
             <CardContent class="space-y-6">
               <!-- Loading State -->

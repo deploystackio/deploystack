@@ -39,6 +39,14 @@ module.exports = {
             dot: true,
           },
         },
+        // Copy AI instructions to dist directory
+        {
+          from: 'src/routes/users/satellite/ai-instructions',
+          to: 'routes/users/satellite/ai-instructions',
+          globOptions: {
+            dot: true,
+          },
+        },
       ],
     }),
   ],

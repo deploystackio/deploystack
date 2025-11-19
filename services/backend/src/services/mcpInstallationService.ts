@@ -6,6 +6,7 @@ import type { FastifyBaseLogger } from 'fastify';
 import { nanoid } from 'nanoid';
 import { McpArgsStorage } from '../utils/mcpArgsStorage';
 import { McpEnvStorage } from '../utils/mcpEnvStorage';
+import { OAuthDiscoveryService } from './OAuthDiscoveryService';
 
 // Types
 export interface McpInstallation {
@@ -39,6 +40,7 @@ export interface McpInstallation {
     tags: string[] | null; // Optional in DB
     packages: any[];
     remotes: any[] | null;
+    requires_oauth: boolean; // OAuth requirement flag
     // Three-tier schema fields
     template_args: any[] | null;
     template_env: Record<string, string> | null;
@@ -302,6 +304,79 @@ export class McpInstallationService {
 
     if (server.length === 0) {
       throw new Error('Server not found');
+    }
+
+    // OAuth detection for remote MCP servers (HTTP/SSE)
+    if (server[0].transport_type === 'http' || server[0].transport_type === 'sse') {
+      this.logger.debug({
+        operation: 'create_installation',
+        step: 'oauth_detection',
+        serverId: data.server_id,
+        transportType: server[0].transport_type
+      }, 'Checking OAuth requirement for remote MCP server');
+
+      try {
+        const remotes = this.parseJsonField(server[0].remotes, []);
+
+        if (remotes.length > 0 && remotes[0].url) {
+          const mcpServerUrl = remotes[0].url;
+
+          this.logger.info({
+            operation: 'create_installation',
+            step: 'oauth_detection',
+            mcpServerUrl
+          }, 'Performing OAuth detection');
+
+          const oauthService = new OAuthDiscoveryService(this.logger);
+          const oauthResult = await oauthService.detectAndDiscoverOAuth(mcpServerUrl);
+
+          if (oauthResult.requiresOauth) {
+            this.logger.info({
+              operation: 'create_installation',
+              step: 'oauth_detection',
+              serverId: data.server_id,
+              authEndpoint: oauthResult.metadata?.authorization_endpoint,
+              tokenEndpoint: oauthResult.metadata?.token_endpoint
+            }, 'OAuth requirement detected, updating server record');
+
+            // Update server record with requires_oauth flag
+            await this.db
+              .update(mcpServers)
+              .set({ requires_oauth: true })
+              .where(eq(mcpServers.id, data.server_id));
+
+            // Throw error with OAuth metadata for frontend to handle
+            // Phase 5 will implement the OAuth flow redirect
+            throw new Error(
+              JSON.stringify({
+                error: 'oauth_required',
+                server_id: data.server_id,
+                server_name: server[0].name,
+                metadata: oauthResult.metadata
+              })
+            );
+          }
+
+          this.logger.info({
+            operation: 'create_installation',
+            step: 'oauth_detection',
+            serverId: data.server_id
+          }, 'OAuth not required, continuing with installation');
+        }
+      } catch (error) {
+        // If error is already our OAuth required error, re-throw it
+        if (error instanceof Error && error.message.includes('oauth_required')) {
+          throw error;
+        }
+
+        // For other errors, log but don't block installation
+        this.logger.warn({
+          operation: 'create_installation',
+          step: 'oauth_detection',
+          serverId: data.server_id,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        }, 'OAuth detection failed, continuing with installation');
+      }
     }
 
     // Check non-HTTP MCP installation limit (stdio servers only)

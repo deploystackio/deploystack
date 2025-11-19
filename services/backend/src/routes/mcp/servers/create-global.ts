@@ -4,6 +4,7 @@ import { requireGlobalAdmin } from '../../../middleware/roleMiddleware';
 import { McpCatalogService } from '../../../services/mcpCatalogService';
 import { GitHubService } from '../../../services/githubService';
 import { GitHubReadmeService } from '../../../services/githubReadmeService';
+import { OAuthDiscoveryService } from '../../../services/OAuthDiscoveryService';
 import { getDb } from '../../../db';
 import { EVENT_NAMES } from '../../../events';
 import type { EventContext } from '../../../events/types';
@@ -169,6 +170,42 @@ export default async function createGlobalServer(server: FastifyInstance) {
         }
       }
 
+      // OAuth detection for remote MCP servers (HTTP/SSE)
+      let requiresOauth = false;
+      if (finalTransportType === 'http' || finalTransportType === 'sse') {
+        if (finalRemotes && finalRemotes.length > 0 && finalRemotes[0].url) {
+          try {
+            request.log.info({
+              operation: 'create_global_mcp_server',
+              step: 'oauth_detection',
+              mcpServerUrl: finalRemotes[0].url,
+              transportType: finalTransportType
+            }, 'Starting OAuth detection for remote MCP server');
+
+            const oauthService = new OAuthDiscoveryService(request.log);
+            const oauthResult = await oauthService.detectAndDiscoverOAuth(finalRemotes[0].url);
+
+            requiresOauth = oauthResult.requiresOauth;
+
+            request.log.info({
+              operation: 'create_global_mcp_server',
+              step: 'oauth_detection',
+              mcpServerUrl: finalRemotes[0].url,
+              requiresOauth,
+              hasMetadata: !!oauthResult.metadata
+            }, 'OAuth detection completed for new server');
+          } catch (error) {
+            request.log.warn({
+              operation: 'create_global_mcp_server',
+              step: 'oauth_detection',
+              mcpServerUrl: finalRemotes[0].url,
+              error: error instanceof Error ? error.message : 'Unknown error'
+            }, 'OAuth detection failed, defaulting to requires_oauth=false');
+            requiresOauth = false;
+          }
+        }
+      }
+
       // Prepare server data with the processed configuration
       // Ensure all schema arrays default to empty arrays instead of undefined/null
       const serverData = {
@@ -221,6 +258,7 @@ export default async function createGlobalServer(server: FastifyInstance) {
         tags: requestData.tags,
         featured: requestData.featured,
         auto_install_new_default_team: requestData.auto_install_new_default_team,
+        requires_oauth: requiresOauth || false,
         source: 'manual' as const, // Always 'manual' for admin-created servers
         github_account_id: githubAccountId,
         github_readme_base64: githubReadmeBase64,
