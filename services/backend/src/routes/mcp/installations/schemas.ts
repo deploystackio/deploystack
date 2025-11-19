@@ -208,6 +208,53 @@ export const UPDATE_QUERY_PARAMS_REQUEST_SCHEMA = {
   additionalProperties: false
 } as const;
 
+export const OAUTH_AUTHORIZE_REQUEST_SCHEMA = {
+  type: 'object',
+  properties: {
+    server_id: {
+      type: 'string',
+      minLength: 1,
+      description: 'MCP server ID that requires OAuth'
+    },
+    installation_name: {
+      type: 'string',
+      minLength: 1,
+      maxLength: 100,
+      description: 'Custom name for this installation (optional)'
+    },
+    team_config: {
+      type: 'object',
+      additionalProperties: true,
+      description: 'Team-level configuration for installation (optional)'
+    }
+  },
+  required: ['server_id'],
+  additionalProperties: false
+} as const;
+
+export const OAUTH_CALLBACK_QUERY_SCHEMA = {
+  type: 'object',
+  properties: {
+    code: {
+      type: 'string',
+      description: 'Authorization code from OAuth provider'
+    },
+    state: {
+      type: 'string',
+      description: 'State parameter for CSRF protection'
+    },
+    error: {
+      type: 'string',
+      description: 'OAuth error code if authorization failed'
+    },
+    error_description: {
+      type: 'string',
+      description: 'Human-readable error description'
+    }
+  },
+  additionalProperties: false
+} as const;
+
 // =============================================================================
 // ENTITY SCHEMAS
 // =============================================================================
@@ -480,16 +527,37 @@ export const INSTALLATION_DELETE_SUCCESS_RESPONSE_SCHEMA = {
 export const CLIENT_CONFIG_SUCCESS_RESPONSE_SCHEMA = {
   type: 'object',
   properties: {
-    success: { 
+    success: {
       type: 'boolean',
       description: 'Indicates if the configuration was generated successfully'
     },
-    data: { 
+    data: {
       type: 'object',
       description: 'Client-specific configuration object (varies by client type)'
     }
   },
   required: ['success', 'data']
+} as const;
+
+export const OAUTH_AUTHORIZE_SUCCESS_RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    installation_id: {
+      type: 'string',
+      description: 'Unique installation ID for the pending OAuth installation'
+    },
+    authorization_url: {
+      type: 'string',
+      format: 'uri',
+      description: 'OAuth authorization URL to redirect user to for authentication'
+    },
+    expires_at: {
+      type: 'string',
+      format: 'date-time',
+      description: 'ISO 8601 timestamp when the OAuth state expires'
+    }
+  },
+  required: ['installation_id', 'authorization_url', 'expires_at']
 } as const;
 
 // =============================================================================
@@ -636,6 +704,26 @@ export interface InstallationDeleteSuccessResponse {
 export interface ClientConfigSuccessResponse {
   success: boolean;
   data: object;
+}
+
+export interface OAuthAuthorizeRequest {
+  server_id: string;
+  installation_name?: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  team_config?: Record<string, any>;
+}
+
+export interface OAuthAuthorizeSuccessResponse {
+  installation_id: string;
+  authorization_url: string;
+  expires_at: string;
+}
+
+export interface OAuthCallbackQuery {
+  code?: string;
+  state?: string;
+  error?: string;
+  error_description?: string;
 }
 
 // =============================================================================

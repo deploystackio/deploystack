@@ -6,6 +6,7 @@ import { RegistryCoordinatorWorker } from './registryCoordinatorWorker';
 import { EmailWorker } from './emailWorker';
 import { McpClientActivityMetricsCleanupWorker } from './mcpClientActivityMetricsCleanupWorker';
 import { CleanupOldJobsWorker } from './cleanupOldJobsWorker';
+import { RefreshOAuthTokensWorker } from './refreshOAuthTokensWorker';
 
 /**
  * Register all workers with the job processor
@@ -61,6 +62,12 @@ export function registerWorkers(
   processor.registerWorker(
     'cleanup_old_jobs',
     new CleanupOldJobsWorker(db, logger)
+  );
+
+  // Register OAuth Token Refresh Worker
+  processor.registerWorker(
+    'refresh_oauth_tokens',
+    new RefreshOAuthTokensWorker(db, logger)
   );
 
   // Log all registered workers dynamically

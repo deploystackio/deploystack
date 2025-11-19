@@ -8404,6 +8404,11 @@ paths:
                       team_id:
                         type: string
                         description: Team identifier
+                      context_window_size:
+                        type: number
+                        description: "Context window size used for calculations (in tokens). Claude:
+                          200,000, GPT-4: 128,000"
+                        default: 200000
                       total_installations:
                         type: number
                         description: Total number of installations with discovered tools
@@ -8485,6 +8490,21 @@ paths:
                             average_tokens_per_tool:
                               type: number
                               description: Average tokens per tool
+                            tools:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  tool_name:
+                                    type: string
+                                    description: Name of the tool
+                                  token_count:
+                                    type: number
+                                    description: Token count for this tool
+                                required:
+                                  - tool_name
+                                  - token_count
+                              description: List of tools with their token counts
                           required:
                             - installation_id
                             - installation_name
@@ -8493,9 +8513,11 @@ paths:
                             - tool_count
                             - total_tokens
                             - average_tokens_per_tool
+                            - tools
                         description: Breakdown by installation
                     required:
                       - team_id
+                      - context_window_size
                       - total_installations
                       - total_tools
                       - total_tokens
@@ -16854,6 +16876,214 @@ paths:
                   - success
                   - error
                 description: Internal Server Error
+  /api/teams/{teamId}/mcp/installations/authorize:
+    post:
+      summary: Initiate OAuth flow for MCP server installation
+      tags:
+        - MCP Installations
+        - OAuth
+      description: "Creates a pending MCP server installation and returns OAuth
+        authorization URL for user authentication. Requires Content-Type:
+        application/json header when sending request body. Supports both
+        cookie-based authentication (for web users) and OAuth2 Bearer token
+        authentication (for CLI users). Requires mcp:read scope for OAuth2
+        access."
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                server_id:
+                  type: string
+                  minLength: 1
+                  description: MCP server ID that requires OAuth
+                installation_name:
+                  type: string
+                  minLength: 1
+                  maxLength: 100
+                  description: Custom name for this installation (optional)
+                team_config:
+                  type: object
+                  additionalProperties: true
+                  description: Team-level configuration for installation (optional)
+              required:
+                - server_id
+              additionalProperties: false
+        required: true
+      parameters:
+        - schema:
+            type: string
+            minLength: 1
+          in: path
+          name: teamId
+          required: true
+          description: Team ID is required
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OAuth authorization URL generated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  installation_id:
+                    type: string
+                    description: Unique installation ID for the pending OAuth installation
+                  authorization_url:
+                    type: string
+                    format: uri
+                    description: OAuth authorization URL to redirect user to for authentication
+                  expires_at:
+                    type: string
+                    format: date-time
+                    description: ISO 8601 timestamp when the OAuth state expires
+                required:
+                  - installation_id
+                  - authorization_url
+                  - expires_at
+                description: OAuth authorization URL generated successfully
+        "400":
+          description: Bad Request - Invalid input or validation error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates the operation failed
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                required:
+                  - success
+                  - error
+                description: Bad Request - Invalid input or validation error
+        "401":
+          description: Unauthorized - Authentication required or invalid token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates the operation failed
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                required:
+                  - success
+                  - error
+                description: Unauthorized - Authentication required or invalid token
+        "403":
+          description: Forbidden - Insufficient permissions or scope
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates the operation failed
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                required:
+                  - success
+                  - error
+                description: Forbidden - Insufficient permissions or scope
+        "404":
+          description: MCP server not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates the operation failed
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                required:
+                  - success
+                  - error
+                description: MCP server not found
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates the operation failed
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                required:
+                  - success
+                  - error
+                description: Internal Server Error
+  /api/api/teams/{teamId}/mcp/installations/{installationId}/oauth/callback:
+    get:
+      tags:
+        - MCP Installations
+        - OAuth
+      description: OAuth callback endpoint for MCP server authentication
+      parameters:
+        - schema:
+            type: string
+          in: query
+          name: code
+          required: false
+          description: Authorization code from OAuth provider
+        - schema:
+            type: string
+          in: query
+          name: state
+          required: false
+          description: State parameter for CSRF protection
+        - schema:
+            type: string
+          in: query
+          name: error
+          required: false
+          description: OAuth error code if authorization failed
+        - schema:
+            type: string
+          in: query
+          name: error_description
+          required: false
+          description: Human-readable error description
+        - schema:
+            type: string
+            minLength: 1
+          in: path
+          name: teamId
+          required: true
+          description: Team ID that owns the installation
+        - schema:
+            type: string
+            minLength: 1
+          in: path
+          name: installationId
+          required: true
+          description: Installation ID
+      responses:
+        "200":
+          description: Default Response
   /api/teams/{teamId}/mcp/installations/{installationId}/user-configs:
     post:
       summary: Create user configuration for MCP installation

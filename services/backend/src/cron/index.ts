@@ -3,6 +3,7 @@ import type { JobQueueService } from '../services/jobQueueService';
 import { CronManager } from './cronManager';
 import { createMcpClientActivityMetricsCleanupJob } from './jobs/mcpClientActivityMetricsCleanup';
 import { createCleanupOldJobsJob } from './jobs/cleanupOldJobs';
+import { createRefreshOAuthTokensJob } from './jobs/refreshOAuthTokens';
 // import { createExampleCronJob } from './jobs/exampleJob';
 
 /**
@@ -29,6 +30,9 @@ export function initializeCronJobs(
 
   // Cleanup old queue jobs (every 6 hours)
   cronManager.register(createCleanupOldJobsJob(jobQueueService));
+
+  // Refresh expiring OAuth tokens for MCP servers (every 5 minutes)
+  cronManager.register(createRefreshOAuthTokensJob(jobQueueService));
 
   // Example cron job - commented out, uncomment to test
   // cronManager.register(createExampleCronJob(jobQueueService));

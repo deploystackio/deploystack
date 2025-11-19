@@ -296,11 +296,17 @@ export const mcpServerInstallations = sqliteTable('mcpServerInstallations', {
   team_env: text('team_env'), // JSON: {"SHARED_API_KEY": "team-secret"} - team-wide environment variables
   team_headers: text('team_headers'), // JSON: {"Authorization": "Bearer team_token"} - team-wide headers
   team_url_query_params: text('team_url_query_params'), // JSON: {"token": "team_api_token"} - team-wide URL query parameters
-  
+
+  // OAuth Flow State
+  oauth_state: text('oauth_state'), // State parameter for CSRF protection
+  oauth_code_verifier: text('oauth_code_verifier'), // PKCE verifier (stored temporarily)
+  oauth_pending: integer('oauth_pending', { mode: 'boolean' }).notNull().default(false), // Installation awaiting OAuth
+  oauth_pending_expires_at: integer('oauth_pending_expires_at', { mode: 'timestamp' }), // Expiry for pending state
+
   // Legacy fields - REMOVED (zero backward compatibility)
   // user_environment_variables: text('user_environment_variables'), // REMOVED - moved to mcpUserConfigurations
   // user_args: text('user_args'), // REMOVED - moved to mcpUserConfigurations
-  
+
   // Metadata
   created_at: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
   updated_at: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
