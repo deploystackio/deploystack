@@ -222,10 +222,8 @@ const canGoNext = computed(() => !isLastStep.value)
 const canGoPrevious = computed(() => !isFirstStep.value)
 
 const canProceedFromGitHub = computed(() => {
-  const repositoryUrl = formData.value.repository.repository_url
-  return repositoryUrl &&
-         repositoryUrl.length > 0 &&
-         !isFetchingGitHub.value
+  // Always allow proceeding from GitHub step (URL is optional)
+  return !isFetchingGitHub.value
 })
 
 const canProceedFromClaudeConfig = computed(() => {
@@ -236,7 +234,6 @@ const canProceedFromClaudeConfig = computed(() => {
 const canSubmit = computed(() => {
   return formData.value.basic.name &&
          formData.value.basic.description &&
-         formData.value.repository.repository_url &&
          canProceedFromClaudeConfig.value
 })
 
@@ -312,11 +309,19 @@ const handleCancel = () => {
 const handleGitHubStepNext = async () => {
   if (currentStep.value !== 0) return
 
+  const repositoryUrl = formData.value.repository.repository_url
+
+  // If no GitHub URL provided, skip fetching and go to next step
+  if (!repositoryUrl || repositoryUrl.trim() === '') {
+    nextStep()
+    return
+  }
+
+  // GitHub URL provided - fetch and validate
   try {
     isFetchingGitHub.value = true
     githubFetchError.value = null
 
-    const repositoryUrl = formData.value.repository.repository_url
     const gitBranch = formData.value.repository.git_branch
 
     // Call backend API to fetch repository data
@@ -413,7 +418,7 @@ const submitForm = async () => {
     }
 
     // Construct the final payload for the backend API
-    const finalPayload = {
+    const finalPayload: any = {
       // Basic Info
       name: formData.value.basic.name,
       description: formData.value.basic.description,
@@ -426,14 +431,6 @@ const submitForm = async () => {
       tags: formData.value.basic.tags,
       featured: formData.value.basic.featured,
       auto_install_new_default_team: formData.value.basic.auto_install_new_default_team,
-
-      // Repository Info
-      repository_url: formData.value.repository.repository_url,
-      repository_source: formData.value.repository.repository_source,
-      git_branch: formData.value.repository.git_branch,
-
-      // From auto-population or manual entry
-      website_url: formData.value.repository.repo_data?.homepage,
 
       // New Configuration Schema (ADR-007)
       configuration_schema: formData.value.configuration_schema,
@@ -448,6 +445,19 @@ const submitForm = async () => {
       packages: extractedPackages,
       remotes: extractedRemotes,
     };
+
+    // Only include repository fields if repository URL is provided
+    const repositoryUrl = formData.value.repository.repository_url;
+    if (repositoryUrl && repositoryUrl.trim() !== '') {
+      finalPayload.repository_url = repositoryUrl;
+      finalPayload.repository_source = formData.value.repository.repository_source;
+      finalPayload.git_branch = formData.value.repository.git_branch;
+
+      // From auto-population or manual entry
+      if (formData.value.repository.repo_data?.homepage) {
+        finalPayload.website_url = formData.value.repository.repo_data.homepage;
+      }
+    }
 
     await emit('submit', finalPayload)
 

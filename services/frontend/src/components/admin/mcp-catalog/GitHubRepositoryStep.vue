@@ -31,19 +31,28 @@ const repositoryUrl = ref(props.modelValue?.repository_url || '')
 const validationError = ref<string | null>(null)
 
 // Basic repository URL validation (supports any Git platform)
+// Returns true if URL is empty (optional) or if it's a valid format
 const isValidRepositoryUrl = computed(() => {
-  if (!repositoryUrl.value) return false
-  // Basic validation - check if it looks like a repository URL
+  if (!repositoryUrl.value || repositoryUrl.value.trim() === '') return true
+  // If URL is provided, check if it looks like a repository URL
   return repositoryUrl.value.length > 0 && repositoryUrl.value.includes('/')
 })
 
 // Validate URL format
 const validateUrl = () => {
-  if (!repositoryUrl.value) {
+  // If URL is empty or whitespace only, clear error and update with empty values
+  if (!repositoryUrl.value || repositoryUrl.value.trim() === '') {
     validationError.value = null
+    emit('update:modelValue', {
+      repository_url: '',
+      repository_source: 'github',
+      git_branch: 'main',
+      auto_populated: false
+    })
     return
   }
 
+  // URL is provided - validate format
   if (!isValidRepositoryUrl.value) {
     validationError.value = 'Please enter a valid repository URL'
     return
@@ -84,7 +93,7 @@ watch(repositoryUrl, validateUrl)
     </div>
 
     <div class="space-y-2">
-      <Label for="repository-url">Repository URL *</Label>
+      <Label for="repository-url">Repository URL (Optional)</Label>
       <Input
         id="repository-url"
         v-model="repositoryUrl"
@@ -93,7 +102,7 @@ watch(repositoryUrl, validateUrl)
         @blur="validateUrl"
       />
       <p class="text-sm text-muted-foreground">
-        Enter a valid repository URL (GitHub, GitLab, Bitbucket, etc.)
+        Enter a repository URL to auto-populate server details, or leave blank to enter manually
       </p>
     </div>
 
