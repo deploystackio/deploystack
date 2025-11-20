@@ -82,6 +82,7 @@ export async function refreshExpiringOAuthTokens(logger: FastifyBaseLogger) {
 		);
 
 		// Initialize services
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const tokenService = new OAuthTokenService(logger as any);
 		const discoveryService = new OAuthDiscoveryService(logger);
 
@@ -108,6 +109,7 @@ export async function refreshExpiringOAuthTokens(logger: FastifyBaseLogger) {
 				if (server.remotes && Array.isArray(server.remotes) && server.remotes.length > 0) {
 					// Remote MCP server (HTTP/SSE)
 					const remote = server.remotes[0];
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any
 					serverUrl = (remote as any).url;
 				} else if (
 					server.packages &&
@@ -116,6 +118,7 @@ export async function refreshExpiringOAuthTokens(logger: FastifyBaseLogger) {
 				) {
 					// Stdio MCP server with OAuth configuration
 					const pkg = server.packages[0];
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any
 					serverUrl = (pkg as any).oauth_server_url || null;
 				}
 

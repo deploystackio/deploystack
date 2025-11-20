@@ -34001,6 +34001,343 @@
         }
       }
     },
+    "/api/satellites/{satelliteId}/tokens/retrieve": {
+      "post": {
+        "summary": "Retrieve decrypted OAuth tokens for MCP server spawning",
+        "tags": [
+          "Satellite OAuth"
+        ],
+        "description": "Returns decrypted OAuth access and refresh tokens for a specific MCP server installation. Only accessible by authenticated satellites. Rate limited to 100 requests per minute per satellite.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "installation_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "MCP server installation ID"
+                  },
+                  "user_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "User ID who owns the tokens"
+                  },
+                  "team_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Team ID for team isolation"
+                  }
+                },
+                "required": [
+                  "installation_id",
+                  "user_id",
+                  "team_id"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": true
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "satelliteId",
+            "required": true,
+            "description": "Satellite ID (must match authenticated satellite)"
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OAuth tokens retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "access_token": {
+                      "type": "string",
+                      "description": "Decrypted OAuth access token"
+                    },
+                    "refresh_token": {
+                      "type": [
+                        "null",
+                        "string"
+                      ],
+                      "description": "Decrypted OAuth refresh token (null if not available)"
+                    },
+                    "token_type": {
+                      "type": "string",
+                      "description": "Token type (usually \"Bearer\")"
+                    },
+                    "expires_at": {
+                      "type": [
+                        "null",
+                        "string"
+                      ],
+                      "format": "date-time",
+                      "description": "Token expiration timestamp (ISO 8601 format)"
+                    },
+                    "scope": {
+                      "type": [
+                        "null",
+                        "string"
+                      ],
+                      "description": "OAuth scopes granted to the token"
+                    }
+                  },
+                  "required": [
+                    "access_token",
+                    "token_type"
+                  ],
+                  "description": "OAuth tokens retrieved successfully"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Satellite does not have access to this team",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates failure"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Forbidden - Satellite does not have access to this team"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found - No OAuth tokens found for this installation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates failure"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Not Found - No OAuth tokens found for this installation"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error - Failed to retrieve or decrypt tokens",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates failure"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Internal Server Error - Failed to retrieve or decrypt tokens"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/satellites/{satelliteId}/tokens/status": {
+      "post": {
+        "summary": "Check OAuth token status without decryption",
+        "tags": [
+          "Satellite OAuth"
+        ],
+        "description": "Returns token metadata (existence, expiration, refresh capability) without decrypting the tokens. Useful for satellites to check token status before attempting retrieval.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "installation_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "MCP server installation ID"
+                  },
+                  "user_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "User ID who owns the tokens"
+                  },
+                  "team_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Team ID for team isolation"
+                  }
+                },
+                "required": [
+                  "installation_id",
+                  "user_id",
+                  "team_id"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": true
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "satelliteId",
+            "required": true,
+            "description": "Satellite ID (must match authenticated satellite)"
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Token status retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "exists": {
+                      "type": "boolean",
+                      "description": "Whether tokens exist for this installation"
+                    },
+                    "expired": {
+                      "type": [
+                        "null",
+                        "boolean"
+                      ],
+                      "description": "Whether the token is expired (null if no expiration time)"
+                    },
+                    "expires_at": {
+                      "type": [
+                        "null",
+                        "string"
+                      ],
+                      "format": "date-time",
+                      "description": "Token expiration timestamp (ISO 8601 format)"
+                    },
+                    "can_refresh": {
+                      "type": "boolean",
+                      "description": "Whether the token can be refreshed (has refresh_token)"
+                    }
+                  },
+                  "required": [
+                    "exists",
+                    "can_refresh"
+                  ],
+                  "description": "Token status retrieved successfully"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Satellite does not have access to this team",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates failure"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Forbidden - Satellite does not have access to this team"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error - Failed to check token status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates failure"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Internal Server Error - Failed to check token status"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/auth/email/register": {
       "post": {
         "summary": "User registration via email",

@@ -12,11 +12,18 @@ vi.mock('@fastify/formbody', () => ({
   default: vi.fn()
 }))
 
+// Mock @fastify/rate-limit
+vi.mock('@fastify/rate-limit', () => ({
+  default: vi.fn()
+}))
+
 import fastifyCors from '@fastify/cors'
 import fastifyFormbody from '@fastify/formbody'
+import fastifyRateLimit from '@fastify/rate-limit'
 
 const mockFastifyCors = fastifyCors as MockedFunction<typeof fastifyCors>
 const mockFastifyFormbody = fastifyFormbody as MockedFunction<typeof fastifyFormbody>
+const mockFastifyRateLimit = fastifyRateLimit as MockedFunction<typeof fastifyRateLimit>
 
 describe('Fastify Plugins', () => {
   let mockServer: FastifyInstance
@@ -55,12 +62,12 @@ describe('Fastify Plugins', () => {
     it('should register formbody plugin first, then CORS plugin with default origins', async () => {
       await registerFastifyPlugins(mockServer)
 
-      // Check that register was called twice
-      expect(mockServer.register).toHaveBeenCalledTimes(2)
-      
+      // Check that register was called 3 times (formbody, CORS, rate-limit)
+      expect(mockServer.register).toHaveBeenCalledTimes(3)
+
       // Check first call - formbody plugin
       expect(mockServer.register).toHaveBeenNthCalledWith(1, mockFastifyFormbody)
-      
+
       // Check second call - CORS plugin
       expect(mockServer.register).toHaveBeenNthCalledWith(2, mockFastifyCors, {
         origin: [
@@ -71,6 +78,13 @@ describe('Fastify Plugins', () => {
         ],
         credentials: true,
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS']
+      })
+
+      // Check third call - rate-limit plugin
+      expect(mockServer.register).toHaveBeenNthCalledWith(3, mockFastifyRateLimit, {
+        global: false,
+        max: 1000,
+        timeWindow: '1 minute'
       })
     })
 
@@ -163,10 +177,10 @@ describe('Fastify Plugins', () => {
       )
     })
 
-    it('should register both plugins (formbody and CORS)', async () => {
+    it('should register all three plugins (formbody, CORS, and rate-limit)', async () => {
       await registerFastifyPlugins(mockServer)
 
-      expect(mockServer.register).toHaveBeenCalledTimes(2)
+      expect(mockServer.register).toHaveBeenCalledTimes(3)
     })
 
     it('should handle plugin registration errors gracefully', async () => {
@@ -232,12 +246,13 @@ describe('Fastify Plugins', () => {
   })
 
   describe('Plugin Registration Order', () => {
-    it('should register formbody plugin before CORS plugin', async () => {
+    it('should register plugins in correct order: formbody, CORS, rate-limit', async () => {
       await registerFastifyPlugins(mockServer)
 
       // Verify the order of plugin registration
       expect(mockServer.register).toHaveBeenNthCalledWith(1, mockFastifyFormbody)
       expect(mockServer.register).toHaveBeenNthCalledWith(2, mockFastifyCors, expect.any(Object))
+      expect(mockServer.register).toHaveBeenNthCalledWith(3, mockFastifyRateLimit, expect.any(Object))
     })
   })
 

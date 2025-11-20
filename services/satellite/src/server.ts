@@ -21,6 +21,7 @@ import { JobManager, HeartbeatJob, McpActivityReportJob, IdleProcessCleanupJob }
 import { EventBus } from './services/event-bus';
 import { McpActivityTracker } from './services/mcp-activity-tracker';
 import { ToolSearchService } from './services/tool-search-service';
+import { OAuthTokenService } from './services/oauth-token-service';
 
 /**
  * Validate registration token format and availability
@@ -627,9 +628,14 @@ export async function createServer() {
 
       // Initialize Token Introspection Service for OAuth authentication
       const tokenIntrospectionService = new TokenIntrospectionService(backendClient, server.log);
-      
+
+      // Phase 10: Initialize OAuth Token Service for HTTP/SSE MCP servers
+      const oauthTokenService = new OAuthTokenService(server.log as any, backendClient, satelliteId);
+      mcpServerWrapper.setOAuthTokenService(oauthTokenService);
+
       // Store OAuth services on server instance for access by routes
       server.decorate('tokenIntrospectionService', tokenIntrospectionService);
+      server.decorate('oauthTokenService', oauthTokenService);
 
       server.log.info({
         operation: 'oauth_services_initialized',
@@ -707,12 +713,17 @@ export async function createServer() {
   }
   
   // Initialize OAuth services if not already done (for existing satellites)
-  if (skipRegistration) {
+  if (skipRegistration && satelliteId) {
     // Initialize Token Introspection Service for OAuth authentication
     const tokenIntrospectionService = new TokenIntrospectionService(backendClient, server.log);
-    
+
+    // Phase 10: Initialize OAuth Token Service for HTTP/SSE MCP servers
+    const oauthTokenService = new OAuthTokenService(server.log as any, backendClient, satelliteId);
+    mcpServerWrapper.setOAuthTokenService(oauthTokenService);
+
     // Store OAuth services on server instance for access by routes
     server.decorate('tokenIntrospectionService', tokenIntrospectionService);
+    server.decorate('oauthTokenService', oauthTokenService);
 
     server.log.info({
       operation: 'oauth_services_initialized',

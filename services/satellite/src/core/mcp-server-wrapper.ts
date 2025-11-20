@@ -12,6 +12,7 @@ import { UnifiedToolDiscoveryManager } from '../services/unified-tool-discovery-
 import { ProcessManager } from '../process/manager';
 import { ToolSearchService } from '../services/tool-search-service';
 import { DynamicConfigManager } from '../services/dynamic-config-manager';
+import { OAuthTokenService } from '../services/oauth-token-service';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { getVersionString } from '../config/version';
@@ -26,12 +27,13 @@ export class McpServerWrapper {
   private processManager?: ProcessManager;
   private toolSearchService?: ToolSearchService;
   private dynamicConfigManager?: DynamicConfigManager;
+  private oauthTokenService?: OAuthTokenService;
   private transports = new Map<string, { transport: StreamableHTTPServerTransport; server: Server }>();
   private registeredTools = new Set<string>();
 
   constructor(logger: FastifyBaseLogger) {
     this.logger = logger.child({ component: 'McpServerWrapper' });
-    
+
     this.logger.info({
       operation: 'mcp_server_wrapper_created'
     }, 'MCP Server Wrapper created with official SDK');
@@ -50,10 +52,21 @@ export class McpServerWrapper {
     this.processManager = processManager;
     this.toolSearchService = toolSearchService;
     this.dynamicConfigManager = dynamicConfigManager;
-    
+
     this.logger.debug({
       operation: 'mcp_dependencies_set'
     }, 'MCP server dependencies set');
+  }
+
+  /**
+   * Set OAuth token service (Phase 10)
+   */
+  setOAuthTokenService(oauthTokenService: OAuthTokenService): void {
+    this.oauthTokenService = oauthTokenService;
+
+    this.logger.debug({
+      operation: 'oauth_token_service_set'
+    }, 'OAuth token service set');
   }
 
   /**
@@ -465,8 +478,83 @@ export class McpServerWrapper {
       original_tool_name: originalToolName,
       server_url: config.url,
       has_query_params: !!config.url_query_params,
-      query_param_count: config.url_query_params ? Object.keys(config.url_query_params).length : 0
+      query_param_count: config.url_query_params ? Object.keys(config.url_query_params).length : 0,
+      requires_oauth: config.requires_oauth
     }, `Sending tool call to HTTP server: ${serverName}`);
+
+    // Phase 10: OAuth token injection for HTTP/SSE MCP servers
+    let headers: Record<string, string> = {};
+
+    if (config.requires_oauth && this.oauthTokenService) {
+      if (!config.installation_id || !config.user_id || !config.team_id) {
+        throw new Error(
+          `OAuth required but missing context for ${serverName}. ` +
+          'Installation ID, User ID, and Team ID are required.'
+        );
+      }
+
+      this.logger.info({
+        operation: 'oauth_token_injection_http',
+        server_name: serverName,
+        installation_id: config.installation_id,
+        user_id: config.user_id,
+        team_id: config.team_id
+      }, 'HTTP server requires OAuth - fetching tokens');
+
+      try {
+        // Check token status first
+        const tokenStatus = await this.oauthTokenService.checkTokenStatus(
+          config.installation_id,
+          config.user_id,
+          config.team_id
+        );
+
+        if (!tokenStatus.exists) {
+          throw new Error(
+            `OAuth authorization required for ${serverName}. ` +
+            'Please visit the dashboard to authorize this MCP server.'
+          );
+        }
+
+        if (tokenStatus.expired) {
+          this.logger.warn({
+            operation: 'oauth_token_expired',
+            server_name: serverName,
+            expires_at: tokenStatus.expires_at
+          }, 'OAuth token is expired - attempting request anyway (backend may have refreshed)');
+        }
+
+        // Retrieve tokens
+        const tokens = await this.oauthTokenService.getTokens(
+          config.installation_id,
+          config.user_id,
+          config.team_id
+        );
+
+        if (!tokens) {
+          throw new Error(`Failed to retrieve OAuth tokens for ${serverName}`);
+        }
+
+        // Inject OAuth token into Authorization header
+        headers['Authorization'] = `Bearer ${tokens.access_token}`;
+
+        this.logger.info({
+          operation: 'oauth_token_injected_http',
+          server_name: serverName,
+          expires_at: tokens.expires_at,
+          has_refresh_token: !!tokens.refresh_token
+        }, 'OAuth token injected into HTTP headers');
+
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        this.logger.error({
+          operation: 'oauth_token_injection_failed_http',
+          server_name: serverName,
+          error: errorMessage
+        }, 'Failed to inject OAuth tokens for HTTP server');
+        throw error;
+      }
+    }
 
     const client = new Client({
       name: 'deploystack-satellite',
@@ -476,7 +564,34 @@ export class McpServerWrapper {
     // Build URL with query parameters
     const finalUrl = this.buildMcpServerUrl(config.url, config.url_query_params);
 
+    // Create transport
+    // TODO Phase 10: MCP SDK StreamableHTTPClientTransport doesn't currently support custom headers
+    // We need to either:
+    // 1. Fork/patch the SDK to accept custom headers in constructor
+    // 2. Use a custom fetch wrapper
+    // 3. Wait for SDK to add header support
+    // For now, we create the transport without headers - this will fail for OAuth-required servers
     const transport = new StreamableHTTPClientTransport(new URL(finalUrl));
+
+    // WORKAROUND: Monkey-patch the transport's fetch method to inject OAuth headers
+    if (Object.keys(headers).length > 0) {
+      const originalFetch = (transport as any).fetch || fetch;
+      (transport as any).fetch = async (input: any, init?: any) => {
+        const modifiedInit = {
+          ...init,
+          headers: {
+            ...(init?.headers || {}),
+            ...headers
+          }
+        };
+        return originalFetch(input, modifiedInit);
+      };
+
+      this.logger.debug({
+        operation: 'oauth_headers_monkey_patched',
+        server_name: serverName
+      }, 'Monkey-patched transport fetch to inject OAuth headers');
+    }
 
     try {
       await client.connect(transport);
@@ -515,6 +630,25 @@ export class McpServerWrapper {
         error: errorMessage,
         response_time_ms: responseTime
       }, `HTTP tool call failed: ${errorMessage}`);
+
+      // Phase 10: Handle OAuth 401 errors
+      if (errorMessage.includes('401') || errorMessage.toLowerCase().includes('unauthorized')) {
+        this.logger.error({
+          operation: 'oauth_token_invalid_or_expired',
+          server_name: serverName,
+          installation_id: config.installation_id
+        }, 'MCP server returned 401 - OAuth token may be expired or invalid');
+
+        // Clear cached token
+        if (config.requires_oauth && config.installation_id && config.user_id && config.team_id && this.oauthTokenService) {
+          this.oauthTokenService.clearCache(config.installation_id, config.user_id, config.team_id);
+        }
+
+        throw new Error(
+          `OAuth token expired or invalid for ${serverName}. ` +
+          'Please re-authorize this MCP server in the dashboard.'
+        );
+      }
 
       if (errorMessage.includes('ECONNREFUSED')) {
         throw new Error(`Cannot connect to HTTP MCP server: ${serverName}`);

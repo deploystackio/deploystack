@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify'
 import fastifyCors from '@fastify/cors'
 import fastifyFormbody from '@fastify/formbody'
+import fastifyRateLimit from '@fastify/rate-limit'
 
 export const registerFastifyPlugins = async (server: FastifyInstance): Promise<void> => {
   // Build allowed origins array
@@ -18,18 +19,26 @@ export const registerFastifyPlugins = async (server: FastifyInstance): Promise<v
   
   // Register form body parser for OAuth2 token endpoint
   await server.register(fastifyFormbody)
-  
+
   // Register CORS plugin
   await server.register(fastifyCors, {
     origin: defaultOrigins,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS']
   })
-  
+
   // Log the allowed origins for debugging
   server.log.info(`CORS configured with origins: ${defaultOrigins.join(', ')}`);
-  
+
+  // Register rate limiting plugin (global configuration, can be overridden per-route)
+  await server.register(fastifyRateLimit, {
+    global: false, // Don't apply globally by default, allow per-route configuration
+    max: 1000, // Default: 1000 requests
+    timeWindow: '1 minute' // Default: 1 minute window
+  })
+  server.log.info('Rate limiting plugin registered (per-route configuration enabled)');
+
   // Favicon plugin is now registered in server.ts after Swagger to exclude it from documentation
-  
+
   // Register other plugins as needed
 }

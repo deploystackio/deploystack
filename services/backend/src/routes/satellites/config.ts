@@ -42,6 +42,8 @@ const CONFIG_RESPONSE_SCHEMA = {
           headers: { type: 'object', description: 'HTTP headers for HTTP/SSE transport' },
           timeout: { type: 'integer', description: 'Timeout in milliseconds' },
           enabled: { type: 'boolean', description: 'Whether this server is enabled' },
+          requires_oauth: { type: 'boolean', description: 'Whether this MCP server requires OAuth authentication (Phase 10)' },
+          user_id: { type: 'string', description: 'User ID who created the installation (for OAuth token retrieval, Phase 10)' },
           secret_metadata: {
             type: 'object',
             properties: {
@@ -154,6 +156,9 @@ interface McpServerConfig {
   url_query_params?: Record<string, string>;
   timeout?: number;
   enabled: boolean;
+  // Phase 10: OAuth support for HTTP/SSE MCP servers
+  requires_oauth?: boolean;
+  user_id?: string;
   secret_metadata?: {
     query_params?: string[];
     headers?: string[];
@@ -353,7 +358,8 @@ export default async function satelliteConfigRoute(server: FastifyInstance) {
         .select({
           installation: mcpServerInstallations,
           server: mcpServers,
-          team_slug: teams.slug
+          team_slug: teams.slug,
+          created_by_user_id: mcpServerInstallations.created_by // Phase 10: User ID for OAuth
         })
         .from(mcpServerInstallations)
         .leftJoin(mcpServers, eq(mcpServerInstallations.server_id, mcpServers.id))
@@ -361,7 +367,7 @@ export default async function satelliteConfigRoute(server: FastifyInstance) {
         .where(whereClause);
 
       // Process each installation using proven gateway logic
-      for (const { installation, server, team_slug } of installations) {
+      for (const { installation, server, team_slug, created_by_user_id } of installations) {
         if (!server || !team_slug) continue;
 
         try {
@@ -489,7 +495,10 @@ export default async function satelliteConfigRoute(server: FastifyInstance) {
             server_slug: server.slug,
             installation_name: installation.installation_name,
             transport_type: server.transport_type as 'stdio' | 'http' | 'sse',
-            enabled: true
+            enabled: true,
+            // Phase 10: OAuth support for HTTP/SSE MCP servers
+            requires_oauth: server.requires_oauth || false,
+            user_id: created_by_user_id // User who created the installation (for OAuth token retrieval)
           };
 
           if (server.transport_type === 'stdio') {

@@ -64,6 +64,10 @@ export interface McpServerConfig {
   server_slug?: string;
   installation_name?: string;
 
+  /** OAuth support (Phase 10) - Only for HTTP/SSE transport */
+  requires_oauth?: boolean;
+  user_id?: string; // User who authorized the OAuth connection
+
   /** Metadata about which fields contain secrets (for secure logging) */
   secret_metadata?: {
     /** Names of query parameters that are secrets */

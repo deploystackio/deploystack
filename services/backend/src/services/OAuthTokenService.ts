@@ -230,6 +230,7 @@ export class OAuthTokenService {
 				.where(eq(mcpOauthTokens.id, tokenId));
 
 			// Multi-driver compatibility: check both SQLite and Turso result properties
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			const rowsAffected = (result as any).changes || (result as any).rowsAffected || 0;
 
 			if (rowsAffected === 0) {

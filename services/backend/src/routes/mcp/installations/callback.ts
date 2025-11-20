@@ -190,6 +190,7 @@ export default async function oauthCallbackRoute(server: FastifyInstance) {
 				const redirectUri = `${backendUrl}/api/teams/${teamId}/mcp/installations/${installationId}/oauth/callback`;
 
 				// Exchange code for token using PKCE verification
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				const tokenService = new OAuthTokenService(request.log as any);
 				const tokenResponse = await tokenService.exchangeCodeForToken({
 					code: query.code,
