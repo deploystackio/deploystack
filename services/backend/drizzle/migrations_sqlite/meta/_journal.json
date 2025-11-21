@@ -113,6 +113,20 @@
       "when": 1763578617185,
       "tag": "0015_concerned_shard",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "6",
+      "when": 1763717870037,
+      "tag": "0016_bizarre_bloodstrike",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "6",
+      "when": 1763742761796,
+      "tag": "0017_noisy_revanche",
+      "breakpoints": true
     }
   ]
 }

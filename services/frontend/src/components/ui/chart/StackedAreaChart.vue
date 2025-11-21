@@ -101,7 +101,8 @@ const chartOption = computed<EChartsOption>(() => ({
     right: '4%',
     bottom: '3%',
     top: props.showLegend ? '12%' : '10%',
-    containLabel: true,
+    outerBoundsMode: 'same',
+    outerBoundsContain: 'axisLabel',
   },
   xAxis: {
     type: 'category',

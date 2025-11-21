@@ -235,6 +235,7 @@ describe('MCP Servers - Get Server', () => {
         status: 'active',
         featured: false,
         auto_install_new_default_team: false,
+        requires_oauth: false,
         source: 'manual'
       };
 
@@ -295,6 +296,7 @@ describe('MCP Servers - Get Server', () => {
             status: 'active',
             featured: false,
             auto_install_new_default_team: false,
+            requires_oauth: false,
             source: 'manual',
             official_name: null,
             synced_from_official_registry: false,
@@ -304,8 +306,7 @@ describe('MCP Servers - Get Server', () => {
             official_registry_updated_at: null,
             created_at: '2024-01-01T00:00:00.000Z',
             updated_at: '2024-01-01T00:00:00.000Z',
-            last_sync_at: null,
-            github_readme_base64: null
+            last_sync_at: null
           }
         })
       );
@@ -374,6 +375,7 @@ describe('MCP Servers - Get Server', () => {
         status: 'active',
         featured: false,
         auto_install_new_default_team: false,
+        requires_oauth: false,
         source: 'manual'
       };
 
@@ -433,6 +435,7 @@ describe('MCP Servers - Get Server', () => {
             status: 'active',
             featured: false,
             auto_install_new_default_team: false,
+            requires_oauth: false,
             source: 'manual',
             official_name: null,
             synced_from_official_registry: false,
@@ -442,8 +445,7 @@ describe('MCP Servers - Get Server', () => {
             official_registry_updated_at: null,
             created_at: '2024-01-01T00:00:00.000Z',
             updated_at: '2024-01-01T00:00:00.000Z',
-            last_sync_at: null,
-            github_readme_base64: null
+            last_sync_at: null
           }
         })
       );
@@ -485,6 +487,7 @@ describe('MCP Servers - Get Server', () => {
         status: 'active',
         featured: false,
         auto_install_new_default_team: false,
+        requires_oauth: false,
         source: 'manual'
       };
 
@@ -544,6 +547,7 @@ describe('MCP Servers - Get Server', () => {
             status: 'active',
             featured: false,
             auto_install_new_default_team: false,
+            requires_oauth: false,
             source: 'manual',
             official_name: null,
             synced_from_official_registry: false,
@@ -553,8 +557,7 @@ describe('MCP Servers - Get Server', () => {
             official_registry_updated_at: null,
             created_at: '2024-01-01T00:00:00.000Z',
             updated_at: '2024-01-01T00:00:00.000Z',
-            last_sync_at: null,
-            github_readme_base64: null
+            last_sync_at: null
           }
         })
       );
@@ -609,6 +612,7 @@ describe('MCP Servers - Get Server', () => {
         status: 'active',
         featured: false,
         auto_install_new_default_team: false,
+        requires_oauth: false,
         source: 'manual'
       };
 
@@ -668,6 +672,7 @@ describe('MCP Servers - Get Server', () => {
             status: 'active',
             featured: false,
             auto_install_new_default_team: false,
+            requires_oauth: false,
             source: 'manual',
             official_name: null,
             synced_from_official_registry: false,
@@ -677,8 +682,7 @@ describe('MCP Servers - Get Server', () => {
             official_registry_updated_at: null,
             created_at: '2024-01-01T00:00:00.000Z',
             updated_at: '2024-01-01T00:00:00.000Z',
-            last_sync_at: null,
-            github_readme_base64: null
+            last_sync_at: null
           }
         })
       );
@@ -733,6 +737,7 @@ describe('MCP Servers - Get Server', () => {
         status: 'active',
         featured: false,
         auto_install_new_default_team: false,
+        requires_oauth: false,
         source: 'manual'
       };
 

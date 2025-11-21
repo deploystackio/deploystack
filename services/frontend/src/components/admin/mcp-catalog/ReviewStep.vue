@@ -26,6 +26,8 @@ const freshBasicData = ref<any>(null)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const freshRepositoryData = ref<any>(null)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
+const freshRepositorySetupData = ref<any>(null)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const freshTechnicalData = ref<any>(null)
 
 const claudeConfig = ref<string>('')
@@ -37,6 +39,7 @@ const loadFreshData = () => {
   // Get fresh data from storage for all form sections
   freshBasicData.value = eventBus.getState('edit_basic_data')
   freshRepositoryData.value = eventBus.getState('edit_repository_data')
+  freshRepositorySetupData.value = eventBus.getState('edit_repository_setup_data')
   freshTechnicalData.value = eventBus.getState('edit_technical_data')
 
   // Get the stored Claude Desktop config
@@ -59,6 +62,7 @@ const handleStorageChange = (data: { key: string; oldValue: any; newValue: any }
   // Reload data when any of our storage keys change
   if (data.key === 'edit_basic_data' ||
       data.key === 'edit_repository_data' ||
+      data.key === 'edit_repository_setup_data' ||
       data.key === 'edit_technical_data' ||
       data.key === 'edit_claude_config') {
     loadFreshData()
@@ -80,7 +84,20 @@ onUnmounted(() => {
 
 // Helper functions to get fresh data with fallback to props
 const getBasicData = () => freshBasicData.value || props.formData.basic
-const getRepositoryData = () => freshRepositoryData.value || props.formData.repository
+const getRepositoryData = () => {
+  // Merge repository data and repository setup data
+  // Repository setup data (from RepositoryStep) takes priority for git_branch, repository_url, etc.
+  const repoData = freshRepositoryData.value || props.formData.repository
+  const setupData = freshRepositorySetupData.value || {}
+
+  return {
+    ...repoData,
+    // Override with setup data if available (this is what user edited in RepositoryStep)
+    repository_url: setupData.repository_url || repoData.repository_url,
+    repository_source: setupData.repository_source || repoData.repository_source,
+    git_branch: setupData.git_branch || repoData.git_branch
+  }
+}
 const getTechnicalData = () => freshTechnicalData.value || props.formData.technical
 
 

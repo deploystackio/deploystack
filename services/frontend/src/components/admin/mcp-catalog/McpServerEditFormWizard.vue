@@ -349,10 +349,8 @@ const canGoNext = computed(() => !isLastStep.value)
 const canGoPrevious = computed(() => !isFirstStep.value)
 
 const canProceedFromRepository = computed(() => {
-  const repositoryUrl = formData.value.repository_setup.repository_url
-  return repositoryUrl &&
-         repositoryUrl.length > 0 &&
-         !isFetchingRepository.value
+  // Repository URL is optional - always allow proceeding unless fetching
+  return !isFetchingRepository.value
 })
 
 // Dynamic button text based on props or defaults
@@ -428,6 +426,14 @@ const handleCancel = () => {
 const handleRepositoryStepNext = async () => {
   if (currentStep.value !== 0) return
 
+  const repositoryUrl = formData.value.repository_setup.repository_url
+
+  // If no repository URL provided, skip fetching and go to next step
+  if (!repositoryUrl || repositoryUrl.trim() === '') {
+    nextStep()
+    return
+  }
+
   // In edit mode, skip repository auto-population and just go to next step
   if (props.mode === 'edit') {
     nextStep()
@@ -438,7 +444,6 @@ const handleRepositoryStepNext = async () => {
     isFetchingRepository.value = true
     repositoryFetchError.value = null
 
-    const repositoryUrl = formData.value.repository_setup.repository_url
     const gitBranch = formData.value.repository_setup.git_branch
 
     // Call backend API to fetch repository data from any supported platform

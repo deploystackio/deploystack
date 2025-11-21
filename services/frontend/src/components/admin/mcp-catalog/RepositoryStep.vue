@@ -141,7 +141,7 @@ onMounted(() => {
     <div class="space-y-4">
       <!-- Repository URL -->
       <div class="space-y-2">
-        <Label for="repository-url">Repository URL *</Label>
+        <Label for="repository-url">Repository URL (Optional)</Label>
         <Input
           id="repository-url"
           v-model="repositoryUrl"
@@ -150,7 +150,7 @@ onMounted(() => {
           @blur="validateRepository"
         />
         <p class="text-sm text-muted-foreground">
-          Enter a repository URL from GitHub, GitLab, or Bitbucket
+          Enter a repository URL from GitHub, GitLab, or Bitbucket (optional - can be skipped)
         </p>
       </div>
 

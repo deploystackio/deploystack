@@ -31,7 +31,7 @@ import {
  */
 export default async function oauthCallbackRoute(server: FastifyInstance) {
 	server.get(
-		'/api/teams/:teamId/mcp/installations/:installationId/oauth/callback',
+		'/teams/:teamId/mcp/installations/:installationId/oauth/callback',
 		{
 			schema: {
 				description: 'OAuth callback endpoint for MCP server authentication',
@@ -58,8 +58,9 @@ export default async function oauthCallbackRoute(server: FastifyInstance) {
 					'OAuth callback received error from provider'
 				);
 
-				// Render error page
+				// Render error page that posts message to opener
 				const frontendUrl = await GlobalSettingsInitService.getPageUrl();
+				const errorMsg = query.error_description || query.error;
 				return reply.type('text/html').send(`
 					<!DOCTYPE html>
 					<html>
@@ -71,11 +72,20 @@ export default async function oauthCallbackRoute(server: FastifyInstance) {
 							<h1>Authorization Failed</h1>
 							<p><strong>Error:</strong> ${escapeHtml(query.error)}</p>
 							${query.error_description ? `<p>${escapeHtml(query.error_description)}</p>` : ''}
-							<p>Redirecting to dashboard...</p>
+							<p>Closing window...</p>
 							<script>
+								// Post error message to parent window
+								if (window.opener) {
+									window.opener.postMessage({
+										type: 'oauth_error',
+										error: '${escapeHtml(errorMsg)}'
+									}, '${frontendUrl}');
+								}
+
+								// Close the popup window
 								setTimeout(() => {
-									window.location.href = '${frontendUrl}/teams/${teamId}/mcp/installations?status=error&error=${encodeURIComponent(query.error)}';
-								}, 2000);
+									window.close();
+								}, 500);
 							</script>
 						</body>
 					</html>
@@ -148,25 +158,34 @@ export default async function oauthCallbackRoute(server: FastifyInstance) {
 				// Extract server URL from packages or remotes
 				let serverUrl: string | null = null;
 
-				if (mcpServer.remotes && Array.isArray(mcpServer.remotes) && mcpServer.remotes.length > 0) {
-					// Remote MCP server (HTTP/SSE)
-					const remote = mcpServer.remotes[0];
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
-					serverUrl = (remote as any).url;
-				} else if (
-					mcpServer.packages &&
-					Array.isArray(mcpServer.packages) &&
-					mcpServer.packages.length > 0
-				) {
+				// Parse JSON fields if they are strings (Drizzle returns TEXT fields as strings)
+				const packages = typeof mcpServer.packages === 'string'
+					? JSON.parse(mcpServer.packages)
+					: mcpServer.packages;
+
+				const remotes = typeof mcpServer.remotes === 'string'
+					? JSON.parse(mcpServer.remotes)
+					: mcpServer.remotes;
+
+				// Check packages first (with null check)
+				if (packages && Array.isArray(packages) && packages.length > 0 && packages[0] !== null) {
 					// Stdio MCP server - check if it has OAuth configuration
-					const pkg = mcpServer.packages[0];
+					const pkg = packages[0];
 					// eslint-disable-next-line @typescript-eslint/no-explicit-any
 					serverUrl = (pkg as any).oauth_server_url || null;
 				}
 
+				// Always check remotes if we don't have a URL yet (not else if!)
+				if (!serverUrl && remotes && Array.isArray(remotes) && remotes.length > 0) {
+					// Remote MCP server (HTTP/SSE)
+					const remote = remotes[0];
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any
+					serverUrl = (remote as any).url;
+				}
+
 				if (!serverUrl) {
 					request.log.error(
-						{ serverId: mcpServer.id, packages: mcpServer.packages, remotes: mcpServer.remotes },
+						{ serverId: mcpServer.id, packages, remotes },
 						'Cannot determine server URL for OAuth discovery'
 					);
 					throw new Error('Cannot determine server URL for OAuth discovery');
@@ -189,13 +208,21 @@ export default async function oauthCallbackRoute(server: FastifyInstance) {
 					process.env.NODE_ENV === 'production' ? `${protocol}://${host}` : `${protocol}://${host}:${port}`;
 				const redirectUri = `${backendUrl}/api/teams/${teamId}/mcp/installations/${installationId}/oauth/callback`;
 
+				// Get client_id from installation (may be dynamically registered)
+				const clientId = installation.oauth_client_id || 'deploystack';
+
+				request.log.info(
+					{ clientId, installationId: installation.id },
+					'Using OAuth client_id for token exchange'
+				);
+
 				// Exchange code for token using PKCE verification
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				const tokenService = new OAuthTokenService(request.log as any);
 				const tokenResponse = await tokenService.exchangeCodeForToken({
 					code: query.code,
 					codeVerifier: installation.oauth_code_verifier,
-					clientId: 'deploystack',
+					clientId,
 					redirectUri,
 					tokenEndpoint: discovery.metadata.token_endpoint,
 				});
@@ -215,7 +242,7 @@ export default async function oauthCallbackRoute(server: FastifyInstance) {
 				await db.insert(mcpOauthTokens).values({
 					id: nanoid(),
 					installation_id: installation.id,
-					user_id: installation.installed_by_user_id,
+					user_id: installation.created_by,
 					team_id: installation.team_id,
 					access_token: encryptedAccessToken,
 					refresh_token: encryptedRefreshToken,
@@ -243,16 +270,40 @@ export default async function oauthCallbackRoute(server: FastifyInstance) {
 						installationId: installation.id,
 						serverId: mcpServer.id,
 						teamId: installation.team_id,
-						userId: installation.installed_by_user_id,
+						userId: installation.created_by,
 					},
 					'OAuth flow completed successfully'
 				);
 
-				// Redirect to frontend with success status
+				// Return HTML page that posts message to opener and closes
 				const frontendUrl = await GlobalSettingsInitService.getPageUrl();
-				return reply.redirect(
-					`${frontendUrl}/teams/${teamId}/mcp/installations?status=success&id=${installationId}`
-				);
+				return reply.type('text/html').send(`
+					<!DOCTYPE html>
+					<html>
+						<head>
+							<title>Authorization Successful</title>
+							<meta charset="utf-8">
+						</head>
+						<body>
+							<h1>Authorization Successful</h1>
+							<p>Closing window...</p>
+							<script>
+								// Post success message to parent window
+								if (window.opener) {
+									window.opener.postMessage({
+										type: 'oauth_success',
+										installation_id: '${installationId}'
+									}, '${frontendUrl}');
+								}
+
+								// Close the popup window
+								setTimeout(() => {
+									window.close();
+								}, 500);
+							</script>
+						</body>
+					</html>
+				`);
 			} catch (error) {
 				request.log.error(
 					{
@@ -265,8 +316,9 @@ export default async function oauthCallbackRoute(server: FastifyInstance) {
 				// Clean up failed installation
 				await db.delete(mcpServerInstallations).where(eq(mcpServerInstallations.id, installation.id));
 
-				// Render error page
+				// Render error page that posts message to opener
 				const frontendUrl = await GlobalSettingsInitService.getPageUrl();
+				const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
 				return reply.type('text/html').send(`
 					<!DOCTYPE html>
 					<html>
@@ -277,11 +329,20 @@ export default async function oauthCallbackRoute(server: FastifyInstance) {
 						<body>
 							<h1>Authorization Failed</h1>
 							<p>An error occurred while processing the authorization.</p>
-							<p>Redirecting to dashboard...</p>
+							<p>Closing window...</p>
 							<script>
+								// Post error message to parent window
+								if (window.opener) {
+									window.opener.postMessage({
+										type: 'oauth_error',
+										error: '${escapeHtml(errorMessage)}'
+									}, '${frontendUrl}');
+								}
+
+								// Close the popup window
 								setTimeout(() => {
-									window.location.href = '${frontendUrl}/teams/${teamId}/mcp/installations?status=error&error=processing_failed';
-								}, 2000);
+									window.close();
+								}, 500);
 							</script>
 						</body>
 					</html>

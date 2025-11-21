@@ -8,6 +8,7 @@ import deleteCategory from './categories/delete';
 
 import listServers from './servers/list';
 import getServer from './servers/get';
+import getServerReadme from './servers/readme';
 import searchServers from './servers/search';
 import getTags from './servers/tags';
 import getLanguages from './servers/languages';
@@ -40,6 +41,7 @@ export default async function mcpRoutes(server: FastifyInstance) {
   // Server routes (global)
   await server.register(listServers);
   await server.register(getServer);
+  await server.register(getServerReadme);
   await server.register(searchServers);
   await server.register(getTags);
   await server.register(getLanguages);

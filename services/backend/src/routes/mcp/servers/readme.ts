@@ -5,30 +5,29 @@ import { getUserRole, requireAuthentication } from '../../../middleware/roleMidd
 import { getDb } from '../../../db';
 import {
   SERVER_ID_PARAM_SCHEMA,
-  GET_SERVER_SUCCESS_RESPONSE_SCHEMA,
+  GET_README_SUCCESS_RESPONSE_SCHEMA,
   ERROR_RESPONSE_SCHEMA,
   type ServerIdParams,
-  type GetServerSuccessResponse,
-  type ErrorResponse,
-  formatServerResponse
+  type GetReadmeSuccessResponse,
+  type ErrorResponse
 } from './schemas';
 
-export default async function getServer(server: FastifyInstance) {
-  server.get('/mcp/servers/:id', {
+export default async function getServerReadme(server: FastifyInstance) {
+  server.get('/mcp/servers/:id/readme', {
     preValidation: requireAuthentication(),
     schema: {
       tags: ['MCP Servers'],
-      summary: 'Get MCP server by ID',
-      description: 'Retrieve a specific MCP server by its ID. Access is controlled based on user role and team membership - users can access global servers and their team servers, while global admins can access all servers.',
+      summary: 'Get MCP server README',
+      description: 'Retrieve the GitHub README content for a specific MCP server. Returns base64-encoded README data. Access is controlled based on user role and team membership - users can access global servers and their team servers, while global admins can access all servers.',
       security: [{ cookieAuth: [] }],
-      
+
       // Fastify validation schema
       params: SERVER_ID_PARAM_SCHEMA,
-      
+
       response: {
         200: {
-          ...GET_SERVER_SUCCESS_RESPONSE_SCHEMA,
-          description: 'Server retrieved successfully'
+          ...GET_README_SUCCESS_RESPONSE_SCHEMA,
+          description: 'README retrieved successfully'
         },
         401: {
           ...ERROR_RESPONSE_SCHEMA,
@@ -46,21 +45,21 @@ export default async function getServer(server: FastifyInstance) {
     }
   }, async (request, reply) => {
     const { id: serverId } = request.params as ServerIdParams;
-    
+
     request.log.info({
-      operation: 'get_mcp_server',
+      operation: 'get_mcp_server_readme',
       userId: request.user?.id,
       serverId
-    }, 'Getting MCP server by ID');
+    }, 'Getting MCP server README by ID');
 
     try {
       const db = getDb();
       const mcpService = new McpCatalogService(db, request.log);
-      
+
       // Get user role and team memberships
       const roleInfo = await getUserRole(request.user!.id);
       const userRole = roleInfo?.id || 'global_user';
-      
+
       // Get user's team memberships
       let teamIds: string[] = [];
       try {
@@ -69,7 +68,7 @@ export default async function getServer(server: FastifyInstance) {
         teamIds = userTeams.map((team: any) => team.id);
       } catch (teamError) {
         request.log.warn({
-          operation: 'get_mcp_server',
+          operation: 'get_mcp_server_readme',
           userId: request.user!.id,
           serverId,
           teamError
@@ -79,10 +78,10 @@ export default async function getServer(server: FastifyInstance) {
 
       // Get the server by ID
       const server = await mcpService.getServerById(serverId);
-      
+
       if (!server) {
         request.log.info({
-          operation: 'get_mcp_server',
+          operation: 'get_mcp_server_readme',
           userId: request.user!.id,
           serverId,
           userRole
@@ -112,14 +111,14 @@ export default async function getServer(server: FastifyInstance) {
 
       if (!hasAccess) {
         request.log.info({
-          operation: 'get_mcp_server',
+          operation: 'get_mcp_server_readme',
           userId: request.user!.id,
           serverId,
           userRole,
           serverVisibility: server.visibility,
           serverOwnerTeamId: server.owner_team_id,
           userTeamIds: teamIds
-        }, 'Access denied to MCP server');
+        }, 'Access denied to MCP server README');
 
         // Return 404 instead of 403 to avoid information disclosure
         const errorResponse: ErrorResponse = {
@@ -131,20 +130,20 @@ export default async function getServer(server: FastifyInstance) {
       }
 
       request.log.info({
-        operation: 'get_mcp_server',
+        operation: 'get_mcp_server_readme',
         userId: request.user!.id,
         serverId,
         userRole,
         serverVisibility: server.visibility,
         teamCount: teamIds.length
-      }, 'MCP server access granted');
+      }, 'MCP server README access granted');
 
-      // Format the server response using the shared utility function
-      const responseServer = formatServerResponse(server);
-
-      const response: GetServerSuccessResponse = {
+      // Return only the README content
+      const response: GetReadmeSuccessResponse = {
         success: true,
-        data: responseServer
+        data: {
+          github_readme_base64: server.github_readme_base64 || null
+        }
       };
 
       // Manual JSON serialization to ensure consistent JSON output
@@ -152,15 +151,15 @@ export default async function getServer(server: FastifyInstance) {
       return reply.status(200).type('application/json').send(jsonString);
     } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
       request.log.error({
-        operation: 'get_mcp_server',
+        operation: 'get_mcp_server_readme',
         userId: request.user?.id,
         serverId,
         error
-      }, 'Failed to get MCP server');
+      }, 'Failed to get MCP server README');
 
       const errorResponse: ErrorResponse = {
         success: false,
-        error: 'Failed to get MCP server'
+        error: 'Failed to get MCP server README'
       };
       const jsonString = JSON.stringify(errorResponse);
       return reply.status(500).type('application/json').send(jsonString);

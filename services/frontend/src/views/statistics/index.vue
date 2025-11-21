@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import DashboardLayout from '@/components/DashboardLayout.vue'
 import { useEventBus } from '@/composables/useEventBus'
 import { useMcpToolsStatsStore } from '@/stores/mcpToolsStatsStore'
+import McpInstallationsEmptyState from '@/components/mcp-server/McpInstallationsEmptyState.vue'
 import {
   Card,
   CardContent,
@@ -35,6 +37,7 @@ import {
 import type { TeamMcpToolsStats } from '@/types/mcpStats'
 
 const { t } = useI18n()
+const router = useRouter()
 const eventBus = useEventBus()
 const statsStore = useMcpToolsStatsStore()
 
@@ -42,7 +45,13 @@ const stats = ref<TeamMcpToolsStats | null>(null)
 const error = ref<string | null>(null)
 const expandedRows = ref<Set<string>>(new Set())
 
-const teamId = computed(() => eventBus.getState<string>('selected_team_id'))
+// Use ref instead of computed for better reactivity
+const teamId = ref<string | null>(null)
+
+// Initialize teamId from storage
+const initializeTeamId = () => {
+  teamId.value = eventBus.getState<string>('selected_team_id')
+}
 
 async function fetchStats() {
   if (!teamId.value) {
@@ -79,6 +88,10 @@ function formatPercent(value: number): string {
   return `${value.toFixed(2)}%`
 }
 
+function handleInstallServer() {
+  router.push('/mcp-server/install')
+}
+
 const chartData = computed(() => {
   if (!stats.value) return { series: [], labels: [] }
 
@@ -107,28 +120,32 @@ const chartData = computed(() => {
   }
 })
 
+// Event handler for team selection from sidebar
+const handleTeamSelected = () => {
+  // Update teamId from storage and fetch stats
+  teamId.value = eventBus.getState<string>('selected_team_id')
+  fetchStats()
+}
+
 onMounted(() => {
+  // Initialize teamId from storage
+  initializeTeamId()
+  // Fetch initial stats
   fetchStats()
+
+  // Listen for team selection events from sidebar
+  eventBus.on('team-selected', handleTeamSelected)
 })
 
-watch(teamId, () => {
-  fetchStats()
-})
-
-eventBus.on('team-selected', () => {
-  fetchStats()
+onUnmounted(() => {
+  // Clean up event listeners
+  eventBus.off('team-selected', handleTeamSelected)
 })
 </script>
 
 <template>
   <DashboardLayout :title="t('statistics.title')">
     <div class="space-y-6">
-      <!-- Header -->
-      <div>
-        <h1 class="text-2xl font-bold">{{ t('statistics.title') }}</h1>
-        <p class="text-muted-foreground">{{ t('statistics.description') }}</p>
-      </div>
-
       <!-- Error Alert -->
       <Alert v-if="error" variant="destructive">
         <AlertCircle class="h-4 w-4" />
@@ -136,12 +153,10 @@ eventBus.on('team-selected', () => {
       </Alert>
 
       <!-- Empty State -->
-      <Card v-if="!statsStore.isLoading && !error && stats?.total_installations === 0">
-        <CardHeader>
-          <CardTitle>{{ t('statistics.emptyState.title') }}</CardTitle>
-          <CardDescription>{{ t('statistics.emptyState.description') }}</CardDescription>
-        </CardHeader>
-      </Card>
+      <McpInstallationsEmptyState
+        v-if="!statsStore.isLoading && !error && stats?.total_installations === 0"
+        @install-server="handleInstallServer"
+      />
 
       <!-- Statistics Content -->
       <template v-if="stats && stats.total_installations > 0">

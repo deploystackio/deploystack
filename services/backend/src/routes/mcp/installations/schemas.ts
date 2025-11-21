@@ -551,13 +551,17 @@ export const OAUTH_AUTHORIZE_SUCCESS_RESPONSE_SCHEMA = {
       format: 'uri',
       description: 'OAuth authorization URL to redirect user to for authentication'
     },
+    requires_authorization: {
+      type: 'boolean',
+      description: 'Indicates that OAuth authorization is required (always true for this endpoint)'
+    },
     expires_at: {
       type: 'string',
       format: 'date-time',
       description: 'ISO 8601 timestamp when the OAuth state expires'
     }
   },
-  required: ['installation_id', 'authorization_url', 'expires_at']
+  required: ['installation_id', 'authorization_url', 'requires_authorization', 'expires_at']
 } as const;
 
 // =============================================================================
@@ -716,6 +720,7 @@ export interface OAuthAuthorizeRequest {
 export interface OAuthAuthorizeSuccessResponse {
   installation_id: string;
   authorization_url: string;
+  requires_authorization: boolean;
   expires_at: string;
 }
 

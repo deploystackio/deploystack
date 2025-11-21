@@ -711,6 +711,10 @@ onUnmounted(() => {
               <SelectValue :placeholder="t('mcpCatalog.form.technical.language.placeholder')" />
             </SelectTrigger>
             <SelectContent>
+              <!-- HTTP option only shown when runtime is http -->
+              <SelectItem v-if="isHttpRuntime" value="http">
+                HTTP/Remote Server
+              </SelectItem>
               <SelectItem value="javascript">
                 {{ t('mcpCatalog.form.technical.language.options.javascript') }}
               </SelectItem>

@@ -224,6 +224,27 @@ export class McpCatalogService {
   }
 
   /**
+   * Get README content for a specific MCP server by ID
+   */
+  static async getServerReadme(serverId: string): Promise<string | null> {
+    const response = await fetch(`${this.baseUrl}/api/mcp/servers/${serverId}/readme`, {
+      method: 'GET',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.message || `Failed to fetch server README: ${response.status}`)
+    }
+
+    const data = await response.json()
+    return data.data?.github_readme_base64 || null
+  }
+
+  /**
    * Create a new global MCP server (admin only)
    */
   static async createGlobalServer(serverData: CreateMcpServerRequest): Promise<McpServer> {

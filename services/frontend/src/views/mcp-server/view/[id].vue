@@ -18,13 +18,35 @@ const server = ref<McpServer | null>(null)
 const isLoading = ref(true)
 const error = ref<string | null>(null)
 
+const readmeContent = ref<string | null>(null)
+const isLoadingReadme = ref(false)
+
 const serverId = route.params.id as string
+
+async function fetchReadme() {
+  if (!serverId) return
+
+  try {
+    isLoadingReadme.value = true
+    readmeContent.value = await McpCatalogService.getServerReadme(serverId)
+  } catch (err) {
+    console.error('Failed to fetch README:', err)
+    readmeContent.value = null
+  } finally {
+    isLoadingReadme.value = false
+  }
+}
 
 onMounted(async () => {
   try {
     isLoading.value = true
     server.value = await McpCatalogService.getServerById(serverId)
     error.value = null
+
+    // Fetch README after server data is loaded successfully
+    if (server.value) {
+      await fetchReadme()
+    }
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'An unknown error occurred'
     server.value = null
@@ -72,8 +94,9 @@ const installServer = () => {
       <div v-else-if="server" class="flex flex-col lg:flex-row gap-6">
         <div class="flex-1 min-w-0">
           <McpServerReadme
-            :readme-base64="server.github_readme_base64"
+            :readme-base64="readmeContent"
             :server-name="server.name"
+            :is-loading="isLoadingReadme"
           />
         </div>
 

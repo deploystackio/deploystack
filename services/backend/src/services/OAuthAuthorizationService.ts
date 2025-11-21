@@ -9,6 +9,7 @@ export interface AuthorizationUrlParams {
   userId: string;
   installationId: string;
   redirectUri: string;
+  clientId: string; // OAuth client_id (may be dynamically registered)
   scope?: string;
 }
 
@@ -60,7 +61,7 @@ export class OAuthAuthorizationService {
     const authUrl = new URL(discovery.metadata.authorization_endpoint);
 
     authUrl.searchParams.set('response_type', 'code');
-    authUrl.searchParams.set('client_id', 'deploystack');
+    authUrl.searchParams.set('client_id', params.clientId);
     authUrl.searchParams.set('redirect_uri', params.redirectUri);
     authUrl.searchParams.set('state', state);
     authUrl.searchParams.set('code_challenge', pkce.code_challenge);

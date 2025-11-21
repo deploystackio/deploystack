@@ -2,6 +2,9 @@ import { type FastifyInstance } from 'fastify';
 import { requireAuthenticationAny, requireOAuthScope } from '../../../middleware/oauthMiddleware';
 import { requireTeamPermission } from '../../../middleware/roleMiddleware';
 import { OAuthAuthorizationService } from '../../../services/OAuthAuthorizationService';
+import { OAuthDiscoveryService } from '../../../services/OAuthDiscoveryService';
+import { OAuthClientRegistrationService } from '../../../services/OAuthClientRegistrationService';
+import { encrypt } from '../../../utils/encryption';
 import { getDb } from '../../../db';
 import { mcpServers, mcpServerInstallations } from '../../../db/schema.sqlite';
 import { eq } from 'drizzle-orm';
@@ -104,15 +107,59 @@ export default async function authorizeRoute(server: FastifyInstance) {
       // Get server URL from packages or remotes
       let serverUrl: string | null = null;
 
-      if (mcpServer.packages && Array.isArray(mcpServer.packages) && mcpServer.packages.length > 0) {
+      // DEBUG: Log raw values from database
+      server.log.info({
+        operation: 'oauth_debug',
+        server_id: body.server_id,
+        packages_raw: mcpServer.packages,
+        packages_type: typeof mcpServer.packages,
+        remotes_raw: mcpServer.remotes,
+        remotes_type: typeof mcpServer.remotes,
+        transport_type: mcpServer.transport_type
+      }, 'DEBUG: Raw database values');
+
+      // Parse JSON fields if they are strings (Drizzle returns TEXT fields as strings)
+      const packages = typeof mcpServer.packages === 'string'
+        ? JSON.parse(mcpServer.packages)
+        : mcpServer.packages;
+
+      const remotes = typeof mcpServer.remotes === 'string'
+        ? JSON.parse(mcpServer.remotes)
+        : mcpServer.remotes;
+
+      // DEBUG: Log parsed values
+      server.log.info({
+        operation: 'oauth_debug',
+        packages_parsed: packages,
+        packages_is_array: Array.isArray(packages),
+        packages_length: packages?.length,
+        remotes_parsed: remotes,
+        remotes_is_array: Array.isArray(remotes),
+        remotes_length: remotes?.length,
+        remotes_first: remotes?.[0]
+      }, 'DEBUG: Parsed values');
+
+      if (packages && Array.isArray(packages) && packages.length > 0 && packages[0] !== null) {
         // For stdio transport, extract from first package
-        serverUrl = mcpServer.packages[0]?.url || null;
-      } else if (mcpServer.remotes && Array.isArray(mcpServer.remotes) && mcpServer.remotes.length > 0) {
+        serverUrl = packages[0]?.url || null;
+        server.log.info({ operation: 'oauth_debug', serverUrl, source: 'packages' }, 'DEBUG: URL from packages');
+      }
+
+      // Always check remotes if we don't have a URL yet (not else if!)
+      if (!serverUrl && remotes && Array.isArray(remotes) && remotes.length > 0) {
         // For http/sse transport, extract from first remote
-        serverUrl = mcpServer.remotes[0]?.url || null;
+        serverUrl = remotes[0]?.url || null;
+        server.log.info({ operation: 'oauth_debug', serverUrl, source: 'remotes', remote_object: remotes[0] }, 'DEBUG: URL from remotes');
       }
 
       if (!serverUrl) {
+        server.log.error({
+          operation: 'oauth_url_not_found',
+          server_id: body.server_id,
+          packages,
+          remotes
+        }, 'MCP server URL not found - dumping full data');
+
         const errorResponse: ErrorResponse = {
           success: false,
           error: 'MCP server URL not found in server configuration'
@@ -134,6 +181,48 @@ export default async function authorizeRoute(server: FastifyInstance) {
         : `${protocol}://${host}:${port}`;
       const redirectUri = `${backendUrl}/api/teams/${teamId}/mcp/installations/${installationId}/oauth/callback`;
 
+      // Discover OAuth endpoints and check for dynamic client registration
+      const discoveryService = new OAuthDiscoveryService(request.log);
+      const discovery = await discoveryService.detectAndDiscoverOAuth(serverUrl);
+
+      if (!discovery.requiresOauth || !discovery.metadata) {
+        throw new Error('OAuth discovery failed');
+      }
+
+      // Dynamic client registration (RFC 7591)
+      let clientId = 'deploystack'; // Default client_id
+      let clientSecret: string | null = null;
+
+      if (discovery.metadata.registration_endpoint) {
+        request.log.info(
+          { registrationEndpoint: discovery.metadata.registration_endpoint },
+          'Registering dynamic OAuth client'
+        );
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const registrationService = new OAuthClientRegistrationService(request.log as any);
+        const registrationResponse = await registrationService.registerClient(
+          discovery.metadata.registration_endpoint,
+          {
+            client_name: 'DeployStack',
+            redirect_uris: [redirectUri],
+            grant_types: ['authorization_code', 'refresh_token'],
+            response_types: ['code'],
+            token_endpoint_auth_method: 'none', // Public client (PKCE)
+          }
+        );
+
+        clientId = registrationResponse.client_id;
+        if (registrationResponse.client_secret) {
+          clientSecret = registrationResponse.client_secret;
+        }
+
+        request.log.info(
+          { clientId, hasClientSecret: !!clientSecret },
+          'Dynamic client registration successful'
+        );
+      }
+
       // Build authorization URL
       const authResult = await authService.buildAuthorizationUrl({
         serverId: mcpServer.id,
@@ -142,6 +231,7 @@ export default async function authorizeRoute(server: FastifyInstance) {
         userId,
         installationId,
         redirectUri,
+        clientId, // Use dynamically registered client_id
         scope: undefined // Will use default scopes from OAuth provider
       });
 
@@ -161,6 +251,8 @@ export default async function authorizeRoute(server: FastifyInstance) {
         oauth_code_verifier: authResult.codeVerifier,
         oauth_pending: true,
         oauth_pending_expires_at: authResult.expiresAt,
+        oauth_client_id: clientId,
+        oauth_client_secret: clientSecret ? encrypt(clientSecret, request.log) : null,
         created_at: new Date(),
         updated_at: new Date(),
         last_used_at: null
@@ -179,6 +271,7 @@ export default async function authorizeRoute(server: FastifyInstance) {
       const successResponse: OAuthAuthorizeSuccessResponse = {
         installation_id: installationId,
         authorization_url: authResult.authorizationUrl,
+        requires_authorization: true,
         expires_at: authResult.expiresAt.toISOString()
       };
       const jsonString = JSON.stringify(successResponse);

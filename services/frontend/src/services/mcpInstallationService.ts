@@ -477,4 +477,45 @@ export class McpInstallationService {
       throw new Error(errorData.message || `Failed to delete user configuration: ${response.status}`)
     }
   }
+
+  // ==============================
+  // OAUTH AUTHORIZATION METHODS
+  // ==============================
+
+  /**
+   * Start OAuth authorization flow for an MCP server
+   */
+  static async startOAuthAuthorization(
+    teamId: string,
+    authorizationData: {
+      server_id: string
+      installation_name: string
+      team_args?: string[]
+      team_env?: Record<string, string>
+    }
+  ): Promise<{
+    installation_id: string
+    authorization_url: string
+    requires_authorization: boolean
+  }> {
+    const response = await fetch(
+      `${this.baseUrl}/api/teams/${teamId}/mcp/installations/authorize`,
+      {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(authorizationData),
+      }
+    )
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.error || errorData.message || `Failed to start OAuth authorization: ${response.status}`)
+    }
+
+    const data = await response.json()
+    return data
+  }
 }

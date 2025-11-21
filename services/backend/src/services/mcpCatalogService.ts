@@ -117,6 +117,7 @@ export interface CreateMcpServerRequest {
   tags?: string[];
   featured?: boolean;
   auto_install_new_default_team?: boolean;
+  requires_oauth?: boolean;
   source?: 'official_registry' | 'manual';
   
   // Official Registry Sync Tracking
@@ -474,7 +475,7 @@ export class McpCatalogService {
       status: 'active',
       featured: userRole === 'global_admin' ? (data.featured || false) : false,
       auto_install_new_default_team: userRole === 'global_admin' ? (data.auto_install_new_default_team || false) : false,
-      requires_oauth: false, // Default to false, will be updated during installation if needed
+      requires_oauth: data.requires_oauth ?? false,
       source: (data as any).source || 'manual',
 
       // Official Registry Sync Tracking
@@ -538,7 +539,18 @@ export class McpCatalogService {
     if (data.repository_source !== undefined) updateData.repository_source = data.repository_source;
     if (data.repository_id !== undefined) updateData.repository_id = data.repository_id;
     if (data.repository_subfolder !== undefined) updateData.repository_subfolder = data.repository_subfolder;
-    if (data.git_branch !== undefined) updateData.git_branch = data.git_branch;
+    // Clear git_branch if repository_url is being cleared or set git_branch if provided with repository_url
+    if (data.git_branch !== undefined) {
+      // If repository_url is being explicitly set to null/empty, clear git_branch
+      if (data.repository_url !== undefined && !data.repository_url) {
+        updateData.git_branch = null;
+      } else {
+        updateData.git_branch = data.git_branch;
+      }
+    } else if (data.repository_url !== undefined && !data.repository_url) {
+      // If only repository_url is being cleared (git_branch not in request), also clear git_branch
+      updateData.git_branch = null;
+    }
     if (data.website_url !== undefined) updateData.website_url = data.website_url;
     if (data.language !== undefined) updateData.language = data.language;
     if (data.runtime !== undefined) updateData.runtime = data.runtime;

@@ -4,6 +4,7 @@ export interface OAuthServerMetadata {
   issuer: string;
   authorization_endpoint: string;
   token_endpoint: string;
+  registration_endpoint?: string; // RFC 7591 Dynamic Client Registration
   revocation_endpoint?: string;
   introspection_endpoint?: string;
   scopes_supported?: string[];

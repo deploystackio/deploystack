@@ -213,20 +213,20 @@ export default async function createGlobalServer(server: FastifyInstance) {
         description: requestData.description,
         long_description: requestData.long_description,
         repository_url: requestData.repository_url,
-        repository_source: requestData.repository_url?.includes('github.com') ? 'github' : 
+        repository_source: requestData.repository_url?.includes('github.com') ? 'github' :
                           requestData.repository_url?.includes('gitlab.com') ? 'gitlab' :
                           requestData.repository_url?.includes('bitbucket.org') ? 'bitbucket' : undefined,
         repository_id: requestData.repository_url ? (
-          requestData.repository_url.includes('github.com') ? 
+          requestData.repository_url.includes('github.com') ?
             requestData.repository_url.split('github.com/')[1]?.replace('.git', '') :
-          requestData.repository_url.includes('gitlab.com') ? 
+          requestData.repository_url.includes('gitlab.com') ?
             requestData.repository_url.split('gitlab.com/')[1]?.replace('.git', '') :
-          requestData.repository_url.includes('bitbucket.org') ? 
+          requestData.repository_url.includes('bitbucket.org') ?
             requestData.repository_url.split('bitbucket.org/')[1]?.replace('.git', '') :
             undefined
         ) : undefined,
         repository_subfolder: requestData.repository_subfolder || undefined,
-        git_branch: requestData.git_branch,
+        git_branch: requestData.repository_url ? requestData.git_branch : undefined,
         website_url: requestData.website_url,
         language: requestData.language,
         runtime: requestData.runtime,

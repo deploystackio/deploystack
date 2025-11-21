@@ -15469,6 +15469,10 @@
                                 "type": "boolean",
                                 "description": "Auto-install for new default teams"
                               },
+                              "requires_oauth": {
+                                "type": "boolean",
+                                "description": "Whether this server requires OAuth authentication"
+                              },
                               "source": {
                                 "type": "string",
                                 "enum": [
@@ -15517,6 +15521,7 @@
                               "status",
                               "featured",
                               "auto_install_new_default_team",
+                              "requires_oauth",
                               "created_at",
                               "updated_at"
                             ]
@@ -15876,6 +15881,10 @@
                           "type": "boolean",
                           "description": "Auto-install for new default teams"
                         },
+                        "requires_oauth": {
+                          "type": "boolean",
+                          "description": "Whether this server requires OAuth authentication"
+                        },
                         "source": {
                           "type": "string",
                           "enum": [
@@ -15899,11 +15908,6 @@
                           "format": "date-time",
                           "nullable": true,
                           "description": "Last sync timestamp"
-                        },
-                        "github_readme_base64": {
-                          "type": "string",
-                          "nullable": true,
-                          "description": "Base64-encoded GitHub README content"
                         }
                       },
                       "required": [
@@ -15929,6 +15933,7 @@
                         "status",
                         "featured",
                         "auto_install_new_default_team",
+                        "requires_oauth",
                         "created_at",
                         "updated_at"
                       ]
@@ -15939,6 +15944,157 @@
                     "data"
                   ],
                   "description": "Server retrieved successfully"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates the operation failed"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    },
+                    "details": {
+                      "description": "Additional error details"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Unauthorized - Authentication required"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found - Server not found or access denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates the operation failed"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    },
+                    "details": {
+                      "description": "Additional error details"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Not Found - Server not found or access denied"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates the operation failed"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    },
+                    "details": {
+                      "description": "Additional error details"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Internal Server Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/mcp/servers/{id}/readme": {
+      "get": {
+        "summary": "Get MCP server README",
+        "tags": [
+          "MCP Servers"
+        ],
+        "description": "Retrieve the GitHub README content for a specific MCP server. Returns base64-encoded README data. Access is controlled based on user role and team membership - users can access global servers and their team servers, while global admins can access all servers.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "description": "Server ID is required"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "README retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates successful README retrieval"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "github_readme_base64": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Base64-encoded GitHub README content"
+                        }
+                      },
+                      "required": [
+                        "github_readme_base64"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "additionalProperties": false,
+                  "description": "README retrieved successfully"
                 }
               }
             }
@@ -16390,6 +16546,10 @@
                                 "type": "boolean",
                                 "description": "Auto-install for new default teams"
                               },
+                              "requires_oauth": {
+                                "type": "boolean",
+                                "description": "Whether this server requires OAuth authentication"
+                              },
                               "source": {
                                 "type": "string",
                                 "enum": [
@@ -16438,6 +16598,7 @@
                               "status",
                               "featured",
                               "auto_install_new_default_team",
+                              "requires_oauth",
                               "created_at",
                               "updated_at"
                             ]
@@ -17705,6 +17866,10 @@
                   "auto_install_new_default_team": {
                     "type": "boolean",
                     "description": "Auto-install for new default teams"
+                  },
+                  "requires_oauth": {
+                    "type": "boolean",
+                    "description": "Whether this server requires OAuth authentication"
                   }
                 },
                 "required": [
@@ -17946,6 +18111,10 @@
                           "type": "boolean",
                           "description": "Auto-install for new default teams"
                         },
+                        "requires_oauth": {
+                          "type": "boolean",
+                          "description": "Whether this server requires OAuth authentication"
+                        },
                         "source": {
                           "type": "string",
                           "enum": [
@@ -17994,6 +18163,7 @@
                         "status",
                         "featured",
                         "auto_install_new_default_team",
+                        "requires_oauth",
                         "created_at",
                         "updated_at"
                       ]
@@ -18365,6 +18535,10 @@
                   "auto_install_new_default_team": {
                     "type": "boolean",
                     "description": "Auto-install for new default teams"
+                  },
+                  "requires_oauth": {
+                    "type": "boolean",
+                    "description": "Whether this server requires OAuth authentication"
                   },
                   "template_args": {
                     "type": "array",
@@ -19132,6 +19306,10 @@
                           "type": "boolean",
                           "description": "Auto-install for new default teams"
                         },
+                        "requires_oauth": {
+                          "type": "boolean",
+                          "description": "Whether this server requires OAuth authentication"
+                        },
                         "source": {
                           "type": "string",
                           "enum": [
@@ -19180,6 +19358,7 @@
                         "status",
                         "featured",
                         "auto_install_new_default_team",
+                        "requires_oauth",
                         "created_at",
                         "updated_at"
                       ]
@@ -23823,6 +24002,10 @@
                       "format": "uri",
                       "description": "OAuth authorization URL to redirect user to for authentication"
                     },
+                    "requires_authorization": {
+                      "type": "boolean",
+                      "description": "Indicates that OAuth authorization is required (always true for this endpoint)"
+                    },
                     "expires_at": {
                       "type": "string",
                       "format": "date-time",
@@ -23832,6 +24015,7 @@
                   "required": [
                     "installation_id",
                     "authorization_url",
+                    "requires_authorization",
                     "expires_at"
                   ],
                   "description": "OAuth authorization URL generated successfully"
@@ -23972,7 +24156,7 @@
         }
       }
     },
-    "/api/api/teams/{teamId}/mcp/installations/{installationId}/oauth/callback": {
+    "/api/teams/{teamId}/mcp/installations/{installationId}/oauth/callback": {
       "get": {
         "tags": [
           "MCP Installations",
@@ -32074,6 +32258,14 @@
                           "enabled": {
                             "type": "boolean",
                             "description": "Whether this server is enabled"
+                          },
+                          "requires_oauth": {
+                            "type": "boolean",
+                            "description": "Whether this MCP server requires OAuth authentication (Phase 10)"
+                          },
+                          "user_id": {
+                            "type": "string",
+                            "description": "User ID who created the installation (for OAuth token retrieval, Phase 10)"
                           },
                           "secret_metadata": {
                             "type": "object",

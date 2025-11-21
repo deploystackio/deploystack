@@ -69,7 +69,8 @@ const SERVER_FIELDS = {
   tags: { type: 'array', items: { type: 'string' }, description: 'Server tags' },
   status: { type: 'string', enum: ['active', 'deprecated', 'maintenance'], description: 'Server status' },
   featured: { type: 'boolean', description: 'Whether server is featured' },
-  auto_install_new_default_team: { type: 'boolean', description: 'Auto-install for new default teams' }
+  auto_install_new_default_team: { type: 'boolean', description: 'Auto-install for new default teams' },
+  requires_oauth: { type: 'boolean', description: 'Whether this server requires OAuth authentication' }
 } as const;
 
 // Search-specific query schema - extends list schema but makes 'q' required instead of optional 'search'
@@ -626,9 +627,13 @@ export const CREATE_GLOBAL_SERVER_REQUEST_SCHEMA = {
       type: 'boolean',
       description: 'Whether server is featured'
     },
-    auto_install_new_default_team: { 
+    auto_install_new_default_team: {
       type: 'boolean',
       description: 'Auto-install for new default teams'
+    },
+    requires_oauth: {
+      type: 'boolean',
+      description: 'Whether this server requires OAuth authentication'
     }
   },
   required: ['name', 'description', 'language', 'runtime'],
@@ -856,9 +861,13 @@ export const SERVER_ENTITY_SCHEMA = {
       type: 'boolean',
       description: 'Whether server is featured'
     },
-    auto_install_new_default_team: { 
+    auto_install_new_default_team: {
       type: 'boolean',
       description: 'Auto-install for new default teams'
+    },
+    requires_oauth: {
+      type: 'boolean',
+      description: 'Whether this server requires OAuth authentication'
     },
     source: {
       type: 'string',
@@ -882,22 +891,11 @@ export const SERVER_ENTITY_SCHEMA = {
       description: 'Last sync timestamp'
     }
   },
-  required: ['id', 'name', 'slug', 'description', 'language', 'runtime', 'packages', 'visibility', 'created_by', 'transport_type', 'template_args', 'template_env', 'template_headers', 'template_url_query_params', 'team_args_schema', 'team_env_schema', 'team_headers_schema', 'team_url_query_params_schema', 'user_args_schema', 'status', 'featured', 'auto_install_new_default_team', 'created_at', 'updated_at']
+  required: ['id', 'name', 'slug', 'description', 'language', 'runtime', 'packages', 'visibility', 'created_by', 'transport_type', 'template_args', 'template_env', 'template_headers', 'template_url_query_params', 'team_args_schema', 'team_env_schema', 'team_headers_schema', 'team_url_query_params_schema', 'user_args_schema', 'status', 'featured', 'auto_install_new_default_team', 'requires_oauth', 'created_at', 'updated_at']
 } as const;
 
-// Extended schema for GET endpoint only
-export const GET_SERVER_ENTITY_SCHEMA = {
-  type: 'object',
-  properties: {
-    ...SERVER_ENTITY_SCHEMA.properties,
-    github_readme_base64: {
-      type: 'string',
-      nullable: true,
-      description: 'Base64-encoded GitHub README content'
-    }
-  },
-  required: SERVER_ENTITY_SCHEMA.required
-} as const;
+// GET endpoint uses the same schema as base entity (github_readme_base64 removed)
+export const GET_SERVER_ENTITY_SCHEMA = SERVER_ENTITY_SCHEMA;
 
 const PAGINATION_SCHEMA = {
   type: 'object',
@@ -1054,6 +1052,7 @@ export const UPDATE_GLOBAL_SERVER_REQUEST_SCHEMA = { type: 'object',
     status: SERVER_FIELDS.status,
     featured: SERVER_FIELDS.featured,
     auto_install_new_default_team: SERVER_FIELDS.auto_install_new_default_team,
+    requires_oauth: SERVER_FIELDS.requires_oauth,
     // Three-tier configuration schema - CRITICAL FIX
     template_args: { 
       type: 'array',
@@ -1205,6 +1204,33 @@ export const GET_RUNTIMES_SUCCESS_RESPONSE_SCHEMA = {
   additionalProperties: false
 } as const;
 
+// README-specific schemas
+export const README_ENTITY_SCHEMA = {
+  type: 'object',
+  properties: {
+    github_readme_base64: {
+      type: 'string',
+      nullable: true,
+      description: 'Base64-encoded GitHub README content'
+    }
+  },
+  required: ['github_readme_base64'],
+  additionalProperties: false
+} as const;
+
+export const GET_README_SUCCESS_RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    success: {
+      type: 'boolean',
+      description: 'Indicates successful README retrieval'
+    },
+    data: README_ENTITY_SCHEMA
+  },
+  required: ['success', 'data'],
+  additionalProperties: false
+} as const;
+
 // =============================================================================
 // TYPESCRIPT INTERFACES - CONSOLIDATED
 // =============================================================================
@@ -1285,6 +1311,7 @@ export interface ServerEntity {
   status: 'active' | 'deprecated' | 'maintenance';
   featured: boolean;
   auto_install_new_default_team: boolean;
+  requires_oauth: boolean;
   source: 'official_registry' | 'manual';
   
   // Official Registry Sync Tracking
@@ -1300,10 +1327,8 @@ export interface ServerEntity {
   last_sync_at: string | Date | null;
 }
 
-// Extended interface for GET endpoint only - includes github_readme_base64
-export interface GetServerEntity extends ServerEntity {
-  github_readme_base64: string | null;
-}
+// GET endpoint uses the same entity as base (github_readme_base64 removed)
+export type GetServerEntity = ServerEntity;
 
 // Base configuration interfaces
 interface BaseConfig {
@@ -1437,7 +1462,8 @@ export interface CreateGlobalServerRequest {
   tags?: string[];
   featured?: boolean;
   auto_install_new_default_team?: boolean;
-  
+  requires_oauth?: boolean;
+
   // Official Registry Sync Tracking
   official_name?: string;
   synced_from_official_registry?: boolean;
@@ -1497,6 +1523,15 @@ export interface GetRuntimesSuccessResponse {
     runtimes: string[];
     total: number;
   };
+}
+
+export interface ReadmeEntity {
+  github_readme_base64: string | null;
+}
+
+export interface GetReadmeSuccessResponse {
+  success: boolean;
+  data: ReadmeEntity;
 }
 
 // =============================================================================
@@ -1569,6 +1604,7 @@ export function formatServerResponse(server: any): ServerEntity {
     status: server.status,
     featured: server.featured,
     auto_install_new_default_team: server.auto_install_new_default_team,
+    requires_oauth: server.requires_oauth || false,
     source: server.source || 'manual',
     
     // Official Registry Sync Tracking

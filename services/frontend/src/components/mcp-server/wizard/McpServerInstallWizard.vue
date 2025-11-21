@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import { Button } from '@/components/ui/button'
@@ -12,6 +12,7 @@ import { McpCatalogService } from '@/services/mcpCatalogService'
 import { useEventBus } from '@/composables/useEventBus'
 import McpServerSelectionStep from './McpServerSelectionStep.vue'
 import EnvironmentVariablesStep from './EnvironmentVariablesStep.vue'
+import OAuthAuthorizationStep from './OAuthAuthorizationStep.vue'
 import PlatformSelectionStep from './PlatformSelectionStep.vue'
 
 // Props
@@ -51,46 +52,10 @@ interface InstallationFormData {
   }
   platform: {
     installation_type: string
+    installation_id?: string
     platform_config?: any
   }
 }
-
-// Progress steps for DsProgressSteps component
-const progressSteps = computed<ProgressStep[]>(() => {
-  // Skip the first step (server selection) for progress display
-  const wizardSteps = [
-    {
-      id: 1,
-      title: t('mcpInstallations.wizard.steps.configureEnvironment'),
-      description: t('mcpInstallations.wizard.environment.helpText')
-    },
-    {
-      id: 2,
-      title: t('mcpInstallations.wizard.steps.selectPlatform'),
-      description: t('mcpInstallations.wizard.platform.helpText')
-    }
-  ]
-
-  return wizardSteps
-})
-
-// Completed steps for progress indicator
-const completedSteps = computed(() => {
-  const completed: number[] = []
-
-  // Environment step (index 0 in progress, step 1 in wizard)
-  if (currentStep.value > 1) {
-    completed.push(0)
-  }
-
-  return completed
-})
-
-// Current progress step (adjusted for skipped server selection)
-const currentProgressStep = computed(() => {
-  if (currentStep.value === 0) return -1 // Server selection, no progress shown
-  return currentStep.value - 1 // Adjust for 0-based progress index
-})
 
 // State
 const currentStep = ref(0)
@@ -121,7 +86,53 @@ const formData = ref<InstallationFormData>({
   }
 })
 
-// Computed properties
+// Computed property to check if server requires OAuth
+const requiresOAuth = computed(() => {
+  return formData.value.server.server_data?.requires_oauth === true
+})
+
+// Progress steps for DsProgressSteps component
+const progressSteps = computed<ProgressStep[]>(() => {
+  // Skip the first step (server selection) for progress display
+  const wizardSteps = [
+    {
+      id: 1,
+      title: requiresOAuth.value
+        ? 'OAuth Authorization'
+        : t('mcpInstallations.wizard.steps.configureEnvironment'),
+      description: requiresOAuth.value
+        ? 'Authorize access to your account'
+        : t('mcpInstallations.wizard.environment.helpText')
+    },
+    {
+      id: 2,
+      title: t('mcpInstallations.wizard.steps.selectPlatform'),
+      description: t('mcpInstallations.wizard.platform.helpText')
+    }
+  ]
+
+  return wizardSteps
+})
+
+// Completed steps for progress indicator
+const completedSteps = computed(() => {
+  const completed: number[] = []
+
+  // Environment step (index 0 in progress, step 1 in wizard)
+  if (currentStep.value > 1) {
+    completed.push(0)
+  }
+
+  return completed
+})
+
+// Current progress step (adjusted for skipped server selection)
+const currentProgressStep = computed(() => {
+  if (currentStep.value === 0) return -1 // Server selection, no progress shown
+  return currentStep.value - 1 // Adjust for 0-based progress index
+})
+
+// Additional computed properties
 const totalSteps = 3 // Server selection (0), Environment (1), Platform (2)
 const isFirstStep = computed(() => currentStep.value === 0)
 const isLastStep = computed(() => currentStep.value === totalSteps - 1)
@@ -132,6 +143,11 @@ const canProceedFromEnvironment = computed(() => {
   // If no server is selected, can't proceed
   if (!formData.value.server.server_id) {
     return false
+  }
+
+  // If OAuth is required, always allow proceeding (no validation needed for OAuth step)
+  if (requiresOAuth.value) {
+    return true
   }
 
   // Use the validation state from the EnvironmentVariablesStep component
@@ -347,6 +363,130 @@ const handleValidationChange = (isValid: boolean, missingFields: string[]) => {
   }
 }
 
+// OAuth popup reference
+const oauthPopup = ref<Window | null>(null)
+
+// Handle OAuth authorization
+const handleOAuthAuthorization = async () => {
+  try {
+    isSubmitting.value = true
+
+    // Ensure we have a team ID
+    if (!currentTeamId.value) {
+      throw new Error('No team selected. Please refresh the page and try again.')
+    }
+
+    // Prepare authorization data
+    const authorizationData = {
+      server_id: formData.value.server.server_id,
+      installation_name: formData.value.server.server_data?.name || 'Unknown Server',
+      team_args: formData.value.environment.team_args,
+      team_env: formData.value.environment.team_env
+    }
+
+    // Call backend to start OAuth flow
+    const response = await McpInstallationService.startOAuthAuthorization(
+      currentTeamId.value,
+      authorizationData
+    )
+
+    // Check if OAuth is required
+    if (!response.requires_authorization) {
+      // Server doesn't require OAuth, should not reach here
+      toast.success('Installation successful', {
+        description: 'MCP server has been installed.'
+      })
+
+      emit('complete', {
+        ...authorizationData,
+        id: response.installation_id
+      })
+      return
+    }
+
+    // Open OAuth popup window
+    const popupWidth = 600
+    const popupHeight = 700
+    const left = window.screenX + (window.outerWidth - popupWidth) / 2
+    const top = window.screenY + (window.outerHeight - popupHeight) / 2
+
+    oauthPopup.value = window.open(
+      response.authorization_url,
+      'OAuth Authentication',
+      `width=${popupWidth},height=${popupHeight},left=${left},top=${top},toolbar=no,menubar=no,location=no,status=no`
+    )
+
+    if (!oauthPopup.value) {
+      throw new Error('Popup was blocked. Please allow popups for this site and try again.')
+    }
+
+    toast.info('Opening authentication window', {
+      description: 'Please authorize DeployStack to access your account'
+    })
+
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Failed to start OAuth authorization'
+    toast.error('Authorization failed', {
+      description: errorMessage
+    })
+  } finally {
+    isSubmitting.value = false
+  }
+}
+
+// Handle OAuth popup messages
+const handleOAuthMessage = (event: MessageEvent) => {
+  // Security: Verify origin (allow both frontend and backend origins)
+  const backendUrl = new URL(import.meta.env.VITE_DEPLOYSTACK_BACKEND_URL || 'http://localhost:3000')
+  const allowedOrigins = [window.location.origin, backendUrl.origin]
+
+  if (!allowedOrigins.includes(event.origin)) {
+    console.warn('Rejected postMessage from unauthorized origin:', event.origin)
+    return
+  }
+
+  // Handle success message
+  if (event.data.type === 'oauth_success') {
+    const { installation_id } = event.data
+
+    // Close popup if still open
+    if (oauthPopup.value && !oauthPopup.value.closed) {
+      oauthPopup.value.close()
+    }
+    oauthPopup.value = null
+
+    // Store installation_id in platform data
+    formData.value.platform.installation_id = installation_id
+
+    // Show success toast
+    toast.success('Authorization successful', {
+      description: `Connected to ${formData.value.server.server_data?.name || 'MCP server'}. Choose your platform to continue.`
+    })
+
+    // Auto-advance to next step (Platform Selection)
+    currentStep.value++
+
+    // Emit event to refresh installation list
+    eventBus.emit('mcp-installations-updated')
+  }
+
+  // Handle error message
+  else if (event.data.type === 'oauth_error') {
+    const { error } = event.data
+
+    // Close popup if still open
+    if (oauthPopup.value && !oauthPopup.value.closed) {
+      oauthPopup.value.close()
+    }
+    oauthPopup.value = null
+
+    // Show error toast
+    toast.error('Authentication failed', {
+      description: error || 'OAuth authorization failed. Please try again.'
+    })
+  }
+}
+
 // Handle query parameters for pre-selection
 const handleQueryParameters = async () => {
   const serverId = route.query.serverId as string
@@ -400,6 +540,9 @@ onMounted(async () => {
   // Handle query parameters for pre-selection
   await handleQueryParameters()
 
+  // Listen for OAuth popup messages
+  window.addEventListener('message', handleOAuthMessage)
+
   // Listen for wizard reset events
   eventBus.on('mcp-install-wizard-reset', () => {
     currentStep.value = 0
@@ -409,6 +552,16 @@ onMounted(async () => {
       platform: { installation_type: 'global' }
     }
   })
+})
+
+// Cleanup on unmount
+onUnmounted(() => {
+  window.removeEventListener('message', handleOAuthMessage)
+
+  // Close OAuth popup if still open
+  if (oauthPopup.value && !oauthPopup.value.closed) {
+    oauthPopup.value.close()
+  }
 })
 </script>
 
@@ -474,15 +627,25 @@ onMounted(async () => {
         :completed-steps="completedSteps"
         max-width="max-w-3xl"
       >
-        <!-- Environment Variables Step Content -->
+        <!-- Step 1 Content: Environment Variables OR OAuth Authorization -->
         <template #step-content-0>
+          <!-- OAuth Authorization Step (if OAuth required) -->
+          <OAuthAuthorizationStep
+            v-if="requiresOAuth"
+            :server-data="formData.server.server_data"
+            :is-authorizing="isSubmitting"
+            @authorize="handleOAuthAuthorization"
+          />
+
+          <!-- Environment Variables Step (if OAuth NOT required) -->
           <EnvironmentVariablesStep
+            v-else
             v-model="formData.environment"
             :server-data="formData.server.server_data"
             @validation-change="handleValidationChange"
           />
 
-          <!-- Navigation Buttons for Environment Step -->
+          <!-- Navigation Buttons -->
           <div class="flex items-center justify-between mt-6">
             <Button variant="outline" @click="previousStep">
               {{ t('navigation.previous') }}
