@@ -242,7 +242,7 @@ export default async function authorizeRoute(server: FastifyInstance) {
         server_id: mcpServer.id,
         created_by: userId,
         installation_name: body.installation_name || mcpServer.name,
-        installation_type: 'global',
+        installation_type: body.installation_type,
         team_args: null,
         team_env: body.team_config ? JSON.stringify(body.team_config) : null,
         team_headers: null,

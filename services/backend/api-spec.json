@@ -23950,6 +23950,14 @@
                     "maxLength": 100,
                     "description": "Custom name for this installation (optional)"
                   },
+                  "installation_type": {
+                    "type": "string",
+                    "enum": [
+                      "global",
+                      "team"
+                    ],
+                    "description": "Installation type - required for OAuth installations"
+                  },
                   "team_config": {
                     "type": "object",
                     "additionalProperties": true,
@@ -23957,7 +23965,8 @@
                   }
                 },
                 "required": [
-                  "server_id"
+                  "server_id",
+                  "installation_type"
                 ],
                 "additionalProperties": false
               }

@@ -81,6 +81,8 @@ export default {
     description: 'Follow the steps below to install a new MCP server for your team',
     installing: 'Installing...',
     install: 'Install Server',
+    authorizing: 'Authorizing...',
+    authorizeAndInstall: 'Authorize & Install',
 
     steps: {
       selectServer: 'Select Server',

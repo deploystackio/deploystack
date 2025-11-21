@@ -222,13 +222,18 @@ export const OAUTH_AUTHORIZE_REQUEST_SCHEMA = {
       maxLength: 100,
       description: 'Custom name for this installation (optional)'
     },
+    installation_type: {
+      type: 'string',
+      enum: ['global', 'team'],
+      description: 'Installation type - required for OAuth installations'
+    },
     team_config: {
       type: 'object',
       additionalProperties: true,
       description: 'Team-level configuration for installation (optional)'
     }
   },
-  required: ['server_id'],
+  required: ['server_id', 'installation_type'],
   additionalProperties: false
 } as const;
 
@@ -713,6 +718,7 @@ export interface ClientConfigSuccessResponse {
 export interface OAuthAuthorizeRequest {
   server_id: string;
   installation_name?: string;
+  installation_type: 'global' | 'team';
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   team_config?: Record<string, any>;
 }

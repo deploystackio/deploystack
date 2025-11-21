@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { Button } from '@/components/ui/button'
 import { DsProgressSteps, type ProgressStep } from '@/components/ui/ds-progress-steps'
 import { toast } from 'vue-sonner'
@@ -34,6 +34,7 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 const route = useRoute()
+const router = useRouter()
 const eventBus = useEventBus()
 
 // Form data interface
@@ -97,17 +98,17 @@ const progressSteps = computed<ProgressStep[]>(() => {
   const wizardSteps = [
     {
       id: 1,
+      title: t('mcpInstallations.wizard.steps.selectPlatform'),
+      description: t('mcpInstallations.wizard.platform.helpText')
+    },
+    {
+      id: 2,
       title: requiresOAuth.value
         ? 'OAuth Authorization'
         : t('mcpInstallations.wizard.steps.configureEnvironment'),
       description: requiresOAuth.value
         ? 'Authorize access to your account'
         : t('mcpInstallations.wizard.environment.helpText')
-    },
-    {
-      id: 2,
-      title: t('mcpInstallations.wizard.steps.selectPlatform'),
-      description: t('mcpInstallations.wizard.platform.helpText')
     }
   ]
 
@@ -270,10 +271,16 @@ const submitInstallation = async () => {
     const response = await McpInstallationService.createInstallation(currentTeamId.value, installationData)
 
     if (response.success) {
-      emit('complete', {
-        ...installationData,
-        id: response.data.id
+      // Show success toast
+      toast.success('Installation successful', {
+        description: `${formData.value.server.server_data?.name || 'MCP server'} has been installed.`
       })
+
+      // Emit event to refresh installation list
+      eventBus.emit('mcp-installations-updated')
+
+      // Redirect to installation list
+      router.push('/mcp-server')
     } else {
       throw new Error(response.message || 'Failed to create installation')
     }
@@ -380,8 +387,7 @@ const handleOAuthAuthorization = async () => {
     const authorizationData = {
       server_id: formData.value.server.server_id,
       installation_name: formData.value.server.server_data?.name || 'Unknown Server',
-      team_args: formData.value.environment.team_args,
-      team_env: formData.value.environment.team_env
+      installation_type: formData.value.platform.installation_type
     }
 
     // Call backend to start OAuth flow
@@ -447,27 +453,22 @@ const handleOAuthMessage = (event: MessageEvent) => {
 
   // Handle success message
   if (event.data.type === 'oauth_success') {
-    const { installation_id } = event.data
-
     // Close popup if still open
     if (oauthPopup.value && !oauthPopup.value.closed) {
       oauthPopup.value.close()
     }
     oauthPopup.value = null
 
-    // Store installation_id in platform data
-    formData.value.platform.installation_id = installation_id
-
     // Show success toast
-    toast.success('Authorization successful', {
-      description: `Connected to ${formData.value.server.server_data?.name || 'MCP server'}. Choose your platform to continue.`
+    toast.success('Installation successful', {
+      description: `${formData.value.server.server_data?.name || 'MCP server'} has been installed and connected.`
     })
-
-    // Auto-advance to next step (Platform Selection)
-    currentStep.value++
 
     // Emit event to refresh installation list
     eventBus.emit('mcp-installations-updated')
+
+    // Redirect to installation list
+    router.push('/mcp-server')
   }
 
   // Handle error message
@@ -627,8 +628,35 @@ onUnmounted(() => {
         :completed-steps="completedSteps"
         max-width="max-w-3xl"
       >
-        <!-- Step 1 Content: Environment Variables OR OAuth Authorization -->
+        <!-- Step 1 Content: Platform Selection -->
         <template #step-content-0>
+          <PlatformSelectionStep
+            v-model="formData.platform.installation_type"
+          />
+
+          <!-- Navigation Buttons for Platform Step -->
+          <div class="flex items-center justify-between mt-6">
+            <Button variant="outline" @click="previousStep">
+              {{ t('navigation.previous') }}
+            </Button>
+
+            <div class="flex items-center gap-2">
+              <Button variant="ghost" @click="handleCancel">
+                {{ t('navigation.cancel') }}
+              </Button>
+
+              <Button
+                @click="nextStep"
+                :disabled="!formData.platform.installation_type"
+              >
+                {{ t('navigation.next') }}
+              </Button>
+            </div>
+          </div>
+        </template>
+
+        <!-- Step 2 Content: Environment Variables OR OAuth Authorization -->
+        <template #step-content-1>
           <!-- OAuth Authorization Step (if OAuth required) -->
           <OAuthAuthorizationStep
             v-if="requiresOAuth"
@@ -656,34 +684,20 @@ onUnmounted(() => {
                 {{ t('navigation.cancel') }}
               </Button>
 
+              <!-- OAuth: "Authorize & Install" button -->
               <Button
-                @click="nextStep"
-                :disabled="!canProceedFromEnvironment"
+                v-if="requiresOAuth"
+                @click="handleOAuthAuthorization"
+                :loading="isSubmitting"
+                :loading-text="t('mcpInstallations.wizard.authorizing')"
+                :disabled="!formData.platform.installation_type"
               >
-                {{ t('navigation.next') }}
-              </Button>
-            </div>
-          </div>
-        </template>
-
-        <!-- Platform Selection Step Content -->
-        <template #step-content-1>
-          <PlatformSelectionStep
-            v-model="formData.platform.installation_type"
-          />
-
-          <!-- Navigation Buttons for Platform Step -->
-          <div class="flex items-center justify-between mt-6">
-            <Button variant="outline" @click="previousStep">
-              {{ t('navigation.previous') }}
-            </Button>
-
-            <div class="flex items-center gap-2">
-              <Button variant="ghost" @click="handleCancel">
-                {{ t('navigation.cancel') }}
+                {{ t('mcpInstallations.wizard.authorizeAndInstall') }}
               </Button>
 
+              <!-- Non-OAuth: "Install" button -->
               <Button
+                v-else
                 @click="submitInstallation"
                 :disabled="!canSubmit"
                 :loading="isSubmitting"

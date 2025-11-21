@@ -17030,12 +17030,19 @@ paths:
                   minLength: 1
                   maxLength: 100
                   description: Custom name for this installation (optional)
+                installation_type:
+                  type: string
+                  enum:
+                    - global
+                    - team
+                  description: Installation type - required for OAuth installations
                 team_config:
                   type: object
                   additionalProperties: true
                   description: Team-level configuration for installation (optional)
               required:
                 - server_id
+                - installation_type
               additionalProperties: false
         required: true
       parameters:
