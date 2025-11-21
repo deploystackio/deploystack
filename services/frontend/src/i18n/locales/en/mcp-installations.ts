@@ -167,6 +167,20 @@ export default {
       }
     },
 
+    satellite: {
+      title: 'Select Satellite',
+      description: 'Choose which satellite will run your MCP server',
+      globalSatellites: 'Global Satellites',
+      teamSatellites: 'Team Satellites',
+      global: 'Global',
+      team: 'Team',
+      capabilities: 'Capabilities',
+      lastHeartbeat: 'Last seen',
+      neverSeen: 'Never',
+      errorFetching: 'Failed to load satellites',
+      noSatellites: 'No satellites available for your team'
+    },
+
   success: {
     installed: 'Successfully installed {name}'
   }

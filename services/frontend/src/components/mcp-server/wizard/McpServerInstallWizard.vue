@@ -9,11 +9,12 @@ import { toast } from 'vue-sonner'
 import { McpInstallationService } from '@/services/mcpInstallationService'
 import { TeamService } from '@/services/teamService'
 import { McpCatalogService } from '@/services/mcpCatalogService'
+import { SatelliteService, type TeamSatellite } from '@/services/satelliteService'
 import { useEventBus } from '@/composables/useEventBus'
 import McpServerSelectionStep from './McpServerSelectionStep.vue'
 import EnvironmentVariablesStep from './EnvironmentVariablesStep.vue'
 import OAuthAuthorizationStep from './OAuthAuthorizationStep.vue'
-import PlatformSelectionStep from './PlatformSelectionStep.vue'
+import SatelliteSelectionStep from './SatelliteSelectionStep.vue'
 
 // Props
 interface Props {
@@ -53,6 +54,7 @@ interface InstallationFormData {
   }
   platform: {
     installation_type: string
+    satellite_id: string
     installation_id?: string
     platform_config?: any
   }
@@ -69,6 +71,10 @@ const environmentValidation = ref({
 const environmentStepTouched = ref(false)
 const currentTeamId = ref<string | null>(null)
 
+// Satellite selection state
+const satellites = ref<TeamSatellite[]>([])
+const isFetchingSatellites = ref(false)
+
 // Form data with proper initialization
 const formData = ref<InstallationFormData>({
   server: {
@@ -83,7 +89,8 @@ const formData = ref<InstallationFormData>({
     user_url_query_params: {}
   },
   platform: {
-    installation_type: 'global'
+    installation_type: 'global',
+    satellite_id: ''
   }
 })
 
@@ -92,25 +99,35 @@ const requiresOAuth = computed(() => {
   return formData.value.server.server_data?.requires_oauth === true
 })
 
+// Computed property to determine if satellite step should be shown
+const shouldShowSatelliteStep = computed(() => {
+  return satellites.value.length > 1
+})
+
 // Progress steps for DsProgressSteps component
 const progressSteps = computed<ProgressStep[]>(() => {
   // Skip the first step (server selection) for progress display
-  const wizardSteps = [
-    {
+  const wizardSteps = []
+
+  // Step 1: Satellite Selection (only if multiple satellites)
+  if (shouldShowSatelliteStep.value) {
+    wizardSteps.push({
       id: 1,
-      title: t('mcpInstallations.wizard.steps.selectPlatform'),
-      description: t('mcpInstallations.wizard.platform.helpText')
-    },
-    {
-      id: 2,
-      title: requiresOAuth.value
-        ? 'OAuth Authorization'
-        : t('mcpInstallations.wizard.steps.configureEnvironment'),
-      description: requiresOAuth.value
-        ? 'Authorize access to your account'
-        : t('mcpInstallations.wizard.environment.helpText')
-    }
-  ]
+      title: t('mcpInstallations.wizard.satellite.title'),
+      description: t('mcpInstallations.wizard.satellite.description')
+    })
+  }
+
+  // Step 2: Environment or OAuth
+  wizardSteps.push({
+    id: shouldShowSatelliteStep.value ? 2 : 1,
+    title: requiresOAuth.value
+      ? 'OAuth Authorization'
+      : t('mcpInstallations.wizard.steps.configureEnvironment'),
+    description: requiresOAuth.value
+      ? 'Authorize access to your account'
+      : t('mcpInstallations.wizard.environment.helpText')
+  })
 
   return wizardSteps
 })
@@ -119,8 +136,15 @@ const progressSteps = computed<ProgressStep[]>(() => {
 const completedSteps = computed(() => {
   const completed: number[] = []
 
-  // Environment step (index 0 in progress, step 1 in wizard)
-  if (currentStep.value > 1) {
+  // If satellite step is shown and we've passed it
+  if (shouldShowSatelliteStep.value && currentStep.value > 1) {
+    completed.push(0) // Satellite step completed
+  }
+
+  // If we're on the final step (environment/oauth)
+  if (shouldShowSatelliteStep.value && currentStep.value > 2) {
+    completed.push(1)
+  } else if (!shouldShowSatelliteStep.value && currentStep.value > 1) {
     completed.push(0)
   }
 
@@ -130,13 +154,23 @@ const completedSteps = computed(() => {
 // Current progress step (adjusted for skipped server selection)
 const currentProgressStep = computed(() => {
   if (currentStep.value === 0) return -1 // Server selection, no progress shown
-  return currentStep.value - 1 // Adjust for 0-based progress index
+
+  if (shouldShowSatelliteStep.value) {
+    // With satellite step: Step 1 = satellite (progress 0), Step 2 = environment (progress 1)
+    return currentStep.value - 1
+  } else {
+    // Without satellite step: Step 1 = environment (progress 0)
+    return currentStep.value - 1
+  }
 })
 
 // Additional computed properties
-const totalSteps = 3 // Server selection (0), Environment (1), Platform (2)
+const totalSteps = computed(() => {
+  // Server selection (0) + Satellite (1, conditional) + Environment/OAuth (2 or 1)
+  return shouldShowSatelliteStep.value ? 3 : 2
+})
 const isFirstStep = computed(() => currentStep.value === 0)
-const isLastStep = computed(() => currentStep.value === totalSteps - 1)
+const isLastStep = computed(() => currentStep.value === totalSteps.value - 1)
 const canGoNext = computed(() => !isLastStep.value)
 const canGoPrevious = computed(() => !isFirstStep.value)
 
@@ -162,8 +196,11 @@ const canSubmit = computed(() => {
 })
 
 const nextStep = () => {
+  // Determine which step we're on based on whether satellite step is shown
+  const environmentStepIndex = shouldShowSatelliteStep.value ? 2 : 1
+
   // Mark environment step as touched when user tries to proceed from it
-  if (currentStep.value === 1) {
+  if (currentStep.value === environmentStepIndex) {
     environmentStepTouched.value = true
 
     // Check validation before proceeding
@@ -195,16 +232,44 @@ const previousStep = () => {
       formData.value.environment.team_env = {}
       formData.value.environment.user_env = {}
       environmentStepTouched.value = false
-    } else if (currentStep.value === 1) {
-      // Going back to environment step - clear platform data
-      formData.value.platform.installation_type = 'global'
-      formData.value.platform.platform_config = undefined
+    } else if (shouldShowSatelliteStep.value && currentStep.value === 1) {
+      // Going back to satellite step - clear satellite selection
+      formData.value.platform.satellite_id = ''
+    } else if (!shouldShowSatelliteStep.value && currentStep.value === 1) {
+      // No satellite step, going back to server selection (step 0) - already handled above
     }
   }
 }
 
 const handleCancel = () => {
   emit('cancel')
+}
+
+// Fetch available satellites for the team
+const fetchSatellites = async () => {
+  if (!currentTeamId.value) {
+    return
+  }
+
+  try {
+    isFetchingSatellites.value = true
+    const response = await SatelliteService.getTeamSatellites(currentTeamId.value)
+    satellites.value = response.data.satellites
+
+    // Auto-select satellite if only one is available
+    if (satellites.value.length === 1) {
+      formData.value.platform.satellite_id = satellites.value[0]!.id
+    }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Failed to fetch satellites'
+    toast.error(t('mcpInstallations.wizard.satellite.errorFetching'), {
+      description: errorMessage
+    })
+    // Set empty array on error to allow wizard to continue
+    satellites.value = []
+  } finally {
+    isFetchingSatellites.value = false
+  }
 }
 
 // Initialize team context from event bus storage
@@ -538,6 +603,9 @@ onMounted(async () => {
   // Initialize team context
   await initializeTeamContext()
 
+  // Fetch available satellites for the team
+  await fetchSatellites()
+
   // Handle query parameters for pre-selection
   await handleQueryParameters()
 
@@ -550,7 +618,7 @@ onMounted(async () => {
     formData.value = {
       server: { server_id: '' },
       environment: { team_args: [], team_env: {}, team_headers: {}, team_url_query_params: {}, user_env: {}, user_url_query_params: {} },
-      platform: { installation_type: 'global' }
+      platform: { installation_type: 'global', satellite_id: '' }
     }
   })
 })
@@ -628,34 +696,93 @@ onUnmounted(() => {
         :completed-steps="completedSteps"
         max-width="max-w-3xl"
       >
-        <!-- Step 1 Content: Platform Selection -->
+        <!-- Step Content 0: Satellite Selection if shown, otherwise Environment/OAuth -->
         <template #step-content-0>
-          <PlatformSelectionStep
-            v-model="formData.platform.installation_type"
-          />
+          <!-- Satellite Selection (only if multiple satellites) -->
+          <div v-if="shouldShowSatelliteStep">
+            <SatelliteSelectionStep
+              v-model="formData.platform.satellite_id"
+              :satellites="satellites"
+              :is-loading="isFetchingSatellites"
+            />
 
-          <!-- Navigation Buttons for Platform Step -->
-          <div class="flex items-center justify-between mt-6">
-            <Button variant="outline" @click="previousStep">
-              {{ t('navigation.previous') }}
-            </Button>
-
-            <div class="flex items-center gap-2">
-              <Button variant="ghost" @click="handleCancel">
-                {{ t('navigation.cancel') }}
+            <!-- Navigation Buttons for Satellite Step -->
+            <div class="flex items-center justify-between mt-6">
+              <Button variant="outline" @click="previousStep">
+                {{ t('navigation.previous') }}
               </Button>
 
-              <Button
-                @click="nextStep"
-                :disabled="!formData.platform.installation_type"
-              >
-                {{ t('navigation.next') }}
+              <div class="flex items-center gap-2">
+                <Button variant="ghost" @click="handleCancel">
+                  {{ t('navigation.cancel') }}
+                </Button>
+
+                <Button
+                  @click="nextStep"
+                  :disabled="!formData.platform.satellite_id"
+                >
+                  {{ t('navigation.next') }}
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Environment/OAuth Step (when satellite step is hidden) -->
+          <div v-else>
+            <!-- OAuth Authorization Step (if OAuth required) -->
+            <OAuthAuthorizationStep
+              v-if="requiresOAuth"
+              :server-data="formData.server.server_data"
+              :is-authorizing="isSubmitting"
+              @authorize="handleOAuthAuthorization"
+            />
+
+            <!-- Environment Variables Step (if OAuth NOT required) -->
+            <EnvironmentVariablesStep
+              v-else
+              v-model="formData.environment"
+              :server-data="formData.server.server_data"
+              @validation-change="handleValidationChange"
+            />
+
+            <!-- Navigation Buttons -->
+            <div class="flex items-center justify-between mt-6">
+              <Button variant="outline" @click="previousStep">
+                {{ t('navigation.previous') }}
               </Button>
+
+              <div class="flex items-center gap-2">
+                <Button variant="ghost" @click="handleCancel">
+                  {{ t('navigation.cancel') }}
+                </Button>
+
+                <!-- OAuth: "Authorize & Install" button -->
+                <Button
+                  v-if="requiresOAuth"
+                  @click="handleOAuthAuthorization"
+                  :loading="isSubmitting"
+                  :loading-text="t('mcpInstallations.wizard.authorizing')"
+                  :disabled="!formData.platform.installation_type"
+                >
+                  {{ t('mcpInstallations.wizard.authorizeAndInstall') }}
+                </Button>
+
+                <!-- Non-OAuth: "Install" button -->
+                <Button
+                  v-else
+                  @click="submitInstallation"
+                  :disabled="!canSubmit"
+                  :loading="isSubmitting"
+                  :loading-text="t('mcpInstallations.wizard.installing')"
+                >
+                  {{ t('mcpInstallations.wizard.install') }}
+                </Button>
+              </div>
             </div>
           </div>
         </template>
 
-        <!-- Step 2 Content: Environment Variables OR OAuth Authorization -->
+        <!-- Environment/OAuth Step when satellite step is shown -->
         <template #step-content-1>
           <!-- OAuth Authorization Step (if OAuth required) -->
           <OAuthAuthorizationStep

@@ -55,6 +55,27 @@ export interface SatelliteListParams {
   limit?: number
 }
 
+// Simplified interface for team satellites endpoint
+export interface TeamSatellite {
+  id: string
+  name: string
+  satellite_type: 'global' | 'team'
+  status: 'active' | 'inactive' | 'maintenance' | 'error'
+  capabilities: string[]
+  team_id: string | null
+  last_heartbeat: string | null
+}
+
+export interface TeamSatellitesResponse {
+  success: boolean
+  data: {
+    satellites: TeamSatellite[]
+    total_count: number
+    global_count: number
+    team_count: number
+  }
+}
+
 export class SatelliteService {
   private static baseUrl = getEnv('VITE_DEPLOYSTACK_BACKEND_URL')
   private static cache: Map<string, { data: SatelliteListResponse; timestamp: number }> = new Map()
@@ -161,6 +182,36 @@ export class SatelliteService {
       return data
     } catch (error) {
       console.error('Failed to update satellite status:', error)
+      throw error
+    }
+  }
+
+  static async getTeamSatellites(teamId: string): Promise<TeamSatellitesResponse> {
+    try {
+      const url = `${this.baseUrl}/api/teams/${teamId}/satellites`
+
+      const response = await fetch(url, {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Authentication required')
+        }
+        if (response.status === 403) {
+          throw new Error('You do not have access to this team')
+        }
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      }
+
+      const data: TeamSatellitesResponse = await response.json()
+      return data
+    } catch (error) {
+      console.error('Failed to fetch team satellites:', error)
       throw error
     }
   }
