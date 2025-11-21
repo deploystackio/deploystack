@@ -89,6 +89,7 @@ export const ROLE_DEFINITIONS = {
     'mcp.installations.delete',
     'mcp.tools.view',
     'mcp.tools.stats.view',
+    'satellites.team.view',
   ],
   team_user: [
     'teams.view',
@@ -98,6 +99,7 @@ export const ROLE_DEFINITIONS = {
     'mcp.installations.view',
     'mcp.tools.view',
     'mcp.tools.stats.view',
+    'satellites.team.view',
   ],
 } as const;
 
