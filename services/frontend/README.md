@@ -85,10 +85,10 @@ The frontend uses a dual-layer environment system that works seamlessly across d
 
 ### Core Variables
 
-| Variable | Description | Default | Required |
-|----------|-------------|---------|----------|
-| `VITE_DEPLOYSTACK_BACKEND_URL` | Backend API URL | `http://localhost:3000` | Yes |
-| `VITE_APP_TITLE` | Application title | `DeployStack` | Yes |
+| Variable                       | Description         | Default                 | Required |
+|--------------------------------|---------------------|-------------------------|----------|
+| `VITE_DEPLOYSTACK_BACKEND_URL` | Backend API URL     | `http://localhost:3000` | Yes      |
+| `VITE_APP_TITLE`               | Application title   | `DeployStack`           | Yes      |
 
 ### Development Setup
 

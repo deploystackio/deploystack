@@ -9,6 +9,7 @@ interface Props {
   tags?: string[] | string | null
   license?: string | null
   runtime: string
+  transportType?: string | null
   categoryId?: string | null
 }
 
@@ -50,18 +51,22 @@ const displayTags = computed(() => {
           <dt class="text-muted-foreground">{{ t('mcpInstallations.view.values.runtime') }}</dt>
           <dd class="font-mono text-xs">{{ runtime }}</dd>
         </div>
-        <div class="flex items-center justify-between">
+        <div v-if="transportType" class="flex items-center justify-between">
+          <dt class="text-muted-foreground">Transport Type</dt>
+          <dd class="font-mono text-xs uppercase">{{ transportType }}</dd>
+        </div>
+        <div v-if="license" class="flex items-center justify-between">
           <dt class="text-muted-foreground">{{ t('mcpInstallations.view.values.license') }}</dt>
-          <dd>{{ license || t('mcpInstallations.view.values.notProvided') }}</dd>
+          <dd>{{ license }}</dd>
         </div>
       </dl>
     </div>
 
-    <div class="space-y-2">
+    <div v-if="categoryId" class="space-y-2">
       <h3 class="text-sm font-semibold">{{ t('mcpInstallations.view.fields.category') }}</h3>
       <CategoryDisplay
         :category-id="categoryId"
-        :show-not-provided="true"
+        :show-not-provided="false"
         text-class="text-sm"
       />
     </div>

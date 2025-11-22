@@ -243,10 +243,10 @@ onUnmounted(() => {
                 :server-name="installation.installation_name"
                 size="sm"
                 rounded="md"
-                class="shrink-0"
+                class="shrink-0 hidden sm:flex"
               />
 
-              <dl class="flex-1 grid grid-cols-1 gap-x-8 gap-y-1 text-xs/5 text-gray-500 sm:grid-cols-4">
+              <dl class="flex-1 grid grid-cols-2 gap-x-8 gap-y-1 text-xs/5 text-gray-500 sm:grid-cols-4">
                 <div>
                   <dt class="font-medium text-gray-700">Satellite</dt>
                   <dd>{{ installation.installation_type }}</dd>

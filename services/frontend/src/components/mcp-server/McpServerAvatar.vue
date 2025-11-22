@@ -119,7 +119,7 @@ const handleImageError = () => {
       'justify-center',
       'select-none'
     ]"
-    :style="{ ...customSize, ...customFontSize }"
+    :style="{ ...customSize, ...customFontSize, lineHeight: '1' }"
     :aria-label="serverName ? `${serverName} avatar` : 'MCP server avatar'"
   >
     {{ firstLetter }}

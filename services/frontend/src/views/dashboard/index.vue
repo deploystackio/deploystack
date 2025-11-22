@@ -461,8 +461,8 @@ onUnmounted(() => {
       <div v-else>
         <McpStats />
 
-        <div class="flex gap-6 mt-18">
-          <div class="flex-[0.7]">
+        <div class="flex flex-col-reverse sm:flex-row gap-6 mt-18">
+          <div class="sm:flex-[0.7]">
             <McpInstallationsCard
               :installations="installations"
               :show-walkthrough="showUserWalkthrough"
@@ -471,7 +471,7 @@ onUnmounted(() => {
               @remove-installation="handleRemoveInstallation"
             />
           </div>
-          <div class="flex-[0.3]">
+          <div class="sm:flex-[0.3]">
             <McpClientConnectionsCard />
           </div>
         </div>

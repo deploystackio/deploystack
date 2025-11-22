@@ -75,7 +75,7 @@ const shouldShowNotProvided = computed(() => {
     <div class="h-4 w-16 bg-gray-200 rounded animate-pulse"></div>
   </div>
   
-  <div v-else-if="shouldShowNotProvided" class="text-muted-foreground italic">
+  <div v-else-if="shouldShowNotProvided" :class="textClass || 'text-muted-foreground'">
     {{ t('mcpCatalog.edit.values.notProvided') }}
   </div>
 </template>

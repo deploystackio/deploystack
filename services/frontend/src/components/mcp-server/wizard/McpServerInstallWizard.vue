@@ -4,15 +4,6 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { Button } from '@/components/ui/button'
-import {
-  Sheet,
-  SheetContent,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet'
-import { Badge } from '@/components/ui/badge'
-import { Globe, Github, Package, Code, User, Layers, Shield } from 'lucide-vue-next'
 import { DsProgressSteps, type ProgressStep } from '@/components/ui/ds-progress-steps'
 import { toast } from 'vue-sonner'
 import { McpInstallationService } from '@/services/mcpInstallationService'
@@ -25,6 +16,7 @@ import EnvironmentVariablesStep from './EnvironmentVariablesStep.vue'
 import OAuthAuthorizationStep from './OAuthAuthorizationStep.vue'
 import SatelliteSelectionStep from './SatelliteSelectionStep.vue'
 import McpServerAvatar from '../McpServerAvatar.vue'
+import McpServerDetailsSheet from './McpServerDetailsSheet.vue'
 
 // Props
 interface Props {
@@ -729,19 +721,20 @@ onUnmounted(() => {
             />
 
             <!-- Navigation Buttons for Satellite Step -->
-            <div class="flex items-center justify-between mt-6">
-              <Button variant="outline" @click="previousStep">
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center sm:justify-between gap-3 mt-8 sm:mt-6">
+              <Button variant="outline" @click="previousStep" class="w-full sm:w-auto">
                 {{ t('navigation.previous') }}
               </Button>
 
-              <div class="flex items-center gap-2">
-                <Button variant="ghost" @click="handleCancel">
+              <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-2">
+                <Button variant="ghost" @click="handleCancel" class="w-full sm:w-auto">
                   {{ t('navigation.cancel') }}
                 </Button>
 
                 <Button
                   @click="nextStep"
                   :disabled="!formData.platform.satellite_id"
+                  class="w-full sm:w-auto"
                 >
                   {{ t('navigation.next') }}
                 </Button>
@@ -768,13 +761,13 @@ onUnmounted(() => {
             />
 
             <!-- Navigation Buttons -->
-            <div class="flex items-center justify-between mt-6">
-              <Button variant="outline" @click="previousStep">
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center sm:justify-between gap-3 mt-8 sm:mt-6">
+              <Button variant="outline" @click="previousStep" class="w-full sm:w-auto">
                 {{ t('navigation.previous') }}
               </Button>
 
-              <div class="flex items-center gap-2">
-                <Button variant="ghost" @click="handleCancel">
+              <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-2">
+                <Button variant="ghost" @click="handleCancel" class="w-full sm:w-auto">
                   {{ t('navigation.cancel') }}
                 </Button>
 
@@ -785,6 +778,7 @@ onUnmounted(() => {
                   :loading="isSubmitting"
                   :loading-text="t('mcpInstallations.wizard.authorizing')"
                   :disabled="!formData.platform.installation_type"
+                  class="w-full sm:w-auto"
                 >
                   {{ t('mcpInstallations.wizard.authorizeAndInstall') }}
                 </Button>
@@ -796,6 +790,7 @@ onUnmounted(() => {
                   :disabled="!canSubmit"
                   :loading="isSubmitting"
                   :loading-text="t('mcpInstallations.wizard.installing')"
+                  class="w-full sm:w-auto"
                 >
                   {{ t('mcpInstallations.wizard.install') }}
                 </Button>
@@ -823,13 +818,13 @@ onUnmounted(() => {
           />
 
           <!-- Navigation Buttons -->
-          <div class="flex items-center justify-between mt-6">
-            <Button variant="outline" @click="previousStep">
+          <div class="flex flex-col sm:flex-row items-stretch sm:items-center sm:justify-between gap-3 mt-8 sm:mt-6">
+            <Button variant="outline" @click="previousStep" class="w-full sm:w-auto">
               {{ t('navigation.previous') }}
             </Button>
 
-            <div class="flex items-center gap-2">
-              <Button variant="ghost" @click="handleCancel">
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-2">
+              <Button variant="ghost" @click="handleCancel" class="w-full sm:w-auto">
                 {{ t('navigation.cancel') }}
               </Button>
 
@@ -840,6 +835,7 @@ onUnmounted(() => {
                 :loading="isSubmitting"
                 :loading-text="t('mcpInstallations.wizard.authorizing')"
                 :disabled="!formData.platform.installation_type"
+                class="w-full sm:w-auto"
               >
                 {{ t('mcpInstallations.wizard.authorizeAndInstall') }}
               </Button>
@@ -851,6 +847,7 @@ onUnmounted(() => {
                 :disabled="!canSubmit"
                 :loading="isSubmitting"
                 :loading-text="t('mcpInstallations.wizard.installing')"
+                class="w-full sm:w-auto"
               >
                 {{ t('mcpInstallations.wizard.install') }}
               </Button>
@@ -861,155 +858,9 @@ onUnmounted(() => {
     </template>
 
     <!-- Details Sheet -->
-    <Sheet v-model:open="isDetailsSheetOpen">
-      <SheetContent class="overflow-y-auto">
-        <SheetHeader>
-          <SheetTitle>Server Details</SheetTitle>
-        </SheetHeader>
-
-        <div v-if="formData.server.server_data" class="pb-4 px-4 space-y-6">
-          <!-- Basic Information Section -->
-          <div class="space-y-4">
-
-            <!-- Description -->
-            <div class="space-y-1">
-              <dt class="text-xs font-medium text-gray-500">Description</dt>
-              <dd class="text-sm text-gray-900">
-                {{ formData.server.server_data.description || 'No description available' }}
-              </dd>
-            </div>
-
-            <!-- Website URL -->
-            <div v-if="formData.server.server_data.website_url" class="space-y-1">
-              <dt class="text-xs font-medium text-gray-500 flex items-center gap-1">
-                <Globe class="h-3 w-3" />
-                Website
-              </dt>
-              <dd class="text-sm">
-                <a
-                  :href="formData.server.server_data.website_url"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="text-blue-600 hover:underline"
-                >
-                  {{ formData.server.server_data.website_url }}
-                </a>
-              </dd>
-            </div>
-
-            <!-- GitHub URL -->
-            <div v-if="formData.server.server_data.repository_url" class="space-y-1">
-              <dt class="text-xs font-medium text-gray-500 flex items-center gap-1">
-                <Github class="h-3 w-3" />
-                Repository
-              </dt>
-              <dd class="text-sm">
-                <a
-                  :href="formData.server.server_data.repository_url"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="text-blue-600 hover:underline"
-                >
-                  {{ formData.server.server_data.repository_url }}
-                </a>
-              </dd>
-            </div>
-
-            <!-- Runtime -->
-            <div class="space-y-1">
-              <dt class="text-xs font-medium text-gray-500 flex items-center gap-1">
-                <Layers class="h-3 w-3" />
-                Runtime
-              </dt>
-              <dd class="text-sm">
-                <Badge variant="secondary" class="font-mono text-xs">
-                  {{ formData.server.server_data.runtime }}
-                </Badge>
-              </dd>
-            </div>
-
-            <!-- Language -->
-            <div v-if="formData.server.server_data.language && formData.server.server_data.language.toLowerCase() !== 'http'" class="space-y-1">
-              <dt class="text-xs font-medium text-gray-500 flex items-center gap-1">
-                <Code class="h-3 w-3" />
-                Language
-              </dt>
-              <dd class="text-sm">
-                <Badge variant="outline" class="text-xs">
-                  {{ formData.server.server_data.language }}
-                </Badge>
-              </dd>
-            </div>
-
-            <!-- Author Name -->
-            <div v-if="formData.server.server_data.author_name" class="space-y-1">
-              <dt class="text-xs font-medium text-gray-500 flex items-center gap-1">
-                <User class="h-3 w-3" />
-                Author
-              </dt>
-              <dd class="text-sm text-gray-900">
-                {{ formData.server.server_data.author_name }}
-              </dd>
-            </div>
-
-            <!-- Transport Type -->
-            <div class="space-y-1">
-              <dt class="text-xs font-medium text-gray-500">Transport Type</dt>
-              <dd class="text-sm">
-                <Badge variant="outline" class="text-xs uppercase">
-                  {{ formData.server.server_data.transport_type }}
-                </Badge>
-              </dd>
-            </div>
-          </div>
-
-          <!-- Specifications Section -->
-          <div class="space-y-4 pt-4 border-t border-gray-200">
-            <h3 class="text-sm font-semibold text-gray-900">Specifications</h3>
-
-            <!-- Requires OAuth -->
-            <div v-if="formData.server.server_data.requires_oauth" class="space-y-1">
-              <dt class="text-xs font-medium text-gray-500 flex items-center gap-1">
-                <Shield class="h-3 w-3" />
-                Authentication
-              </dt>
-              <dd class="text-sm">
-                <Badge variant="default" class="text-xs">
-                  Requires OAuth
-                </Badge>
-              </dd>
-            </div>
-
-            <!-- Packages (if runtime !== 'http') -->
-            <div v-if="formData.server.server_data.runtime !== 'http' && formData.server.server_data.packages" class="space-y-1">
-              <dt class="text-xs font-medium text-gray-500 flex items-center gap-1">
-                <Package class="h-3 w-3" />
-                Packages
-              </dt>
-              <dd class="text-sm">
-                <pre class="bg-gray-50 border border-gray-200 rounded p-3 text-xs overflow-x-auto">{{ JSON.stringify(formData.server.server_data.packages, null, 2) }}</pre>
-              </dd>
-            </div>
-
-            <!-- Remotes (if runtime === 'http') -->
-            <div v-if="formData.server.server_data.runtime === 'http' && formData.server.server_data.remotes" class="space-y-1">
-              <dt class="text-xs font-medium text-gray-500 flex items-center gap-1">
-                <Globe class="h-3 w-3" />
-                Remotes
-              </dt>
-              <dd class="text-sm">
-                <pre class="bg-gray-50 border border-gray-200 rounded p-3 text-xs overflow-x-auto">{{ JSON.stringify(formData.server.server_data.remotes, null, 2) }}</pre>
-              </dd>
-            </div>
-          </div>
-        </div>
-
-        <SheetFooter>
-          <Button @click="isDetailsSheetOpen = false" variant="outline">
-            Close
-          </Button>
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
+    <McpServerDetailsSheet
+      v-model:open="isDetailsSheetOpen"
+      :server="formData.server.server_data"
+    />
   </div>
 </template>

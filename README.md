@@ -7,9 +7,10 @@
 </p>
 
 <p align="center">
+    <a href="https://cloud.deploystack.io">🚀 Try it out</a> ·&nbsp;
     <a href="https://deploystack.io">🌐 Website</a> ·&nbsp;
     <a href="https://docs.deploystack.io/">📚 Documentation</a> ·&nbsp;
-    <a href="https://deploystack.io/roadmap"><img src="./.assets/planner-icon.svg" alt="Roadmap" width="12" height="12"/> Roadmap </a> ·&nbsp;
+    <a href="https://github.com/deploystackio/deploystack?tab=readme-ov-file#roadmap"><img src="./.assets/planner-icon.svg" alt="Roadmap" width="12" height="12"/> Roadmap </a> ·&nbsp;
     <a href="https://discord.gg/42Ce3S7b3b"><img src="./.assets/discord-icon.svg" alt="Discord" width="12" height="12"/> Discord</a>
 </p>
 

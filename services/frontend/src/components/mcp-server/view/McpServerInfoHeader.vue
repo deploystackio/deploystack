@@ -9,6 +9,7 @@ interface Props {
   githubStars?: number | null
   githubAccountId?: string | null
   description?: string | null
+  repositoryUrl?: string | null
 }
 
 const props = defineProps<Props>()
@@ -46,11 +47,13 @@ const formattedStars = computed(() => {
       <h2 class="text-lg font-semibold">{{ name }}</h2>
       <div class="flex items-center justify-center gap-2 text-sm text-muted-foreground">
         <span>By <span class="font-medium text-foreground">{{ displayAuthor }}</span></span>
-        <span>·</span>
-        <div class="flex items-center gap-1">
-          <Star class="h-4 w-4" />
-          <span>{{ formattedStars }}</span>
-        </div>
+        <template v-if="repositoryUrl">
+          <span>·</span>
+          <div class="flex items-center gap-1">
+            <Star class="h-4 w-4" />
+            <span>{{ formattedStars }}</span>
+          </div>
+        </template>
       </div>
     </div>
 
