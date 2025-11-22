@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.45.0 (2025-11-22)
+
+* chore(all): update dependencies across services 44bbbc2
+* chore(frontend): release v0.40.0 b5ddad8
+* refactor(all): simplify conventional changelog preset configuration 482c662
+* feat(all): add OAuth authorization step in server installation wizard fce8128
+* feat(all): add README content management to MCP server forms f0b706e
+* feat(backend): add endpoint to retrieve available satellites for team 5c87421
+* feat(backend): add installation_type field for OAuth installations c79f52a
+* feat(backend): add OAuth token management services and utilities 3729357
+* feat(backend): added icon_url to mcp catalog a1d66de
+* feat(backend): auto-fill icon_url from GitHub avatar if not provided 3f418cf
+* feat(backend): implement OAuth token retrieval and status endpoints 51472b6
+* feat(backend): implement OAuthDiscoveryService for detecting and discovering OAuth metadata from MCP 424a4bc
+* feat(frontend): add icon_url field to MCP server forms and views 7356c2b
+* feat(frontend): add satellite selection step in installation wizard f4c71d0
+* feat(frontend): add website URL display in MCP server card 703416c
+* feat(frontend): add website URL field to MCP server forms 5de8134
+* feat(frontend): enhance MCP server details with specifications view 3f08f39
+* feat(frontend): make repository URL optional in GitHub step aab785c
+
 ## 0.44.0 (2025-11-17)
 
 * chore(backend): release v0.44.0 ([1c71e34](https://github.com/deploystackio/deploystack/commit/1c71e34))
