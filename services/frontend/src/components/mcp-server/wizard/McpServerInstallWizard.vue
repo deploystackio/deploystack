@@ -15,6 +15,7 @@ import McpServerSelectionStep from './McpServerSelectionStep.vue'
 import EnvironmentVariablesStep from './EnvironmentVariablesStep.vue'
 import OAuthAuthorizationStep from './OAuthAuthorizationStep.vue'
 import SatelliteSelectionStep from './SatelliteSelectionStep.vue'
+import McpServerAvatar from '../McpServerAvatar.vue'
 
 // Props
 interface Props {
@@ -655,11 +656,11 @@ onUnmounted(() => {
         <div class="px-6 md:flex md:items-center md:justify-between md:space-x-6 lg:space-x-8">
           <!-- Avatar Image -->
           <div class="flex-shrink-0 mb-4 md:mb-0">
-            <img
-              v-if="formData.server.server_data.github_account_id"
-              :src="`https://avatars.githubusercontent.com/u/${formData.server.server_data.github_account_id}?v=4&s=64`"
-              :alt="`${formData.server.server_data.name} GitHub avatar`"
-              class="h-18 w-18 rounded-lg"
+            <McpServerAvatar
+              :icon-url="formData.server.server_data.icon_url"
+              :server-name="formData.server.server_data.name"
+              :size="72"
+              rounded="lg"
             />
           </div>
 

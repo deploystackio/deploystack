@@ -68,7 +68,8 @@ const defaultData: BasicInfoFormData = {
   tags: [],
   featured: false,
   auto_install_new_default_team: false,
-  website_url: ''
+  website_url: '',
+  icon_url: ''
 }
 
 // Storage-first reactive data - using ref instead of computed for better reactivity
@@ -339,6 +340,20 @@ onUnmounted(() => {
             :model-value="localData.website_url"
             @update:model-value="(value) => updateField('website_url', String(value))"
             :placeholder="t('mcpCatalog.form.basic.websiteUrl.placeholder')"
+            type="url"
+          />
+        </SharedFormField>
+
+        <!-- Icon URL -->
+        <SharedFormField
+          label="Icon URL"
+          description="URL to the server icon image (auto-generated from GitHub avatar if not provided)"
+        >
+          <Input
+            id="icon_url"
+            :model-value="localData.icon_url"
+            @update:model-value="(value) => updateField('icon_url', String(value))"
+            placeholder="https://example.com/icon.png"
             type="url"
           />
         </SharedFormField>

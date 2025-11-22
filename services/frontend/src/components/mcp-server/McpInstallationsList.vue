@@ -17,12 +17,12 @@ import {
   Trash2,
   AlertTriangle,
   ChevronRight,
-  Github,
 } from 'lucide-vue-next'
 import type { McpInstallation } from '@/types/mcp-installations'
 import { McpInstallationService } from '@/services/mcpInstallationService'
 import { TeamService } from '@/services/teamService'
 import CategoryDisplay from '@/components/mcp-server/CategoryDisplay.vue'
+import McpServerAvatar from '@/components/mcp-server/McpServerAvatar.vue'
 import { useEventBus } from '@/composables/useEventBus'
 
 interface Props {
@@ -227,17 +227,28 @@ onUnmounted(() => {
           :id="index === sortedInstallations.length - 1 ? 'last-server-item' : undefined"
           class="relative flex justify-between gap-x-6 px-4 py-5 hover:bg-gray-50 sm:px-6"
         >
-          <div class="flex min-w-0 gap-x-4">
-            <div class="min-w-0 flex-auto">
-              <p class="text-sm/6 font-semibold text-gray-900 mb-2">
-                <a @click="handleViewInstallation(installation.id)" class="cursor-pointer hover:text-blue-600 transition-colors">
-                  {{ installation.installation_name }}
-                </a>
-              </p>
+          <div class="flex min-w-0 gap-x-4 flex-col flex-1">
+            <!-- MCP Server Name -->
+            <p class="text-sm/6 font-semibold text-gray-900 mb-2">
+              <a @click="handleViewInstallation(installation.id)" class="cursor-pointer hover:text-blue-600 transition-colors">
+                {{ installation.installation_name }}
+              </a>
+            </p>
 
-              <dl class="mt-1 grid grid-cols-1 gap-x-4 gap-y-1 text-xs/5 text-gray-500 sm:grid-cols-5">
+            <!-- Icon + Details Grid -->
+            <div class="flex gap-x-4 items-center w-full">
+              <!-- MCP Server Icon -->
+              <McpServerAvatar
+                :icon-url="installation.server.icon_url"
+                :server-name="installation.installation_name"
+                size="sm"
+                rounded="md"
+                class="shrink-0"
+              />
+
+              <dl class="flex-1 grid grid-cols-1 gap-x-8 gap-y-1 text-xs/5 text-gray-500 sm:grid-cols-4">
                 <div>
-                  <dt class="font-medium text-gray-700">{{ t('mcpInstallations.table.columns.installationMethod') }}</dt>
+                  <dt class="font-medium text-gray-700">Satellite</dt>
                   <dd>{{ installation.installation_type }}</dd>
                 </div>
                 <div>
@@ -258,23 +269,6 @@ onUnmounted(() => {
                 <div>
                   <dt class="font-medium text-gray-700">{{ t('mcpInstallations.table.columns.installed') }}</dt>
                   <dd>{{ formatDate(installation.created_at) }}</dd>
-                </div>
-                <div>
-                  <dt class="font-medium text-gray-700">{{ t('mcpInstallations.table.columns.repository') }}</dt>
-                  <dd v-if="installation.server.repository_url">
-                    <a
-                      :href="installation.server.repository_url"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      class="inline-flex items-center gap-1 text-gray-600 hover:text-gray-900 transition-colors"
-                    >
-                      <Github class="h-3 w-3" />
-                      {{ t('mcpInstallations.table.values.github') }}
-                    </a>
-                  </dd>
-                  <dd v-else class="text-gray-400">
-                    {{ t('mcpInstallations.table.values.noRepository') }}
-                  </dd>
                 </div>
               </dl>
             </div>

@@ -168,7 +168,8 @@ const convertServerToFormData = (server: McpServer, readmeBase64: string = ''): 
       tags: parsedTags,
       featured: Boolean(server.featured),
       auto_install_new_default_team: Boolean(server.auto_install_new_default_team),
-      website_url: server.website_url || ''
+      website_url: server.website_url || '',
+      icon_url: server.icon_url || ''
     },
     repository: {
       repository_url: server.repository_url || '',
@@ -289,6 +290,7 @@ const handleSubmit = async (formData: McpServerFormData) => {
     tags: formData.basic.tags.length > 0 ? formData.basic.tags : undefined,
     featured: formData.basic.featured,
     auto_install_new_default_team: formData.basic.auto_install_new_default_team,
+    icon_url: formData.basic.icon_url || undefined,
 
     // Repository (use finalRepositoryData which merges storage + formData)
     repository_url: finalRepositoryData.repository_url || undefined,

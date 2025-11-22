@@ -7,6 +7,7 @@ export interface McpServer {
   description: string
   long_description?: string
   github_account_id?: string
+  icon_url?: string
   github_stars?: number
   // Repository platform fields
   repository_url?: string
@@ -212,6 +213,7 @@ export interface CreateMcpServerRequest {
   description: string
   long_description?: string
   github_account_id?: string
+  icon_url?: string
   github_stars?: number
   // Repository platform fields
   repository_url?: string
@@ -262,6 +264,7 @@ export interface UpdateMcpServerRequest {
   description?: string
   long_description?: string
   github_account_id?: string
+  icon_url?: string
   github_readme_base64?: string
   github_stars?: number
   // Repository platform fields
@@ -330,6 +333,7 @@ export interface BasicInfoFormData {
   featured: boolean
   auto_install_new_default_team: boolean
   website_url: string
+  icon_url?: string
 }
 
 export interface RepositoryFormData {

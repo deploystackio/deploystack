@@ -8,6 +8,7 @@ export interface McpServer {
   status: 'active' | 'deprecated' | 'maintenance'
   author_name?: string | null
   website_url?: string | null
+  icon_url?: string | null
   repository_url?: string | null
   repository_source?: string | null
   repository_id?: string | null

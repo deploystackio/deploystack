@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/hover-card'
 import { Github, Star } from 'lucide-vue-next'
 import type { McpServer } from '@/views/admin/mcp-server-catalog/types'
+import McpServerAvatar from './McpServerAvatar.vue'
 
 interface Props {
   server: McpServer
@@ -51,11 +52,6 @@ const getServerDescription = (server: McpServer) => {
   return server.description || 'No description available'
 }
 
-const getGitHubAvatarUrl = (server: McpServer) => {
-  if (!server.github_account_id) return null
-  return `https://avatars.githubusercontent.com/u/${server.github_account_id}?v=4&s=64`
-}
-
 const getRuntimeBadgeClass = (runtime: string | null | undefined) => {
   if (!runtime) return 'bg-gray-100 text-gray-800'
   
@@ -94,12 +90,11 @@ const truncateServerName = (name: string, maxLength: number = 30) => {
             @click="handleServerClick"
             :title="`View ${server.name} details`"
           >
-            <img
-              v-if="getGitHubAvatarUrl(server)"
-              :src="getGitHubAvatarUrl(server)!"
-              :alt="`${server.name} GitHub avatar`"
-              class="h-8 w-8 rounded-md flex-shrink-0"
-              @error="($event.target as HTMLImageElement).style.display = 'none'"
+            <McpServerAvatar
+              :icon-url="server.icon_url"
+              :server-name="server.name"
+              size="sm"
+              rounded="md"
             />
             <span class="truncate">{{ truncateServerName(server.name) }}</span>
           </dt>

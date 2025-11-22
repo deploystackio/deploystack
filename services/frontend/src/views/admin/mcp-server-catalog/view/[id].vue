@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import CategoryDisplay from '@/components/mcp-server/CategoryDisplay.vue'
 import ContentWrapper from '@/components/ContentWrapper.vue'
+import McpServerAvatar from '@/components/mcp-server/McpServerAvatar.vue'
 import { ArrowLeft, Github, GitBranch, Globe, ExternalLink, Package, Settings, Calendar, Tag, Trash2, AlertTriangle, Edit, Terminal, Users, User, Lock, Unlock, Link } from 'lucide-vue-next'
 import DashboardLayout from '@/components/DashboardLayout.vue'
 
@@ -315,14 +316,6 @@ const handleEditServer = () => {
   router.push(`/admin/mcp-server-catalog/edit/${serverId}`)
 }
 
-const getGitHubAvatarUrl = (server: McpServer) => {
-  // Only show GitHub avatar if the repository is hosted on GitHub
-  if (!server.github_account_id || (server.repository_source && server.repository_source !== 'github')) {
-    return null
-  }
-  return `https://avatars.githubusercontent.com/u/${server.github_account_id}?v=4&s=128`
-}
-
 // Get repository icon based on platform
 const getRepositoryIcon = (platform: string | undefined) => {
   switch (platform) {
@@ -404,12 +397,11 @@ const goBack = () => {
       <ContentWrapper v-if="server">
         <!-- Basic Information Section -->
         <div class="px-4 sm:px-0 flex items-center gap-4">
-          <img
-            v-if="getGitHubAvatarUrl(server)"
-            :src="getGitHubAvatarUrl(server)!"
-            :alt="`${server.name} GitHub avatar`"
-            class="h-12 w-12 rounded-lg flex-shrink-0"
-            @error="($event.target as HTMLImageElement).style.display = 'none'"
+          <McpServerAvatar
+            :icon-url="server.icon_url"
+            :server-name="server.name"
+            size="md"
+            rounded="lg"
           />
           <div>
             <h3 class="text-base/7 font-semibold text-gray-900">{{ t('mcpCatalog.edit.serverInformation') }}</h3>

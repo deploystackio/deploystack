@@ -309,7 +309,8 @@ const formData = ref<McpServerFormData>({
     tags: [],
     featured: false,
     auto_install_new_default_team: false,
-    website_url: ''
+    website_url: '',
+    icon_url: ''
   },
   repository: {
     repository_url: '',
