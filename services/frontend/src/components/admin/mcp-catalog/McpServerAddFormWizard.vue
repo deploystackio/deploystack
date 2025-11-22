@@ -214,6 +214,9 @@ const compatibleFormData = computed((): McpServerFormData => ({
   },
   configuration_schema: formData.value.configuration_schema,
   repository_setup: formData.value.repository,
+  readme: {
+    github_readme_base64: ''
+  },
   review: {}
 }))
 

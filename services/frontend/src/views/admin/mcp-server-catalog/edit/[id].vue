@@ -47,9 +47,11 @@ const clearEditStorage = () => {
   const editStorageKeys = [
     'edit_basic_data',
     'edit_repository_data',
+    'edit_repository_setup_data',
     'edit_technical_data',
     'edit_configuration_schema',
     'edit_claude_config',
+    'edit_readme_data',
     'technical_extracted_env_vars_edit',
     'mcp_edit_drafts'
   ]
@@ -80,8 +82,18 @@ const loadServerData = async () => {
 
     serverData.value = server
 
+    // Fetch README data separately using dedicated endpoint
+    let readmeBase64 = ''
+    try {
+      const readmeResponse = await McpCatalogService.getServerReadme(serverId)
+      readmeBase64 = readmeResponse || ''
+    } catch (readmeError) {
+      console.warn('Failed to fetch README:', readmeError)
+      // Continue even if README fetch fails
+    }
+
     // Convert server data to form data format
-    initialFormData.value = convertServerToFormData(server)
+    initialFormData.value = convertServerToFormData(server, readmeBase64)
 
   } catch (error) {
     loadError.value = error instanceof Error ? error.message : 'Failed to load server data'
@@ -110,7 +122,7 @@ const parseJsonField = (fieldValue: any, defaultValue: any) => {
 }
 
 // Convert server data to form data format
-const convertServerToFormData = (server: McpServer): Partial<McpServerFormData> => {
+const convertServerToFormData = (server: McpServer, readmeBase64: string = ''): Partial<McpServerFormData> => {
   // Parse tags with proper handling
   const parsedTags = parseJsonField(server.tags, [])
 
@@ -181,6 +193,9 @@ const convertServerToFormData = (server: McpServer): Partial<McpServerFormData> 
       git_branch: server.git_branch || '',
       auto_populated: false
     },
+    readme: {
+      github_readme_base64: readmeBase64
+    },
     review: {}
   }
 }
@@ -209,6 +224,11 @@ const handleSubmit = async (formData: McpServerFormData) => {
     repository_source: repositorySetupData?.repository_source !== undefined ? repositorySetupData.repository_source : formData.repository.repository_source,
     git_branch: repositorySetupData?.git_branch !== undefined ? repositorySetupData.git_branch : formData.repository.git_branch
   }
+
+  // Get README markdown from storage and convert to base64
+  const readmeData = eventBus.getState<{ readme_markdown: string }>('edit_readme_data')
+  const readmeMarkdown = readmeData?.readme_markdown || ''
+  const readmeBase64 = readmeMarkdown ? btoa(readmeMarkdown) : ''
 
   // CRITICAL FIX: Synchronize environment variables from installation_methods to team_env_schema
   let finalConfigurationSchema = { ...formData.configuration_schema }
@@ -277,6 +297,9 @@ const handleSubmit = async (formData: McpServerFormData) => {
     repository_subfolder: formData.repository.repository_subfolder || undefined,
     git_branch: finalRepositoryData.git_branch ? finalRepositoryData.git_branch : null,
     website_url: formData.basic.website_url || undefined,
+
+    // README content
+    github_readme_base64: readmeBase64 || undefined,
 
     // Technical
     language: formData.technical.language,

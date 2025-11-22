@@ -1023,9 +1023,13 @@ export const UPDATE_GLOBAL_SERVER_REQUEST_SCHEMA = { type: 'object',
     repository_subfolder: SERVER_FIELDS.repository_subfolder,
     git_branch: SERVER_FIELDS.git_branch,
     website_url: SERVER_FIELDS.website_url,
-    github_account_id: { 
+    github_account_id: {
       type: 'string',
       description: 'GitHub Account ID (owner.id from GitHub API)'
+    },
+    github_readme_base64: {
+      type: 'string',
+      description: 'Base64 encoded README content'
     },
     language: SERVER_FIELDS.language,
     runtime: SERVER_FIELDS.runtime,

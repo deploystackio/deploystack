@@ -262,6 +262,7 @@ export interface UpdateMcpServerRequest {
   description?: string
   long_description?: string
   github_account_id?: string
+  github_readme_base64?: string
   github_stars?: number
   // Repository platform fields
   repository_url?: string
@@ -377,12 +378,17 @@ export interface ConfigurationSchemaFormData {
   user_url_query_params_schema?: UserUrlQueryParamsSchema[]
 }
 
+export interface ReadmeFormData {
+  github_readme_base64: string
+}
+
 export interface McpServerFormData {
   basic: BasicInfoFormData
   repository: RepositoryFormData
   technical: TechnicalFormData
   configuration_schema: ConfigurationSchemaFormData
   repository_setup: RepositorySetupFormData
+  readme: ReadmeFormData
   review: ReviewFormData
 }
 

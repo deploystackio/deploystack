@@ -17,7 +17,7 @@ import { useI18n } from 'vue-i18n'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { ProgressBars } from '@/components/ui/progress-bars'
-import { FileText, GitBranch, Code, Settings, CheckCircle } from 'lucide-vue-next'
+import { FileText, GitBranch, Code, Settings, CheckCircle, BookOpen } from 'lucide-vue-next'
 import { McpCatalogService } from '@/services/mcpCatalogService'
 import { useEventBus } from '@/composables/useEventBus'
 import ContentWrapper from '@/components/ContentWrapper.vue'
@@ -25,6 +25,7 @@ import BasicInfoStepEdit from '@/components/admin/mcp-catalog/steps/BasicInfoSte
 import TechnicalStep from '@/components/admin/mcp-catalog/TechnicalStep.vue'
 import ConfigurationSchemaStepEdit from '@/components/admin/mcp-catalog/steps/ConfigurationSchemaStepEdit.vue'
 import RepositoryStep from '@/components/admin/mcp-catalog/RepositoryStep.vue'
+import ReadmeStep from '@/components/admin/mcp-catalog/ReadmeStep.vue'
 import ReviewStep from '@/components/admin/mcp-catalog/ReviewStep.vue'
 import type {
   McpServerFormData,
@@ -87,6 +88,12 @@ const steps = [
     label: t('mcpCatalog.form.steps.configurationSchema'),
     icon: Settings,
     component: ConfigurationSchemaStepEdit
+  },
+  {
+    key: 'readme' as const,
+    label: 'README',
+    icon: BookOpen,
+    component: ReadmeStep
   },
   {
     key: 'review' as const,
@@ -273,6 +280,19 @@ const initializeStorageWithData = (data: McpServerFormData) => {
     }
     eventBus.setState('edit_claude_config', JSON.stringify(claudeConfig, null, 2))
   }
+
+  // Initialize README data - decode base64 to markdown for editing
+  if (data.readme && data.readme.github_readme_base64) {
+    try {
+      const readmeMarkdown = atob(data.readme.github_readme_base64)
+      eventBus.setState('edit_readme_data', { readme_markdown: readmeMarkdown })
+    } catch (e) {
+      console.error('Failed to decode README base64:', e)
+      eventBus.setState('edit_readme_data', { readme_markdown: '' })
+    }
+  } else {
+    eventBus.setState('edit_readme_data', { readme_markdown: '' })
+  }
 }
 
 // Form data with proper initialization
@@ -313,6 +333,9 @@ const formData = ref<McpServerFormData>({
     git_branch: '',
     auto_populated: false
   },
+  readme: {
+    github_readme_base64: ''
+  },
   review: {}
 })
 
@@ -329,6 +352,7 @@ watch(
         technical: { ...formData.value.technical, ...newInitialData.technical },
         configuration_schema: newInitialData.configuration_schema ? newInitialData.configuration_schema : formData.value.configuration_schema,
         repository_setup: { ...formData.value.repository_setup, ...newInitialData.repository_setup },
+        readme: { ...formData.value.readme, ...newInitialData.readme },
         review: { ...formData.value.review, ...newInitialData.review }
       }
 

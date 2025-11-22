@@ -27,6 +27,7 @@ interface UpdateGlobalServerRequest {
   git_branch?: string;
   website_url?: string;
   github_account_id?: string;
+  github_readme_base64?: string;
   language?: string;
   runtime?: string;
   transport_type?: 'stdio' | 'http' | 'sse';
