@@ -8,7 +8,7 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from '@/components/ui/hover-card'
-import { Github, Star } from 'lucide-vue-next'
+import { Github, Star, Globe } from 'lucide-vue-next'
 import type { McpServer } from '@/views/admin/mcp-server-catalog/types'
 import McpServerAvatar from './McpServerAvatar.vue'
 
@@ -104,14 +104,14 @@ const truncateServerName = (name: string, maxLength: number = 30) => {
             {{ server.runtime }}
           </Badge>
         </div>
-        <div class="mt-6 flex w-full flex-none gap-x-4 items-center border-t border-gray-900/5 px-6 pt-6">
+        <!-- Show repository URL if available -->
+        <div v-if="server.repository_url" class="mt-6 flex w-full flex-none gap-x-4 items-center border-t border-gray-900/5 px-6 pt-6">
           <dt class="flex-none">
             <span class="sr-only">{{ t('mcpInstallations.view.fields.repository') }}</span>
             <Github class="h-4 w-4 text-gray-400" aria-hidden="true" />
           </dt>
           <dd class="text-sm/6 font-medium text-gray-900 min-w-0 flex-1">
             <a
-              v-if="server.repository_url"
               :href="server.repository_url"
               target="_blank"
               rel="noopener noreferrer"
@@ -120,11 +120,28 @@ const truncateServerName = (name: string, maxLength: number = 30) => {
             >
               {{ server.repository_url.replace('https://github.com/', '').replace('https://gitlab.com/', '').replace('https://bitbucket.org/', '') }}
             </a>
-            <span v-else class="text-gray-500 truncate block">{{ t('mcpInstallations.view.values.notProvided') }}</span>
           </dd>
           <dd v-if="server.github_stars !== null && server.github_stars !== undefined" class="flex items-center gap-1 text-sm/6 text-gray-600">
             <Star class="h-4 w-4 text-yellow-500 fill-yellow-500" aria-hidden="true" />
             <span>{{ server.github_stars.toLocaleString() }}</span>
+          </dd>
+        </div>
+        <!-- Show website URL if no repository URL but website URL is available -->
+        <div v-else-if="server.website_url" class="mt-6 flex w-full flex-none gap-x-4 items-center border-t border-gray-900/5 px-6 pt-6">
+          <dt class="flex-none">
+            <span class="sr-only">Website</span>
+            <Globe class="h-4 w-4 text-gray-400" aria-hidden="true" />
+          </dt>
+          <dd class="text-sm/6 font-medium text-gray-900 min-w-0 flex-1">
+            <a
+              :href="server.website_url"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="hover:underline truncate block"
+              :title="server.website_url"
+            >
+              {{ server.website_url.replace('https://', '').replace('http://', '') }}
+            </a>
           </dd>
         </div>
         <div class="mt-4 flex w-full flex-none gap-x-4 px-6">
