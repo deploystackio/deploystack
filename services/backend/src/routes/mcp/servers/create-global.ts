@@ -170,6 +170,18 @@ export default async function createGlobalServer(server: FastifyInstance) {
         }
       }
 
+      // Auto-fill icon_url from GitHub avatar if not explicitly provided
+      let iconUrl = requestData.icon_url;
+      if (!iconUrl && githubAccountId) {
+        iconUrl = `https://avatars.githubusercontent.com/u/${githubAccountId}?v=4&s=64`;
+        request.log.debug({
+          operation: 'create_global_mcp_server',
+          step: 'auto_fill_icon_url',
+          github_account_id: githubAccountId,
+          icon_url: iconUrl
+        }, 'Auto-filled icon_url from GitHub account ID');
+      }
+
       // OAuth detection for remote MCP servers (HTTP/SSE)
       let requiresOauth = false;
       if (finalTransportType === 'http' || finalTransportType === 'sse') {
@@ -228,7 +240,7 @@ export default async function createGlobalServer(server: FastifyInstance) {
         repository_subfolder: requestData.repository_subfolder || undefined,
         git_branch: requestData.repository_url ? requestData.git_branch : undefined,
         website_url: requestData.website_url,
-        icon_url: requestData.icon_url,
+        icon_url: iconUrl,
         language: requestData.language,
         runtime: requestData.runtime,
         packages: finalPackages,
