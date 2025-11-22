@@ -29,6 +29,7 @@ export interface McpServer {
   organization?: string
   license?: string
   transport_type?: 'stdio' | 'http' | 'sse'
+  requires_oauth?: boolean
 
   // New three-tier schema fields
   template_args?: TemplateArg[] | string
@@ -231,6 +232,7 @@ export interface CreateMcpServerRequest {
   organization?: string
   license?: string
   transport_type?: 'stdio' | 'http' | 'sse'
+  requires_oauth?: boolean
 
   // New three-tier schema fields
   template_args?: TemplateArg[]
@@ -266,7 +268,7 @@ export interface UpdateMcpServerRequest {
   repository_source?: string
   repository_id?: string
   repository_subfolder?: string
-  git_branch?: string
+  git_branch?: string | null
   website_url?: string
   language?: string
   runtime?: string
@@ -279,6 +281,7 @@ export interface UpdateMcpServerRequest {
   organization?: string
   license?: string
   transport_type?: 'stdio' | 'http' | 'sse'
+  requires_oauth?: boolean
 
   // New three-tier schema fields
   template_args?: TemplateArg[]
@@ -325,6 +328,7 @@ export interface BasicInfoFormData {
   tags: string[]
   featured: boolean
   auto_install_new_default_team: boolean
+  website_url: string
 }
 
 export interface RepositoryFormData {

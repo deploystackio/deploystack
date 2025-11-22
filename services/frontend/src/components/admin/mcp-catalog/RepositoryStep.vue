@@ -30,7 +30,7 @@ const STORAGE_KEY = 'edit_repository_setup_data'
 // Form state from storage
 const repositoryUrl = ref('')
 const repositorySource = ref('')
-const gitBranch = ref('main')
+const gitBranch = ref('')
 const validationError = ref<string | null>(null)
 
 // Load data from storage on mount
@@ -40,11 +40,11 @@ const loadFromStorage = () => {
   if (stored) {
     repositoryUrl.value = stored.repository_url || ''
     repositorySource.value = stored.repository_source || ''
-    gitBranch.value = stored.git_branch || 'main'
+    gitBranch.value = stored.git_branch || ''
   } else if (props.modelValue) {
     repositoryUrl.value = props.modelValue.repository_url || ''
     repositorySource.value = props.modelValue.repository_source || ''
-    gitBranch.value = props.modelValue.git_branch || 'main'
+    gitBranch.value = props.modelValue.git_branch || ''
   }
 }
 
@@ -194,7 +194,7 @@ onMounted(() => {
           placeholder="main"
         />
         <p class="text-sm text-muted-foreground">
-          Specify the branch to use (defaults to 'main')
+          Specify the branch to use (optional)
         </p>
       </div>
     </div>

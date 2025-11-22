@@ -259,6 +259,20 @@ loadCategories()
           />
         </SharedFormField>
 
+        <!-- Website URL -->
+        <SharedFormField
+          :label="t('mcpCatalog.form.basic.websiteUrl.label')"
+          :description="t('mcpCatalog.form.basic.websiteUrl.description')"
+        >
+          <Input
+            id="website_url"
+            :model-value="localData.website_url"
+            @update:model-value="(value) => updateField('website_url', String(value))"
+            :placeholder="t('mcpCatalog.form.basic.websiteUrl.placeholder')"
+            type="url"
+          />
+        </SharedFormField>
+
         <!-- Tags -->
         <SharedFormField
           :label="t('mcpCatalog.form.basic.tags.label')"

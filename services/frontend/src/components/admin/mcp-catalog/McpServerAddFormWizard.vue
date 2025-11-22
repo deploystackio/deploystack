@@ -65,6 +65,7 @@ interface McpServerAddFormData {
     featured: boolean
     auto_install_new_default_team: boolean
     transport_type: string
+    website_url: string
   }
 }
 
@@ -190,7 +191,8 @@ const formData = ref<McpServerAddFormData>({
     tags: [],
     featured: false,
     auto_install_new_default_team: false,
-    transport_type: 'auto'
+    transport_type: 'auto',
+    website_url: ''
   }
 })
 
@@ -368,6 +370,7 @@ const autoPopulateFromGitHub = (repositoryData: any) => {
     organization: repositoryData.owner?.type === 'Organization' ? repositoryData.owner.login : (repositoryData.organization || ''),
     license: repositoryData.license?.spdx_id || repositoryData.license || '',
     tags: repositoryData.topics || repositoryData.tags || [],
+    website_url: repositoryData.homepage || '',
     // Keep existing values for these properties
     featured: formData.value.basic.featured,
     auto_install_new_default_team: formData.value.basic.auto_install_new_default_team,
@@ -452,11 +455,11 @@ const submitForm = async () => {
       finalPayload.repository_url = repositoryUrl;
       finalPayload.repository_source = formData.value.repository.repository_source;
       finalPayload.git_branch = formData.value.repository.git_branch;
+    }
 
-      // From auto-population or manual entry
-      if (formData.value.repository.repo_data?.homepage) {
-        finalPayload.website_url = formData.value.repository.repo_data.homepage;
-      }
+    // Include website_url from basic info (can be manually entered or auto-populated)
+    if (formData.value.basic.website_url && formData.value.basic.website_url.trim() !== '') {
+      finalPayload.website_url = formData.value.basic.website_url;
     }
 
     await emit('submit', finalPayload)

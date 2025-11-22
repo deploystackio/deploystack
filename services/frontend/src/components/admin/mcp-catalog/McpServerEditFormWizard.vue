@@ -180,7 +180,7 @@ const initializeStorageWithData = (data: McpServerFormData) => {
     repository_source: data.repository.repository_source || 'github',
     repository_id: data.repository.repository_id || '',
     repository_subfolder: data.repository.repository_subfolder || '',
-    git_branch: data.repository.git_branch || 'main',
+    git_branch: data.repository.git_branch || '',
     website_url: data.repository.website_url || ''
   }
 
@@ -190,7 +190,7 @@ const initializeStorageWithData = (data: McpServerFormData) => {
   const repositorySetupData = {
     repository_url: repositoryData.repository_url || '',
     repository_source: repositoryData.repository_source || '',
-    git_branch: repositoryData.git_branch || 'main',
+    git_branch: repositoryData.git_branch || '',
     auto_populated: !!data.repository_setup?.auto_populated
   }
   eventBus.setState('edit_repository_setup_data', repositorySetupData)
@@ -288,14 +288,15 @@ const formData = ref<McpServerFormData>({
     license: '',
     tags: [],
     featured: false,
-    auto_install_new_default_team: false
+    auto_install_new_default_team: false,
+    website_url: ''
   },
   repository: {
     repository_url: '',
     repository_source: '',
     repository_id: '',
     repository_subfolder: '',
-    git_branch: 'main',
+    git_branch: '',
     website_url: ''
   },
   technical: {
@@ -309,7 +310,7 @@ const formData = ref<McpServerFormData>({
   repository_setup: {
     repository_url: '',
     repository_source: '',
-    git_branch: 'main',
+    git_branch: '',
     auto_populated: false
   },
   review: {}
@@ -486,14 +487,15 @@ const autoPopulateFromRepository = (repositoryData: any) => {
       license: repositoryData.license?.spdx_id || repositoryData.license || '',
       tags: repositoryData.topics || repositoryData.tags || [],
       featured: false,
-      auto_install_new_default_team: false
+      auto_install_new_default_team: false,
+      website_url: repositoryData.homepage || repositoryData.website_url || ''
     },
     repository: {
       repository_url: repositoryData.html_url || repositoryData.repository_url || formData.value.repository_setup.repository_url,
       repository_source: repositoryData.repository_source || formData.value.repository_setup.repository_source,
       repository_id: repositoryData.repository_id || '',
       repository_subfolder: repositoryData.repository_subfolder || '',
-      git_branch: repositoryData.default_branch || 'main',
+      git_branch: repositoryData.default_branch || '',
       website_url: repositoryData.homepage || repositoryData.website_url || ''
     },
     technical: {
@@ -507,7 +509,7 @@ const autoPopulateFromRepository = (repositoryData: any) => {
     repository_setup: {
       repository_url: repositoryData.html_url || repositoryData.repository_url || formData.value.repository_setup.repository_url,
       repository_source: repositoryData.repository_source || formData.value.repository_setup.repository_source,
-      git_branch: repositoryData.default_branch || 'main',
+      git_branch: repositoryData.default_branch || '',
       auto_populated: true,
       repo_data: repositoryData
     }

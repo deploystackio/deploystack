@@ -508,47 +508,45 @@ const goBack = () => {
               </dd>
             </div>
 
-            <!-- Repository Links -->
-            <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
-              <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.edit.fields.links') }}</dt>
+            <!-- Repository Link -->
+            <div v-if="server.repository_url" class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+              <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.edit.fields.repositoryUrl') }}</dt>
               <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
-                <div class="space-y-2">
-                  <!-- Primary Repository URL -->
-                  <div v-if="server.repository_url" class="flex items-center gap-1">
-                    <component
-                      :is="getRepositoryIcon(server.repository_source)"
-                      class="h-4 w-4 text-muted-foreground"
-                    />
-                    <a
-                      :href="server.repository_url"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      class="text-blue-600 hover:underline"
-                    >
-                      {{ getRepositoryLabel(server.repository_source) }}
-                      <ExternalLink class="inline h-3 w-3 ml-1" />
-                    </a>
-                    <!-- Show platform badge if available -->
-                    <Badge v-if="server.repository_source" variant="outline" class="text-xs">
-                      {{ McpCatalogService.getPlatformDisplayName(server.repository_source) }}
-                    </Badge>
-                  </div>
-                  <div v-if="server.website_url" class="flex items-center gap-1">
-                    <ExternalLink class="h-4 w-4 text-muted-foreground" />
-                    <a
-                      :href="server.website_url"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      class="text-blue-600 hover:underline"
-                    >
-                      {{ t('mcpCatalog.edit.values.homepage') }}
-                      <ExternalLink class="inline h-3 w-3 ml-1" />
-                    </a>
-                  </div>
-                  <div v-if="!server.repository_url && !server.website_url" class="text-muted-foreground">
-                    {{ t('mcpCatalog.edit.values.noLinks') }}
-                  </div>
+                <div class="flex items-center gap-1">
+                  <component
+                    :is="getRepositoryIcon(server.repository_source)"
+                    class="h-4 w-4 text-muted-foreground"
+                  />
+                  <a
+                    :href="server.repository_url"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="text-blue-600 hover:underline"
+                  >
+                    {{ getRepositoryLabel(server.repository_source) }}
+                    <ExternalLink class="inline h-3 w-3 ml-1" />
+                  </a>
+                  <!-- Show platform badge if available -->
+                  <Badge v-if="server.repository_source" variant="outline" class="text-xs">
+                    {{ McpCatalogService.getPlatformDisplayName(server.repository_source) }}
+                  </Badge>
                 </div>
+              </dd>
+            </div>
+
+            <!-- Website URL -->
+            <div v-if="server.website_url" class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+              <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.edit.fields.websiteUrl') }}</dt>
+              <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
+                <a
+                  :href="server.website_url"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="text-blue-600 hover:underline"
+                >
+                  {{ server.website_url }}
+                  <ExternalLink class="inline h-3 w-3 ml-1" />
+                </a>
               </dd>
             </div>
 
@@ -744,6 +742,32 @@ const goBack = () => {
                     </div>
                   </li>
                 </ul>
+              </dd>
+            </div>
+
+            <!-- Requires OAuth -->
+            <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+              <dt class="text-sm/6 font-medium text-gray-900">OAuth Authentication</dt>
+              <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
+                <div class="flex items-center gap-2">
+                  <Badge
+                    v-if="server.requires_oauth"
+                    variant="default"
+                    class="bg-blue-50 text-blue-700 border-blue-200"
+                  >
+                    Required
+                  </Badge>
+                  <Badge
+                    v-else
+                    variant="outline"
+                    class="bg-gray-50 text-gray-600 border-gray-200"
+                  >
+                    Not Required
+                  </Badge>
+                  <span v-if="server.requires_oauth" class="text-xs text-muted-foreground">
+                    This server requires OAuth authentication
+                  </span>
+                </div>
               </dd>
             </div>
 

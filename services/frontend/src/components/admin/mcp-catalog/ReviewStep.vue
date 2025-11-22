@@ -93,9 +93,9 @@ const getRepositoryData = () => {
   return {
     ...repoData,
     // Override with setup data if available (this is what user edited in RepositoryStep)
-    repository_url: setupData.repository_url || repoData.repository_url,
-    repository_source: setupData.repository_source || repoData.repository_source,
-    git_branch: setupData.git_branch || repoData.git_branch
+    repository_url: setupData.repository_url !== undefined ? setupData.repository_url : repoData.repository_url,
+    repository_source: setupData.repository_source !== undefined ? setupData.repository_source : repoData.repository_source,
+    git_branch: setupData.git_branch !== undefined ? setupData.git_branch : repoData.git_branch
   }
 }
 const getTechnicalData = () => freshTechnicalData.value || props.formData.technical
@@ -200,6 +200,13 @@ const formatJson = (jsonString: string) => {
         </dd>
       </div>
 
+      <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+        <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.review.fields.homepage') }}</dt>
+        <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
+          {{ getBasicData().website_url || t('mcpCatalog.form.review.values.notSpecified') }}
+        </dd>
+      </div>
+
       <div v-if="getBasicData().tags && getBasicData().tags.length > 0" class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
         <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.review.fields.tags') }}</dt>
         <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
@@ -231,14 +238,7 @@ const formatJson = (jsonString: string) => {
       <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
         <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.review.fields.gitBranch') }}</dt>
         <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
-          {{ getRepositoryData().git_branch || 'main' }}
-        </dd>
-      </div>
-
-      <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
-        <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.review.fields.homepage') }}</dt>
-        <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
-          {{ getRepositoryData().website_url || t('mcpCatalog.form.review.values.notSpecified') }}
+          {{ getRepositoryData().git_branch || t('mcpCatalog.form.review.values.notSpecified') }}
         </dd>
       </div>
     </dl>

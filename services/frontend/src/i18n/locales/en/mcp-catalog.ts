@@ -361,6 +361,11 @@ export default {
         placeholder: 'e.g., MIT, Apache-2.0',
         description: 'Software license for this server'
       },
+      websiteUrl: {
+        label: 'Website URL',
+        placeholder: 'https://example.com',
+        description: 'Official website or documentation URL for this MCP server'
+      },
       tags: {
         label: 'Tags',
         placeholder: 'Add tags (press Enter to add)',
@@ -722,6 +727,8 @@ export default {
       author: 'Author Information',
       technical: 'Technical Specifications',
       links: 'Repository Links',
+      repositoryUrl: 'Repository URL',
+      websiteUrl: 'Website URL',
       status: 'Status & Classification',
       tags: 'Tags',
       installation: 'Installation Methods',

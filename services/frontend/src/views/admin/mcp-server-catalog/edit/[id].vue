@@ -156,13 +156,14 @@ const convertServerToFormData = (server: McpServer): Partial<McpServerFormData> 
       tags: parsedTags,
       featured: Boolean(server.featured),
       auto_install_new_default_team: Boolean(server.auto_install_new_default_team),
+      website_url: server.website_url || ''
     },
     repository: {
       repository_url: server.repository_url || '',
       repository_source: server.repository_source || 'github',
       repository_id: server.repository_id || '',
       repository_subfolder: server.repository_subfolder || '',
-      git_branch: server.git_branch || 'main',
+      git_branch: server.git_branch || '',
       website_url: server.website_url || ''
     },
     technical: {
@@ -177,7 +178,7 @@ const convertServerToFormData = (server: McpServer): Partial<McpServerFormData> 
     repository_setup: {
       repository_url: server.repository_url || '',
       repository_source: server.repository_source || 'github',
-      git_branch: server.git_branch || 'main',
+      git_branch: server.git_branch || '',
       auto_populated: false
     },
     review: {}
@@ -193,6 +194,21 @@ const handleSubmit = async (formData: McpServerFormData) => {
   // Parse resources and prompts from server data
   const parsedResources = parseJsonField(server.resources, [])
   const parsedPrompts = parseJsonField(server.prompts, [])
+
+  // Get fresh repository data from storage (RepositoryStep uses storage-first architecture)
+  const repositorySetupData = eventBus.getState<{
+    repository_url?: string
+    repository_source?: string
+    git_branch?: string
+    auto_populated?: boolean
+  }>('edit_repository_setup_data')
+
+  // Merge repository data: storage takes priority over formData
+  const finalRepositoryData = {
+    repository_url: repositorySetupData?.repository_url !== undefined ? repositorySetupData.repository_url : formData.repository.repository_url,
+    repository_source: repositorySetupData?.repository_source !== undefined ? repositorySetupData.repository_source : formData.repository.repository_source,
+    git_branch: repositorySetupData?.git_branch !== undefined ? repositorySetupData.git_branch : formData.repository.git_branch
+  }
 
   // CRITICAL FIX: Synchronize environment variables from installation_methods to team_env_schema
   let finalConfigurationSchema = { ...formData.configuration_schema }
@@ -254,13 +270,13 @@ const handleSubmit = async (formData: McpServerFormData) => {
     featured: formData.basic.featured,
     auto_install_new_default_team: formData.basic.auto_install_new_default_team,
 
-    // Repository
-    repository_url: formData.repository.repository_url || undefined,
-    repository_source: formData.repository.repository_source || undefined,
+    // Repository (use finalRepositoryData which merges storage + formData)
+    repository_url: finalRepositoryData.repository_url || undefined,
+    repository_source: finalRepositoryData.repository_source || undefined,
     repository_id: formData.repository.repository_id || undefined,
     repository_subfolder: formData.repository.repository_subfolder || undefined,
-    git_branch: formData.repository.git_branch || 'main',
-    website_url: formData.repository.website_url || undefined,
+    git_branch: finalRepositoryData.git_branch ? finalRepositoryData.git_branch : null,
+    website_url: formData.basic.website_url || undefined,
 
     // Technical
     language: formData.technical.language,

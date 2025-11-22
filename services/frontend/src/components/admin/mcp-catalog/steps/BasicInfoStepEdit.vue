@@ -67,7 +67,8 @@ const defaultData: BasicInfoFormData = {
   license: '',
   tags: [],
   featured: false,
-  auto_install_new_default_team: false
+  auto_install_new_default_team: false,
+  website_url: ''
 }
 
 // Storage-first reactive data - using ref instead of computed for better reactivity
@@ -325,6 +326,20 @@ onUnmounted(() => {
             :model-value="localData.license"
             @update:model-value="(value) => updateField('license', String(value))"
             :placeholder="t('mcpCatalog.form.basic.license.placeholder')"
+          />
+        </SharedFormField>
+
+        <!-- Website URL -->
+        <SharedFormField
+          :label="t('mcpCatalog.form.basic.websiteUrl.label')"
+          :description="t('mcpCatalog.form.basic.websiteUrl.description')"
+        >
+          <Input
+            id="website_url"
+            :model-value="localData.website_url"
+            @update:model-value="(value) => updateField('website_url', String(value))"
+            :placeholder="t('mcpCatalog.form.basic.websiteUrl.placeholder')"
+            type="url"
           />
         </SharedFormField>
 
