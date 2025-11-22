@@ -35,6 +35,7 @@ export const mcpServers = sqliteTable('mcpServers', {
   repository_subfolder: text('repository_subfolder'), // For monorepos
   git_branch: text('git_branch'), // Git branch - no default, only set when repository_url exists
   website_url: text('website_url'),
+  icon_url: text('icon_url'), // Icon/logo URL for display in frontend
 
   // Technical Details
   language: text('language').notNull(), // 'typescript', 'javascript', 'python', 'go'

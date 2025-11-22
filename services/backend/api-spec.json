@@ -15525,6 +15525,11 @@
                                 "nullable": true,
                                 "description": "Website URL"
                               },
+                              "icon_url": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "Icon/logo URL"
+                              },
                               "github_account_id": {
                                 "type": "string",
                                 "nullable": true,
@@ -15936,6 +15941,11 @@
                           "type": "string",
                           "nullable": true,
                           "description": "Website URL"
+                        },
+                        "icon_url": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Icon/logo URL"
                         },
                         "github_account_id": {
                           "type": "string",
@@ -16601,6 +16611,11 @@
                                 "type": "string",
                                 "nullable": true,
                                 "description": "Website URL"
+                              },
+                              "icon_url": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "Icon/logo URL"
                               },
                               "github_account_id": {
                                 "type": "string",
@@ -17988,6 +18003,11 @@
                     "format": "uri",
                     "description": "Website URL"
                   },
+                  "icon_url": {
+                    "type": "string",
+                    "format": "uri",
+                    "description": "Icon/logo URL"
+                  },
                   "github_account_id": {
                     "type": "string",
                     "description": "GitHub Account ID (owner.id from GitHub API)"
@@ -18166,6 +18186,11 @@
                           "type": "string",
                           "nullable": true,
                           "description": "Website URL"
+                        },
+                        "icon_url": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Icon/logo URL"
                         },
                         "github_account_id": {
                           "type": "string",
@@ -18621,9 +18646,18 @@
                     "format": "uri",
                     "description": "Website URL"
                   },
+                  "icon_url": {
+                    "type": "string",
+                    "format": "uri",
+                    "description": "Icon/logo URL"
+                  },
                   "github_account_id": {
                     "type": "string",
                     "description": "GitHub Account ID (owner.id from GitHub API)"
+                  },
+                  "github_readme_base64": {
+                    "type": "string",
+                    "description": "Base64 encoded README content"
                   },
                   "language": {
                     "type": "string",
@@ -19361,6 +19395,11 @@
                           "type": "string",
                           "nullable": true,
                           "description": "Website URL"
+                        },
+                        "icon_url": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Icon/logo URL"
                         },
                         "github_account_id": {
                           "type": "string",
@@ -20587,6 +20626,11 @@
                               "nullable": true,
                               "description": "Website URL"
                             },
+                            "icon_url": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "Icon/logo URL"
+                            },
                             "author_name": {
                               "type": "string",
                               "nullable": true,
@@ -20995,6 +21039,11 @@
                                 "nullable": true,
                                 "description": "Website URL"
                               },
+                              "icon_url": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "Icon/logo URL"
+                              },
                               "author_name": {
                                 "type": "string",
                                 "nullable": true,
@@ -21387,6 +21436,11 @@
                               "type": "string",
                               "nullable": true,
                               "description": "Website URL"
+                            },
+                            "icon_url": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "Icon/logo URL"
                             },
                             "author_name": {
                               "type": "string",
@@ -21807,6 +21861,11 @@
                               "type": "string",
                               "nullable": true,
                               "description": "Website URL"
+                            },
+                            "icon_url": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "Icon/logo URL"
                             },
                             "author_name": {
                               "type": "string",
@@ -22434,6 +22493,11 @@
                               "nullable": true,
                               "description": "Website URL"
                             },
+                            "icon_url": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "Icon/logo URL"
+                            },
                             "author_name": {
                               "type": "string",
                               "nullable": true,
@@ -22852,6 +22916,11 @@
                               "type": "string",
                               "nullable": true,
                               "description": "Website URL"
+                            },
+                            "icon_url": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "Icon/logo URL"
                             },
                             "author_name": {
                               "type": "string",
@@ -23272,6 +23341,11 @@
                               "nullable": true,
                               "description": "Website URL"
                             },
+                            "icon_url": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "Icon/logo URL"
+                            },
                             "author_name": {
                               "type": "string",
                               "nullable": true,
@@ -23690,6 +23764,11 @@
                               "type": "string",
                               "nullable": true,
                               "description": "Website URL"
+                            },
+                            "icon_url": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "Icon/logo URL"
                             },
                             "author_name": {
                               "type": "string",

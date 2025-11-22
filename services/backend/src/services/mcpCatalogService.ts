@@ -19,6 +19,7 @@ export interface McpServer {
   repository_subfolder?: string;
   git_branch?: string;
   website_url?: string;
+  icon_url?: string;
   language: string;
   runtime: string;
   packages: string; // JSON
@@ -80,7 +81,8 @@ export interface CreateMcpServerRequest {
   repository_subfolder?: string;
   git_branch?: string;
   website_url?: string;
-  
+  icon_url?: string;
+
   // Version information
   version?: string;
   
@@ -139,6 +141,7 @@ export interface UpdateMcpServerRequest {
   repository_subfolder?: string;
   git_branch?: string;
   website_url?: string;
+  icon_url?: string;
   language?: string;
   runtime?: string;
   packages?: any[];
@@ -439,6 +442,7 @@ export class McpCatalogService {
       repository_subfolder: data.repository_subfolder || null,
       git_branch: data.git_branch || 'main',
       website_url: githubInfo.website_url || data.website_url,
+      icon_url: data.icon_url || null,
       language: githubInfo.language || data.language,
       runtime: data.runtime,
       packages: JSON.stringify(data.packages),
@@ -552,6 +556,7 @@ export class McpCatalogService {
       updateData.git_branch = null;
     }
     if (data.website_url !== undefined) updateData.website_url = data.website_url;
+    if (data.icon_url !== undefined) updateData.icon_url = data.icon_url;
     if (data.language !== undefined) updateData.language = data.language;
     if (data.runtime !== undefined) updateData.runtime = data.runtime;
     if (data.packages !== undefined) updateData.packages = JSON.stringify(data.packages);

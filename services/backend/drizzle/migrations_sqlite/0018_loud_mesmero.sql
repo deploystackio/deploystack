@@ -1,0 +1,1 @@
+ALTER TABLE `mcpServers` ADD `icon_url` text;

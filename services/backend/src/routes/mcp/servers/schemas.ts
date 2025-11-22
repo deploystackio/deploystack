@@ -55,6 +55,7 @@ const SERVER_FIELDS = {
   repository_subfolder: { type: 'string', description: 'Subfolder path for monorepos' },
   git_branch: { type: 'string', description: 'Git branch (defaults to main)' },
   website_url: { type: 'string', format: 'uri', description: 'Website URL' },
+  icon_url: { type: 'string', format: 'uri', description: 'Icon/logo URL' },
   language: { type: 'string', minLength: 1, description: 'Programming language is required' },
   runtime: { type: 'string', minLength: 1, description: 'Runtime environment is required' },
   transport_type: { type: 'string', enum: ['stdio', 'http', 'sse'], description: 'MCP transport type' },
@@ -575,12 +576,17 @@ export const CREATE_GLOBAL_SERVER_REQUEST_SCHEMA = {
       type: 'string',
       description: 'Git branch (defaults to main)'
     },
-    website_url: { 
-      type: 'string', 
+    website_url: {
+      type: 'string',
       format: 'uri',
       description: 'Website URL'
     },
-    github_account_id: { 
+    icon_url: {
+      type: 'string',
+      format: 'uri',
+      description: 'Icon/logo URL'
+    },
+    github_account_id: {
       type: 'string',
       description: 'GitHub Account ID (owner.id from GitHub API)'
     },
@@ -716,13 +722,18 @@ export const SERVER_ENTITY_SCHEMA = {
       nullable: true,
       description: 'Git branch'
     },
-    website_url: { 
-      type: 'string', 
+    website_url: {
+      type: 'string',
       nullable: true,
       description: 'Website URL'
     },
-    github_account_id: { 
-      type: 'string', 
+    icon_url: {
+      type: 'string',
+      nullable: true,
+      description: 'Icon/logo URL'
+    },
+    github_account_id: {
+      type: 'string',
       nullable: true,
       description: 'GitHub Account ID'
     },
@@ -1023,6 +1034,7 @@ export const UPDATE_GLOBAL_SERVER_REQUEST_SCHEMA = { type: 'object',
     repository_subfolder: SERVER_FIELDS.repository_subfolder,
     git_branch: SERVER_FIELDS.git_branch,
     website_url: SERVER_FIELDS.website_url,
+    icon_url: SERVER_FIELDS.icon_url,
     github_account_id: {
       type: 'string',
       description: 'GitHub Account ID (owner.id from GitHub API)'
@@ -1281,6 +1293,7 @@ export interface ServerEntity {
   repository_subfolder: string | null;
   git_branch: string | null;
   website_url: string | null;
+  icon_url: string | null;
   github_account_id: string | null;
   github_stars: number | null;
   language: string;
@@ -1453,6 +1466,7 @@ export interface CreateGlobalServerRequest {
   repository_subfolder?: string;
   git_branch?: string;
   website_url?: string;
+  icon_url?: string;
   github_account_id?: string;
   github_stars?: number;
   resources?: Resource[];
@@ -1573,6 +1587,7 @@ export function formatServerResponse(server: any): ServerEntity {
     repository_subfolder: server.repository_subfolder || null,
     git_branch: server.git_branch || null,
     website_url: server.website_url || null,
+    icon_url: server.icon_url || null,
     github_account_id: server.github_account_id || null,
     github_stars: server.github_stars || null,
     language: server.language,

@@ -228,6 +228,7 @@ export default async function createGlobalServer(server: FastifyInstance) {
         repository_subfolder: requestData.repository_subfolder || undefined,
         git_branch: requestData.repository_url ? requestData.git_branch : undefined,
         website_url: requestData.website_url,
+        icon_url: requestData.icon_url,
         language: requestData.language,
         runtime: requestData.runtime,
         packages: finalPackages,

@@ -127,6 +127,13 @@
       "when": 1763742761796,
       "tag": "0017_noisy_revanche",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "6",
+      "when": 1763800238672,
+      "tag": "0018_loud_mesmero",
+      "breakpoints": true
     }
   ]
 }

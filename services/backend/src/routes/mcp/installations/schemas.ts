@@ -299,15 +299,20 @@ export const SERVER_DETAILS_SCHEMA = {
       nullable: true, 
       description: 'Subfolder path for monorepos' 
     },
-    website_url: { 
-      type: 'string', 
-      nullable: true, 
-      description: 'Website URL' 
+    website_url: {
+      type: 'string',
+      nullable: true,
+      description: 'Website URL'
     },
-    author_name: { 
-      type: 'string', 
-      nullable: true, 
-      description: 'Author name' 
+    icon_url: {
+      type: 'string',
+      nullable: true,
+      description: 'Icon/logo URL'
+    },
+    author_name: {
+      type: 'string',
+      nullable: true,
+      description: 'Author name'
     },
     github_stars: { 
       type: 'number', 
@@ -640,6 +645,7 @@ export interface ServerDetails {
   repository_id: string | null;
   repository_subfolder: string | null;
   website_url: string | null;
+  icon_url: string | null;
   author_name: string | null;
   github_stars: number | null;
   language: string;

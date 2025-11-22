@@ -33,6 +33,7 @@ export interface McpInstallation {
     status: string; // Required in DB with default 'active'
     author_name: string | null; // Optional in DB
     website_url: string | null; // Optional in DB
+    icon_url: string | null; // Optional in DB
     repository_url: string | null; // Optional in DB
     repository_source: string | null; // Optional in DB
     repository_id: string | null; // Optional in DB
@@ -149,6 +150,7 @@ export class McpInstallationService {
           status: row.server.status,
           author_name: row.server.author_name,
           website_url: row.server.website_url,
+          icon_url: row.server.icon_url,
           repository_url: row.server.repository_url,
         repository_source: row.server.repository_source,
         repository_id: row.server.repository_id,
@@ -242,6 +244,7 @@ export class McpInstallationService {
         status: server.status,
         author_name: server.author_name,
         website_url: server.website_url,
+        icon_url: server.icon_url,
         repository_url: server.repository_url,
         repository_source: server.repository_source,
         repository_id: server.repository_id,

@@ -26,6 +26,7 @@ interface UpdateGlobalServerRequest {
   repository_subfolder?: string;
   git_branch?: string;
   website_url?: string;
+  icon_url?: string;
   github_account_id?: string;
   github_readme_base64?: string;
   language?: string;
