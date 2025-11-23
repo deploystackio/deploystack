@@ -3,6 +3,7 @@ import { platform, arch, totalmem } from 'os';
 import { readFile, writeFile, access } from 'fs/promises';
 import { join } from 'path';
 import { SatelliteEvent } from '../events/registry';
+import { getVersionString } from '../config/version';
 
 export interface BackendConnectionStatus {
   backend_url: string;
@@ -122,12 +123,25 @@ export class BackendClient {
   }
 
   /**
-   * Get authentication headers
+   * Get base browser-like headers for Cloudflare compatibility
+   */
+  private getBaseHeaders(): Record<string, string> {
+    return {
+      'Content-Type': 'application/json',
+      'User-Agent': `DeployStack-Satellite/${getVersionString()} (Node.js)`,
+      'Accept': 'application/json, text/plain, */*',
+      'Accept-Language': 'en-US,en;q=0.9',
+      'Accept-Encoding': 'gzip, deflate, br',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive'
+    };
+  }
+
+  /**
+   * Get authentication headers with API key
    */
   private getAuthHeaders(): Record<string, string> {
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json'
-    };
+    const headers = this.getBaseHeaders();
 
     if (this.apiKey) {
       headers['Authorization'] = `Bearer ${this.apiKey}`;
@@ -151,9 +165,7 @@ export class BackendClient {
       // Try to connect to backend health endpoint
       const response = await fetch(`${this.backendUrl}/api/health`, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: this.getBaseHeaders(),
         // 5 second timeout
         signal: AbortSignal.timeout(5000)
       });
@@ -235,12 +247,12 @@ export class BackendClient {
         satellite_name: registrationData.name
       }, 'Registering satellite with backend');
 
+      const headers = this.getBaseHeaders();
+      headers['Authorization'] = `Bearer ${registrationToken}`;
+
       const response = await fetch(`${this.backendUrl}/api/satellites/register`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${registrationToken}`
-        },
+        headers: headers,
         body: JSON.stringify(registrationData),
         // 10 second timeout for registration
         signal: AbortSignal.timeout(10000)
