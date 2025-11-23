@@ -6,6 +6,7 @@ import { OAuthTokenService } from '../../../services/OAuthTokenService';
 import { OAuthDiscoveryService } from '../../../services/OAuthDiscoveryService';
 import { encrypt } from '../../../utils/encryption';
 import { GlobalSettingsInitService } from '../../../global-settings';
+import { GlobalSettings } from '../../../global-settings';
 import { nanoid } from 'nanoid';
 import {
 	OAUTH_CALLBACK_QUERY_SCHEMA,
@@ -201,11 +202,7 @@ export default async function oauthCallbackRoute(server: FastifyInstance) {
 				}
 
 				// Construct redirect URI (must match what was sent in authorization request)
-				const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
-				const host = process.env.HOST || 'localhost';
-				const port = process.env.PORT || '3000';
-				const backendUrl =
-					process.env.NODE_ENV === 'production' ? `${protocol}://${host}` : `${protocol}://${host}:${port}`;
+				const backendUrl = await GlobalSettings.get('global.backend_url', 'http://localhost:3000');
 				const redirectUri = `${backendUrl}/api/teams/${teamId}/mcp/installations/${installationId}/oauth/callback`;
 
 				// Get client_id from installation (may be dynamically registered)

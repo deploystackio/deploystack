@@ -9,6 +9,7 @@ import { getDb } from '../../../db';
 import { mcpServers, mcpServerInstallations } from '../../../db/schema.sqlite';
 import { eq } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
+import { GlobalSettings } from '../../../global-settings';
 import {
   TEAM_ID_PARAM_SCHEMA,
   OAUTH_AUTHORIZE_REQUEST_SCHEMA,
@@ -172,13 +173,8 @@ export default async function authorizeRoute(server: FastifyInstance) {
       const installationId = nanoid();
       const authService = new OAuthAuthorizationService(request.log);
 
-      // Build backend URL for OAuth callback
-      const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
-      const host = process.env.HOST || 'localhost';
-      const port = process.env.PORT || '3000';
-      const backendUrl = process.env.NODE_ENV === 'production'
-        ? `${protocol}://${host}`
-        : `${protocol}://${host}:${port}`;
+      // Get backend URL from global settings for OAuth callback
+      const backendUrl = await GlobalSettings.get('global.backend_url', 'http://localhost:3000');
       const redirectUri = `${backendUrl}/api/teams/${teamId}/mcp/installations/${installationId}/oauth/callback`;
 
       // Discover OAuth endpoints and check for dynamic client registration
