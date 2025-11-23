@@ -2,6 +2,12 @@
 
 ## 0.11.0 (2025-11-23)
 
+* chore(backend): release v0.45.0 482c6f4
+* chore(backend): release v0.45.0 13a7796
+* chore(satellite): release v0.11.0 9fddc8e
+
+## 0.11.0 (2025-11-23)
+
 * chore(all): update dependencies across services 44bbbc2
 * chore(backend): release v0.44.0 09333c5
 * chore(backend): release v0.44.0 1c71e34
