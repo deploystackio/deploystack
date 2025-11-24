@@ -262,6 +262,29 @@ export default async function oauthCallbackRoute(server: FastifyInstance) {
 					})
 					.where(eq(mcpServerInstallations.id, installation.id));
 
+				// Create satellite commands for immediate notification
+				try {
+					const { SatelliteCommandService } = await import('../../../services/satelliteCommandService');
+					const satelliteCommandService = new SatelliteCommandService(db, request.log);
+					const commands = await satelliteCommandService.notifyMcpInstallation(
+						installation.id,
+						installation.team_id,
+						installation.created_by
+					);
+
+					request.log.info(
+						{
+							installationId: installation.id,
+							commandsCreated: commands.length,
+							satelliteIds: commands.map(c => c.satellite_id)
+						},
+						'Satellite commands created for OAuth MCP installation'
+					);
+				} catch (commandError) {
+					request.log.error(commandError, `Failed to create satellite commands for installation ${installation.id}:`);
+					// Don't fail OAuth completion if command creation fails
+				}
+
 				request.log.info(
 					{
 						installationId: installation.id,

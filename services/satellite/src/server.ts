@@ -632,6 +632,7 @@ export async function createServer() {
       // Phase 10: Initialize OAuth Token Service for HTTP/SSE MCP servers
       const oauthTokenService = new OAuthTokenService(server.log as any, backendClient, satelliteId);
       mcpServerWrapper.setOAuthTokenService(oauthTokenService);
+      remoteToolDiscoveryManager.setOAuthTokenService(oauthTokenService);
 
       // Store OAuth services on server instance for access by routes
       server.decorate('tokenIntrospectionService', tokenIntrospectionService);
@@ -720,6 +721,7 @@ export async function createServer() {
     // Phase 10: Initialize OAuth Token Service for HTTP/SSE MCP servers
     const oauthTokenService = new OAuthTokenService(server.log as any, backendClient, satelliteId);
     mcpServerWrapper.setOAuthTokenService(oauthTokenService);
+    remoteToolDiscoveryManager.setOAuthTokenService(oauthTokenService);
 
     // Store OAuth services on server instance for access by routes
     server.decorate('tokenIntrospectionService', tokenIntrospectionService);

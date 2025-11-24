@@ -6,6 +6,7 @@ import { DynamicConfigManager, DynamicMcpServersConfig, ConfigurationChanges } f
 import { McpServerConfig } from './command-polling-service';
 import type { EventBus } from './event-bus';
 import { maskUrlForLogging } from '../utils/log-masker';
+import { OAuthTokenService } from './oauth-token-service';
 
 /**
  * Cached tool information with namespacing
@@ -40,6 +41,7 @@ export class RemoteToolDiscoveryManager {
   private logger: FastifyBaseLogger;
   private configManager?: DynamicConfigManager;
   private eventBus?: EventBus;
+  private oauthTokenService?: OAuthTokenService;
 
   constructor(logger: FastifyBaseLogger, eventBus?: EventBus) {
     this.logger = logger.child({ component: 'RemoteToolDiscoveryManager' });
@@ -54,6 +56,16 @@ export class RemoteToolDiscoveryManager {
     this.logger.debug({
       operation: 'tool_discovery_config_manager_set'
     }, 'Dynamic configuration manager set for tool discovery');
+  }
+
+  /**
+   * Set OAuth token service (for OAuth-enabled MCP servers)
+   */
+  setOAuthTokenService(oauthTokenService: OAuthTokenService): void {
+    this.oauthTokenService = oauthTokenService;
+    this.logger.debug({
+      operation: 'tool_discovery_oauth_service_set'
+    }, 'OAuth token service set for tool discovery');
   }
 
   /**
@@ -257,8 +269,120 @@ export class RemoteToolDiscoveryManager {
     // Build URL with query parameters
     const finalUrl = this.buildMcpServerUrl(config.url, config.url_query_params);
 
+    // Phase 10: OAuth token injection for tool discovery
+    let headers: Record<string, string> = {};
+
+    if (config.requires_oauth && this.oauthTokenService) {
+      if (!config.installation_id || !config.user_id || !config.team_id) {
+        throw new Error(
+          `OAuth required but missing context for ${serverName}. ` +
+          'Installation ID, User ID, and Team ID are required for tool discovery.'
+        );
+      }
+
+      this.logger.info({
+        operation: 'oauth_token_injection_tool_discovery',
+        server_name: serverName,
+        installation_id: config.installation_id,
+        user_id: config.user_id,
+        team_id: config.team_id
+      }, 'MCP server requires OAuth for tool discovery - fetching tokens');
+
+      try {
+        // Check token status first
+        const tokenStatus = await this.oauthTokenService.checkTokenStatus(
+          config.installation_id,
+          config.user_id,
+          config.team_id
+        );
+
+        if (!tokenStatus.exists) {
+          throw new Error(
+            `OAuth authorization required for ${serverName}. ` +
+            'Please visit the dashboard to authorize this MCP server.'
+          );
+        }
+
+        if (tokenStatus.expired) {
+          this.logger.warn({
+            operation: 'oauth_token_expired_tool_discovery',
+            server_name: serverName,
+            expires_at: tokenStatus.expires_at
+          }, 'OAuth token is expired - attempting tool discovery anyway (backend may have refreshed)');
+        }
+
+        // Retrieve tokens
+        const tokens = await this.oauthTokenService.getTokens(
+          config.installation_id,
+          config.user_id,
+          config.team_id
+        );
+
+        if (!tokens) {
+          throw new Error(`Failed to retrieve OAuth tokens for ${serverName}`);
+        }
+
+        // Inject OAuth token into Authorization header
+        headers['Authorization'] = `Bearer ${tokens.access_token}`;
+
+        this.logger.info({
+          operation: 'oauth_token_injected_tool_discovery',
+          server_name: serverName,
+          expires_at: tokens.expires_at,
+          has_refresh_token: !!tokens.refresh_token
+        }, 'OAuth token injected for tool discovery');
+
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        this.logger.error({
+          operation: 'oauth_token_injection_failed_tool_discovery',
+          server_name: serverName,
+          error: errorMessage
+        }, 'Failed to inject OAuth tokens for tool discovery');
+        throw error;
+      }
+    }
+
     // Create transport for the remote server
     const transport = new StreamableHTTPClientTransport(new URL(finalUrl));
+
+    // WORKAROUND: Patch global fetch temporarily to inject OAuth headers
+    // The MCP SDK doesn't currently support custom headers in StreamableHTTPClientTransport
+    let originalGlobalFetch: typeof fetch | null = null;
+    if (Object.keys(headers).length > 0) {
+      originalGlobalFetch = global.fetch;
+      global.fetch = async (input: any, init?: any) => {
+        // Properly merge headers (handle both Headers object and plain object)
+        const mergedHeaders: Record<string, string> = {};
+
+        // Copy existing headers
+        if (init?.headers) {
+          if (init.headers instanceof Headers) {
+            init.headers.forEach((value: string, key: string) => {
+              mergedHeaders[key] = value;
+            });
+          } else {
+            Object.assign(mergedHeaders, init.headers);
+          }
+        }
+
+        // Add OAuth headers (don't overwrite existing)
+        Object.assign(mergedHeaders, headers);
+
+        const modifiedInit = {
+          ...init,
+          headers: mergedHeaders
+        };
+
+        return originalGlobalFetch!(input, modifiedInit);
+      };
+
+      this.logger.debug({
+        operation: 'oauth_headers_patched_global_fetch',
+        server_name: serverName,
+        headers_to_inject: Object.keys(headers)
+      }, 'Patched global fetch to inject OAuth headers for tool discovery');
+    }
 
     try {
       // Connect to remote MCP server
@@ -322,6 +446,11 @@ export class RemoteToolDiscoveryManager {
 
       throw error;
     } finally {
+      // Restore global fetch if it was patched
+      if (originalGlobalFetch) {
+        global.fetch = originalGlobalFetch;
+      }
+
       // Always clean up the client connection
       try {
         await client.close();
@@ -474,8 +603,22 @@ export class RemoteToolDiscoveryManager {
       unchanged_servers: configChanges.unchangedServers
     }, 'Processing differential tool discovery update');
 
-    // If no changes, skip all processing
-    if (!configChanges.hasChanges) {
+    // Check if any unchanged servers require OAuth (need re-discovery for token updates)
+    const oauthUnchangedServers = configChanges.unchangedServers.filter(serverName => {
+      const serverConfig = config.servers[serverName];
+      return serverConfig?.requires_oauth === true;
+    });
+
+    if (oauthUnchangedServers.length > 0) {
+      this.logger.debug({
+        operation: 'tool_discovery_oauth_rediscovery',
+        oauth_servers: oauthUnchangedServers,
+        oauth_server_count: oauthUnchangedServers.length
+      }, `Forcing re-discovery for ${oauthUnchangedServers.length} OAuth servers (tokens may have been updated)`);
+    }
+
+    // If no changes and no OAuth servers need re-discovery, skip all processing
+    if (!configChanges.hasChanges && oauthUnchangedServers.length === 0) {
       this.logger.debug({
         operation: 'tool_discovery_no_changes',
         server_count: Object.keys(config.servers).length
@@ -501,16 +644,22 @@ export class RemoteToolDiscoveryManager {
       });
     }
 
-    // Discover tools for new servers
-    const serversToDiscover = [...configChanges.addedServers, ...configChanges.modifiedServers];
+    // Discover tools for new, modified, and OAuth unchanged servers
+    // OAuth servers need re-discovery even when config unchanged (for token updates)
+    const serversToDiscover = [
+      ...configChanges.addedServers,
+      ...configChanges.modifiedServers,
+      ...oauthUnchangedServers
+    ];
     
     if (serversToDiscover.length > 0) {
       this.logger.debug({
         operation: 'tool_discovery_partial_discovery',
         servers_to_discover: serversToDiscover,
         added_count: configChanges.addedServers.length,
-        modified_count: configChanges.modifiedServers.length
-      }, `Discovering tools for ${serversToDiscover.length} servers (${configChanges.addedServers.length} new, ${configChanges.modifiedServers.length} modified)`);
+        modified_count: configChanges.modifiedServers.length,
+        oauth_unchanged_count: oauthUnchangedServers.length
+      }, `Discovering tools for ${serversToDiscover.length} servers (${configChanges.addedServers.length} new, ${configChanges.modifiedServers.length} modified, ${oauthUnchangedServers.length} OAuth re-discovery)`);
 
       let successCount = 0;
       let failureCount = 0;
