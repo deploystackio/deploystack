@@ -1,7 +1,6 @@
 import { type FastifyInstance, type FastifyRequest, type FastifyReply } from 'fastify';
 import { eq, and, like, desc } from 'drizzle-orm';
-import { getDb } from '../../../db';
-import { satellites, teams, authUser } from '../../../db/schema.sqlite';
+import { getDb, getSchema } from '../../../db';
 import { requirePermission } from '../../../middleware/roleMiddleware';
 
 interface ListSatellitesQuery {
@@ -151,29 +150,30 @@ export default async function listSatellitesRoute(server: FastifyInstance) {
           pagination: { page, limit }
         }, 'Listing satellites for admin');
 
+        const db = getDb();
+        const { satellites, teams, authUser } = getSchema();
+
         // Build query conditions
         const conditions = [];
-        
+
         if (status) {
           conditions.push(eq(satellites.status, status));
         }
-        
+
         if (satellite_type) {
           conditions.push(eq(satellites.satellite_type, satellite_type));
         }
-        
+
         if (team_id) {
           conditions.push(eq(satellites.team_id, team_id));
         }
-        
+
         if (search) {
           conditions.push(like(satellites.name, `%${search}%`));
         }
 
         // Calculate offset
         const offset = (page - 1) * limit;
-
-        const db = getDb();
 
         // Get total count for pagination
         const totalQuery = db
@@ -208,16 +208,14 @@ export default async function listSatellitesRoute(server: FastifyInstance) {
           })
           .from(satellites)
           .leftJoin(teams, eq(satellites.team_id, teams.id))
-          .leftJoin(authUser, eq(satellites.created_by, authUser.id))
+          .leftJoin(authUser, eq(satellites.created_by, authUser.id));
+
+        const results = await (conditions.length > 0
+          ? query.where(and(...conditions))
+          : query)
           .orderBy(desc(satellites.created_at))
           .limit(limit)
           .offset(offset);
-
-        if (conditions.length > 0) {
-          query = query.where(and(...conditions));
-        }
-
-        const results = await query;
 
         // Transform results to include nested objects
         /* eslint-disable-next-line @typescript-eslint/no-explicit-any */

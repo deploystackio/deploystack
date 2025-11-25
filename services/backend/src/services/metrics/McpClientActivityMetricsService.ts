@@ -1,5 +1,5 @@
 import { eq, and, gte, lte, desc, sum } from 'drizzle-orm';
-import { mcpClientActivityMetrics } from '../../db/schema.sqlite';
+import { mcpClientActivityMetrics } from '../../db/schema';
 import type { AnyDatabase } from '../../db';
 import type { FastifyBaseLogger } from 'fastify';
 import { 

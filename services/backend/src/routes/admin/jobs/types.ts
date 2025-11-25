@@ -1,7 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { requirePermission } from '../../../middleware/roleMiddleware';
-import { getDb } from '../../../db';
-import { queueJobs } from '../../../db/schema.sqlite';
+import { getDb, getSchema } from '../../../db';
 import { ERROR_RESPONSE_SCHEMA } from './schemas';
 
 const JOB_TYPES_RESPONSE_SCHEMA = {
@@ -64,6 +63,7 @@ export default async function getJobTypesRoute(server: FastifyInstance) {
   }, async (request, reply) => {
     try {
       const db = getDb();
+      const { queueJobs } = getSchema();
 
       // Efficient query: DISTINCT + ORDER BY uses the type_idx index
       // Database returns only unique types (not 10,000 rows, maybe 5-20 unique types)

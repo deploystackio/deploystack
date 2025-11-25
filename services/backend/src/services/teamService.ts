@@ -284,7 +284,7 @@ export class TeamService {
       .delete(schema.teams)
       .where(eq(schema.teams.id, teamId));
 
-    return result.changes > 0;
+    return (result.rowCount || 0) > 0;
   }
 
   /**
@@ -752,7 +752,7 @@ export class TeamService {
         )
       );
 
-    return result.changes > 0;
+    return (result.rowCount || 0) > 0;
   }
 
   /**

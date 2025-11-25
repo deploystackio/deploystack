@@ -1,6 +1,5 @@
 import { type FastifyInstance } from 'fastify';
-import { getDb } from '../../db';
-import { satellites, satelliteHeartbeats, satelliteProcesses } from '../../db/schema.sqlite';
+import { getDb, getSchema } from '../../db';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import { requireSatelliteAuth, requireUserOrSatelliteAuth } from '../../middleware/satelliteAuthMiddleware';
 
@@ -256,9 +255,10 @@ export default async function satelliteHeartbeatRoute(server: FastifyInstance) {
   }, async (request, reply) => {
     const { satelliteId } = request.params as SatelliteIdParams;
     const { status, system_metrics, processes = [], error_count = 0, version } = request.body as HeartbeatRequest;
-    
+
     const db = getDb();
-    
+    const { satellites, satelliteHeartbeats, satelliteProcesses } = getSchema();
+
     try {
       // Verify satellite exists
       const satellite = await db
@@ -294,9 +294,9 @@ export default async function satelliteHeartbeatRoute(server: FastifyInstance) {
       
       // Record heartbeat with rolling 5K limit per satellite
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await db.transaction((tx: any) => {
+      await db.transaction(async (tx: any) => {
         // 1. Insert new heartbeat first (ensures it's always saved)
-        tx
+        await tx
           .insert(satelliteHeartbeats)
           .values({
             id: `hb_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -310,23 +310,22 @@ export default async function satelliteHeartbeatRoute(server: FastifyInstance) {
             uptime_seconds: system_metrics.uptime_seconds || null,
             version,
             timestamp: now
-          })
-          .run();
-        
+          });
+
         // 2. Clean up excess records beyond 5000 per satellite
         // Use window function to efficiently identify records beyond limit
-        tx.run(sql`
-          DELETE FROM satelliteHeartbeats 
+        await tx.execute(sql`
+          DELETE FROM "satelliteHeartbeats"
           WHERE id IN (
             SELECT id FROM (
               SELECT id,
                      ROW_NUMBER() OVER (
-                       PARTITION BY satellite_id 
+                       PARTITION BY satellite_id
                        ORDER BY timestamp DESC
                      ) as row_num
-              FROM satelliteHeartbeats 
+              FROM "satelliteHeartbeats"
               WHERE satellite_id = ${satelliteId}
-            ) 
+            ) as subquery
             WHERE row_num > 5000
           )
         `);
@@ -439,9 +438,10 @@ export default async function satelliteHeartbeatRoute(server: FastifyInstance) {
     }
   }, async (request, reply) => {
     const { satelliteId } = request.params as SatelliteIdParams;
-    
+
     const db = getDb();
-    
+    const { satellites, satelliteHeartbeats, satelliteProcesses } = getSchema();
+
     try {
       // Get satellite info
       const satellite = await db

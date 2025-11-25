@@ -22,10 +22,10 @@ import forgotPasswordRoute from './routes/auth/forgotPassword'
 import resetPasswordRoute from './routes/auth/resetPassword'
 import adminResetPasswordRoute from './routes/auth/adminResetPassword'
 import githubStatusRoute from './routes/auth/githubStatus'
-import { 
-  initializeDatabase, 
-  registerPluginTables, 
-  initializePluginDatabases, 
+import {
+  initializeDatabase,
+  registerPluginTables,
+  initializePluginDatabases,
   createPluginTables,
   getDb,
   getDbStatus
@@ -34,7 +34,7 @@ import { GlobalSettingsInitService } from './global-settings'
 import { GlobalSettings } from './global-settings/helpers';
 import { GlobalSettingsService } from './services/globalSettingsService'; // Import the service
 import { RoleSyncService } from './services/roleSyncService'; // Import the role sync service
-import type SqliteDriver from 'better-sqlite3'; // For type checking in onClose
+import type { Pool } from 'pg'; // For PostgreSQL connection pool cleanup in onClose
 import type { FastifyInstance } from 'fastify'
 
 // Import event system
@@ -91,11 +91,16 @@ export async function initializeDatabaseDependentServices(
       pluginManager.setDatabase(dbInstance as any); // Set Drizzle instance for plugins
       server.log.debug('✅ Plugin manager database set');
 
+      // Register plugin table definitions first (must happen before schema generation)
+      server.log.debug('🔄 Registering plugin table definitions...');
+      registerPluginTables(pluginManager.getAllPlugins(), server.log);
+      server.log.debug('✅ Plugin table definitions registered');
+
       // Create plugin tables in the database (Note: better handled by migrations)
       server.log.debug('🔄 Creating plugin tables...');
       await createPluginTables(pluginManager.getAllPlugins(), server.log);
       server.log.debug('✅ Plugin tables created');
-    
+
       // Initialize plugin database extensions (e.g., run plugin-specific setup)
       server.log.debug('🔄 Initializing plugin database extensions...');
       const dbExtensions = pluginManager.getAllPlugins().filter(p => p.databaseExtension);
@@ -173,18 +178,26 @@ export async function initializeDatabaseDependentServices(
         // Start processing jobs
         await jobProcessorService.start();
         server.log.info('✅ Job Queue System started and processing jobs');
-        
+
         // Decorate server with job services for use in routes
-        if (!server.hasDecorator('jobQueueService')) {
-          server.decorate('jobQueueService', jobQueueService);
-        } else {
+        // During reinitialization, server is already started, so check server state
+        // Fastify server.addresses() returns non-empty array only after server.listen() is called
+        const isServerStarted = server.addresses().length > 0;
+
+        if (isServerStarted) {
+          // Server already started (reinitialization): just update properties
+          server.log.debug('Updating job service references (server is running)');
           (server as any).jobQueueService = jobQueueService;
-        }
-        
-        if (!server.hasDecorator('jobProcessorService')) {
-          server.decorate('jobProcessorService', jobProcessorService);
-        } else {
           (server as any).jobProcessorService = jobProcessorService;
+        } else {
+          // Server not started yet (initial setup): use decorate()
+          server.log.debug('Creating job service decorators (initial setup)');
+          if (!server.hasDecorator('jobQueueService')) {
+            server.decorate('jobQueueService', jobQueueService);
+          }
+          if (!server.hasDecorator('jobProcessorService')) {
+            server.decorate('jobProcessorService', jobProcessorService);
+          }
         }
         
       } catch (jobQueueError) {
@@ -210,12 +223,21 @@ export async function initializeDatabaseDependentServices(
           // Start all cron jobs
           cronManager.start();
           server.log.info('✅ Cron Job System started and jobs scheduled');
-          
+
           // Decorate server with cron manager for graceful shutdown
-          if (!server.hasDecorator('cronManager')) {
-            server.decorate('cronManager', cronManager);
-          } else {
+          // Use same check as job queue services
+          const isServerStarted = server.addresses().length > 0;
+
+          if (isServerStarted) {
+            // Server already started (reinitialization): just update property
+            server.log.debug('Updating cron manager reference (server is running)');
             (server as any).cronManager = cronManager;
+          } else {
+            // Server not started yet (initial setup): use decorate()
+            server.log.debug('Creating cron manager decorator (initial setup)');
+            if (!server.hasDecorator('cronManager')) {
+              server.decorate('cronManager', cronManager);
+            }
           }
         } else {
           server.log.warn('⚠️ Job Queue Service not available, skipping Cron Job System initialization');
@@ -482,22 +504,32 @@ export const createServer = async () => {
   pluginManager.setApp(server); // Set app early for plugins that might need it
   pluginManager.setEventBus(eventBus); // Set EventBus for plugin event listener registration
 
-  // Discover available plugins first
-  await pluginManager.discoverPlugins();
-  
-  // Register plugin table definitions (populates inputPluginTableDefinitions in db/index.ts)
-  // This must happen before initializeDatabase, which generates the actual schema
-  registerPluginTables(pluginManager.getAllPlugins(), server.log);
+  // Skip plugin discovery if SKIP_PLUGIN_INIT is set (e.g., for API spec generation)
+  if (process.env.SKIP_PLUGIN_INIT === 'true') {
+    server.log.info('Skipping plugin discovery (SKIP_PLUGIN_INIT=true)');
+  } else {
+    // Discover available plugins first
+    await pluginManager.discoverPlugins();
 
-  // Try to initialize database-dependent services (will fail gracefully if no DB configured)
-  try {
-    await initializeDatabaseDependentServices(server, pluginManager);
-  } catch (error) {
-    const typedError = error as Error;
-    if (typedError.message.includes('No database selection found')) {
-      server.log.info('No database configured yet. Please use the /api/db/setup endpoint to configure your database.');
-    } else {
-      server.log.warn('Database not configured yet. Some features will be unavailable until database setup is completed.');
+    // Register plugin table definitions (populates inputPluginTableDefinitions in db/index.ts)
+    // This must happen before initializeDatabase, which generates the actual schema
+    registerPluginTables(pluginManager.getAllPlugins(), server.log);
+  }
+
+  // Skip database initialization if SKIP_DATABASE_INIT is set (e.g., for API spec generation)
+  if (process.env.SKIP_DATABASE_INIT === 'true') {
+    server.log.info('Skipping database initialization (SKIP_DATABASE_INIT=true)');
+  } else {
+    // Try to initialize database-dependent services (will fail gracefully if no DB configured)
+    try {
+      await initializeDatabaseDependentServices(server, pluginManager);
+    } catch (error) {
+      const typedError = error as Error;
+      if (typedError.message.includes('No database selection found')) {
+        server.log.info('No database configured yet. Please use the /api/db/setup endpoint to configure your database.');
+      } else {
+        server.log.warn('Database not configured yet. Some features will be unavailable until database setup is completed.');
+      }
     }
   }
 
@@ -519,7 +551,12 @@ export const createServer = async () => {
         swaggerEnabled = true;
       }
     } catch (error) {
-      server.log.error({ error }, 'Error fetching "global.enable_swagger_docs" setting. Defaulting to true.');
+      // Don't log as error during API spec generation when database is intentionally skipped
+      if (process.env.SKIP_DATABASE_INIT === 'true') {
+        server.log.debug({ error }, 'Error fetching "global.enable_swagger_docs" setting (expected during API spec generation). Defaulting to true.');
+      } else {
+        server.log.error({ error }, 'Error fetching "global.enable_swagger_docs" setting. Defaulting to true.');
+      }
       swaggerEnabled = true;
     }
   }
@@ -593,7 +630,12 @@ export const createServer = async () => {
             }
             request.server.log.info(`Swagger UI access check (using Service): "global.enable_swagger_docs" is ${showSwagger}. Raw value: ${setting ? setting.value : 'Not found'}`);
           } catch (err) {
-            request.server.log.error({ error: err }, 'Error fetching "global.enable_swagger_docs" with Service in preHandler. Defaulting to show Swagger.');
+            // Don't log as error during API spec generation when database is intentionally skipped
+            if (process.env.SKIP_DATABASE_INIT === 'true') {
+              request.server.log.debug({ error: err }, 'Error fetching "global.enable_swagger_docs" with Service in preHandler (expected during API spec generation). Defaulting to show Swagger.');
+            } else {
+              request.server.log.error({ error: err }, 'Error fetching "global.enable_swagger_docs" with Service in preHandler. Defaulting to show Swagger.');
+            }
             showSwagger = true;
           }
         } else {
@@ -625,7 +667,12 @@ export const createServer = async () => {
   
   // Initialize plugins (routes, hooks, etc.)
   // This should happen after DB and other core services are ready (or known to be unavailable)
-  await pluginManager.initializePlugins();
+  // Skip plugin initialization if SKIP_PLUGIN_INIT is set (e.g., for API spec generation)
+  if (process.env.SKIP_PLUGIN_INIT === 'true') {
+    server.log.info('Skipping plugin initialization (SKIP_PLUGIN_INIT=true)');
+  } else {
+    await pluginManager.initializePlugins();
+  }
   
   server.decorate('pluginManager', pluginManager);
   
@@ -677,11 +724,10 @@ export const createServer = async () => {
     const rawConn = server.rawDbConnection; // Get from decoration
     if (rawConn) {
       const status = getDbStatus();
-      if (status.dialect === 'sqlite' && 'close' in rawConn) {
-        (rawConn as SqliteDriver.Database).close();
-        server.log.info('SQLite connection closed.');
+      if (status.dialect === 'postgresql') {
+        await (rawConn as Pool).end();
+        server.log.info('PostgreSQL connection pool closed.');
       }
-      // Note: Turso/LibSQL connections are automatically managed by the client
     }
   });
   

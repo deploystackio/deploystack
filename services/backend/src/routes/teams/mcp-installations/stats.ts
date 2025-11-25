@@ -1,7 +1,6 @@
 import { type FastifyInstance } from 'fastify';
 import { requireTeamPermission } from '../../../middleware/roleMiddleware';
-import { getDb } from '../../../db';
-import { mcpToolMetadata, mcpServerInstallations, mcpServers, teams } from '../../../db/schema.sqlite';
+import { getDb, getSchema } from '../../../db';
 import { eq, sql } from 'drizzle-orm';
 
 // =============================================================================
@@ -264,6 +263,7 @@ export default async function getTeamMcpToolsStatsRoute(server: FastifyInstance)
 
     try {
       const db = getDb();
+      const { mcpToolMetadata, mcpServerInstallations, mcpServers, teams } = getSchema();
 
       // Step 1: Verify team exists
       const team = await db

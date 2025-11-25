@@ -226,7 +226,7 @@ export class UserService {
     const authSessionTable = schema.authSession;
     await (db as any)
       .delete(authSessionTable)
-      .where(eq(authSessionTable.user_id, id));
+      .where(eq(authSessionTable.userId, id));
 
     // Delete user
     await (db as any)

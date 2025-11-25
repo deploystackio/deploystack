@@ -279,8 +279,8 @@ export default async function loginEmailRoute(server: FastifyInstance) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         await (db as any).insert(authSessionTable).values({
           id: sessionId,
-          user_id: user.id,
-          expires_at: expiresAt
+          userId: user.id,
+          expiresAt: expiresAt
         });
         
         server.log.info(`Session created successfully for user: ${user.id}`);

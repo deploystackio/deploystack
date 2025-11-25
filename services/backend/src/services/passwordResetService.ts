@@ -224,7 +224,7 @@ export class PasswordResetService {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await (db as any)
         .delete(authSessionTable)
-        .where(eq(authSessionTable.user_id, userId));
+        .where(eq(authSessionTable.userId, userId));
     } catch (error) {
       if (logger) {
         logger.error({
@@ -272,7 +272,7 @@ export class PasswordResetService {
       .delete(passwordResetTokensTable)
       .where(lt(passwordResetTokensTable.expires_at, new Date()));
 
-    return result.changes || 0;
+    return result.rowCount || 0;
   }
 
   /**

@@ -430,10 +430,10 @@ export class TokenService {
       logger?.debug({
         operation: 'revoke_access_token',
         tokenId,
-        deleted: result.changes > 0,
+        deleted: (result.rowCount || 0) > 0,
       }, 'Access token revocation attempted');
 
-      return result.changes > 0;
+      return (result.rowCount || 0) > 0;
     } catch (error) {
       logger?.error({
         operation: 'revoke_access_token',
@@ -465,8 +465,8 @@ export class TokenService {
 
       logger?.info({
         operation: 'cleanup_expired_tokens',
-        accessTokensDeleted: accessTokenResult.changes || 0,
-        refreshTokensDeleted: refreshTokenResult.changes || 0,
+        accessTokensDeleted: accessTokenResult.rowCount || 0,
+        refreshTokensDeleted: refreshTokenResult.rowCount || 0,
       }, 'Expired tokens cleaned up');
     } catch (error) {
       logger?.error({

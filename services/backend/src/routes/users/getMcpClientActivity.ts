@@ -1,6 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { getDb } from '../../db';
-import { mcpClientActivity, satellites } from '../../db/schema.sqlite';
+import { getDb, getSchema } from '../../db';
 import { eq, and, gt, sql } from 'drizzle-orm';
 import { requireAuthenticationAny } from '../../middleware/oauthMiddleware';
 
@@ -185,6 +184,7 @@ export default async function getMcpClientActivityRoute(server: FastifyInstance)
   }, async (request, reply) => {
     try {
       const db = getDb();
+      const { mcpClientActivity, satellites } = getSchema();
       const userId = request.user!.id;
       const query = request.query as QueryParams;
       

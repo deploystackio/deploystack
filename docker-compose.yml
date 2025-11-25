@@ -1,6 +1,27 @@
 version: '3.8'
 
 services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: deploystack-postgres
+    environment:
+      - POSTGRES_DB=deploystack
+      - POSTGRES_USER=deploystack
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-deploystack}
+    ports:
+      - "5432:5432"
+    volumes:
+      - deploystack_postgres_data:/var/lib/postgresql/data
+    networks:
+      - deploystack-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U deploystack -d deploystack"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
   backend:
     image: deploystack/backend:latest
     container_name: deploystack-backend
@@ -11,11 +32,20 @@ services:
       - PORT=3000
       - DEPLOYSTACK_FRONTEND_URL=http://localhost:8080
       - DEPLOYSTACK_ENCRYPTION_SECRET=${DEPLOYSTACK_ENCRYPTION_SECRET}
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DATABASE=deploystack
+      - POSTGRES_USER=deploystack
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-deploystack}
+      - POSTGRES_SSL=false
     volumes:
       - deploystack_backend_persistent:/app/persistent_data
     networks:
       - deploystack-network
     restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/"]
       interval: 30s
@@ -39,6 +69,8 @@ services:
         condition: service_healthy
 
 volumes:
+  deploystack_postgres_data:
+    driver: local
   deploystack_backend_persistent:
     driver: local
 

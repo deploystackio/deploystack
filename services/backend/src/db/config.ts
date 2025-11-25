@@ -1,6 +1,6 @@
 /**
  * Database Configuration
- * Environment-based database selection for SQLite and Turso
+ * PostgreSQL-only configuration for DeployStack backend
  */
 import type { FastifyBaseLogger } from 'fastify';
 import fs from 'fs';
@@ -11,34 +11,36 @@ function isTestMode(): boolean {
   return process.env.NODE_ENV === 'test';
 }
 
-export type DatabaseType = 'sqlite' | 'turso';
+export type DatabaseType = 'postgresql';
 
 export interface DatabaseConfig {
   type: DatabaseType;
-  // SQLite specific
-  dbPath?: string;
-  // Turso specific
-  url?: string;
-  authToken?: string;
+  host: string;
+  port: number;
+  database: string;
+  user: string;
+  password: string;
+  ssl: boolean;
 }
 
 /**
  * Get database selection from persistent_data/db.selection.json
+ * For backward compatibility with existing installations
  */
-function getDatabaseSelection(): { type: DatabaseType } | null {
+function getDatabaseSelection(): { type: string } | null {
   try {
     const persistentDataDir = path.join(process.cwd(), 'persistent_data');
     const selectionFile = path.join(persistentDataDir, 'db.selection.json');
-    
+
     if (!fs.existsSync(selectionFile)) {
       return null;
     }
-    
+
     const content = fs.readFileSync(selectionFile, 'utf8');
     const selection = JSON.parse(content);
-    
+
     return {
-      type: selection.type as DatabaseType
+      type: selection.type
     };
   } catch {
     return null;
@@ -46,86 +48,69 @@ function getDatabaseSelection(): { type: DatabaseType } | null {
 }
 
 /**
- * Get database configuration from selection file or environment variables
+ * Get PostgreSQL database configuration from environment variables
  */
 export function getDatabaseConfig(logger?: FastifyBaseLogger): DatabaseConfig {
-  // First check if there's a database selection file
+  // Check if there's a database selection file (backward compatibility)
   const selection = getDatabaseSelection();
-  
-  let dbType: DatabaseType;
-  if (selection) {
-    dbType = selection.type;
+
+  if (selection && selection.type !== 'postgresql') {
     if (!isTestMode() && logger) {
-      logger.info({
+      logger.warn({
         operation: 'get_database_config',
-        source: 'selection_file',
-        databaseType: dbType
-      }, 'Database type from selection file');
+        selectedType: selection.type
+      }, `Database type '${selection.type}' is no longer supported. DeployStack now requires PostgreSQL. Please reconfigure your database.`);
     }
-  } else {
-    // Fall back to environment variable, but don't default to sqlite
-    const envDbType = process.env.DB_TYPE;
-    if (!envDbType) {
-      throw new Error('No database selection found. Please use the setup endpoint to configure a database.');
-    }
-    dbType = envDbType as DatabaseType;
-    if (!isTestMode() && logger) {
-      logger.info({
-        operation: 'get_database_config',
-        source: 'environment',
-        databaseType: dbType
-      }, 'Database type from environment');
-    }
+    throw new Error(`Database type '${selection.type}' is no longer supported. DeployStack now requires PostgreSQL. Please reconfigure your database.`);
   }
-  
-  const config: DatabaseConfig = { type: dbType };
-  
-  switch (dbType) {
-    case 'sqlite':
-      if (isTestMode()) {
-        const timestamp = Date.now();
-        config.dbPath = `persistent_data/database-test/deploystack-${timestamp}.db`;
-      } else {
-        config.dbPath = process.env.SQLITE_DB_PATH || 'persistent_data/database/deploystack.db';
-      }
-      break;
-      
-    case 'turso':
-      config.url = process.env.TURSO_DATABASE_URL;
-      config.authToken = process.env.TURSO_AUTH_TOKEN;
-      
-      if (!config.url || !config.authToken) {
-        throw new Error('Turso configuration incomplete. Required: TURSO_DATABASE_URL, TURSO_AUTH_TOKEN');
-      }
-      break;
-      
-    default:
-      throw new Error(`Unsupported database type: ${dbType}`);
-  }
-  
+
   if (!isTestMode() && logger) {
     logger.info({
       operation: 'get_database_config',
-      databaseType: dbType
-    }, 'Database configuration loaded');
+      databaseType: 'postgresql'
+    }, 'Loading PostgreSQL configuration');
   }
+
+  // Build PostgreSQL configuration from environment variables
+  const config: DatabaseConfig = {
+    type: 'postgresql',
+    host: process.env.POSTGRES_HOST || 'localhost',
+    port: process.env.POSTGRES_PORT ? parseInt(process.env.POSTGRES_PORT, 10) : 5432,
+    database: process.env.POSTGRES_DATABASE || 'deploystack',
+    user: process.env.POSTGRES_USER || 'postgres',
+    password: process.env.POSTGRES_PASSWORD || '',
+    ssl: process.env.POSTGRES_SSL === 'true'
+  };
+
+  // Validate required fields
+  if (!config.database || !config.user || !config.password) {
+    throw new Error('PostgreSQL configuration incomplete. Required environment variables: POSTGRES_DATABASE, POSTGRES_USER, POSTGRES_PASSWORD');
+  }
+
+  if (!isTestMode() && logger) {
+    logger.info({
+      operation: 'get_database_config',
+      host: config.host,
+      port: config.port,
+      database: config.database,
+      user: config.user,
+      ssl: config.ssl
+    }, 'PostgreSQL configuration loaded successfully');
+  }
+
   return config;
 }
 
 /**
- * Validate database configuration
+ * Validate PostgreSQL database configuration
  */
 export function validateDatabaseConfig(config: DatabaseConfig): boolean {
-  switch (config.type) {
-    case 'sqlite':
-      return !!config.dbPath;
-      
-    case 'turso':
-      return !!(config.url && config.authToken);
-      
-    default:
-      return false;
-  }
+  return config.type === 'postgresql' &&
+    !!config.host &&
+    !!config.port &&
+    !!config.database &&
+    !!config.user &&
+    !!config.password;
 }
 
 /**
@@ -134,7 +119,7 @@ export function validateDatabaseConfig(config: DatabaseConfig): boolean {
 export function getDatabaseStatus(config: DatabaseConfig) {
   return {
     configured: validateDatabaseConfig(config),
-    dialect: config.type,
-    type: config.type
+    dialect: 'postgresql',
+    type: 'postgresql'
   };
 }

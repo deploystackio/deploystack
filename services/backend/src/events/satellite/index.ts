@@ -5,11 +5,11 @@
  * to appropriate handlers based on event type.
  */
 
-import type { LibSQLDatabase } from 'drizzle-orm/libsql';
+import type { AnyDatabase } from '../../db';
 import type {
-  EventHandlerRegistry, 
+  EventHandlerRegistry,
   SatelliteEvent,
-  EventProcessingResult 
+  EventProcessingResult
 } from './types';
 import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
@@ -95,7 +95,7 @@ async function getEventRegistry(logger?: FastifyBaseLogger): Promise<EventHandle
 async function processEvent(
   satelliteId: string,
   event: SatelliteEvent,
-  db: LibSQLDatabase,
+  db: AnyDatabase,
   logger: FastifyBaseLogger
 ): Promise<EventProcessingResult> {
   try {
@@ -165,7 +165,7 @@ async function processEvent(
 
 /**
  * Process batch of events from satellite
- * 
+ *
  * @param satelliteId - Satellite identifier
  * @param events - Array of events to process
  * @param db - Database instance
@@ -175,7 +175,7 @@ async function processEvent(
 export async function processBatch(
   satelliteId: string,
   events: SatelliteEvent[],
-  db: LibSQLDatabase,
+  db: AnyDatabase,
   logger: FastifyBaseLogger
 ): Promise<{
   processed: number;

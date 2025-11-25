@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { eq, and, desc } from 'drizzle-orm';
-import { mcpServerInstallations, mcpServers, teams } from '../db/schema.sqlite';
+import { getSchema } from '../db/index';
 import type { AnyDatabase } from '../db';
 import type { FastifyBaseLogger } from 'fastify';
 import { nanoid } from 'nanoid';
@@ -84,10 +84,19 @@ export interface ClientConfig {
 }
 
 export class McpInstallationService {
+  private readonly mcpServerInstallations: ReturnType<typeof getSchema>['mcpServerInstallations'];
+  private readonly mcpServers: ReturnType<typeof getSchema>['mcpServers'];
+  private readonly teams: ReturnType<typeof getSchema>['teams'];
+
   constructor(
     private db: AnyDatabase,
     private logger: FastifyBaseLogger
-  ) {}
+  ) {
+    const schema = getSchema();
+    this.mcpServerInstallations = schema.mcpServerInstallations;
+    this.mcpServers = schema.mcpServers;
+    this.teams = schema.teams;
+  }
 
   async getTeamInstallations(teamId: string, userId: string): Promise<McpInstallation[]> {
     this.logger.debug({
@@ -98,13 +107,13 @@ export class McpInstallationService {
 
     const installations = await this.db
       .select({
-        installation: mcpServerInstallations,
-        server: mcpServers
+        installation: this.mcpServerInstallations,
+        server: this.mcpServers
       })
-      .from(mcpServerInstallations)
-      .leftJoin(mcpServers, eq(mcpServerInstallations.server_id, mcpServers.id))
-      .where(eq(mcpServerInstallations.team_id, teamId))
-      .orderBy(desc(mcpServerInstallations.created_at));
+      .from(this.mcpServerInstallations)
+      .leftJoin(this.mcpServers, eq(this.mcpServerInstallations.server_id, this.mcpServers.id))
+      .where(eq(this.mcpServerInstallations.team_id, teamId))
+      .orderBy(desc(this.mcpServerInstallations.created_at));
 
     this.logger.info({
       operation: 'get_team_installations',
@@ -133,6 +142,8 @@ export class McpInstallationService {
 
       processedInstallations.push({
         ...row.installation,
+        installation_type: row.installation.installation_type as 'global' | 'team',
+        last_used_at: row.installation.last_used_at ?? undefined,
         team_args: teamArgs,
         team_env: teamEnv,
         team_headers: row.installation.team_headers
@@ -170,7 +181,8 @@ export class McpInstallationService {
           user_env_schema: this.parseJsonField(row.server.user_env_schema, []),
           user_headers_schema: this.parseJsonField(row.server.user_headers_schema, []),
           user_url_query_params_schema: this.parseJsonField(row.server.user_url_query_params_schema, []),
-          transport_type: row.server.transport_type
+          transport_type: row.server.transport_type,
+          requires_oauth: row.server.requires_oauth || false
         } : undefined
       });
     }
@@ -187,15 +199,15 @@ export class McpInstallationService {
 
     const result = await this.db
       .select({
-        installation: mcpServerInstallations,
-        server: mcpServers
+        installation: this.mcpServerInstallations,
+        server: this.mcpServers
       })
-      .from(mcpServerInstallations)
-      .leftJoin(mcpServers, eq(mcpServerInstallations.server_id, mcpServers.id))
+      .from(this.mcpServerInstallations)
+      .leftJoin(this.mcpServers, eq(this.mcpServerInstallations.server_id, this.mcpServers.id))
       .where(
         and(
-          eq(mcpServerInstallations.id, installationId),
-          eq(mcpServerInstallations.team_id, teamId)
+          eq(this.mcpServerInstallations.id, installationId),
+          eq(this.mcpServerInstallations.team_id, teamId)
         )
       )
       .limit(1);
@@ -222,6 +234,8 @@ export class McpInstallationService {
 
     return {
       ...installation,
+      installation_type: installation.installation_type as 'global' | 'team',
+      last_used_at: installation.last_used_at ?? undefined,
       team_args: teamArgs,
       team_env: installation.team_env
         ? await this.maskEnvironmentVariables(
@@ -264,7 +278,8 @@ export class McpInstallationService {
         user_env_schema: this.parseJsonField(server.user_env_schema, []),
         user_headers_schema: this.parseJsonField(server.user_headers_schema, []),
         user_url_query_params_schema: this.parseJsonField(server.user_url_query_params_schema, []),
-        transport_type: server.transport_type
+        transport_type: server.transport_type,
+        requires_oauth: server.requires_oauth || false
       } : undefined
     };
   }
@@ -285,11 +300,11 @@ export class McpInstallationService {
     // Check if installation name already exists in team
     const existingInstallation = await this.db
       .select()
-      .from(mcpServerInstallations)
+      .from(this.mcpServerInstallations)
       .where(
         and(
-          eq(mcpServerInstallations.team_id, teamId),
-          eq(mcpServerInstallations.installation_name, data.installation_name)
+          eq(this.mcpServerInstallations.team_id, teamId),
+          eq(this.mcpServerInstallations.installation_name, data.installation_name)
         )
       )
       .limit(1);
@@ -301,8 +316,8 @@ export class McpInstallationService {
     // Verify server exists
     const server = await this.db
       .select()
-      .from(mcpServers)
-      .where(eq(mcpServers.id, data.server_id))
+      .from(this.mcpServers)
+      .where(eq(this.mcpServers.id, data.server_id))
       .limit(1);
 
     if (server.length === 0) {
@@ -344,9 +359,9 @@ export class McpInstallationService {
 
             // Update server record with requires_oauth flag
             await this.db
-              .update(mcpServers)
+              .update(this.mcpServers)
               .set({ requires_oauth: true })
-              .where(eq(mcpServers.id, data.server_id));
+              .where(eq(this.mcpServers.id, data.server_id));
 
             // Throw error with OAuth metadata for frontend to handle
             // Phase 5 will implement the OAuth flow redirect
@@ -395,8 +410,8 @@ export class McpInstallationService {
       // Get team data to access the limit
       const teamResult = await this.db
         .select()
-        .from(teams)
-        .where(eq(teams.id, teamId))
+        .from(this.teams)
+        .where(eq(this.teams.id, teamId))
         .limit(1);
 
       if (teamResult.length === 0) {
@@ -416,12 +431,12 @@ export class McpInstallationService {
       // Count current non-HTTP (stdio) installations for this team
       const currentInstallations = await this.db
         .select({
-          installation: mcpServerInstallations,
-          server: mcpServers
+          installation: this.mcpServerInstallations,
+          server: this.mcpServers
         })
-        .from(mcpServerInstallations)
-        .leftJoin(mcpServers, eq(mcpServerInstallations.server_id, mcpServers.id))
-        .where(eq(mcpServerInstallations.team_id, teamId));
+        .from(this.mcpServerInstallations)
+        .leftJoin(this.mcpServers, eq(this.mcpServerInstallations.server_id, this.mcpServers.id))
+        .where(eq(this.mcpServerInstallations.team_id, teamId));
 
       // Count only stdio servers
       const nonHttpCount = currentInstallations.filter(
@@ -502,7 +517,7 @@ export class McpInstallationService {
       last_used_at: null
     };
 
-    await this.db.insert(mcpServerInstallations).values(installationData);
+    await this.db.insert(this.mcpServerInstallations).values(installationData);
 
     this.logger.info({
       operation: 'create_installation',
@@ -547,12 +562,12 @@ export class McpInstallationService {
       // Check if new name conflicts with existing installations
       const conflictingInstallation = await this.db
         .select()
-        .from(mcpServerInstallations)
+        .from(this.mcpServerInstallations)
         .where(
           and(
-            eq(mcpServerInstallations.team_id, teamId),
-            eq(mcpServerInstallations.installation_name, data.installation_name),
-            eq(mcpServerInstallations.id, installationId) // Exclude current installation
+            eq(this.mcpServerInstallations.team_id, teamId),
+            eq(this.mcpServerInstallations.installation_name, data.installation_name),
+            eq(this.mcpServerInstallations.id, installationId) // Exclude current installation
           )
         )
         .limit(1);
@@ -603,9 +618,9 @@ export class McpInstallationService {
     }
 
     await this.db
-      .update(mcpServerInstallations)
+      .update(this.mcpServerInstallations)
       .set(updateData)
-      .where(eq(mcpServerInstallations.id, installationId));
+      .where(eq(this.mcpServerInstallations.id, installationId));
 
     this.logger.info({
       operation: 'update_installation',
@@ -624,16 +639,16 @@ export class McpInstallationService {
     }, 'Deleting MCP installation');
 
     const result = await this.db
-      .delete(mcpServerInstallations)
+      .delete(this.mcpServerInstallations)
       .where(
         and(
-          eq(mcpServerInstallations.id, installationId),
-          eq(mcpServerInstallations.team_id, teamId)
+          eq(this.mcpServerInstallations.id, installationId),
+          eq(this.mcpServerInstallations.team_id, teamId)
         )
       );
 
-    // Handle different property names between SQLite (changes) and Turso (rowsAffected)
-    const deleted = (result.changes || result.rowsAffected || 0) > 0;
+    // PostgreSQL returns rowCount for deleted rows
+    const deleted = (result.rowCount || 0) > 0;
 
     return deleted;
   }
@@ -653,15 +668,15 @@ export class McpInstallationService {
     // Get installation data directly from database to access encrypted values
     const result = await this.db
       .select({
-        installation: mcpServerInstallations,
-        server: mcpServers
+        installation: this.mcpServerInstallations,
+        server: this.mcpServers
       })
-      .from(mcpServerInstallations)
-      .leftJoin(mcpServers, eq(mcpServerInstallations.server_id, mcpServers.id))
+      .from(this.mcpServerInstallations)
+      .leftJoin(this.mcpServers, eq(this.mcpServerInstallations.server_id, this.mcpServers.id))
       .where(
         and(
-          eq(mcpServerInstallations.id, installationId),
-          eq(mcpServerInstallations.team_id, teamId)
+          eq(this.mcpServerInstallations.id, installationId),
+          eq(this.mcpServerInstallations.team_id, teamId)
         )
       )
       .limit(1);
@@ -674,9 +689,9 @@ export class McpInstallationService {
 
     // Update last_used_at
     await this.db
-      .update(mcpServerInstallations)
+      .update(this.mcpServerInstallations)
       .set({ last_used_at: new Date() })
-      .where(eq(mcpServerInstallations.id, installationId));
+      .where(eq(this.mcpServerInstallations.id, installationId));
 
     // Get command configuration from server's packages
     const packages = this.parseJsonField(server.packages, []);
@@ -721,7 +736,12 @@ export class McpInstallationService {
         };
 
       case 'vscode':
-        return this.generateVSCodeConfig(installation, baseConfig);
+        return this.generateVSCodeConfig({
+          ...installation,
+          installation_type: installation.installation_type as 'global' | 'team',
+          team_args: null,
+          team_env: null
+        } as any, baseConfig);
 
       case 'cursor':
         return {

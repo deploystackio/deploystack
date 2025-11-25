@@ -1,37 +1,23 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { type FastifyBaseLogger } from 'fastify';
-import { 
-  type Plugin, 
+import {
+  type Plugin,
   type DatabaseExtension,
   type GlobalSettingsExtension,
   type PluginRouteManager
 } from '../../plugin-system/types';
 
-import { type AnyDatabase, type AnySchema } from '../../db';
-import { type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
-import { type NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { type SQLiteTable } from 'drizzle-orm/sqlite-core'; 
-import { type PgTable } from 'drizzle-orm/pg-core'; 
-// import { exampleEntities } from './schema'; // No longer directly used for queries
+import { type AnyDatabase } from '../../db';
 import { sql } from 'drizzle-orm';
 import { EVENT_NAMES } from '../../events';
 import type { EventData, EventContext, EventListeners } from '../../events/types';
-
-// Helper type guard to check for BetterSQLite3Database specific methods
-function isSQLiteDB(db: AnyDatabase): db is BetterSQLite3Database<any> {
-  // Check for methods specific to BetterSQLite3Database query results/execution
-  // This is a heuristic. A more robust check might involve more specific features.
-  return typeof (db as BetterSQLite3Database).get === 'function' &&
-         typeof (db as BetterSQLite3Database).all === 'function' &&
-         typeof (db as BetterSQLite3Database).run === 'function';
-}
 
 const examplePluginTableDefinitions = {
   'example_entities': { // Table name matches the one in exampleEntities
     id: (b: any) => b('id').primaryKey(),
     name: (b: any) => b('name').notNull(),
     description: (b: any) => b('description'),
-    created_at: (b: any) => b('created_at', { mode: 'timestamp' }).notNull().defaultNow(), // Use defaultNow for portability
+    created_at: (b: any) => b('created_at', { mode: 'date' }).notNull().defaultNow(),
   }
 };
 
@@ -40,7 +26,7 @@ class ExamplePlugin implements Plugin {
     id: 'example-plugin',
     name: 'Example Plugin',
     version: '1.0.0',
-    description: 'An example plugin for DeployStack',
+    description: 'An example plugin for DeployStack (PostgreSQL only)',
     author: 'DeployStack Team',
   };
 
@@ -103,73 +89,67 @@ class ExamplePlugin implements Plugin {
       }
     ],
   };
-  
+
   // Database extension
   databaseExtension: DatabaseExtension = {
-    tableDefinitions: examplePluginTableDefinitions, // Use tableDefinitions
-    
-    // Optional initialization function
-    onDatabaseInit: async (db: AnyDatabase, schema: AnySchema, logger: FastifyBaseLogger) => {
+    tableDefinitions: examplePluginTableDefinitions,
+
+    // Optional initialization function (PostgreSQL only)
+    onDatabaseInit: async (db: AnyDatabase, logger: FastifyBaseLogger) => {
       logger.debug({
         operation: 'plugin_database_init',
         pluginId: 'example-plugin'
       }, 'Initializing example plugin database...');
 
-      // Use hardcoded plugin ID since 'this' is not available in arrow function
-      const tableNameInSchema = `example-plugin_example_entities`; 
-      const table = schema[tableNameInSchema];
+      // Plugin tables are created dynamically and not part of the schema export
+      // Use raw SQL queries for plugin table access
+      const tableName = 'example-plugin_example_entities';
 
-      if (!table) {
+      try {
+        // PostgreSQL query to check existing records
+        const result = await db.execute(
+          sql.raw(`SELECT COUNT(*) as count FROM "${tableName}"`)
+        );
+        const currentCount = Number(result.rows?.[0]?.count ?? 0);
+
+        if (currentCount === 0) {
+          logger.debug({
+            operation: 'plugin_database_seed',
+            pluginId: 'example-plugin'
+          }, 'Seeding initial data for example plugin...');
+
+          // PostgreSQL insert using raw SQL
+          // Note: id is INTEGER type (auto-detected by mock column builder based on column name)
+          await db.execute(sql.raw(`
+            INSERT INTO "${tableName}" (id, name, description, created_at)
+            VALUES (1, 'Example Entity', 'This is an example entity created by the plugin', NOW())
+          `));
+
+          logger.info({
+            operation: 'plugin_database_seed',
+            pluginId: 'example-plugin'
+          }, 'Seeded initial data for example plugin');
+        } else {
+          logger.debug({
+            operation: 'plugin_database_init',
+            pluginId: 'example-plugin',
+            existingRows: currentCount
+          }, 'Plugin table already has data, skipping seed');
+        }
+      } catch (error) {
         logger.error({
           operation: 'plugin_database_init',
           pluginId: 'example-plugin',
-          tableNameInSchema,
-          availableTables: Object.keys(schema)
-        }, 'Critical: Table not found in global schema! Cannot initialize database for plugin.');
-        return;
-      }
-      
-      let currentCount = 0;
-      if (isSQLiteDB(db)) {
-        const result = await db
-          .select({ count: sql<number>`count(*)` })
-          .from(table as SQLiteTable)
-          .get();
-        currentCount = result?.count ?? 0;
-      } else {
-        // Assume NodePgDatabase-like behavior
-        const rows = await (db as NodePgDatabase)
-          .select({ count: sql<number>`count(*)` })
-          .from(table as PgTable);
-        currentCount = rows[0]?.count ?? 0;
-      }
-      
-      if (currentCount === 0) {
-        logger.debug({
-          operation: 'plugin_database_seed',
-          pluginId: 'example-plugin'
-        }, 'Seeding initial data for example plugin...');
-        const dataToSeed = {
-          id: 'example1',
-          name: 'Example Entity',
-          description: 'This is an example entity created by the plugin',
-        };
-        if (isSQLiteDB(db)) {
-          await db.insert(table as SQLiteTable).values(dataToSeed).run();
-        } else {
-          // Assume NodePgDatabase-like behavior
-          await (db as NodePgDatabase).insert(table as PgTable).values(dataToSeed);
-        }
-        logger.info({
-          operation: 'plugin_database_seed',
-          pluginId: 'example-plugin'
-        }, 'Seeded initial data for example plugin');
+          tableName,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        }, 'Failed to initialize plugin database');
+        throw error;
       }
     },
   };
-  
+
   // Initialize the plugin (non-route initialization only)
-   
+
   async initialize(db: AnyDatabase | null, logger: FastifyBaseLogger) {
     logger.info({
       operation: 'plugin_init',
@@ -181,13 +161,13 @@ class ExamplePlugin implements Plugin {
       pluginId: this.meta.id
     }, 'Initialized successfully');
   }
-  
+
   // Register plugin routes using the isolated route manager
   async registerRoutes(routeManager: PluginRouteManager, db: AnyDatabase | null, logger: FastifyBaseLogger) {
     const { registerRoutes } = await import('./routes');
     await registerRoutes(routeManager, db, logger);
   }
-  
+
   // Event handler methods
   private async handleUserRegistered(data: EventData<typeof EVENT_NAMES.USER_REGISTERED>, context: EventContext) {
     context.logger.info({
@@ -196,7 +176,7 @@ class ExamplePlugin implements Plugin {
       event: 'user.registered',
       userId: data.user.id
     }, 'User registered event received');
-    
+
     // Example: Track user registration in plugin's database
     // Could create a welcome record, send notification, etc.
   }
@@ -208,7 +188,7 @@ class ExamplePlugin implements Plugin {
       event: 'user.login',
       userId: data.user.id
     }, 'User login event received');
-    
+
     // Example: Track login activity, update last seen, etc.
   }
 
@@ -220,7 +200,7 @@ class ExamplePlugin implements Plugin {
       teamId: data.team.id,
       createdBy: data.createdBy.id
     }, 'Team created event received');
-    
+
     // Example: Initialize team-specific plugin data
   }
 
@@ -232,7 +212,7 @@ class ExamplePlugin implements Plugin {
       teamId: data.team.id,
       userId: data.member.id
     }, 'Team member added event received');
-    
+
     // Example: Send welcome message to new team member
   }
 
@@ -243,7 +223,7 @@ class ExamplePlugin implements Plugin {
       event: 'settings.updated',
       settingKey: data.setting.key
     }, 'Settings updated event received');
-    
+
     // Example: React to plugin-specific setting changes
     if (data.setting.key?.startsWith('examplePlugin.')) {
       context.logger.info({
@@ -262,7 +242,7 @@ class ExamplePlugin implements Plugin {
       event: 'mcp.installation_created',
       serverId: data.installation.serverId
     }, 'MCP installation created event received');
-    
+
     // Example: Update plugin functionality based on available MCP servers
   }
 

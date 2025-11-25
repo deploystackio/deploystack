@@ -1,9 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { getLucia } from '../../lib/lucia';
-import { getDb, getSchema, getDbStatus } from '../../db';
+import { getDb, getSchema } from '../../db';
 import { eq } from 'drizzle-orm';
-import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { z } from 'zod';
 import { createSchema } from 'zod-openapi';
 import { EVENT_NAMES } from '../../events';
@@ -59,12 +58,8 @@ export default async function logoutRoute(fastify: FastifyInstance) {
             
             // Verify table and column exist before attempting deletion
             if (authSessionTable && authSessionTable.id) {
-              const dbStatus = getDbStatus();
-              if (dbStatus.dialect === 'sqlite') {
-                 
-                const sqliteDb = db as BetterSQLite3Database<any>;
-                await sqliteDb.delete(authSessionTable).where(eq(authSessionTable.id, sessionId));
-              }
+              // PostgreSQL delete
+              await db.delete(authSessionTable).where(eq(authSessionTable.id, sessionId));
               fastify.log.info(`Manually deleted session ${sessionId} from database`);
             } else {
               fastify.log.warn('authSession table or id column not found in schema');
@@ -174,12 +169,8 @@ export default async function logoutRoute(fastify: FastifyInstance) {
           
           // Verify table and column exist before attempting deletion
           if (authSessionTable && authSessionTable.id) {
-            const dbStatus = getDbStatus();
-            if (dbStatus.dialect === 'sqlite') {
-               
-              const sqliteDb = db as BetterSQLite3Database<any>;
-              await sqliteDb.delete(authSessionTable).where(eq(authSessionTable.id, sessionId));
-            }
+            // PostgreSQL delete
+            await db.delete(authSessionTable).where(eq(authSessionTable.id, sessionId));
             fastify.log.info(`Manually deleted session ${sessionId} after Lucia invalidation failed`);
           } else {
             fastify.log.warn('authSession table or id column not found in schema');

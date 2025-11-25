@@ -3,7 +3,7 @@ import type { AnyDatabase } from '../db';
 import type { FastifyBaseLogger } from 'fastify';
 import type { Worker, WorkerResult } from './types';
 import { JobQueueService } from '../services/jobQueueService';
-import { mcpServers } from '../db/schema.sqlite';
+import { mcpServers } from '../db/schema';
 
 /**
  * Job payload interface for registry coordination jobs

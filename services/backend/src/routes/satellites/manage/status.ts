@@ -1,7 +1,6 @@
 import { type FastifyInstance, type FastifyRequest, type FastifyReply } from 'fastify';
 import { eq } from 'drizzle-orm';
-import { getDb } from '../../../db';
-import { satellites } from '../../../db/schema.sqlite';
+import { getDb, getSchema } from '../../../db';
 import { requirePermission } from '../../../middleware/roleMiddleware';
 
 interface UpdateStatusParams {
@@ -120,6 +119,7 @@ export default async function updateSatelliteStatusRoute(server: FastifyInstance
         }
 
         const db = getDb();
+        const { satellites } = getSchema();
 
         // Check if satellite exists
         const existingSatellite = await db

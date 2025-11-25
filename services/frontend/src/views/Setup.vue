@@ -47,8 +47,8 @@
               <p class="text-muted-foreground">{{ $t('setup.databaseSelection.subtitle') }}</p>
             </div>
 
-            <!-- Database Options -->
-            <div class="grid gap-4 md:grid-cols-1 lg:grid-cols-2 max-w-4xl mx-auto">
+            <!-- Database Options - PostgreSQL Only -->
+            <div class="grid gap-4 max-w-2xl mx-auto">
               <DatabaseOptionCard
                 v-for="dbOption in databaseOptions"
                 :key="dbOption.type"
@@ -58,7 +58,7 @@
               />
             </div>
 
-            <!-- Environment Variables Warning (for Turso) -->
+            <!-- Environment Variables Warning (PostgreSQL) -->
             <Alert v-if="selectedOption?.requiresEnvVars" class="border-amber-200 bg-amber-50">
               <AlertTriangle class="h-4 w-4 text-amber-600" />
               <AlertTitle class="text-amber-800">{{ $t('setup.environmentWarning.title') }}</AlertTitle>
@@ -119,36 +119,23 @@ const router = useRouter();
 const databaseStore = useDatabaseStore();
 
 const setupSuccessMessageVisible = ref(false);
-const selectedType = ref<DatabaseType>(DatabaseType.SQLite);
+const selectedType = ref<DatabaseType>(DatabaseType.PostgreSQL);
 
-// Database options configuration
+// Database options configuration - PostgreSQL only
 const databaseOptions: DatabaseOption[] = [
   {
-    type: DatabaseType.SQLite,
-    name: 'setup.databaseTypes.sqlite.name',
-    subtitle: 'setup.databaseTypes.sqlite.subtitle',
-    description: 'setup.databaseTypes.sqlite.description',
+    type: DatabaseType.PostgreSQL,
+    name: 'setup.databaseTypes.postgresql.name',
+    subtitle: 'setup.databaseTypes.postgresql.subtitle',
+    description: 'setup.databaseTypes.postgresql.description',
     features: [
-      'setup.databaseTypes.sqlite.features.noSetup',
-      'setup.databaseTypes.sqlite.features.immediate',
-      'setup.databaseTypes.sqlite.features.development'
+      'setup.databaseTypes.postgresql.features.scalable',
+      'setup.databaseTypes.postgresql.features.reliable',
+      'setup.databaseTypes.postgresql.features.fullFeatured'
     ],
-    recommended: 'development',
-    requiresEnvVars: false
-  },
-  {
-    type: DatabaseType.Turso,
-    name: 'setup.databaseTypes.turso.name',
-    subtitle: 'setup.databaseTypes.turso.subtitle',
-    description: 'setup.databaseTypes.turso.description',
-    features: [
-      'setup.databaseTypes.turso.features.multiRegion',
-      'setup.databaseTypes.turso.features.lowLatency',
-      'setup.databaseTypes.turso.features.advanced'
-    ],
-    recommended: 'advanced',
+    recommended: 'production',
     requiresEnvVars: true,
-    envVars: ['TURSO_DATABASE_URL', 'TURSO_AUTH_TOKEN']
+    envVars: ['POSTGRES_HOST', 'POSTGRES_PORT', 'POSTGRES_DATABASE', 'POSTGRES_USER', 'POSTGRES_PASSWORD']
   }
 ];
 

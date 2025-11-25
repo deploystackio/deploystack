@@ -186,7 +186,7 @@ async function setupDbHandler(
           const cleanResponse = {
             message: 'Database setup successful. All services have been initialized and are ready to use.',
             restart_required: false,
-            database_type: 'sqlite'
+            database_type: String(dbType)
           };
           
           // Send as raw JSON string to bypass any serialization issues

@@ -1,8 +1,7 @@
 import { type FastifyInstance } from 'fastify';
 import { requireAuthenticationAny, requireOAuthScope } from '../../middleware/oauthMiddleware';
-import { getDb } from '../../db';
+import { getDb, getSchema } from '../../db';
 import { eq, and, inArray } from 'drizzle-orm';
-import { mcpServers, mcpServerInstallations, mcpUserConfigurations, teamMemberships } from '../../db/schema.sqlite';
 import { McpArgsStorage } from '../../utils/mcpArgsStorage';
 import { McpEnvStorage } from '../../utils/mcpEnvStorage';
 // NOTE: Device activity tracking removed as part of strategic pivot to Satellite Service
@@ -150,6 +149,7 @@ export default async function gatewayMeMcpConfigurationsRoute(server: FastifyIns
 
     try {
       const db = getDb();
+      const { teamMemberships, mcpServerInstallations, mcpServers, mcpUserConfigurations } = getSchema();
 
       // NOTE: Device lookup by hardware_id removed as part of strategic pivot to Satellite Service
       // Device name is now just a simple string for optional user configuration identification

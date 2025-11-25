@@ -1,13 +1,13 @@
- 
+
 // MCP Client Activity Tracking Tables
 
-import { sqliteTable, text, integer, index, unique } from 'drizzle-orm/sqlite-core';
+import { pgTable, text, integer, timestamp, index, unique } from 'drizzle-orm/pg-core';
 import { authUser } from './auth';
 import { teams } from './teams';
 import { satellites } from './satellites';
 
 // MCP Client Activity - Personal dashboard tracking active MCP clients
-export const mcpClientActivity = sqliteTable('mcpClientActivity', {
+export const mcpClientActivity = pgTable('mcpClientActivity', {
   id: text('id').primaryKey(),
 
   // Who and where
@@ -30,14 +30,14 @@ export const mcpClientActivity = sqliteTable('mcpClientActivity', {
   current_session_id: text('current_session_id'), // Latest Mcp-Session-Id header
 
   // Activity tracking
-  first_seen_at: integer('first_seen_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
-  last_activity_at: integer('last_activity_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  first_seen_at: timestamp('first_seen_at', { withTimezone: true }).notNull().defaultNow(),
+  last_activity_at: timestamp('last_activity_at', { withTimezone: true }).notNull().defaultNow(),
   total_requests: integer('total_requests').notNull().default(0),
   total_tool_calls: integer('total_tool_calls').notNull().default(0),
 
   // Metadata
-  created_at: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
-  updated_at: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 }, (table) => ({
   userTeamSatelliteIdx: index('mcp_activity_user_team_satellite_idx').on(
     table.user_id, table.team_id, table.satellite_id
@@ -58,7 +58,7 @@ export const mcpClientActivity = sqliteTable('mcpClientActivity', {
 }));
 
 // MCP Client Activity Metrics - Time-series metrics
-export const mcpClientActivityMetrics = sqliteTable('mcpClientActivityMetrics', {
+export const mcpClientActivityMetrics = pgTable('mcpClientActivityMetrics', {
   id: text('id').primaryKey(),
 
   // Context
@@ -77,7 +77,7 @@ export const mcpClientActivityMetrics = sqliteTable('mcpClientActivityMetrics', 
   active_client_count: integer('active_client_count').notNull().default(0),
 
   // Timestamps
-  created_at: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 }, (table) => ({
   lookupIdx: index('mcp_activity_metrics_lookup_idx').on(
     table.user_id,

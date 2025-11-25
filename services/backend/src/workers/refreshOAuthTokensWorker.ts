@@ -17,7 +17,7 @@ import { refreshExpiringOAuthTokens } from '../jobs/refresh-oauth-tokens';
  * Performance:
  * - Typical execution: < 2 seconds for small batches
  * - Each token refresh: ~500ms (network latency)
- * - Handles both SQLite and Turso database drivers
+ * - Uses PostgreSQL for data storage
  */
 export class RefreshOAuthTokensWorker implements Worker {
 	constructor(

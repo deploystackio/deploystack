@@ -4,9 +4,9 @@
  * Stores discovered tool metadata from MCP server installations in the database
  */
 
-import type { LibSQLDatabase } from 'drizzle-orm/libsql';
+import type { AnyDatabase } from '../../db';
 import type { FastifyBaseLogger } from 'fastify';
-import { mcpToolMetadata } from '../../db/schema.sqlite';
+import { mcpToolMetadata } from '../../db/schema';
 import { eq } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 
@@ -113,7 +113,7 @@ interface ToolsDiscoveredData {
 export async function handle(
   satelliteId: string,
   eventData: Record<string, unknown>,
-  db: LibSQLDatabase,
+  db: AnyDatabase,
   eventTimestamp: Date,
   logger: FastifyBaseLogger
 ): Promise<void> {

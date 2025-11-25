@@ -1,6 +1,5 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { getDb } from '../../../db';
-import { mcpServerInstallations, mcpServers, mcpOauthTokens } from '../../../db/schema.sqlite';
+import { getDb, getSchema } from '../../../db';
 import { eq, and } from 'drizzle-orm';
 import { OAuthTokenService } from '../../../services/OAuthTokenService';
 import { OAuthDiscoveryService } from '../../../services/OAuthDiscoveryService';
@@ -46,6 +45,7 @@ export default async function oauthCallbackRoute(server: FastifyInstance) {
 			const params = request.params as TeamAndInstallationParams;
 			const { teamId, installationId } = params;
 			const db = getDb();
+			const { mcpServerInstallations, mcpServers, mcpOauthTokens } = getSchema();
 
 			// Check for OAuth errors from provider
 			if (query.error) {

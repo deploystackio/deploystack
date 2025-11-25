@@ -1,11 +1,12 @@
 import { eq, and } from 'drizzle-orm';
-import { satellites, satelliteCommands } from '../db/schema.sqlite';
+import { satellites, satelliteCommands } from '../db/schema';
 import type { AnyDatabase } from '../db';
 import type { FastifyBaseLogger } from 'fastify';
 import { nanoid } from 'nanoid';
 
-export type CommandType = 'configure' | 'restart' | 'update';
-export type CommandPriority = 'immediate' | 'high' | 'normal';
+// Match schema enum from satelliteCommands table
+export type CommandType = 'spawn' | 'kill' | 'restart' | 'configure' | 'health_check';
+export type CommandPriority = 'immediate' | 'high' | 'normal' | 'low';
 
 export interface SatelliteCommand {
   id: string;
@@ -88,13 +89,12 @@ export class SatelliteCommandService {
     await this.db.insert(satelliteCommands).values(commands.map(cmd => ({
       id: cmd.id,
       satellite_id: cmd.satellite_id,
-      command_type: cmd.command_type,
-      priority: cmd.priority,
+      command_type: cmd.command_type as 'spawn' | 'kill' | 'restart' | 'configure' | 'health_check',
+      priority: cmd.priority as 'immediate' | 'high' | 'normal' | 'low',
       payload: cmd.payload,
-      status: 'pending',
+      status: 'pending' as const,
       target_team_id: cmd.target_team_id,
       correlation_id: cmd.correlation_id,
-      expires_at: cmd.expires_at,
       retry_count: 0,
       max_retries: 3,
       error_message: null,
@@ -158,13 +158,12 @@ export class SatelliteCommandService {
     await this.db.insert(satelliteCommands).values({
       id: command.id,
       satellite_id: command.satellite_id,
-      command_type: command.command_type,
-      priority: command.priority,
+      command_type: command.command_type as 'spawn' | 'kill' | 'restart' | 'configure' | 'health_check',
+      priority: command.priority as 'immediate' | 'high' | 'normal' | 'low',
       payload: command.payload,
-      status: 'pending',
+      status: 'pending' as const,
       target_team_id: command.target_team_id,
       correlation_id: command.correlation_id,
-      expires_at: command.expires_at,
       retry_count: 0,
       max_retries: 3,
       error_message: null,
@@ -237,13 +236,12 @@ export class SatelliteCommandService {
     await this.db.insert(satelliteCommands).values(commands.map(cmd => ({
       id: cmd.id,
       satellite_id: cmd.satellite_id,
-      command_type: cmd.command_type,
-      priority: cmd.priority,
+      command_type: cmd.command_type as 'spawn' | 'kill' | 'restart' | 'configure' | 'health_check',
+      priority: cmd.priority as 'immediate' | 'high' | 'normal' | 'low',
       payload: cmd.payload,
-      status: 'pending',
+      status: 'pending' as const,
       target_team_id: cmd.target_team_id,
       correlation_id: cmd.correlation_id,
-      expires_at: cmd.expires_at,
       retry_count: 0,
       max_retries: 3,
       error_message: null,

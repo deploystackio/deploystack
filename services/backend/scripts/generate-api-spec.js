@@ -28,10 +28,18 @@ async function waitForServer(url, maxAttempts = 30, delay = 1000) {
 
 async function generateApiSpec() {
   let server = null;
-  
+
   try {
     console.log('🚀 Starting server to generate API specification...');
-    
+
+    // Skip database initialization for API spec generation
+    process.env.SKIP_DATABASE_INIT = 'true';
+    console.log('ℹ️  Database initialization will be skipped for API spec generation');
+
+    // Skip plugin discovery for API spec generation
+    process.env.SKIP_PLUGIN_INIT = 'true';
+    console.log('ℹ️  Plugin discovery will be skipped for API spec generation');
+
     // Create the server
     server = await createServer();
     
@@ -47,22 +55,8 @@ async function generateApiSpec() {
       throw new Error('Server did not become ready in time');
     }
     
-    // Additional wait to ensure plugin initialization is complete
-    console.log('⏳ Allowing additional time for plugin initialization...');
-    await new Promise(resolve => setTimeout(resolve, 3000));
-    
-    // Check if any plugin routes are available by fetching a test route
-    try {
-      console.log('🔍 Checking plugin route availability...');
-      const testResponse = await fetch('http://localhost:3000/api/plugin/example-plugin/examples');
-      if (testResponse.ok || testResponse.status === 404) {
-        console.log('✅ Plugin routes are registered');
-      } else {
-        console.log(`⚠️  Plugin routes may not be fully initialized (status: ${testResponse.status})`);
-      }
-    } catch (pluginError) {
-      console.log('⚠️  Plugin routes check failed:', pluginError.message);
-    }
+    // Plugin routes are intentionally excluded from API spec generation
+    console.log('ℹ️  Plugin routes are excluded from API spec generation');
     
     // Fetch the OpenAPI specification
     console.log('📥 Fetching API specification...');
@@ -73,16 +67,6 @@ async function generateApiSpec() {
     }
     
     const apiSpec = await response.json();
-    
-    // Check if plugin routes are in the spec
-    const pluginRoutes = Object.keys(apiSpec.paths || {}).filter(path => path.includes('/api/plugin/'));
-    console.log(`📊 Found ${pluginRoutes.length} plugin routes in API spec:`, pluginRoutes);
-    
-    if (pluginRoutes.length === 0) {
-      console.log('⚠️  WARNING: No plugin routes found in API specification!');
-      console.log('    This might indicate plugin initialization issues.');
-      console.log('    Check server logs for plugin-related errors.');
-    }
     
     // Ensure output directory exists
     const outputDir = path.join(__dirname, '..');
@@ -110,32 +94,18 @@ async function generateApiSpec() {
     
     // Generate summary report
     const totalPaths = Object.keys(apiSpec.paths || {}).length;
-    const corePaths = Object.keys(apiSpec.paths || {}).filter(path => !path.includes('/api/plugin/')).length;
-    const pluginPaths = pluginRoutes.length;
-    
+
     console.log('\n📊 API Specification Summary:');
     console.log(`   Total endpoints: ${totalPaths}`);
-    console.log(`   Core endpoints: ${corePaths}`);
-    console.log(`   Plugin endpoints: ${pluginPaths}`);
-    
+    console.log(`   Note: Plugin endpoints are excluded from this spec`);
+
     console.log('\n📋 API Documentation URLs:');
     console.log('   Interactive Docs: http://localhost:3000/documentation');
     console.log('   JSON Spec: http://localhost:3000/documentation/json');
     console.log('   YAML Spec: http://localhost:3000/documentation/yaml');
-    
+
     console.log('\n📦 Import into Postman:');
     console.log(`   Use the generated file: ${jsonPath}`);
-    
-    if (pluginPaths === 0) {
-      console.log('\n⚠️  PLUGIN ROUTES MISSING:');
-      console.log('   The generated API spec does not include plugin routes.');
-      console.log('   This suggests plugin initialization failed.');
-      console.log('   Recommendations:');
-      console.log('   1. Check that the database is properly configured');
-      console.log('   2. Review server logs for plugin initialization errors');
-      console.log('   3. Ensure plugin tables are created in the database');
-      console.log('   4. Verify plugin files are present in src/plugins/');
-    }
     
   } catch (error) {
     console.error('❌ Error generating API specification:', error);

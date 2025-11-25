@@ -379,7 +379,7 @@ export class GlobalSettingsService {
         .delete(schema.globalSettings)
         .where(eq(schema.globalSettings.key, key));
 
-      return result.changes > 0;
+      return (result.rowCount || 0) > 0;
     } catch (error) {
       throw new Error(`Failed to delete setting '${key}': ${error instanceof Error ? error.message : 'Unknown error'}`);
     }

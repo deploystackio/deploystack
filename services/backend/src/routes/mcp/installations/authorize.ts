@@ -5,8 +5,7 @@ import { OAuthAuthorizationService } from '../../../services/OAuthAuthorizationS
 import { OAuthDiscoveryService } from '../../../services/OAuthDiscoveryService';
 import { OAuthClientRegistrationService } from '../../../services/OAuthClientRegistrationService';
 import { encrypt } from '../../../utils/encryption';
-import { getDb } from '../../../db';
-import { mcpServers, mcpServerInstallations } from '../../../db/schema.sqlite';
+import { getDb, getSchema } from '../../../db';
 import { eq } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import { GlobalSettings } from '../../../global-settings';
@@ -78,6 +77,7 @@ export default async function authorizeRoute(server: FastifyInstance) {
 
     try {
       const db = getDb();
+      const { mcpServers, mcpServerInstallations } = getSchema();
 
       // Get MCP server from catalog
       const [mcpServer] = await db

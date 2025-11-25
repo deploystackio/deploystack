@@ -1,7 +1,7 @@
 import type { AnyDatabase } from '../db';
 import type { FastifyBaseLogger } from 'fastify';
 import type { Worker, WorkerResult } from './types';
-import { queueJobs, queueJobBatches } from '../db/schema.sqlite';
+import { queueJobs, queueJobBatches } from '../db/schema';
 import { lt, sql } from 'drizzle-orm';
 
 interface CleanupPayload {
@@ -39,7 +39,7 @@ export class CleanupOldJobsWorker implements Worker {
         .delete(queueJobs)
         .where(lt(queueJobs.created_at, cutoffDate));
 
-      const jobsDeleted = (jobsResult.changes || jobsResult.rowsAffected || 0);
+      const jobsDeleted = (jobsResult.rowCount || 0);
 
       // Delete orphaned batches (batches with no jobs)
       const batchesResult = await this.db
@@ -48,7 +48,7 @@ export class CleanupOldJobsWorker implements Worker {
           sql`${queueJobBatches.id} NOT IN (SELECT DISTINCT ${queueJobs.batch_id} FROM ${queueJobs} WHERE ${queueJobs.batch_id} IS NOT NULL)`
         );
 
-      const batchesDeleted = (batchesResult.changes || batchesResult.rowsAffected || 0);
+      const batchesDeleted = (batchesResult.rowCount || 0);
 
       this.logger.info({ 
         jobId,

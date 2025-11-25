@@ -1,17 +1,32 @@
 import { eq, and, lte, asc, sql } from 'drizzle-orm';
-import { queueJobs, queueJobBatches } from '../db/schema.sqlite';
 import type { AnyDatabase } from '../db';
 import type { FastifyBaseLogger } from 'fastify';
 import type { Job, JobBatch, JobOptions, JobStatus, JobStats } from '../types/jobs';
 import { nanoid } from 'nanoid';
+import { getSchema, getDbStatus } from '../db';
 
 export class JobQueueService {
   private readonly db: AnyDatabase;
   private readonly logger: FastifyBaseLogger;
+  private readonly queueJobs: ReturnType<typeof getSchema>['queueJobs'];
+  private readonly queueJobBatches: ReturnType<typeof getSchema>['queueJobBatches'];
+  private readonly dbType: 'postgresql';
 
   constructor(db: AnyDatabase, logger: FastifyBaseLogger) {
     this.db = db;
     this.logger = logger;
+
+    // Get schema dynamically based on database type
+    const schema = getSchema();
+    this.queueJobs = schema.queueJobs;
+    this.queueJobBatches = schema.queueJobBatches;
+
+    // Store database type for SQL query generation (PostgreSQL only)
+    const dbStatus = getDbStatus();
+    this.dbType = 'postgresql';
+    if (dbStatus.type !== 'postgresql') {
+      throw new Error('Only PostgreSQL is supported');
+    }
   }
 
   /**
@@ -40,7 +55,7 @@ export class JobQueueService {
         completed_at: null,
       };
 
-      await this.db.insert(queueJobs).values(jobData);
+      await this.db.insert(this.queueJobs).values(jobData);
       
       this.logger.info({ jobId, type, scheduledFor, batchId }, 'Job created');
       
@@ -60,14 +75,14 @@ export class JobQueueService {
       
       const result = await this.db
         .select()
-        .from(queueJobs)
+        .from(this.queueJobs)
         .where(
           and(
-            eq(queueJobs.status, 'pending'),
-            lte(queueJobs.scheduled_for, now)
+            eq(this.queueJobs.status, 'pending'),
+            lte(this.queueJobs.scheduled_for, now)
           )
         )
-        .orderBy(asc(queueJobs.scheduled_for))
+        .orderBy(asc(this.queueJobs.scheduled_for))
         .limit(1);
 
       return result.length > 0 ? (result[0] as Job) : null;
@@ -83,13 +98,13 @@ export class JobQueueService {
   async markJobProcessing(jobId: string): Promise<void> {
     try {
       await this.db
-        .update(queueJobs)
+        .update(this.queueJobs)
         .set({
           status: 'processing',
-          attempts: sql`${queueJobs.attempts} + 1`,
+          attempts: sql`${this.queueJobs.attempts} + 1`,
           updated_at: new Date(),
         })
-        .where(eq(queueJobs.id, jobId));
+        .where(eq(this.queueJobs.id, jobId));
 
       this.logger.debug({ jobId }, 'Job marked as processing');
     } catch (error) {
@@ -118,9 +133,9 @@ export class JobQueueService {
       }
 
       await this.db
-        .update(queueJobs)
+        .update(this.queueJobs)
         .set(updateData)
-        .where(eq(queueJobs.id, jobId));
+        .where(eq(this.queueJobs.id, jobId));
 
       this.logger.info({ jobId, status, error }, 'Job status updated');
     } catch (error) {
@@ -137,13 +152,13 @@ export class JobQueueService {
       const scheduledFor = new Date(Date.now() + delayMs);
 
       await this.db
-        .update(queueJobs)
+        .update(this.queueJobs)
         .set({
           status: 'pending',
           scheduled_for: scheduledFor,
           updated_at: new Date(),
         })
-        .where(eq(queueJobs.id, jobId));
+        .where(eq(this.queueJobs.id, jobId));
 
       this.logger.info({ jobId, delayMs, scheduledFor }, 'Job requeued for retry');
     } catch (error) {
@@ -159,8 +174,8 @@ export class JobQueueService {
     try {
       const result = await this.db
         .select()
-        .from(queueJobs)
-        .where(eq(queueJobs.id, jobId))
+        .from(this.queueJobs)
+        .where(eq(this.queueJobs.id, jobId))
         .limit(1);
 
       return result.length > 0 ? (result[0] as Job) : null;
@@ -177,9 +192,9 @@ export class JobQueueService {
     try {
       const result = await this.db
         .select()
-        .from(queueJobs)
-        .where(eq(queueJobs.batch_id, batchId))
-        .orderBy(asc(queueJobs.created_at));
+        .from(this.queueJobs)
+        .where(eq(this.queueJobs.batch_id, batchId))
+        .orderBy(asc(this.queueJobs.created_at));
 
       return result as Job[];
     } catch (error) {
@@ -195,11 +210,11 @@ export class JobQueueService {
     try {
       const result = await this.db
         .select({
-          status: queueJobs.status,
+          status: this.queueJobs.status,
           count: sql<number>`COUNT(*)`,
         })
-        .from(queueJobs)
-        .groupBy(queueJobs.status);
+        .from(this.queueJobs)
+        .groupBy(this.queueJobs.status);
 
       const stats: JobStats = {
         pending: 0,
@@ -217,11 +232,14 @@ export class JobQueueService {
 
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      const todayTimestamp = Math.floor(today.getTime() / 1000); // Convert to Unix timestamp
+
+      // PostgreSQL: use timestamp directly with Drizzle's gte operator
+      const { gte } = await import('drizzle-orm');
       const todayResult = await this.db
         .select({ count: sql<number>`COUNT(*)` })
-        .from(queueJobs)
-        .where(sql`${queueJobs.created_at} >= ${todayTimestamp}`);
+        .from(this.queueJobs)
+        .where(gte(this.queueJobs.created_at, today));
+
       stats.totalToday = todayResult.length > 0 ? Number(todayResult[0].count) : 0;
 
       const avgDuration = await this.getAverageJobDuration();
@@ -254,7 +272,7 @@ export class JobQueueService {
         completed_at: null,
       };
 
-      await this.db.insert(queueJobBatches).values(batchData);
+      await this.db.insert(this.queueJobBatches).values(batchData);
 
       this.logger.info({ batchId, type, totalJobs }, 'Job batch created');
 
@@ -272,11 +290,11 @@ export class JobQueueService {
   async updateBatchTotalJobs(batchId: string, totalJobs: number): Promise<void> {
     try {
       await this.db
-        .update(queueJobBatches)
+        .update(this.queueJobBatches)
         .set({
           total_jobs: totalJobs,
         })
-        .where(eq(queueJobBatches.id, batchId));
+        .where(eq(this.queueJobBatches.id, batchId));
 
       this.logger.info({ batchId, totalJobs }, 'Batch total_jobs updated');
     } catch (error) {
@@ -292,8 +310,8 @@ export class JobQueueService {
     try {
       const batch = await this.db
         .select()
-        .from(queueJobBatches)
-        .where(eq(queueJobBatches.id, batchId))
+        .from(this.queueJobBatches)
+        .where(eq(this.queueJobBatches.id, batchId))
         .limit(1);
 
       if (batch.length === 0) {
@@ -306,14 +324,14 @@ export class JobQueueService {
       const status = isComplete ? (failed > 0 ? 'failed' : 'completed') : 'processing';
 
       await this.db
-        .update(queueJobBatches)
+        .update(this.queueJobBatches)
         .set({
           completed_jobs: completed,
           failed_jobs: failed,
           status,
           completed_at: isComplete ? new Date() : null,
         })
-        .where(eq(queueJobBatches.id, batchId));
+        .where(eq(this.queueJobBatches.id, batchId));
 
       this.logger.debug({ batchId, completed, failed, status }, 'Batch progress updated');
     } catch (error) {
@@ -329,8 +347,8 @@ export class JobQueueService {
     try {
       const result = await this.db
         .select()
-        .from(queueJobBatches)
-        .where(eq(queueJobBatches.id, batchId))
+        .from(this.queueJobBatches)
+        .where(eq(this.queueJobBatches.id, batchId))
         .limit(1);
 
       return result.length > 0 ? (result[0] as JobBatch) : null;
@@ -353,13 +371,13 @@ export class JobQueueService {
     try {
       const conditions = [];
       if (options.status) {
-        conditions.push(eq(queueJobs.status, options.status));
+        conditions.push(eq(this.queueJobs.status, options.status));
       }
       if (options.type) {
-        conditions.push(eq(queueJobs.type, options.type));
+        conditions.push(eq(this.queueJobs.type, options.type));
       }
       if (options.batchId) {
-        conditions.push(eq(queueJobs.batch_id, options.batchId));
+        conditions.push(eq(this.queueJobs.batch_id, options.batchId));
       }
 
       const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
@@ -367,14 +385,14 @@ export class JobQueueService {
       const [jobs, countResult] = await Promise.all([
         this.db
           .select()
-          .from(queueJobs)
+          .from(this.queueJobs)
           .where(whereClause)
-          .orderBy(sql`${queueJobs.created_at} DESC`)
+          .orderBy(sql`${this.queueJobs.created_at} DESC`)
           .limit(options.limit || 50)
           .offset(options.offset || 0),
         this.db
           .select({ count: sql<number>`COUNT(*)` })
-          .from(queueJobs)
+          .from(this.queueJobs)
           .where(whereClause),
       ]);
 
@@ -395,19 +413,22 @@ export class JobQueueService {
    */
   async getAverageJobDuration(jobType?: string): Promise<number> {
     try {
-      const conditions = [eq(queueJobs.status, 'completed')];
+      const conditions = [eq(this.queueJobs.status, 'completed')];
       if (jobType) {
-        conditions.push(eq(queueJobs.type, jobType));
+        conditions.push(eq(this.queueJobs.type, jobType));
       }
+
+      // PostgreSQL: EXTRACT(EPOCH FROM timestamp) returns seconds as decimal
+      const avgDurationSQL = sql<number>`AVG(
+        EXTRACT(EPOCH FROM ${this.queueJobs.completed_at} - ${this.queueJobs.created_at}) * 1000
+      )`;
 
       const result = await this.db
         .select({
-          avgDuration: sql<number>`AVG(
-            CAST((julianday(${queueJobs.completed_at}) - julianday(${queueJobs.created_at})) * 86400000 AS INTEGER)
-          )`,
+          avgDuration: avgDurationSQL,
         })
-        .from(queueJobs)
-        .where(and(...conditions, sql`${queueJobs.completed_at} IS NOT NULL`));
+        .from(this.queueJobs)
+        .where(and(...conditions, sql`${this.queueJobs.completed_at} IS NOT NULL`));
 
       return result.length > 0 && result[0].avgDuration !== null
         ? Number(result[0].avgDuration)
@@ -444,8 +465,8 @@ export class JobQueueService {
       // Get batch info
       const batchResult = await this.db
         .select()
-        .from(queueJobBatches)
-        .where(eq(queueJobBatches.id, batchId))
+        .from(this.queueJobBatches)
+        .where(eq(this.queueJobBatches.id, batchId))
         .limit(1);
       
       if (batchResult.length === 0) {
@@ -457,12 +478,12 @@ export class JobQueueService {
       // Get job counts by status
       const jobCounts = await this.db
         .select({
-          status: queueJobs.status,
+          status: this.queueJobs.status,
           count: sql<number>`COUNT(*)`,
         })
-        .from(queueJobs)
-        .where(eq(queueJobs.batch_id, batchId))
-        .groupBy(queueJobs.status);
+        .from(this.queueJobs)
+        .where(eq(this.queueJobs.batch_id, batchId))
+        .groupBy(this.queueJobs.status);
       
       // Calculate progress
       const statusCounts: Record<string, number> = {};
@@ -480,19 +501,19 @@ export class JobQueueService {
       // Get recent jobs (last 10)
       const recentJobs = await this.db
         .select()
-        .from(queueJobs)
-        .where(eq(queueJobs.batch_id, batchId))
-        .orderBy(sql`${queueJobs.created_at} DESC`)
+        .from(this.queueJobs)
+        .where(eq(this.queueJobs.batch_id, batchId))
+        .orderBy(sql`${this.queueJobs.created_at} DESC`)
         .limit(10);
       
       // Get failed jobs for error analysis
       const failedJobs = await this.db
         .select()
-        .from(queueJobs)
+        .from(this.queueJobs)
         .where(
           and(
-            eq(queueJobs.batch_id, batchId),
-            eq(queueJobs.status, 'failed')
+            eq(this.queueJobs.batch_id, batchId),
+            eq(this.queueJobs.status, 'failed')
           )
         )
         .limit(20);
@@ -539,9 +560,9 @@ export class JobQueueService {
     try {
       const batches = await this.db
         .select()
-        .from(queueJobBatches)
-        .where(eq(queueJobBatches.type, batchType))
-        .orderBy(sql`${queueJobBatches.created_at} DESC`)
+        .from(this.queueJobBatches)
+        .where(eq(this.queueJobBatches.type, batchType))
+        .orderBy(sql`${this.queueJobBatches.created_at} DESC`)
         .limit(limit);
       
       return batches as JobBatch[];
@@ -557,7 +578,7 @@ export class JobQueueService {
   async cancelBatchJobs(batchId: string): Promise<number> {
     try {
       await this.db
-        .update(queueJobs)
+        .update(this.queueJobs)
         .set({
           status: 'failed',
           error: 'Cancelled by administrator',
@@ -565,20 +586,20 @@ export class JobQueueService {
         })
         .where(
           and(
-            eq(queueJobs.batch_id, batchId),
-            eq(queueJobs.status, 'pending')
+            eq(this.queueJobs.batch_id, batchId),
+            eq(this.queueJobs.status, 'pending')
           )
         );
       
-      // SQLite doesn't return affected row count directly, so we need to count
+      // Count the cancelled jobs
       const cancelledJobs = await this.db
         .select({ count: sql<number>`COUNT(*)` })
-        .from(queueJobs)
+        .from(this.queueJobs)
         .where(
           and(
-            eq(queueJobs.batch_id, batchId),
-            eq(queueJobs.status, 'failed'),
-            eq(queueJobs.error, 'Cancelled by administrator')
+            eq(this.queueJobs.batch_id, batchId),
+            eq(this.queueJobs.status, 'failed'),
+            eq(this.queueJobs.error, 'Cancelled by administrator')
           )
         );
       
@@ -601,7 +622,7 @@ export class JobQueueService {
       const now = new Date();
       
       await this.db
-        .update(queueJobs)
+        .update(this.queueJobs)
         .set({
           status: 'pending',
           scheduled_for: now,
@@ -611,20 +632,20 @@ export class JobQueueService {
         })
         .where(
           and(
-            eq(queueJobs.batch_id, batchId),
-            eq(queueJobs.status, 'failed')
+            eq(this.queueJobs.batch_id, batchId),
+            eq(this.queueJobs.status, 'failed')
           )
         );
       
       // Count retried jobs
       const retriedJobs = await this.db
         .select({ count: sql<number>`COUNT(*)` })
-        .from(queueJobs)
+        .from(this.queueJobs)
         .where(
           and(
-            eq(queueJobs.batch_id, batchId),
-            eq(queueJobs.status, 'pending'),
-            eq(queueJobs.attempts, 0)
+            eq(this.queueJobs.batch_id, batchId),
+            eq(this.queueJobs.status, 'pending'),
+            eq(this.queueJobs.attempts, 0)
           )
         );
       

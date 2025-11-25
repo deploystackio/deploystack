@@ -1,2 +1,0 @@
-DROP INDEX `mcp_activity_metrics_unique_bucket`;--> statement-breakpoint
-CREATE UNIQUE INDEX `mcp_activity_metrics_unique_bucket` ON `mcpClientActivityMetrics` (`user_id`,`team_id`,`satellite_id`,`auth_identifier`,`bucket_timestamp`,`bucket_interval`);

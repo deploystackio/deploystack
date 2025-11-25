@@ -4,9 +4,9 @@
  * Logs tool execution to satelliteUsageLogs table for analytics and audit trails
  */
 
-import type { LibSQLDatabase } from 'drizzle-orm/libsql';
+import type { AnyDatabase } from '../../db';
 import type { FastifyBaseLogger } from 'fastify';
-import { satelliteUsageLogs } from '../../db/schema.sqlite';
+import { satelliteUsageLogs } from '../../db/schema';
 import { nanoid } from 'nanoid';
 
 // Event type identifier
@@ -68,7 +68,7 @@ interface ToolExecutedData {
 export async function handle(
   satelliteId: string,
   eventData: Record<string, unknown>,
-  db: LibSQLDatabase,
+  db: AnyDatabase,
   eventTimestamp: Date,
   _logger: FastifyBaseLogger
 ): Promise<void> {

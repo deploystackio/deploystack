@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { type FastifyInstance } from 'fastify';
-import { getDb } from '../../db';
-import { satellites, satelliteCommands } from '../../db/schema.sqlite';
+import { getDb, getSchema } from '../../db';
 import { eq, and, asc } from 'drizzle-orm';
 import { requireSatelliteAuth } from '../../middleware/satelliteAuthMiddleware';
 
@@ -204,9 +203,10 @@ export default async function satelliteCommandsRoute(server: FastifyInstance) {
   }, async (request, reply) => {
     const { satelliteId } = request.params as SatelliteIdParams;
     const { limit = 10 } = request.query as CommandsQuery;
-    
+
     const db = getDb();
-    
+    const { satellites, satelliteCommands } = getSchema();
+
     try {
       // Verify satellite exists and is active
       const satellite = await db
@@ -355,9 +355,10 @@ export default async function satelliteCommandsRoute(server: FastifyInstance) {
   }, async (request, reply) => {
     const { satelliteId } = request.params as SatelliteIdParams;
     const { command_id, status, result, error_message } = request.body as CommandResultRequest;
-    
+
     const db = getDb();
-    
+    const { satelliteCommands } = getSchema();
+
     try {
       // Verify command exists and belongs to this satellite
       const command = await db

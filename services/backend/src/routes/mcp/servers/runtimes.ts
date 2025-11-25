@@ -1,7 +1,6 @@
 import { type FastifyInstance } from 'fastify';
 import { requirePermission } from '../../../middleware/roleMiddleware';
-import { getDb } from '../../../db';
-import { mcpServers } from '../../../db/schema.sqlite';
+import { getDb, getSchema } from '../../../db';
 import { sql } from 'drizzle-orm';
 import {
   GET_RUNTIMES_SUCCESS_RESPONSE_SCHEMA,
@@ -42,7 +41,8 @@ export default async function getRuntimes(server: FastifyInstance) {
 
     try {
       const db = getDb();
-      
+      const { mcpServers } = getSchema();
+
       const results = await db
         .selectDistinct({ runtime: mcpServers.runtime })
         .from(mcpServers)

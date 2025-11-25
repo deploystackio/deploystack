@@ -5,35 +5,23 @@ export default {
     title: 'Setup DeployStack',
     description: 'Configure your DeployStack instance to get started.',
     databaseSelection: {
-      title: 'Choose Your Database',
-      subtitle: 'Select the database that best fits your needs',
+      title: 'Database Configuration',
+      subtitle: 'Configure PostgreSQL for your DeployStack instance',
     },
     databaseTypes: {
-      sqlite: {
-        name: 'SQLite',
-        subtitle: 'Local Development',
-        description: 'File-based database perfect for development and small deployments',
+      postgresql: {
+        name: 'PostgreSQL',
+        subtitle: 'Production Database',
+        description: 'Industry-standard relational database for production deployments',
         features: {
-          noSetup: 'No setup required',
-          immediate: 'Works immediately',
-          development: 'Perfect for getting started',
-        },
-      },
-      turso: {
-        name: 'Turso',
-        subtitle: 'Distributed SQLite',
-        description: 'Multi-region SQLite with global replication',
-        features: {
-          multiRegion: 'Multi-region replication',
-          lowLatency: 'Low latency worldwide',
-          advanced: 'Advanced SQLite features',
+          scalable: 'Highly scalable',
+          reliable: 'Enterprise-grade reliability',
+          fullFeatured: 'Full SQL support',
         },
       },
     },
     recommended: {
-      development: 'Development',
       production: 'Production',
-      advanced: 'Advanced',
     },
     environmentVars: {
       required: 'Required environment variables',
@@ -46,9 +34,9 @@ export default {
       databaseType: {
         label: 'Database Type',
         placeholder: 'Select database type',
-        description: 'DeployStack uses SQLite for data storage.',
+        description: 'DeployStack uses PostgreSQL for data storage.',
         options: {
-          sqlite: 'SQLite',
+          postgresql: 'PostgreSQL',
         },
       },
     },
@@ -79,9 +67,7 @@ export default {
     database: {
       title: 'Database Configuration',
       typeLabel: 'Database Type',
-      sqliteLabel: 'SQLite',
-      sqlitePathLabel: 'SQLite Database Path',
-      sqlitePathPlaceholder: 'e.g., persistent_data/database.db',
+      postgresqlLabel: 'PostgreSQL',
     },
     adminUser: {
       title: 'Administrator Account',

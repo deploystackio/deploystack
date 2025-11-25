@@ -1,7 +1,6 @@
 import { type FastifyInstance } from 'fastify';
 import { requireTeamPermission } from '../../middleware/roleMiddleware';
-import { getDb } from '../../db';
-import { satellites } from '../../db/schema.sqlite';
+import { getDb, getSchema } from '../../db';
 import { eq, and, or, isNull } from 'drizzle-orm';
 
 // =============================================================================
@@ -190,6 +189,7 @@ export default async function getTeamSatellitesRoute(server: FastifyInstance) {
 
     try {
       const db = getDb();
+      const { satellites } = getSchema();
 
       // Query active satellites: global satellites OR team-specific satellites
       // requireTeamPermission already verified team membership

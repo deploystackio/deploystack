@@ -4,9 +4,9 @@
  * Updates satelliteProcesses table when a dormant MCP server is respawned
  */
 
-import type { LibSQLDatabase } from 'drizzle-orm/libsql';
+import type { AnyDatabase } from '../../db';
 import type { FastifyBaseLogger } from 'fastify';
-import { satelliteProcesses } from '../../db/schema.sqlite';
+import { satelliteProcesses } from '../../db/schema';
 import { eq } from 'drizzle-orm';
 
 // Event type identifier
@@ -69,7 +69,7 @@ interface ServerRespawnedData {
 export async function handle(
   satelliteId: string,
   eventData: Record<string, unknown>,
-  db: LibSQLDatabase,
+  db: AnyDatabase,
   eventTimestamp: Date,
   _logger: FastifyBaseLogger
 ): Promise<void> {

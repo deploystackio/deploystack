@@ -167,7 +167,7 @@ export class EmailVerificationService {
       .delete(emailVerificationTokensTable)
       .where(lt(emailVerificationTokensTable.expires_at, new Date()));
 
-    return result.changes || 0;
+    return result.rowCount || 0;
   }
 
   /**

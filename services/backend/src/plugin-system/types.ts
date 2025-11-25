@@ -1,7 +1,5 @@
 import { type FastifyInstance, type FastifyBaseLogger } from 'fastify';
-// import { type SQLiteTable } from 'drizzle-orm/sqlite-core'; // Replaced by tableDefinitions
-// import { type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3'; // Replaced by AnyDatabase
-import { type AnyDatabase } from '../db'; // Import AnyDatabase
+import { type AnyDatabase } from '../db';
 import { type PluginRouteManager } from './route-manager';
 import { type EventListeners } from '../events';
 

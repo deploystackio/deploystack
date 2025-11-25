@@ -1,146 +1,29 @@
 import { describe, it, expect } from 'vitest';
-import { z } from 'zod';
 import {
   DatabaseType,
-  SQLiteInternalConfigSchema,
-  InternalDbConfigSchema,
   DbSetupRequestBodySchema,
   DbStatusResponseSchema,
-  type SQLiteInternalConfig,
-  type InternalDbConfig,
   type DbSetupRequestBody,
   type DbStatusResponse,
 } from '../../../../src/routes/db/schemas';
 
 describe('Database Schemas', () => {
   describe('DatabaseType Enum', () => {
-    it('should have correct SQLite value', () => {
-      expect(DatabaseType.SQLite).toBe('sqlite');
+    it('should have correct PostgreSQL value', () => {
+      expect(DatabaseType.PostgreSQL).toBe('postgresql');
     });
 
-    it('should contain both SQLite and Turso types', () => {
+    it('should contain only PostgreSQL type', () => {
       const values = Object.values(DatabaseType);
-      expect(values).toEqual(['sqlite', 'turso']);
-      expect(values).toHaveLength(2);
-    });
-  });
-
-  describe('SQLiteInternalConfigSchema', () => {
-    it('should validate valid SQLite config', () => {
-      const validConfig = {
-        type: DatabaseType.SQLite,
-        dbPath: '/path/to/database.db',
-      };
-
-      const result = SQLiteInternalConfigSchema.safeParse(validConfig);
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data).toEqual(validConfig);
-      }
-    });
-
-    it('should reject invalid type', () => {
-      const invalidConfig = {
-        type: 'postgres',
-        dbPath: '/path/to/database.db',
-      };
-
-      const result = SQLiteInternalConfigSchema.safeParse(invalidConfig);
-      expect(result.success).toBe(false);
-      if (!result.success) {
-        expect(result.error.issues[0].code).toBe('invalid_value');
-        expect(result.error.issues[0].path).toEqual(['type']);
-      }
-    });
-
-    it('should reject missing dbPath', () => {
-      const invalidConfig = {
-        type: DatabaseType.SQLite,
-      };
-
-      const result = SQLiteInternalConfigSchema.safeParse(invalidConfig);
-      expect(result.success).toBe(false);
-      if (!result.success) {
-        expect(result.error.issues[0].code).toBe('invalid_type');
-        expect(result.error.issues[0].path).toEqual(['dbPath']);
-      }
-    });
-
-    it('should reject empty dbPath', () => {
-      const invalidConfig = {
-        type: DatabaseType.SQLite,
-        dbPath: '',
-      };
-
-      const result = SQLiteInternalConfigSchema.safeParse(invalidConfig);
-      expect(result.success).toBe(true); // Empty string is valid for dbPath
-      if (result.success) {
-        expect(result.data.dbPath).toBe('');
-      }
-    });
-
-    it('should reject non-string dbPath', () => {
-      const invalidConfig = {
-        type: DatabaseType.SQLite,
-        dbPath: 123,
-      };
-
-      const result = SQLiteInternalConfigSchema.safeParse(invalidConfig);
-      expect(result.success).toBe(false);
-      if (!result.success) {
-        expect(result.error.issues[0].code).toBe('invalid_type');
-        expect(result.error.issues[0].path).toEqual(['dbPath']);
-      }
-    });
-
-    it('should handle relative paths', () => {
-      const validConfig = {
-        type: DatabaseType.SQLite,
-        dbPath: './database/deploystack.db',
-      };
-
-      const result = SQLiteInternalConfigSchema.safeParse(validConfig);
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data.dbPath).toBe('./database/deploystack.db');
-      }
-    });
-
-    it('should handle absolute paths', () => {
-      const validConfig = {
-        type: DatabaseType.SQLite,
-        dbPath: '/absolute/path/to/database.db',
-      };
-
-      const result = SQLiteInternalConfigSchema.safeParse(validConfig);
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data.dbPath).toBe('/absolute/path/to/database.db');
-      }
-    });
-  });
-
-  describe('InternalDbConfigSchema', () => {
-    it('should be equivalent to SQLiteInternalConfigSchema', () => {
-      const validConfig = {
-        type: DatabaseType.SQLite,
-        dbPath: '/path/to/database.db',
-      };
-
-      const sqliteResult = SQLiteInternalConfigSchema.safeParse(validConfig);
-      const internalResult = InternalDbConfigSchema.safeParse(validConfig);
-
-      expect(sqliteResult.success).toBe(internalResult.success);
-      if (sqliteResult.success && internalResult.success) {
-        expect(sqliteResult.data).toEqual(internalResult.data);
-      }
+      expect(values).toEqual(['postgresql']);
+      expect(values).toHaveLength(1);
     });
   });
 
   describe('DbSetupRequestBodySchema', () => {
-    it('should validate valid SQLite setup request', () => {
+    it('should validate valid PostgreSQL setup request', () => {
       const validRequest = {
-        type: DatabaseType.SQLite,
+        type: DatabaseType.PostgreSQL,
       };
 
       const result = DbSetupRequestBodySchema.safeParse(validRequest);
@@ -152,7 +35,7 @@ describe('Database Schemas', () => {
 
     it('should reject invalid database type', () => {
       const invalidRequest = {
-        type: 'postgres',
+        type: 'mysql',
       };
 
       const result = DbSetupRequestBodySchema.safeParse(invalidRequest);
@@ -176,7 +59,7 @@ describe('Database Schemas', () => {
 
     it('should ignore extra properties', () => {
       const requestWithExtra = {
-        type: DatabaseType.SQLite,
+        type: DatabaseType.PostgreSQL,
         extraProperty: 'should be ignored',
         connectionString: 'should also be ignored',
       };
@@ -184,7 +67,7 @@ describe('Database Schemas', () => {
       const result = DbSetupRequestBodySchema.safeParse(requestWithExtra);
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.data).toEqual({ type: DatabaseType.SQLite });
+        expect(result.data).toEqual({ type: DatabaseType.PostgreSQL });
         expect(result.data).not.toHaveProperty('extraProperty');
         expect(result.data).not.toHaveProperty('connectionString');
       }
@@ -209,7 +92,7 @@ describe('Database Schemas', () => {
       const validResponse = {
         configured: true,
         initialized: true,
-        dialect: DatabaseType.SQLite,
+        dialect: DatabaseType.PostgreSQL,
       };
 
       const result = DbStatusResponseSchema.safeParse(validResponse);
@@ -237,7 +120,7 @@ describe('Database Schemas', () => {
       const invalidResponse = {
         configured: 'true',
         initialized: true,
-        dialect: DatabaseType.SQLite,
+        dialect: DatabaseType.PostgreSQL,
       };
 
       const result = DbStatusResponseSchema.safeParse(invalidResponse);
@@ -252,7 +135,7 @@ describe('Database Schemas', () => {
       const invalidResponse = {
         configured: true,
         initialized: 1,
-        dialect: DatabaseType.SQLite,
+        dialect: DatabaseType.PostgreSQL,
       };
 
       const result = DbStatusResponseSchema.safeParse(invalidResponse);
@@ -267,7 +150,7 @@ describe('Database Schemas', () => {
       const invalidResponse = {
         configured: true,
         initialized: true,
-        dialect: 'postgres',
+        dialect: 'mysql',
       };
 
       const result = DbStatusResponseSchema.safeParse(invalidResponse);
@@ -310,44 +193,24 @@ describe('Database Schemas', () => {
   });
 
   describe('Type Inference', () => {
-    it('should infer correct SQLiteInternalConfig type', () => {
-      const config: SQLiteInternalConfig = {
-        type: DatabaseType.SQLite,
-        dbPath: '/path/to/db',
-      };
-
-      expect(config.type).toBe('sqlite');
-      expect(typeof config.dbPath).toBe('string');
-    });
-
-    it('should infer correct InternalDbConfig type', () => {
-      const config: InternalDbConfig = {
-        type: DatabaseType.SQLite,
-        dbPath: '/path/to/db',
-      };
-
-      expect(config.type).toBe('sqlite');
-      expect(typeof config.dbPath).toBe('string');
-    });
-
     it('should infer correct DbSetupRequestBody type', () => {
       const request: DbSetupRequestBody = {
-        type: DatabaseType.SQLite,
+        type: DatabaseType.PostgreSQL,
       };
 
-      expect(request.type).toBe('sqlite');
+      expect(request.type).toBe('postgresql');
     });
 
     it('should infer correct DbStatusResponse type', () => {
       const response: DbStatusResponse = {
         configured: true,
         initialized: true,
-        dialect: DatabaseType.SQLite,
+        dialect: DatabaseType.PostgreSQL,
       };
 
       expect(typeof response.configured).toBe('boolean');
       expect(typeof response.initialized).toBe('boolean');
-      expect(response.dialect).toBe('sqlite');
+      expect(response.dialect).toBe('postgresql');
     });
 
     it('should allow null dialect in DbStatusResponse type', () => {
@@ -383,7 +246,7 @@ describe('Database Schemas', () => {
     });
 
     it('should handle primitive values', () => {
-      const result = DbSetupRequestBodySchema.safeParse('sqlite');
+      const result = DbSetupRequestBodySchema.safeParse('postgresql');
       expect(result.success).toBe(false);
     });
   });

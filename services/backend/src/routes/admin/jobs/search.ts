@@ -1,7 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { requirePermission } from '../../../middleware/roleMiddleware';
-import { getDb } from '../../../db';
-import { queueJobs } from '../../../db/schema.sqlite';
+import { getDb, getSchema } from '../../../db';
 import { and, eq, gte, lte, like, desc } from 'drizzle-orm';
 import {
   ERROR_RESPONSE_SCHEMA,
@@ -97,6 +96,8 @@ export default async function searchJobsRoute(server: FastifyInstance) {
     }
   }, async (request, reply) => {
     try {
+      const db = getDb();
+      const { queueJobs } = getSchema();
       const query = request.query as SearchJobsQuery;
 
       // Parse and validate pagination parameters
@@ -171,8 +172,6 @@ export default async function searchJobsRoute(server: FastifyInstance) {
       if (createdBefore) {
         conditions.push(lte(queueJobs.created_at, createdBefore));
       }
-
-      const db = getDb();
 
       // Get total count with filters
       const whereClause = conditions.length > 0 ? and(...conditions) : undefined;

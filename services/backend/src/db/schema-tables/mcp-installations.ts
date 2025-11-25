@@ -1,13 +1,13 @@
- 
+
 // MCP Installation and Configuration Tables
 
-import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
+import { pgTable, text, integer, boolean, timestamp, index, jsonb } from 'drizzle-orm/pg-core';
 import { authUser } from './auth';
 import { teams } from './teams';
 import { mcpServers } from './mcp-catalog';
 
 // MCP Server Installations - Team installations (Tier 2)
-export const mcpServerInstallations = sqliteTable('mcpServerInstallations', {
+export const mcpServerInstallations = pgTable('mcpServerInstallations', {
   id: text('id').primaryKey(),
 
   // References
@@ -28,17 +28,17 @@ export const mcpServerInstallations = sqliteTable('mcpServerInstallations', {
   // OAuth Flow State
   oauth_state: text('oauth_state'), // State parameter for CSRF protection
   oauth_code_verifier: text('oauth_code_verifier'), // PKCE verifier (stored temporarily)
-  oauth_pending: integer('oauth_pending', { mode: 'boolean' }).notNull().default(false), // Installation awaiting OAuth
-  oauth_pending_expires_at: integer('oauth_pending_expires_at', { mode: 'timestamp' }), // Expiry for pending state
+  oauth_pending: boolean('oauth_pending').notNull().default(false), // Installation awaiting OAuth
+  oauth_pending_expires_at: timestamp('oauth_pending_expires_at', { withTimezone: true }), // Expiry for pending state
 
   // OAuth Dynamic Client Registration (RFC 7591)
   oauth_client_id: text('oauth_client_id'), // Dynamically registered client_id from MCP OAuth server
   oauth_client_secret: text('oauth_client_secret'), // Encrypted client_secret (if provided by registration endpoint)
 
   // Metadata
-  created_at: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
-  updated_at: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
-  last_used_at: integer('last_used_at', { mode: 'timestamp' }),
+  created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  last_used_at: timestamp('last_used_at', { withTimezone: true }),
 }, (table) => ({
   teamInstallationNameIdx: index('mcp_installations_team_name_idx').on(table.team_id, table.installation_name),
   teamServerIdx: index('mcp_installations_team_server_idx').on(table.team_id, table.server_id),
@@ -46,7 +46,7 @@ export const mcpServerInstallations = sqliteTable('mcpServerInstallations', {
 }));
 
 // MCP User Configurations - Individual user configurations per installation (Tier 3)
-export const mcpUserConfigurations = sqliteTable('mcpUserConfigurations', {
+export const mcpUserConfigurations = pgTable('mcpUserConfigurations', {
   id: text('id').primaryKey(),
 
   // References
@@ -63,9 +63,9 @@ export const mcpUserConfigurations = sqliteTable('mcpUserConfigurations', {
   user_url_query_params: text('user_url_query_params'), // JSON: {"api_key": "user_personal_api_key"} - user-specific URL query parameters
 
   // Metadata
-  created_at: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
-  updated_at: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
-  last_used_at: integer('last_used_at', { mode: 'timestamp' }),
+  created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  last_used_at: timestamp('last_used_at', { withTimezone: true }),
 }, (table) => ({
   installationUserIdx: index('mcp_user_configs_installation_user_idx').on(table.installation_id, table.user_id),
   userIdx: index('mcp_user_configs_user_idx').on(table.user_id),
@@ -74,7 +74,7 @@ export const mcpUserConfigurations = sqliteTable('mcpUserConfigurations', {
 }));
 
 // MCP Tool Metadata - Stores discovered tools from MCP servers
-export const mcpToolMetadata = sqliteTable('mcpToolMetadata', {
+export const mcpToolMetadata = pgTable('mcpToolMetadata', {
   id: text('id').primaryKey(),
 
   // References
@@ -84,12 +84,12 @@ export const mcpToolMetadata = sqliteTable('mcpToolMetadata', {
   // Tool information
   tool_name: text('tool_name').notNull(),
   description: text('description').notNull().default(''),
-  input_schema: text('input_schema', { mode: 'json' }), // JSON object stored as text
+  input_schema: jsonb('input_schema'), // JSON object stored as jsonb
   token_count: integer('token_count').notNull().default(0),
 
   // Timestamps
-  discovered_at: integer('discovered_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
-  updated_at: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  discovered_at: timestamp('discovered_at', { withTimezone: true }).notNull().defaultNow(),
+  updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 }, (table) => ({
   installationIdx: index('mcp_tool_metadata_installation_idx').on(table.installation_id),
   teamIdx: index('mcp_tool_metadata_team_idx').on(table.team_id),
@@ -97,7 +97,7 @@ export const mcpToolMetadata = sqliteTable('mcpToolMetadata', {
 }));
 
 // MCP OAuth Tokens - Encrypted OAuth tokens for MCP servers requiring OAuth
-export const mcpOauthTokens = sqliteTable('mcpOauthTokens', {
+export const mcpOauthTokens = pgTable('mcpOauthTokens', {
   id: text('id').primaryKey(),
 
   // Foreign Keys
@@ -117,12 +117,12 @@ export const mcpOauthTokens = sqliteTable('mcpOauthTokens', {
 
   // Token Metadata
   token_type: text('token_type').notNull().default('Bearer'),
-  expires_at: integer('expires_at', { mode: 'timestamp' }),
+  expires_at: timestamp('expires_at', { withTimezone: true }),
   scope: text('scope'),
 
   // Timestamps
-  created_at: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
-  updated_at: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date())
+  created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
 }, (table) => ({
   installationUserTeamIdx: index('mcp_oauth_tokens_installation_user_team_idx').on(
     table.installation_id,

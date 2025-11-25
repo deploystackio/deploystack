@@ -1,7 +1,6 @@
 import { type FastifyInstance } from 'fastify';
 import { requireTeamPermission } from '../../../middleware/roleMiddleware';
-import { getDb } from '../../../db';
-import { mcpToolMetadata, mcpServerInstallations, mcpServers } from '../../../db/schema.sqlite';
+import { getDb, getSchema } from '../../../db';
 import { eq, and } from 'drizzle-orm';
 
 // =============================================================================
@@ -170,6 +169,7 @@ export default async function getInstallationToolsRoute(server: FastifyInstance)
 
     try {
       const db = getDb();
+      const { mcpToolMetadata, mcpServerInstallations, mcpServers } = getSchema();
 
       // Step 1: Verify installation exists and belongs to the specified team
       const installation = await db
@@ -249,7 +249,7 @@ export default async function getInstallationToolsRoute(server: FastifyInstance)
           installation_id: installationData.id,
           installation_name: installationData.installation_name,
           team_id: installationData.team_id,
-          server_slug: installationData.server_slug,
+          server_slug: installationData.server_slug || 'unknown',
           tool_count: toolCount,
           total_tokens: totalTokens,
           tools: formattedTools

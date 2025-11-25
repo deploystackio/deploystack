@@ -1,26 +1,26 @@
 import type { AnyDatabase } from '../db';
 import type { FastifyBaseLogger } from 'fastify';
 import type { Worker, WorkerResult } from './types';
-import { mcpClientActivityMetrics } from '../db/schema.sqlite';
+import { mcpClientActivityMetrics } from '../db/schema';
 import { lt } from 'drizzle-orm';
 
 /**
  * MCP Client Activity Metrics Cleanup Worker
- * 
+ *
  * Deletes old metric buckets from the mcpClientActivityMetrics table.
- * 
+ *
  * Retention Policy (Hardcoded):
  * - 15-minute buckets: Keep for 3 days
  * - Deletes all buckets older than the cutoff timestamp
- * 
+ *
  * This worker is triggered by the cron job that runs every 30 minutes.
  * It calculates the cutoff timestamp (3 days ago) and deletes all
  * bucket_timestamp records older than that cutoff.
- * 
+ *
  * Performance:
  * - Uses indexed query on bucket_timestamp column
  * - Expected execution time: < 500ms for typical datasets
- * - Handles both SQLite and Turso database drivers
+ * - Uses PostgreSQL for data storage
  */
 export class McpClientActivityMetricsCleanupWorker implements Worker {
   // Hardcoded retention period: 3 days
@@ -59,8 +59,8 @@ export class McpClientActivityMetricsCleanupWorker implements Worker {
         .delete(mcpClientActivityMetrics)
         .where(lt(mcpClientActivityMetrics.bucket_timestamp, cutoffTimestamp));
 
-      // Handle both SQLite (changes) and Turso (rowsAffected) drivers
-      const deletedCount = (result.changes || result.rowsAffected || 0);
+      // PostgreSQL returns rowCount for deleted rows
+      const deletedCount = (result.rowCount || 0);
 
       const durationMs = Date.now() - startTime;
 

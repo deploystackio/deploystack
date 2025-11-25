@@ -1,14 +1,14 @@
- 
+
 // Satellite Infrastructure Management Tables
 
-import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
+import { pgTable, text, integer, boolean, timestamp, index, jsonb } from 'drizzle-orm/pg-core';
 import { nanoid } from 'nanoid';
 import { authUser } from './auth';
 import { teams } from './teams';
 import { mcpServerInstallations } from './mcp-installations';
 
 // Satellite Registry - Central registry for all satellites
-export const satellites = sqliteTable('satellites', {
+export const satellites = pgTable('satellites', {
   id: text('id').primaryKey(),
   name: text('name').notNull(), // User-friendly name like "company-satellite-1"
   satellite_type: text('satellite_type', { enum: ['global', 'team'] }).notNull(), // Deployment model
@@ -16,12 +16,12 @@ export const satellites = sqliteTable('satellites', {
   status: text('status', { enum: ['active', 'inactive', 'maintenance', 'error'] }).notNull().default('active'),
   capabilities: text('capabilities').notNull(), // JSON array of supported MCP server types
   api_key_hash: text('api_key_hash').notNull(), // Argon2 hashed API key for satellite authentication
-  last_heartbeat: integer('last_heartbeat', { mode: 'timestamp' }), // Timestamp of last communication
+  last_heartbeat: timestamp('last_heartbeat', { withTimezone: true }), // Timestamp of last communication
   system_info: text('system_info'), // JSON: Hardware and OS information
   config: text('config'), // JSON: Satellite-specific configuration and policies
   created_by: text('created_by').notNull().references(() => authUser.id),
-  created_at: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
-  updated_at: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 }, (table) => ({
   satelliteTypeIdx: index('satellites_type_idx').on(table.satellite_type),
   teamIdx: index('satellites_team_idx').on(table.team_id),
@@ -31,7 +31,7 @@ export const satellites = sqliteTable('satellites', {
 }));
 
 // Satellite Registration Tokens - Secure token-based pairing
-export const satelliteRegistrationTokens = sqliteTable('satelliteRegistrationTokens', {
+export const satelliteRegistrationTokens = pgTable('satelliteRegistrationTokens', {
   id: text('id').primaryKey().$defaultFn(() => nanoid()),
 
   // Token type and scope
@@ -44,10 +44,10 @@ export const satelliteRegistrationTokens = sqliteTable('satelliteRegistrationTok
 
   // Token metadata
   created_by: text('created_by').notNull().references(() => authUser.id),
-  permissions: text('permissions', { mode: 'json' }).$type<string[]>().notNull(),
+  permissions: jsonb('permissions').$type<string[]>().notNull(),
 
   // Token usage tracking
-  used: integer('used', { mode: 'boolean' }).notNull().default(false),
+  used: boolean('used').notNull().default(false),
   used_at: text('used_at'),
   used_by_satellite_id: text('used_by_satellite_id').references(() => satellites.id),
 
@@ -63,7 +63,7 @@ export const satelliteRegistrationTokens = sqliteTable('satelliteRegistrationTok
 }));
 
 // Command Queue - Priority-based command queue for satellite orchestration
-export const satelliteCommands = sqliteTable('satelliteCommands', {
+export const satelliteCommands = pgTable('satelliteCommands', {
   id: text('id').primaryKey(),
   satellite_id: text('satellite_id').notNull().references(() => satellites.id, { onDelete: 'cascade' }),
   command_type: text('command_type', {
@@ -81,8 +81,8 @@ export const satelliteCommands = sqliteTable('satelliteCommands', {
   error_message: text('error_message'),
   result: text('result'), // JSON result data from satellite
   created_by: text('created_by').references(() => authUser.id),
-  created_at: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
-  updated_at: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 }, (table) => ({
   satelliteStatusIdx: index('satellite_commands_satellite_status_idx').on(table.satellite_id, table.status),
   priorityStatusIdx: index('satellite_commands_priority_status_idx').on(table.priority, table.status),
@@ -91,7 +91,7 @@ export const satelliteCommands = sqliteTable('satelliteCommands', {
 }));
 
 // Process Tracking - Real-time tracking of MCP processes on satellites
-export const satelliteProcesses = sqliteTable('satelliteProcesses', {
+export const satelliteProcesses = pgTable('satelliteProcesses', {
   id: text('id').primaryKey(),
   satellite_id: text('satellite_id').notNull().references(() => satellites.id, { onDelete: 'cascade' }),
   installation_id: text('installation_id').references(() => mcpServerInstallations.id, { onDelete: 'cascade' }),
@@ -107,10 +107,10 @@ export const satelliteProcesses = sqliteTable('satelliteProcesses', {
   performance_metrics: text('performance_metrics'), // JSON: CPU, memory, response time
   team_id: text('team_id').notNull().references(() => teams.id),
   error_message: text('error_message'),
-  started_at: integer('started_at', { mode: 'timestamp' }),
-  stopped_at: integer('stopped_at', { mode: 'timestamp' }),
-  created_at: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
-  updated_at: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  started_at: timestamp('started_at', { withTimezone: true }),
+  stopped_at: timestamp('stopped_at', { withTimezone: true }),
+  created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 }, (table) => ({
   satelliteStatusIdx: index('satellite_processes_satellite_status_idx').on(table.satellite_id, table.status),
   teamStatusIdx: index('satellite_processes_team_status_idx').on(table.team_id, table.status),
@@ -119,7 +119,7 @@ export const satelliteProcesses = sqliteTable('satelliteProcesses', {
 }));
 
 // Usage Analytics - Comprehensive usage logging
-export const satelliteUsageLogs = sqliteTable('satelliteUsageLogs', {
+export const satelliteUsageLogs = pgTable('satelliteUsageLogs', {
   id: text('id').primaryKey(),
   satellite_id: text('satellite_id').notNull().references(() => satellites.id, { onDelete: 'cascade' }),
   user_id: text('user_id').references(() => authUser.id),
@@ -135,7 +135,7 @@ export const satelliteUsageLogs = sqliteTable('satelliteUsageLogs', {
   response_size_bytes: integer('response_size_bytes'),
   user_agent: text('user_agent'),
   ip_address: text('ip_address'),
-  timestamp: integer('timestamp', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  timestamp: timestamp('timestamp', { withTimezone: true }).notNull().defaultNow(),
   date_partition: text('date_partition').notNull(), // YYYY-MM-DD for partitioning
 }, (table) => ({
   satelliteTimestampIdx: index('satellite_usage_logs_satellite_timestamp_idx').on(table.satellite_id, table.timestamp),
@@ -146,7 +146,7 @@ export const satelliteUsageLogs = sqliteTable('satelliteUsageLogs', {
 }));
 
 // Health Monitoring - Real-time health and system metrics
-export const satelliteHeartbeats = sqliteTable('satelliteHeartbeats', {
+export const satelliteHeartbeats = pgTable('satelliteHeartbeats', {
   id: text('id').primaryKey(),
   satellite_id: text('satellite_id').notNull().references(() => satellites.id, { onDelete: 'cascade' }),
   status: text('status', { enum: ['active', 'degraded', 'error'] }).notNull(),
@@ -157,7 +157,7 @@ export const satelliteHeartbeats = sqliteTable('satelliteHeartbeats', {
   response_time_ms: integer('response_time_ms'),
   uptime_seconds: integer('uptime_seconds'),
   version: text('version'),
-  timestamp: integer('timestamp', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  timestamp: timestamp('timestamp', { withTimezone: true }).notNull().defaultNow(),
 }, (table) => ({
   satelliteTimestampIdx: index('satellite_heartbeats_satellite_timestamp_idx').on(table.satellite_id, table.timestamp),
   statusIdx: index('satellite_heartbeats_status_idx').on(table.status),

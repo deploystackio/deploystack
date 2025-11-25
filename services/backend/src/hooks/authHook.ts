@@ -1,6 +1,6 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import { getLucia } from '../lib/lucia';
-import { getDbStatus, getSchema, getDb } from '../db';
+import { getDbStatus, getDb, authSession, authUser } from '../db';
 import { eq } from 'drizzle-orm';
 import type { User, Session } from 'lucia';
 
@@ -41,32 +41,22 @@ export async function authHook(
     
     // Manual session validation to avoid Lucia SQL syntax issues
     const db = getDb();
-    const schema = getSchema();
-    const authSessionTable = schema.authSession;
-    const authUserTable = schema.authUser;
-    
-    if (!authSessionTable || !authUserTable) {
-      request.log.error('Auth tables not found in schema');
-      request.user = null;
-      request.session = null;
-      return;
-    }
-    
+
     // Query session and user manually
     const sessionResult = await db.select({
-      sessionId: authSessionTable.id,
-      userId: authSessionTable.user_id,
-      expiresAt: authSessionTable.expires_at,
-      username: authUserTable.username,
-      email: authUserTable.email,
-      firstName: authUserTable.first_name,
-      lastName: authUserTable.last_name,
-      authType: authUserTable.auth_type,
-      githubId: authUserTable.github_id
+      sessionId: authSession.id,
+      userId: authSession.userId,
+      expiresAt: authSession.expiresAt,
+      username: authUser.username,
+      email: authUser.email,
+      firstName: authUser.first_name,
+      lastName: authUser.last_name,
+      authType: authUser.auth_type,
+      githubId: authUser.github_id
     })
-    .from(authSessionTable)
-    .innerJoin(authUserTable, eq(authSessionTable.user_id, authUserTable.id))
-    .where(eq(authSessionTable.id, sessionId))
+    .from(authSession)
+    .innerJoin(authUser, eq(authSession.userId, authUser.id))
+    .where(eq(authSession.id, sessionId))
     .limit(1);
     
     if (sessionResult.length === 0) {
@@ -84,7 +74,7 @@ export async function authHook(
     if (sessionData.expiresAt < Date.now()) {
       request.log.debug(`Auth hook: Session ${sessionId} is expired`);
       // Delete expired session
-      await db.delete(authSessionTable).where(eq(authSessionTable.id, sessionId));
+      await db.delete(authSession).where(eq(authSession.id, sessionId));
       const sessionCookie = lucia.createBlankSessionCookie();
       reply.setCookie(sessionCookie.name, sessionCookie.value, sessionCookie.attributes);
       request.user = null;

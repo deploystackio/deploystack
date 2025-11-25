@@ -3,8 +3,7 @@ import path from 'node:path';
 import fs from 'node:fs';
 import fsPromises from 'node:fs/promises';
 import { type FastifyInstance, type FastifyBaseLogger } from 'fastify';
-// import { type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3'; // Replaced by AnyDatabase
-import { type AnyDatabase } from '../db'; // Import the AnyDatabase union type
+import { type AnyDatabase } from '../db';
 
 import { 
   type Plugin, 

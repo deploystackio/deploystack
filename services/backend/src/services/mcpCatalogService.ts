@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { eq, and, or, like, desc, asc } from 'drizzle-orm';
-import { mcpServers } from '../db/schema.sqlite';
+import { getSchema } from '../db/index';
 import type { AnyDatabase } from '../db';
 import type { FastifyBaseLogger } from 'fastify';
 import { GitHubService } from './githubService';
@@ -214,9 +214,10 @@ export class McpSlugService {
   }
   
   private static async ensureUniqueSlug(baseSlug: string, db: AnyDatabase): Promise<string> {
+    const mcpServers = getSchema().mcpServers;
     let slug = baseSlug;
     let counter = 1;
-    
+
     while (true) {
       const existing = await db.select().from(mcpServers).where(eq(mcpServers.slug, slug)).limit(1);
       if (existing.length === 0) {
@@ -229,10 +230,15 @@ export class McpSlugService {
 }
 
 export class McpCatalogService {
+  private readonly mcpServers: ReturnType<typeof getSchema>['mcpServers'];
+
   constructor(
     private db: AnyDatabase,
     private logger: FastifyBaseLogger
-  ) {}
+  ) {
+    const schema = getSchema();
+    this.mcpServers = schema.mcpServers;
+  }
   
   // Get servers visible to a user based on their role and team memberships
   async getServersForUser(
@@ -261,10 +267,10 @@ export class McpCatalogService {
       // Regular users see global servers + their team servers
       whereConditions.push(
         or(
-          eq(mcpServers.visibility, 'global'),
+          eq(this.mcpServers.visibility, 'global'),
           and(
-            eq(mcpServers.visibility, 'team'),
-            teamIds.length > 0 ? or(...teamIds.map(teamId => eq(mcpServers.owner_team_id, teamId))) : eq(mcpServers.id, 'never-match')
+            eq(this.mcpServers.visibility, 'team'),
+            teamIds.length > 0 ? or(...teamIds.map(teamId => eq(this.mcpServers.owner_team_id, teamId))) : eq(this.mcpServers.id, 'never-match')
           )
         )
       );
@@ -273,55 +279,49 @@ export class McpCatalogService {
     // Apply additional filters
     if (filters) {
       if (filters.category_id) {
-        whereConditions.push(eq(mcpServers.category_id, filters.category_id));
+        whereConditions.push(eq(this.mcpServers.category_id, filters.category_id));
       }
       if (filters.language) {
-        whereConditions.push(eq(mcpServers.language, filters.language));
+        whereConditions.push(eq(this.mcpServers.language, filters.language));
       }
       if (filters.runtime) {
-        whereConditions.push(eq(mcpServers.runtime, filters.runtime));
+        whereConditions.push(eq(this.mcpServers.runtime, filters.runtime));
       }
       if (filters.status) {
-        whereConditions.push(eq(mcpServers.status, filters.status));
+        whereConditions.push(eq(this.mcpServers.status, filters.status));
       }
       if (filters.featured !== undefined) {
-        whereConditions.push(eq(mcpServers.featured, filters.featured));
+        whereConditions.push(eq(this.mcpServers.featured, filters.featured));
       }
       if (filters.search) {
         const searchTerm = `%${filters.search}%`;
         whereConditions.push(
           or(
-            like(mcpServers.name, searchTerm),
-            like(mcpServers.description, searchTerm),
-            like(mcpServers.tags, searchTerm)
+            like(this.mcpServers.name, searchTerm),
+            like(this.mcpServers.description, searchTerm),
+            like(this.mcpServers.tags, searchTerm)
           )
         );
       }
       if (filters.tags) {
         const tagList = filters.tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
         if (tagList.length > 0) {
-          const tagConditions = tagList.map(tag => like(mcpServers.tags, `%${tag}%`));
+          const tagConditions = tagList.map(tag => like(this.mcpServers.tags, `%${tag}%`));
           whereConditions.push(or(...tagConditions));
         }
       }
     }
     
     // Build the query with all conditions combined
-    let query = this.db.select().from(mcpServers);
-    if (whereConditions.length > 0) {
-      query = query.where(and(...whereConditions));
-    }
-    
+    const baseQuery = this.db.select().from(this.mcpServers);
+    const queryWithConditions = whereConditions.length > 0
+      ? baseQuery.where(and(...whereConditions))
+      : baseQuery;
+
     // Apply sorting based on sortBy parameter
-    if (sortBy === 'github_stars') {
-      // Sort by GitHub stars (descending, nulls last), then by name
-      query = query.orderBy(desc(mcpServers.github_stars), asc(mcpServers.name));
-    } else {
-      // Default: Sort by featured first, then by name
-      query = query.orderBy(desc(mcpServers.featured), asc(mcpServers.name));
-    }
-    
-    const servers = await query;
+    const servers = await (sortBy === 'github_stars'
+      ? queryWithConditions.orderBy(desc(this.mcpServers.github_stars), asc(this.mcpServers.name))
+      : queryWithConditions.orderBy(desc(this.mcpServers.featured), asc(this.mcpServers.name)));
     
     this.logger.info({
       operation: 'get_servers_for_user',
@@ -342,7 +342,7 @@ export class McpCatalogService {
       serverId
     }, 'Getting MCP server by ID');
     
-    const servers = await this.db.select().from(mcpServers).where(eq(mcpServers.id, serverId)).limit(1);
+    const servers = await this.db.select().from(this.mcpServers).where(eq(this.mcpServers.id, serverId)).limit(1);
     
     if (servers.length === 0) {
       this.logger.debug({
@@ -495,7 +495,7 @@ export class McpCatalogService {
       last_sync_at: data.repository_url && data.repository_url.includes('github.com') ? now : null
     };
     
-    await this.db.insert(mcpServers).values(serverData);
+    await this.db.insert(this.mcpServers).values(serverData);
     
     this.logger.info({
       operation: 'create_mcp_server',
@@ -599,7 +599,7 @@ export class McpCatalogService {
       updateData.auto_install_new_default_team = data.auto_install_new_default_team;
     }
     
-    await this.db.update(mcpServers).set(updateData).where(eq(mcpServers.id, serverId));
+    await this.db.update(this.mcpServers).set(updateData).where(eq(this.mcpServers.id, serverId));
     
     this.logger.info({
       operation: 'update_mcp_server',
@@ -628,7 +628,7 @@ export class McpCatalogService {
       throw new Error('Insufficient permissions to delete this server');
     }
     
-    await this.db.delete(mcpServers).where(eq(mcpServers.id, serverId));
+    await this.db.delete(this.mcpServers).where(eq(this.mcpServers.id, serverId));
     
     this.logger.info({
       operation: 'delete_mcp_server',
@@ -732,10 +732,10 @@ export class McpCatalogService {
       // Regular users see tags from global servers + their team servers
       whereConditions.push(
         or(
-          eq(mcpServers.visibility, 'global'),
+          eq(this.mcpServers.visibility, 'global'),
           and(
-            eq(mcpServers.visibility, 'team'),
-            teamIds.length > 0 ? or(...teamIds.map(teamId => eq(mcpServers.owner_team_id, teamId))) : eq(mcpServers.id, 'never-match')
+            eq(this.mcpServers.visibility, 'team'),
+            teamIds.length > 0 ? or(...teamIds.map(teamId => eq(this.mcpServers.owner_team_id, teamId))) : eq(this.mcpServers.id, 'never-match')
           )
         )
       );
@@ -743,12 +743,11 @@ export class McpCatalogService {
     
     // Use DISTINCT to get only unique tag combinations at database level
     // This is much more efficient when many servers share the same tags
-    let query = this.db.selectDistinct({ tags: mcpServers.tags }).from(mcpServers);
-    if (whereConditions.length > 0) {
-      query = query.where(and(...whereConditions));
-    }
-    
-    const results = await query;
+    const queryBuilder = this.db.selectDistinct({ tags: this.mcpServers.tags }).from(this.mcpServers);
+
+    const results = await (whereConditions.length > 0
+      ? queryBuilder.where(and(...whereConditions))
+      : queryBuilder);
     
     this.logger.debug({
       operation: 'get_tags_for_user',

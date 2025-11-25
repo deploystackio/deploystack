@@ -352,12 +352,7 @@ export class McpServerSyncWorker implements Worker {
     if (errorMessage.includes('ECONNRESET') || errorMessage.includes('ENOTFOUND')) {
       return true;
     }
-    
-    // Database lock errors (SQLite)
-    if (errorMessage.includes('database is locked') || errorMessage.includes('SQLITE_BUSY')) {
-      return true;
-    }
-    
+
     return false;
   }
 }

@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { eq, and, desc } from 'drizzle-orm';
-import { mcpUserConfigurations, mcpServerInstallations, mcpServers } from '../db/schema.sqlite';
+import { getSchema } from '../db/index';
 import type { AnyDatabase } from '../db';
 import type { FastifyBaseLogger } from 'fastify';
 import { nanoid } from 'nanoid';
@@ -52,10 +52,19 @@ export interface UpdateUserConfigRequest {
 }
 
 export class McpUserConfigurationService {
+  private readonly mcpUserConfigurations: ReturnType<typeof getSchema>['mcpUserConfigurations'];
+  private readonly mcpServerInstallations: ReturnType<typeof getSchema>['mcpServerInstallations'];
+  private readonly mcpServers: ReturnType<typeof getSchema>['mcpServers'];
+
   constructor(
     private db: AnyDatabase,
     private logger: FastifyBaseLogger
-  ) {}
+  ) {
+    const schema = getSchema();
+    this.mcpUserConfigurations = schema.mcpUserConfigurations;
+    this.mcpServerInstallations = schema.mcpServerInstallations;
+    this.mcpServers = schema.mcpServers;
+  }
 
   async getUserConfigurations(
     installationId: string,
@@ -72,11 +81,11 @@ export class McpUserConfigurationService {
     // First verify user has access to this installation
     const installation = await this.db
       .select()
-      .from(mcpServerInstallations)
+      .from(this.mcpServerInstallations)
       .where(
         and(
-          eq(mcpServerInstallations.id, installationId),
-          eq(mcpServerInstallations.team_id, teamId)
+          eq(this.mcpServerInstallations.id, installationId),
+          eq(this.mcpServerInstallations.team_id, teamId)
         )
       )
       .limit(1);
@@ -87,20 +96,20 @@ export class McpUserConfigurationService {
 
     const configurations = await this.db
       .select({
-        config: mcpUserConfigurations,
-        installation: mcpServerInstallations,
-        server: mcpServers
+        config: this.mcpUserConfigurations,
+        installation: this.mcpServerInstallations,
+        server: this.mcpServers
       })
-      .from(mcpUserConfigurations)
-      .leftJoin(mcpServerInstallations, eq(mcpUserConfigurations.installation_id, mcpServerInstallations.id))
-      .leftJoin(mcpServers, eq(mcpServerInstallations.server_id, mcpServers.id))
+      .from(this.mcpUserConfigurations)
+      .leftJoin(this.mcpServerInstallations, eq(this.mcpUserConfigurations.installation_id, this.mcpServerInstallations.id))
+      .leftJoin(this.mcpServers, eq(this.mcpServerInstallations.server_id, this.mcpServers.id))
       .where(
         and(
-          eq(mcpUserConfigurations.installation_id, installationId),
-          eq(mcpUserConfigurations.user_id, userId)
+          eq(this.mcpUserConfigurations.installation_id, installationId),
+          eq(this.mcpUserConfigurations.user_id, userId)
         )
       )
-      .orderBy(desc(mcpUserConfigurations.created_at));
+      .orderBy(desc(this.mcpUserConfigurations.created_at));
 
     this.logger.info({
       operation: 'get_user_configurations',
@@ -155,6 +164,7 @@ export class McpUserConfigurationService {
 
       processedConfigurations.push({
         ...row.config,
+        last_used_at: row.config.last_used_at ?? undefined,
         user_args: userArgs,
         user_env: userEnv,
         user_headers: userHeaders,
@@ -194,18 +204,18 @@ export class McpUserConfigurationService {
 
     const result = await this.db
       .select({
-        config: mcpUserConfigurations,
-        installation: mcpServerInstallations,
-        server: mcpServers
+        config: this.mcpUserConfigurations,
+        installation: this.mcpServerInstallations,
+        server: this.mcpServers
       })
-      .from(mcpUserConfigurations)
-      .leftJoin(mcpServerInstallations, eq(mcpUserConfigurations.installation_id, mcpServerInstallations.id))
-      .leftJoin(mcpServers, eq(mcpServerInstallations.server_id, mcpServers.id))
+      .from(this.mcpUserConfigurations)
+      .leftJoin(this.mcpServerInstallations, eq(this.mcpUserConfigurations.installation_id, this.mcpServerInstallations.id))
+      .leftJoin(this.mcpServers, eq(this.mcpServerInstallations.server_id, this.mcpServers.id))
       .where(
         and(
-          eq(mcpUserConfigurations.id, configId),
-          eq(mcpUserConfigurations.user_id, userId),
-          eq(mcpServerInstallations.team_id, teamId)
+          eq(this.mcpUserConfigurations.id, configId),
+          eq(this.mcpUserConfigurations.user_id, userId),
+          eq(this.mcpServerInstallations.team_id, teamId)
         )
       )
       .limit(1);
@@ -265,6 +275,7 @@ export class McpUserConfigurationService {
 
     return {
       ...config,
+      last_used_at: config.last_used_at ?? undefined,
       user_args: userArgs,
       user_env: userEnv,
       user_headers: userHeaders,
@@ -303,15 +314,15 @@ export class McpUserConfigurationService {
     // Verify installation exists and user has access
     const installation = await this.db
       .select({
-        installation: mcpServerInstallations,
-        server: mcpServers
+        installation: this.mcpServerInstallations,
+        server: this.mcpServers
       })
-      .from(mcpServerInstallations)
-      .leftJoin(mcpServers, eq(mcpServerInstallations.server_id, mcpServers.id))
+      .from(this.mcpServerInstallations)
+      .leftJoin(this.mcpServers, eq(this.mcpServerInstallations.server_id, this.mcpServers.id))
       .where(
         and(
-          eq(mcpServerInstallations.id, installationId),
-          eq(mcpServerInstallations.team_id, teamId)
+          eq(this.mcpServerInstallations.id, installationId),
+          eq(this.mcpServerInstallations.team_id, teamId)
         )
       )
       .limit(1);
@@ -371,7 +382,7 @@ export class McpUserConfigurationService {
       last_used_at: null
     };
 
-    await this.db.insert(mcpUserConfigurations).values(configData);
+    await this.db.insert(this.mcpUserConfigurations).values(configData);
 
     this.logger.info({
       operation: 'create_user_configuration',
@@ -463,9 +474,9 @@ export class McpUserConfigurationService {
     }
 
     await this.db
-      .update(mcpUserConfigurations)
+      .update(this.mcpUserConfigurations)
       .set(updateData)
-      .where(eq(mcpUserConfigurations.id, configId));
+      .where(eq(this.mcpUserConfigurations.id, configId));
 
     this.logger.info({
       operation: 'update_user_configuration',
@@ -490,22 +501,22 @@ export class McpUserConfigurationService {
 
     // Verify ownership through join to ensure user can only delete their own configs in their team
     const result = await this.db
-      .delete(mcpUserConfigurations)
+      .delete(this.mcpUserConfigurations)
       .where(
         and(
-          eq(mcpUserConfigurations.id, configId),
-          eq(mcpUserConfigurations.user_id, userId),
+          eq(this.mcpUserConfigurations.id, configId),
+          eq(this.mcpUserConfigurations.user_id, userId),
           // Verify team access through installation
-          eq(mcpUserConfigurations.installation_id, 
-            this.db.select({ id: mcpServerInstallations.id })
-              .from(mcpServerInstallations)
-              .where(eq(mcpServerInstallations.team_id, teamId))
+          eq(this.mcpUserConfigurations.installation_id, 
+            this.db.select({ id: this.mcpServerInstallations.id })
+              .from(this.mcpServerInstallations)
+              .where(eq(this.mcpServerInstallations.team_id, teamId))
               .limit(1)
           )
         )
       );
 
-    const deleted = result.changes > 0;
+    const deleted = (result.rowCount || 0) > 0;
 
     this.logger.info({
       operation: 'delete_user_configuration',

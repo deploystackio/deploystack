@@ -1,5 +1,5 @@
 import { eq, asc } from 'drizzle-orm';
-import { mcpCategories } from '../db/schema.sqlite';
+import { getSchema } from '../db/index';
 import type { AnyDatabase } from '../db';
 import type { FastifyBaseLogger } from 'fastify';
 import { nanoid } from 'nanoid';
@@ -29,10 +29,15 @@ export interface UpdateMcpCategoryRequest {
 }
 
 export class McpCategoriesService {
+  private readonly mcpCategories: ReturnType<typeof getSchema>['mcpCategories'];
+
   constructor(
     private db: AnyDatabase,
     private logger: FastifyBaseLogger
-  ) {}
+  ) {
+    const schema = getSchema();
+    this.mcpCategories = schema.mcpCategories;
+  }
   
   async getAllCategories(): Promise<McpCategory[]> {
     this.logger.debug({
@@ -40,8 +45,8 @@ export class McpCategoriesService {
     }, 'Getting all MCP categories');
     
     const categories = await this.db.select()
-      .from(mcpCategories)
-      .orderBy(asc(mcpCategories.sort_order), asc(mcpCategories.name));
+      .from(this.mcpCategories)
+      .orderBy(asc(this.mcpCategories.sort_order), asc(this.mcpCategories.name));
     
     this.logger.info({
       operation: 'get_all_categories',
@@ -58,8 +63,8 @@ export class McpCategoriesService {
     }, 'Getting MCP category by ID');
     
     const categories = await this.db.select()
-      .from(mcpCategories)
-      .where(eq(mcpCategories.id, categoryId))
+      .from(this.mcpCategories)
+      .where(eq(this.mcpCategories.id, categoryId))
       .limit(1);
     
     if (categories.length === 0) {
@@ -91,7 +96,7 @@ export class McpCategoriesService {
       created_at: now
     };
     
-    await this.db.insert(mcpCategories).values(categoryData);
+    await this.db.insert(this.mcpCategories).values(categoryData);
     
     this.logger.info({
       operation: 'create_category',
@@ -125,7 +130,7 @@ export class McpCategoriesService {
       return category;
     }
     
-    await this.db.update(mcpCategories).set(updateData).where(eq(mcpCategories.id, categoryId));
+    await this.db.update(this.mcpCategories).set(updateData).where(eq(this.mcpCategories.id, categoryId));
     
     this.logger.info({
       operation: 'update_category',
@@ -147,7 +152,7 @@ export class McpCategoriesService {
       return false;
     }
     
-    await this.db.delete(mcpCategories).where(eq(mcpCategories.id, categoryId));
+    await this.db.delete(this.mcpCategories).where(eq(this.mcpCategories.id, categoryId));
     
     this.logger.info({
       operation: 'delete_category',

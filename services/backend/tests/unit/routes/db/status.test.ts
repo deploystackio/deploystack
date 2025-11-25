@@ -81,8 +81,8 @@ describe('Database Status Route', () => {
       const mockStatus = {
         configured: true,
         initialized: true,
-        dialect: DatabaseType.SQLite,
-        type: DatabaseType.SQLite,
+        dialect: DatabaseType.PostgreSQL,
+        type: DatabaseType.PostgreSQL,
       };
       mockGetDbStatus.mockReturnValue(mockStatus);
 
@@ -94,7 +94,7 @@ describe('Database Status Route', () => {
         JSON.stringify({
           configured: true,
           initialized: true,
-          dialect: DatabaseType.SQLite,
+          dialect: DatabaseType.PostgreSQL,
         })
       );
       expect(mockReply.status).not.toHaveBeenCalled();
@@ -126,8 +126,8 @@ describe('Database Status Route', () => {
       const mockStatus = {
         configured: true,
         initialized: false,
-        dialect: DatabaseType.SQLite,
-        type: DatabaseType.SQLite,
+        dialect: DatabaseType.PostgreSQL,
+        type: DatabaseType.PostgreSQL,
       };
       mockGetDbStatus.mockReturnValue(mockStatus);
 
@@ -139,7 +139,7 @@ describe('Database Status Route', () => {
         JSON.stringify({
           configured: true,
           initialized: false,
-          dialect: DatabaseType.SQLite,
+          dialect: DatabaseType.PostgreSQL,
         })
       );
     });
@@ -206,8 +206,8 @@ describe('Database Status Route', () => {
       const invalidStatus = {
         configured: 'true', // Should be boolean
         initialized: 1, // Should be boolean
-        dialect: 'postgres', // Should be sqlite or null
-        type: 'postgres',
+        dialect: 'mysql', // Should be postgresql or null
+        type: 'mysql',
       };
       mockGetDbStatus.mockReturnValue(invalidStatus as any);
 
@@ -219,7 +219,7 @@ describe('Database Status Route', () => {
         JSON.stringify({
           configured: true,
           initialized: true,
-          dialect: 'postgres',
+          dialect: 'mysql',
         })
       );
     });
@@ -279,8 +279,8 @@ describe('Database Status Route', () => {
       const originalStatus = {
         configured: true,
         initialized: true,
-        dialect: DatabaseType.SQLite,
-        type: DatabaseType.SQLite,
+        dialect: DatabaseType.PostgreSQL,
+        type: DatabaseType.PostgreSQL,
       };
       mockGetDbStatus.mockReturnValue(originalStatus);
 
@@ -291,8 +291,8 @@ describe('Database Status Route', () => {
       expect(originalStatus).toEqual({
         configured: true,
         initialized: true,
-        dialect: 'sqlite',
-        type: 'sqlite',
+        dialect: 'postgresql',
+        type: 'postgresql',
       });
 
       // Verify the response was sent with correct typing
@@ -300,7 +300,7 @@ describe('Database Status Route', () => {
         JSON.stringify({
           configured: true,
           initialized: true,
-          dialect: DatabaseType.SQLite,
+          dialect: DatabaseType.PostgreSQL,
         })
       );
     });
@@ -315,14 +315,14 @@ describe('Database Status Route', () => {
       const mockStatus2 = {
         configured: true,
         initialized: true,
-        dialect: DatabaseType.SQLite,
-        type: DatabaseType.SQLite,
+        dialect: DatabaseType.PostgreSQL,
+        type: DatabaseType.PostgreSQL,
       };
 
       mockGetDbStatus.mockReturnValueOnce(mockStatus1).mockReturnValueOnce(mockStatus2);
 
       const handler = routeHandlers['GET /db/status'];
-      
+
       // First call
       await handler(mockRequest, mockReply);
       expect(mockReply.send).toHaveBeenCalledWith(
@@ -343,7 +343,7 @@ describe('Database Status Route', () => {
         JSON.stringify({
           configured: true,
           initialized: true,
-          dialect: DatabaseType.SQLite,
+          dialect: DatabaseType.PostgreSQL,
         })
       );
     });

@@ -623,7 +623,7 @@ export class AuthorizationService {
 
       logger?.info({
         operation: 'cleanup_expired_authorization_codes',
-        deleted: result.changes || 0,
+        deleted: result.rowCount || 0,
       }, 'Expired authorization codes cleaned up');
     } catch (error) {
       logger?.error({

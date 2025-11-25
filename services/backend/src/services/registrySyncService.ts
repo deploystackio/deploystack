@@ -1,7 +1,7 @@
 import type { FastifyBaseLogger } from 'fastify';
 import type { AnyDatabase } from '../db';
 import { JobQueueService } from './jobQueueService';
-import { mcpServers } from '../db/schema.sqlite';
+import { getSchema } from '../db/index';
 import { inArray } from 'drizzle-orm';
 
 /**
@@ -27,7 +27,7 @@ interface SyncStats {
 
 /**
  * Service for synchronizing MCP servers from the official registry
- * 
+ *
  * This service:
  * 1. Fetches server list from registry.modelcontextprotocol.io
  * 2. Creates a job batch for tracking progress
@@ -37,12 +37,16 @@ interface SyncStats {
 export class RegistrySyncService {
   private readonly API_BASE = 'https://registry.modelcontextprotocol.io';
   private readonly API_VERSION = 'v0';
-  
+  private readonly mcpServers: ReturnType<typeof getSchema>['mcpServers'];
+
   constructor(
     private db: AnyDatabase,
     private logger: FastifyBaseLogger,
     private jobQueueService: JobQueueService
-  ) {}
+  ) {
+    const schema = getSchema();
+    this.mcpServers = schema.mcpServers;
+  }
   
   /**
    * Sync all servers from official MCP registry using job queue
@@ -173,9 +177,9 @@ export class RegistrySyncService {
     try {
       // Query database for existing servers by official_name
       const existing = await this.db
-        .select({ official_name: mcpServers.official_name })
-        .from(mcpServers)
-        .where(inArray(mcpServers.official_name, officialNames));
+        .select({ official_name: this.mcpServers.official_name })
+        .from(this.mcpServers)
+        .where(inArray(this.mcpServers.official_name, officialNames));
       
       // Build Set of existing names for fast lookup
       const existingNames = new Set(

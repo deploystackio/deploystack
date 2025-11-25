@@ -1,14 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { type FastifyInstance, type FastifyBaseLogger } from 'fastify';
-import { getDb } from '../../db';
-import { dynamicOauthClients } from '../../db/schema.sqlite';
+import { getDb, getSchema } from '../../db';
 import { eq } from 'drizzle-orm';
 
 // Database-backed client registration functions
 export async function isClientRegistered(clientId: string, logger: FastifyBaseLogger): Promise<boolean> {
   try {
     const db = getDb();
-    
+    const { dynamicOauthClients } = getSchema();
+
     const result = await db
       .select()
       .from(dynamicOauthClients)
@@ -29,7 +29,8 @@ export async function isClientRegistered(clientId: string, logger: FastifyBaseLo
 export async function getRegisteredClient(clientId: string, logger: FastifyBaseLogger): Promise<any> {
   try {
     const db = getDb();
-    
+    const { dynamicOauthClients } = getSchema();
+
     const result = await db
       .select()
       .from(dynamicOauthClients)
@@ -50,7 +51,8 @@ export async function getRegisteredClient(clientId: string, logger: FastifyBaseL
 export async function getRegisteredClientsDebugInfo(logger: FastifyBaseLogger): Promise<any> {
   try {
     const db = getDb();
-    
+    const { dynamicOauthClients } = getSchema();
+
     const allClients = await db
       .select()
       .from(dynamicOauthClients);
@@ -222,7 +224,8 @@ export default async function registerRoute(server: FastifyInstance) {
     try {
       // Store client registration in database
       const db = getDb();
-      
+      const { dynamicOauthClients } = getSchema();
+
       const dbRegistration = {
         client_id,
         client_name: registration.client_name,

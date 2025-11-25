@@ -1,10 +1,9 @@
-import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
-import { sql } from 'drizzle-orm'
+import { pgTable, text, timestamp } from 'drizzle-orm/pg-core';
 
-// Example table for the plugin
-export const exampleEntities = sqliteTable('example_entities', {
+// Example table for the plugin (PostgreSQL)
+export const exampleEntities = pgTable('example_entities', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
   description: text('description'),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(strftime('%s', 'now'))`),
+  createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
 });

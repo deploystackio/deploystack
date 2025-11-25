@@ -7,25 +7,21 @@ import { type Plugin, type DatabaseExtension } from '../plugin-system/types';
 // Config
 import { getDatabaseConfig, validateDatabaseConfig, type DatabaseConfig } from './config';
 
-// Schema Definitions
-import { pluginTableDefinitions as inputPluginTableDefinitions } from './schema.sqlite';
+// Schema - single source of truth (PostgreSQL only)
+export * from './schema';
+import * as schema from './schema';
+import { pluginTableDefinitions } from './schema';
 
-// Drizzle imports for different database types
-import { drizzle as drizzleSqlite, type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
-import { drizzle as drizzleLibSQL } from 'drizzle-orm/libsql';
-import SqliteDriver from 'better-sqlite3';
-import { createClient } from '@libsql/client';
-import { sqliteTable, text as sqliteText, integer as sqliteInteger } from 'drizzle-orm/sqlite-core';
+// Drizzle imports for PostgreSQL
+import { drizzle } from 'drizzle-orm/node-postgres';
+import { Pool } from 'pg';
 
-// Types for database instances
- 
-export type AnyDatabase = BetterSQLite3Database<any> | any; // LibSQL instances
- 
-export type AnySchema = Record<string, any>;
+// Types for database instances (PostgreSQL only)
+export type AnyDatabase = ReturnType<typeof drizzle>;
+export type AnySchema = typeof schema;
 
 // Global state
 let dbInstance: AnyDatabase | null = null;
-let dbSchema: AnySchema | null = null;
 let dbConfig: DatabaseConfig | null = null;
 let isDbInitialized = false;
 
@@ -36,52 +32,21 @@ function isTestMode(): boolean {
   return process.env.NODE_ENV === 'test';
 }
 
-function getColumnBuilder(type: 'text' | 'integer' | 'timestamp') {
-  if (type === 'text') return sqliteText;
-  if (type === 'integer') return sqliteInteger;
-  if (type === 'timestamp') return sqliteInteger; // SQLite uses integer for timestamps
-  throw new Error(`Unsupported column type ${type}`);
-}
-
-import * as staticSchema from './schema.sqlite';
-
-function generateSchema(): AnySchema {
-  const generatedSchema: AnySchema = { ...staticSchema };
-
-  // Add plugin tables to the static schema
-  for (const [tableName, tableColumns] of Object.entries(inputPluginTableDefinitions)) {
-    const columns: Record<string, ReturnType<typeof tableColumns[keyof typeof tableColumns]>> = {};
-    for (const [columnName, columnDefFunc] of Object.entries(tableColumns)) {
-      let builderType: 'text' | 'integer' | 'timestamp' = 'text';
-      if (columnName.toLowerCase().includes('at') || columnName.toLowerCase().includes('date')) {
-        builderType = 'timestamp';
-      } else if (['id', 'count', 'age', 'quantity', 'order', 'status', 'number'].some(keyword => columnName.toLowerCase().includes(keyword))) {
-        builderType = 'integer';
-      }
-      const builder = getColumnBuilder(builderType);
-      columns[columnName] = columnDefFunc(builder);
-    }
-    generatedSchema[tableName] = sqliteTable(tableName, columns);
-  }
-  return generatedSchema;
-}
-
 /**
- * Split SQL content into individual statements for Turso compatibility
+ * Split SQL content into individual statements for better compatibility
  */
 function splitSQLStatements(sqlContent: string): string[] {
   // First split by the statement breakpoint marker
   const sections = sqlContent.split('--> statement-breakpoint');
   const statements: string[] = [];
-  
+
   for (const section of sections) {
     const trimmed = section.trim();
     if (!trimmed) continue;
-    
+
     // Further split by semicolons to ensure each statement is separate
-    // This handles cases where multiple statements aren't separated by breakpoints
     const subStatements = trimmed.split(';');
-    
+
     for (const subStatement of subStatements) {
       const cleanStatement = subStatement.trim();
       if (cleanStatement) {
@@ -90,98 +55,61 @@ function splitSQLStatements(sqlContent: string): string[] {
       }
     }
   }
-  
+
   return statements;
 }
 
 /**
- * Create database instance based on configuration
+ * Create PostgreSQL database instance
  */
-async function createDatabaseInstance(config: DatabaseConfig, schema: AnySchema, logger?: FastifyBaseLogger): Promise<AnyDatabase> {
+async function createDatabaseInstance(config: DatabaseConfig, logger?: FastifyBaseLogger): Promise<AnyDatabase> {
+  if (config.type !== 'postgresql') {
+    throw new Error(`Unsupported database type: ${config.type}. Only PostgreSQL is supported.`);
+  }
+
   if (!isTestMode() && logger) {
     logger.info({
       operation: 'create_database_instance',
-      databaseType: config.type
-    }, `Creating database instance for ${config.type}`);
+      databaseType: 'postgresql',
+      host: config.host,
+      port: config.port,
+      database: config.database
+    }, `Creating PostgreSQL connection`);
   }
 
-  switch (config.type) {
-    case 'sqlite': {
-      const dbPath = path.resolve(process.cwd(), config.dbPath!);
-      if (!isTestMode() && logger) {
-        logger.info({
-          operation: 'create_database_instance',
-          databaseType: 'sqlite',
-          dbPath
-        }, `Creating SQLite connection to: ${dbPath}`);
-      }
-      const sqliteConn = new SqliteDriver(dbPath);
-      const db = drizzleSqlite(sqliteConn, { schema });
-      if (!isTestMode() && logger) {
-        logger.info({
-          operation: 'create_database_instance',
-          databaseType: 'sqlite',
-          clientType: typeof (db as any).$client
-        }, `SQLite database instance created successfully`);
-      }
-      return db;
-    }
-    
-    case 'turso': {
-      if (!isTestMode() && logger) {
-        logger.info({
-          operation: 'create_database_instance',
-          databaseType: 'turso',
-          url: config.url,
-          hasAuthToken: !!config.authToken
-        }, `Creating Turso connection`);
-      }
-      
-      // Create the libSQL client first
-      const libsqlClient = createClient({
-        url: config.url!,
-        authToken: config.authToken!
-      });
-      
-      if (!isTestMode() && logger) {
-        logger.info({
-          operation: 'create_database_instance',
-          databaseType: 'turso',
-          clientType: typeof libsqlClient,
-          clientMethods: Object.getOwnPropertyNames(libsqlClient)
-        }, `LibSQL client created`);
-      }
-      
-      // Create the Drizzle instance with the libSQL client
-      const db = drizzleLibSQL(libsqlClient, { schema });
-      
-      if (!isTestMode() && logger) {
-        logger.info({
-          operation: 'create_database_instance',
-          databaseType: 'turso',
-          drizzleType: typeof db,
-          drizzleMethods: Object.getOwnPropertyNames(db),
-          hasClient: '$client' in db,
-          clientType: '$client' in db ? typeof (db as any).$client : 'undefined'
-        }, `Turso database instance created successfully`);
-      }
-      
-      return db;
-    }
-    
-    default:
-      throw new Error(`Unsupported database type: ${config.type}`);
+  // Create PostgreSQL connection pool
+  const pool = new Pool({
+    host: config.host!,
+    port: config.port!,
+    database: config.database!,
+    user: config.user!,
+    password: config.password!,
+    ssl: config.ssl ? { rejectUnauthorized: false } : false
+  });
+
+  // Create the Drizzle instance with the PostgreSQL pool
+  const db = drizzle(pool, { schema });
+
+  if (!isTestMode() && logger) {
+    logger.info({
+      operation: 'create_database_instance',
+      databaseType: 'postgresql',
+      clientType: typeof pool
+    }, `PostgreSQL database instance created successfully`);
   }
+
+  return db;
 }
 
 /**
- * Apply migrations for any database type
+ * Apply migrations for PostgreSQL
  */
 async function applyMigrations(db: AnyDatabase, config: DatabaseConfig, logger: FastifyBaseLogger) {
-  // Note: Migrations now run in test mode to ensure plugin tables are created
+  if (config.type !== 'postgresql') {
+    throw new Error('Only PostgreSQL migrations are supported');
+  }
 
-  const projectRootMigrationsDir = path.join(process.cwd(), 'drizzle');
-  const migrationsPath = path.join(projectRootMigrationsDir, 'migrations_sqlite');
+  const migrationsPath = path.join(process.cwd(), 'drizzle', 'migrations');
 
   try {
     await fs.access(migrationsPath);
@@ -196,52 +124,31 @@ async function applyMigrations(db: AnyDatabase, config: DatabaseConfig, logger: 
   if (!isTestMode()) {
     logger.info({
       operation: 'apply_migrations',
-      migrationsPath,
-      databaseType: config.type
+      migrationsPath
     }, `Checking for new migrations in ${migrationsPath}...`);
-  }
-
-  // Debug the database instance structure
-  if (!isTestMode()) {
-    logger.info({
-      operation: 'apply_migrations',
-      databaseType: config.type,
-      dbType: typeof db,
-      hasClient: '$client' in db,
-      clientType: '$client' in db ? typeof (db as any).$client : 'undefined',
-      dbMethods: Object.getOwnPropertyNames(db)
-    }, `Database instance structure for migrations`);
   }
 
   // Ensure migrations table exists
   const createTableQuery = `
     CREATE TABLE IF NOT EXISTS ${MIGRATIONS_TABLE_NAME} (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id SERIAL PRIMARY KEY,
       migration_name TEXT UNIQUE NOT NULL,
-      applied_at INTEGER DEFAULT (strftime('%s', 'now')) NOT NULL
+      applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
     )
   `;
 
   try {
-    if (config.type === 'sqlite') {
-      // SQLite uses the better-sqlite3 client
-      (db as any).$client.exec(createTableQuery);
-    } else if (config.type === 'turso') {
-      // Turso uses libSQL client - execute single statement
-      await (db as any).$client.execute(createTableQuery.trim());
-    }
-    
+    await (db as any).$client.query(createTableQuery);
+
     if (!isTestMode()) {
       logger.info({
-        operation: 'apply_migrations',
-        databaseType: config.type
+        operation: 'apply_migrations'
       }, `Migrations table created/verified`);
     }
   } catch (error) {
     const typedError = error as Error;
     logger.error({
       operation: 'apply_migrations',
-      databaseType: config.type,
       error: typedError,
       errorMessage: typedError.message
     }, `Failed to create migrations table`);
@@ -253,18 +160,12 @@ async function applyMigrations(db: AnyDatabase, config: DatabaseConfig, logger: 
   let appliedMigrations: { name: string }[] = [];
 
   try {
-    if (config.type === 'sqlite') {
-      appliedMigrations = (db as any).$client.prepare(selectAppliedQuery).all();
-    } else if (config.type === 'turso') {
-      // Turso uses libSQL client
-      const result = await (db as any).$client.execute(selectAppliedQuery);
-      appliedMigrations = result.rows || [];
-    }
-    
+    const result = await (db as any).$client.query(selectAppliedQuery);
+    appliedMigrations = result.rows || [];
+
     if (!isTestMode()) {
       logger.info({
         operation: 'apply_migrations',
-        databaseType: config.type,
         appliedCount: appliedMigrations.length
       }, `Found ${appliedMigrations.length} applied migrations`);
     }
@@ -272,7 +173,6 @@ async function applyMigrations(db: AnyDatabase, config: DatabaseConfig, logger: 
     const typedError = error as Error;
     logger.error({
       operation: 'apply_migrations',
-      databaseType: config.type,
       error: typedError,
       errorMessage: typedError.message
     }, `Failed to query applied migrations`);
@@ -295,17 +195,14 @@ async function applyMigrations(db: AnyDatabase, config: DatabaseConfig, logger: 
       if (!isTestMode()) {
         logger.info({
           operation: 'apply_migrations',
-          migrationFile: file,
-          databaseType: config.type
+          migrationFile: file
         }, `Applying migration: ${file}`);
       }
       const migrationFilePath = path.join(migrationsPath, file);
       const sqlContent = await fs.readFile(migrationFilePath, 'utf8');
-      
-      // Use improved statement splitting for Turso
-      const statements = config.type === 'turso' 
-        ? splitSQLStatements(sqlContent)
-        : sqlContent.split('--> statement-breakpoint');
+
+      // Split SQL statements for better execution
+      const statements = splitSQLStatements(sqlContent);
 
       try {
         let statementCount = 0;
@@ -313,65 +210,48 @@ async function applyMigrations(db: AnyDatabase, config: DatabaseConfig, logger: 
           const trimmedStatement = statement.trim();
           if (trimmedStatement) {
             statementCount++;
-            if (config.type === 'sqlite') {
-              (db as any).$client.exec(trimmedStatement);
-            } else if (config.type === 'turso') {
-              // Log each statement for debugging
-              if (!isTestMode()) {
-                logger.debug({
-                  operation: 'apply_migrations',
-                  migrationFile: file,
-                  statementNumber: statementCount,
-                  statementPreview: trimmedStatement.substring(0, 100) + (trimmedStatement.length > 100 ? '...' : ''),
-                  databaseType: config.type
-                }, `Executing statement ${statementCount}`);
-              }
-              
-              // Turso - execute each statement individually
-              try {
-                await (db as any).$client.execute(trimmedStatement);
-              } catch (stmtError: any) {
-                logger.error({
-                  operation: 'apply_migrations',
-                  migrationFile: file,
-                  statementNumber: statementCount,
-                  statement: trimmedStatement,
-                  databaseType: config.type,
-                  error: stmtError,
-                  errorMessage: stmtError.message
-                }, `Failed to execute statement ${statementCount}`);
-                throw stmtError;
-              }
+
+            if (!isTestMode()) {
+              logger.debug({
+                operation: 'apply_migrations',
+                migrationFile: file,
+                statementNumber: statementCount,
+                statementPreview: trimmedStatement.substring(0, 100) + (trimmedStatement.length > 100 ? '...' : '')
+              }, `Executing statement ${statementCount}`);
+            }
+
+            try {
+              await (db as any).$client.query(trimmedStatement);
+            } catch (stmtError: any) {
+              logger.error({
+                operation: 'apply_migrations',
+                migrationFile: file,
+                statementNumber: statementCount,
+                statement: trimmedStatement,
+                error: stmtError,
+                errorMessage: stmtError.message
+              }, `Failed to execute statement ${statementCount}`);
+              throw stmtError;
             }
           }
         }
-        
+
         if (!isTestMode()) {
           logger.info({
             operation: 'apply_migrations',
             migrationFile: file,
-            statementCount,
-            databaseType: config.type
+            statementCount
           }, `Successfully executed ${statementCount} statements from migration`);
         }
-        
+
         // Record the migration as applied
-        const insertMigrationQuery = `INSERT INTO ${MIGRATIONS_TABLE_NAME} (migration_name) VALUES (?)`;
-        if (config.type === 'sqlite') {
-          (db as any).$client.prepare(insertMigrationQuery).run(file);
-        } else if (config.type === 'turso') {
-          // Turso uses libSQL client with parameterized query
-          await (db as any).$client.execute({
-            sql: insertMigrationQuery,
-            args: [file]
-          });
-        }
-        
+        const insertMigrationQuery = `INSERT INTO ${MIGRATIONS_TABLE_NAME} (migration_name) VALUES ($1)`;
+        await (db as any).$client.query(insertMigrationQuery, [file]);
+
         if (!isTestMode()) {
           logger.info({
             operation: 'apply_migrations',
-            migrationFile: file,
-            databaseType: config.type
+            migrationFile: file
           }, `Applied migration: ${file}`);
         }
       } catch (error) {
@@ -379,7 +259,6 @@ async function applyMigrations(db: AnyDatabase, config: DatabaseConfig, logger: 
         logger.error({
           operation: 'apply_migrations',
           migrationFile: file,
-          databaseType: config.type,
           error: typedError,
           errorMessage: typedError.message
         }, `Failed to apply migration ${file}`);
@@ -389,8 +268,7 @@ async function applyMigrations(db: AnyDatabase, config: DatabaseConfig, logger: 
       if (!isTestMode()) {
         logger.debug({
           operation: 'apply_migrations',
-          migrationFile: file,
-          databaseType: config.type
+          migrationFile: file
         }, `Migration already applied: ${file}`);
       }
     }
@@ -410,7 +288,7 @@ export async function initializeDatabase(logger: FastifyBaseLogger): Promise<boo
 
   try {
     dbConfig = getDatabaseConfig(logger);
-    
+
     if (!validateDatabaseConfig(dbConfig)) {
       logger.error({
         operation: 'initialize_database',
@@ -419,26 +297,25 @@ export async function initializeDatabase(logger: FastifyBaseLogger): Promise<boo
       return false;
     }
 
-    dbSchema = generateSchema();
-    
-    // Ensure directory exists for SQLite
-    if (dbConfig.type === 'sqlite') {
-      const dbDir = path.dirname(path.resolve(process.cwd(), dbConfig.dbPath!));
-      await fs.mkdir(dbDir, { recursive: true });
+    if (dbConfig.type !== 'postgresql') {
+      logger.error({
+        operation: 'initialize_database',
+        error: `Unsupported database type: ${dbConfig.type}`
+      }, 'Only PostgreSQL is supported');
+      return false;
     }
 
-    dbInstance = await createDatabaseInstance(dbConfig, dbSchema, logger);
-    
+    dbInstance = await createDatabaseInstance(dbConfig, logger);
+
     if (!isTestMode()) {
       logger.info({
-        operation: 'initialize_database',
-        databaseType: dbConfig.type
-      }, `Connected to ${dbConfig.type} database`);
+        operation: 'initialize_database'
+      }, `Connected to PostgreSQL database`);
     }
 
     // Apply migrations
     await applyMigrations(dbInstance, dbConfig, logger);
-    
+
     isDbInitialized = true;
     if (!isTestMode()) {
       logger.info({
@@ -446,7 +323,7 @@ export async function initializeDatabase(logger: FastifyBaseLogger): Promise<boo
       }, 'Database initialized successfully.');
     }
     return true;
-    
+
   } catch (error) {
     const typedError = error as Error;
     if (typedError.message.includes('No database selection found')) {
@@ -474,14 +351,14 @@ function createSafeDbProxy(): AnyDatabase {
       if (prop === 'constructor' || prop === 'toString' || prop === 'valueOf') {
         return target[prop];
       }
-      
+
       // For any database operation, throw a more descriptive error
       return () => {
         throw new Error('Database not available. Please complete the setup process at /setup first.');
       };
     }
   };
-  
+
   // Create a minimal proxy object that looks like a database but safely handles calls
   const mockDb = {
     select: () => { throw new Error('Database not available. Please complete the setup process at /setup first.'); },
@@ -490,7 +367,7 @@ function createSafeDbProxy(): AnyDatabase {
     delete: () => { throw new Error('Database not available. Please complete the setup process at /setup first.'); },
     $client: null
   };
-  
+
   return new Proxy(mockDb, handler) as AnyDatabase;
 }
 
@@ -507,14 +384,11 @@ export function getDb(): AnyDatabase {
 }
 
 /**
- * Get database schema with graceful startup handling
+ * Get database schema (PostgreSQL only)
+ * Returns the schema directly since we no longer need dynamic selection
  */
 export function getSchema(): AnySchema {
-  if (!dbSchema || !isDbInitialized) {
-    // During startup, generate a basic schema to allow server startup
-    return generateSchema();
-  }
-  return dbSchema;
+  return schema;
 }
 
 /**
@@ -529,12 +403,12 @@ export function getDbStatus() {
         return {
           configured: validateDatabaseConfig(config),
           initialized: isDbInitialized,
-          dialect: config.type,
+          dialect: 'postgresql',
           type: config.type
         };
       }
     }
-    
+
     if (!dbConfig) {
       return {
         configured: false,
@@ -543,11 +417,11 @@ export function getDbStatus() {
         type: null
       };
     }
-    
+
     return {
       configured: validateDatabaseConfig(dbConfig),
       initialized: isDbInitialized,
-      dialect: dbConfig.type,
+      dialect: 'postgresql',
       type: dbConfig.type
     };
   } catch {
@@ -565,7 +439,6 @@ export function getDbStatus() {
  */
 export function resetDatabaseState() {
   dbInstance = null;
-  dbSchema = null;
   dbConfig = null;
   isDbInitialized = false;
 }
@@ -574,12 +447,10 @@ export function resetDatabaseState() {
  * Helper function to safely execute database operations
  */
 export function executeDbOperation<T>(
-   
-  operation: (db: any, schema: any) => Promise<T> | T
+  operation: (db: AnyDatabase) => Promise<T> | T
 ): Promise<T> | T {
   const db = getDb();
-  const schema = getSchema();
-  return operation(db, schema);
+  return operation(db);
 }
 
 // Import plugin migration functionality
@@ -587,9 +458,8 @@ import { createPluginTables as createPluginTablesImpl } from './plugin-migration
 
 // Plugin system functions
 interface DatabaseExtensionWithTables extends DatabaseExtension {
-   
   tableDefinitions?: Record<string, Record<string, (columnBuilder: any) => any>>;
-  onDatabaseInit?: (db: AnyDatabase, schema: AnySchema, logger: FastifyBaseLogger) => Promise<void>;
+  onDatabaseInit?: (db: AnyDatabase, logger: FastifyBaseLogger) => Promise<void>;
 }
 
 export function registerPluginTables(plugins: Plugin[], logger?: FastifyBaseLogger) {
@@ -597,9 +467,9 @@ export function registerPluginTables(plugins: Plugin[], logger?: FastifyBaseLogg
   for (const plugin of dbPlugins) {
     const ext = plugin.databaseExtension as DatabaseExtensionWithTables | undefined;
     if (!ext || !ext.tableDefinitions) continue;
-    
+
     for (const [defName, definition] of Object.entries(ext.tableDefinitions)) {
-      inputPluginTableDefinitions[`${plugin.meta.id}_${defName}`] = definition;
+      pluginTableDefinitions[`${plugin.meta.id}_${defName}`] = definition;
     }
   }
   if (isDbInitialized) {
@@ -636,15 +506,7 @@ export async function initializePluginDatabases(db: AnyDatabase, plugins: Plugin
       try {
         // Create a child logger for this plugin
         const pluginLogger = logger.child({ pluginId: plugin.meta.id });
-        // Get the current schema - use dbSchema directly if available, otherwise generate one
-        let schema: AnySchema;
-        try {
-          schema = getSchema();
-        } catch {
-          // If getSchema fails, generate a basic schema for the plugin
-          schema = generateSchema();
-        }
-        await ext.onDatabaseInit(db, schema, pluginLogger);
+        await ext.onDatabaseInit(db, pluginLogger);
         if (!isTestMode()) {
           logger.info({
             operation: 'initialize_plugin_databases',

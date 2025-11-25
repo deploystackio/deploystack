@@ -287,18 +287,8 @@ describe('Logout Route', () => {
       );
     });
 
-    it('should handle non-sqlite database dialect', async () => {
-      mockRequest.session = null;
-      mockLucia.readSessionCookie.mockReturnValue('invalid-session-123');
-      mockGetDbStatus.mockReturnValue({ configured: true, initialized: true, dialect: null, type: null });
-
-      const handler = routeHandlers['POST /logout'];
-      await handler(mockRequest, mockReply);
-
-      // Should not attempt database deletion for non-sqlite
-      expect(mockDb.delete).not.toHaveBeenCalled();
-      expect(mockReply.status).toHaveBeenCalledWith(200);
-    });
+    // Note: Test for non-SQLite database dialect removed as DeployStack is now PostgreSQL-only.
+    // All logout operations use PostgreSQL database cleanup.
 
     it('should handle missing cookie headers', async () => {
       mockRequest.session = null;

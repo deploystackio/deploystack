@@ -1,8 +1,8 @@
-import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import type { FastifyBaseLogger } from 'fastify';
-import { mcpClientActivity, mcpClientActivityMetrics } from '../../db/schema.sqlite';
+import { mcpClientActivity, mcpClientActivityMetrics } from '../../db/schema';
 import { eq, and, sql } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
+import type { AnyDatabase } from '../../db';
 
 export const EVENT_TYPE = 'mcp.client.activity';
 
@@ -92,7 +92,7 @@ function calculateBucketTimestamp(activityTimestamp: Date, intervalSeconds: numb
 }
 
 async function updateCumulativeActivity(
-  db: LibSQLDatabase,
+  db: AnyDatabase,
   satelliteId: string,
   data: McpClientActivityData,
   authIdentifier: string,
@@ -146,7 +146,7 @@ async function updateCumulativeActivity(
 }
 
 async function writeTimeSeriesMetrics(
-  db: LibSQLDatabase,
+  db: AnyDatabase,
   satelliteId: string,
   data: McpClientActivityData,
   authIdentifier: string,
@@ -192,7 +192,7 @@ async function writeTimeSeriesMetrics(
 export async function handle(
   satelliteId: string,
   eventData: Record<string, unknown>,
-  db: LibSQLDatabase,
+  db: AnyDatabase,
   eventTimestamp: Date,
   logger: FastifyBaseLogger
 ): Promise<void> {

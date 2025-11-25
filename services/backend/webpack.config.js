@@ -38,6 +38,7 @@ module.exports = {
           globOptions: {
             dot: true,
           },
+          noErrorOnMissing: true, // Don't fail if no plugins exist
         },
         // Copy AI instructions to dist directory
         {

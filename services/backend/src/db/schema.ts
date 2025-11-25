@@ -1,6 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // SINGLE SOURCE OF TRUTH FOR DATABASE SCHEMA
-// This file is the definitive schema definition for the SQLite database.
+// This file is the definitive schema definition for the DeployStack backend.
+// Database: PostgreSQL only
+//
 // It is used by:
 // - Drizzle Kit for generating migrations (npm run db:generate)
 // - The application runtime for table definitions and type safety
@@ -10,8 +12,6 @@
 // 1. Edit table files in schema-tables/ directory
 // 2. Run `npm run db:generate` to create migrations
 // 3. The changes will be automatically applied on next server start
-//
-// DO NOT create or edit schema.ts - this file has been removed to avoid confusion.
 
 // =============================================================================
 // SCHEMA ORGANIZATION

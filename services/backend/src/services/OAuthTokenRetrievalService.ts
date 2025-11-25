@@ -1,6 +1,6 @@
 import type { FastifyBaseLogger } from 'fastify';
 import type { AnyDatabase } from '../db';
-import { mcpOauthTokens } from '../db/schema.sqlite';
+import { mcpOauthTokens } from '../db/schema';
 import { and, eq } from 'drizzle-orm';
 import { decrypt } from '../utils/encryption';
 

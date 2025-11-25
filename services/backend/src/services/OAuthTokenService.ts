@@ -1,6 +1,6 @@
 import type { Logger } from 'pino';
 import type { AnyDatabase } from '../db';
-import { mcpOauthTokens } from '../db/schema.sqlite';
+import { mcpOauthTokens } from '../db/schema';
 import { eq } from 'drizzle-orm';
 import { encrypt } from '../utils/encryption';
 
@@ -229,9 +229,9 @@ export class OAuthTokenService {
 				})
 				.where(eq(mcpOauthTokens.id, tokenId));
 
-			// Multi-driver compatibility: check both SQLite and Turso result properties
+			// PostgreSQL result property
 			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			const rowsAffected = (result as any).changes || (result as any).rowsAffected || 0;
+			const rowsAffected = (result as any).rowCount || 0;
 
 			if (rowsAffected === 0) {
 				this.logger.error({ tokenId }, 'Failed to update tokens - token record not found');

@@ -1,7 +1,6 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { requireSatelliteAuth } from '../../middleware/satelliteAuthMiddleware';
-import { getDb } from '../../db';
-import { mcpOauthTokens } from '../../db/schema.sqlite';
+import { getDb, getSchema } from '../../db';
 import { and, eq } from 'drizzle-orm';
 import { isTokenExpired } from '../../utils/oauth-token-utils';
 import {
@@ -118,6 +117,7 @@ export default async function satelliteTokensStatusRoute(server: FastifyInstance
 
     // Check token status without decryption
     const db = getDb();
+    const { mcpOauthTokens } = getSchema();
 
     try {
       const [tokenRecord] = await db

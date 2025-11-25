@@ -9,7 +9,7 @@ A modular and extensible backend API for the DeployStack CI/CD platform, built w
 - **Modular**: Well-organized code structure for maintainability
 - **Email System**: Integrated email service with Pug templates and SMTP support
 - **Global Settings**: Centralized configuration management with encryption
-- **Database Integration**: SQLite/Turso support with Drizzle ORM
+- **Database Integration**: PostgreSQL support with Drizzle ORM
 - **Plugin System**: Extensible architecture for custom functionality
 - **Authentication**: Lucia-based authentication with role management
 - **Logging**: Comprehensive request logging with request IDs and timing
@@ -18,15 +18,8 @@ A modular and extensible backend API for the DeployStack CI/CD platform, built w
 ## 🚀 Quick Start with Docker
 
 ```bash
-# Run with Docker (using docker-compose recommended)
+# Run with Docker Compose (includes PostgreSQL)
 docker-compose up -d
-
-# Or run standalone with volume for data persistence
-docker run -it -p 3000:3000 \
-  -e NODE_ENV=production \
-  -e DEPLOYSTACK_ENCRYPTION_SECRET=your-32-character-secret-key-here \
-  -v deploystack_data:/app/persistent_data \
-  deploystack/backend:latest
 
 # Access the setup wizard at http://localhost:3000
 # (or http://localhost:8080 if using the full docker-compose stack)
@@ -36,6 +29,7 @@ docker run -it -p 3000:3000 \
 
 - Node.js (v18 or higher)
 - npm (v8 or higher)
+- PostgreSQL (v13 or higher)
 
 ## 🛠️ Installation
 
@@ -52,8 +46,11 @@ cd services/backend
 # Install dependencies
 npm install
 
+# Start local PostgreSQL (Docker-based)
+npm run postgres:local
+
 # Create .env file (see Environment Variables section)
-cp .env.example .env  # Or create manually
+cp .env.example .env
 
 # Start development server
 npm run dev
@@ -64,7 +61,7 @@ npm run dev
 ### Production Setup with Docker
 
 ```bash
-# Using Docker Compose (recommended)
+# Using Docker Compose (recommended - includes PostgreSQL)
 git clone https://github.com/deploystackio/deploystack.git
 cd deploystack
 docker-compose up -d
@@ -78,6 +75,9 @@ docker-compose up -d
 ### Development Commands
 
 ```bash
+# Start local PostgreSQL for development
+npm run postgres:local
+
 # Run in development mode (with live reloading)
 npm run dev
 
@@ -99,66 +99,54 @@ npm run api:spec      # Generate OpenAPI spec
 
 ### Initial Setup
 
-1. **First Run**: Navigate to `/setup` in your browser
-2. **Choose Database**: Select SQLite (default) or Turso
-3. **Create Admin**: Set up your administrator account
-4. **Configure Settings**: Access Global Settings to configure email, features, etc.
+1. **Start PostgreSQL**: Run `npm run postgres:local` for local development
+2. **First Run**: Navigate to `/setup` in your browser
+3. **Configure Database**: PostgreSQL connection details are configured via environment variables
+4. **Create Admin**: Set up your administrator account
+5. **Configure Settings**: Access Global Settings to configure email, features, etc.
 
-## 💾 Persistent Data
+## 💾 Database
 
-All persistent data is stored in the `persistent_data/` directory, which maintains the same structure across development and production environments.
+DeployStack uses PostgreSQL as its database backend, providing enterprise-grade reliability with ACID compliance and advanced features.
 
-### Directory Structure
+### Local Development
 
-```bash
-persistent_data/
-├── database/
-│   └── deploystack.db     # SQLite database (if using SQLite)
-└── db.selection.json       # Database type configuration
-```
-
-### Environment-Specific Locations
-
-**Development (Local):**
-
-- Location: `services/backend/persistent_data/`
-- Created automatically when running `npm run dev`
-- Direct file system access
-
-**Production (Docker):**
-
-- Location: `/app/persistent_data/` (inside container)
-- Mounted as Docker volume: `deploystack_backend_persistent`
-- Persists data between container restarts
-
-### Backup Strategies
-
-**Docker Volume Backup:**
+For local development, use the provided PostgreSQL script:
 
 ```bash
-# Create backup
-docker run --rm -v deploystack_backend_persistent:/data \
-  -v $(pwd):/backup alpine \
-  tar czf /backup/deploystack-backup-$(date +%Y%m%d).tar.gz /data
+# Start PostgreSQL 18 in Docker
+npm run postgres:local
 
-# Restore backup
-docker run --rm -v deploystack_backend_persistent:/data \
-  -v $(pwd):/backup alpine \
-  tar xzf /backup/deploystack-backup-20250108.tar.gz -C /
+# This creates a local PostgreSQL instance with:
+# - Host: localhost
+# - Port: 5432
+# - User: deploystack
+# - Password: deploystack
+# - Database: deploystack
 ```
 
-**Local Development Backup:**
+### Environment Configuration
+
+Configure PostgreSQL connection in your `.env` file:
 
 ```bash
-# Create backup
-tar czf deploystack-backup-$(date +%Y%m%d).tar.gz \
-  services/backend/persistent_data/
-
-# Restore backup
-tar xzf deploystack-backup-20250108.tar.gz
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+POSTGRES_DATABASE=deploystack
+POSTGRES_USER=deploystack
+POSTGRES_PASSWORD=deploystack
+POSTGRES_SSL=false
 ```
 
-**Important:** Always backup the entire `persistent_data/` directory/volume, not just the database file, as it contains critical configuration.
+### Database Migrations
+
+Migrations are automatically applied on server startup. To generate new migrations:
+
+```bash
+npm run db:generate
+```
+
+Migration files are stored in `drizzle/migrations/`.
 
 ## 📧 Email System
 
@@ -208,6 +196,14 @@ HOST=localhost
 LOG_LEVEL=info
 DEPLOYSTACK_FRONTEND_URL=http://localhost:5173  # Frontend URL for CORS and redirects
 DEPLOYSTACK_ENCRYPTION_SECRET=your-32-character-secret-key-here  # Required for global settings encryption
+
+# PostgreSQL Configuration
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+POSTGRES_DATABASE=deploystack
+POSTGRES_USER=deploystack
+POSTGRES_PASSWORD=deploystack
+POSTGRES_SSL=false
 ```
 
 ### Logging Configuration

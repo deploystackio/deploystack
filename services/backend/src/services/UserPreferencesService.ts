@@ -1,11 +1,11 @@
 import { eq, and } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import type { AnyDatabase } from '../db/index';
-import { userPreferences } from '../db/schema.sqlite';
-import { 
-  DEFAULT_USER_PREFERENCES, 
-  getDefaultPreferencesArray, 
-  isValidPreferenceKey, 
+import { getSchema } from '../db/index';
+import {
+  DEFAULT_USER_PREFERENCES,
+  getDefaultPreferencesArray,
+  isValidPreferenceKey,
   isValidPreferenceValue,
   type PreferenceValue
 } from '../config/user-preferences';
@@ -42,7 +42,12 @@ export interface UserPreferences {
 }
 
 export class UserPreferencesService {
-  constructor(private db: AnyDatabase) {}
+  private readonly userPreferences: ReturnType<typeof getSchema>['userPreferences'];
+
+  constructor(private db: AnyDatabase) {
+    const schema = getSchema();
+    this.userPreferences = schema.userPreferences;
+  }
 
   /**
    * Initialize default preferences for a new user
@@ -63,7 +68,7 @@ export class UserPreferencesService {
 
     // Use batch insert for better performance
     if (preferencesToInsert.length > 0) {
-      await this.db.insert(userPreferences).values(preferencesToInsert);
+      await this.db.insert(this.userPreferences).values(preferencesToInsert);
     }
   }
 
@@ -73,11 +78,11 @@ export class UserPreferencesService {
   async getUserPreferences(userId: string): Promise<UserPreferences> {
     const preferences = await this.db
       .select({
-        key: userPreferences.preference_key,
-        value: userPreferences.preference_value,
+        key: this.userPreferences.preference_key,
+        value: this.userPreferences.preference_value,
       })
-      .from(userPreferences)
-      .where(eq(userPreferences.user_id, userId));
+      .from(this.userPreferences)
+      .where(eq(this.userPreferences.user_id, userId));
 
     const result: UserPreferences = {};
     
@@ -93,20 +98,22 @@ export class UserPreferencesService {
    * Get a specific preference by key
    */
   async getPreference<T extends PreferenceValue>(
-    userId: string, 
-    key: string, 
+    userId: string,
+    key: string,
     defaultValue?: T
   ): Promise<T | undefined> {
-    const preference = await this.db
-      .select({ value: userPreferences.preference_value })
-      .from(userPreferences)
+    const result = await this.db
+      .select({ value: this.userPreferences.preference_value })
+      .from(this.userPreferences)
       .where(
         and(
-          eq(userPreferences.user_id, userId),
-          eq(userPreferences.preference_key, key)
+          eq(this.userPreferences.user_id, userId),
+          eq(this.userPreferences.preference_key, key)
         )
       )
-      .get();
+      .limit(1);
+
+    const preference = result[0];
 
     if (!preference) {
       return defaultValue;
@@ -133,21 +140,21 @@ export class UserPreferencesService {
 
     // Try to update existing preference first
     const result = await this.db
-      .update(userPreferences)
+      .update(this.userPreferences)
       .set({
         preference_value: stringValue,
         updated_at: now,
       })
       .where(
         and(
-          eq(userPreferences.user_id, userId),
-          eq(userPreferences.preference_key, key)
+          eq(this.userPreferences.user_id, userId),
+          eq(this.userPreferences.preference_key, key)
         )
       );
 
     // If no rows were updated, insert a new preference
-    if (result.changes === 0) {
-      await this.db.insert(userPreferences).values({
+    if ((result.rowCount || 0) === 0) {
+      await this.db.insert(this.userPreferences).values({
         id: nanoid(),
         user_id: userId,
         preference_key: key,
@@ -163,11 +170,11 @@ export class UserPreferencesService {
    */
   async deletePreference(userId: string, key: string): Promise<void> {
     await this.db
-      .delete(userPreferences)
+      .delete(this.userPreferences)
       .where(
         and(
-          eq(userPreferences.user_id, userId),
-          eq(userPreferences.preference_key, key)
+          eq(this.userPreferences.user_id, userId),
+          eq(this.userPreferences.preference_key, key)
         )
       );
   }
@@ -250,12 +257,12 @@ export class UserPreferencesService {
    */
   async getUsersWithPreference(key: string, value: PreferenceValue): Promise<string[]> {
     const users = await this.db
-      .select({ user_id: userPreferences.user_id })
-      .from(userPreferences)
+      .select({ user_id: this.userPreferences.user_id })
+      .from(this.userPreferences)
       .where(
         and(
-          eq(userPreferences.preference_key, key),
-          eq(userPreferences.preference_value, String(value))
+          eq(this.userPreferences.preference_key, key),
+          eq(this.userPreferences.preference_value, String(value))
         )
       );
 

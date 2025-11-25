@@ -241,8 +241,8 @@ export default async function githubAuthRoutes(fastify: FastifyInstance) {
             const authSessionTable = schema.authSession;
             await (db as any).insert(authSessionTable).values({
               id: sessionId,
-              user_id: userId,
-              expires_at: expiresAt.getTime()
+              userId: userId,
+              expiresAt: expiresAt.getTime()
             });
             
             const sessionCookie = getLucia().createSessionCookie(sessionId);
@@ -379,8 +379,8 @@ export default async function githubAuthRoutes(fastify: FastifyInstance) {
           const authSessionTable = schema.authSession;
           await (db as any).insert(authSessionTable).values({
             id: sessionId,
-            user_id: newUserId,
-            expires_at: expiresAt.getTime()
+            userId: newUserId,
+            expiresAt: expiresAt.getTime()
           });
           
           const sessionCookie = getLucia().createSessionCookie(sessionId);

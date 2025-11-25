@@ -1,6 +1,5 @@
 import type { FastifyBaseLogger } from 'fastify';
-import { getDb } from '../db';
-import { mcpServerInstallations } from '../db/schema.sqlite';
+import { getDb, mcpServerInstallations } from '../db';
 import { and, eq, lt } from 'drizzle-orm';
 
 /**
@@ -32,8 +31,8 @@ export async function cleanupExpiredOAuthPending(logger: FastifyBaseLogger) {
         )
       );
 
-    // Handle both SQLite and Turso driver result differences
-    const deletedCount = (result.changes || result.rowsAffected || 0);
+    // PostgreSQL returns rowCount
+    const deletedCount = result.rowCount || 0;
 
     if (deletedCount > 0) {
       logger.info(

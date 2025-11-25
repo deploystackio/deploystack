@@ -1,22 +1,22 @@
- 
+
 // MCP Server Catalog Tables
 
-import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
+import { pgTable, text, integer, boolean, timestamp, index } from 'drizzle-orm/pg-core';
 import { authUser } from './auth';
 import { teams } from './teams';
 
 // MCP Categories - Organize MCP servers by category
-export const mcpCategories = sqliteTable('mcpCategories', {
+export const mcpCategories = pgTable('mcpCategories', {
   id: text('id').primaryKey(),
   name: text('name').notNull().unique(),
   description: text('description'),
   icon: text('icon'), // Icon name/class for UI
   sort_order: integer('sort_order').notNull().default(0),
-  created_at: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
 // MCP Servers - Main catalog of available MCP servers
-export const mcpServers = sqliteTable('mcpServers', {
+export const mcpServers = pgTable('mcpServers', {
   id: text('id').primaryKey(),
 
   // Basic Information
@@ -94,26 +94,26 @@ export const mcpServers = sqliteTable('mcpServers', {
   category_id: text('category_id').references(() => mcpCategories.id),
   tags: text('tags'), // JSON array: ["browser", "automation", "testing"]
   status: text('status').notNull().default('active'), // 'active', 'deprecated', 'maintenance'
-  featured: integer('featured', { mode: 'boolean' }).notNull().default(false),
-  auto_install_new_default_team: integer('auto_install_new_default_team', { mode: 'boolean' }).notNull().default(false),
+  featured: boolean('featured').notNull().default(false),
+  auto_install_new_default_team: boolean('auto_install_new_default_team').notNull().default(false),
 
   // Source Tracking
   source: text('source', { enum: ['official_registry', 'manual'] }).notNull().default('manual'),
 
   // Official Registry Sync Tracking
-  synced_from_official_registry: integer('synced_from_official_registry', { mode: 'boolean' }).notNull().default(false),
+  synced_from_official_registry: boolean('synced_from_official_registry').notNull().default(false),
   official_registry_server_id: text('official_registry_server_id'),
   official_registry_version_id: text('official_registry_version_id'),
-  official_registry_published_at: integer('official_registry_published_at', { mode: 'timestamp' }),
-  official_registry_updated_at: integer('official_registry_updated_at', { mode: 'timestamp' }),
+  official_registry_published_at: timestamp('official_registry_published_at', { withTimezone: true }),
+  official_registry_updated_at: timestamp('official_registry_updated_at', { withTimezone: true }),
 
   // OAuth Support
-  requires_oauth: integer({ mode: 'boolean' }).notNull().default(false),
+  requires_oauth: boolean('requires_oauth').notNull().default(false),
 
   // Timestamps
-  created_at: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
-  updated_at: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
-  last_sync_at: integer('last_sync_at', { mode: 'timestamp' }), // Last GitHub sync
+  created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  last_sync_at: timestamp('last_sync_at', { withTimezone: true }), // Last GitHub sync
 }, (table) => ({
   visibilityIdx: index('mcp_servers_visibility_idx').on(table.visibility),
   categoryIdx: index('mcp_servers_category_idx').on(table.category_id),
@@ -127,15 +127,15 @@ export const mcpServers = sqliteTable('mcpServers', {
 }));
 
 // MCP Server Versions - Track releases/versions
-export const mcpServerVersions = sqliteTable('mcpServerVersions', {
+export const mcpServerVersions = pgTable('mcpServerVersions', {
   id: text('id').primaryKey(),
   server_id: text('server_id').notNull().references(() => mcpServers.id, { onDelete: 'cascade' }),
   version: text('version').notNull(), // 0.0.29, 1.2.3
   git_commit: text('git_commit'), // GitHub commit hash
   changelog: text('changelog'), // Release notes
-  is_latest: integer('is_latest', { mode: 'boolean' }).notNull().default(false),
-  is_stable: integer('is_stable', { mode: 'boolean' }).notNull().default(true),
-  created_at: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  is_latest: boolean('is_latest').notNull().default(false),
+  is_stable: boolean('is_stable').notNull().default(true),
+  created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 }, (table) => ({
   serverVersionIdx: index('mcp_server_versions_server_idx').on(table.server_id),
   latestIdx: index('mcp_server_versions_latest_idx').on(table.is_latest),

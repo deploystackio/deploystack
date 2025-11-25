@@ -3,8 +3,7 @@ import { validateRegistrationToken, RegistrationTokenRequest } from '../../middl
 import { SatelliteTokenService } from '../../services/satelliteTokenService';
 import { nanoid } from 'nanoid';
 import { hash } from '@node-rs/argon2';
-import { getDb } from '../../db';
-import { satellites } from '../../db/schema.sqlite';
+import { getDb, getSchema } from '../../db';
 import { eq } from 'drizzle-orm';
 
 // Reusable Schema Constants
@@ -179,6 +178,7 @@ export default async function satelliteRegisterRoute(server: FastifyInstance) {
       const teamId = tokenRecord.team_id; // null for global, team ID for team tokens
       
       // Check if satellite name already exists
+      const satellites = getSchema().satellites;
       const existingSatellites = await db.select()
         .from(satellites)
         .where(eq(satellites.name, name));

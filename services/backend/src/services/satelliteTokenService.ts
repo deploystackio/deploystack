@@ -1,18 +1,20 @@
 import { nanoid } from 'nanoid';
 import { hash, verify } from '@node-rs/argon2';
-import { getDb } from '../db';
-import { satelliteRegistrationTokens, authUser } from '../db/schema.sqlite';
+import { getDb, getSchema } from '../db';
 import { eq, and, lt, count, desc } from 'drizzle-orm';
 import { SimpleJWT, TokenExpiredError } from '../utils/jwt';
-import type { 
-  TokenType, 
-  SatelliteRegistrationToken, 
-  TokenValidationResult, 
-  JWTPayload 
+import type {
+  TokenType,
+  SatelliteRegistrationToken,
+  TokenValidationResult,
+  JWTPayload
 } from '../types/satellite';
 import type { FastifyBaseLogger } from 'fastify';
 
 export class SatelliteTokenService {
+  private static getSchema() {
+    return getSchema();
+  }
   private static readonly JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key-for-satellite-tokens';
   private static readonly GLOBAL_TOKEN_PREFIX = 'deploystack_satellite_global_';
   private static readonly TEAM_TOKEN_PREFIX = 'deploystack_satellite_team_';
@@ -85,7 +87,7 @@ export class SatelliteTokenService {
 
     // Insert into database
     const db = getDb();
-    await db.insert(satelliteRegistrationTokens).values(tokenRecord);
+    await db.insert(this.getSchema().satelliteRegistrationTokens).values(tokenRecord);
 
     return { token: fullToken, tokenRecord };
   }
@@ -129,10 +131,10 @@ export class SatelliteTokenService {
       // we need to get all unused tokens and verify hash
       const db = getDb();
       const candidateTokens = await db.select()
-        .from(satelliteRegistrationTokens)
+        .from(this.getSchema().satelliteRegistrationTokens)
         .where(and(
-          eq(satelliteRegistrationTokens.token_prefix, tokenPrefix),
-          eq(satelliteRegistrationTokens.used, false)
+          eq(this.getSchema().satelliteRegistrationTokens.token_prefix, tokenPrefix),
+          eq(this.getSchema().satelliteRegistrationTokens.used, false)
         ));
 
       let tokenRecord: SatelliteRegistrationToken | undefined;
@@ -188,13 +190,13 @@ export class SatelliteTokenService {
    */
   static async markTokenAsUsed(tokenId: string, satelliteId: string): Promise<void> {
     const db = getDb();
-    await db.update(satelliteRegistrationTokens)
+    await db.update(this.getSchema().satelliteRegistrationTokens)
       .set({
         used: true,
         used_at: new Date().toISOString(),
         used_by_satellite_id: satelliteId
       })
-      .where(eq(satelliteRegistrationTokens.id, tokenId));
+      .where(eq(this.getSchema().satelliteRegistrationTokens.id, tokenId));
   }
 
   /**
@@ -203,10 +205,10 @@ export class SatelliteTokenService {
   static async cleanupExpiredTokens(): Promise<number> {
     const db = getDb();
     const now = new Date().toISOString();
-    const result = await db.delete(satelliteRegistrationTokens)
-      .where(lt(satelliteRegistrationTokens.expires_at, now));
+    const result = await db.delete(this.getSchema().satelliteRegistrationTokens)
+      .where(lt(this.getSchema().satelliteRegistrationTokens.expires_at, now));
     
-    return result.changes || 0;
+    return result.rowCount || 0;
   }
 
   /**
@@ -214,31 +216,29 @@ export class SatelliteTokenService {
    */
   static async getActiveTokens(tokenType?: TokenType, teamId?: string) {
     const db = getDb();
-    let query = db.select({
-      id: satelliteRegistrationTokens.id,
-      token_type: satelliteRegistrationTokens.token_type,
-      team_id: satelliteRegistrationTokens.team_id,
-      created_by: satelliteRegistrationTokens.created_by,
-      expires_at: satelliteRegistrationTokens.expires_at,
-      created_at: satelliteRegistrationTokens.created_at,
-      used: satelliteRegistrationTokens.used
-    }).from(satelliteRegistrationTokens);
+    const queryBuilder = db.select({
+      id: this.getSchema().satelliteRegistrationTokens.id,
+      token_type: this.getSchema().satelliteRegistrationTokens.token_type,
+      team_id: this.getSchema().satelliteRegistrationTokens.team_id,
+      created_by: this.getSchema().satelliteRegistrationTokens.created_by,
+      expires_at: this.getSchema().satelliteRegistrationTokens.expires_at,
+      created_at: this.getSchema().satelliteRegistrationTokens.created_at,
+      used: this.getSchema().satelliteRegistrationTokens.used
+    }).from(this.getSchema().satelliteRegistrationTokens);
 
     const conditions = [];
 
     if (tokenType) {
-      conditions.push(eq(satelliteRegistrationTokens.token_type, tokenType));
+      conditions.push(eq(this.getSchema().satelliteRegistrationTokens.token_type, tokenType));
     }
 
     if (teamId) {
-      conditions.push(eq(satelliteRegistrationTokens.team_id, teamId));
+      conditions.push(eq(this.getSchema().satelliteRegistrationTokens.team_id, teamId));
     }
 
-    if (conditions.length > 0) {
-      query = query.where(and(...conditions));
-    }
-
-    return await query;
+    return await (conditions.length > 0
+      ? queryBuilder.where(and(...conditions))
+      : queryBuilder);
   }
 
   /**
@@ -261,60 +261,60 @@ export class SatelliteTokenService {
     if (userRole === 'global_admin') {
       // Global admins see all tokens
       query = db.select({
-        id: satelliteRegistrationTokens.id,
-        token: satelliteRegistrationTokens.token_prefix, // Return masked token for display
-        token_type: satelliteRegistrationTokens.token_type,
-        team_id: satelliteRegistrationTokens.team_id,
-        team_slug: satelliteRegistrationTokens.team_id, // TODO: Join with teams table for slug
-        created_by: satelliteRegistrationTokens.created_by,
-        creator_name: authUser.username,
-        creator_email: authUser.email,
-        creator_display_name: authUser.first_name,
-        creator_last_name: authUser.last_name,
-        expires_at: satelliteRegistrationTokens.expires_at,
-        created_at: satelliteRegistrationTokens.created_at,
-        used: satelliteRegistrationTokens.used,
-        used_at: satelliteRegistrationTokens.used_at,
-        used_by: satelliteRegistrationTokens.used_by_satellite_id
+        id: this.getSchema().satelliteRegistrationTokens.id,
+        token: this.getSchema().satelliteRegistrationTokens.token_prefix, // Return masked token for display
+        token_type: this.getSchema().satelliteRegistrationTokens.token_type,
+        team_id: this.getSchema().satelliteRegistrationTokens.team_id,
+        team_slug: this.getSchema().satelliteRegistrationTokens.team_id, // TODO: Join with teams table for slug
+        created_by: this.getSchema().satelliteRegistrationTokens.created_by,
+        creator_name: this.getSchema().authUser.username,
+        creator_email: this.getSchema().authUser.email,
+        creator_display_name: this.getSchema().authUser.first_name,
+        creator_last_name: this.getSchema().authUser.last_name,
+        expires_at: this.getSchema().satelliteRegistrationTokens.expires_at,
+        created_at: this.getSchema().satelliteRegistrationTokens.created_at,
+        used: this.getSchema().satelliteRegistrationTokens.used,
+        used_at: this.getSchema().satelliteRegistrationTokens.used_at,
+        used_by: this.getSchema().satelliteRegistrationTokens.used_by_satellite_id
       })
-      .from(satelliteRegistrationTokens)
-      .leftJoin(authUser, eq(satelliteRegistrationTokens.created_by, authUser.id))
+      .from(this.getSchema().satelliteRegistrationTokens)
+      .leftJoin(this.getSchema().authUser, eq(this.getSchema().satelliteRegistrationTokens.created_by, this.getSchema().authUser.id))
       .limit(limit)
       .offset(offset)
-      .orderBy(desc(satelliteRegistrationTokens.created_at));
+      .orderBy(desc(this.getSchema().satelliteRegistrationTokens.created_at));
       
       countQuery = db.select({ count: count() })
-        .from(satelliteRegistrationTokens);
+        .from(this.getSchema().satelliteRegistrationTokens);
         
     } else {
       // Regular users only see tokens they created
       query = db.select({
-        id: satelliteRegistrationTokens.id,
-        token: satelliteRegistrationTokens.token_prefix, // Return masked token for display
-        token_type: satelliteRegistrationTokens.token_type,
-        team_id: satelliteRegistrationTokens.team_id,
-        team_slug: satelliteRegistrationTokens.team_id, // TODO: Join with teams table for slug
-        created_by: satelliteRegistrationTokens.created_by,
-        creator_name: authUser.username,
-        creator_email: authUser.email,
-        creator_display_name: authUser.first_name,
-        creator_last_name: authUser.last_name,
-        expires_at: satelliteRegistrationTokens.expires_at,
-        created_at: satelliteRegistrationTokens.created_at,
-        used: satelliteRegistrationTokens.used,
-        used_at: satelliteRegistrationTokens.used_at,
-        used_by: satelliteRegistrationTokens.used_by_satellite_id
+        id: this.getSchema().satelliteRegistrationTokens.id,
+        token: this.getSchema().satelliteRegistrationTokens.token_prefix, // Return masked token for display
+        token_type: this.getSchema().satelliteRegistrationTokens.token_type,
+        team_id: this.getSchema().satelliteRegistrationTokens.team_id,
+        team_slug: this.getSchema().satelliteRegistrationTokens.team_id, // TODO: Join with teams table for slug
+        created_by: this.getSchema().satelliteRegistrationTokens.created_by,
+        creator_name: this.getSchema().authUser.username,
+        creator_email: this.getSchema().authUser.email,
+        creator_display_name: this.getSchema().authUser.first_name,
+        creator_last_name: this.getSchema().authUser.last_name,
+        expires_at: this.getSchema().satelliteRegistrationTokens.expires_at,
+        created_at: this.getSchema().satelliteRegistrationTokens.created_at,
+        used: this.getSchema().satelliteRegistrationTokens.used,
+        used_at: this.getSchema().satelliteRegistrationTokens.used_at,
+        used_by: this.getSchema().satelliteRegistrationTokens.used_by_satellite_id
       })
-      .from(satelliteRegistrationTokens)
-      .leftJoin(authUser, eq(satelliteRegistrationTokens.created_by, authUser.id))
-      .where(eq(satelliteRegistrationTokens.created_by, userId))
+      .from(this.getSchema().satelliteRegistrationTokens)
+      .leftJoin(this.getSchema().authUser, eq(this.getSchema().satelliteRegistrationTokens.created_by, this.getSchema().authUser.id))
+      .where(eq(this.getSchema().satelliteRegistrationTokens.created_by, userId))
       .limit(limit)
       .offset(offset)
-      .orderBy(desc(satelliteRegistrationTokens.created_at));
+      .orderBy(desc(this.getSchema().satelliteRegistrationTokens.created_at));
       
       countQuery = db.select({ count: count() })
-        .from(satelliteRegistrationTokens)
-        .where(eq(satelliteRegistrationTokens.created_by, userId));
+        .from(this.getSchema().satelliteRegistrationTokens)
+        .where(eq(this.getSchema().satelliteRegistrationTokens.created_by, userId));
     }
     
     // Execute queries
@@ -379,12 +379,12 @@ export class SatelliteTokenService {
    */
   static async revokeToken(tokenId: string): Promise<boolean> {
     const db = getDb();
-    const result = await db.delete(satelliteRegistrationTokens)
+    const result = await db.delete(this.getSchema().satelliteRegistrationTokens)
       .where(and(
-        eq(satelliteRegistrationTokens.id, tokenId),
-        eq(satelliteRegistrationTokens.used, false)
+        eq(this.getSchema().satelliteRegistrationTokens.id, tokenId),
+        eq(this.getSchema().satelliteRegistrationTokens.used, false)
       ));
-    
-    return (result.changes || 0) > 0;
+
+    return (result.rowCount || 0) > 0;
   }
 }

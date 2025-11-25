@@ -2,7 +2,7 @@
  * Shared TypeScript interfaces for satellite event system
  */
 
-import type { LibSQLDatabase } from 'drizzle-orm/libsql';
+import type { AnyDatabase } from '../../db';
 import type { FastifyBaseLogger } from 'fastify';
 
 /**
@@ -54,7 +54,7 @@ export interface EventHandler {
   handle: (
     satelliteId: string,
     eventData: Record<string, unknown>,
-    db: LibSQLDatabase,
+    db: AnyDatabase,
     eventTimestamp: Date,
     logger: FastifyBaseLogger
   ) => Promise<void>;

@@ -56,7 +56,7 @@ describe('Database Setup Route', () => {
     // Setup mock request
     mockRequest = {
       body: {
-        type: DatabaseType.SQLite,
+        type: DatabaseType.PostgreSQL,
       },
       log: {
         error: vi.fn(),
@@ -103,8 +103,8 @@ describe('Database Setup Route', () => {
     });
 
     describe('Basic functionality', () => {
-      it('should handle valid SQLite request', async () => {
-        mockRequest.body = { type: DatabaseType.SQLite };
+      it('should handle valid PostgreSQL request', async () => {
+        mockRequest.body = { type: DatabaseType.PostgreSQL };
 
         const handler = routeHandlers['POST /db/setup'];
         await handler(mockRequest, mockReply);
@@ -114,8 +114,8 @@ describe('Database Setup Route', () => {
         expect(mockReply.send).toHaveBeenCalled();
       });
 
-      it('should handle Turso request', async () => {
-        mockRequest.body = { type: DatabaseType.Turso };
+      it('should handle PostgreSQL request with alternate configuration', async () => {
+        mockRequest.body = { type: DatabaseType.PostgreSQL };
 
         const handler = routeHandlers['POST /db/setup'];
         await handler(mockRequest, mockReply);
@@ -161,7 +161,7 @@ describe('Database Setup Route', () => {
         const originalEnv = process.env.NODE_ENV;
         process.env.NODE_ENV = 'test';
 
-        mockRequest.body = { type: DatabaseType.SQLite };
+        mockRequest.body = { type: DatabaseType.PostgreSQL };
 
         const handler = routeHandlers['POST /db/setup'];
         await handler(mockRequest, mockReply);
@@ -176,7 +176,7 @@ describe('Database Setup Route', () => {
         const originalEnv = process.env.NODE_ENV;
         process.env.NODE_ENV = 'production';
 
-        mockRequest.body = { type: DatabaseType.SQLite };
+        mockRequest.body = { type: DatabaseType.PostgreSQL };
 
         const handler = routeHandlers['POST /db/setup'];
         await handler(mockRequest, mockReply);
@@ -217,7 +217,7 @@ describe('Database Setup Route', () => {
 
     describe('Logging', () => {
       it('should log setup attempts', async () => {
-        mockRequest.body = { type: DatabaseType.SQLite };
+        mockRequest.body = { type: DatabaseType.PostgreSQL };
 
         const handler = routeHandlers['POST /db/setup'];
         await handler(mockRequest, mockReply);
@@ -229,7 +229,7 @@ describe('Database Setup Route', () => {
 
     describe('Response format', () => {
       it('should return proper response structure on success', async () => {
-        mockRequest.body = { type: DatabaseType.SQLite };
+        mockRequest.body = { type: DatabaseType.PostgreSQL };
 
         const handler = routeHandlers['POST /db/setup'];
         await handler(mockRequest, mockReply);

@@ -1,6 +1,6 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import { getDb } from '../db';
-import { satellites } from '../db/schema.sqlite';
+import { satellites } from '../db/schema';
 import { verify } from '@node-rs/argon2';
 
 // Extend FastifyRequest to include satellite context

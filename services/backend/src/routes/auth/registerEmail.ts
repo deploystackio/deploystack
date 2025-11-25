@@ -289,8 +289,8 @@ export default async function registerEmailRoute(server: FastifyInstance) {
         // Insert session directly into database
         await (db as any).insert(authSessionTable).values({
           id: sessionId,
-          user_id: userId,
-          expires_at: expiresAt
+          userId: userId,
+          expiresAt: expiresAt
         });
         
         server.log.info(`Session created successfully for user: ${userId}`);

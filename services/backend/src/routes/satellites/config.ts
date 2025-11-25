@@ -1,6 +1,5 @@
 import { type FastifyInstance } from 'fastify';
-import { getDb } from '../../db';
-import { satellites, mcpServerInstallations, mcpServers, teams } from '../../db/schema.sqlite';
+import { getDb, getSchema } from '../../db';
 import { eq, and } from 'drizzle-orm';
 import { requireSatelliteAuth } from '../../middleware/satelliteAuthMiddleware';
 import { McpArgsStorage } from '../../utils/mcpArgsStorage';
@@ -235,9 +234,10 @@ export default async function satelliteConfigRoute(server: FastifyInstance) {
     }
   }, async (request, reply) => {
     const { satelliteId } = request.params as SatelliteIdParams;
-    
+
     const db = getDb();
-    
+    const { satellites, mcpServerInstallations, mcpServers, teams } = getSchema();
+
     try {
       // Verify satellite exists and get its configuration
       const satellite = await db

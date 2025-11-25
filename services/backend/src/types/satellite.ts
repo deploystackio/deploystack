@@ -1,5 +1,5 @@
 // TypeScript types for Satellite Token Management System
-// Based on the database schema defined in schema.sqlite.ts
+// Based on the database schema defined in schema.postgres.ts
 
 export type TokenType = 'global' | 'team';
 
