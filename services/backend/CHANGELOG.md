@@ -2,6 +2,16 @@
 
 ## 0.46.0 (2025-11-25)
 
+* chore(backend): release v0.46.0 1490b2a
+* chore(frontend): release v0.41.0 6f71964
+* chore(frontend): release v0.41.0 52da4b2
+* feat(backend): add satellite command notifications for MCP installations 769d557
+* feat(backend): complete PostgreSQL-only database migration 88c52f8
+* refactor(backend): use GlobalSettings for backend URL in OAuth routes 7aa72ca
+* refactor(satellite): enhance headers for Cloudflare compatibility 362987f
+
+## 0.46.0 (2025-11-25)
+
 * chore(frontend): release v0.41.0 6f71964
 * chore(frontend): release v0.41.0 52da4b2
 * chore(satellite): release v0.11.0 bfcb1ff
