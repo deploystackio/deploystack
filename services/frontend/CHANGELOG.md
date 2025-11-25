@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.41.0 (2025-11-25)
+
+* feat(backend): add satellite command notifications for MCP installations 769d557
+* feat(backend): complete PostgreSQL-only database migration 88c52f8
+* refactor(backend): use GlobalSettings for backend URL in OAuth routes 7aa72ca
+* refactor(satellite): enhance headers for Cloudflare compatibility 362987f
+* chore(backend): release v0.45.0 482c6f4
+* chore(backend): release v0.45.0 13a7796
+* chore(satellite): release v0.11.0 bfcb1ff
+* chore(satellite): release v0.11.0 9fddc8e
+
 ## 0.40.0 (2025-11-22)
 
 * chore(all): update dependencies across services 44bbbc2
