@@ -19,6 +19,7 @@ export const globalSettingGroups = pgTable('globalSettingGroups', {
 // Global Settings - Platform-wide configuration
 export const globalSettings = pgTable('globalSettings', {
   key: text('key').primaryKey(),
+  name: text('name'),
   value: text('value').notNull(),
   type: text('type').notNull().default('string'),
   description: text('description'),

@@ -1,0 +1,1 @@
+ALTER TABLE "globalSettings" ADD COLUMN "name" text;

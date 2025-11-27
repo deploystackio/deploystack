@@ -6121,6 +6121,16 @@
                               "maxLength": 255,
                               "pattern": "^[a-zA-Z0-9._-]+$"
                             },
+                            "name": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
                             "value": {
                               "type": "string"
                             },
@@ -6290,6 +6300,9 @@
                     "maxLength": 255,
                     "pattern": "^[a-zA-Z0-9._-]+$"
                   },
+                  "name": {
+                    "type": "string"
+                  },
                   "value": {
                     "type": [
                       "string",
@@ -6355,6 +6368,16 @@
                             "minLength": 1,
                             "maxLength": 255,
                             "pattern": "^[a-zA-Z0-9._-]+$"
+                          },
+                          "name": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
                           },
                           "value": {
                             "type": "string"
@@ -6623,6 +6646,16 @@
                             "maxLength": 255,
                             "pattern": "^[a-zA-Z0-9._-]+$"
                           },
+                          "name": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
                           "value": {
                             "type": "string"
                           },
@@ -6821,6 +6854,9 @@
               "schema": {
                 "type": "object",
                 "properties": {
+                  "name": {
+                    "type": "string"
+                  },
                   "value": {
                     "type": "string",
                     "minLength": 1
@@ -6880,6 +6916,16 @@
                             "minLength": 1,
                             "maxLength": 255,
                             "pattern": "^[a-zA-Z0-9._-]+$"
+                          },
+                          "name": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
                           },
                           "value": {
                             "type": "string"
@@ -7345,6 +7391,16 @@
                               "maxLength": 255,
                               "pattern": "^[a-zA-Z0-9._-]+$"
                             },
+                            "name": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
                             "value": {
                               "type": "string"
                             },
@@ -7555,6 +7611,9 @@
                           "maxLength": 255,
                           "pattern": "^[a-zA-Z0-9._-]+$"
                         },
+                        "name": {
+                          "type": "string"
+                        },
                         "value": {
                           "type": [
                             "string",
@@ -7629,6 +7688,16 @@
                               "minLength": 1,
                               "maxLength": 255,
                               "pattern": "^[a-zA-Z0-9._-]+$"
+                            },
+                            "name": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
                             },
                             "value": {
                               "type": "string"
@@ -7731,6 +7800,16 @@
                               "minLength": 1,
                               "maxLength": 255,
                               "pattern": "^[a-zA-Z0-9._-]+$"
+                            },
+                            "name": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
                             },
                             "value": {
                               "type": "string"
@@ -8022,6 +8101,16 @@
                                     "maxLength": 255,
                                     "pattern": "^[a-zA-Z0-9._-]+$"
                                   },
+                                  "name": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
                                   "value": {
                                     "type": "string"
                                   },
@@ -8244,6 +8333,16 @@
                               "minLength": 1,
                               "maxLength": 255,
                               "pattern": "^[a-zA-Z0-9._-]+$"
+                            },
+                            "name": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
                             },
                             "value": {
                               "type": "string"

@@ -3,6 +3,7 @@ import { z } from 'zod';
 // Base schema for global setting
 export const GlobalSettingSchema = z.object({
   key: z.string().min(1).max(255).regex(/^[a-zA-Z0-9._-]+$/, 'Key can only contain letters, numbers, dots, underscores, and hyphens'),
+  name: z.string().nullable().optional(),
   value: z.string(),
   type: z.enum(['string', 'number', 'boolean']),
   description: z.string().optional(),
@@ -27,6 +28,7 @@ export const GlobalSettingGroupSchema = z.object({
 // Schema for creating a new global setting
 export const CreateGlobalSettingSchema = z.object({
   key: z.string().min(1).max(255).regex(/^[a-zA-Z0-9._-]+$/, 'Key can only contain letters, numbers, dots, underscores, and hyphens'),
+  name: z.string().optional(),
   value: z.union([z.string(), z.number(), z.boolean()]),
   type: z.enum(['string', 'number', 'boolean']),
   description: z.string().optional(),
@@ -51,6 +53,7 @@ export const CreateGlobalSettingSchema = z.object({
 
 // Schema for updating a global setting
 export const UpdateGlobalSettingSchema = z.object({
+  name: z.string().optional(),
   value: z.string().min(1).optional(),
   description: z.string().optional(),
   encrypted: z.boolean().optional(),

@@ -320,6 +320,7 @@ export class GlobalSettingsInitService {
         if (!exists) {
           const groupIdForThisSetting = this.getGroupIdForSetting(setting.key);
           await GlobalSettingsService.setTyped(setting.key, setting.defaultValue, setting.type, {
+            name: setting.name,
             description: setting.description,
             encrypted: setting.encrypted,
             group_id: groupIdForThisSetting === 'unknown' ? undefined : groupIdForThisSetting
@@ -430,9 +431,10 @@ export class GlobalSettingsInitService {
     const settingsData = settingsToCreate.map(({ setting, groupId }) => {
       const stringValue = String(setting.defaultValue);
       const finalValue = setting.encrypted ? encrypt(stringValue) : stringValue;
-      
+
       return {
         key: setting.key,
+        name: setting.name || null,
         value: finalValue,
         type: setting.type,
         description: setting.description || null,

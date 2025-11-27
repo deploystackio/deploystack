@@ -4,6 +4,7 @@ import { encrypt, decrypt } from '../utils/encryption';
 
 export interface GlobalSetting {
   key: string;
+  name: string | null;
   value: string;
   type: 'string' | 'number' | 'boolean';
   description: string | null;
@@ -29,6 +30,7 @@ export interface GlobalSettingGroupWithSettings extends GlobalSettingGroup {
 
 export interface CreateGlobalSettingInput {
   key: string;
+  name?: string;
   value: string | number | boolean;
   type: 'string' | 'number' | 'boolean';
   description?: string;
@@ -37,6 +39,7 @@ export interface CreateGlobalSettingInput {
 }
 
 export interface UpdateGlobalSettingInput {
+  name?: string;
   value?: string | number | boolean;
   type?: 'string' | 'number' | 'boolean';
   description?: string;
@@ -240,15 +243,15 @@ export class GlobalSettingsService {
    * Create or update a setting with type support
    */
   static async setTyped(
-    key: string, 
-    value: string | number | boolean, 
+    key: string,
+    value: string | number | boolean,
     type: 'string' | 'number' | 'boolean',
-    options: { description?: string; encrypted?: boolean; group_id?: string } = {}
+    options: { name?: string; description?: string; encrypted?: boolean; group_id?: string } = {}
   ): Promise<GlobalSetting> {
     this.validateKey(key);
     this.validateValueType(value, type);
 
-    const { description, encrypted = false, group_id } = options;
+    const { name, description, encrypted = false, group_id } = options;
     const db = getDb();
     const schema = getSchema();
 
@@ -273,6 +276,7 @@ export class GlobalSettingsService {
 
       const settingData = {
         key,
+        name: name || null,
         value: finalValue,
         type,
         description: description || null,
@@ -341,6 +345,10 @@ export class GlobalSettingsService {
       if (updates.type) {
         updateData.type = updates.type;
       }
+    }
+
+    if (updates.name !== undefined) {
+      updateData.name = updates.name;
     }
 
     if (updates.description !== undefined) {

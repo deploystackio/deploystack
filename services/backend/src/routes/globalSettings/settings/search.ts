@@ -58,6 +58,7 @@ export default async function searchGlobalSettingsRoute(fastify: FastifyInstance
         success: true,
         data: settings.map(setting => ({
           key: String(setting.key),
+          name: setting.name ? String(setting.name) : null,
           value: setting.value,
           type: setting.type ? String(setting.type) : null,
           description: setting.description ? String(setting.description) : null,

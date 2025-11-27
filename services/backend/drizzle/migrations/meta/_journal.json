@@ -15,6 +15,13 @@
       "when": 1764070516586,
       "tag": "0001_wild_selene",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1764272185073,
+      "tag": "0002_lyrical_unus",
+      "breakpoints": true
     }
   ]
 }

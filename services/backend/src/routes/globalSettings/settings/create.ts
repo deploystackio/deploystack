@@ -34,6 +34,7 @@ export default async function createGlobalSettingRoute(fastify: FastifyInstance)
         type: 'object',
         properties: {
           key: { type: 'string', minLength: 1, maxLength: 255, pattern: '^[a-zA-Z0-9._-]+$' },
+          name: { type: 'string' },
           value: { type: ['string', 'number', 'boolean'] }, // Allow multiple types without oneOf
           type: { type: 'string', enum: ['string', 'number', 'boolean'] },
           description: { type: 'string' },
@@ -74,6 +75,7 @@ export default async function createGlobalSettingRoute(fastify: FastifyInstance)
         validatedData.value,
         validatedData.type,
         {
+          name: validatedData.name,
           description: validatedData.description,
           encrypted: validatedData.encrypted,
           group_id: validatedData.group_id
@@ -85,6 +87,7 @@ export default async function createGlobalSettingRoute(fastify: FastifyInstance)
         success: true,
         data: {
           key: String(setting.key),
+          name: setting.name ? String(setting.name) : null,
           value: setting.value,
           type: setting.type ? String(setting.type) : null,
           description: setting.description ? String(setting.description) : null,

@@ -2,6 +2,7 @@ export type GlobalSettingType = 'string' | 'number' | 'boolean';
 
 export interface GlobalSettingDefinition {
   key: string;
+  name: string;
   defaultValue: string | number | boolean;
   type: GlobalSettingType;
   description: string;

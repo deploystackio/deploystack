@@ -41,6 +41,7 @@ export default async function updateGlobalSettingRoute(fastify: FastifyInstance)
       body: {
         type: 'object',
         properties: {
+          name: { type: 'string' },
           value: { type: 'string', minLength: 1 },
           description: { type: 'string' },
           encrypted: { type: 'boolean' },
@@ -81,6 +82,7 @@ export default async function updateGlobalSettingRoute(fastify: FastifyInstance)
         success: true,
         data: {
           key: String(setting.key),
+          name: setting.name ? String(setting.name) : null,
           value: setting.value,
           type: setting.type ? String(setting.type) : null,
           description: setting.description ? String(setting.description) : null,

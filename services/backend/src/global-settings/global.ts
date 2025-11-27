@@ -11,54 +11,61 @@ export const globalSettings: GlobalSettingsModule = {
   settings: [
     {
       key: 'global.page_url',
+      name: 'Frontend URL',
       defaultValue: 'http://localhost:5173',
       type: 'string',
-      description: 'Base URL for the application frontend',
+      description: 'Base URL for the application frontend.',
       encrypted: false,
       required: true
     },
     {
       key: 'global.backend_url',
+      name: 'Backend URL',
       defaultValue: 'http://localhost:3000',
       type: 'string',
-      description: 'Base URL for the application backend API',
+      description: 'Base URL for the application backend API.',
       encrypted: false,
       required: true
     },
     {
       key: 'global.enable_login',
+      name: 'Enable Login',
       defaultValue: true,
       type: 'boolean',
-      description: 'Enable or disable all login functionality (email, GitHub, etc.)',
+      description: 'Allow users to log in using any authentication method (email, GitHub, etc.).',
       encrypted: false,
       required: false
     },
     {
       key: 'global.enable_email_registration',
+      name: 'Enable Email Registration',
       defaultValue: true,
       type: 'boolean',
-      description: 'Enable or disable email registration',
+      description: 'Allow new users to register using their email address.',
       encrypted: false,
       required: false
     },
     {
       key: 'global.enable_swagger_docs',
+      name: 'Enable Swagger Docs',
       defaultValue: true,
       type: 'boolean',
-      description: 'Enable or disable Swagger API documentation endpoint (/documentation)',
+      description: 'Expose the Swagger API documentation endpoint at /documentation.',
       encrypted: false,
       required: false
     },
     {
       key: 'global.show_version',
+      name: 'Show Backend Version',
       defaultValue: true,
       type: 'boolean',
-      description: 'Show backend version in the root API response. When disabled, version information is hidden from visitors.',
+      description: 'Display backend version in the root API response. When disabled, version information is hidden from visitors.',
       encrypted: false,
       required: false
     },
     {
       key: 'global.team_member_limit',
+      name: 'Team Member Limit',
       defaultValue: 3,
       type: 'number',
       description: 'Maximum number of members allowed in non-default teams. Default teams are always limited to 1 member (the owner).',
@@ -67,33 +74,37 @@ export const globalSettings: GlobalSettingsModule = {
     },
     {
       key: 'global.team_creation_limit',
+      name: 'Team Creation Limit',
       defaultValue: 3,
       type: 'number',
-      description: 'Maximum number of teams a user can create. This includes both default and custom teams.',
+      description: 'Maximum number of teams a user can create, including both default and custom teams.',
       encrypted: false,
       required: false
     },
     {
       key: 'global.send_welcome_email',
+      name: 'Send Welcome Email',
       defaultValue: false,
       type: 'boolean',
-      description: 'Send welcome email to users when they verify their email or login via OAuth flows (GitHub, etc.)',
+      description: 'Send a welcome email when users verify their email or log in via OAuth (GitHub, etc.).',
       encrypted: false,
       required: false
     },
     {
       key: 'global.show_user_walkthrough',
+      name: 'Show User Walkthrough',
       defaultValue: false,
       type: 'boolean',
-      description: 'Show user walkthrough flow when users log in. When enabled, users who have not completed or cancelled the walkthrough will see the walkthrough process in the frontend.',
+      description: 'Display onboarding walkthrough for users who have not completed or cancelled it.',
       encrypted: false,
       required: false
     },
     {
       key: 'global.default_non_http_mcp_limit',
+      name: 'Default Non-HTTP MCP Limit',
       defaultValue: 1,
       type: 'number',
-      description: 'Default maximum number of non-HTTP (stdio) MCP servers that can be installed per team. This limit is applied when a new team is created. HTTP and SSE MCP servers are not affected by this limit.',
+      description: 'Maximum number of non-HTTP (stdio) MCP servers per team. Applied when a new team is created. HTTP and SSE servers are not affected.',
       encrypted: false,
       required: false
     }
