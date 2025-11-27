@@ -170,7 +170,7 @@ async function handleProfileSubmit(event: Event) {
           <div v-else class="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle class="text-xl">{{ t('userAccount.profile.title') }}</CardTitle>
+                <CardTitle>{{ t('userAccount.profile.title') }}</CardTitle>
                 <CardDescription>
                   {{ t('userAccount.profile.description') }}
                 </CardDescription>

@@ -6,11 +6,14 @@ import { useConnectionTest } from '@/composables/useConnectionTest'
 import type { SettingsComponentProps, SettingsComponentEvents } from '@/composables/useSettingsComponentRegistry'
 import {
   Card,
-  CardContent
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
 } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Switch } from '@/components/ui/switch'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Separator } from '@/components/ui/separator'
@@ -98,24 +101,25 @@ function getSetting(key: string) {
     <div class="md:hidden">
       <!-- Mobile: Form without Card wrapper -->
       <form @submit.prevent="handleSave" class="space-y-6">
-          <!-- Email Functionality Toggle -->
-          <div class="space-y-2">
-            <div class="flex items-center space-x-2">
-              <Switch
-                id="smtp-enabled"
-                :model-value="Boolean(formValues['smtp.enabled'])"
-                @update:model-value="(value) => updateField('smtp.enabled', value)"
-              />
-              <Label for="smtp-enabled" class="font-medium">
-                {{ getSetting('smtp.enabled')?.description || t('smtp.fields.enabled.label') }}
-              </Label>
+          <!-- Email Functionality Checkbox -->
+          <div class="flex items-start gap-3">
+            <Checkbox
+              id="smtp-enabled"
+              :checked="Boolean(formValues['smtp.enabled'])"
+              @update:checked="(value: boolean) => updateField('smtp.enabled', value)"
+            />
+            <div class="grid gap-1">
+              <label
+                for="smtp-enabled"
+                class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                {{ getSetting('smtp.enabled')?.name || t('smtp.fields.enabled.label') }}
+              </label>
+              <p class="text-muted-foreground text-sm">
+                {{ getSetting('smtp.enabled')?.description || t('smtp.fields.enabled.description') }}
+              </p>
             </div>
-            <p class="text-xs text-muted-foreground">
-              {{ t('smtp.fields.enabled.description') }}
-            </p>
           </div>
-
-          <Separator />
 
           <!-- SMTP Host Field -->
           <div class="space-y-2">
@@ -200,21 +204,24 @@ function getSetting(key: string) {
             </p>
           </div>
 
-          <!-- SMTP Secure Toggle -->
-          <div class="space-y-2">
-            <div class="flex items-center space-x-2">
-              <Switch
-                id="smtp-secure"
-                :model-value="Boolean(formValues['smtp.secure'])"
-                @update:model-value="(value) => updateField('smtp.secure', value)"
-              />
-              <Label for="smtp-secure">
-                {{ getSetting('smtp.secure')?.description || t('smtp.fields.secure.label') }}
-              </Label>
+          <!-- SMTP Secure Checkbox -->
+          <div class="flex items-start gap-3">
+            <Checkbox
+              id="smtp-secure"
+              :checked="Boolean(formValues['smtp.secure'])"
+              @update:checked="(value: boolean) => updateField('smtp.secure', value)"
+            />
+            <div class="grid gap-1">
+              <label
+                for="smtp-secure"
+                class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                {{ getSetting('smtp.secure')?.name || t('smtp.fields.secure.label') }}
+              </label>
+              <p class="text-muted-foreground text-sm">
+                {{ getSetting('smtp.secure')?.description || t('smtp.fields.secure.description') }}
+              </p>
             </div>
-            <p class="text-xs text-muted-foreground">
-              {{ t('smtp.fields.secure.description') }}
-            </p>
           </div>
 
           <!-- From Name Field -->
@@ -360,26 +367,36 @@ function getSetting(key: string) {
 
       <!-- Desktop: Form with Card wrapper -->
       <Card class="hidden md:block">
-        <CardContent class="pt-6">
+        <CardHeader class="pb-3">
+          <CardTitle>
+            {{ props.group.name }}
+          </CardTitle>
+          <CardDescription v-if="props.group.description">
+            {{ props.group.description }}
+          </CardDescription>
+        </CardHeader>
+        <Separator />
+        <CardContent class="pt-10">
           <form @submit.prevent="handleSave" class="space-y-6">
-            <!-- Email Functionality Toggle -->
-            <div class="space-y-2">
-              <div class="flex items-center space-x-2">
-                <Switch
-                  id="smtp-enabled-desktop"
-                  :model-value="Boolean(formValues['smtp.enabled'])"
-                  @update:model-value="(value) => updateField('smtp.enabled', value)"
-                />
-                <Label for="smtp-enabled-desktop" class="font-medium">
-                  {{ getSetting('smtp.enabled')?.description || t('smtp.fields.enabled.label') }}
-                </Label>
+            <!-- Email Functionality Checkbox -->
+            <div class="flex items-start gap-3">
+              <Checkbox
+                id="smtp-enabled-desktop"
+                :checked="Boolean(formValues['smtp.enabled'])"
+                @update:checked="(value: boolean) => updateField('smtp.enabled', value)"
+              />
+              <div class="grid gap-1">
+                <label
+                  for="smtp-enabled-desktop"
+                  class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  {{ getSetting('smtp.enabled')?.name || t('smtp.fields.enabled.label') }}
+                </label>
+                <p class="text-muted-foreground text-sm">
+                  {{ getSetting('smtp.enabled')?.description || t('smtp.fields.enabled.description') }}
+                </p>
               </div>
-              <p class="text-xs text-muted-foreground">
-                {{ t('smtp.fields.enabled.description') }}
-              </p>
             </div>
-
-            <Separator />
 
             <!-- SMTP Host Field -->
             <div class="space-y-2">
@@ -464,21 +481,24 @@ function getSetting(key: string) {
               </p>
             </div>
 
-            <!-- SMTP Secure Toggle -->
-            <div class="space-y-2">
-              <div class="flex items-center space-x-2">
-                <Switch
-                  id="smtp-secure-desktop"
-                  :model-value="Boolean(formValues['smtp.secure'])"
-                  @update:model-value="(value) => updateField('smtp.secure', value)"
-                />
-                <Label for="smtp-secure-desktop">
-                  {{ getSetting('smtp.secure')?.description || t('smtp.fields.secure.label') }}
-                </Label>
+            <!-- SMTP Secure Checkbox -->
+            <div class="flex items-start gap-3">
+              <Checkbox
+                id="smtp-secure-desktop"
+                :checked="Boolean(formValues['smtp.secure'])"
+                @update:checked="(value: boolean) => updateField('smtp.secure', value)"
+              />
+              <div class="grid gap-1">
+                <label
+                  for="smtp-secure-desktop"
+                  class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  {{ getSetting('smtp.secure')?.name || t('smtp.fields.secure.label') }}
+                </label>
+                <p class="text-muted-foreground text-sm">
+                  {{ getSetting('smtp.secure')?.description || t('smtp.fields.secure.description') }}
+                </p>
               </div>
-              <p class="text-xs text-muted-foreground">
-                {{ t('smtp.fields.secure.description') }}
-              </p>
             </div>
 
             <!-- From Name Field -->

@@ -195,7 +195,7 @@ onMounted(async () => {
           <!-- Client Configuration Content -->
           <Card v-else-if="selectedClient">
             <CardHeader>
-              <CardTitle class="text-xl">
+              <CardTitle>
                 {{ getClientDisplayName(selectedClient) }}
               </CardTitle>
             </CardHeader>

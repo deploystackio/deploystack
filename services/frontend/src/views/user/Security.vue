@@ -180,7 +180,7 @@ async function handleSecuritySubmit(event: Event) {
           <div v-else class="space-y-6">
             <Card v-if="canChangePassword">
               <CardHeader>
-                <CardTitle class="text-xl">{{ t('userAccount.security.title') }}</CardTitle>
+                <CardTitle>{{ t('userAccount.security.title') }}</CardTitle>
                 <CardDescription>
                   {{ t('userAccount.security.description') }}
                 </CardDescription>
@@ -239,7 +239,7 @@ async function handleSecuritySubmit(event: Event) {
             <!-- Message for non-email users -->
             <Card v-else>
               <CardHeader>
-                <CardTitle class="text-xl">{{ t('userAccount.security.unavailable.title') }}</CardTitle>
+                <CardTitle>{{ t('userAccount.security.unavailable.title') }}</CardTitle>
                 <CardDescription>
                   {{ t('userAccount.security.unavailable.description') }}
                 </CardDescription>

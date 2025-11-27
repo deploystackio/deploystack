@@ -10,8 +10,8 @@ import DashboardLayout from '@/components/DashboardLayout.vue'
 import { getEnv } from '@/utils/env'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Switch } from '@/components/ui/switch'
-import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Field, FieldGroup, FieldLabel, FieldDescription } from '@/components/ui/field'
 import {
   Card,
   CardContent,
@@ -19,6 +19,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { Separator } from '@/components/ui/separator'
 import { getSettingsComponent } from '@/composables/useSettingsComponentRegistry'
 
 const { t } = useI18n()
@@ -356,46 +357,62 @@ async function handleSubmit(event: Event) {
             <div v-else>
               <!-- Mobile: Form without Card wrapper -->
               <div class="md:hidden">
-                <form v-if="selectedGroup.settings && selectedGroup.settings.length > 0" class="space-y-6" @submit="handleSubmit">
-                  <div v-for="setting in selectedGroup.settings" :key="setting.key" class="space-y-2">
-                    <Label :for="`setting-${setting.key}`">{{ setting.description || setting.key }}</Label>
+                <form v-if="selectedGroup.settings && selectedGroup.settings.length > 0" @submit="handleSubmit">
+                  <FieldGroup>
+                    <template v-for="setting in selectedGroup.settings" :key="setting.key">
+                      <!-- Boolean Checkbox -->
+                      <div v-if="setting.type === 'boolean'" class="flex items-start gap-3">
+                        <Checkbox
+                          :id="`setting-${setting.key}`"
+                          :checked="formValues[setting.key] as boolean"
+                          @update:checked="(value: boolean) => {
+                            formValues[setting.key] = value
+                          }"
+                        />
+                        <div class="grid gap-1">
+                          <label
+                            :for="`setting-${setting.key}`"
+                            class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                          >
+                            {{ setting.name || setting.key }}
+                          </label>
+                          <p v-if="setting.description" class="text-muted-foreground text-sm">
+                            {{ setting.description }}
+                          </p>
+                        </div>
+                      </div>
 
-                    <!-- String Input (text or password) -->
-                    <Input
-                      v-if="setting.type === 'string'"
-                      :id="`setting-${setting.key}`"
-                      :type="setting.is_encrypted ? 'password' : 'text'"
-                      v-model="formValues[setting.key] as string"
-                      class="w-full"
-                    />
-
-                    <!-- Number Input -->
-                    <Input
-                      v-else-if="setting.type === 'number'"
-                      :id="`setting-${setting.key}`"
-                      type="number"
-                      v-model.number="formValues[setting.key] as number"
-                      class="w-full"
-                    />
-
-                    <!-- Boolean Toggle Switch -->
-                    <div v-else-if="setting.type === 'boolean'">
-                      <Switch
-                        :id="`setting-${setting.key}`"
-                        :model-value="formValues[setting.key] as boolean"
-                        @update:model-value="(value: boolean) => {
-                          formValues[setting.key] = value
-                        }"
-                      />
-                    </div>
-
-                    <p v-if="setting.is_encrypted" class="text-xs text-muted-foreground">{{ t('globalSettings.form.encryptedValue') }}</p>
-                  </div>
+                      <!-- String/Number Input with Field -->
+                      <Field v-else>
+                        <FieldLabel :for="`setting-${setting.key}`">
+                          {{ setting.name || setting.key }}
+                        </FieldLabel>
+                        <Input
+                          v-if="setting.type === 'string'"
+                          :id="`setting-${setting.key}`"
+                          :type="setting.is_encrypted ? 'password' : 'text'"
+                          v-model="formValues[setting.key] as string"
+                        />
+                        <Input
+                          v-else-if="setting.type === 'number'"
+                          :id="`setting-${setting.key}`"
+                          type="number"
+                          v-model.number="formValues[setting.key] as number"
+                        />
+                        <FieldDescription v-if="setting.description">
+                          {{ setting.description }}
+                        </FieldDescription>
+                        <p v-if="setting.is_encrypted" class="text-xs text-muted-foreground">
+                          {{ t('globalSettings.form.encryptedValue') }}
+                        </p>
+                      </Field>
+                    </template>
+                  </FieldGroup>
 
                   <Button
                     type="submit"
                     :loading="isSubmitting"
-                    class="w-full sm:w-auto"
+                    class="w-full sm:w-auto mt-7"
                   >
                     {{ t('globalSettings.form.saveChanges') }}
                   </Button>
@@ -410,54 +427,72 @@ async function handleSubmit(event: Event) {
 
               <!-- Desktop: Form with Card wrapper -->
               <Card class="hidden md:block">
-                <CardHeader>
-                  <CardTitle class="text-xl">
+                <CardHeader class="pb-3">
+                  <CardTitle>
                     {{ selectedGroup.name }}
                   </CardTitle>
                   <CardDescription v-if="selectedGroup.description">
                     {{ selectedGroup.description }}
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <form v-if="selectedGroup.settings && selectedGroup.settings.length > 0" class="space-y-6" @submit="handleSubmit">
-                    <div v-for="setting in selectedGroup.settings" :key="setting.key" class="space-y-2">
-                      <Label :for="`setting-${setting.key}-desktop`">{{ setting.description || setting.key }}</Label>
+                <Separator />
+                <CardContent class="pt-10">
+                  <form v-if="selectedGroup.settings && selectedGroup.settings.length > 0" @submit="handleSubmit">
+                    <FieldGroup>
+                      <template v-for="setting in selectedGroup.settings" :key="setting.key">
+                        <!-- Boolean Checkbox -->
+                        <div v-if="setting.type === 'boolean'" class="flex items-start gap-3">
+                          <Checkbox
+                            :id="`setting-${setting.key}-desktop`"
+                            :checked="formValues[setting.key] as boolean"
+                            @update:checked="(value: boolean) => {
+                              formValues[setting.key] = value
+                            }"
+                          />
+                          <div class="grid gap-1">
+                            <label
+                              :for="`setting-${setting.key}-desktop`"
+                              class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                            >
+                              {{ setting.name || setting.key }}
+                            </label>
+                            <p v-if="setting.description" class="text-muted-foreground text-sm">
+                              {{ setting.description }}
+                            </p>
+                          </div>
+                        </div>
 
-                      <!-- String Input (text or password) -->
-                      <Input
-                        v-if="setting.type === 'string'"
-                        :id="`setting-${setting.key}-desktop`"
-                        :type="setting.is_encrypted ? 'password' : 'text'"
-                        v-model="formValues[setting.key] as string"
-                        class="w-full"
-                      />
-
-                      <!-- Number Input -->
-                      <Input
-                        v-else-if="setting.type === 'number'"
-                        :id="`setting-${setting.key}-desktop`"
-                        type="number"
-                        v-model.number="formValues[setting.key] as number"
-                        class="w-full"
-                      />
-
-                      <!-- Boolean Toggle Switch -->
-                      <div v-else-if="setting.type === 'boolean'">
-                        <Switch
-                          :id="`setting-${setting.key}-desktop`"
-                          :model-value="formValues[setting.key] as boolean"
-                          @update:model-value="(value: boolean) => {
-                            formValues[setting.key] = value
-                          }"
-                        />
-                      </div>
-
-                      <p v-if="setting.is_encrypted" class="text-xs text-muted-foreground">{{ t('globalSettings.form.encryptedValue') }}</p>
-                    </div>
+                        <!-- String/Number Input with Field -->
+                        <Field v-else>
+                          <FieldLabel :for="`setting-${setting.key}-desktop`">
+                            {{ setting.name || setting.key }}
+                          </FieldLabel>
+                          <Input
+                            v-if="setting.type === 'string'"
+                            :id="`setting-${setting.key}-desktop`"
+                            :type="setting.is_encrypted ? 'password' : 'text'"
+                            v-model="formValues[setting.key] as string"
+                          />
+                          <Input
+                            v-else-if="setting.type === 'number'"
+                            :id="`setting-${setting.key}-desktop`"
+                            type="number"
+                            v-model.number="formValues[setting.key] as number"
+                          />
+                          <FieldDescription v-if="setting.description">
+                            {{ setting.description }}
+                          </FieldDescription>
+                          <p v-if="setting.is_encrypted" class="text-xs text-muted-foreground">
+                            {{ t('globalSettings.form.encryptedValue') }}
+                          </p>
+                        </Field>
+                      </template>
+                    </FieldGroup>
 
                     <Button
                       type="submit"
                       :loading="isSubmitting"
+                      class="mt-7"
                     >
                       {{ t('globalSettings.form.saveChanges') }}
                     </Button>

@@ -129,6 +129,18 @@ export class GlobalSettingsInitService {
         await this.createSettingsIndividually(allSettings, result);
       }
 
+      // Update existing settings with name field if missing
+      try {
+        await this.updateSettingsMetadata(allSettings);
+      } catch (error) {
+        if (logger) {
+          logger.debug({
+            operation: 'update_settings_metadata',
+            error: error instanceof Error ? error.message : String(error)
+          }, 'Failed to update settings metadata during initialization');
+        }
+      }
+
       // Check for missing required settings
       try {
         await this.validateRequiredSettings();
@@ -316,7 +328,7 @@ export class GlobalSettingsInitService {
     for (const setting of allSettings) {
       try {
         const exists = await GlobalSettingsService.exists(setting.key);
-        
+
         if (!exists) {
           const groupIdForThisSetting = this.getGroupIdForSetting(setting.key);
           await GlobalSettingsService.setTyped(setting.key, setting.defaultValue, setting.type, {
@@ -325,12 +337,46 @@ export class GlobalSettingsInitService {
             encrypted: setting.encrypted,
             group_id: groupIdForThisSetting === 'unknown' ? undefined : groupIdForThisSetting
           });
-          
+
           result.created++;
           result.createdSettings.push(setting.key);
         } else {
           result.skipped++;
           result.skippedSettings.push(setting.key);
+        }
+      } catch {
+        // Silently continue on error
+      }
+    }
+  }
+
+  /**
+   * Update existing settings with metadata (name) from definitions
+   * This ensures settings created before the name field was added get updated
+   */
+  private static async updateSettingsMetadata(allSettings: GlobalSettingDefinition[]): Promise<void> {
+    const db = getDb();
+    const schema = getSchema();
+
+    if (!db) {
+      return;
+    }
+
+    for (const setting of allSettings) {
+      try {
+        // Get the current setting from database
+        const existingSetting = await GlobalSettingsService.get(setting.key);
+
+        // If setting exists but has no name, update it with the name from definition
+        if (existingSetting && !existingSetting.name && setting.name) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          await (db as any)
+            .update(schema.globalSettings)
+            .set({
+              name: setting.name,
+              updated_at: new Date()
+            })
+            .where(eq(schema.globalSettings.key, setting.key));
         }
       } catch {
         // Silently continue on error

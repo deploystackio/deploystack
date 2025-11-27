@@ -6,11 +6,14 @@ import { useConnectionTest } from '@/composables/useConnectionTest'
 import type { SettingsComponentProps, SettingsComponentEvents } from '@/composables/useSettingsComponentRegistry'
 import {
   Card,
-  CardContent
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
 } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Switch } from '@/components/ui/switch'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Separator } from '@/components/ui/separator'
@@ -144,21 +147,24 @@ function getSetting(key: string) {
             </p>
           </div>
 
-          <!-- Enable Toggle -->
-          <div class="space-y-2">
-            <div class="flex items-center space-x-2">
-              <Switch
-                id="enabled"
-                :model-value="Boolean(formValues['github.app.enabled'])"
-                @update:model-value="(value) => updateField('github.app.enabled', value)"
-              />
-              <Label for="enabled">
-                {{ getSetting('github.app.enabled')?.description || t('githubApp.fields.enabled.label') }}
-              </Label>
+          <!-- Enable Checkbox -->
+          <div class="flex items-start gap-3">
+            <Checkbox
+              id="enabled"
+              :checked="Boolean(formValues['github.app.enabled'])"
+              @update:checked="(value: boolean) => updateField('github.app.enabled', value)"
+            />
+            <div class="grid gap-1">
+              <label
+                for="enabled"
+                class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                {{ getSetting('github.app.enabled')?.name || t('githubApp.fields.enabled.label') }}
+              </label>
+              <p class="text-muted-foreground text-sm">
+                {{ getSetting('github.app.enabled')?.description || t('githubApp.fields.enabled.description') }}
+              </p>
             </div>
-            <p class="text-xs text-muted-foreground">
-              {{ t('githubApp.fields.enabled.description') }}
-            </p>
           </div>
 
           <Separator />
@@ -240,7 +246,16 @@ function getSetting(key: string) {
 
       <!-- Desktop: Form with Card wrapper -->
       <Card class="hidden md:block">
-        <CardContent class="pt-6">
+        <CardHeader class="pb-3">
+          <CardTitle>
+            {{ props.group.name }}
+          </CardTitle>
+          <CardDescription v-if="props.group.description">
+            {{ props.group.description }}
+          </CardDescription>
+        </CardHeader>
+        <Separator />
+        <CardContent class="pt-10">
           <form @submit.prevent="handleSave" class="space-y-6">
             <!-- App ID Field -->
             <div class="space-y-2">
@@ -303,21 +318,24 @@ function getSetting(key: string) {
               </p>
             </div>
 
-            <!-- Enable Toggle -->
-            <div class="space-y-2">
-              <div class="flex items-center space-x-2">
-                <Switch
-                  id="enabled-desktop"
-                  :model-value="Boolean(formValues['github.app.enabled'])"
-                  @update:model-value="(value) => updateField('github.app.enabled', value)"
-                />
-                <Label for="enabled-desktop">
-                  {{ getSetting('github.app.enabled')?.description || t('githubApp.fields.enabled.label') }}
-                </Label>
+            <!-- Enable Checkbox -->
+            <div class="flex items-start gap-3">
+              <Checkbox
+                id="enabled-desktop"
+                :checked="Boolean(formValues['github.app.enabled'])"
+                @update:checked="(value: boolean) => updateField('github.app.enabled', value)"
+              />
+              <div class="grid gap-1">
+                <label
+                  for="enabled-desktop"
+                  class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  {{ getSetting('github.app.enabled')?.name || t('githubApp.fields.enabled.label') }}
+                </label>
+                <p class="text-muted-foreground text-sm">
+                  {{ getSetting('github.app.enabled')?.description || t('githubApp.fields.enabled.description') }}
+                </p>
               </div>
-              <p class="text-xs text-muted-foreground">
-                {{ t('githubApp.fields.enabled.description') }}
-              </p>
             </div>
 
             <Separator />

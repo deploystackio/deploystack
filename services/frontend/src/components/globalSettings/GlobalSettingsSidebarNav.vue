@@ -6,13 +6,13 @@ import { Button } from '@/components/ui/button' // Adjusted path assuming shadcn
 
 export interface Setting {
   key: string
+  name?: string
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   value: any
   type: 'string' | 'number' | 'boolean'
   description?: string
   is_encrypted?: boolean
   group_id?: string
-  // Add other potential fields like 'required', 'type' if known/needed
 }
 
 export interface GlobalSettingGroup {

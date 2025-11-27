@@ -1,6 +1,7 @@
 // Settings-related TypeScript types
 export interface Setting {
   key: string
+  name?: string
   value?: string | number | boolean
   type: 'string' | 'number' | 'boolean'
   description?: string
