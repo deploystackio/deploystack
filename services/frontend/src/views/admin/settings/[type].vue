@@ -336,7 +336,7 @@ async function handleSubmit(event: Event) {
         </aside>
 
         <!-- Content Area -->
-        <div class="flex-1 md:max-w-3xl">
+        <div class="flex-1">
 
           <div v-if="isLoading" class="text-muted-foreground">{{ t('globalSettings.loading') }}</div>
           <div v-else-if="error" class="text-red-500">{{ t('globalSettings.errors.loadSettings') }}: {{ error }}</div>

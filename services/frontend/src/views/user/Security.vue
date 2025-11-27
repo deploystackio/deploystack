@@ -170,7 +170,7 @@ async function handleSecuritySubmit(event: Event) {
         </aside>
         
         <!-- Content Area -->
-        <div class="flex-1 md:max-w-3xl">
+        <div class="flex-1">
           <!-- Loading State -->
           <div v-if="isLoading" class="text-muted-foreground py-8 text-center">
             {{ t('userAccount.messages.loading') }}
