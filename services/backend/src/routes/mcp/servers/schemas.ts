@@ -55,7 +55,13 @@ const SERVER_FIELDS = {
   repository_subfolder: { type: 'string', description: 'Subfolder path for monorepos' },
   git_branch: { type: 'string', description: 'Git branch (defaults to main)' },
   website_url: { type: 'string', format: 'uri', description: 'Website URL' },
-  icon_url: { type: 'string', format: 'uri', description: 'Icon/logo URL' },
+  icon_url: {
+    oneOf: [
+      { type: 'string', maxLength: 0 },
+      { type: 'string', format: 'uri' }
+    ],
+    description: 'Icon/logo URL (empty string or valid URI)'
+  },
   language: { type: 'string', minLength: 1, description: 'Programming language is required' },
   runtime: { type: 'string', minLength: 1, description: 'Runtime environment is required' },
   transport_type: { type: 'string', enum: ['stdio', 'http', 'sse'], description: 'MCP transport type' },
@@ -582,9 +588,11 @@ export const CREATE_GLOBAL_SERVER_REQUEST_SCHEMA = {
       description: 'Website URL'
     },
     icon_url: {
-      type: 'string',
-      format: 'uri',
-      description: 'Icon/logo URL'
+      oneOf: [
+        { type: 'string', maxLength: 0 },
+        { type: 'string', format: 'uri' }
+      ],
+      description: 'Icon/logo URL (empty string or valid URI)'
     },
     github_account_id: {
       type: 'string',

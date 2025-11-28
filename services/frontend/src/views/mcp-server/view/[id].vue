@@ -2,8 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Button } from '@/components/ui/button'
-import { ArrowLeft } from 'lucide-vue-next'
+import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
 import DashboardLayout from '@/components/DashboardLayout.vue'
 import McpServerReadme from '@/components/mcp-server/view/McpServerReadme.vue'
 import McpServerInfoSidebar from '@/components/mcp-server/view/McpServerInfoSidebar.vue'
@@ -13,6 +12,7 @@ import type { McpServer } from '@/views/admin/mcp-server-catalog/types'
 const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
+const { setBreadcrumbs } = useBreadcrumbs()
 
 const server = ref<McpServer | null>(null)
 const isLoading = ref(true)
@@ -38,13 +38,22 @@ async function fetchReadme() {
 }
 
 onMounted(async () => {
+  setBreadcrumbs([
+    { label: t('mcpInstallations.title'), href: '/mcp-server' },
+    { label: t('mcpInstallations.view.titleLoading') }
+  ])
+
   try {
     isLoading.value = true
     server.value = await McpCatalogService.getServerById(serverId)
     error.value = null
 
-    // Fetch README after server data is loaded successfully
+    // Update breadcrumbs with server name
     if (server.value) {
+      setBreadcrumbs([
+        { label: t('mcpInstallations.title'), href: '/mcp-server' },
+        { label: server.value.name }
+      ])
       await fetchReadme()
     }
   } catch (err) {
@@ -54,10 +63,6 @@ onMounted(async () => {
     isLoading.value = false
   }
 })
-
-const goBack = () => {
-  router.push('/mcp-server')
-}
 
 const installServer = () => {
   router.push({
@@ -71,18 +76,8 @@ const installServer = () => {
 </script>
 
 <template>
-  <DashboardLayout :title="server ? server.name : t('mcpInstallations.view.titleLoading')">
+  <DashboardLayout>
     <div class="space-y-6">
-      <div class="flex items-center">
-        <Button
-          variant="outline"
-          @click="goBack"
-        >
-          <ArrowLeft class="h-4 w-4 mr-2" />
-          {{ t('mcpInstallations.view.backToServers') }}
-        </Button>
-      </div>
-
       <div v-if="isLoading" class="text-muted-foreground text-center py-12">
         {{ t('mcpInstallations.view.loading') }}
       </div>

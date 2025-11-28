@@ -84,7 +84,7 @@ describe('banner.ts', () => {
       const bannerOutput = logCall[1] as string;
       // Check for parts of the ASCII art
       expect(bannerOutput).toContain('██████╗ ███████╗██████╗ ██╗      ██████╗ ██╗   ██╗███████╗████████╗ █████╗  ██████╗██╗  ██╗');
-      expect(bannerOutput).toContain('DeployStack CI/CD Backend');
+      expect(bannerOutput).toContain('DeployStack Backend');
     });
 
     it('should include ANSI color codes', () => {
@@ -177,7 +177,7 @@ describe('banner.ts', () => {
       expect(bannerOutput).toContain('╔═══'); // Top border
       expect(bannerOutput).toContain('╚═══'); // Bottom border
       expect(bannerOutput).toContain('║'); // Side borders
-      expect(bannerOutput).toContain('DeployStack CI/CD Backend');
+      expect(bannerOutput).toContain('DeployStack Backend');
       expect(bannerOutput).toContain('Running on port');
       expect(bannerOutput).toContain('Environment:');
     });

@@ -4,18 +4,19 @@ import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { ArrowLeft, Info, Users, Shield, Loader2, AlertTriangle } from 'lucide-vue-next'
+import { Loader2, AlertTriangle } from 'lucide-vue-next'
 import { DsTabs, DsTabsItem } from '@/components/ui/ds-tabs'
 import DashboardLayout from '@/components/DashboardLayout.vue'
-import ContentWrapper from '@/components/ContentWrapper.vue'
 import { TeamInfo, TeamMembers, TeamDangerZone } from '@/components/teams/manage'
 import { TeamService, type Team } from '@/services/teamService'
 import { useEventBus } from '@/composables/useEventBus'
+import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
 
 const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const eventBus = useEventBus()
+const { setBreadcrumbs } = useBreadcrumbs()
 
 // State
 const team = ref<Team | null>(null)
@@ -26,12 +27,6 @@ const activeTab = ref('team-info')
 
 // Computed properties
 const teamId = computed(() => route.params.id as string)
-
-const pageTitle = computed(() => {
-  return team.value
-    ? `${t('teams.manage.title')}: ${team.value.name}`
-    : t('teams.manage.loading')
-})
 
 const canEditName = computed(() => {
   return team.value?.is_admin === true &&
@@ -68,6 +63,12 @@ const loadTeam = async () => {
     const teamData = await TeamService.getTeamById(teamId.value)
     team.value = teamData
 
+    // Update breadcrumbs with team name
+    setBreadcrumbs([
+      { label: t('teams.title'), href: '/teams' },
+      { label: teamData.name }
+    ])
+
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'Failed to load team'
     console.error('Error loading team:', err)
@@ -95,11 +96,6 @@ const handleTeamSelected = (data: { teamId: string; teamName: string }) => {
   }
 }
 
-// Navigate back to teams list
-const goBack = () => {
-  router.push('/teams')
-}
-
 // Initialize tab from query parameter
 const initializeTab = () => {
   const tabFromQuery = route.query.tab as string
@@ -121,6 +117,10 @@ watch(
 
 // Load data on mount
 onMounted(() => {
+  setBreadcrumbs([
+    { label: t('teams.title'), href: '/teams' },
+    { label: t('teams.manage.loading') }
+  ])
   initializeTab()
   loadTeam()
 
@@ -135,19 +135,8 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <DashboardLayout :title="pageTitle">
+  <DashboardLayout>
     <div class="space-y-6">
-      <!-- Header with Back Button -->
-      <div class="flex items-center justify-between">
-        <Button
-          variant="outline"
-          @click="goBack"
-        >
-          <ArrowLeft class="h-4 w-4 mr-2" />
-          {{ t('teams.manage.backToTeams') }}
-        </Button>
-      </div>
-
       <!-- Loading State -->
       <div v-if="isLoading" class="flex items-center justify-center py-12">
         <div class="flex items-center gap-3 text-muted-foreground">
@@ -172,7 +161,7 @@ onUnmounted(() => {
           >
             {{ t('teams.manage.errorActions.tryAgain') }}
           </Button>
-          <Button variant="ghost" size="sm" @click="goBack">
+          <Button variant="ghost" size="sm" @click="router.push('/teams')">
             {{ t('teams.manage.errorActions.backToTeams') }}
           </Button>
         </div>
@@ -180,42 +169,34 @@ onUnmounted(() => {
 
       <!-- Team Management with Tabs -->
       <div v-else-if="team">
-        <DsTabs v-model="activeTab">
-          <DsTabsItem value="team-info" label="Team Info">
-            <Info class="h-4 w-4" />
-          </DsTabsItem>
+        <DsTabs v-model="activeTab" variant="underlined" class="mb-10">
+          <DsTabsItem value="team-info" label="Team Info" />
           <DsTabsItem
             value="members"
             label="Members"
             :badge="memberCount > 1 ? memberCount : undefined"
-          >
-            <Users class="h-4 w-4" />
-          </DsTabsItem>
-          <DsTabsItem value="danger-zone" label="Danger Zone">
-            <Shield class="h-4 w-4" />
-          </DsTabsItem>
+          />
+          <DsTabsItem value="danger-zone" label="Danger Zone" />
         </DsTabs>
 
         <!-- Tab Content -->
-        <ContentWrapper>
-          <TeamInfo
-            v-if="activeTab === 'team-info'"
-            :team="team"
-            :can-edit-name="canEditName"
-            :can-edit-description="canEditDescription"
-            @team-updated="handleTeamUpdated"
-          />
-          <TeamMembers
-            v-if="activeTab === 'members'"
-            :team="team"
-            :can-manage-members="canManageMembers"
-          />
-          <TeamDangerZone
-            v-if="activeTab === 'danger-zone'"
-            :team="team"
-            :can-delete-team="canDeleteTeam"
-          />
-        </ContentWrapper>
+        <TeamInfo
+          v-if="activeTab === 'team-info'"
+          :team="team"
+          :can-edit-name="canEditName"
+          :can-edit-description="canEditDescription"
+          @team-updated="handleTeamUpdated"
+        />
+        <TeamMembers
+          v-if="activeTab === 'members'"
+          :team="team"
+          :can-manage-members="canManageMembers"
+        />
+        <TeamDangerZone
+          v-if="activeTab === 'danger-zone'"
+          :team="team"
+          :can-delete-team="canDeleteTeam"
+        />
       </div>
     </div>
   </DashboardLayout>

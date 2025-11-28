@@ -43,7 +43,7 @@ async function handleCopy() {
     <Textarea
       v-else
       :model-value="action.command"
-      class="min-h-[100px] font-mono text-sm bg-gray-50 dark:bg-gray-900"
+      class="min-h-[100px] font-mono text-sm bg-white dark:bg-gray-900"
       readonly
     />
 

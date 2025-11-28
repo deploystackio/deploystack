@@ -312,6 +312,7 @@ export default {
       previous: 'Previous',
       submit: 'Create Server',
       update: 'Update Server',
+      edit: 'Edit',
       creating: 'Creating...',
       updating: 'Updating...',
       cancel: 'Cancel',

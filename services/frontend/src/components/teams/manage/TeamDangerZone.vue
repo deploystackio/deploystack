@@ -200,7 +200,7 @@ const deleteTeam = async () => {
       </div>
 
       <!-- Additional Safety Information -->
-      <div class="bg-muted/50 rounded-lg p-4">
+      <div class="bg-white dark:bg-card border rounded-lg p-4">
         <h4 class="text-sm font-medium mb-2 flex items-center gap-2">
           <AlertTriangle class="h-4 w-4 text-amber-500" />
           {{ t('teams.manage.dangerZone.safetyInfo.title') }}

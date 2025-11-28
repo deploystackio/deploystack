@@ -28,6 +28,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { MoreHorizontal, Edit, Trash2 } from 'lucide-vue-next'
+import { DynamicIcon } from '@/components/ui/dynamic-icon'
 import type { McpCategory } from '@/services/mcpCategoriesService'
 
 const { t } = useI18n()
@@ -77,12 +78,6 @@ const sortedCategories = computed(() => {
 const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleDateString()
 }
-
-// Get icon component or fallback
-const getIconDisplay = (iconName?: string | null) => {
-  if (!iconName) return '—'
-  return iconName
-}
 </script>
 
 <template>
@@ -117,9 +112,12 @@ const getIconDisplay = (iconName?: string | null) => {
             </span>
           </TableCell>
           <TableCell>
-            <Badge v-if="category.icon" variant="secondary" class="font-mono text-xs">
-              {{ getIconDisplay(category.icon) }}
-            </Badge>
+            <div v-if="category.icon" class="flex items-center gap-2">
+              <DynamicIcon :name="category.icon" class="h-4 w-4 text-muted-foreground" />
+              <Badge variant="secondary" class="font-mono text-xs">
+                {{ category.icon }}
+              </Badge>
+            </div>
             <span v-else class="text-sm text-muted-foreground">—</span>
           </TableCell>
           <TableCell>

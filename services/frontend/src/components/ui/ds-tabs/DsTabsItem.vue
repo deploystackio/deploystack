@@ -129,11 +129,17 @@ const tabClasses = computed(() => {
   // Variant classes
   switch (variant) {
     case 'underlined':
+      // Override size padding for underlined variant
+      baseClasses.length = 0
       baseClasses.push(
-        'border-b-2 transition-colors',
+        'px-1 py-4 text-sm font-medium whitespace-nowrap',
+        'inline-flex items-center gap-2 transition-colors',
+        'focus:outline-none',
+        'disabled:cursor-not-allowed disabled:opacity-50',
+        'border-b-2',
         isActive.value
-          ? 'border-primary text-primary'
-          : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+          ? '!border-zinc-950 text-foreground dark:!border-zinc-50'
+          : '!border-transparent text-muted-foreground hover:text-foreground hover:!border-border'
       )
       break
     case 'pills':

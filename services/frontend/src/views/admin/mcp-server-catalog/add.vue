@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import { onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
+import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
 import { toast } from 'vue-sonner'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft } from 'lucide-vue-next'
@@ -15,6 +17,14 @@ type FinalPayload = CreateMcpServerRequest;
 
 const { t } = useI18n()
 const router = useRouter()
+const { setBreadcrumbs } = useBreadcrumbs()
+
+onMounted(() => {
+  setBreadcrumbs([
+    { label: t('mcpCatalog.title'), href: '/admin/mcp-server-catalog' },
+    { label: t('mcpCatalog.form.title') }
+  ])
+})
 
 const goBack = () => {
   router.push('/admin/mcp-server-catalog')
@@ -52,7 +62,7 @@ const handleCancel = () => {
 </script>
 
 <template>
-  <DashboardLayout :title="t('mcpCatalog.form.title')">
+  <DashboardLayout>
     <div class="space-y-6">
       <!-- Header with back button -->
       <div class="flex items-center gap-4">

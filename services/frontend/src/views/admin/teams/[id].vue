@@ -2,9 +2,10 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, Users, Crown, UserCheck, Pencil } from 'lucide-vue-next'
+import { Users, Crown, UserCheck, Pencil } from 'lucide-vue-next'
 import DashboardLayout from '@/components/DashboardLayout.vue'
 import { TeamService } from '@/services/teamService'
 import { getEnv } from '@/utils/env'
@@ -31,6 +32,7 @@ interface TeamMembersResponse {
 const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
+const { setBreadcrumbs } = useBreadcrumbs()
 
 const team = ref<Team | null>(null)
 const members = ref<TeamMember[]>([])
@@ -67,10 +69,21 @@ async function fetchTeamMembers(id: string): Promise<TeamMembersResponse> {
 
 // Load team and members on component mount
 onMounted(async () => {
+  setBreadcrumbs([
+    { label: t('adminTeams.title'), href: '/admin/teams' },
+    { label: t('adminTeams.teamDetail.titleLoading') }
+  ])
+
   try {
     isLoading.value = true
     team.value = await fetchTeam(teamId)
     error.value = null
+
+    // Update breadcrumbs with team name
+    setBreadcrumbs([
+      { label: t('adminTeams.title'), href: '/admin/teams' },
+      { label: team.value.name }
+    ])
 
     // Fetch members after team is loaded
     try {
@@ -105,29 +118,17 @@ const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleDateString()
 }
 
-const goBack = () => {
-  router.push('/admin/teams')
-}
-
 const goToEdit = () => {
   router.push(`/admin/teams/edit/${teamId}`)
 }
 </script>
 
 <template>
-  <DashboardLayout :title="team ? t('adminTeams.teamDetail.title', { name: team.name }) : t('adminTeams.teamDetail.titleLoading')">
+  <DashboardLayout>
     <div class="space-y-6">
-      <!-- Back Button and Edit Button -->
-      <div class="flex justify-between items-center">
+      <!-- Edit Button -->
+      <div v-if="team" class="flex justify-end">
         <Button
-          variant="outline"
-          @click="goBack"
-        >
-          <ArrowLeft class="h-4 w-4 mr-2" />
-          {{ t('adminTeams.teamDetail.backToTeams') }}
-        </Button>
-        <Button
-          v-if="team"
           variant="outline"
           @click="goToEdit"
         >

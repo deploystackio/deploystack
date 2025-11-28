@@ -11,6 +11,7 @@ import { CredentialsService } from '@/services/credentialsService'
 import { UserService } from '@/services/userService'
 import { TeamService, type Team } from '@/services/teamService'
 import { useEventBus } from '@/composables/useEventBus'
+import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
 import type { CloudCredential, CloudCredentialBasic } from './types'
 import CredentialsTable from '@/components/credentials/CredentialsTable.vue'
 import AddCredentialDialog from '@/components/credentials/AddCredentialDialog.vue'
@@ -30,6 +31,7 @@ const { t } = useI18n()
 const router = useRouter()
 const route = useRoute()
 const eventBus = useEventBus()
+const { setBreadcrumbs } = useBreadcrumbs()
 
 // State
 const credentials = ref<CloudCredential[]>([])
@@ -241,6 +243,8 @@ const checkDeleteSuccess = () => {
 
 // Load data on component mount
 onMounted(async () => {
+  setBreadcrumbs([{ label: t('credentials.title') }])
+
   // Check for delete success message first
   checkDeleteSuccess()
 
@@ -273,7 +277,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <DashboardLayout :title="t('credentials.title')">
+  <DashboardLayout>
     <div class="space-y-6">
       <!-- Header -->
       <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

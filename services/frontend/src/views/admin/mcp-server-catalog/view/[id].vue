@@ -2,13 +2,14 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
 import { toast } from 'vue-sonner'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import CategoryDisplay from '@/components/mcp-server/CategoryDisplay.vue'
 import ContentWrapper from '@/components/ContentWrapper.vue'
 import McpServerAvatar from '@/components/mcp-server/McpServerAvatar.vue'
-import { ArrowLeft, Github, GitBranch, Globe, ExternalLink, Package, Settings, Calendar, Tag, Trash2, AlertTriangle, Edit, Terminal, Users, User, Lock, Unlock, Link } from 'lucide-vue-next'
+import { Github, GitBranch, Globe, ExternalLink, Package, Settings, Calendar, Tag, Trash2, AlertTriangle, Edit, Terminal, Users, User, Lock, Unlock, Link } from 'lucide-vue-next'
 import DashboardLayout from '@/components/DashboardLayout.vue'
 
 import { McpCatalogService } from '@/services/mcpCatalogService'
@@ -34,6 +35,7 @@ import {
 const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
+const { setBreadcrumbs } = useBreadcrumbs()
 
 const server = ref<McpServer | null>(null)
 const isLoading = ref(true)
@@ -50,10 +52,21 @@ async function fetchServer(id: string): Promise<McpServer> {
 
 // Load server on component mount
 onMounted(async () => {
+  setBreadcrumbs([
+    { label: t('mcpCatalog.title'), href: '/admin/mcp-server-catalog' },
+    { label: t('mcpCatalog.edit.titleLoading') }
+  ])
+
   try {
     isLoading.value = true
     server.value = await fetchServer(serverId)
     error.value = null
+
+    // Update breadcrumbs with server name
+    setBreadcrumbs([
+      { label: t('mcpCatalog.title'), href: '/admin/mcp-server-catalog' },
+      { label: server.value.name }
+    ])
 
     // Check for success query parameter
     if (route.query.updated === 'true') {
@@ -343,24 +356,13 @@ const getRepositoryLabel = (platform: string | undefined) => {
   }
 }
 
-const goBack = () => {
-  router.push('/admin/mcp-server-catalog')
-}
 </script>
 
 <template>
-  <DashboardLayout :title="server ? t('mcpCatalog.edit.title', { name: server.name }) : t('mcpCatalog.edit.titleLoading')">
+  <DashboardLayout>
     <div class="space-y-6">
-      <!-- Header with Back and Manage Dropdown -->
-      <div class="flex items-center justify-between">
-        <Button
-          variant="outline"
-          @click="goBack"
-        >
-          <ArrowLeft class="h-4 w-4 mr-2" />
-          {{ t('mcpCatalog.edit.backToCatalog') }}
-        </Button>
-
+      <!-- Header with Manage Dropdown -->
+      <div class="flex items-center justify-end">
         <!-- Manage Server Dropdown -->
         <DropdownMenu v-if="server">
           <DropdownMenuTrigger asChild>

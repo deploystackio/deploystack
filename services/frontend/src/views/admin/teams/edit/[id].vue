@@ -2,10 +2,11 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
 import { toast } from 'vue-sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { ArrowLeft, RefreshCw } from 'lucide-vue-next'
+import { RefreshCw } from 'lucide-vue-next'
 import DashboardLayout from '@/components/DashboardLayout.vue'
 import TeamEditForm from '@/components/admin/teams/TeamEditForm.vue'
 import { TeamService } from '@/services/teamService'
@@ -14,6 +15,7 @@ import type { Team, UpdateTeamAdminRequest } from '../types'
 const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
+const { setBreadcrumbs } = useBreadcrumbs()
 
 const team = ref<Team | null>(null)
 const isLoading = ref(true)
@@ -28,6 +30,13 @@ const fetchTeam = async () => {
     isLoading.value = true
     error.value = null
     team.value = await TeamService.getTeamAsAdmin(teamId)
+
+    // Update breadcrumbs with team name
+    setBreadcrumbs([
+      { label: t('adminTeams.title'), href: '/admin/teams' },
+      { label: team.value.name, href: `/admin/teams/${teamId}` },
+      { label: t('adminTeams.teamEdit.editButton') }
+    ])
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'An unknown error occurred'
     team.value = null
@@ -66,30 +75,18 @@ const retryLoad = () => {
   fetchTeam()
 }
 
-// Go back
-const goBack = () => {
-  router.push(`/admin/teams/${teamId}`)
-}
-
 onMounted(() => {
+  setBreadcrumbs([
+    { label: t('adminTeams.title'), href: '/admin/teams' },
+    { label: t('adminTeams.teamEdit.titleLoading') }
+  ])
   fetchTeam()
 })
 </script>
 
 <template>
-  <DashboardLayout :title="team ? t('adminTeams.teamEdit.title', { name: team.name }) : t('adminTeams.teamEdit.titleLoading')">
+  <DashboardLayout>
     <div class="space-y-6">
-      <!-- Back Button -->
-      <div>
-        <Button
-          variant="outline"
-          @click="goBack"
-        >
-          <ArrowLeft class="h-4 w-4 mr-2" />
-          {{ t('adminTeams.teamEdit.backToTeam') }}
-        </Button>
-      </div>
-
       <!-- Loading State -->
       <div v-if="isLoading" class="flex items-center justify-center py-12">
         <div class="text-center space-y-4">

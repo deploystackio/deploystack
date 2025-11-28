@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { CodeHighlight } from '@/components/ui/code-highlight'
-import { ArrowLeft, Copy, RefreshCw, ExternalLink } from 'lucide-vue-next'
+import { Copy, RefreshCw, ExternalLink } from 'lucide-vue-next'
 import { toast } from 'vue-sonner'
 import DashboardLayout from '@/components/DashboardLayout.vue'
 import { JobsService } from '@/services/jobsService'
@@ -14,6 +15,7 @@ import type { Job } from './types'
 
 const route = useRoute()
 const router = useRouter()
+const { setBreadcrumbs } = useBreadcrumbs()
 
 const job = ref<Job | null>(null)
 const isLoading = ref(true)
@@ -70,10 +72,6 @@ const copyToClipboard = (text: string, label: string) => {
   toast.success(`${label} copied to clipboard`)
 }
 
-const handleBack = () => {
-  router.push('/admin/jobs')
-}
-
 const handleViewBatch = () => {
   if (job.value?.batch_id) {
     router.push(`/admin/jobs/batches/${job.value.batch_id}`)
@@ -85,6 +83,14 @@ const fetchJob = async (): Promise<void> => {
     isLoading.value = true
     error.value = null
     job.value = await JobsService.getJob(jobId.value)
+
+    // Update breadcrumbs with job ID
+    if (job.value) {
+      setBreadcrumbs([
+        { label: 'Background Jobs', href: '/admin/jobs' },
+        { label: `Job ${job.value.id.substring(0, 8)}` }
+      ])
+    }
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'Failed to load job'
   } finally {
@@ -98,18 +104,18 @@ const refreshJob = async (): Promise<void> => {
 }
 
 onMounted(() => {
+  setBreadcrumbs([
+    { label: 'Background Jobs', href: '/admin/jobs' },
+    { label: 'Job Details' }
+  ])
   fetchJob()
 })
 </script>
 
 <template>
-  <DashboardLayout :title="job ? `Job ${job.id.substring(0, 8)}` : 'Job Details'">
+  <DashboardLayout>
     <div class="space-y-6">
-      <div class="flex items-center justify-between">
-        <Button variant="ghost" @click="handleBack">
-          <ArrowLeft class="h-4 w-4 mr-2" />
-          Back to Jobs
-        </Button>
+      <div class="flex justify-end">
         <Button
           variant="outline"
           size="sm"

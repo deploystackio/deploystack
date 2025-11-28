@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-vue-next'
 import { toast } from 'vue-sonner'
 import { useEventBus } from '@/composables/useEventBus'
+import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
 import McpInstallationsCard from '@/components/mcp-server/McpInstallationsCard.vue'
 import McpInstallationsEmptyState from '@/components/mcp-server/McpInstallationsEmptyState.vue'
 import McpClientConnectionsCard from '@/components/mcp-server/McpClientConnectionsCard.vue'
@@ -22,6 +23,7 @@ import { UserPreferencesService } from '@/services/userPreferencesService'
 const { t } = useI18n()
 const router = useRouter()
 const eventBus = useEventBus()
+const { setBreadcrumbs } = useBreadcrumbs()
 
 // State
 const installations = ref<McpInstallation[]>([])
@@ -366,6 +368,9 @@ const checkForPendingNotification = () => {
 
 // Lifecycle
 onMounted(async () => {
+  // Set breadcrumbs
+  setBreadcrumbs([{ label: t('sidebar.navigation.dashboard') }])
+
   // Initialize team context first
   await initializeSelectedTeam()
 
@@ -406,7 +411,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <DashboardLayout title="Dashboard">
+  <DashboardLayout>
     <div class="space-y-6">
       <!-- Header -->
       <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

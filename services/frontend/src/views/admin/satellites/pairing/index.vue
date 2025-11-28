@@ -1,17 +1,17 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRouter } from 'vue-router'
+import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
 import { toast } from 'vue-sonner'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, Plus } from 'lucide-vue-next'
+import { Plus } from 'lucide-vue-next'
 import DashboardLayout from '@/components/DashboardLayout.vue'
 import TokenTable from '@/components/admin/satellites/TokenTable.vue'
 import CreateTokenModal from '@/components/admin/satellites/CreateTokenModal.vue'
 import { SatelliteTokenService, type RegistrationToken } from '@/services/satelliteTokenService'
 
 const { t } = useI18n()
-const router = useRouter()
+const { setBreadcrumbs } = useBreadcrumbs()
 
 // State
 const tokens = ref<RegistrationToken[]>([])
@@ -79,32 +79,21 @@ const handleTokenRevoked = async (tokenId: string) => {
   }
 }
 
-// Go back to satellites
-const goBack = () => {
-  router.push('/admin/satellites')
-}
-
 // Load data on component mount
 onMounted(async () => {
+  setBreadcrumbs([
+    { label: t('satellites.title'), href: '/admin/satellites' },
+    { label: t('satellites.pairing.title') }
+  ])
   await fetchTokens()
 })
 </script>
 
 <template>
-  <DashboardLayout :title="t('satellites.pairing.title')">
+  <DashboardLayout>
     <div class="space-y-6">
       <!-- Header -->
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-3">
-          <Button
-          @click="goBack"
-          variant="ghost"
-          class="flex items-center gap-2"
-          >
-            <ArrowLeft class="h-4 w-4" />
-            {{ t('satellites.actions.backToSatellites') }}
-          </Button>
-        </div>
+      <div class="flex justify-end">
         <Button
           @click="isCreateModalOpen = true"
           variant="default"

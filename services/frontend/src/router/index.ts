@@ -191,12 +191,12 @@ const routes = [
       {
         path: 'users',
         name: 'AdminUsers',
-        component: () => import('../views/admin/Users.vue'),
+        component: () => import('../views/admin/users/index.vue'),
       },
       {
         path: 'users/:id',
         name: 'AdminUserDetail',
-        component: () => import('../views/admin/UserDetail.vue'),
+        component: () => import('../views/admin/users/[id].vue'),
       },
       {
         path: 'teams',

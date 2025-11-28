@@ -254,7 +254,7 @@ defineExpose({
     </div>
 
     <!-- Team Limits Info -->
-    <div class="bg-muted/50 rounded-lg p-4">
+    <div class="bg-white dark:bg-card border rounded-lg p-4">
       <h4 class="text-sm font-medium mb-2 flex items-center gap-2">
         <Info class="h-4 w-4" />
         {{ t('teams.manage.members.info.title') }}

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
 import { toast } from 'vue-sonner'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -13,6 +14,7 @@ import CategoryTableColumns from './CategoryTableColumns.vue'
 
 const { t } = useI18n()
 const eventBus = useEventBus()
+const { setBreadcrumbs } = useBreadcrumbs()
 
 // State
 const categories = ref<McpCategory[]>([])
@@ -103,6 +105,7 @@ const handleCategorySuccess = (action: 'created' | 'updated') => {
 
 // Load data on component mount
 onMounted(async () => {
+  setBreadcrumbs([{ label: t('mcpCategories.title') }])
   await fetchCategories()
 
   // Listen for category updates from other components
@@ -118,7 +121,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <DashboardLayout :title="t('mcpCategories.title')">
+  <DashboardLayout>
     <div class="space-y-6">
       <!-- Header -->
       <div class="flex items-center justify-between">

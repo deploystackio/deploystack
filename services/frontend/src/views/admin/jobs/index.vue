@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
+import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
@@ -10,6 +11,8 @@ import { JobsService } from '@/services/jobsService'
 import JobTableColumns from './JobTableColumns.vue'
 import PaginationControls from '@/components/ui/pagination/PaginationControls.vue'
 import type { Job, JobStats, JobFilters, JobStatus, SearchJobsParams } from './types'
+
+const { setBreadcrumbs } = useBreadcrumbs()
 
 const jobs = ref<Job[]>([])
 const stats = ref<JobStats>({
@@ -175,12 +178,13 @@ const formatDuration = (ms: number): string => {
 
 
 onMounted(async () => {
+  setBreadcrumbs([{ label: 'Background Jobs' }])
   await Promise.all([fetchStats(), fetchJobTypes(), fetchJobs()])
 })
 </script>
 
 <template>
-  <DashboardLayout title="Background Jobs">
+  <DashboardLayout>
     <div class="space-y-6">
       <div>
         <p class="text-muted-foreground">

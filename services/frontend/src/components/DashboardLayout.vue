@@ -1,44 +1,30 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { StyleValue } from 'vue'
-import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar'
+import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar'
 import { Separator } from '@/components/ui/separator'
 import AppSidebar from '@/components/AppSidebar.vue'
-
-interface Props {
-  title: string
-}
-const props = defineProps<Props>()
+import SiteHeader from '@/components/SiteHeader.vue'
 
 // TODO: Implement cookie-based persistence for defaultOpen if needed, like in the shadcn/ui example.
 // For now, defaulting to true.
 const defaultOpen = true
 
 // Define sidebar width using custom values
-// Override the collapsed width to 30rem for testing
 const sidebarStyle = computed(() => ({
   '--sidebar-width': '16rem',
   '--sidebar-width-mobile': '18rem',
   '--sidebar-width-icon': '4rem',
 } as StyleValue))
-
-// A simple ref for the SiteHeader, can be expanded later
-// For now, just using the title prop.
 </script>
 
 <template>
   <SidebarProvider :default-open="defaultOpen" :style="sidebarStyle">
     <AppSidebar variant="inset" />
     <SidebarInset class="px-5">
-      <!-- SiteHeader equivalent -->
-      <header class="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
-        <div class="flex items-center gap-2 px-4">
-          <SidebarTrigger class="-ml-1" />
-          <h1 class="text-lg font-semibold md:text-xl">{{ props.title }}</h1>
-        </div>
-      </header>
+      <SiteHeader />
 
-      <Separator class="my-6 max-w-7xl" />
+      <Separator class="mb-6 max-w-7xl" />
 
       <!-- Content area -->
       <div class="flex flex-1 flex-col gap-4 py-4 pt-0 max-w-7xl">

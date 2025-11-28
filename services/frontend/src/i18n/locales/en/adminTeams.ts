@@ -62,6 +62,7 @@ export default {
     teamEdit: {
       title: 'Edit Team: {name}',
       titleLoading: 'Loading Team...',
+      editButton: 'Edit',
       backToTeam: 'Back to Team',
       loading: 'Loading team details...',
       errorLoading: 'Error loading team: {error}',

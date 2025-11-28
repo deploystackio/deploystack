@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import DashboardLayout from '@/components/DashboardLayout.vue'
 import { useEventBus } from '@/composables/useEventBus'
+import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
 import { useMcpToolsStatsStore } from '@/stores/mcpToolsStatsStore'
 import McpInstallationsEmptyState from '@/components/mcp-server/McpInstallationsEmptyState.vue'
 import {
@@ -40,6 +41,7 @@ const { t } = useI18n()
 const router = useRouter()
 const eventBus = useEventBus()
 const statsStore = useMcpToolsStatsStore()
+const { setBreadcrumbs } = useBreadcrumbs()
 
 const stats = ref<TeamMcpToolsStats | null>(null)
 const error = ref<string | null>(null)
@@ -128,6 +130,8 @@ const handleTeamSelected = () => {
 }
 
 onMounted(() => {
+  setBreadcrumbs([{ label: t('statistics.title') }])
+
   // Initialize teamId from storage
   initializeTeamId()
   // Fetch initial stats
@@ -144,7 +148,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <DashboardLayout :title="t('statistics.title')">
+  <DashboardLayout>
     <div class="space-y-6">
       <!-- Error Alert -->
       <Alert v-if="error" variant="destructive">

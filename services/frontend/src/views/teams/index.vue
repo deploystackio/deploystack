@@ -9,12 +9,14 @@ import AddTeamModal from '@/components/teams/AddTeamModal.vue'
 import { TeamService, type TeamWithRole, type Team } from '@/services/teamService'
 import { UserService } from '@/services/userService'
 import { useEventBus } from '@/composables/useEventBus'
+import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
 import TeamTableColumns from './TeamTableColumns.vue'
 import { useRouter } from 'vue-router'
 
 const { t } = useI18n()
 const router = useRouter()
 const eventBus = useEventBus()
+const { setBreadcrumbs } = useBreadcrumbs()
 
 // State
 const teams = ref<TeamWithRole[]>([])
@@ -149,6 +151,8 @@ const handleTeamCreated = async () => {
 
 // Load data on component mount
 onMounted(async () => {
+  setBreadcrumbs([{ label: t('teams.title') }])
+
   await Promise.all([
     checkPermissions(),
     fetchTeams(),
@@ -173,7 +177,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <DashboardLayout :title="t('teams.title')">
+  <DashboardLayout>
     <div class="space-y-6">
       <!-- Header -->
       <div class="flex items-center justify-between">

@@ -2,15 +2,11 @@
 import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
 import { toast } from 'vue-sonner'
 import DashboardLayout from '@/components/DashboardLayout.vue'
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { GatewayConfigService, type ClientConfigResponse, type ConfigAction, type ClientInfo, type ClientCategory } from '@/services/satelliteConfigService'
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
 import LinkActionRenderer from '@/components/client-config/LinkActionRenderer.vue'
 import StepsActionRenderer from '@/components/client-config/StepsActionRenderer.vue'
 import CommandActionRenderer from '@/components/client-config/CommandActionRenderer.vue'
@@ -20,6 +16,7 @@ import TextActionRenderer from '@/components/client-config/TextActionRenderer.vu
 const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
+const { setBreadcrumbs } = useBreadcrumbs()
 
 // State
 const clientCategories = ref<ClientCategory[]>([])
@@ -39,6 +36,32 @@ const selectedClientFromRoute = computed(() => {
 const selectedCategoryFromRoute = computed(() => {
   return route.params.category as string | undefined
 })
+
+// Separate actions into connection setup (non-text) and AI instructions (text)
+const connectionActions = computed(() => {
+  return actions.value.filter(action => action.type !== 'text')
+})
+
+const textActions = computed(() => {
+  return actions.value.filter(action => action.type === 'text')
+})
+
+// Mobile select value (combined category:client format)
+const mobileSelectValue = computed(() => {
+  if (selectedCategory.value && selectedClient.value) {
+    return `${selectedCategory.value}:${selectedClient.value}`
+  }
+  return undefined
+})
+
+// Handle mobile select change
+function handleMobileSelectChange(value: unknown) {
+  if (typeof value !== 'string') return
+  const [category, client] = value.split(':')
+  if (category && client) {
+    router.push(`/client-configuration/${category}/${client}`)
+  }
+}
 
 // Get display name for client ID
 function getClientDisplayName(clientId: string): string {
@@ -139,23 +162,54 @@ watch([selectedCategoryFromRoute, selectedClientFromRoute], async ([newCategory,
 })
 
 onMounted(async () => {
+  setBreadcrumbs([{ label: t('clientConfiguration.title') }])
   await loadSupportedClients()
 })
 </script>
 
 <template>
-  <DashboardLayout :title="t('clientConfiguration.title')">
+  <DashboardLayout>
     <!-- Main Content -->
     <div class="space-y-6 pb-16">
-      <div class="flex flex-col space-y-8 md:flex-row md:space-x-12 md:space-y-0">
+      <!-- Mobile Navigation -->
+      <div v-if="!isLoading" class="md:hidden">
+        <Select :model-value="mobileSelectValue" @update:model-value="handleMobileSelectChange">
+          <SelectTrigger class="w-full">
+            <SelectValue placeholder="Select a client" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup v-for="category in clientCategories" :key="category.id">
+              <SelectLabel>{{ category.name }}</SelectLabel>
+              <SelectItem
+                v-for="client in category.clients"
+                :key="client.id"
+                :value="`${category.id}:${client.id}`"
+              >
+                <div class="flex items-center gap-2">
+                  <img
+                    v-if="client.iconPath"
+                    :src="client.iconPath"
+                    :alt="client.name"
+                    class="w-4 h-4 object-contain"
+                  />
+                  <span>{{ client.name }}</span>
+                </div>
+              </SelectItem>
+            </SelectGroup>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div class="flex flex-col space-y-8 md:flex-row md:space-x-12 md:space-y-0 md:min-h-[calc(100vh-12rem)]">
         <!-- Desktop Sidebar Navigation -->
-        <aside class="hidden md:block md:w-1/5">
+        <aside class="hidden md:block md:w-1/5 md:border-r md:pr-8">
           <div v-if="!isLoading" class="space-y-6">
-            <div v-for="category in clientCategories" :key="category.id" class="space-y-2">
-              <h3 class="font-semibold text-sm text-muted-foreground uppercase tracking-wider">
-                {{ category.name }}
-              </h3>
-              <nav class="space-y-1">
+            <template v-for="(category, categoryIndex) in clientCategories" :key="category.id">
+              <div class="space-y-2">
+                <h3 class="font-semibold text-sm text-muted-foreground pl-3">
+                  {{ category.name }}
+                </h3>
+                <nav class="space-y-1">
                 <RouterLink
                   v-for="client in category.clients"
                   :key="client.id"
@@ -163,8 +217,8 @@ onMounted(async () => {
                   class="flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors"
                   :class="[
                     selectedClient === client.id && selectedCategory === category.id
-                      ? 'bg-secondary text-secondary-foreground font-medium'
-                      : 'text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
+                      ? 'bg-secondary text-secondary-foreground font-medium border border-border'
+                      : 'text-muted-foreground hover:bg-secondary/50 hover:text-foreground border border-transparent!'
                   ]"
                 >
                   <img
@@ -176,7 +230,10 @@ onMounted(async () => {
                   <span>{{ client.name }}</span>
                 </RouterLink>
               </nav>
-            </div>
+              </div>
+              <!-- Separator between categories -->
+              <div v-if="categoryIndex < clientCategories.length - 1" class="h-px w-full bg-border" />
+            </template>
           </div>
           <div v-else class="text-muted-foreground text-sm">
             {{ t('common.common.loading') }}
@@ -193,59 +250,59 @@ onMounted(async () => {
           </div>
 
           <!-- Client Configuration Content -->
-          <Card v-else-if="selectedClient">
-            <CardHeader>
-              <CardTitle>
-                {{ getClientDisplayName(selectedClient) }}
-              </CardTitle>
-            </CardHeader>
-            <CardContent class="space-y-6">
-              <!-- Loading State -->
-              <div v-if="isLoadingConfig" class="text-center py-8 text-muted-foreground">
-                {{ t('satelliteConfig.modal.loading') }}
-              </div>
+          <div v-else-if="selectedClient" class="space-y-6">
+            <h2 class="text-xl font-semibold">
+              {{ getClientDisplayName(selectedClient) }}
+            </h2>
 
-              <!-- Actions Rendering -->
-              <template v-else>
-                <template v-for="(action, index) in actions" :key="index">
-                  <!-- Link Actions (One-Click Install) -->
-                  <div v-if="action.type === 'link'" class="space-y-2">
-                    <label v-if="action.name" class="text-sm font-medium">{{ action.name }}</label>
-                    <p v-if="action.description" class="text-sm text-muted-foreground">{{ action.description }}</p>
-                    <LinkActionRenderer :action="action" @click="handleLinkClick" />
-                  </div>
+            <!-- Loading State -->
+            <div v-if="isLoadingConfig" class="text-center py-8 text-muted-foreground">
+              {{ t('satelliteConfig.modal.loading') }}
+            </div>
 
-                  <!-- Steps Actions -->
-                  <div v-else-if="action.type === 'steps'" class="space-y-2">
-                    <label v-if="action.title" class="text-sm font-medium">{{ action.title }}</label>
-                    <p v-if="action.description" class="text-sm text-muted-foreground">{{ action.description }}</p>
-                    <StepsActionRenderer :action="action" />
-                  </div>
+            <!-- Actions Rendering -->
+            <template v-else>
+              <!-- Connection Setup Actions -->
+              <template v-for="(action, index) in connectionActions" :key="`conn-${index}`">
+                <!-- Link Actions (One-Click Install) -->
+                <div v-if="action.type === 'link'" class="space-y-2">
+                  <label v-if="action.name" class="text-sm font-medium">{{ action.name }}</label>
+                  <p v-if="action.description" class="text-sm text-muted-foreground">{{ action.description }}</p>
+                  <LinkActionRenderer :action="action" @click="handleLinkClick" />
+                </div>
 
-                  <!-- Command Actions -->
-                  <CommandActionRenderer
-                    v-else-if="action.type === 'command'"
-                    :action="action"
-                    @copy="handleCopy"
-                  />
+                <!-- Steps Actions -->
+                <div v-else-if="action.type === 'steps'" class="space-y-2">
+                  <label v-if="action.title" class="text-sm font-medium">{{ action.title }}</label>
+                  <p v-if="action.description" class="text-sm text-muted-foreground">{{ action.description }}</p>
+                  <StepsActionRenderer :action="action" />
+                </div>
 
-                  <!-- JSON Actions -->
-                  <JsonActionRenderer
-                    v-else-if="action.type === 'json'"
-                    :action="action"
-                    @copy="handleCopy"
-                  />
+                <!-- Command Actions -->
+                <CommandActionRenderer
+                  v-else-if="action.type === 'command'"
+                  :action="action"
+                  @copy="handleCopy"
+                />
 
-                  <!-- Text Actions (AI Instructions) -->
-                  <TextActionRenderer
-                    v-else-if="action.type === 'text'"
-                    :action="action"
-                    @copy="handleCopy"
-                  />
-                </template>
+                <!-- JSON Actions -->
+                <JsonActionRenderer
+                  v-else-if="action.type === 'json'"
+                  :action="action"
+                  @copy="handleCopy"
+                />
               </template>
-            </CardContent>
-          </Card>
+
+
+              <!-- Text Actions (AI Instructions) -->
+              <template v-for="(action, index) in textActions" :key="`text-${index}`">
+                <TextActionRenderer
+                  :action="action"
+                  @copy="handleCopy"
+                />
+              </template>
+            </template>
+          </div>
 
           <div v-else-if="!selectedClientFromRoute && supportedClients.length === 0">
             <p class="text-muted-foreground">{{ t('satelliteConfig.messages.noClients') }}</p>

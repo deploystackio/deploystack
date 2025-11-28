@@ -2,14 +2,16 @@
 import { ref, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
+import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
 import { Input } from '@/components/ui/input'
 import DashboardLayout from '@/components/DashboardLayout.vue'
 import { getEnv } from '@/utils/env'
-import UserTableColumns from './users/UserTableColumns.vue'
-import type { User, UsersApiResponse } from './users/types'
+import UserTableColumns from './UserTableColumns.vue'
+import type { User, UsersApiResponse } from './types'
 
 const { t } = useI18n()
 const router = useRouter()
+const { setBreadcrumbs } = useBreadcrumbs()
 
 const users = ref<User[]>([])
 const isLoading = ref(true)
@@ -67,6 +69,8 @@ async function fetchUsers(): Promise<User[]> {
 
 // Load users on component mount
 onMounted(async () => {
+  setBreadcrumbs([{ label: t('adminUsers.title') }])
+
   try {
     isLoading.value = true
     users.value = await fetchUsers()
@@ -81,7 +85,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <DashboardLayout :title="t('adminUsers.title')">
+  <DashboardLayout>
     <div class="space-y-6">
       <!-- Header -->
       <div>

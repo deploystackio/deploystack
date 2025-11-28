@@ -1,12 +1,19 @@
 <script setup lang="ts">
+import { onMounted } from 'vue'
 import DashboardLayout from '@/components/DashboardLayout.vue'
 import { useI18n } from 'vue-i18n'
+import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
 
 const { t } = useI18n()
+const { setBreadcrumbs } = useBreadcrumbs()
+
+onMounted(() => {
+  setBreadcrumbs([{ label: t('pages.provider.title') }])
+})
 </script>
 
 <template>
-  <DashboardLayout :title="t('pages.provider.title')">
+  <DashboardLayout>
     <div class="rounded-xl border bg-card text-card-foreground shadow">
       <div class="p-6">
         <h2 class="text-2xl font-bold">{{ t('pages.provider.title') }}</h2>

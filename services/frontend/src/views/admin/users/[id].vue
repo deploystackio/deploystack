@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Button } from '@/components/ui/button'
+import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
 import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, Mail, Github, Shield, Users, Crown, UserCheck } from 'lucide-vue-next'
+import { Mail, Github, Shield, Users, Crown, UserCheck } from 'lucide-vue-next'
 import DashboardLayout from '@/components/DashboardLayout.vue'
 import UserActionsGroup from '@/components/admin/UserActionsGroup.vue'
 import { getEnv } from '@/utils/env'
-import type { User } from './users/types'
+import type { User } from './types'
 
 interface Team {
   id: string
@@ -29,7 +29,7 @@ interface TeamsResponse {
 
 const { t } = useI18n()
 const route = useRoute()
-const router = useRouter()
+const { setBreadcrumbs } = useBreadcrumbs()
 
 const user = ref<User | null>(null)
 const teams = ref<Team[]>([])
@@ -79,10 +79,21 @@ async function fetchUserTeams(id: string): Promise<TeamsResponse> {
 
 // Load user and teams on component mount
 onMounted(async () => {
+  setBreadcrumbs([
+    { label: t('adminUsers.title'), href: '/admin/users' },
+    { label: t('adminUsers.userDetail.titleLoading') }
+  ])
+
   try {
     isLoading.value = true
     user.value = await fetchUser(userId)
     error.value = null
+
+    // Update breadcrumbs with username
+    setBreadcrumbs([
+      { label: t('adminUsers.title'), href: '/admin/users' },
+      { label: user.value.username }
+    ])
 
     // Fetch teams after user is loaded
     try {
@@ -123,26 +134,11 @@ const authTypeBadge = computed(() => {
   }
 })
 
-const goBack = () => {
-  router.push('/admin/users')
-}
 </script>
 
 <template>
-  <DashboardLayout :title="user ? t('adminUsers.userDetail.title', { username: user.username }) : t('adminUsers.userDetail.titleLoading')">
+  <DashboardLayout>
     <div class="space-y-6">
-      <!-- Back Button -->
-      <div>
-        <Button
-          variant="outline"
-          @click="goBack"
-          class="mb-4"
-        >
-          <ArrowLeft class="h-4 w-4 mr-2" />
-          {{ t('adminUsers.userDetail.backToUsers') }}
-        </Button>
-      </div>
-
       <!-- Loading State -->
       <div v-if="isLoading" class="text-muted-foreground">
         {{ t('adminUsers.userDetail.loading') }}

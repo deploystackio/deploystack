@@ -95,16 +95,6 @@ function closeUninstallModal() {
 
 <template>
   <div class="space-y-6">
-    <!-- Header -->
-    <div>
-      <h2 class="text-xl font-semibold">
-        {{ t('mcpInstallations.details.dangerZone.title') }}
-      </h2>
-      <p class="text-muted-foreground mt-1">
-        {{ t('mcpInstallations.details.dangerZone.description') }}
-      </p>
-    </div>
-
     <!-- Uninstall MCP Server Section -->
     <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
       <dt class="text-sm/6 font-medium text-gray-900">

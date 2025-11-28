@@ -1,22 +1,20 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Button } from '@/components/ui/button'
-import { ArrowLeft, Info, Settings, Shield, User, Package } from 'lucide-vue-next'
 import { DsTabs, DsTabsItem } from '@/components/ui/ds-tabs'
 import DashboardLayout from '@/components/DashboardLayout.vue'
-import ContentWrapper from '@/components/ContentWrapper.vue'
 import { InstallationInfo, McpToolsTab, TeamConfiguration, UserConfiguration, DangerZone } from '@/components/mcp-server/installation'
 import { McpInstallationService } from '@/services/mcpInstallationService'
 import { TeamService, type Team } from '@/services/teamService'
 import { useEventBus } from '@/composables/useEventBus'
+import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
 import type { McpInstallation } from '@/types/mcp-installations'
 
 const { t } = useI18n()
 const route = useRoute()
-const router = useRouter()
 const eventBus = useEventBus()
+const { setBreadcrumbs } = useBreadcrumbs()
 
 const installation = ref<McpInstallation | null>(null)
 const currentTeam = ref<Team | null>(null)
@@ -34,20 +32,20 @@ async function loadInstallation(installationId: string): Promise<{ team: Team; i
   try {
     // Get selected team from event bus storage
     const selectedTeamId = eventBus.getState<string>('selected_team_id')
-    
+
     if (!selectedTeamId) {
       // Fallback: try to find which team owns this installation
       const userTeams = await TeamService.getUserTeams()
-      
+
       for (const team of userTeams) {
         try {
           const installation = await McpInstallationService.getInstallationById(team.id, installationId)
           if (installation) {
             // Set this team as selected in storage
             eventBus.setState('selected_team_id', team.id)
-            return { 
-              team, 
-              installation, 
+            return {
+              team,
+              installation,
               userRole: team.role || 'team_user'
             }
           }
@@ -55,7 +53,7 @@ async function loadInstallation(installationId: string): Promise<{ team: Team; i
           continue
         }
       }
-      
+
       return null
     }
 
@@ -73,9 +71,9 @@ async function loadInstallation(installationId: string): Promise<{ team: Team; i
     if (!installation) {
       return null
     }
-    return { 
-      team: selectedTeam, 
-      installation, 
+    return {
+      team: selectedTeam,
+      installation,
       userRole: selectedTeam.role || 'team_user'
     }
   } catch {
@@ -85,8 +83,12 @@ async function loadInstallation(installationId: string): Promise<{ team: Team; i
 
 // Load installation on component mount
 onMounted(async () => {
+  setBreadcrumbs([
+    { label: t('mcpInstallations.title'), href: '/mcp-server' },
+    { label: 'Loading...' }
+  ])
   await loadAndSetInstallation()
-  
+
   // Listen for team selection changes
   eventBus.on('storage-changed', (data) => {
     if (data.key === 'selected_team_id') {
@@ -98,15 +100,6 @@ onMounted(async () => {
 onUnmounted(() => {
   // Clean up event listeners
   eventBus.off('storage-changed', handleTeamChanged)
-})
-
-
-
-// Computed properties for display
-const pageTitle = computed(() => {
-  return installation.value
-    ? `Installation: ${installation.value.installation_name}`
-    : 'Loading Installation...'
 })
 
 // Check if environment variables exist for badge display
@@ -121,10 +114,6 @@ const canEditInstallation = computed(() => {
   // If role is null/undefined, default to false (no edit permissions)
   return userTeamRole.value === 'team_admin'
 })
-
-const goBack = () => {
-  router.push('/mcp-server')
-}
 
 // Handle installation updates
 const handleInstallationUpdated = (updatedInstallation: McpInstallation) => {
@@ -150,6 +139,12 @@ const loadAndSetInstallation = async () => {
       currentTeam.value = result.team
       userTeamRole.value = result.userRole
       error.value = null
+
+      // Update breadcrumbs with installation name
+      setBreadcrumbs([
+        { label: t('mcpInstallations.title'), href: '/mcp-server' },
+        { label: result.installation.installation_name }
+      ])
     } else {
       error.value = 'Installation not found in the selected team or no team selected'
       installation.value = null
@@ -168,19 +163,8 @@ const loadAndSetInstallation = async () => {
 </script>
 
 <template>
-  <DashboardLayout :title="pageTitle">
+  <DashboardLayout>
     <div class="space-y-6">
-      <!-- Header with Back Button -->
-      <div class="flex items-center justify-between">
-        <Button
-          variant="outline"
-          @click="goBack"
-        >
-          <ArrowLeft class="h-4 w-4 mr-2" />
-          {{ t('mcpInstallations.view.backToServers') }}
-        </Button>
-      </div>
-
       <!-- Loading State -->
       <div v-if="isLoading" class="text-muted-foreground">
         {{ t('mcpInstallations.view.loading') }}
@@ -194,62 +178,50 @@ const loadAndSetInstallation = async () => {
       <!-- Installation Details with Tabs -->
       <div v-else-if="installation && currentTeam">
 
-        <DsTabs v-model="activeTab">
-          <DsTabsItem value="information" label="Installation Info">
-            <Info class="h-4 w-4" />
-          </DsTabsItem>
-          <DsTabsItem value="mcp-tools" :label="t('mcpInstallations.details.mcpTools.title')">
-            <Package class="h-4 w-4" />
-          </DsTabsItem>
-          <DsTabsItem value="user-config" label="User Configuration">
-            <User class="h-4 w-4" />
-          </DsTabsItem>
+        <DsTabs v-model="activeTab" variant="underlined" class="mb-10">
+          <DsTabsItem value="information" label="Installation Info" />
+          <DsTabsItem value="mcp-tools" :label="t('mcpInstallations.details.mcpTools.title')" />
+          <DsTabsItem value="user-config" label="User Configuration" />
           <DsTabsItem
             value="environment"
             label="Team Configuration"
             :badge="environmentVariablesCount > 0 ? environmentVariablesCount : undefined"
-          >
-            <Settings class="h-4 w-4" />
-          </DsTabsItem>
-          <DsTabsItem value="danger-zone" label="Danger Zone">
-            <Shield class="h-4 w-4" />
-          </DsTabsItem>
+          />
+          <DsTabsItem value="danger-zone" label="Danger Zone" />
         </DsTabs>
 
         <!-- Tab Content -->
-        <ContentWrapper>
-          <InstallationInfo
-            v-if="activeTab === 'information'"
-            :installation="installation"
-          />
-          <McpToolsTab
-            v-if="activeTab === 'mcp-tools'"
-            :installation="installation"
-            :team-id="currentTeam.id"
-          />
-          <TeamConfiguration
-            v-if="activeTab === 'environment'"
-            :installation="installation"
-            :team-id="currentTeam.id"
-            :can-edit="canEditInstallation"
-            :user-role="userTeamRole"
-            @installation-updated="handleInstallationUpdated"
-          />
-          <UserConfiguration
-            v-if="activeTab === 'user-config'"
-            :installation="installation"
-            :team-id="currentTeam.id"
-            :can-edit="canEditInstallation"
-            :user-role="userTeamRole"
-          />
-          <DangerZone
-            v-if="activeTab === 'danger-zone'"
-            :installation="installation"
-            :team-id="currentTeam.id"
-            :can-edit="canEditInstallation"
-            :user-role="userTeamRole"
-          />
-        </ContentWrapper>
+        <InstallationInfo
+          v-if="activeTab === 'information'"
+          :installation="installation"
+        />
+        <McpToolsTab
+          v-if="activeTab === 'mcp-tools'"
+          :installation="installation"
+          :team-id="currentTeam.id"
+        />
+        <TeamConfiguration
+          v-if="activeTab === 'environment'"
+          :installation="installation"
+          :team-id="currentTeam.id"
+          :can-edit="canEditInstallation"
+          :user-role="userTeamRole"
+          @installation-updated="handleInstallationUpdated"
+        />
+        <UserConfiguration
+          v-if="activeTab === 'user-config'"
+          :installation="installation"
+          :team-id="currentTeam.id"
+          :can-edit="canEditInstallation"
+          :user-role="userTeamRole"
+        />
+        <DangerZone
+          v-if="activeTab === 'danger-zone'"
+          :installation="installation"
+          :team-id="currentTeam.id"
+          :can-edit="canEditInstallation"
+          :user-role="userTeamRole"
+        />
       </div>
     </div>
   </DashboardLayout>

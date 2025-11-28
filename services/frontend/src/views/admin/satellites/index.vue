@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
 import { toast } from 'vue-sonner'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -12,6 +13,7 @@ import { useEventBus } from '@/composables/useEventBus'
 
 const { t } = useI18n()
 const eventBus = useEventBus()
+const { setBreadcrumbs } = useBreadcrumbs()
 
 // State
 const satellites = ref<Satellite[]>([])
@@ -144,6 +146,8 @@ const handlePageChange = (page: number) => {
 
 // Load data on component mount
 onMounted(async () => {
+  setBreadcrumbs([{ label: t('satellites.title') }])
+
   // Fetch satellites (router already verified permissions)
   await fetchSatellites()
 
@@ -160,7 +164,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <DashboardLayout :title="t('satellites.title')">
+  <DashboardLayout>
     <div class="space-y-6">
       <!-- Header -->
       <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

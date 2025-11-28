@@ -39,7 +39,6 @@ const { t } = useI18n()
         :author-name="server.author_name"
         :organization="server.organization"
         :github-stars="server.github_stars"
-        :github-account-id="server.github_account_id"
         :description="server.description"
         :repository-url="server.repository_url"
       />

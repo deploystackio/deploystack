@@ -110,12 +110,43 @@ export class IconService {
     }
   }
 
+  // Sort icons by relevance: exact match > starts with > contains
+  private static sortByRelevance(icons: IconOption[], query: string): IconOption[] {
+    const lowerQuery = query.toLowerCase()
+
+    return icons.sort((a, b) => {
+      const aLower = a.label.toLowerCase()
+      const bLower = b.label.toLowerCase()
+
+      // Exact match gets highest priority
+      const aExact = aLower === lowerQuery
+      const bExact = bLower === lowerQuery
+      if (aExact && !bExact) return -1
+      if (bExact && !aExact) return 1
+
+      // Starts with query gets second priority
+      const aStarts = aLower.startsWith(lowerQuery)
+      const bStarts = bLower.startsWith(lowerQuery)
+      if (aStarts && !bStarts) return -1
+      if (bStarts && !aStarts) return 1
+
+      // If both start with query, shorter names first (more relevant)
+      if (aStarts && bStarts) {
+        return a.label.length - b.label.length
+      }
+
+      // Otherwise, alphabetical
+      return a.label.localeCompare(b.label)
+    })
+  }
+
   static async searchIcons(query: string): Promise<IconOption[]> {
     // Less than 3 characters = show common icons only
     if (query.length < 3) {
-      return this.getCommonIcons().filter(icon =>
+      const filtered = this.getCommonIcons().filter(icon =>
         icon.label.toLowerCase().includes(query.toLowerCase())
       )
+      return this.sortByRelevance(filtered, query)
     }
 
     try {
@@ -124,20 +155,23 @@ export class IconService {
 
       // If no icons were loaded, fall back to common icons
       if (allIcons.length === 0) {
-        return this.getCommonIcons().filter(icon =>
+        const filtered = this.getCommonIcons().filter(icon =>
           icon.label.toLowerCase().includes(query.toLowerCase())
         )
+        return this.sortByRelevance(filtered, query)
       }
 
-      return allIcons.filter(icon =>
+      const filtered = allIcons.filter(icon =>
         icon.label.toLowerCase().includes(query.toLowerCase())
       )
+      return this.sortByRelevance(filtered, query)
     } catch (error) {
       console.error('[IconService] Search failed:', error)
       // Fallback to common icons search
-      return this.getCommonIcons().filter(icon =>
+      const filtered = this.getCommonIcons().filter(icon =>
         icon.label.toLowerCase().includes(query.toLowerCase())
       )
+      return this.sortByRelevance(filtered, query)
     }
   }
 

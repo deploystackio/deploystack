@@ -66,6 +66,7 @@ interface McpServerAddFormData {
     auto_install_new_default_team: boolean
     transport_type: string
     website_url: string
+    icon_url: string
   }
 }
 
@@ -192,7 +193,8 @@ const formData = ref<McpServerAddFormData>({
     featured: false,
     auto_install_new_default_team: false,
     transport_type: 'auto',
-    website_url: ''
+    website_url: '',
+    icon_url: ''
   }
 })
 
@@ -374,6 +376,7 @@ const autoPopulateFromGitHub = (repositoryData: any) => {
     license: repositoryData.license?.spdx_id || repositoryData.license || '',
     tags: repositoryData.topics || repositoryData.tags || [],
     website_url: repositoryData.homepage || '',
+    icon_url: repositoryData.owner?.avatar_url || repositoryData.icon_url || '',
     // Keep existing values for these properties
     featured: formData.value.basic.featured,
     auto_install_new_default_team: formData.value.basic.auto_install_new_default_team,
@@ -437,6 +440,7 @@ const submitForm = async () => {
       tags: formData.value.basic.tags,
       featured: formData.value.basic.featured,
       auto_install_new_default_team: formData.value.basic.auto_install_new_default_team,
+      icon_url: formData.value.basic.icon_url,
 
       // New Configuration Schema (ADR-007)
       configuration_schema: formData.value.configuration_schema,

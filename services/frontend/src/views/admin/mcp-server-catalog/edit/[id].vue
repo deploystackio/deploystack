@@ -4,8 +4,9 @@
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter, useRoute } from 'vue-router'
+import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, Loader2 } from 'lucide-vue-next'
+import { Loader2 } from 'lucide-vue-next'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import DashboardLayout from '@/components/DashboardLayout.vue'
 import McpServerFormWizard from '@/components/admin/mcp-catalog/McpServerEditFormWizard.vue'
@@ -21,6 +22,7 @@ const { t } = useI18n()
 const router = useRouter()
 const route = useRoute()
 const eventBus = useEventBus()
+const { setBreadcrumbs } = useBreadcrumbs()
 
 // State
 const isLoading = ref(true)
@@ -33,10 +35,6 @@ const initialFormData = ref<Partial<McpServerFormData> | null>(null)
 const serverId = route.params.id as string
 
 // Navigation
-const goBack = () => {
-  router.push(`/admin/mcp-server-catalog/view/${serverId}`)
-}
-
 const goToCatalog = () => {
   router.push('/admin/mcp-server-catalog')
 }
@@ -81,6 +79,13 @@ const loadServerData = async () => {
     eventBus.setState('edit_raw_server_response', server)
 
     serverData.value = server
+
+    // Update breadcrumbs with server name
+    setBreadcrumbs([
+      { label: t('mcpCatalog.title'), href: '/admin/mcp-server-catalog' },
+      { label: server.name, href: `/admin/mcp-server-catalog/view/${serverId}` },
+      { label: t('mcpCatalog.form.navigation.edit') }
+    ])
 
     // Fetch README data separately using dedicated endpoint
     let readmeBase64 = ''
@@ -287,7 +292,7 @@ const handleSubmit = async (formData: McpServerFormData) => {
     author_contact: formData.basic.author_contact || undefined,
     organization: formData.basic.organization || undefined,
     license: formData.basic.license || undefined,
-    tags: formData.basic.tags.length > 0 ? formData.basic.tags : undefined,
+    tags: formData.basic.tags,
     featured: formData.basic.featured,
     auto_install_new_default_team: formData.basic.auto_install_new_default_team,
     icon_url: formData.basic.icon_url || undefined,
@@ -349,21 +354,17 @@ const handleCancel = () => {
 
 // Load data on mount
 onMounted(() => {
+  setBreadcrumbs([
+    { label: t('mcpCatalog.title'), href: '/admin/mcp-server-catalog' },
+    { label: t('mcpCatalog.edit.titleLoading') }
+  ])
   loadServerData()
 })
 </script>
 
 <template>
-  <DashboardLayout :title="isLoading ? t('mcpCatalog.edit.titleLoading') : t('mcpCatalog.edit.title', { name: serverData?.name || '' })">
+  <DashboardLayout>
     <div class="space-y-6">
-      <!-- Header with back button -->
-      <div class="flex items-center gap-4">
-        <Button variant="ghost" size="sm" @click="goBack" class="flex items-center gap-2">
-          <ArrowLeft class="h-4 w-4" />
-          {{ t('mcpCatalog.edit.backToCatalog') }}
-        </Button>
-      </div>
-
       <!-- Loading State -->
       <div v-if="isLoading" class="flex items-center justify-center py-12">
         <div class="flex items-center gap-2 text-muted-foreground">

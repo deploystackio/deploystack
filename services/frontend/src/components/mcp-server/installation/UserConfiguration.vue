@@ -388,18 +388,7 @@ const modalTitle = computed(() => {
 
 <template>
   <div>
-    <div class="px-4 sm:px-0 border-b border-gray-200 pb-3">
-      <div class="flex items-center justify-between">
-        <div>
-          <h3 class="text-base/7 font-semibold text-gray-900">{{ t('mcpInstallations.userConfiguration.title') }}</h3>
-          <p class="mt-1 text-sm/6 text-gray-500">
-            {{ t('mcpInstallations.userConfiguration.description') }}
-          </p>
-        </div>
-      </div>
-    </div>
-
-    <div class="mt-6">
+    <div>
       <!-- Loading State -->
       <div v-if="isLoading" class="px-4 py-12 sm:px-0 text-center">
         <div class="text-muted-foreground">{{ t('mcpInstallations.userConfiguration.loading') }}</div>
@@ -416,7 +405,7 @@ const modalTitle = computed(() => {
           </div>
 
           <ul role="list" class="space-y-3">
-            <li v-for="arg in userArgsWithData" :key="arg.name" class="flex items-center justify-between gap-x-6 py-5 bg-muted/50 rounded-lg px-4">
+            <li v-for="arg in userArgsWithData" :key="arg.name" class="flex items-center justify-between gap-x-6 py-5 bg-white dark:bg-card border rounded-lg px-4">
               <div class="min-w-0 flex-1">
                 <div class="flex items-start gap-x-3">
                   <p class="text-sm/6 font-semibold text-gray-900 font-mono">
@@ -472,7 +461,7 @@ const modalTitle = computed(() => {
           </div>
 
           <ul role="list" class="space-y-3">
-            <li v-for="envVar in userEnvWithData" :key="envVar.name" class="flex items-center justify-between gap-x-6 py-5 bg-muted/50 rounded-lg px-4">
+            <li v-for="envVar in userEnvWithData" :key="envVar.name" class="flex items-center justify-between gap-x-6 py-5 bg-white dark:bg-card border rounded-lg px-4">
               <div class="min-w-0 flex-1">
                 <div class="flex items-start gap-x-3">
                   <p class="text-sm/6 font-semibold text-gray-900 font-mono">
@@ -528,7 +517,7 @@ const modalTitle = computed(() => {
           </div>
 
           <ul role="list" class="space-y-3">
-            <li v-for="header in userHeadersWithData" :key="header.name" class="flex items-center justify-between gap-x-6 py-5 bg-muted/50 rounded-lg px-4">
+            <li v-for="header in userHeadersWithData" :key="header.name" class="flex items-center justify-between gap-x-6 py-5 bg-white dark:bg-card border rounded-lg px-4">
               <div class="min-w-0 flex-1">
                 <div class="flex items-start gap-x-3">
                   <p class="text-sm/6 font-semibold text-gray-900 font-mono">
@@ -584,7 +573,7 @@ const modalTitle = computed(() => {
           </div>
 
           <ul role="list" class="space-y-3">
-            <li v-for="queryParam in userQueryParamsWithData" :key="queryParam.name" class="flex items-center justify-between gap-x-6 py-5 bg-yellow-50 rounded-lg px-4">
+            <li v-for="queryParam in userQueryParamsWithData" :key="queryParam.name" class="flex items-center justify-between gap-x-6 py-5 bg-white dark:bg-card border rounded-lg px-4">
               <div class="min-w-0 flex-1">
                 <div class="flex items-start gap-x-3">
                   <p class="text-sm/6 font-semibold text-gray-900 font-mono">

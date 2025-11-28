@@ -18,13 +18,13 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Switch } from '@/components/ui/switch'
 import { X, Plus, CheckCircle } from 'lucide-vue-next'
+import { DynamicIcon } from '@/components/ui/dynamic-icon'
 import type { BasicInfoFormData } from '@/views/admin/mcp-server-catalog/types'
 import { useCategories } from '@/composables/admin/mcp-catalog/useCategories'
 import { useTagManager } from '@/composables/admin/mcp-catalog/useTagManager'
@@ -64,6 +64,11 @@ const localData = computed({
 // Check if data was auto-populated from GitHub
 const isAutoPopulated = computed(() => {
   return props.formData?.github?.auto_populated || false
+})
+
+// Get selected category for displaying icon in trigger
+const selectedCategory = computed(() => {
+  return categories.value.find(c => c.id === localData.value.category_id)
 })
 
 // Update field helper
@@ -125,11 +130,16 @@ loadCategories()
             :disabled="categoriesLoading"
           >
             <SelectTrigger>
-              <SelectValue
-                :placeholder="categoriesLoading
-                  ? 'Loading categories...'
-                  : t('mcpCatalog.form.basic.category.placeholder')"
-              />
+              <div class="flex items-center gap-2">
+                <DynamicIcon
+                  v-if="selectedCategory?.icon"
+                  :name="selectedCategory.icon"
+                  class="h-4 w-4 shrink-0 text-muted-foreground"
+                />
+                <span class="truncate">
+                  {{ selectedCategory?.name || (categoriesLoading ? 'Loading categories...' : t('mcpCatalog.form.basic.category.placeholder')) }}
+                </span>
+              </div>
             </SelectTrigger>
             <SelectContent>
               <SelectItem
@@ -137,7 +147,14 @@ loadCategories()
                 :key="category.id"
                 :value="category.id"
               >
-                {{ category.name }}
+                <div class="flex items-center gap-2">
+                  <DynamicIcon
+                    v-if="category.icon"
+                    :name="category.icon"
+                    class="h-4 w-4 shrink-0 text-muted-foreground"
+                  />
+                  <span>{{ category.name }}</span>
+                </div>
               </SelectItem>
             </SelectContent>
           </Select>
@@ -269,6 +286,20 @@ loadCategories()
             :model-value="localData.website_url"
             @update:model-value="(value) => updateField('website_url', String(value))"
             :placeholder="t('mcpCatalog.form.basic.websiteUrl.placeholder')"
+            type="url"
+          />
+        </SharedFormField>
+
+        <!-- Icon URL -->
+        <SharedFormField
+          label="Icon URL"
+          description="URL to the server icon image (auto-generated from GitHub avatar if not provided)"
+        >
+          <Input
+            id="icon_url"
+            :model-value="localData.icon_url"
+            @update:model-value="(value) => updateField('icon_url', String(value))"
+            placeholder="https://example.com/icon.png"
             type="url"
           />
         </SharedFormField>

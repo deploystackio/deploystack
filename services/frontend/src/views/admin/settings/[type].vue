@@ -2,6 +2,7 @@
 import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
 import { toast } from 'vue-sonner'
 import { useEventBus } from '@/composables/useEventBus'
 import { SidebarNav, type NavItem } from '@/components/ui/sidebar-nav'
@@ -24,6 +25,7 @@ import { getSettingsComponent } from '@/composables/useSettingsComponentRegistry
 
 const { t } = useI18n()
 const route = useRoute()
+const { setBreadcrumbs } = useBreadcrumbs()
 
 const settingGroups = ref<GlobalSettingGroup[]>([])
 const isLoading = ref(true)
@@ -60,6 +62,8 @@ async function fetchSettingGroupsApi(): Promise<GlobalSettingGroup[]> {
 }
 
 onMounted(async () => {
+  setBreadcrumbs([{ label: t('globalSettings.title') }])
+
   try {
     isLoading.value = true
     const fetchedGroups = await fetchSettingGroupsApi() // fetchSettingGroupsApi now returns fully typed GlobalSettingGroup[]
@@ -306,7 +310,7 @@ async function handleSubmit(event: Event) {
 </script>
 
 <template>
-  <DashboardLayout :title="t('globalSettings.title')">
+  <DashboardLayout>
     <!-- Mobile Navigation - Show tabs on small screens -->
     <div class="block md:hidden mb-6">
       <nav class="flex space-x-1 p-1 bg-muted/50 rounded-lg overflow-x-auto">

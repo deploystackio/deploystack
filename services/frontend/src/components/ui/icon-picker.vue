@@ -4,6 +4,7 @@ import { Check, ChevronsUpDown, Loader2 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { DynamicIcon } from '@/components/ui/dynamic-icon'
 import { IconService, type IconOption } from '@/services/iconService'
 
 interface Props {
@@ -55,7 +56,14 @@ const selectIcon = (iconValue: string) => {
   <Popover v-model:open="open">
     <PopoverTrigger as-child>
       <Button variant="outline" class="w-full justify-between">
-        <span>{{ selectedIcon?.label || placeholder || 'Select icon...' }}</span>
+        <span class="flex items-center gap-2">
+          <DynamicIcon
+            v-if="selectedIcon && selectedIcon.value !== 'none'"
+            :name="selectedIcon.value"
+            class="h-4 w-4 shrink-0 text-muted-foreground"
+          />
+          <span class="truncate">{{ selectedIcon?.label || placeholder || 'Select icon...' }}</span>
+        </span>
         <ChevronsUpDown class="ml-2 h-4 w-4 shrink-0 opacity-50" />
       </Button>
     </PopoverTrigger>
@@ -86,11 +94,17 @@ const selectIcon = (iconValue: string) => {
               :key="icon.value"
               :value="icon.value"
               @select="selectIcon(icon.value)"
+              class="flex items-center gap-2"
             >
-              <span>{{ icon.label }}</span>
+              <DynamicIcon
+                v-if="icon.value !== 'none'"
+                :name="icon.value"
+                class="h-4 w-4 shrink-0 text-muted-foreground"
+              />
+              <span class="truncate">{{ icon.label }}</span>
               <Check
                 v-if="props.modelValue === icon.value"
-                class="ml-auto h-4 w-4"
+                class="ml-auto h-4 w-4 shrink-0"
               />
             </CommandItem>
           </CommandGroup>

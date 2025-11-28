@@ -3,9 +3,8 @@ import { onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { toast } from 'vue-sonner'
-import { ArrowLeft } from 'lucide-vue-next'
-import { Button } from '@/components/ui/button'
 import { useEventBus } from '@/composables/useEventBus'
+import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
 import DashboardLayout from '@/components/DashboardLayout.vue'
 import McpServerInstallWizard from '@/components/mcp-server/wizard/McpServerInstallWizard.vue'
 
@@ -13,12 +12,8 @@ const { t } = useI18n()
 const router = useRouter()
 const route = useRoute()
 const eventBus = useEventBus()
+const { setBreadcrumbs } = useBreadcrumbs()
 
-
-// Navigation
-const goBack = () => {
-  router.push('/mcp-server')
-}
 
 // Handle wizard completion
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -41,29 +36,18 @@ const handleWizardCancel = () => {
 }
 
 onMounted(() => {
+  setBreadcrumbs([
+    { label: t('mcpInstallations.title'), href: '/mcp-server' },
+    { label: t('mcpInstallations.wizard.title') }
+  ])
   // Clear any previous wizard state
   eventBus.emit('mcp-install-wizard-reset')
 })
 </script>
 
 <template>
-  <DashboardLayout :title="t('mcpInstallations.wizard.title')">
+  <DashboardLayout>
     <div class="space-y-6">
-      <!-- Header -->
-      <div class="mb-6">
-        <div class="flex items-center gap-4 mb-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            @click="goBack"
-            class="flex items-center gap-2"
-          >
-            <ArrowLeft class="h-4 w-4" />
-            {{ t('navigation.back') }}
-          </Button>
-        </div>
-      </div>
-
       <!-- Wizard Component -->
       <McpServerInstallWizard
         :initial-server-id="route.query.serverId as string"

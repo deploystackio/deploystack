@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -14,6 +15,7 @@ import type { BatchInfo, Job } from '../types'
 
 const route = useRoute()
 const router = useRouter()
+const { setBreadcrumbs } = useBreadcrumbs()
 
 const batch = ref<BatchInfo | null>(null)
 const recentJobs = ref<Job[]>([])
@@ -65,10 +67,18 @@ const fetchBatchStatus = async (): Promise<void> => {
   try {
     isLoading.value = true
     error.value = null
-    
+
     const response = await JobsService.getBatchStatus(batchId.value)
     batch.value = response.batch
     recentJobs.value = response.recentJobs
+
+    // Update breadcrumbs with batch ID
+    if (batch.value) {
+      setBreadcrumbs([
+        { label: 'Background Jobs', href: '/admin/jobs' },
+        { label: `Batch ${batch.value.id.substring(0, 8)}` }
+      ])
+    }
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'Failed to load batch'
   } finally {
@@ -82,12 +92,16 @@ const refreshBatch = async (): Promise<void> => {
 }
 
 onMounted(async () => {
+  setBreadcrumbs([
+    { label: 'Background Jobs', href: '/admin/jobs' },
+    { label: 'Batch Status' }
+  ])
   await fetchBatchStatus()
 })
 </script>
 
 <template>
-  <DashboardLayout :title="batch ? `Batch ${batch.id.substring(0, 8)}` : 'Batch Status'">
+  <DashboardLayout>
     <div class="space-y-6">
       <div class="flex items-center justify-between">
         <Button variant="ghost" @click="handleBack">

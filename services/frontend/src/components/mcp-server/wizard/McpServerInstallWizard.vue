@@ -860,7 +860,7 @@ onUnmounted(() => {
     <!-- Details Sheet -->
     <McpServerDetailsSheet
       v-model:open="isDetailsSheetOpen"
-      :server="formData.server.server_data"
+      :server="formData.server.server_data ?? null"
     />
   </div>
 </template>

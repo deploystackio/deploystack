@@ -12698,9 +12698,12 @@ paths:
                   format: uri
                   description: Website URL
                 icon_url:
-                  type: string
-                  format: uri
-                  description: Icon/logo URL
+                  oneOf:
+                    - type: string
+                      maxLength: 0
+                    - type: string
+                      format: uri
+                  description: Icon/logo URL (empty string or valid URI)
                 github_account_id:
                   type: string
                   description: GitHub Account ID (owner.id from GitHub API)
@@ -13180,9 +13183,12 @@ paths:
                   format: uri
                   description: Website URL
                 icon_url:
-                  type: string
-                  format: uri
-                  description: Icon/logo URL
+                  oneOf:
+                    - type: string
+                      maxLength: 0
+                    - type: string
+                      format: uri
+                  description: Icon/logo URL (empty string or valid URI)
                 github_account_id:
                   type: string
                   description: GitHub Account ID (owner.id from GitHub API)

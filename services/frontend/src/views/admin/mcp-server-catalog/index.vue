@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter, useRoute } from 'vue-router'
+import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
 import { toast } from 'vue-sonner'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -44,6 +45,7 @@ const { t, tm } = useI18n()
 const router = useRouter()
 const route = useRoute()
 const eventBus = useEventBus()
+const { setBreadcrumbs } = useBreadcrumbs()
 
 // State
 const servers = ref<McpServer[]>([])
@@ -462,6 +464,8 @@ const fetchLanguages = async () => {
 
 // Load data on component mount
 onMounted(async () => {
+  setBreadcrumbs([{ label: t('mcpCatalog.title') }])
+
   await Promise.all([
     fetchServers(),
     fetchRuntimes(),
@@ -503,7 +507,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <DashboardLayout :title="t('mcpCatalog.title')">
+  <DashboardLayout>
     <div class="space-y-6">
       <!-- Header -->
       <div class="flex items-center justify-between">

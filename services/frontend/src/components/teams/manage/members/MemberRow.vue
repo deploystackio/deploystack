@@ -78,7 +78,7 @@ const handleEditRole = () => {
 </script>
 
 <template>
-  <div class="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+  <div class="flex items-center justify-between p-4 border rounded-lg bg-white dark:bg-card hover:bg-muted/50 transition-colors">
     <div class="flex items-center gap-4">
       <!-- Avatar placeholder -->
       <div class="flex h-10 w-10 items-center justify-center rounded-full bg-muted">

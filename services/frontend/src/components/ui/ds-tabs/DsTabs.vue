@@ -52,14 +52,14 @@ export interface DsTabItem {
 export type DsTabsVariant = 'default' | 'underlined' | 'pills' | 'bordered'
 
 const tabsVariants = cva(
-  'relative py-8',
+  'relative',
   {
     variants: {
       variant: {
-        default: '',
-        underlined: 'border-b border-border',
-        pills: '',
-        bordered: 'border border-border rounded-lg p-1'
+        default: 'py-8',
+        underlined: '',
+        pills: 'py-8',
+        bordered: 'py-8 border border-border rounded-lg p-1'
       },
       size: {
         sm: '',
@@ -85,7 +85,7 @@ const tabListVariants = cva(
     variants: {
       variant: {
         default: 'space-x-1',
-        underlined: 'space-x-6',
+        underlined: '-mb-px space-x-8',
         pills: 'space-x-1',
         bordered: 'space-x-1'
       },
@@ -247,11 +247,17 @@ function getTabClasses(tab: DsTabItem) {
   // Variant classes
   switch (props.variant) {
     case 'underlined':
+      // Override size padding for underlined variant
+      baseClasses.length = 0
       baseClasses.push(
-        'border-b-2 transition-colors',
-        isActive 
-          ? 'border-primary text-primary' 
-          : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+        'px-1 py-4 text-sm font-medium whitespace-nowrap',
+        'inline-flex items-center gap-2 transition-colors',
+        'focus:outline-none',
+        'disabled:cursor-not-allowed disabled:opacity-50',
+        'border-b-2',
+        isActive
+          ? '!border-zinc-950 text-foreground dark:!border-zinc-50'
+          : '!border-transparent text-muted-foreground hover:text-foreground hover:!border-border'
       )
       break
     case 'pills':
@@ -305,12 +311,12 @@ function getBadgeClasses(tab: DsTabItem) {
   }
 }
 
-// Provide context for child components
+// Provide context for child components using getters for reactivity
 provide('ds-tabs', {
   activeTab,
-  variant: props.variant,
-  size: props.size,
-  disabled: props.disabled,
+  get variant() { return props.variant },
+  get size() { return props.size },
+  get disabled() { return props.disabled },
   registerTab: (tab: DsTabItem) => {
     if (!slotTabs.value.find(t => t.value === tab.value)) {
       slotTabs.value.push(tab)
@@ -362,8 +368,8 @@ provide('ds-tabs', {
     </div>
 
     <!-- Desktop navigation -->
-    <div :class="desktopBreakpointClass">
-      <nav 
+    <div :class="[desktopBreakpointClass, variant === 'underlined' ? 'border-b border-border' : '']">
+      <nav
         role="tablist"
         :class="cn(tabListVariants({ variant, justified, fullWidth }))"
         aria-label="Tabs"

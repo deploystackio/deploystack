@@ -2,6 +2,7 @@
 import { ref, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
 import { toast } from 'vue-sonner'
 import AccountSidebarNav from '@/components/account/AccountSidebarNav.vue'
 import DashboardLayout from '@/components/DashboardLayout.vue'
@@ -20,6 +21,7 @@ import type { SecurityFormData } from './types'
 
 const router = useRouter()
 const { t } = useI18n()
+const { setBreadcrumbs } = useBreadcrumbs()
 
 const isLoading = ref(true)
 const currentUser = ref<User | null>(null)
@@ -49,6 +51,10 @@ async function initializeUserData() {
 }
 
 onMounted(() => {
+  setBreadcrumbs([
+    { label: t('userAccount.title'), href: '/user/profile' },
+    { label: t('userAccount.navigation.security') }
+  ])
   initializeUserData()
 })
 
@@ -135,7 +141,7 @@ async function handleSecuritySubmit(event: Event) {
 </script>
 
 <template>
-  <DashboardLayout :title="t('userAccount.title')">
+  <DashboardLayout>
     <!-- Mobile Navigation - Show tabs on small screens -->
     <div class="block md:hidden mb-6">
       <nav class="flex space-x-1 p-1 bg-muted/50 rounded-lg">

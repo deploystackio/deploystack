@@ -30,12 +30,14 @@ import DashboardLayout from '@/components/DashboardLayout.vue'
 import { CredentialsService } from '@/services/credentialsService'
 import { TeamService, type Team } from '@/services/teamService'
 import { useEventBus } from '@/composables/useEventBus'
+import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
 import type { CloudCredential, CloudProvider, CredentialField } from './types'
 
 const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const eventBus = useEventBus()
+const { setBreadcrumbs } = useBreadcrumbs()
 
 const credential = ref<CloudCredential | null>(null)
 const fullProvider = ref<CloudProvider | null>(null)
@@ -128,7 +130,18 @@ async function findCredentialTeam(): Promise<void> {
 
 // Load data on component mount
 onMounted(async () => {
+  setBreadcrumbs([
+    { label: t('credentials.title'), href: '/credentials' },
+    { label: t('credentials.detail.loading') }
+  ])
   await findCredentialTeam()
+  // Update breadcrumbs with credential name after loading
+  if (credential.value) {
+    setBreadcrumbs([
+      { label: t('credentials.title'), href: '/credentials' },
+      { label: credential.value.name }
+    ])
+  }
 })
 
 // Computed properties for display
@@ -444,7 +457,7 @@ const cancelEditName = () => {
 </script>
 
 <template>
-  <DashboardLayout :title="credential ? t('credentials.detail.title') : t('credentials.detail.loading')">
+  <DashboardLayout>
     <div class="space-y-6">
       <!-- Back Button and Edit Credential Dropdown -->
       <div class="flex items-center justify-between mb-4">
