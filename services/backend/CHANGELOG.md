@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.47.0 (2025-11-28)
+
+* chore(all): bump isomorphic-dompurify from 2.32.0 to 2.33.0 6243596
+* chore(all): update dependencies in package.json files 12bdfcd
+* chore(deps): bump actions/checkout from 5 to 6 e5d84d1
+* chore(frontend): release v0.42.0 94ca47c
+* chore(frontend): release v0.42.0 14e3b3b
+* feat(all): implement breadcrumbs and several frontend and UI improvements f3d3e70
+* feat(backend): add total MCP server installation limit per team a9dff02
+* feat(frontend): add MCP server limit to team management forms c47091a
+* feat(frontend): replace switches with checkboxes for settings c144d10
+* fix(backend): set git_branch to null if repository_url is absent bb16362
+* style(frontend): remove max-width from content area in settings and profile b9624a8
+* feature(backend): re-build the global settings - added name param dfab0ed
+
 ## 0.46.0 (2025-11-25)
 
 * chore(backend): release v0.46.0 1490b2a
