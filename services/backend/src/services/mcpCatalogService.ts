@@ -440,7 +440,7 @@ export class McpCatalogService {
           null
       ) : null,
       repository_subfolder: data.repository_subfolder || null,
-      git_branch: data.git_branch || 'main',
+      git_branch: data.repository_url ? (data.git_branch || 'main') : null,
       website_url: githubInfo.website_url || data.website_url,
       icon_url: data.icon_url || null,
       language: githubInfo.language || data.language,
