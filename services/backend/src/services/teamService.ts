@@ -13,6 +13,7 @@ export interface Team {
   owner_id: string;
   is_default: boolean;
   non_http_mcp_limit: number;
+  mcp_server_limit: number;
   created_at: Date;
   updated_at: Date;
 }
@@ -32,6 +33,7 @@ export interface CreateTeamData {
   owner_id: string;
   is_default?: boolean;
   non_http_mcp_limit?: number;
+  mcp_server_limit?: number;
 }
 
 export interface UpdateTeamData {
@@ -39,6 +41,7 @@ export interface UpdateTeamData {
   slug?: string;
   description?: string | null;
   non_http_mcp_limit?: number;
+  mcp_server_limit?: number;
 }
 
 export interface TeamMemberWithUser {
@@ -126,10 +129,14 @@ export class TeamService {
     const slug = data.slug || await this.generateUniqueSlug(data.name);
     const now = new Date();
 
-    // Get the default non-HTTP MCP limit from global settings if not provided
+    // Get the default MCP limits from global settings if not provided
     const nonHttpMcpLimit = data.non_http_mcp_limit !== undefined
       ? data.non_http_mcp_limit
       : await GlobalSettings.getNumber('global.default_non_http_mcp_limit', 1);
+
+    const mcpServerLimit = data.mcp_server_limit !== undefined
+      ? data.mcp_server_limit
+      : await GlobalSettings.getNumber('global.default_mcp_server_limit', 5);
 
     // Create the team
     const teamData = {
@@ -140,6 +147,7 @@ export class TeamService {
       owner_id: data.owner_id,
       is_default: data.is_default || false,
       non_http_mcp_limit: nonHttpMcpLimit,
+      mcp_server_limit: mcpServerLimit,
       created_at: now,
       updated_at: now,
     };
@@ -260,6 +268,7 @@ export class TeamService {
     if (data.slug !== undefined) updateData.slug = data.slug;
     if (data.description !== undefined) updateData.description = data.description;
     if (data.non_http_mcp_limit !== undefined) updateData.non_http_mcp_limit = data.non_http_mcp_limit;
+    if (data.mcp_server_limit !== undefined) updateData.mcp_server_limit = data.mcp_server_limit;
 
     await (db as any)
       .update(schema.teams)

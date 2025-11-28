@@ -1,0 +1,1 @@
+ALTER TABLE "teams" ADD COLUMN "mcp_server_limit" integer DEFAULT 5 NOT NULL;

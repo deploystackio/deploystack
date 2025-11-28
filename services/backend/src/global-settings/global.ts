@@ -107,6 +107,15 @@ export const globalSettings: GlobalSettingsModule = {
       description: 'Maximum number of non-HTTP (stdio) MCP servers per team. Applied when a new team is created. HTTP and SSE servers are not affected.',
       encrypted: false,
       required: false
+    },
+    {
+      key: 'global.default_mcp_server_limit',
+      name: 'Default MCP Server Limit',
+      defaultValue: 5,
+      type: 'number',
+      description: 'Maximum total number of MCP server installations per team. Applied when a new team is created. Includes all transport types (HTTP, SSE, stdio).',
+      encrypted: false,
+      required: false
     }
   ]
 };

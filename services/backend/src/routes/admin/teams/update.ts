@@ -90,6 +90,18 @@ export default async function updateTeamAdminRoute(server: FastifyInstance) {
         }
       }
 
+      // Validate mcp_server_limit if provided
+      if (updateData.mcp_server_limit !== undefined) {
+        if (!Number.isInteger(updateData.mcp_server_limit) || updateData.mcp_server_limit < 0) {
+          const errorResponse: ErrorResponse = {
+            success: false,
+            error: 'mcp_server_limit must be a non-negative integer'
+          };
+          const jsonString = JSON.stringify(errorResponse);
+          return reply.status(400).type('application/json').send(jsonString);
+        }
+      }
+
       // Update the team
       const updatedTeam = await TeamService.updateTeam(id, updateData);
 
@@ -114,6 +126,7 @@ export default async function updateTeamAdminRoute(server: FastifyInstance) {
           owner_id: updatedTeam.owner_id,
           is_default: updatedTeam.is_default,
           non_http_mcp_limit: updatedTeam.non_http_mcp_limit,
+          mcp_server_limit: updatedTeam.mcp_server_limit,
           created_at: updatedTeam.created_at.toISOString(),
           updated_at: updatedTeam.updated_at.toISOString()
         }

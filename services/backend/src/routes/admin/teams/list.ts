@@ -51,6 +51,7 @@ export default async function listTeamsAdminRoute(server: FastifyInstance) {
           owner_id: team.owner_id,
           is_default: team.is_default,
           non_http_mcp_limit: team.non_http_mcp_limit,
+          mcp_server_limit: team.mcp_server_limit,
           created_at: team.created_at.toISOString(),
           updated_at: team.updated_at.toISOString()
         }))

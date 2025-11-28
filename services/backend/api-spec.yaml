@@ -21668,6 +21668,9 @@ paths:
                         non_http_mcp_limit:
                           type: integer
                           description: Non-HTTP MCP server limit
+                        mcp_server_limit:
+                          type: integer
+                          description: Total MCP server limit
                         created_at:
                           type: string
                           description: ISO8601 timestamp
@@ -21681,6 +21684,7 @@ paths:
                         - owner_id
                         - is_default
                         - non_http_mcp_limit
+                        - mcp_server_limit
                         - created_at
                         - updated_at
                 required:
@@ -21795,6 +21799,9 @@ paths:
                       non_http_mcp_limit:
                         type: integer
                         description: Non-HTTP MCP server limit
+                      mcp_server_limit:
+                        type: integer
+                        description: Total MCP server limit
                       created_at:
                         type: string
                         description: ISO8601 timestamp
@@ -21808,6 +21815,7 @@ paths:
                       - owner_id
                       - is_default
                       - non_http_mcp_limit
+                      - mcp_server_limit
                       - created_at
                       - updated_at
                 required:
@@ -21913,6 +21921,11 @@ paths:
                   type: integer
                   minimum: 0
                   description: Maximum number of non-HTTP (stdio) MCP servers the team can install
+                mcp_server_limit:
+                  type: integer
+                  minimum: 0
+                  description: Maximum total number of MCP servers the team can install (all
+                    transport types)
               additionalProperties: false
       parameters:
         - schema:
@@ -21962,6 +21975,9 @@ paths:
                       non_http_mcp_limit:
                         type: integer
                         description: Non-HTTP MCP server limit
+                      mcp_server_limit:
+                        type: integer
+                        description: Total MCP server limit
                       created_at:
                         type: string
                         description: ISO8601 timestamp
@@ -21975,6 +21991,7 @@ paths:
                       - owner_id
                       - is_default
                       - non_http_mcp_limit
+                      - mcp_server_limit
                       - created_at
                       - updated_at
                 required:

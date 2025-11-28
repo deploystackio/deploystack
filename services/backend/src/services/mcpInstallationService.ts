@@ -324,6 +324,68 @@ export class McpInstallationService {
       throw new Error('Server not found');
     }
 
+    // Check total MCP server installation limit (applies to all transport types)
+    this.logger.debug({
+      operation: 'create_installation',
+      step: 'check_mcp_server_limit',
+      teamId,
+      serverId: data.server_id
+    }, 'Checking total MCP server installation limit');
+
+    // Get team data to access the limit
+    const teamResult = await this.db
+      .select()
+      .from(this.teams)
+      .where(eq(this.teams.id, teamId))
+      .limit(1);
+
+    if (teamResult.length === 0) {
+      throw new Error('Team not found');
+    }
+
+    const team = teamResult[0];
+    const totalLimit = team.mcp_server_limit;
+
+    // Count current total installations for this team
+    const currentTotalInstallations = await this.db
+      .select()
+      .from(this.mcpServerInstallations)
+      .where(eq(this.mcpServerInstallations.team_id, teamId));
+
+    const totalCount = currentTotalInstallations.length;
+
+    this.logger.debug({
+      operation: 'create_installation',
+      step: 'check_mcp_server_limit',
+      teamId,
+      totalCount,
+      totalLimit
+    }, `Current total installations: ${totalCount}/${totalLimit}`);
+
+    // Check if total limit would be exceeded
+    if (totalCount >= totalLimit) {
+      const errorMessage = `Team has reached the maximum limit of ${totalLimit} MCP server installation${totalLimit === 1 ? '' : 's'}. Contact your administrator to increase the limit.`;
+
+      this.logger.warn({
+        operation: 'create_installation',
+        step: 'check_mcp_server_limit',
+        teamId,
+        totalCount,
+        totalLimit,
+        serverId: data.server_id
+      }, 'Total MCP server installation limit exceeded');
+
+      throw new Error(errorMessage);
+    }
+
+    this.logger.info({
+      operation: 'create_installation',
+      step: 'check_mcp_server_limit',
+      teamId,
+      totalCount,
+      totalLimit
+    }, 'Total MCP server installation limit check passed');
+
     // OAuth detection for remote MCP servers (HTTP/SSE)
     if (server[0].transport_type === 'http' || server[0].transport_type === 'sse') {
       this.logger.debug({
@@ -407,18 +469,7 @@ export class McpInstallationService {
         transportType: server[0].transport_type
       }, 'Checking non-HTTP MCP installation limit');
 
-      // Get team data to access the limit
-      const teamResult = await this.db
-        .select()
-        .from(this.teams)
-        .where(eq(this.teams.id, teamId))
-        .limit(1);
-
-      if (teamResult.length === 0) {
-        throw new Error('Team not found');
-      }
-
-      const team = teamResult[0];
+      // Reuse team data from earlier query
       const limit = team.non_http_mcp_limit;
 
       this.logger.debug({

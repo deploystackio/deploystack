@@ -174,15 +174,26 @@ export default async function createInstallationRoute(server: FastifyInstance) {
       return reply.status(201).type('application/json').send(jsonString);
 
     } catch (error) {
-      request.log.error({
-        operation: 'create_mcp_installation',
-        error,
-        teamId,
-        serverId: installationData.server_id
-      }, 'Failed to create MCP server installation');
-
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      
+
+      // Check if this is a limit exceeded error (expected business logic, not an actual error)
+      const isLimitExceeded = errorMessage.includes('maximum limit');
+
+      if (isLimitExceeded) {
+        request.log.warn({
+          operation: 'create_mcp_installation',
+          teamId,
+          serverId: installationData.server_id
+        }, 'MCP installation rejected: limit exceeded');
+      } else {
+        request.log.error({
+          operation: 'create_mcp_installation',
+          error,
+          teamId,
+          serverId: installationData.server_id
+        }, 'Failed to create MCP server installation');
+      }
+
       if (errorMessage.includes('already exists')) {
         const conflictResponse: ErrorResponse = {
           success: false,
