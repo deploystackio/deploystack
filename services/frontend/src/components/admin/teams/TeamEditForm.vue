@@ -24,7 +24,8 @@ const emit = defineEmits<{
 const formData = ref<UpdateTeamAdminRequest>({
   name: '',
   description: '',
-  non_http_mcp_limit: 0
+  non_http_mcp_limit: 0,
+  mcp_server_limit: 0
 })
 
 const errors = ref<Record<string, string>>({})
@@ -34,7 +35,8 @@ onMounted(() => {
   formData.value = {
     name: props.team.name,
     description: props.team.description,
-    non_http_mcp_limit: props.team.non_http_mcp_limit
+    non_http_mcp_limit: props.team.non_http_mcp_limit,
+    mcp_server_limit: props.team.mcp_server_limit
   }
 })
 
@@ -63,6 +65,12 @@ const validateForm = (): boolean => {
     return false
   }
 
+  // Validate mcp_server_limit
+  if (formData.value.mcp_server_limit !== undefined && formData.value.mcp_server_limit < 0) {
+    errors.value.mcp_server_limit = t('adminTeams.teamEdit.form.mcpLimitMin')
+    return false
+  }
+
   return true
 }
 
@@ -84,6 +92,10 @@ const handleSubmit = () => {
 
   if (formData.value.non_http_mcp_limit !== props.team.non_http_mcp_limit) {
     updates.non_http_mcp_limit = formData.value.non_http_mcp_limit
+  }
+
+  if (formData.value.mcp_server_limit !== props.team.mcp_server_limit) {
+    updates.mcp_server_limit = formData.value.mcp_server_limit
   }
 
   emit('submit', updates)
@@ -130,6 +142,28 @@ const handleCancel = () => {
       />
       <p v-if="errors.description" class="text-sm text-red-500">
         {{ errors.description }}
+      </p>
+    </div>
+
+    <!-- Total MCP Server Limit -->
+    <div class="space-y-2">
+      <Label for="mcp_server_limit" class="required">
+        {{ t('adminTeams.teamEdit.form.totalMcpLimit') }}
+      </Label>
+      <Input
+        id="mcp_server_limit"
+        v-model.number="formData.mcp_server_limit"
+        type="number"
+        min="0"
+        :disabled="isSubmitting"
+        :class="{ 'border-red-500': errors.mcp_server_limit }"
+        required
+      />
+      <p class="text-sm text-muted-foreground">
+        {{ t('adminTeams.teamEdit.form.totalMcpLimitHelp') }}
+      </p>
+      <p v-if="errors.mcp_server_limit" class="text-sm text-red-500">
+        {{ errors.mcp_server_limit }}
       </p>
     </div>
 

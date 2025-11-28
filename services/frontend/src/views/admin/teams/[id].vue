@@ -192,6 +192,14 @@ const goToEdit = () => {
               </dd>
             </div>
 
+            <!-- Total MCP Server Limit -->
+            <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+              <dt class="text-sm/6 font-medium text-gray-900">{{ t('adminTeams.teamDetail.fields.totalMcpLimit') }}</dt>
+              <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
+                {{ team.mcp_server_limit }}
+              </dd>
+            </div>
+
             <!-- Non-HTTP MCP Limit -->
             <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
               <dt class="text-sm/6 font-medium text-gray-900">{{ t('adminTeams.teamDetail.fields.mcpLimit') }}</dt>

@@ -10,6 +10,7 @@ export const TeamSchema = z.object({
   owner_id: z.string(),
   is_default: z.boolean(),
   non_http_mcp_limit: z.number(),
+  mcp_server_limit: z.number(),
   created_at: z.string(),
   updated_at: z.string(),
   role: z.enum(['team_admin', 'team_user']).optional(),
@@ -413,7 +414,7 @@ export class TeamService {
   /**
    * Update team as global admin
    */
-  static async updateTeamAsAdmin(teamId: string, teamData: { name?: string; description?: string | null; non_http_mcp_limit?: number }): Promise<Team> {
+  static async updateTeamAsAdmin(teamId: string, teamData: { name?: string; description?: string | null; non_http_mcp_limit?: number; mcp_server_limit?: number }): Promise<Team> {
     try {
       const apiUrl = this.getApiUrl()
 
