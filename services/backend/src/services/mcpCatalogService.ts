@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { eq, and, or, like, desc, asc } from 'drizzle-orm';
+import { eq, and, or, ilike, desc, asc } from 'drizzle-orm';
 import { getSchema } from '../db/index';
 import type { AnyDatabase } from '../db';
 import type { FastifyBaseLogger } from 'fastify';
@@ -297,16 +297,16 @@ export class McpCatalogService {
         const searchTerm = `%${filters.search}%`;
         whereConditions.push(
           or(
-            like(this.mcpServers.name, searchTerm),
-            like(this.mcpServers.description, searchTerm),
-            like(this.mcpServers.tags, searchTerm)
+            ilike(this.mcpServers.name, searchTerm),
+            ilike(this.mcpServers.description, searchTerm),
+            ilike(this.mcpServers.tags, searchTerm)
           )
         );
       }
       if (filters.tags) {
         const tagList = filters.tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
         if (tagList.length > 0) {
-          const tagConditions = tagList.map(tag => like(this.mcpServers.tags, `%${tag}%`));
+          const tagConditions = tagList.map(tag => ilike(this.mcpServers.tags, `%${tag}%`));
           whereConditions.push(or(...tagConditions));
         }
       }
