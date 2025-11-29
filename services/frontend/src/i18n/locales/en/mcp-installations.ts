@@ -26,11 +26,13 @@ export default {
   },
 
   catalog: {
-    title: 'MCP Server Catalog',
+    title: 'Server Catalog',
     description: 'Browse all available MCP servers',
+    servers: 'servers',
+    noCategories: 'No categories found',
     emptyState: {
-      title: 'MCP Server Catalog',
-      description: 'Browse all available MCP servers. Coming soon.',
+      title: 'No Servers in Category',
+      description: 'This category does not have any MCP servers yet.',
     },
   },
 

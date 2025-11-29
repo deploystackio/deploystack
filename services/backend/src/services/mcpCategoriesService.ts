@@ -1,4 +1,4 @@
-import { eq, asc, and, count } from 'drizzle-orm';
+import { eq, asc, and, count, isNull } from 'drizzle-orm';
 import { getSchema } from '../db/index';
 import type { AnyDatabase } from '../db';
 import type { FastifyBaseLogger } from 'fastify';
@@ -21,6 +21,16 @@ export interface FeaturedCategory {
   icon: string | null;
   sort_order: number;
   featured_server_count: number;
+}
+
+export interface CategoryWithServerCount {
+  id: string;
+  name: string;
+  description: string | null;
+  icon: string | null;
+  sort_order: number;
+  server_count: number;
+  created_at: Date;
 }
 
 export interface CreateMcpCategoryRequest {
@@ -217,6 +227,55 @@ export class McpCategoriesService {
       icon: row.icon,
       sort_order: row.sort_order,
       featured_server_count: Number(row.featured_server_count)
+    }));
+  }
+
+  async getAllCategoriesWithServerCount(): Promise<CategoryWithServerCount[]> {
+    this.logger.debug({
+      operation: 'get_all_categories_with_server_count'
+    }, 'Getting all categories with global server count');
+
+    const results = await this.db
+      .select({
+        id: this.mcpCategories.id,
+        name: this.mcpCategories.name,
+        description: this.mcpCategories.description,
+        icon: this.mcpCategories.icon,
+        sort_order: this.mcpCategories.sort_order,
+        created_at: this.mcpCategories.created_at,
+        server_count: count(this.mcpServers.id)
+      })
+      .from(this.mcpCategories)
+      .leftJoin(
+        this.mcpServers,
+        and(
+          eq(this.mcpServers.category_id, this.mcpCategories.id),
+          isNull(this.mcpServers.owner_team_id)  // Only global servers
+        )
+      )
+      .groupBy(
+        this.mcpCategories.id,
+        this.mcpCategories.name,
+        this.mcpCategories.description,
+        this.mcpCategories.icon,
+        this.mcpCategories.sort_order,
+        this.mcpCategories.created_at
+      )
+      .orderBy(asc(this.mcpCategories.sort_order), asc(this.mcpCategories.name));
+
+    this.logger.info({
+      operation: 'get_all_categories_with_server_count',
+      categoriesFound: results.length
+    }, 'Retrieved all categories with global server count');
+
+    return results.map(row => ({
+      id: row.id,
+      name: row.name,
+      description: row.description,
+      icon: row.icon,
+      sort_order: row.sort_order,
+      server_count: Number(row.server_count),
+      created_at: row.created_at
     }));
   }
 }

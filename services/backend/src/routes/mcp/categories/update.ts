@@ -159,6 +159,7 @@ export default async function updateCategory(server: FastifyInstance) {
           description: updatedCategory.description ? String(updatedCategory.description) : null,
           icon: updatedCategory.icon ? String(updatedCategory.icon) : null,
           sort_order: Number(updatedCategory.sort_order),
+          server_count: 0,
           created_at: updatedCategory.created_at.toISOString()
         }
       };

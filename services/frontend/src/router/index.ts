@@ -125,8 +125,14 @@ const routes = [
   },
   {
     path: '/mcp-server/catalog',
+    name: 'McpServerCatalogIndex',
+    component: () => import('../views/mcp-server/catalog/index.vue'),
+    meta: { requiresSetup: true },
+  },
+  {
+    path: '/mcp-server/catalog/:categoryId',
     name: 'McpServerCatalog',
-    component: () => import('../views/mcp-server/catalog.vue'),
+    component: () => import('../views/mcp-server/catalog/[categoryId].vue'),
     meta: { requiresSetup: true },
   },
   {

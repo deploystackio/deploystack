@@ -90,7 +90,7 @@ export default async function listCategories(server: FastifyInstance) {
 
       const db = getDb();
       const categoriesService = new McpCategoriesService(db, server.log);
-      const categories = await categoriesService.getAllCategories();
+      const categories = await categoriesService.getAllCategoriesWithServerCount();
 
       const successResponse: ListCategoriesSuccessResponse = {
         success: true,
@@ -100,6 +100,7 @@ export default async function listCategories(server: FastifyInstance) {
           description: cat.description ? String(cat.description) : null,
           icon: cat.icon ? String(cat.icon) : null,
           sort_order: Number(cat.sort_order),
+          server_count: Number(cat.server_count),
           created_at: cat.created_at.toISOString()
         }))
       };

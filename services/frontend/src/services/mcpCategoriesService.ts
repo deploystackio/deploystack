@@ -7,6 +7,7 @@ export interface McpCategory {
   description?: string | null
   icon?: string | null
   sort_order: number
+  server_count: number
   created_at: string
 }
 

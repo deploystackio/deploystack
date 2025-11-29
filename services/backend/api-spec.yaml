@@ -10330,6 +10330,9 @@ paths:
                         sort_order:
                           type: number
                           description: Sort order for display
+                        server_count:
+                          type: number
+                          description: Number of global MCP servers in this category
                         created_at:
                           type: string
                           format: date-time
@@ -10340,6 +10343,7 @@ paths:
                         - description
                         - icon
                         - sort_order
+                        - server_count
                         - created_at
                     description: Array of MCP server categories
                 required:
@@ -10465,6 +10469,9 @@ paths:
                       sort_order:
                         type: number
                         description: Sort order for display
+                      server_count:
+                        type: number
+                        description: Number of global MCP servers in this category
                       created_at:
                         type: string
                         format: date-time
@@ -10475,6 +10482,7 @@ paths:
                       - description
                       - icon
                       - sort_order
+                      - server_count
                       - created_at
                 required:
                   - success
@@ -10753,6 +10761,9 @@ paths:
                       sort_order:
                         type: number
                         description: Sort order for display
+                      server_count:
+                        type: number
+                        description: Number of global MCP servers in this category
                       created_at:
                         type: string
                         format: date-time
@@ -10763,6 +10774,7 @@ paths:
                       - description
                       - icon
                       - sort_order
+                      - server_count
                       - created_at
                 required:
                   - success

@@ -143,6 +143,7 @@ export default async function createCategory(server: FastifyInstance) {
           description: newCategory.description ? String(newCategory.description) : null,
           icon: newCategory.icon ? String(newCategory.icon) : null,
           sort_order: Number(newCategory.sort_order),
+          server_count: 0,
           created_at: newCategory.created_at.toISOString()
         }
       };

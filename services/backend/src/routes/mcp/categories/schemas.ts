@@ -28,13 +28,17 @@ export const CATEGORY_SCHEMA = {
       type: 'number',
       description: 'Sort order for display'
     },
+    server_count: {
+      type: 'number',
+      description: 'Number of global MCP servers in this category'
+    },
     created_at: {
       type: 'string',
       format: 'date-time',
       description: 'ISO timestamp when the category was created'
     }
   },
-  required: ['id', 'name', 'description', 'icon', 'sort_order', 'created_at']
+  required: ['id', 'name', 'description', 'icon', 'sort_order', 'server_count', 'created_at']
 } as const;
 
 // Standard error response schema - used by all category endpoints
@@ -76,6 +80,7 @@ export interface Category {
   description: string | null;
   icon: string | null;
   sort_order: number;
+  server_count: number;
   created_at: string;
 }
 

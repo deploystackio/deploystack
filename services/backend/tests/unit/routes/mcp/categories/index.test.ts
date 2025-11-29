@@ -51,6 +51,7 @@ describe('MCP Categories Routes', () => {
     // Setup mock service
     mockService = {
       getAllCategories: vi.fn(),
+      getAllCategoriesWithServerCount: vi.fn(),
       getCategoryById: vi.fn(),
       createCategory: vi.fn(),
       updateCategory: vi.fn(),
@@ -137,6 +138,7 @@ describe('MCP Categories Routes', () => {
           description: 'Tools for software development',
           icon: 'code',
           sort_order: 1,
+          server_count: 5,
           created_at: new Date('2024-01-01T00:00:00Z'),
         },
         {
@@ -145,16 +147,17 @@ describe('MCP Categories Routes', () => {
           description: 'Tools for data analysis and visualization',
           icon: 'chart',
           sort_order: 2,
+          server_count: 3,
           created_at: new Date('2024-01-02T00:00:00Z'),
         },
       ];
 
-      mockService.getAllCategories.mockResolvedValue(mockCategories);
+      mockService.getAllCategoriesWithServerCount.mockResolvedValue(mockCategories);
 
       const handler = routeHandlers['GET /mcp/categories'];
       await handler(mockRequest, mockReply);
 
-      expect(mockService.getAllCategories).toHaveBeenCalled();
+      expect(mockService.getAllCategoriesWithServerCount).toHaveBeenCalled();
       expect(mockReply.send).toHaveBeenCalledWith(
         JSON.stringify({
           success: true,
@@ -165,6 +168,7 @@ describe('MCP Categories Routes', () => {
               description: 'Tools for software development',
               icon: 'code',
               sort_order: 1,
+              server_count: 5,
               created_at: '2024-01-01T00:00:00.000Z',
             },
             {
@@ -173,6 +177,7 @@ describe('MCP Categories Routes', () => {
               description: 'Tools for data analysis and visualization',
               icon: 'chart',
               sort_order: 2,
+              server_count: 3,
               created_at: '2024-01-02T00:00:00.000Z',
             },
           ],
@@ -181,12 +186,12 @@ describe('MCP Categories Routes', () => {
     });
 
     it('should return empty array when no categories exist', async () => {
-      mockService.getAllCategories.mockResolvedValue([]);
+      mockService.getAllCategoriesWithServerCount.mockResolvedValue([]);
 
       const handler = routeHandlers['GET /mcp/categories'];
       await handler(mockRequest, mockReply);
 
-      expect(mockService.getAllCategories).toHaveBeenCalled();
+      expect(mockService.getAllCategoriesWithServerCount).toHaveBeenCalled();
       expect(mockReply.send).toHaveBeenCalledWith(
         JSON.stringify({
           success: true,
@@ -197,7 +202,7 @@ describe('MCP Categories Routes', () => {
 
     it('should handle service errors gracefully', async () => {
       const error = new Error('Database connection failed');
-      mockService.getAllCategories.mockRejectedValue(error);
+      mockService.getAllCategoriesWithServerCount.mockRejectedValue(error);
 
       const handler = routeHandlers['GET /mcp/categories'];
       await handler(mockRequest, mockReply);
@@ -223,11 +228,12 @@ describe('MCP Categories Routes', () => {
           description: null,
           icon: null,
           sort_order: 1,
+          server_count: 0,
           created_at: new Date('2024-01-01T00:00:00Z'),
         },
       ];
 
-      mockService.getAllCategories.mockResolvedValue(mockCategories);
+      mockService.getAllCategoriesWithServerCount.mockResolvedValue(mockCategories);
 
       const handler = routeHandlers['GET /mcp/categories'];
       await handler(mockRequest, mockReply);
@@ -242,6 +248,7 @@ describe('MCP Categories Routes', () => {
               description: null,
               icon: null,
               sort_order: 1,
+              server_count: 0,
               created_at: '2024-01-01T00:00:00.000Z',
             },
           ],
@@ -277,7 +284,7 @@ describe('MCP Categories Routes', () => {
 
       const mockRequestWithBody = {
         ...mockRequest,
-        body: { 
+        body: {
           name: 'Test Category',
           description: 'Test description',
           icon: 'test-icon',
@@ -286,7 +293,7 @@ describe('MCP Categories Routes', () => {
         user: { id: 'test-user' },
         log: mockFastify.log
       };
-      
+
       const handler = routeHandlers['POST /mcp/categories'];
       await handler(mockRequestWithBody, mockReply);
 
@@ -301,7 +308,12 @@ describe('MCP Categories Routes', () => {
         JSON.stringify({
           success: true,
           data: {
-            ...newCategory,
+            id: 'cat-new',
+            name: 'Test Category',
+            description: 'Test description',
+            icon: 'test-icon',
+            sort_order: 1,
+            server_count: 0,
             created_at: '2024-01-01T00:00:00.000Z',
           }
         })
@@ -397,7 +409,7 @@ describe('MCP Categories Routes', () => {
       const mockRequestWithParams = {
         ...mockRequest,
         params: { id: 'cat-1' },
-        body: { 
+        body: {
           name: 'Updated Category',
           description: 'Updated description',
           icon: 'updated-icon',
@@ -406,7 +418,7 @@ describe('MCP Categories Routes', () => {
         user: { id: 'test-user' },
         log: mockFastify.log
       };
-      
+
       const handler = routeHandlers['PUT /mcp/categories/:id'];
       await handler(mockRequestWithParams, mockReply);
 
@@ -421,7 +433,12 @@ describe('MCP Categories Routes', () => {
         JSON.stringify({
           success: true,
           data: {
-            ...updatedCategory,
+            id: 'cat-1',
+            name: 'Updated Category',
+            description: 'Updated description',
+            icon: 'updated-icon',
+            sort_order: 2,
+            server_count: 0,
             created_at: '2024-01-01T00:00:00.000Z',
           }
         })
