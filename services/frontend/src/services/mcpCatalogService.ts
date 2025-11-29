@@ -15,6 +15,15 @@ export interface PaginationParams {
   offset?: number
 }
 
+export interface FeaturedCategory {
+  id: string
+  name: string
+  description: string | null
+  icon: string | null
+  sort_order: number
+  featured_server_count: number
+}
+
 export interface PaginationMeta {
   total: number
   limit: number
@@ -423,6 +432,27 @@ export class McpCatalogService {
 
     const data = await response.json()
     return data.data || data
+  }
+
+  /**
+   * Get categories that have featured MCP servers
+   */
+  static async getFeaturedCategories(): Promise<FeaturedCategory[]> {
+    const response = await fetch(`${this.baseUrl}/api/mcp/categories/featured`, {
+      method: 'GET',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.message || `Failed to fetch featured categories: ${response.status}`)
+    }
+
+    const data = await response.json()
+    return data.data || []
   }
 
   /**

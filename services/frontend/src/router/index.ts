@@ -118,6 +118,18 @@ const routes = [
     meta: { requiresSetup: true },
   },
   {
+    path: '/mcp-server/featured',
+    name: 'McpServerFeatured',
+    component: () => import('../views/mcp-server/featured.vue'),
+    meta: { requiresSetup: true },
+  },
+  {
+    path: '/mcp-server/catalog',
+    name: 'McpServerCatalog',
+    component: () => import('../views/mcp-server/catalog.vue'),
+    meta: { requiresSetup: true },
+  },
+  {
     path: '/client-configuration',
     name: 'ClientConfiguration',
     component: () => import('../views/client-configuration/index.vue'),

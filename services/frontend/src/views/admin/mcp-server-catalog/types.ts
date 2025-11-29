@@ -48,6 +48,11 @@ export interface McpServer {
 
   dependencies?: Record<string, any>
   category_id?: string
+  category?: {
+    id: string
+    name: string
+    icon: string | null
+  } | null
   tags?: string[]
   status: 'active' | 'deprecated' | 'maintenance'
   featured: boolean

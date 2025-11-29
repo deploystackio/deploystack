@@ -13,10 +13,25 @@ export default {
   },
 
   featured: {
-    title: 'Featured MCP Servers',
+    title: 'Featured Catalog',
     description: 'Discover our curated selection of high-quality MCP servers',
     loading: 'Loading featured servers...',
     noServers: 'No featured servers available at the moment',
+    categories: 'Categories',
+    noCategories: 'No categories found',
+    emptyState: {
+      title: 'No Featured Servers',
+      description: 'Featured MCP servers need to be configured by an administrator.',
+    },
+  },
+
+  catalog: {
+    title: 'MCP Server Catalog',
+    description: 'Browse all available MCP servers',
+    emptyState: {
+      title: 'MCP Server Catalog',
+      description: 'Browse all available MCP servers. Coming soon.',
+    },
   },
 
   status: {
@@ -115,6 +130,8 @@ export default {
       loadingCategories: 'Loading categories...',
       categoriesError: 'Failed to load categories',
       errorTitle: 'Error loading servers',
+      browseFeatured: 'Browse Featured',
+      viewAllServers: 'View All Servers',
       requiredEnvVars: 'Required Environment Variables',
       details: 'Details',
       install: 'Install',

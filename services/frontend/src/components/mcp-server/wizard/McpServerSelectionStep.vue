@@ -213,6 +213,26 @@ onMounted(() => {
           </button>
         </div>
       </form>
+
+      <!-- Browse Buttons -->
+      <div class="mt-4 flex items-center justify-center gap-3">
+        <Button
+          variant="outline"
+          size="sm"
+          class="bg-black text-white border-black hover:bg-black/90 hover:border-black hover:text-white"
+          @click="router.push('/mcp-server/featured')"
+        >
+          {{ t('mcpInstallations.wizard.server.browseFeatured') }}
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          class="bg-black text-white border-black hover:bg-black/90 hover:border-black hover:text-white"
+          @click="router.push('/mcp-server/catalog')"
+        >
+          {{ t('mcpInstallations.wizard.server.viewAllServers') }}
+        </Button>
+      </div>
     </div>
 
     <div v-if="isLoadingCategories" class="mt-4 text-center text-sm text-gray-500">
