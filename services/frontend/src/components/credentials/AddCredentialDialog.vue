@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Button } from '@/components/ui/button'
+import { Spinner } from '@/components/ui/spinner'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -392,11 +393,10 @@ onMounted(() => {
             </Button>
             <Button
               type="submit"
-              :disabled="!isFormValid"
-              :loading="isSaving"
-              :loading-text="t('credentials.form.buttons.saving')"
+              :disabled="!isFormValid || isSaving"
               class="min-w-[120px]"
             >
+              <Spinner v-if="isSaving" class="mr-2" />
               {{ t('credentials.form.buttons.save') }}
             </Button>
           </div>

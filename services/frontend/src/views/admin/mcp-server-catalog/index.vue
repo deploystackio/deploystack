@@ -32,6 +32,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Plus, RefreshCw, ExternalLink, X } from 'lucide-vue-next'
+import { Spinner } from '@/components/ui/spinner'
 import DashboardLayout from '@/components/DashboardLayout.vue'
 import { McpCatalogService, type PaginationMeta } from '@/services/mcpCatalogService'
 import { useEventBus } from '@/composables/useEventBus'
@@ -557,10 +558,10 @@ onUnmounted(() => {
             />
             <Button
               @click="executeSearch"
-              :loading="isSearching"
-              loading-text="Searching..."
+              :disabled="isSearching"
               class="flex items-center gap-2"
             >
+              <Spinner v-if="isSearching" class="mr-2" />
               {{ t('mcpCatalog.table.search.button') }}
             </Button>
             <Button
@@ -834,10 +835,9 @@ onUnmounted(() => {
           >
             <Button
               @click="handleSyncRegistry"
-              :loading="isSyncing"
-              :loading-text="t('mcpCatalog.registrySync.modal.starting')"
               :disabled="isSyncing"
             >
+              <Spinner v-if="isSyncing" class="mr-2" />
               {{ t('mcpCatalog.registrySync.modal.confirm') }}
             </Button>
           </AlertDialogAction>

@@ -15,6 +15,7 @@
 import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Button } from '@/components/ui/button'
+import { Spinner } from '@/components/ui/spinner'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { ProgressBars } from '@/components/ui/progress-bars'
 import { FileText, GitBranch, Code, Settings, CheckCircle, BookOpen } from 'lucide-vue-next'
@@ -39,13 +40,15 @@ interface Props {
   submitButtonText?: string
   cancelButtonText?: string
   serverId?: string
+  isSubmitting?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   mode: 'create',
   submitButtonText: '',
   cancelButtonText: '',
-  serverId: ''
+  serverId: '',
+  isSubmitting: false
 })
 
 // Emits
@@ -141,7 +144,7 @@ const progressPercentage = computed(() => {
 
 // Progress title based on current step
 const progressTitle = computed(() => {
-  if (isSubmitting.value) {
+  if (props.isSubmitting || internalIsSubmitting.value) {
     return props.mode === 'edit'
       ? t('mcpCatalog.form.navigation.updating')
       : t('mcpCatalog.form.navigation.creating')
@@ -163,14 +166,14 @@ const progressTitle = computed(() => {
 // Progress variant based on state
 const progressVariant = computed(() => {
   if (repositoryFetchError.value || submitError.value) return 'destructive'
-  if (isSubmitting.value) return 'default' // Keep default while submitting
+  if (props.isSubmitting || internalIsSubmitting.value) return 'default' // Keep default while submitting
   // Only show success after actual completion (would need to be handled by parent component)
   return 'default'
 })
 
 // State
 const currentStep = ref(0)
-const isSubmitting = ref(false)
+const internalIsSubmitting = ref(false)
 const submitError = ref<string | null>(null)
 const isFetchingRepository = ref(false)
 const repositoryFetchError = ref<string | null>(null)
@@ -653,10 +656,20 @@ watch(
   }
 )
 
+// Reset internal submitting state when parent signals completion
+watch(
+  () => props.isSubmitting,
+  (newValue) => {
+    if (!newValue) {
+      internalIsSubmitting.value = false
+    }
+  }
+)
+
 // Form submission with fresh data from actual storage keys
 const submitForm = async () => {
   try {
-    isSubmitting.value = true
+    internalIsSubmitting.value = true
     submitError.value = null
 
     // Get fresh data from ALL storage keys being used by components
@@ -745,9 +758,9 @@ const submitForm = async () => {
   } catch (error) {
     console.error('Form submission error:', error)
     submitError.value = error instanceof Error ? error.message : 'Failed to submit form'
-  } finally {
-    isSubmitting.value = false
+    internalIsSubmitting.value = false
   }
+  // Note: Don't reset internalIsSubmitting in finally - parent controls final state via prop
 }
 
 // Lifecycle
@@ -771,7 +784,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   // Save current state as draft when component unmounts (unless submitting)
-  if (!isSubmitting.value) {
+  if (!props.isSubmitting && !internalIsSubmitting.value) {
     saveDraft()
   }
 })
@@ -860,11 +873,10 @@ onUnmounted(() => {
         <Button
           v-if="currentStep === 0"
           @click="handleRepositoryStepNext"
-          :disabled="!canProceedFromRepository"
-          :loading="isFetchingRepository"
-          :loading-text="t('mcpCatalog.form.navigation.fetching')"
+          :disabled="!canProceedFromRepository || isFetchingRepository"
           class="min-w-[120px]"
         >
+          <Spinner v-if="isFetchingRepository" class="mr-2" />
           {{ t('mcpCatalog.form.navigation.next') }}
         </Button>
 
@@ -880,9 +892,9 @@ onUnmounted(() => {
         <Button
           v-else
           @click="submitForm"
-          :loading="isSubmitting"
-          :loading-text="props.mode === 'edit' ? t('mcpCatalog.form.navigation.updating') : t('mcpCatalog.form.navigation.creating')"
+          :disabled="props.isSubmitting || internalIsSubmitting"
         >
+          <Spinner v-if="props.isSubmitting || internalIsSubmitting" class="mr-2" />
           {{ props.mode === 'edit' ? t('mcpCatalog.form.navigation.update') : t('mcpCatalog.form.navigation.submit') }}
         </Button>
       </div>

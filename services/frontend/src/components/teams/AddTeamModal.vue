@@ -12,6 +12,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
+import { Spinner } from '@/components/ui/spinner'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { TeamService, CreateTeamSchema, type CreateTeamInput } from '@/services/teamService'
@@ -198,10 +199,9 @@ const handleDescriptionChange = () => {
           </Button>
           <Button
             type="submit"
-            :disabled="!isFormValid"
-            :loading="isSubmitting"
-            :loading-text="t('teams.addModal.buttons.creating')"
+            :disabled="!isFormValid || isSubmitting"
           >
+            <Spinner v-if="isSubmitting" class="mr-2" />
             {{ t('teams.addModal.buttons.create') }}
           </Button>
         </AlertDialogFooter>

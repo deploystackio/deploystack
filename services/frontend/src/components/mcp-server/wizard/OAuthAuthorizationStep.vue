@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Button } from '@/components/ui/button'
+import { Spinner } from '@/components/ui/spinner'
 import { Lock } from 'lucide-vue-next'
 
 interface ServerData {
@@ -55,11 +56,10 @@ const handleAuthorize = () => {
         @click="handleAuthorize"
         size="lg"
         class="gap-2"
-        :loading="isAuthorizing"
         :disabled="isAuthorizing"
-        loading-text="Opening authentication window..."
       >
-        <Lock v-if="!isAuthorizing" class="h-4 w-4" />
+        <Spinner v-if="isAuthorizing" class="mr-2" />
+        <Lock v-else class="h-4 w-4" />
         <span v-if="serverData?.name">Authorize with {{ serverData.name }}</span>
         <span v-else>Authorize</span>
       </Button>

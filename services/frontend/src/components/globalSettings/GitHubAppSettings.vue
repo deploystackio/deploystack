@@ -12,6 +12,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Spinner } from '@/components/ui/spinner'
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
@@ -184,13 +185,13 @@ function getSetting(key: string) {
               <Button
                 type="button"
                 @click="handleTestConnection"
-                :disabled="!canTestConnection"
-                :loading="isTestingConnection"
+                :disabled="!canTestConnection || isTestingConnection"
                 variant="outline"
                 size="sm"
                 class="w-full sm:w-auto"
               >
-                <TestTube class="h-4 w-4 mr-2" />
+                <Spinner v-if="isTestingConnection" class="mr-2" />
+                <TestTube v-else class="h-4 w-4 mr-2" />
                 {{ t('githubApp.connectionTest.button.test') }}
               </Button>
             </div>
@@ -234,10 +235,10 @@ function getSetting(key: string) {
             </div>
             <Button
               type="submit"
-              :disabled="!hasChanges"
-              :loading="isSaving"
+              :disabled="!hasChanges || isSaving"
               class="min-w-[120px] w-full sm:w-auto"
             >
+              <Spinner v-if="isSaving" class="mr-2" />
               {{ t('githubApp.form.saveChanges') }}
             </Button>
           </div>
@@ -355,13 +356,13 @@ function getSetting(key: string) {
                 <Button
                   type="button"
                   @click="handleTestConnection"
-                  :disabled="!canTestConnection"
-                  :loading="isTestingConnection"
+                  :disabled="!canTestConnection || isTestingConnection"
                   variant="outline"
                   size="sm"
                   class="w-full sm:w-auto"
                 >
-                  <TestTube class="h-4 w-4 mr-2" />
+                  <Spinner v-if="isTestingConnection" class="mr-2" />
+                  <TestTube v-else class="h-4 w-4 mr-2" />
                   {{ t('githubApp.connectionTest.button.test') }}
                 </Button>
               </div>

@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
 import { Button } from '@/components/ui/button'
+import { Spinner } from '@/components/ui/spinner'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import {
   Trash2,
@@ -260,11 +261,11 @@ const deleteTeam = async () => {
           <Button
             variant="destructive"
             @click="deleteTeam"
-            :loading="isDeleting"
-            :loading-text="t('teams.manage.deleteDialog.deleting')"
+            :disabled="isDeleting"
             class="bg-destructive hover:bg-destructive/90 gap-2"
           >
-            <Trash2 class="h-4 w-4" />
+            <Spinner v-if="isDeleting" class="mr-2" />
+            <Trash2 v-else class="h-4 w-4" />
             {{ t('teams.manage.deleteDialog.confirm') }}
           </Button>
         </AlertDialogFooter>

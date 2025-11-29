@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { toast } from 'vue-sonner'
 import { Button } from '@/components/ui/button'
+import { Spinner } from '@/components/ui/spinner'
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -88,12 +89,11 @@ const handlePasswordReset = async () => {
           <AlertDialogTrigger as-child>
             <Button
               variant="outline"
-              :disabled="!canResetPassword"
-              :loading="isLoading"
-              :loading-text="t('adminUsers.userDetail.actions.forceResetPassword')"
+              :disabled="!canResetPassword || isLoading"
               :title="!canResetPassword ? t('adminUsers.userDetail.actions.resetPasswordDisabled') : undefined"
               class="justify-start"
             >
+              <Spinner v-if="isLoading" class="mr-2" />
               {{ t('adminUsers.userDetail.actions.forceResetPassword') }}
             </Button>
           </AlertDialogTrigger>
@@ -115,11 +115,11 @@ const handlePasswordReset = async () => {
                 {{ t('adminUsers.userDetail.actions.resetPasswordConfirm.cancel') }}
               </AlertDialogCancel>
               <AlertDialogAction as-child>
-                <Button 
-                  @click="handlePasswordReset" 
-                  :loading="isLoading"
-                  :loading-text="t('adminUsers.userDetail.actions.resetPasswordConfirm.confirm')"
+                <Button
+                  @click="handlePasswordReset"
+                  :disabled="isLoading"
                 >
+                  <Spinner v-if="isLoading" class="mr-2" />
                   {{ t('adminUsers.userDetail.actions.resetPasswordConfirm.confirm') }}
                 </Button>
               </AlertDialogAction>

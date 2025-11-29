@@ -8,6 +8,7 @@ import { Settings, Eye, EyeOff } from 'lucide-vue-next'
 import { McpCatalogService } from '@/services/mcpCatalogService'
 import { McpInstallationService } from '@/services/mcpInstallationService'
 import { Button } from '@/components/ui/button'
+import { Spinner } from '@/components/ui/spinner'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -723,9 +724,9 @@ const modalTitle = computed(() => {
             </Button>
             <Button
               type="submit"
-              :loading="isSubmitting"
-              :loadingText="t('mcpInstallations.userConfiguration.editModal.form.buttons.saving')"
+              :disabled="isSubmitting"
             >
+              <Spinner v-if="isSubmitting" class="mr-2" />
               {{ t('mcpInstallations.userConfiguration.editModal.form.buttons.save') }}
             </Button>
           </AlertDialogFooter>

@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
+import { Spinner } from '@/components/ui/spinner'
 import { GatewayConfigService, type ClientConfigResponse, type ClientInfo, type ConfigAction } from '@/services/satelliteConfigService'
 import { toast } from 'vue-sonner'
 import LinkActionRenderer from '@/components/client-config/LinkActionRenderer.vue'
@@ -239,10 +240,9 @@ function handleLinkClick(action: { url: string; name?: string }) {
         <Button
           v-if="hasCopyableContent"
           @click="handleCopyAndClose"
-          :loading="isCopying"
-          loading-text="Copying..."
-          :disabled="!copyableContent || isLoading || isLoadingClients"
+          :disabled="isCopying || !copyableContent || isLoading || isLoadingClients"
         >
+          <Spinner v-if="isCopying" class="mr-2" />
           {{ t('satelliteConfig.button.copyAndClose') }}
         </Button>
       </AlertDialogFooter>

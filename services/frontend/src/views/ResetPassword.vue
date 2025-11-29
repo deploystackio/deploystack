@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/card'
 
 import { Button } from '@/components/ui/button'
+import { Spinner } from '@/components/ui/spinner'
 import {
   FormControl,
   FormField,
@@ -158,12 +159,12 @@ onMounted(() => {
               </FormItem>
             </FormField>
 
-            <Button 
-              type="submit" 
-              class="w-full" 
-              :loading="isLoading"
-              :loading-text="$t('resetPassword.buttons.loading')"
+            <Button
+              type="submit"
+              class="w-full"
+              :disabled="isLoading"
             >
+              <Spinner v-if="isLoading" class="mr-2" />
               {{ $t('resetPassword.buttons.submit') }}
             </Button>
           </form>

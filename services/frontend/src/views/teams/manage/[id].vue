@@ -3,6 +3,7 @@ import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { Button } from '@/components/ui/button'
+import { Spinner } from '@/components/ui/spinner'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Loader2, AlertTriangle } from 'lucide-vue-next'
 import { DsTabs, DsTabsItem } from '@/components/ui/ds-tabs'
@@ -155,10 +156,10 @@ onUnmounted(() => {
           <Button
             variant="outline"
             size="sm"
-            :loading="isRetrying"
-            :loading-text="t('teams.manage.errorActions.loading')"
+            :disabled="isRetrying"
             @click="loadTeam"
           >
+            <Spinner v-if="isRetrying" class="mr-2" />
             {{ t('teams.manage.errorActions.tryAgain') }}
           </Button>
           <Button variant="ghost" size="sm" @click="router.push('/teams')">

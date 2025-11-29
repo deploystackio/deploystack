@@ -3,6 +3,7 @@ import { ref, computed, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { toast } from 'vue-sonner'
 import { Button } from '@/components/ui/button'
+import { Spinner } from '@/components/ui/spinner'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -274,9 +275,8 @@ const selectedTeamName = computed(() => {
           <Button
             @click="handleCreateToken"
             :disabled="isCreating || (!canCreateGlobal && !canCreateTeam)"
-            :loading="isCreating"
-            :loading-text="t('satellites.pairing.createToken.buttons.creating')"
           >
+            <Spinner v-if="isCreating" class="mr-2" />
             {{ t('satellites.pairing.createToken.buttons.create') }}
           </Button>
         </DialogFooter>

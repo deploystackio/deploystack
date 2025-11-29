@@ -3,6 +3,7 @@
 import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Button } from '@/components/ui/button'
+import { Spinner } from '@/components/ui/spinner'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { ProgressBars } from '@/components/ui/progress-bars'
 import { FileText, Github, Settings } from 'lucide-vue-next'
@@ -554,11 +555,10 @@ const submitForm = async () => {
         <Button
           v-if="currentStep === 0"
           @click="handleGitHubStepNext"
-          :disabled="!canProceedFromGitHub"
-          :loading="isFetchingGitHub"
-          :loading-text="t('mcpCatalog.form.navigation.fetching')"
+          :disabled="!canProceedFromGitHub || isFetchingGitHub"
           class="min-w-[120px]"
         >
+          <Spinner v-if="isFetchingGitHub" class="mr-2" />
           {{ t('mcpCatalog.form.navigation.next') }}
         </Button>
 
@@ -575,10 +575,9 @@ const submitForm = async () => {
         <Button
           v-else
           @click="submitForm"
-          :disabled="!canSubmit"
-          :loading="isSubmitting"
-          :loading-text="t('mcpCatalog.form.navigation.creating')"
+          :disabled="!canSubmit || isSubmitting"
         >
+          <Spinner v-if="isSubmitting" class="mr-2" />
           {{ t('mcpCatalog.form.navigation.submit') }}
         </Button>
       </div>

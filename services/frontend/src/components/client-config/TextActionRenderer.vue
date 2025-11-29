@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import type { TextAction } from '@/services/satelliteConfigService'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
+import { Spinner } from '@/components/ui/spinner'
 import { useI18n } from 'vue-i18n'
 
 interface Props {
@@ -42,9 +43,9 @@ async function handleCopy() {
     <div v-if="showCopyButton" class="flex justify-end">
       <Button
         @click="handleCopy"
-        :loading="isCopying"
-        loading-text="Copying..."
+        :disabled="isCopying"
       >
+        <Spinner v-if="isCopying" class="mr-2" />
         {{ t('satelliteConfig.button.copy') }}
       </Button>
     </div>

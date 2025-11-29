@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Button } from '@/components/ui/button'
+import { Spinner } from '@/components/ui/spinner'
 import { Label } from '@/components/ui/label'
 import {
   Select,
@@ -247,10 +248,9 @@ const handleCancel = () => {
         <Button
           v-if="canChangeRole"
           @click="updateMemberRole"
-          :disabled="!isRoleChanged"
-          :loading="isUpdatingRole"
-          :loading-text="$t('teams.manage.members.editRoleModal.buttons.updating')"
+          :disabled="!isRoleChanged || isUpdatingRole"
         >
+          <Spinner v-if="isUpdatingRole" class="mr-2" />
           {{ $t('teams.manage.members.editRoleModal.buttons.update') }}
         </Button>
       </AlertDialogFooter>

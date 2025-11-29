@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Button } from '@/components/ui/button'
+import { Spinner } from '@/components/ui/spinner'
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -175,10 +176,10 @@ const handleCancel = () => {
         <Button
           variant="destructive"
           @click="removeMember"
-          :loading="isRemovingMember"
-          :loading-text="t('teams.manage.members.removeModal.buttons.removing')"
+          :disabled="isRemovingMember"
           class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
         >
+          <Spinner v-if="isRemovingMember" class="mr-2" />
           {{ t('teams.manage.members.removeModal.buttons.remove') }}
         </Button>
       </AlertDialogFooter>

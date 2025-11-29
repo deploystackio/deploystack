@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Button } from '@/components/ui/button'
+import { Spinner } from '@/components/ui/spinner'
 import {
   Dialog,
   DialogContent,
@@ -226,9 +227,9 @@ const handleCancel = () => {
           </Button>
           <Button
             type="submit"
-            :loading="isAddingMember"
-            :loading-text="t('teams.manage.members.addModal.buttons.adding')"
+            :disabled="isAddingMember"
           >
+            <Spinner v-if="isAddingMember" class="mr-2" />
             {{ t('teams.manage.members.addModal.buttons.add') }}
           </Button>
         </DialogFooter>

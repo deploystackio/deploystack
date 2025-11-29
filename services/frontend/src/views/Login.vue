@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/alert'
 
 import { Button } from '@/components/ui/button'
+import { Spinner } from '@/components/ui/spinner'
 import {
   FormControl,
   FormField,
@@ -281,9 +282,9 @@ onMounted(async () => {
             <Button
               type="submit"
               class="w-full"
-              :loading="isLoading"
-              :loading-text="$t('login.buttons.loading')"
+              :disabled="isLoading"
             >
+              <Spinner v-if="isLoading" class="mr-2" />
               {{ $t('login.buttons.submit') }}
             </Button>
           </form>

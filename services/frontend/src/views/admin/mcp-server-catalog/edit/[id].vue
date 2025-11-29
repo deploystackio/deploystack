@@ -6,12 +6,14 @@ import { useI18n } from 'vue-i18n'
 import { useRouter, useRoute } from 'vue-router'
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
 import { Button } from '@/components/ui/button'
+import { Spinner } from '@/components/ui/spinner'
 import { Loader2 } from 'lucide-vue-next'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import DashboardLayout from '@/components/DashboardLayout.vue'
 import McpServerFormWizard from '@/components/admin/mcp-catalog/McpServerEditFormWizard.vue'
 import { McpCatalogService } from '@/services/mcpCatalogService'
 import { useEventBus } from '@/composables/useEventBus'
+import { toast } from 'vue-sonner'
 import type {
   McpServer,
   McpServerFormData,
@@ -27,6 +29,7 @@ const { setBreadcrumbs } = useBreadcrumbs()
 // State
 const isLoading = ref(true)
 const isRetrying = ref(false)
+const isSubmitting = ref(false)
 const loadError = ref<string | null>(null)
 const serverData = ref<McpServer | null>(null)
 const initialFormData = ref<Partial<McpServerFormData> | null>(null)
@@ -210,142 +213,169 @@ const convertServerToFormData = (server: McpServer, readmeBase64: string = ''): 
 const handleSubmit = async (formData: McpServerFormData) => {
   // Get the original server data for tools/resources/prompts
   const server = serverData.value
-  if (!server) return
-
-  // Parse resources and prompts from server data
-  const parsedResources = parseJsonField(server.resources, [])
-  const parsedPrompts = parseJsonField(server.prompts, [])
-
-  // Get fresh repository data from storage (RepositoryStep uses storage-first architecture)
-  const repositorySetupData = eventBus.getState<{
-    repository_url?: string
-    repository_source?: string
-    git_branch?: string
-    auto_populated?: boolean
-  }>('edit_repository_setup_data')
-
-  // Merge repository data: storage takes priority over formData
-  const finalRepositoryData = {
-    repository_url: repositorySetupData?.repository_url !== undefined ? repositorySetupData.repository_url : formData.repository.repository_url,
-    repository_source: repositorySetupData?.repository_source !== undefined ? repositorySetupData.repository_source : formData.repository.repository_source,
-    git_branch: repositorySetupData?.git_branch !== undefined ? repositorySetupData.git_branch : formData.repository.git_branch
+  if (!server) {
+    toast.error(t('mcpCatalog.edit.errors.noServerData'))
+    eventBus.emit('mcp-server-update-error', { serverId, error: 'No server data' })
+    return
   }
 
-  // Get README markdown from storage and convert to base64
-  const readmeData = eventBus.getState<{ readme_markdown: string }>('edit_readme_data')
-  const readmeMarkdown = readmeData?.readme_markdown || ''
-  const readmeBase64 = readmeMarkdown ? btoa(readmeMarkdown) : ''
+  try {
+    isSubmitting.value = true
 
-  // CRITICAL FIX: Synchronize environment variables from installation_methods to team_env_schema
-  let finalConfigurationSchema = { ...formData.configuration_schema }
+    // Parse resources and prompts from server data
+    const parsedResources = parseJsonField(server.resources, [])
+    const parsedPrompts = parseJsonField(server.prompts, [])
 
-  // Extract environment variables from installation_methods
-  if (formData.technical.installation_methods && formData.technical.installation_methods.length > 0) {
-    const firstMethod = formData.technical.installation_methods[0]
-    if (firstMethod && firstMethod.env) {
-      const envVarsFromInstallation = Object.keys(firstMethod.env)
+    // Get fresh repository data from storage (RepositoryStep uses storage-first architecture)
+    const repositorySetupData = eventBus.getState<{
+      repository_url?: string
+      repository_source?: string
+      git_branch?: string
+      auto_populated?: boolean
+    }>('edit_repository_setup_data')
 
-      // Get existing team_env_schema and user_env_schema or initialize empty arrays
-      const existingTeamEnvSchema = finalConfigurationSchema.team_env_schema || []
-      const existingUserEnvSchema = finalConfigurationSchema.user_env_schema || []
+    // Merge repository data: storage takes priority over formData
+    const finalRepositoryData = {
+      repository_url: repositorySetupData?.repository_url !== undefined ? repositorySetupData.repository_url : formData.repository.repository_url,
+      repository_source: repositorySetupData?.repository_source !== undefined ? repositorySetupData.repository_source : formData.repository.repository_source,
+      git_branch: repositorySetupData?.git_branch !== undefined ? repositorySetupData.git_branch : formData.repository.git_branch
+    }
 
-      // Get ALL existing environment variable names from both team and user schemas
-      const existingTeamEnvNames = existingTeamEnvSchema.map(item => item.name)
-      const existingUserEnvNames = existingUserEnvSchema.map(item => item.name)
-      const allExistingEnvNames = [...existingTeamEnvNames, ...existingUserEnvNames]
+    // Get README markdown from storage and convert to base64
+    const readmeData = eventBus.getState<{ readme_markdown: string }>('edit_readme_data')
+    const readmeMarkdown = readmeData?.readme_markdown || ''
+    const readmeBase64 = readmeMarkdown ? btoa(readmeMarkdown) : ''
 
-      // Add missing environment variables to team_env_schema (only if not in team OR user schema)
-      const newEnvSchemaItems: any[] = []
-      envVarsFromInstallation.forEach(envVarName => {
-        if (!allExistingEnvNames.includes(envVarName)) {
-          newEnvSchemaItems.push({
-            name: envVarName,
-            type: 'string',
-            description: 'Automatically detected from Claude Desktop configuration',
-            required: false,
-            locked: false,
-            default_team_locked: false,
-            visible_to_users: true
-          })
-        } else {
-        }
-      })
+    // CRITICAL FIX: Synchronize environment variables from installation_methods to team_env_schema
+    let finalConfigurationSchema = { ...formData.configuration_schema }
 
-      // Update the final configuration schema
-      if (newEnvSchemaItems.length > 0) {
-        finalConfigurationSchema = {
-          ...finalConfigurationSchema,
-          team_env_schema: [...existingTeamEnvSchema, ...newEnvSchemaItems]
+    // Extract environment variables from installation_methods
+    if (formData.technical.installation_methods && formData.technical.installation_methods.length > 0) {
+      const firstMethod = formData.technical.installation_methods[0]
+      if (firstMethod && firstMethod.env) {
+        const envVarsFromInstallation = Object.keys(firstMethod.env)
+
+        // Get existing team_env_schema and user_env_schema or initialize empty arrays
+        const existingTeamEnvSchema = finalConfigurationSchema.team_env_schema || []
+        const existingUserEnvSchema = finalConfigurationSchema.user_env_schema || []
+
+        // Get ALL existing environment variable names from both team and user schemas
+        const existingTeamEnvNames = existingTeamEnvSchema.map(item => item.name)
+        const existingUserEnvNames = existingUserEnvSchema.map(item => item.name)
+        const allExistingEnvNames = [...existingTeamEnvNames, ...existingUserEnvNames]
+
+        // Add missing environment variables to team_env_schema (only if not in team OR user schema)
+        const newEnvSchemaItems: any[] = []
+        envVarsFromInstallation.forEach(envVarName => {
+          if (!allExistingEnvNames.includes(envVarName)) {
+            newEnvSchemaItems.push({
+              name: envVarName,
+              type: 'string',
+              description: 'Automatically detected from Claude Desktop configuration',
+              required: false,
+              locked: false,
+              default_team_locked: false,
+              visible_to_users: true
+            })
+          }
+        })
+
+        // Update the final configuration schema
+        if (newEnvSchemaItems.length > 0) {
+          finalConfigurationSchema = {
+            ...finalConfigurationSchema,
+            team_env_schema: [...existingTeamEnvSchema, ...newEnvSchemaItems]
+          }
         }
       }
     }
+
+    // Parse dependencies - handle both string and object formats
+    let parsedDependencies: any = undefined
+    if (formData.technical.dependencies) {
+      if (typeof formData.technical.dependencies === 'string') {
+        try {
+          parsedDependencies = JSON.parse(formData.technical.dependencies)
+        } catch {
+          parsedDependencies = undefined
+        }
+      } else {
+        parsedDependencies = formData.technical.dependencies
+      }
+    }
+
+    // Convert form data to API request format
+    const requestData: UpdateMcpServerRequest = {
+      // Basic info
+      name: formData.basic.name,
+      description: formData.basic.description,
+      long_description: formData.basic.long_description || undefined,
+      category_id: formData.basic.category_id || undefined,
+      author_name: formData.basic.author_name || undefined,
+      author_contact: formData.basic.author_contact || undefined,
+      organization: formData.basic.organization || undefined,
+      license: formData.basic.license || undefined,
+      tags: formData.basic.tags,
+      featured: formData.basic.featured,
+      auto_install_new_default_team: formData.basic.auto_install_new_default_team,
+      icon_url: formData.basic.icon_url || undefined,
+
+      // Repository (use finalRepositoryData which merges storage + formData)
+      repository_url: finalRepositoryData.repository_url || undefined,
+      repository_source: finalRepositoryData.repository_source || undefined,
+      repository_id: formData.repository.repository_id || undefined,
+      repository_subfolder: formData.repository.repository_subfolder || undefined,
+      git_branch: finalRepositoryData.git_branch ? finalRepositoryData.git_branch : null,
+      website_url: formData.basic.website_url || undefined,
+
+      // README content
+      github_readme_base64: readmeBase64 || undefined,
+
+      // Technical
+      language: formData.technical.language,
+      runtime: formData.technical.runtime,
+      packages: formData.technical.packages,
+      remotes: formData.technical.remotes,
+      dependencies: parsedDependencies,
+
+      // UPDATED: Use the synchronized configuration schema
+      template_args: finalConfigurationSchema.template_args,
+      template_env: finalConfigurationSchema.template_env,
+      template_headers: finalConfigurationSchema.template_headers,
+      template_url_query_params: finalConfigurationSchema.template_url_query_params,
+      team_args_schema: finalConfigurationSchema.team_args_schema,
+      team_env_schema: finalConfigurationSchema.team_env_schema,
+      team_headers_schema: finalConfigurationSchema.team_headers_schema,
+      team_url_query_params_schema: finalConfigurationSchema.team_url_query_params_schema,
+      user_args_schema: finalConfigurationSchema.user_args_schema,
+      user_env_schema: finalConfigurationSchema.user_env_schema,
+      user_headers_schema: finalConfigurationSchema.user_headers_schema,
+      user_url_query_params_schema: finalConfigurationSchema.user_url_query_params_schema,
+
+      // Resources and prompts (from server data)
+      resources: parsedResources.length > 0 ? parsedResources : undefined,
+      prompts: parsedPrompts.length > 0 ? parsedPrompts : undefined,
+      transport_type: formData.technical.transport_type !== 'auto' ? formData.technical.transport_type as 'stdio' | 'http' | 'sse' : undefined
+    }
+
+    // Submit to API
+    await McpCatalogService.updateGlobalServer(serverId, requestData)
+
+    // Emit success event
+    eventBus.emit('mcp-server-updated', { serverId })
+
+    // Navigate back to view page with success parameter
+    router.push({
+      path: `/admin/mcp-server-catalog/view/${serverId}`,
+      query: { updated: 'true' }
+    })
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Failed to update server'
+    toast.error(errorMessage)
+    eventBus.emit('mcp-server-update-error', { serverId, error: errorMessage })
+  } finally {
+    isSubmitting.value = false
   }
-
-  // Convert form data to API request format
-  const requestData: UpdateMcpServerRequest = {
-    // Basic info
-    name: formData.basic.name,
-    description: formData.basic.description,
-    long_description: formData.basic.long_description || undefined,
-    category_id: formData.basic.category_id || undefined,
-    author_name: formData.basic.author_name || undefined,
-    author_contact: formData.basic.author_contact || undefined,
-    organization: formData.basic.organization || undefined,
-    license: formData.basic.license || undefined,
-    tags: formData.basic.tags,
-    featured: formData.basic.featured,
-    auto_install_new_default_team: formData.basic.auto_install_new_default_team,
-    icon_url: formData.basic.icon_url || undefined,
-
-    // Repository (use finalRepositoryData which merges storage + formData)
-    repository_url: finalRepositoryData.repository_url || undefined,
-    repository_source: finalRepositoryData.repository_source || undefined,
-    repository_id: formData.repository.repository_id || undefined,
-    repository_subfolder: formData.repository.repository_subfolder || undefined,
-    git_branch: finalRepositoryData.git_branch ? finalRepositoryData.git_branch : null,
-    website_url: formData.basic.website_url || undefined,
-
-    // README content
-    github_readme_base64: readmeBase64 || undefined,
-
-    // Technical
-    language: formData.technical.language,
-    runtime: formData.technical.runtime,
-    packages: formData.technical.packages,
-    remotes: formData.technical.remotes,
-    dependencies: formData.technical.dependencies ? JSON.parse(formData.technical.dependencies) : undefined,
-
-    // UPDATED: Use the synchronized configuration schema
-    template_args: finalConfigurationSchema.template_args,
-    template_env: finalConfigurationSchema.template_env,
-    template_headers: finalConfigurationSchema.template_headers,
-    template_url_query_params: finalConfigurationSchema.template_url_query_params,
-    team_args_schema: finalConfigurationSchema.team_args_schema,
-    team_env_schema: finalConfigurationSchema.team_env_schema,
-    team_headers_schema: finalConfigurationSchema.team_headers_schema,
-    team_url_query_params_schema: finalConfigurationSchema.team_url_query_params_schema,
-    user_args_schema: finalConfigurationSchema.user_args_schema,
-    user_env_schema: finalConfigurationSchema.user_env_schema,
-    user_headers_schema: finalConfigurationSchema.user_headers_schema,
-    user_url_query_params_schema: finalConfigurationSchema.user_url_query_params_schema,
-
-    // Resources and prompts (from server data)
-    resources: parsedResources.length > 0 ? parsedResources : undefined,
-    prompts: parsedPrompts.length > 0 ? parsedPrompts : undefined,
-    transport_type: formData.technical.transport_type !== 'auto' ? formData.technical.transport_type as 'stdio' | 'http' | 'sse' : undefined
-  }
-
-  // Submit to API
-  await McpCatalogService.updateGlobalServer(serverId, requestData)
-
-  // Emit success event
-  eventBus.emit('mcp-server-updated', { serverId })
-
-  // Navigate back to view page with success parameter
-  router.push({
-    path: `/admin/mcp-server-catalog/view/${serverId}`,
-    query: { updated: 'true' }
-  })
 }
 
 const handleCancel = () => {
@@ -382,10 +412,10 @@ onMounted(() => {
           <Button
             variant="outline"
             size="sm"
-            :loading="isRetrying"
-            :loading-text="t('mcpCatalog.edit.errorActions.loading')"
+            :disabled="isRetrying"
             @click="loadServerData"
           >
+            <Spinner v-if="isRetrying" class="mr-2" />
             {{ t('mcpCatalog.edit.errorActions.tryAgain') }}
           </Button>
           <Button variant="ghost" size="sm" @click="goToCatalog">
@@ -400,6 +430,7 @@ onMounted(() => {
         mode="edit"
         :initial-data="initialFormData"
         :server-id="serverId"
+        :is-submitting="isSubmitting"
         :submit-button-text="t('mcpCatalog.form.navigation.update')"
         @submit="handleSubmit"
         @cancel="handleCancel"

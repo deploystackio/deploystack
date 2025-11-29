@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Plus, Search, CheckCircle } from 'lucide-vue-next'
+import { Spinner } from '@/components/ui/spinner'
 import DashboardLayout from '@/components/DashboardLayout.vue'
 import { CredentialsService } from '@/services/credentialsService'
 import { UserService } from '@/services/userService'
@@ -287,11 +288,11 @@ onUnmounted(() => {
         <Button
           v-if="canCreateCredentials && selectedTeam"
           @click="handleAddCredential"
-          :loading="isCreating"
-          :loading-text="t('credentials.actions.creating')"
+          :disabled="isCreating"
           class="flex items-center justify-center gap-2"
         >
-          <Plus class="h-4 w-4" />
+          <Spinner v-if="isCreating" class="mr-2" />
+          <Plus v-else class="h-4 w-4" />
           {{ t('credentials.addButton') }}
         </Button>
       </div>
@@ -332,10 +333,10 @@ onUnmounted(() => {
               variant="outline"
               class="rounded-l-none border-l-0 px-3"
               @click="handleManualSearch"
-              :loading="isSearching"
-              :loading-text="t('credentials.search.searching')"
+              :disabled="isSearching"
             >
-              <Search class="h-4 w-4" />
+              <Spinner v-if="isSearching" class="h-4 w-4" />
+              <Search v-else class="h-4 w-4" />
               <span class="sr-only">{{ t('credentials.search.button') }}</span>
             </Button>
           </div>

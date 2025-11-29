@@ -14,6 +14,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Spinner } from '@/components/ui/spinner'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { UserService, type User } from '@/services/userService'
@@ -231,11 +232,11 @@ async function handleSecuritySubmit(event: Event) {
                     />
                   </div>
 
-                  <Button 
-                    type="submit" 
-                    :loading="isSubmittingSecurity"
-                    :loading-text="t('userAccount.security.form.changingButton')"
+                  <Button
+                    type="submit"
+                    :disabled="isSubmittingSecurity"
                   >
+                    <Spinner v-if="isSubmittingSecurity" class="mr-2" />
                     {{ t('userAccount.security.form.changeButton') }}
                   </Button>
                 </form>

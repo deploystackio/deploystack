@@ -4,6 +4,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { Button } from '@/components/ui/button'
+import { Spinner } from '@/components/ui/spinner'
 import { DsProgressSteps, type ProgressStep } from '@/components/ui/ds-progress-steps'
 import { toast } from 'vue-sonner'
 import { McpInstallationService } from '@/services/mcpInstallationService'
@@ -775,11 +776,10 @@ onUnmounted(() => {
                 <Button
                   v-if="requiresOAuth"
                   @click="handleOAuthAuthorization"
-                  :loading="isSubmitting"
-                  :loading-text="t('mcpInstallations.wizard.authorizing')"
-                  :disabled="!formData.platform.installation_type"
+                  :disabled="!formData.platform.installation_type || isSubmitting"
                   class="w-full sm:w-auto"
                 >
+                  <Spinner v-if="isSubmitting" class="mr-2" />
                   {{ t('mcpInstallations.wizard.authorizeAndInstall') }}
                 </Button>
 
@@ -787,11 +787,10 @@ onUnmounted(() => {
                 <Button
                   v-else
                   @click="submitInstallation"
-                  :disabled="!canSubmit"
-                  :loading="isSubmitting"
-                  :loading-text="t('mcpInstallations.wizard.installing')"
+                  :disabled="!canSubmit || isSubmitting"
                   class="w-full sm:w-auto"
                 >
+                  <Spinner v-if="isSubmitting" class="mr-2" />
                   {{ t('mcpInstallations.wizard.install') }}
                 </Button>
               </div>
@@ -832,11 +831,10 @@ onUnmounted(() => {
               <Button
                 v-if="requiresOAuth"
                 @click="handleOAuthAuthorization"
-                :loading="isSubmitting"
-                :loading-text="t('mcpInstallations.wizard.authorizing')"
-                :disabled="!formData.platform.installation_type"
+                :disabled="!formData.platform.installation_type || isSubmitting"
                 class="w-full sm:w-auto"
               >
+                <Spinner v-if="isSubmitting" class="mr-2" />
                 {{ t('mcpInstallations.wizard.authorizeAndInstall') }}
               </Button>
 
@@ -844,11 +842,10 @@ onUnmounted(() => {
               <Button
                 v-else
                 @click="submitInstallation"
-                :disabled="!canSubmit"
-                :loading="isSubmitting"
-                :loading-text="t('mcpInstallations.wizard.installing')"
+                :disabled="!canSubmit || isSubmitting"
                 class="w-full sm:w-auto"
               >
+                <Spinner v-if="isSubmitting" class="mr-2" />
                 {{ t('mcpInstallations.wizard.install') }}
               </Button>
             </div>

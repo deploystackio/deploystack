@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/card'
 
 import { Button } from '@/components/ui/button'
+import { Spinner } from '@/components/ui/spinner'
 import {
   FormControl,
   FormField,
@@ -363,9 +364,9 @@ onMounted(async () => {
             <Button
               type="submit"
               class="w-full mt-6"
-              :loading="isLoading"
-              :loading-text="$t('register.buttons.loading')"
+              :disabled="isLoading"
             >
+              <Spinner v-if="isLoading" class="mr-2" />
               {{ $t('register.buttons.submit') }}
             </Button>
           </form>

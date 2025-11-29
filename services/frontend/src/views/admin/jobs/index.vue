@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
 import { RefreshCw, Clock, Play, CheckCircle2, XCircle, Search, X } from 'lucide-vue-next'
+import { Spinner } from '@/components/ui/spinner'
 import { Button } from '@/components/ui/button'
 import DashboardLayout from '@/components/DashboardLayout.vue'
 import { JobsService } from '@/services/jobsService'
@@ -300,12 +301,12 @@ onMounted(async () => {
 
           <div class="flex items-center gap-2 ml-auto">
             <Button
-              :loading="isSearching"
-              loading-text="Searching..."
+              :disabled="isSearching"
               @click="handleSearch"
               size="sm"
             >
-              <Search v-if="!isSearching" class="h-4 w-4 mr-2" />
+              <Spinner v-if="isSearching" class="h-4 w-4 mr-2" />
+              <Search v-else class="h-4 w-4 mr-2" />
               Search
             </Button>
 

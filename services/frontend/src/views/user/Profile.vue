@@ -13,6 +13,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Spinner } from '@/components/ui/spinner'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { UserService, type User } from '@/services/userService'
@@ -227,11 +228,11 @@ async function handleProfileSubmit(event: Event) {
                     />
                   </div>
 
-                  <Button 
-                    type="submit" 
-                    :loading="isSubmittingProfile"
-                    :loading-text="t('userAccount.profile.form.savingButton')"
+                  <Button
+                    type="submit"
+                    :disabled="isSubmittingProfile"
                   >
+                    <Spinner v-if="isSubmittingProfile" class="mr-2" />
                     {{ t('userAccount.profile.form.saveButton') }}
                   </Button>
                 </form>

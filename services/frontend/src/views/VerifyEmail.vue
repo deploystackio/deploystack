@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/alert'
 
 import { Button } from '@/components/ui/button'
+import { Spinner } from '@/components/ui/spinner'
 
 const router = useRouter()
 const route = useRoute()
@@ -303,12 +304,11 @@ onMounted(() => {
 
             <Button
               @click="resendVerification"
-              :disabled="!resendEmail"
-              :loading="isResending"
-              :loading-text="$t('verifyEmail.error.resendSection.buttonSending')"
+              :disabled="!resendEmail || isResending"
               class="w-full"
               variant="outline"
             >
+              <Spinner v-if="isResending" class="mr-2" />
               {{ $t('verifyEmail.error.resendSection.button') }}
             </Button>
 

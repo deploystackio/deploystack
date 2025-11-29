@@ -10,6 +10,7 @@ import type { GlobalSettingGroup, Setting } from '@/components/globalSettings/Gl
 import DashboardLayout from '@/components/DashboardLayout.vue'
 import { getEnv } from '@/utils/env'
 import { Button } from '@/components/ui/button'
+import { Spinner } from '@/components/ui/spinner'
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Field, FieldGroup, FieldLabel, FieldDescription } from '@/components/ui/field'
@@ -415,9 +416,10 @@ async function handleSubmit(event: Event) {
 
                   <Button
                     type="submit"
-                    :loading="isSubmitting"
+                    :disabled="isSubmitting"
                     class="w-full sm:w-auto mt-7"
                   >
+                    <Spinner v-if="isSubmitting" class="mr-2" />
                     {{ t('globalSettings.form.saveChanges') }}
                   </Button>
                 </form>
@@ -495,9 +497,10 @@ async function handleSubmit(event: Event) {
 
                     <Button
                       type="submit"
-                      :loading="isSubmitting"
+                      :disabled="isSubmitting"
                       class="mt-7"
                     >
+                      <Spinner v-if="isSubmitting" class="mr-2" />
                       {{ t('globalSettings.form.saveChanges') }}
                     </Button>
                   </form>

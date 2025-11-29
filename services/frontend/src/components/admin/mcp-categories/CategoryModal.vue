@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { Spinner } from '@/components/ui/spinner'
 import { Label } from '@/components/ui/label'
 import IconPicker from '@/components/ui/icon-picker.vue'
 import { McpCategoriesService, type McpCategory, type CreateMcpCategoryRequest } from '@/services/mcpCategoriesService'
@@ -295,10 +296,9 @@ const handleSortOrderChange = () => {
           </Button>
           <Button
             type="submit"
-            :disabled="!isFormValid"
-            :loading="isSubmitting"
-            :loading-text="t('mcpCategories.modal.saving')"
+            :disabled="!isFormValid || isSubmitting"
           >
+            <Spinner v-if="isSubmitting" class="mr-2" />
             {{ isEditing ? t('mcpCategories.modal.update') : t('mcpCategories.modal.create') }}
           </Button>
         </AlertDialogFooter>

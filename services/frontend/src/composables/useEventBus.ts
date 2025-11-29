@@ -13,6 +13,7 @@ export type EventBusEvents = {
   'mcp-catalog-updated': void
   'mcp-server-created': void
   'mcp-server-updated': { serverId: string }
+  'mcp-server-update-error': { serverId: string; error: string }
   'mcp-server-deleted': { serverId: string }
   'mcp-categories-updated': void
   'mcp-category-created': void

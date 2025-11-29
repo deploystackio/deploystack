@@ -3,6 +3,7 @@ import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { toast } from 'vue-sonner'
 import { Button } from '@/components/ui/button'
+import { Spinner } from '@/components/ui/spinner'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -248,12 +249,11 @@ watch(() => props.team, () => {
     <div class="flex items-center justify-end pt-4 border-t">
       <Button
         @click="saveTeam"
-        :disabled="!hasChanges"
-        :loading="isSaving"
-        :loading-text="t('teams.manage.saving')"
+        :disabled="!hasChanges || isSaving"
         class="gap-2"
       >
-        <Save class="h-4 w-4" />
+        <Spinner v-if="isSaving" class="mr-2" />
+        <Save v-else class="h-4 w-4" />
         {{ t('teams.manage.save') }}
       </Button>
     </div>
