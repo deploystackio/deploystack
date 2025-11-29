@@ -15967,10 +15967,28 @@
                                 "nullable": true,
                                 "description": "Owning team ID"
                               },
-                              "category_id": {
-                                "type": "string",
+                              "category": {
+                                "type": "object",
                                 "nullable": true,
-                                "description": "Category ID"
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "description": "Category ID"
+                                  },
+                                  "name": {
+                                    "type": "string",
+                                    "description": "Category name"
+                                  },
+                                  "icon": {
+                                    "type": "string",
+                                    "nullable": true,
+                                    "description": "Category icon name/class"
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "name"
+                                ]
                               },
                               "tags": {
                                 "type": "array",
@@ -16918,10 +16936,28 @@
                                 "nullable": true,
                                 "description": "Owning team ID"
                               },
-                              "category_id": {
-                                "type": "string",
+                              "category": {
+                                "type": "object",
                                 "nullable": true,
-                                "description": "Category ID"
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "description": "Category ID"
+                                  },
+                                  "name": {
+                                    "type": "string",
+                                    "description": "Category name"
+                                  },
+                                  "icon": {
+                                    "type": "string",
+                                    "nullable": true,
+                                    "description": "Category icon name/class"
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "name"
+                                ]
                               },
                               "tags": {
                                 "type": "array",

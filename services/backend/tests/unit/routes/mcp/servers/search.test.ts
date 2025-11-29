@@ -5,7 +5,7 @@ import { McpCatalogService } from '../../../../../src/services/mcpCatalogService
 import { TeamService } from '../../../../../src/services/teamService';
 import { getUserRole } from '../../../../../src/middleware/roleMiddleware';
 import { RoleService } from '../../../../../src/services/roleService';
-import { getDb } from '../../../../../src/db';
+import { getDb, getSchema } from '../../../../../src/db';
 
 // Mock dependencies
 vi.mock('../../../../../src/services/mcpCatalogService');
@@ -21,6 +21,7 @@ describe('MCP Servers - Search Servers', () => {
   let routeHandlers: Record<string, any>;
   let mockMcpService: any;
   let mockDb: any;
+  let mockSchema: any;
   let mockLogger: any;
   let mockRoleService: any;
 
@@ -39,10 +40,16 @@ describe('MCP Servers - Search Servers', () => {
       error: vi.fn()
     };
 
-    // Setup mock database
+    // Setup mock schema
+    mockSchema = {
+      mcpCategories: 'mcpCategories'
+    };
+
+    // Setup mock database with select for fetching categories
     mockDb = {
-      select: vi.fn().mockReturnThis(),
-      from: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnValue({
+        from: vi.fn().mockResolvedValue([])
+      }),
       where: vi.fn().mockReturnThis(),
       orderBy: vi.fn().mockReturnThis(),
       limit: vi.fn().mockReturnThis()
@@ -75,6 +82,7 @@ describe('MCP Servers - Search Servers', () => {
 
     // Setup mocks
     vi.mocked(getDb).mockReturnValue(mockDb);
+    vi.mocked(getSchema).mockReturnValue(mockSchema);
     vi.mocked(McpCatalogService).mockImplementation(() => mockMcpService);
     vi.mocked(RoleService).mockImplementation(() => mockRoleService);
     vi.mocked(getUserRole).mockResolvedValue({ 

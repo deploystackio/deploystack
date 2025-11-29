@@ -2,7 +2,7 @@ import { type FastifyInstance } from 'fastify';
 import { McpCatalogService } from '../../../services/mcpCatalogService';
 import { TeamService } from '../../../services/teamService';
 import { getUserRole, requirePermission } from '../../../middleware/roleMiddleware';
-import { getDb } from '../../../db';
+import { getDb, getSchema } from '../../../db';
 import {
   LIST_SERVERS_QUERY_SCHEMA,
   LIST_SERVERS_SUCCESS_RESPONSE_SCHEMA,
@@ -10,6 +10,7 @@ import {
   type ListServersQueryParams,
   type ListServersSuccessResponse,
   type ErrorResponse,
+  type CategoryEmbed,
   formatServerListResponse
 } from './schemas';
 
@@ -43,12 +44,13 @@ export default async function listServers(server: FastifyInstance) {
   }, async (request, reply) => {
     try {
       const db = getDb();
+      const schema = getSchema();
       const catalogService = new McpCatalogService(db, request.log);
-      
+
       // Get user role and team memberships (same as search endpoint)
       const roleInfo = await getUserRole(request.user!.id);
       const userRole = roleInfo?.id || 'global_user';
-      
+
       // Get user's team memberships
       let teamIds: string[] = [];
       try {
@@ -66,31 +68,31 @@ export default async function listServers(server: FastifyInstance) {
 
       // Parse query parameters for filtering (Fastify has already validated)
       const query = request.query as ListServersQueryParams;
-      
+
       // Build filters object
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const filters: any = {};
-      
+
       if (query.category_id) {
         filters.category_id = query.category_id;
       }
-      
+
       if (query.language) {
         filters.language = query.language;
       }
-      
+
       if (query.runtime) {
         filters.runtime = query.runtime;
       }
-      
+
       if (query.status) {
         filters.status = query.status;
       }
-      
+
       if (query.featured) {
         filters.featured = query.featured === 'true';
       }
-      
+
       if (query.search) {
         filters.search = query.search;
       }
@@ -103,10 +105,21 @@ export default async function listServers(server: FastifyInstance) {
         filters
       );
 
+      // Fetch all categories and build a lookup map
+      const categories = await db.select().from(schema.mcpCategories);
+      const categoriesMap = new Map<string, CategoryEmbed>();
+      for (const cat of categories) {
+        categoriesMap.set(cat.id, {
+          id: cat.id,
+          name: cat.name,
+          icon: cat.icon || null
+        });
+      }
+
       // Parse pagination parameters (already validated by Fastify)
       const limit = parseInt(query.limit || '20');
       const offset = parseInt(query.offset || '0');
-      
+
       // Apply pagination
       const total = allServers.length;
       const paginatedServers = allServers.slice(offset, offset + limit);
@@ -122,7 +135,7 @@ export default async function listServers(server: FastifyInstance) {
       }, 'MCP server list completed');
 
       // Format response using minimal list formatter (excludes config schemas, packages, etc.)
-      const responseServers = paginatedServers.map(server => formatServerListResponse(server));
+      const responseServers = paginatedServers.map(server => formatServerListResponse(server, categoriesMap));
 
       // Manual JSON serialization to ensure consistent JSON output
       const successResponse: ListServersSuccessResponse = {

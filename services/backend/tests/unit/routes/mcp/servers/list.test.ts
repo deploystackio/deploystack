@@ -13,7 +13,7 @@ vi.mock('../../../../../src/db');
 import { McpCatalogService } from '../../../../../src/services/mcpCatalogService';
 import { TeamService } from '../../../../../src/services/teamService';
 import { getUserRole, requirePermission } from '../../../../../src/middleware/roleMiddleware';
-import { getDb } from '../../../../../src/db';
+import { getDb, getSchema } from '../../../../../src/db';
 
 describe('MCP Servers - List Servers', () => {
   let mockFastify: Partial<FastifyInstance>;
@@ -22,6 +22,7 @@ describe('MCP Servers - List Servers', () => {
   let routeHandlers: Record<string, any>;
   let mockCatalogService: any;
   let mockDb: any;
+  let mockSchema: any;
   let mockLogger: any;
   let mockGetUserRole: any;
   let mockTeamService: any;
@@ -41,8 +42,17 @@ describe('MCP Servers - List Servers', () => {
       debug: vi.fn()
     };
 
-    // Mock database
-    mockDb = {};
+    // Mock schema
+    mockSchema = {
+      mcpCategories: 'mcpCategories'
+    };
+
+    // Mock database with select for fetching categories
+    mockDb = {
+      select: vi.fn().mockReturnValue({
+        from: vi.fn().mockResolvedValue([])
+      })
+    };
 
     // Mock catalog service
     mockCatalogService = {
@@ -69,8 +79,9 @@ describe('MCP Servers - List Servers', () => {
     // Mock requirePermission middleware
     vi.mocked(requirePermission).mockImplementation(() => vi.fn());
 
-    // Mock getDb
+    // Mock getDb and getSchema
     vi.mocked(getDb).mockReturnValue(mockDb);
+    vi.mocked(getSchema).mockReturnValue(mockSchema);
 
     // Setup mock Fastify instance
     mockFastify = {

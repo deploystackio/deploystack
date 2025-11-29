@@ -2,7 +2,7 @@ import { type FastifyInstance } from 'fastify';
 import { McpCatalogService } from '../../../services/mcpCatalogService';
 import { TeamService } from '../../../services/teamService';
 import { getUserRole, requirePermission } from '../../../middleware/roleMiddleware';
-import { getDb } from '../../../db';
+import { getDb, getSchema } from '../../../db';
 import {
   SEARCH_SERVERS_QUERY_SCHEMA,
   LIST_SERVERS_SUCCESS_RESPONSE_SCHEMA,
@@ -10,6 +10,7 @@ import {
   type ListServersQueryParams,
   type ListServersSuccessResponse,
   type ErrorResponse,
+  type CategoryEmbed,
   formatServerListResponse
 } from './schemas';
 
@@ -74,12 +75,13 @@ export default async function searchServers(server: FastifyInstance) {
 
     try {
       const db = getDb();
+      const schema = getSchema();
       const mcpService = new McpCatalogService(db, request.log);
-      
+
       // Get user role and team memberships
       const roleInfo = await getUserRole(request.user!.id);
       const userRole = roleInfo?.id || 'global_user';
-      
+
       // Get user's team memberships
       let teamIds: string[] = [];
       try {
@@ -122,6 +124,17 @@ export default async function searchServers(server: FastifyInstance) {
         sortBy
       );
 
+      // Fetch all categories and build a lookup map
+      const categories = await db.select().from(schema.mcpCategories);
+      const categoriesMap = new Map<string, CategoryEmbed>();
+      for (const cat of categories) {
+        categoriesMap.set(cat.id, {
+          id: cat.id,
+          name: cat.name,
+          icon: cat.icon || null
+        });
+      }
+
       // Apply pagination
       const total = allServers.length;
       const paginatedServers = allServers.slice(offset, offset + limit);
@@ -139,7 +152,7 @@ export default async function searchServers(server: FastifyInstance) {
       }, 'MCP server search completed');
 
       // Format response using minimal list formatter (excludes config schemas, packages, etc.)
-      const responseServers = paginatedServers.map(server => formatServerListResponse(server));
+      const responseServers = paginatedServers.map(server => formatServerListResponse(server, categoriesMap));
 
       // Use the same response structure as list endpoint
       const response: ListServersSuccessResponse = {

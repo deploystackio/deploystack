@@ -1001,6 +1001,18 @@ export const COMMON_ERROR_RESPONSES = {
   500: { ...ERROR_RESPONSE_SCHEMA, description: 'Internal Server Error' }
 } as const;
 
+// Category object schema for embedding in server list responses
+export const CATEGORY_EMBED_SCHEMA = {
+  type: 'object',
+  nullable: true,
+  properties: {
+    id: { type: 'string', description: 'Category ID' },
+    name: { type: 'string', description: 'Category name' },
+    icon: { type: 'string', nullable: true, description: 'Category icon name/class' }
+  },
+  required: ['id', 'name']
+} as const;
+
 // Minimal server entity for list endpoints - excludes configuration schemas and heavy fields
 export const SERVER_LIST_ENTITY_SCHEMA = {
   type: 'object',
@@ -1016,7 +1028,7 @@ export const SERVER_LIST_ENTITY_SCHEMA = {
     transport_type: { type: 'string', enum: ['stdio', 'http', 'sse'], description: 'Transport type' },
     visibility: { type: 'string', enum: ['global', 'team'], description: 'Server visibility' },
     owner_team_id: { type: 'string', nullable: true, description: 'Owning team ID' },
-    category_id: { type: 'string', nullable: true, description: 'Category ID' },
+    category: CATEGORY_EMBED_SCHEMA,
     tags: { type: 'array', items: { type: 'string' }, nullable: true, description: 'Server tags' },
     status: { type: 'string', enum: ['active', 'deprecated', 'maintenance'], description: 'Server status' },
     featured: { type: 'boolean', description: 'Whether server is featured' },
@@ -1549,6 +1561,13 @@ export interface DeleteGlobalServerSuccessResponse {
   };
 }
 
+// Category embed interface for list responses
+export interface CategoryEmbed {
+  id: string;
+  name: string;
+  icon: string | null;
+}
+
 // Minimal server entity for list responses
 export interface ServerListEntity {
   id: string;
@@ -1562,7 +1581,7 @@ export interface ServerListEntity {
   transport_type: 'stdio' | 'http' | 'sse';
   visibility: 'global' | 'team';
   owner_team_id: string | null;
-  category_id: string | null;
+  category: CategoryEmbed | null;
   tags: string[] | null;
   status: 'active' | 'deprecated' | 'maintenance';
   featured: boolean;
@@ -1707,8 +1726,14 @@ export function formatServerResponse(server: any): ServerEntity {
 /**
  * Converts McpServer to minimal API response format for list endpoints
  * Excludes configuration schemas, packages, remotes, and other heavy fields
+ *
+ * @param server - The server entity from database
+ * @param categoriesMap - Optional map of category_id to category data for embedding
  */
-export function formatServerListResponse(server: any): ServerListEntity {
+export function formatServerListResponse(
+  server: any,
+  categoriesMap?: Map<string, CategoryEmbed>
+): ServerListEntity {
   const safeJsonParse = (field: any, defaultValue: any) => {
     if (!field) return defaultValue;
     if (typeof field === 'string') {
@@ -1720,6 +1745,10 @@ export function formatServerListResponse(server: any): ServerListEntity {
     }
     return field;
   };
+
+  // Get category embed if available
+  const categoryId = server.category_id || null;
+  const category = categoryId && categoriesMap ? categoriesMap.get(categoryId) || null : null;
 
   return {
     id: server.id,
@@ -1733,7 +1762,7 @@ export function formatServerListResponse(server: any): ServerListEntity {
     transport_type: server.transport_type,
     visibility: server.visibility,
     owner_team_id: server.owner_team_id || null,
-    category_id: server.category_id || null,
+    category: category,
     tags: safeJsonParse(server.tags, null),
     status: server.status,
     featured: server.featured,
