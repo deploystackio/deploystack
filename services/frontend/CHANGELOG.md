@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.43.0 (2025-11-29)
+
+* chore(backend): release v0.47.0 2070153
+* chore(backend): release v0.47.0 cb03508
+* chore(backend): release v0.48.0 c6c7efc
+* chore(backend): release v0.48.0 dde356a
+* feat(all): add server_count to MCP category schema and responses, view mcp server catalog 7bac93b
+* feat(backend): add API endpoint for retrieving team usage statistics 0be749b
+* feat(backend): add API endpoint to list featured MCP categories 79c6a53
+* feat(backend): enhance server list and search responses with category details 92a86a1
+* feat(backend): implement minimal server response format for list endpoints bf97cd6
+* feat(frontend): add featured MCP servers page and related components 00f4897
+* feat(frontend): add spinner component and replace loading indicators 8f5bd9f
+* feat(frontend): add team usage indicator component and integration e035a86
+* feat(frontend): add team usage statistics component and API integration 0befca8
+* feat(frontend): implement settings menu components for client configuration 0eb2ae6
+* fix(backend): replace like with ilike for case-insensitive search e88c5fb
+
 ## 0.42.0 (2025-11-28)
 
 * chore(all): bump isomorphic-dompurify from 2.32.0 to 2.33.0 6243596
