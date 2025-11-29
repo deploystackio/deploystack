@@ -10,7 +10,7 @@ import {
   type ListServersQueryParams,
   type ListServersSuccessResponse,
   type ErrorResponse,
-  formatServerResponse
+  formatServerListResponse
 } from './schemas';
 
 export default async function listServers(server: FastifyInstance) {
@@ -121,8 +121,8 @@ export default async function listServers(server: FastifyInstance) {
         appliedFilters: filters
       }, 'MCP server list completed');
 
-      // Format dates for response using the shared utility function
-      const responseServers = paginatedServers.map(server => formatServerResponse(server));
+      // Format response using minimal list formatter (excludes config schemas, packages, etc.)
+      const responseServers = paginatedServers.map(server => formatServerListResponse(server));
 
       // Manual JSON serialization to ensure consistent JSON output
       const successResponse: ListServersSuccessResponse = {

@@ -1001,10 +1001,40 @@ export const COMMON_ERROR_RESPONSES = {
   500: { ...ERROR_RESPONSE_SCHEMA, description: 'Internal Server Error' }
 } as const;
 
+// Minimal server entity for list endpoints - excludes configuration schemas and heavy fields
+export const SERVER_LIST_ENTITY_SCHEMA = {
+  type: 'object',
+  properties: {
+    id: { type: 'string', description: 'Unique server identifier' },
+    name: { type: 'string', description: 'Server name' },
+    slug: { type: 'string', description: 'URL-friendly server slug' },
+    description: { type: 'string', description: 'Server description' },
+    icon_url: { type: 'string', nullable: true, description: 'Icon/logo URL' },
+    website_url: { type: 'string', nullable: true, description: 'Website URL' },
+    language: { type: 'string', description: 'Programming language' },
+    runtime: { type: 'string', description: 'Runtime environment' },
+    transport_type: { type: 'string', enum: ['stdio', 'http', 'sse'], description: 'Transport type' },
+    visibility: { type: 'string', enum: ['global', 'team'], description: 'Server visibility' },
+    owner_team_id: { type: 'string', nullable: true, description: 'Owning team ID' },
+    category_id: { type: 'string', nullable: true, description: 'Category ID' },
+    tags: { type: 'array', items: { type: 'string' }, nullable: true, description: 'Server tags' },
+    status: { type: 'string', enum: ['active', 'deprecated', 'maintenance'], description: 'Server status' },
+    featured: { type: 'boolean', description: 'Whether server is featured' },
+    requires_oauth: { type: 'boolean', description: 'Whether server requires OAuth' },
+    github_stars: { type: 'number', nullable: true, description: 'GitHub stars count' },
+    author_name: { type: 'string', nullable: true, description: 'Author name' },
+    organization: { type: 'string', nullable: true, description: 'Organization' },
+    official_name: { type: 'string', nullable: true, description: 'Official registry name' },
+    created_at: { type: 'string', format: 'date-time', description: 'Creation timestamp' },
+    updated_at: { type: 'string', format: 'date-time', description: 'Last update timestamp' }
+  },
+  required: ['id', 'name', 'slug', 'description', 'language', 'runtime', 'transport_type', 'visibility', 'status', 'featured', 'requires_oauth', 'created_at', 'updated_at']
+} as const;
+
 export const LIST_SERVERS_SUCCESS_RESPONSE_SCHEMA = {
   type: 'object',
   properties: {
-    success: { 
+    success: {
       type: 'boolean',
       description: 'Indicates successful server list retrieval'
     },
@@ -1013,8 +1043,8 @@ export const LIST_SERVERS_SUCCESS_RESPONSE_SCHEMA = {
       properties: {
         servers: {
           type: 'array',
-          items: SERVER_ENTITY_SCHEMA,
-          description: 'Array of server objects'
+          items: SERVER_LIST_ENTITY_SCHEMA,
+          description: 'Array of server objects (minimal fields for listing)'
         },
         pagination: {
           ...PAGINATION_SCHEMA,
@@ -1519,10 +1549,36 @@ export interface DeleteGlobalServerSuccessResponse {
   };
 }
 
+// Minimal server entity for list responses
+export interface ServerListEntity {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  icon_url: string | null;
+  website_url: string | null;
+  language: string;
+  runtime: string;
+  transport_type: 'stdio' | 'http' | 'sse';
+  visibility: 'global' | 'team';
+  owner_team_id: string | null;
+  category_id: string | null;
+  tags: string[] | null;
+  status: 'active' | 'deprecated' | 'maintenance';
+  featured: boolean;
+  requires_oauth: boolean;
+  github_stars: number | null;
+  author_name: string | null;
+  organization: string | null;
+  official_name: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface ListServersSuccessResponse {
   success: boolean;
   data: {
-    servers: ServerEntity[];
+    servers: ServerListEntity[];
     pagination: PaginationInfo;
   };
 }
@@ -1645,5 +1701,48 @@ export function formatServerResponse(server: any): ServerEntity {
     created_at: server.created_at.toISOString(),
     updated_at: server.updated_at.toISOString(),
     last_sync_at: server.last_sync_at?.toISOString() || null
+  };
+}
+
+/**
+ * Converts McpServer to minimal API response format for list endpoints
+ * Excludes configuration schemas, packages, remotes, and other heavy fields
+ */
+export function formatServerListResponse(server: any): ServerListEntity {
+  const safeJsonParse = (field: any, defaultValue: any) => {
+    if (!field) return defaultValue;
+    if (typeof field === 'string') {
+      try {
+        return JSON.parse(field);
+      } catch {
+        return defaultValue;
+      }
+    }
+    return field;
+  };
+
+  return {
+    id: server.id,
+    name: server.name,
+    slug: server.slug,
+    description: server.description,
+    icon_url: server.icon_url || null,
+    website_url: server.website_url || null,
+    language: server.language,
+    runtime: server.runtime,
+    transport_type: server.transport_type,
+    visibility: server.visibility,
+    owner_team_id: server.owner_team_id || null,
+    category_id: server.category_id || null,
+    tags: safeJsonParse(server.tags, null),
+    status: server.status,
+    featured: server.featured,
+    requires_oauth: server.requires_oauth || false,
+    github_stars: server.github_stars || null,
+    author_name: server.author_name || null,
+    organization: server.organization || null,
+    official_name: server.official_name || null,
+    created_at: server.created_at.toISOString(),
+    updated_at: server.updated_at.toISOString()
   };
 }

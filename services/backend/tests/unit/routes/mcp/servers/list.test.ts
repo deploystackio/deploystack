@@ -192,8 +192,8 @@ describe('MCP Servers - List Servers', () => {
               id: 'server-1',
               name: 'Test Server 1',
               created_at: '2024-01-01T00:00:00.000Z',
-              updated_at: '2024-01-01T00:00:00.000Z',
-              last_sync_at: null
+              updated_at: '2024-01-01T00:00:00.000Z'
+              // Minimal list response excludes last_sync_at
             })
           ]),
           pagination: {

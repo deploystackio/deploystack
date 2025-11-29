@@ -11090,67 +11090,27 @@ paths:
                             description:
                               type: string
                               description: Server description
-                            long_description:
-                              type: string
-                              nullable: true
-                              description: Detailed server description
-                            repository_url:
-                              type: string
-                              nullable: true
-                              description: Repository URL
-                            repository_source:
-                              type: string
-                              nullable: true
-                              description: Repository platform (github, gitlab, bitbucket)
-                            repository_id:
-                              type: string
-                              nullable: true
-                              description: Platform-specific repository identifier
-                            repository_subfolder:
-                              type: string
-                              nullable: true
-                              description: Subfolder path for monorepos
-                            git_branch:
-                              type: string
-                              nullable: true
-                              description: Git branch
-                            website_url:
-                              type: string
-                              nullable: true
-                              description: Website URL
                             icon_url:
                               type: string
                               nullable: true
                               description: Icon/logo URL
-                            github_account_id:
+                            website_url:
                               type: string
                               nullable: true
-                              description: GitHub Account ID
-                            github_stars:
-                              type: number
-                              nullable: true
-                              description: Number of GitHub stars
+                              description: Website URL
                             language:
                               type: string
                               description: Programming language
                             runtime:
                               type: string
                               description: Runtime environment
-                            packages:
-                              type: array
-                              description: MCP Registry packages array
-                            remotes:
-                              type: array
-                              nullable: true
-                              description: MCP Registry remotes array for HTTP/SSE
-                            resources:
-                              type: array
-                              nullable: true
-                              description: Available resources
-                            prompts:
-                              type: array
-                              nullable: true
-                              description: Available prompts
+                            transport_type:
+                              type: string
+                              enum:
+                                - stdio
+                                - http
+                                - sse
+                              description: Transport type
                             visibility:
                               type: string
                               enum:
@@ -11160,66 +11120,7 @@ paths:
                             owner_team_id:
                               type: string
                               nullable: true
-                              description: Owning team ID (null for global servers)
-                            created_by:
-                              type: string
-                              description: User ID who created the server
-                            author_name:
-                              type: string
-                              nullable: true
-                              description: Author name
-                            author_contact:
-                              type: string
-                              nullable: true
-                              description: Author contact
-                            organization:
-                              type: string
-                              nullable: true
-                              description: Organization
-                            license:
-                              type: string
-                              nullable: true
-                              description: License type
-                            transport_type:
-                              type: string
-                              enum:
-                                - stdio
-                                - http
-                                - sse
-                              description: Transport type
-                            template_args:
-                              type: array
-                              description: Template arguments
-                            template_env:
-                              type: array
-                              description: Template environment variables
-                            template_headers:
-                              type: array
-                              description: Template headers
-                            team_args_schema:
-                              type: array
-                              description: Team argument schema
-                            team_env_schema:
-                              type: array
-                              description: Team environment variable schema
-                            team_headers_schema:
-                              type: array
-                              description: Team header schema
-                            user_args_schema:
-                              type: array
-                              description: User argument schema
-                            user_env_schema:
-                              type: array
-                              nullable: true
-                              description: User environment variable schema
-                            user_headers_schema:
-                              type: array
-                              nullable: true
-                              description: User header schema
-                            dependencies:
-                              type: object
-                              nullable: true
-                              description: Package dependencies
+                              description: Owning team ID
                             category_id:
                               type: string
                               nullable: true
@@ -11240,18 +11141,25 @@ paths:
                             featured:
                               type: boolean
                               description: Whether server is featured
-                            auto_install_new_default_team:
-                              type: boolean
-                              description: Auto-install for new default teams
                             requires_oauth:
                               type: boolean
-                              description: Whether this server requires OAuth authentication
-                            source:
+                              description: Whether server requires OAuth
+                            github_stars:
+                              type: number
+                              nullable: true
+                              description: GitHub stars count
+                            author_name:
                               type: string
-                              enum:
-                                - official_registry
-                                - manual
-                              description: Source of the MCP server
+                              nullable: true
+                              description: Author name
+                            organization:
+                              type: string
+                              nullable: true
+                              description: Organization
+                            official_name:
+                              type: string
+                              nullable: true
+                              description: Official registry name
                             created_at:
                               type: string
                               format: date-time
@@ -11260,11 +11168,6 @@ paths:
                               type: string
                               format: date-time
                               description: Last update timestamp
-                            last_sync_at:
-                              type: string
-                              format: date-time
-                              nullable: true
-                              description: Last sync timestamp
                           required:
                             - id
                             - name
@@ -11272,26 +11175,14 @@ paths:
                             - description
                             - language
                             - runtime
-                            - packages
-                            - visibility
-                            - created_by
                             - transport_type
-                            - template_args
-                            - template_env
-                            - template_headers
-                            - template_url_query_params
-                            - team_args_schema
-                            - team_env_schema
-                            - team_headers_schema
-                            - team_url_query_params_schema
-                            - user_args_schema
+                            - visibility
                             - status
                             - featured
-                            - auto_install_new_default_team
                             - requires_oauth
                             - created_at
                             - updated_at
-                        description: Array of server objects
+                        description: Array of server objects (minimal fields for listing)
                       pagination:
                         type: object
                         properties:
@@ -11902,67 +11793,27 @@ paths:
                             description:
                               type: string
                               description: Server description
-                            long_description:
-                              type: string
-                              nullable: true
-                              description: Detailed server description
-                            repository_url:
-                              type: string
-                              nullable: true
-                              description: Repository URL
-                            repository_source:
-                              type: string
-                              nullable: true
-                              description: Repository platform (github, gitlab, bitbucket)
-                            repository_id:
-                              type: string
-                              nullable: true
-                              description: Platform-specific repository identifier
-                            repository_subfolder:
-                              type: string
-                              nullable: true
-                              description: Subfolder path for monorepos
-                            git_branch:
-                              type: string
-                              nullable: true
-                              description: Git branch
-                            website_url:
-                              type: string
-                              nullable: true
-                              description: Website URL
                             icon_url:
                               type: string
                               nullable: true
                               description: Icon/logo URL
-                            github_account_id:
+                            website_url:
                               type: string
                               nullable: true
-                              description: GitHub Account ID
-                            github_stars:
-                              type: number
-                              nullable: true
-                              description: Number of GitHub stars
+                              description: Website URL
                             language:
                               type: string
                               description: Programming language
                             runtime:
                               type: string
                               description: Runtime environment
-                            packages:
-                              type: array
-                              description: MCP Registry packages array
-                            remotes:
-                              type: array
-                              nullable: true
-                              description: MCP Registry remotes array for HTTP/SSE
-                            resources:
-                              type: array
-                              nullable: true
-                              description: Available resources
-                            prompts:
-                              type: array
-                              nullable: true
-                              description: Available prompts
+                            transport_type:
+                              type: string
+                              enum:
+                                - stdio
+                                - http
+                                - sse
+                              description: Transport type
                             visibility:
                               type: string
                               enum:
@@ -11972,66 +11823,7 @@ paths:
                             owner_team_id:
                               type: string
                               nullable: true
-                              description: Owning team ID (null for global servers)
-                            created_by:
-                              type: string
-                              description: User ID who created the server
-                            author_name:
-                              type: string
-                              nullable: true
-                              description: Author name
-                            author_contact:
-                              type: string
-                              nullable: true
-                              description: Author contact
-                            organization:
-                              type: string
-                              nullable: true
-                              description: Organization
-                            license:
-                              type: string
-                              nullable: true
-                              description: License type
-                            transport_type:
-                              type: string
-                              enum:
-                                - stdio
-                                - http
-                                - sse
-                              description: Transport type
-                            template_args:
-                              type: array
-                              description: Template arguments
-                            template_env:
-                              type: array
-                              description: Template environment variables
-                            template_headers:
-                              type: array
-                              description: Template headers
-                            team_args_schema:
-                              type: array
-                              description: Team argument schema
-                            team_env_schema:
-                              type: array
-                              description: Team environment variable schema
-                            team_headers_schema:
-                              type: array
-                              description: Team header schema
-                            user_args_schema:
-                              type: array
-                              description: User argument schema
-                            user_env_schema:
-                              type: array
-                              nullable: true
-                              description: User environment variable schema
-                            user_headers_schema:
-                              type: array
-                              nullable: true
-                              description: User header schema
-                            dependencies:
-                              type: object
-                              nullable: true
-                              description: Package dependencies
+                              description: Owning team ID
                             category_id:
                               type: string
                               nullable: true
@@ -12052,18 +11844,25 @@ paths:
                             featured:
                               type: boolean
                               description: Whether server is featured
-                            auto_install_new_default_team:
-                              type: boolean
-                              description: Auto-install for new default teams
                             requires_oauth:
                               type: boolean
-                              description: Whether this server requires OAuth authentication
-                            source:
+                              description: Whether server requires OAuth
+                            github_stars:
+                              type: number
+                              nullable: true
+                              description: GitHub stars count
+                            author_name:
                               type: string
-                              enum:
-                                - official_registry
-                                - manual
-                              description: Source of the MCP server
+                              nullable: true
+                              description: Author name
+                            organization:
+                              type: string
+                              nullable: true
+                              description: Organization
+                            official_name:
+                              type: string
+                              nullable: true
+                              description: Official registry name
                             created_at:
                               type: string
                               format: date-time
@@ -12072,11 +11871,6 @@ paths:
                               type: string
                               format: date-time
                               description: Last update timestamp
-                            last_sync_at:
-                              type: string
-                              format: date-time
-                              nullable: true
-                              description: Last sync timestamp
                           required:
                             - id
                             - name
@@ -12084,26 +11878,14 @@ paths:
                             - description
                             - language
                             - runtime
-                            - packages
-                            - visibility
-                            - created_by
                             - transport_type
-                            - template_args
-                            - template_env
-                            - template_headers
-                            - template_url_query_params
-                            - team_args_schema
-                            - team_env_schema
-                            - team_headers_schema
-                            - team_url_query_params_schema
-                            - user_args_schema
+                            - visibility
                             - status
                             - featured
-                            - auto_install_new_default_team
                             - requires_oauth
                             - created_at
                             - updated_at
-                        description: Array of server objects
+                        description: Array of server objects (minimal fields for listing)
                       pagination:
                         type: object
                         properties:

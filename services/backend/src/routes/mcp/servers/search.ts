@@ -10,7 +10,7 @@ import {
   type ListServersQueryParams,
   type ListServersSuccessResponse,
   type ErrorResponse,
-  formatServerResponse
+  formatServerListResponse
 } from './schemas';
 
 // TypeScript interface for search query params
@@ -138,8 +138,8 @@ export default async function searchServers(server: FastifyInstance) {
         teamCount: teamIds.length
       }, 'MCP server search completed');
 
-      // Format servers using the shared utility function
-      const responseServers = paginatedServers.map(server => formatServerResponse(server));
+      // Format response using minimal list formatter (excludes config schemas, packages, etc.)
+      const responseServers = paginatedServers.map(server => formatServerListResponse(server));
 
       // Use the same response structure as list endpoint
       const response: ListServersSuccessResponse = {

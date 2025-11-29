@@ -242,7 +242,8 @@ describe('MCP Servers - Search Servers', () => {
       const server = response.data.servers[0];
       expect(server.id).toBe('server-1');
       expect(server.name).toBe('Test Server');
-      expect(server.packages).toEqual([]);
+      // Minimal list response excludes packages, resources, prompts, etc.
+      expect(server.tags).toBeNull();
     });
 
     it('should handle search with filters', async () => {
@@ -542,15 +543,12 @@ describe('MCP Servers - Search Servers', () => {
       expect(response.data.servers).toHaveLength(1);
       
       const server = response.data.servers[0];
-      expect(server.packages).toEqual(['npm', 'yarn']);
-      expect(server.resources).toEqual([{ name: 'test-resource' }]);
-      expect(server.prompts).toEqual([{ name: 'test-prompt' }]);
-      expect(server.dependencies).toEqual({ dep1: '^1.0.0' });
+      // Minimal list response only includes tags from JSON fields
+      // packages, resources, prompts, dependencies, and config schemas are excluded
       expect(server.tags).toEqual(['tag1', 'tag2']);
-      // Check that three-tier configuration fields are present
-      expect(server.template_args).toBeDefined();
-      expect(server.template_env).toBeDefined();
-      expect(server.template_headers).toBeDefined();
+      expect(server.name).toBe('Test Server');
+      expect(server.language).toBe('javascript');
+      expect(server.runtime).toBe('node');
     });
 
     it('should handle null JSON fields correctly', async () => {
@@ -613,16 +611,12 @@ describe('MCP Servers - Search Servers', () => {
       expect(response.data.servers).toHaveLength(1);
       
       const server = response.data.servers[0];
-      expect(server.packages).toEqual([]);
-      expect(server.resources).toBeNull();
-      expect(server.prompts).toBeNull();
-      expect(server.dependencies).toBeNull();
+      // Minimal list response only includes tags from JSON fields
+      // packages, resources, prompts, dependencies, last_sync_at, and config schemas are excluded
       expect(server.tags).toBeNull();
-      expect(server.last_sync_at).toBeNull();
-      // Check that three-tier configuration fields are present but may be empty
-      expect(server.template_args).toBeDefined();
-      expect(server.user_env_schema).toBeNull();
-      expect(server.user_headers_schema).toBeNull();
+      expect(server.name).toBe('Test Server');
+      expect(server.language).toBe('javascript');
+      expect(server.runtime).toBe('node');
     });
   });
 
