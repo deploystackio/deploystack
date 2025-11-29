@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from 'vue'
-import { useRoute, useRouter, RouterLink } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
 import { toast } from 'vue-sonner'
 import DashboardLayout from '@/components/DashboardLayout.vue'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { SettingsMenu, SettingsMenuGroup, SettingsMenuItem, SettingsMenuSeparator } from '@/components/ui/settings-menu'
 import { GatewayConfigService, type ClientConfigResponse, type ConfigAction, type ClientInfo, type ClientCategory } from '@/services/satelliteConfigService'
 import LinkActionRenderer from '@/components/client-config/LinkActionRenderer.vue'
 import StepsActionRenderer from '@/components/client-config/StepsActionRenderer.vue'
@@ -203,38 +204,22 @@ onMounted(async () => {
       <div class="flex flex-col space-y-8 md:flex-row md:space-x-12 md:space-y-0 md:min-h-[calc(100vh-12rem)]">
         <!-- Desktop Sidebar Navigation -->
         <aside class="hidden md:block md:w-1/5 md:border-r md:pr-8">
-          <div v-if="!isLoading" class="space-y-6">
+          <SettingsMenu v-if="!isLoading">
             <template v-for="(category, categoryIndex) in clientCategories" :key="category.id">
-              <div class="space-y-2">
-                <h3 class="font-semibold text-sm text-muted-foreground pl-3">
-                  {{ category.name }}
-                </h3>
-                <nav class="space-y-1">
-                <RouterLink
+              <SettingsMenuGroup :title="category.name">
+                <SettingsMenuItem
                   v-for="client in category.clients"
                   :key="client.id"
                   :to="`/client-configuration/${category.id}/${client.id}`"
-                  class="flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors"
-                  :class="[
-                    selectedClient === client.id && selectedCategory === category.id
-                      ? 'bg-secondary text-secondary-foreground font-medium border border-border'
-                      : 'text-muted-foreground hover:bg-secondary/50 hover:text-foreground border border-transparent!'
-                  ]"
+                  :icon-url="client.iconPath"
+                  :active="selectedClient === client.id && selectedCategory === category.id"
                 >
-                  <img
-                    v-if="client.iconPath"
-                    :src="client.iconPath"
-                    :alt="client.name"
-                    class="w-5 h-5 object-contain"
-                  />
-                  <span>{{ client.name }}</span>
-                </RouterLink>
-              </nav>
-              </div>
-              <!-- Separator between categories -->
-              <div v-if="categoryIndex < clientCategories.length - 1" class="h-px w-full bg-border" />
+                  {{ client.name }}
+                </SettingsMenuItem>
+              </SettingsMenuGroup>
+              <SettingsMenuSeparator v-if="categoryIndex < clientCategories.length - 1" />
             </template>
-          </div>
+          </SettingsMenu>
           <div v-else class="text-muted-foreground text-sm">
             {{ t('common.common.loading') }}
           </div>
