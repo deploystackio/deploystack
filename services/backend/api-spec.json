@@ -15196,6 +15196,164 @@
         }
       }
     },
+    "/api/mcp/categories/featured": {
+      "get": {
+        "summary": "List categories with featured MCP servers",
+        "tags": [
+          "MCP Categories"
+        ],
+        "description": "Retrieve all MCP server categories that contain at least one featured global server, including the count of featured servers per category. Requires mcp.servers.read permission.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Featured categories retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the categories were retrieved successfully"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "Unique identifier of the category"
+                          },
+                          "name": {
+                            "type": "string",
+                            "description": "Name of the category"
+                          },
+                          "description": {
+                            "type": "string",
+                            "nullable": true,
+                            "description": "Description of the category"
+                          },
+                          "icon": {
+                            "type": "string",
+                            "nullable": true,
+                            "description": "Icon identifier for the category"
+                          },
+                          "sort_order": {
+                            "type": "number",
+                            "description": "Sort order for display"
+                          },
+                          "featured_server_count": {
+                            "type": "number",
+                            "description": "Number of featured MCP servers in this category"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "description",
+                          "icon",
+                          "sort_order",
+                          "featured_server_count"
+                        ]
+                      },
+                      "description": "Array of MCP server categories that have featured servers"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "description": "Featured categories retrieved successfully"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates the operation failed"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Unauthorized - Authentication required"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Insufficient permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates the operation failed"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Forbidden - Insufficient permissions"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates the operation failed"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Internal Server Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/mcp/categories/{id}": {
       "put": {
         "summary": "Update MCP category (Admin only)",

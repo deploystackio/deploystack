@@ -2,6 +2,7 @@ import { type FastifyInstance } from 'fastify';
 
 // Import modular route files
 import listCategories from './categories/list';
+import listFeaturedCategories from './categories/list-featured';
 import createCategory from './categories/create';
 import updateCategory from './categories/update';
 import deleteCategory from './categories/delete';
@@ -32,8 +33,9 @@ import installationsRoutes from './installations';
 import userConfigurationsRoutes from './user-configurations';
 
 export default async function mcpRoutes(server: FastifyInstance) {
-  // Categories routes (global_admin only)
+  // Categories routes
   await server.register(listCategories);
+  await server.register(listFeaturedCategories);
   await server.register(createCategory);
   await server.register(updateCategory);
   await server.register(deleteCategory);

@@ -1,4 +1,4 @@
-import { eq, asc } from 'drizzle-orm';
+import { eq, asc, and, count } from 'drizzle-orm';
 import { getSchema } from '../db/index';
 import type { AnyDatabase } from '../db';
 import type { FastifyBaseLogger } from 'fastify';
@@ -12,6 +12,15 @@ export interface McpCategory {
   icon?: string;
   sort_order: number;
   created_at: Date;
+}
+
+export interface FeaturedCategory {
+  id: string;
+  name: string;
+  description: string | null;
+  icon: string | null;
+  sort_order: number;
+  featured_server_count: number;
 }
 
 export interface CreateMcpCategoryRequest {
@@ -30,6 +39,7 @@ export interface UpdateMcpCategoryRequest {
 
 export class McpCategoriesService {
   private readonly mcpCategories: ReturnType<typeof getSchema>['mcpCategories'];
+  private readonly mcpServers: ReturnType<typeof getSchema>['mcpServers'];
 
   constructor(
     private db: AnyDatabase,
@@ -37,6 +47,7 @@ export class McpCategoriesService {
   ) {
     const schema = getSchema();
     this.mcpCategories = schema.mcpCategories;
+    this.mcpServers = schema.mcpServers;
   }
   
   async getAllCategories(): Promise<McpCategory[]> {
@@ -146,19 +157,66 @@ export class McpCategoriesService {
       operation: 'delete_category',
       categoryId
     }, 'Deleting MCP category');
-    
+
     const category = await this.getCategoryById(categoryId);
     if (!category) {
       return false;
     }
-    
+
     await this.db.delete(this.mcpCategories).where(eq(this.mcpCategories.id, categoryId));
-    
+
     this.logger.info({
       operation: 'delete_category',
       categoryId
     }, 'Successfully deleted MCP category');
-    
+
     return true;
+  }
+
+  async getCategoriesWithFeaturedServers(): Promise<FeaturedCategory[]> {
+    this.logger.debug({
+      operation: 'get_categories_with_featured_servers'
+    }, 'Getting categories with featured MCP servers');
+
+    const results = await this.db
+      .select({
+        id: this.mcpCategories.id,
+        name: this.mcpCategories.name,
+        description: this.mcpCategories.description,
+        icon: this.mcpCategories.icon,
+        sort_order: this.mcpCategories.sort_order,
+        featured_server_count: count(this.mcpServers.id)
+      })
+      .from(this.mcpCategories)
+      .innerJoin(
+        this.mcpServers,
+        and(
+          eq(this.mcpServers.category_id, this.mcpCategories.id),
+          eq(this.mcpServers.featured, true),
+          eq(this.mcpServers.visibility, 'global')
+        )
+      )
+      .groupBy(
+        this.mcpCategories.id,
+        this.mcpCategories.name,
+        this.mcpCategories.description,
+        this.mcpCategories.icon,
+        this.mcpCategories.sort_order
+      )
+      .orderBy(asc(this.mcpCategories.sort_order), asc(this.mcpCategories.name));
+
+    this.logger.info({
+      operation: 'get_categories_with_featured_servers',
+      categoriesFound: results.length
+    }, 'Retrieved categories with featured MCP servers');
+
+    return results.map(row => ({
+      id: row.id,
+      name: row.name,
+      description: row.description,
+      icon: row.icon,
+      sort_order: row.sort_order,
+      featured_server_count: Number(row.featured_server_count)
+    }));
   }
 }
