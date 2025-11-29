@@ -209,6 +209,19 @@ export default {
           }
         }
       },
+      usage: {
+        title: 'Resource Usage',
+        description: 'Current MCP server usage and limits for this team.',
+        loading: 'Loading usage data...',
+        retry: 'Try Again',
+        refresh: 'Refresh',
+        totalMcpServers: 'Total MCP Servers',
+        nonHttpMcpServers: 'Non-HTTP MCP Servers',
+        httpMcpServers: 'HTTP MCP Servers',
+        limitReached: 'You have reached the limit for this resource.',
+        nonHttpDescription: 'Stdio transport servers that run as local processes on the satellite.',
+        httpDescription: 'HTTP/SSE transport servers that connect to remote endpoints.'
+      },
       fields: {
         name: {
           label: 'Team Name',

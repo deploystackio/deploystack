@@ -8,7 +8,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Loader2, AlertTriangle } from 'lucide-vue-next'
 import { DsTabs, DsTabsItem } from '@/components/ui/ds-tabs'
 import DashboardLayout from '@/components/DashboardLayout.vue'
-import { TeamInfo, TeamMembers, TeamDangerZone } from '@/components/teams/manage'
+import { TeamInfo, TeamMembers, TeamUsage, TeamDangerZone } from '@/components/teams/manage'
 import { TeamService, type Team } from '@/services/teamService'
 import { useEventBus } from '@/composables/useEventBus'
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
@@ -100,7 +100,7 @@ const handleTeamSelected = (data: { teamId: string; teamName: string }) => {
 // Initialize tab from query parameter
 const initializeTab = () => {
   const tabFromQuery = route.query.tab as string
-  if (tabFromQuery && ['team-info', 'members', 'danger-zone'].includes(tabFromQuery)) {
+  if (tabFromQuery && ['team-info', 'members', 'usage', 'danger-zone'].includes(tabFromQuery)) {
     activeTab.value = tabFromQuery
   }
 }
@@ -177,6 +177,7 @@ onUnmounted(() => {
             label="Members"
             :badge="memberCount > 1 ? memberCount : undefined"
           />
+          <DsTabsItem value="usage" label="Usage" />
           <DsTabsItem value="danger-zone" label="Danger Zone" />
         </DsTabs>
 
@@ -192,6 +193,10 @@ onUnmounted(() => {
           v-if="activeTab === 'members'"
           :team="team"
           :can-manage-members="canManageMembers"
+        />
+        <TeamUsage
+          v-if="activeTab === 'usage'"
+          :team="team"
         />
         <TeamDangerZone
           v-if="activeTab === 'danger-zone'"

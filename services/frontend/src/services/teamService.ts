@@ -33,6 +33,19 @@ export type Team = z.infer<typeof TeamSchema>
 export type TeamWithRole = z.infer<typeof TeamWithRoleSchema>
 export type CreateTeamInput = z.infer<typeof CreateTeamSchema>
 
+export interface TeamUsageLimits {
+  mcp_server_limit: number;
+  non_http_mcp_limit: number;
+}
+
+export interface TeamUsageData {
+  is_default_team: boolean;
+  total_installed_mcp_servers: number;
+  non_http_mcp_servers: number;
+  http_mcp_servers: number;
+  limits: TeamUsageLimits;
+}
+
 export interface TeamResponse {
   success: boolean;
   teams: Team[]; // For /api/users/me/teams endpoint
@@ -450,6 +463,47 @@ export class TeamService {
       }
     } catch (error) {
       console.error('Error updating team as admin:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Get team usage statistics
+   */
+  static async getTeamUsage(teamId: string): Promise<TeamUsageData> {
+    try {
+      const apiUrl = this.getApiUrl()
+
+      const response = await fetch(`${apiUrl}/api/teams/${teamId}/usage`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+      })
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Unauthorized - please log in')
+        }
+        if (response.status === 403) {
+          throw new Error('You do not have permission to view this team\'s usage')
+        }
+        if (response.status === 404) {
+          throw new Error('Team not found')
+        }
+        throw new Error(`Failed to fetch team usage: ${response.status}`)
+      }
+
+      const data = await response.json()
+
+      if (data.success && data.data) {
+        return data.data
+      } else {
+        throw new Error('Invalid response format')
+      }
+    } catch (error) {
+      console.error('Error fetching team usage:', error)
       throw error
     }
   }

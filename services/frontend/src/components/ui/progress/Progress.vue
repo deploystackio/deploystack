@@ -1,29 +1,36 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import type { ProgressRootProps } from "reka-ui"
+import type { HTMLAttributes } from "vue"
+import { reactiveOmit } from "@vueuse/core"
+import {
+  ProgressIndicator,
+  ProgressRoot,
+} from "reka-ui"
+import { cn } from "@/lib/utils"
 
-interface Props {
-  modelValue: number
-  max?: number
-}
+const props = withDefaults(
+  defineProps<ProgressRootProps & { class?: HTMLAttributes["class"] }>(),
+  {
+    modelValue: 0,
+  },
+)
 
-const props = withDefaults(defineProps<Props>(), {
-  max: 100
-})
-
-const percentage = computed(() => {
-  return Math.min(Math.max(props.modelValue, 0), props.max)
-})
-
-const progressPercentage = computed(() => {
-  return (percentage.value / props.max) * 100
-})
+const delegatedProps = reactiveOmit(props, "class")
 </script>
 
 <template>
-  <div class="relative w-full overflow-hidden rounded-full bg-secondary h-2">
-    <div
-      class="h-full bg-primary transition-all duration-300 ease-in-out"
-      :style="{ width: `${progressPercentage}%` }"
+  <ProgressRoot
+    v-bind="delegatedProps"
+    :class="
+      cn(
+        'relative h-4 w-full overflow-hidden rounded-full bg-secondary',
+        props.class,
+      )
+    "
+  >
+    <ProgressIndicator
+      class="h-full w-full flex-1 bg-primary transition-all"
+      :style="`transform: translateX(-${100 - (props.modelValue ?? 0)}%);`"
     />
-  </div>
+  </ProgressRoot>
 </template>
