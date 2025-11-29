@@ -286,6 +286,10 @@ export default {
         backToTeams: 'Back to Teams',
         loading: 'Loading...'
       }
+    },
+    usageIndicator: {
+      totalMcpServers: 'Total MCP Servers',
+      stdioMcpServers: 'stdio MCP Servers'
     }
   }
 }

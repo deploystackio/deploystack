@@ -14,6 +14,7 @@ import McpClientConnectionsCard from '@/components/mcp-server/McpClientConnectio
 import McpStats from '@/components/mcp-server/McpStats.vue'
 import ClientConfigurationModal from '@/components/gateway-config/ClientConfigurationModal.vue'
 import UserWalkthroughPopover from '@/components/walkthrough/UserWalkthroughPopover.vue'
+import TeamUsageIndicator from '@/components/teams/TeamUsageIndicator.vue'
 import type { McpInstallation } from '@/types/mcp-installations'
 import { McpInstallationService } from '@/services/mcpInstallationService'
 import { TeamService, type Team } from '@/services/teamService'
@@ -416,6 +417,7 @@ onUnmounted(() => {
       <!-- Header -->
       <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div class="flex-1">
+          <TeamUsageIndicator v-if="selectedTeam" :team-id="selectedTeam.id" />
         </div>
         <div v-if="selectedTeam" class="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
           <Button

@@ -13,6 +13,7 @@ import McpInstallationsEmptyState from '@/components/mcp-server/McpInstallations
 import type { McpInstallation } from '@/types/mcp-installations'
 import { McpInstallationService } from '@/services/mcpInstallationService'
 import { TeamService, type Team } from '@/services/teamService'
+import TeamUsageIndicator from '@/components/teams/TeamUsageIndicator.vue'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -254,6 +255,7 @@ onUnmounted(() => {
       <!-- Header -->
       <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div class="flex-1">
+          <TeamUsageIndicator v-if="selectedTeam" :team-id="selectedTeam.id" />
         </div>
         <div v-if="selectedTeam" class="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
           <Button
