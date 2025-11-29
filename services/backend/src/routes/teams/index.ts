@@ -5,6 +5,7 @@ import getTeamByIdRoute from './getTeamById';
 import createTeamRoute from './createTeam';
 import updateTeamRoute from './updateTeam';
 import deleteTeamRoute from './deleteTeam';
+import getTeamUsageRoute from './usage';
 import teamMembersRoutes from './members';
 import mcpInstallationsRoutes from './mcp-installations';
 import getTeamSatellitesRoute from './satellites';
@@ -17,6 +18,7 @@ export default async function teamsRoute(fastify: FastifyInstance) {
   await fastify.register(createTeamRoute);
   await fastify.register(updateTeamRoute);
   await fastify.register(deleteTeamRoute);
+  await fastify.register(getTeamUsageRoute);
 
   // Register team member management routes
   await fastify.register(teamMembersRoutes);

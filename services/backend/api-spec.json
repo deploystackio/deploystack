@@ -10518,6 +10518,224 @@
         }
       }
     },
+    "/api/teams/{id}/usage": {
+      "get": {
+        "summary": "Get team usage statistics",
+        "tags": [
+          "Teams"
+        ],
+        "description": "Retrieves MCP server installation counts and limits for a specific team. Only team members can view their team's usage.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "description": "Team ID"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Team usage retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "is_default_team": {
+                          "type": "boolean",
+                          "description": "Whether this team is the calling user's default team"
+                        },
+                        "total_installed_mcp_servers": {
+                          "type": "number",
+                          "description": "Total number of MCP servers installed for the team"
+                        },
+                        "non_http_mcp_servers": {
+                          "type": "number",
+                          "description": "Number of non-HTTP MCP servers (stdio transport)"
+                        },
+                        "http_mcp_servers": {
+                          "type": "number",
+                          "description": "Number of HTTP MCP servers (http/sse transport)"
+                        },
+                        "limits": {
+                          "type": "object",
+                          "properties": {
+                            "mcp_server_limit": {
+                              "type": "number",
+                              "description": "Maximum total MCP servers allowed for the team"
+                            },
+                            "non_http_mcp_limit": {
+                              "type": "number",
+                              "description": "Maximum non-HTTP MCP servers allowed for the team"
+                            }
+                          },
+                          "required": [
+                            "mcp_server_limit",
+                            "non_http_mcp_limit"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "is_default_team",
+                        "total_installed_mcp_servers",
+                        "non_http_mcp_servers",
+                        "http_mcp_servers",
+                        "limits"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "description": "Team usage retrieved successfully"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates if the operation was successful (false for errors)"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "details": {
+                      "type": "array",
+                      "items": {},
+                      "description": "Additional error details (validation errors)"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Unauthorized - Authentication required"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Insufficient permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates if the operation was successful (false for errors)"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "details": {
+                      "type": "array",
+                      "items": {},
+                      "description": "Additional error details (validation errors)"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Forbidden - Insufficient permissions"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found - Team not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates if the operation was successful (false for errors)"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "details": {
+                      "type": "array",
+                      "items": {},
+                      "description": "Additional error details (validation errors)"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Not Found - Team not found"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates if the operation was successful (false for errors)"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    },
+                    "details": {
+                      "type": "array",
+                      "items": {},
+                      "description": "Additional error details (validation errors)"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Internal Server Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/teams/{id}/members": {
       "get": {
         "summary": "Get team members",

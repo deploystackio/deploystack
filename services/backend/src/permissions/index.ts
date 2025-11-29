@@ -78,6 +78,7 @@ export const ROLE_DEFINITIONS = {
     'teams.manage',
     'team.members.view',
     'team.members.manage',
+    'team.usage.view',
     'cloud_credentials.view',
     'cloud_credentials.create',
     'cloud_credentials.edit',
@@ -94,6 +95,7 @@ export const ROLE_DEFINITIONS = {
   team_user: [
     'teams.view',
     'team.members.view',
+    'team.usage.view',
     'cloud_credentials.view',
     'mcp.servers.read',
     'mcp.installations.view',
