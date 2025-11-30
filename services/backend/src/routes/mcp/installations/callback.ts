@@ -3,7 +3,7 @@ import { getDb, getSchema } from '../../../db';
 import { eq, and } from 'drizzle-orm';
 import { OAuthTokenService } from '../../../services/OAuthTokenService';
 import { OAuthDiscoveryService } from '../../../services/OAuthDiscoveryService';
-import { encrypt } from '../../../utils/encryption';
+import { encrypt, decrypt } from '../../../utils/encryption';
 import { GlobalSettingsInitService } from '../../../global-settings';
 import { GlobalSettings } from '../../../global-settings';
 import { nanoid } from 'nanoid';
@@ -156,61 +156,92 @@ export default async function oauthCallbackRoute(server: FastifyInstance) {
 			}
 
 			try {
-				// Extract server URL from packages or remotes
-				let serverUrl: string | null = null;
-
-				// Parse JSON fields if they are strings (Drizzle returns TEXT fields as strings)
-				const packages = typeof mcpServer.packages === 'string'
-					? JSON.parse(mcpServer.packages)
-					: mcpServer.packages;
-
-				const remotes = typeof mcpServer.remotes === 'string'
-					? JSON.parse(mcpServer.remotes)
-					: mcpServer.remotes;
-
-				// Check packages first (with null check)
-				if (packages && Array.isArray(packages) && packages.length > 0 && packages[0] !== null) {
-					// Stdio MCP server - check if it has OAuth configuration
-					const pkg = packages[0];
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
-					serverUrl = (pkg as any).oauth_server_url || null;
-				}
-
-				// Always check remotes if we don't have a URL yet (not else if!)
-				if (!serverUrl && remotes && Array.isArray(remotes) && remotes.length > 0) {
-					// Remote MCP server (HTTP/SSE)
-					const remote = remotes[0];
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
-					serverUrl = (remote as any).url;
-				}
-
-				if (!serverUrl) {
-					request.log.error(
-						{ serverId: mcpServer.id, packages, remotes },
-						'Cannot determine server URL for OAuth discovery'
-					);
-					throw new Error('Cannot determine server URL for OAuth discovery');
-				}
-
-				// Discover OAuth endpoints on-the-fly
-				const discoveryService = new OAuthDiscoveryService(request.log);
-				const discovery = await discoveryService.detectAndDiscoverOAuth(serverUrl);
-
-				if (!discovery.requiresOauth || !discovery.metadata) {
-					request.log.error({ serverUrl, discovery }, 'OAuth discovery failed or server does not require OAuth');
-					throw new Error('OAuth discovery failed');
-				}
-
 				// Construct redirect URI (must match what was sent in authorization request)
 				const backendUrl = await GlobalSettings.get('global.backend_url', 'http://localhost:3000');
 				const redirectUri = `${backendUrl}/api/teams/${teamId}/mcp/installations/${installationId}/oauth/callback`;
 
-				// Get client_id from installation (may be dynamically registered)
+				// Get OAuth configuration from installation record
+				// These were stored during authorization phase (Phase 4)
 				const clientId = installation.oauth_client_id || 'deploystack';
+				let tokenEndpoint = installation.oauth_token_endpoint;
+				const tokenEndpointAuthMethod = (installation.oauth_token_endpoint_auth_method || 'none') as 'client_secret_post' | 'client_secret_basic' | 'none';
+
+				// Decrypt client secret if present (for pre-registered providers)
+				let clientSecret: string | null = null;
+				if (installation.oauth_client_secret) {
+					try {
+						clientSecret = decrypt(installation.oauth_client_secret, request.log);
+					} catch {
+						request.log.error({ installationId: installation.id }, 'Failed to decrypt client secret');
+						// Continue without client secret - may fail at token exchange
+					}
+				}
+
+				// Fallback to OAuth discovery if token endpoint not stored (backwards compatibility)
+				if (!tokenEndpoint) {
+					request.log.info(
+						{ installationId: installation.id },
+						'Token endpoint not stored, falling back to OAuth discovery'
+					);
+
+					// Extract server URL from packages or remotes
+					let serverUrl: string | null = null;
+
+					// Parse JSON fields if they are strings (Drizzle returns TEXT fields as strings)
+					const packages = typeof mcpServer.packages === 'string'
+						? JSON.parse(mcpServer.packages)
+						: mcpServer.packages;
+
+					const remotes = typeof mcpServer.remotes === 'string'
+						? JSON.parse(mcpServer.remotes)
+						: mcpServer.remotes;
+
+					// Check packages first (with null check)
+					if (packages && Array.isArray(packages) && packages.length > 0 && packages[0] !== null) {
+						// Stdio MCP server - check if it has OAuth configuration
+						const pkg = packages[0];
+						// eslint-disable-next-line @typescript-eslint/no-explicit-any
+						serverUrl = (pkg as any).oauth_server_url || null;
+					}
+
+					// Always check remotes if we don't have a URL yet (not else if!)
+					if (!serverUrl && remotes && Array.isArray(remotes) && remotes.length > 0) {
+						// Remote MCP server (HTTP/SSE)
+						const remote = remotes[0];
+						// eslint-disable-next-line @typescript-eslint/no-explicit-any
+						serverUrl = (remote as any).url;
+					}
+
+					if (!serverUrl) {
+						request.log.error(
+							{ serverId: mcpServer.id, packages, remotes },
+							'Cannot determine server URL for OAuth discovery'
+						);
+						throw new Error('Cannot determine server URL for OAuth discovery');
+					}
+
+					// Discover OAuth endpoints
+					const discoveryService = new OAuthDiscoveryService(request.log);
+					const discovery = await discoveryService.detectAndDiscoverOAuth(serverUrl);
+
+					if (!discovery.requiresOauth || !discovery.metadata) {
+						request.log.error({ serverUrl, discovery }, 'OAuth discovery failed or server does not require OAuth');
+						throw new Error('OAuth discovery failed');
+					}
+
+					tokenEndpoint = discovery.metadata.token_endpoint;
+				}
 
 				request.log.info(
-					{ clientId, installationId: installation.id },
-					'Using OAuth client_id for token exchange'
+					{
+						clientId,
+						installationId: installation.id,
+						tokenEndpoint,
+						authMethod: tokenEndpointAuthMethod,
+						hasClientSecret: !!clientSecret,
+						hasProviderId: !!installation.oauth_provider_id
+					},
+					'Using OAuth configuration for token exchange'
 				);
 
 				// Exchange code for token using PKCE verification
@@ -221,7 +252,9 @@ export default async function oauthCallbackRoute(server: FastifyInstance) {
 					codeVerifier: installation.oauth_code_verifier,
 					clientId,
 					redirectUri,
-					tokenEndpoint: discovery.metadata.token_endpoint,
+					tokenEndpoint,
+					clientSecret,
+					tokenEndpointAuthMethod,
 				});
 
 				// Calculate token expiry
@@ -250,7 +283,7 @@ export default async function oauthCallbackRoute(server: FastifyInstance) {
 					updated_at: new Date(),
 				});
 
-				// Update installation: mark as complete, clear OAuth pending state
+				// Update installation: mark as complete, clear OAuth pending state and temporary fields
 				await db
 					.update(mcpServerInstallations)
 					.set({
@@ -258,6 +291,10 @@ export default async function oauthCallbackRoute(server: FastifyInstance) {
 						oauth_state: null, // Clear state (security)
 						oauth_code_verifier: null, // Clear verifier (security)
 						oauth_pending_expires_at: null,
+						// Clear temporary OAuth fields (security - no longer needed after token exchange)
+						oauth_token_endpoint: null,
+						oauth_token_endpoint_auth_method: null,
+						oauth_client_secret: null, // Clear encrypted secret (tokens are now stored separately)
 						updated_at: new Date(),
 					})
 					.where(eq(mcpServerInstallations.id, installation.id));
@@ -291,6 +328,8 @@ export default async function oauthCallbackRoute(server: FastifyInstance) {
 						serverId: mcpServer.id,
 						teamId: installation.team_id,
 						userId: installation.created_by,
+						providerId: installation.oauth_provider_id,
+						authMethod: tokenEndpointAuthMethod,
 					},
 					'OAuth flow completed successfully'
 				);

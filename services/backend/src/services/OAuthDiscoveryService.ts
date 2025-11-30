@@ -1,4 +1,5 @@
 import type { FastifyBaseLogger } from 'fastify';
+import { OAuthProviderMatchService, MatchedOAuthProvider } from './OAuthProviderMatchService';
 
 export interface OAuthServerMetadata {
   issuer: string;
@@ -17,6 +18,7 @@ export interface OAuthServerMetadata {
 export interface OAuthDetectionResult {
   requiresOauth: boolean;
   metadata?: OAuthServerMetadata;
+  provider?: MatchedOAuthProvider; // Pre-registered provider (when DCR not available)
 }
 
 export class OAuthDiscoveryService {
@@ -54,14 +56,58 @@ export class OAuthDiscoveryService {
           url,
           issuer,
           authEndpoint: metadata.authorization_endpoint,
-          tokenEndpoint: metadata.token_endpoint
+          tokenEndpoint: metadata.token_endpoint,
+          hasDcr: this.hasDcrSupport(metadata)
         },
         'OAuth discovery completed successfully'
       );
 
+      // Check if DCR is supported
+      if (this.hasDcrSupport(metadata)) {
+        this.logger.info(
+          { url, registrationEndpoint: metadata.registration_endpoint },
+          'DCR endpoint found, will use Dynamic Client Registration'
+        );
+        return {
+          requiresOauth: true,
+          metadata
+        };
+      }
+
+      // DCR not supported - check for pre-registered provider
+      this.logger.info(
+        { url, authEndpoint: metadata.authorization_endpoint },
+        'No DCR endpoint, checking for pre-registered OAuth provider'
+      );
+
+      const providerMatchService = new OAuthProviderMatchService(this.logger);
+      const provider = await providerMatchService.findMatchingProvider(metadata.authorization_endpoint);
+
+      if (provider) {
+        this.logger.info(
+          {
+            url,
+            providerId: provider.id,
+            providerName: provider.name
+          },
+          `Found pre-registered OAuth provider: ${provider.name}`
+        );
+        return {
+          requiresOauth: true,
+          metadata,
+          provider
+        };
+      }
+
+      // No DCR and no matching provider
+      this.logger.warn(
+        { url, authEndpoint: metadata.authorization_endpoint },
+        'No DCR support and no matching pre-registered provider found'
+      );
       return {
         requiresOauth: true,
         metadata
+        // provider is undefined - caller should handle this case
       };
     } catch (error) {
       this.logger.error(
@@ -235,5 +281,15 @@ export class OAuthDiscoveryService {
       );
       return null;
     }
+  }
+
+  /**
+   * Checks if OAuth server supports Dynamic Client Registration (DCR)
+   *
+   * @param metadata - OAuth server metadata
+   * @returns true if registration_endpoint is present
+   */
+  private hasDcrSupport(metadata: OAuthServerMetadata): boolean {
+    return !!metadata.registration_endpoint;
   }
 }

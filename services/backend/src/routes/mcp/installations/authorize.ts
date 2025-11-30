@@ -1,10 +1,10 @@
 import { type FastifyInstance } from 'fastify';
 import { requireAuthenticationAny, requireOAuthScope } from '../../../middleware/oauthMiddleware';
 import { requireTeamPermission } from '../../../middleware/roleMiddleware';
-import { OAuthAuthorizationService } from '../../../services/OAuthAuthorizationService';
 import { OAuthDiscoveryService } from '../../../services/OAuthDiscoveryService';
 import { OAuthClientRegistrationService } from '../../../services/OAuthClientRegistrationService';
 import { encrypt } from '../../../utils/encryption';
+import { generatePKCEPair, generateState, generateResourceParameter } from '../../../utils/pkce';
 import { getDb, getSchema } from '../../../db';
 import { eq } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
@@ -171,7 +171,6 @@ export default async function authorizeRoute(server: FastifyInstance) {
 
       // Create pending installation
       const installationId = nanoid();
-      const authService = new OAuthAuthorizationService(request.log);
 
       // Get backend URL from global settings for OAuth callback
       const backendUrl = await GlobalSettings.get('global.backend_url', 'http://localhost:3000');
@@ -185,11 +184,18 @@ export default async function authorizeRoute(server: FastifyInstance) {
         throw new Error('OAuth discovery failed');
       }
 
-      // Dynamic client registration (RFC 7591)
-      let clientId = 'deploystack'; // Default client_id
+      // Variables for OAuth configuration
+      let clientId: string;
       let clientSecret: string | null = null;
+      let tokenEndpoint: string;
+      let tokenEndpointAuthMethod: string;
+      let authorizationEndpoint: string;
+      let providerId: string | null = null;
+      let scopes: string[] = [];
 
+      // Check for Dynamic Client Registration (DCR) or pre-registered provider
       if (discovery.metadata.registration_endpoint) {
+        // DCR available - use dynamic registration (existing flow)
         request.log.info(
           { registrationEndpoint: discovery.metadata.registration_endpoint },
           'Registering dynamic OAuth client'
@@ -212,26 +218,95 @@ export default async function authorizeRoute(server: FastifyInstance) {
         if (registrationResponse.client_secret) {
           clientSecret = registrationResponse.client_secret;
         }
+        tokenEndpoint = discovery.metadata.token_endpoint;
+        tokenEndpointAuthMethod = 'none'; // DCR public client
+        authorizationEndpoint = discovery.metadata.authorization_endpoint;
+
+        // Use scopes from discovery metadata if available
+        if (discovery.metadata.scopes_supported?.length) {
+          scopes = discovery.metadata.scopes_supported;
+        }
 
         request.log.info(
           { clientId, hasClientSecret: !!clientSecret },
           'Dynamic client registration successful'
         );
+
+      } else if (discovery.provider) {
+        // No DCR but we have a pre-registered provider
+        clientId = discovery.provider.clientId;
+        clientSecret = discovery.provider.clientSecret;
+        tokenEndpoint = discovery.provider.tokenEndpoint;
+        tokenEndpointAuthMethod = discovery.provider.tokenEndpointAuthMethod;
+        authorizationEndpoint = discovery.provider.authorizationEndpoint;
+        providerId = discovery.provider.id;
+
+        // Use provider's default scopes if discovery metadata doesn't have them
+        if (discovery.metadata.scopes_supported?.length) {
+          scopes = discovery.metadata.scopes_supported;
+        } else if (discovery.provider.defaultScopes?.length) {
+          scopes = discovery.provider.defaultScopes;
+        }
+
+        request.log.info({
+          operation: 'oauth_using_provider',
+          provider_name: discovery.provider.name,
+          provider_id: discovery.provider.id,
+          clientId,
+          hasClientSecret: !!clientSecret,
+          tokenEndpointAuthMethod,
+          scopes
+        }, `Using pre-registered OAuth provider: ${discovery.provider.name}`);
+
+      } else {
+        // No DCR and no provider - cannot proceed
+        request.log.error({
+          operation: 'oauth_no_provider',
+          serverUrl,
+          authEndpoint: discovery.metadata.authorization_endpoint
+        }, 'OAuth provider not configured - no DCR support and no matching pre-registered provider');
+
+        const errorResponse: ErrorResponse = {
+          success: false,
+          error: 'OAuth provider not configured. This MCP server requires OAuth but its ' +
+            'authorization server does not support Dynamic Client Registration and no ' +
+            'pre-registered provider is configured. Please contact support.'
+        };
+        const jsonString = JSON.stringify(errorResponse);
+        return reply.status(400).type('application/json').send(jsonString);
       }
 
-      // Build authorization URL
-      const authResult = await authService.buildAuthorizationUrl({
-        serverId: mcpServer.id,
-        serverUrl,
-        teamId,
-        userId,
-        installationId,
-        redirectUri,
-        clientId, // Use dynamically registered client_id
-        scope: undefined // Will use default scopes from OAuth provider
-      });
+      // Generate PKCE pair
+      const pkce = generatePKCEPair();
 
-      // Store pending installation
+      // Generate state parameter
+      const state = generateState();
+
+      // Generate resource parameter (RFC 8707)
+      const resource = generateResourceParameter(mcpServer.id, teamId);
+
+      // Build authorization URL
+      const authUrl = new URL(authorizationEndpoint);
+      authUrl.searchParams.set('response_type', 'code');
+      authUrl.searchParams.set('client_id', clientId);
+      authUrl.searchParams.set('redirect_uri', redirectUri);
+      authUrl.searchParams.set('state', state);
+      authUrl.searchParams.set('code_challenge', pkce.code_challenge);
+      authUrl.searchParams.set('code_challenge_method', pkce.code_challenge_method);
+      authUrl.searchParams.set('resource', resource);
+
+      // Add scope if present
+      if (scopes.length > 0) {
+        authUrl.searchParams.set('scope', scopes.join(' '));
+      }
+
+      // Add prompt parameter to force consent
+      authUrl.searchParams.set('prompt', 'consent');
+
+      // State expires in 10 minutes
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+      // Store pending installation with provider reference
       await db.insert(mcpServerInstallations).values({
         id: installationId,
         team_id: teamId,
@@ -243,12 +318,16 @@ export default async function authorizeRoute(server: FastifyInstance) {
         team_env: body.team_config ? JSON.stringify(body.team_config) : null,
         team_headers: null,
         team_url_query_params: null,
-        oauth_state: authResult.state,
-        oauth_code_verifier: authResult.codeVerifier,
+        oauth_state: state,
+        oauth_code_verifier: pkce.code_verifier,
         oauth_pending: true,
-        oauth_pending_expires_at: authResult.expiresAt,
+        oauth_pending_expires_at: expiresAt,
         oauth_client_id: clientId,
         oauth_client_secret: clientSecret ? encrypt(clientSecret, request.log) : null,
+        // NEW: Store provider reference and token endpoint for callback handler
+        oauth_provider_id: providerId,
+        oauth_token_endpoint: tokenEndpoint,
+        oauth_token_endpoint_auth_method: tokenEndpointAuthMethod,
         created_at: new Date(),
         updated_at: new Date(),
         last_used_at: null
@@ -260,15 +339,16 @@ export default async function authorizeRoute(server: FastifyInstance) {
         serverId: mcpServer.id,
         teamId,
         userId,
-        authUrl: authResult.authorizationUrl,
-        expiresAt: authResult.expiresAt
+        providerId,
+        authUrl: authUrl.toString(),
+        expiresAt
       }, 'OAuth authorization initiated successfully');
 
       const successResponse: OAuthAuthorizeSuccessResponse = {
         installation_id: installationId,
-        authorization_url: authResult.authorizationUrl,
+        authorization_url: authUrl.toString(),
         requires_authorization: true,
-        expires_at: authResult.expiresAt.toISOString()
+        expires_at: expiresAt.toISOString()
       };
       const jsonString = JSON.stringify(successResponse);
       return reply.status(200).type('application/json').send(jsonString);

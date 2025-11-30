@@ -1,10 +1,46 @@
 
 // MCP Installation and Configuration Tables
 
-import { pgTable, text, integer, boolean, timestamp, index, jsonb } from 'drizzle-orm/pg-core';
+import { pgTable, text, integer, boolean, timestamp, index, jsonb, uniqueIndex } from 'drizzle-orm/pg-core';
 import { authUser } from './auth';
 import { teams } from './teams';
 import { mcpServers } from './mcp-catalog';
+
+// MCP OAuth Providers - Pre-registered OAuth providers for non-DCR auth servers (GitHub, Google, etc.)
+export const mcpOauthProviders = pgTable('mcpOauthProviders', {
+  id: text('id').primaryKey(),
+
+  // Provider identity
+  name: text('name').notNull(), // Display name: "GitHub", "Google"
+  slug: text('slug').notNull(), // Identifier: "github", "google"
+  icon_url: text('icon_url'), // Provider logo URL
+
+  // Authorization server matching
+  auth_server_patterns: text('auth_server_patterns').notNull(), // JSON array of regex patterns to match auth server URLs
+
+  // OAuth credentials (pre-registered with provider)
+  client_id: text('client_id').notNull(), // OAuth App client ID
+  client_secret: text('client_secret'), // Encrypted client_secret (NULL for public clients)
+
+  // OAuth endpoints
+  authorization_endpoint: text('authorization_endpoint').notNull(), // e.g., "https://github.com/login/oauth/authorize"
+  token_endpoint: text('token_endpoint').notNull(), // e.g., "https://github.com/login/oauth/access_token"
+
+  // OAuth configuration
+  default_scopes: text('default_scopes'), // JSON array of default scopes
+  pkce_required: boolean('pkce_required').notNull().default(true),
+  token_endpoint_auth_method: text('token_endpoint_auth_method').notNull().default('client_secret_post'), // 'client_secret_post', 'client_secret_basic', 'none'
+
+  // Status
+  enabled: boolean('enabled').notNull().default(true),
+
+  // Timestamps
+  created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  slugIdx: uniqueIndex('mcp_oauth_providers_slug_idx').on(table.slug),
+  enabledIdx: index('mcp_oauth_providers_enabled_idx').on(table.enabled),
+}));
 
 // MCP Server Installations - Team installations (Tier 2)
 export const mcpServerInstallations = pgTable('mcpServerInstallations', {
@@ -34,6 +70,11 @@ export const mcpServerInstallations = pgTable('mcpServerInstallations', {
   // OAuth Dynamic Client Registration (RFC 7591)
   oauth_client_id: text('oauth_client_id'), // Dynamically registered client_id from MCP OAuth server
   oauth_client_secret: text('oauth_client_secret'), // Encrypted client_secret (if provided by registration endpoint)
+
+  // Pre-registered OAuth Provider (for non-DCR auth servers like GitHub, Google)
+  oauth_provider_id: text('oauth_provider_id').references(() => mcpOauthProviders.id, { onDelete: 'set null' }), // Reference to pre-registered provider
+  oauth_token_endpoint: text('oauth_token_endpoint'), // Stored token endpoint for callback handler
+  oauth_token_endpoint_auth_method: text('oauth_token_endpoint_auth_method'), // Auth method for token exchange
 
   // Metadata
   created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

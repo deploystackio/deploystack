@@ -22174,6 +22174,999 @@ paths:
                   - success
                   - error
                 description: Internal Server Error
+  /api/admin/oauth-providers:
+    get:
+      summary: List all OAuth providers (Global Admin)
+      tags:
+        - Admin - OAuth Providers
+      description: Returns all pre-registered OAuth providers for MCP server authentication.
+      parameters:
+        - schema:
+            type: boolean
+          in: query
+          name: enabled
+          required: false
+          description: Filter by enabled status
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: List of OAuth providers
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Indicates operation success
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          description: Provider unique identifier
+                        name:
+                          type: string
+                          description: Display name
+                        slug:
+                          type: string
+                          description: URL-safe identifier
+                        icon_url:
+                          type: string
+                          nullable: true
+                          description: Provider logo URL
+                        auth_server_patterns:
+                          type: array
+                          items:
+                            type: string
+                          description: Regex patterns to match authorization server URLs
+                        client_id:
+                          type: string
+                          description: OAuth App client ID
+                        has_client_secret:
+                          type: boolean
+                          description: Whether client secret is configured
+                        authorization_endpoint:
+                          type: string
+                          description: OAuth authorization URL
+                        token_endpoint:
+                          type: string
+                          description: OAuth token exchange URL
+                        default_scopes:
+                          type: array
+                          items:
+                            type: string
+                          nullable: true
+                          description: Default scopes to request
+                        pkce_required:
+                          type: boolean
+                          description: Whether PKCE is required
+                        token_endpoint_auth_method:
+                          type: string
+                          description: Client credential transmission method
+                        enabled:
+                          type: boolean
+                          description: Whether provider is enabled
+                        created_at:
+                          type: string
+                          description: ISO8601 timestamp
+                        updated_at:
+                          type: string
+                          description: ISO8601 timestamp
+                      required:
+                        - id
+                        - name
+                        - slug
+                        - auth_server_patterns
+                        - client_id
+                        - has_client_secret
+                        - authorization_endpoint
+                        - token_endpoint
+                        - pkce_required
+                        - token_endpoint_auth_method
+                        - enabled
+                        - created_at
+                        - updated_at
+                required:
+                  - success
+                  - data
+                description: List of OAuth providers
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates operation failure
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - success
+                  - error
+                description: Unauthorized
+        "403":
+          description: Forbidden - Global admin required
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates operation failure
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - success
+                  - error
+                description: Forbidden - Global admin required
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates operation failure
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - success
+                  - error
+                description: Internal Server Error
+    post:
+      summary: Create OAuth provider (Global Admin)
+      tags:
+        - Admin - OAuth Providers
+      description: Creates a pre-registered OAuth provider for MCP server
+        authentication (e.g., GitHub, Google).
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 100
+                  description: Display name (e.g., "GitHub", "Google")
+                slug:
+                  type: string
+                  minLength: 1
+                  maxLength: 50
+                  pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+                  description: URL-safe identifier (lowercase alphanumeric + hyphens, e.g.,
+                    "github")
+                icon_url:
+                  type: string
+                  nullable: true
+                  description: Provider logo URL
+                auth_server_patterns:
+                  type: array
+                  items:
+                    type: string
+                  minItems: 1
+                  description: Regex patterns to match authorization server URLs
+                client_id:
+                  type: string
+                  minLength: 1
+                  description: OAuth App client ID
+                client_secret:
+                  type: string
+                  nullable: true
+                  description: OAuth App client secret (null for public clients)
+                authorization_endpoint:
+                  type: string
+                  minLength: 1
+                  description: OAuth authorization URL (e.g.,
+                    "https://github.com/login/oauth/authorize")
+                token_endpoint:
+                  type: string
+                  minLength: 1
+                  description: OAuth token exchange URL (e.g.,
+                    "https://github.com/login/oauth/access_token")
+                default_scopes:
+                  type: array
+                  items:
+                    type: string
+                  nullable: true
+                  description: Default scopes to request
+                pkce_required:
+                  type: boolean
+                  default: true
+                  description: Whether PKCE is required for this provider
+                token_endpoint_auth_method:
+                  type: string
+                  enum:
+                    - client_secret_post
+                    - client_secret_basic
+                    - none
+                  default: client_secret_post
+                  description: How to send client credentials to token endpoint
+                enabled:
+                  type: boolean
+                  default: true
+                  description: Whether this provider is enabled
+              required:
+                - name
+                - slug
+                - auth_server_patterns
+                - client_id
+                - authorization_endpoint
+                - token_endpoint
+              additionalProperties: false
+        required: true
+      security:
+        - cookieAuth: []
+      responses:
+        "201":
+          description: Provider created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Indicates operation success
+                  message:
+                    type: string
+                    description: Success message
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        description: Provider unique identifier
+                      name:
+                        type: string
+                        description: Display name
+                      slug:
+                        type: string
+                        description: URL-safe identifier
+                      icon_url:
+                        type: string
+                        nullable: true
+                        description: Provider logo URL
+                      auth_server_patterns:
+                        type: array
+                        items:
+                          type: string
+                        description: Regex patterns to match authorization server URLs
+                      client_id:
+                        type: string
+                        description: OAuth App client ID
+                      has_client_secret:
+                        type: boolean
+                        description: Whether client secret is configured
+                      authorization_endpoint:
+                        type: string
+                        description: OAuth authorization URL
+                      token_endpoint:
+                        type: string
+                        description: OAuth token exchange URL
+                      default_scopes:
+                        type: array
+                        items:
+                          type: string
+                        nullable: true
+                        description: Default scopes to request
+                      pkce_required:
+                        type: boolean
+                        description: Whether PKCE is required
+                      token_endpoint_auth_method:
+                        type: string
+                        description: Client credential transmission method
+                      enabled:
+                        type: boolean
+                        description: Whether provider is enabled
+                      created_at:
+                        type: string
+                        description: ISO8601 timestamp
+                      updated_at:
+                        type: string
+                        description: ISO8601 timestamp
+                    required:
+                      - id
+                      - name
+                      - slug
+                      - auth_server_patterns
+                      - client_id
+                      - has_client_secret
+                      - authorization_endpoint
+                      - token_endpoint
+                      - pkce_required
+                      - token_endpoint_auth_method
+                      - enabled
+                      - created_at
+                      - updated_at
+                required:
+                  - success
+                  - message
+                  - data
+                description: Provider created successfully
+        "400":
+          description: Bad Request - Invalid input
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates operation failure
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - success
+                  - error
+                description: Bad Request - Invalid input
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates operation failure
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - success
+                  - error
+                description: Unauthorized
+        "403":
+          description: Forbidden - Global admin required
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates operation failure
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - success
+                  - error
+                description: Forbidden - Global admin required
+        "409":
+          description: Conflict - Slug already exists
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates operation failure
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - success
+                  - error
+                description: Conflict - Slug already exists
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates operation failure
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - success
+                  - error
+                description: Internal Server Error
+  /api/admin/oauth-providers/{id}:
+    get:
+      summary: Get OAuth provider by ID (Global Admin)
+      tags:
+        - Admin - OAuth Providers
+      description: Returns a specific OAuth provider by ID.
+      parameters:
+        - schema:
+            type: string
+          in: path
+          name: id
+          required: true
+          description: Provider ID
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Provider retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Indicates operation success
+                  message:
+                    type: string
+                    description: Success message
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        description: Provider unique identifier
+                      name:
+                        type: string
+                        description: Display name
+                      slug:
+                        type: string
+                        description: URL-safe identifier
+                      icon_url:
+                        type: string
+                        nullable: true
+                        description: Provider logo URL
+                      auth_server_patterns:
+                        type: array
+                        items:
+                          type: string
+                        description: Regex patterns to match authorization server URLs
+                      client_id:
+                        type: string
+                        description: OAuth App client ID
+                      has_client_secret:
+                        type: boolean
+                        description: Whether client secret is configured
+                      authorization_endpoint:
+                        type: string
+                        description: OAuth authorization URL
+                      token_endpoint:
+                        type: string
+                        description: OAuth token exchange URL
+                      default_scopes:
+                        type: array
+                        items:
+                          type: string
+                        nullable: true
+                        description: Default scopes to request
+                      pkce_required:
+                        type: boolean
+                        description: Whether PKCE is required
+                      token_endpoint_auth_method:
+                        type: string
+                        description: Client credential transmission method
+                      enabled:
+                        type: boolean
+                        description: Whether provider is enabled
+                      created_at:
+                        type: string
+                        description: ISO8601 timestamp
+                      updated_at:
+                        type: string
+                        description: ISO8601 timestamp
+                    required:
+                      - id
+                      - name
+                      - slug
+                      - auth_server_patterns
+                      - client_id
+                      - has_client_secret
+                      - authorization_endpoint
+                      - token_endpoint
+                      - pkce_required
+                      - token_endpoint_auth_method
+                      - enabled
+                      - created_at
+                      - updated_at
+                required:
+                  - success
+                  - message
+                  - data
+                description: Provider retrieved successfully
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates operation failure
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - success
+                  - error
+                description: Unauthorized
+        "403":
+          description: Forbidden - Global admin required
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates operation failure
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - success
+                  - error
+                description: Forbidden - Global admin required
+        "404":
+          description: Provider not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates operation failure
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - success
+                  - error
+                description: Provider not found
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates operation failure
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - success
+                  - error
+                description: Internal Server Error
+    put:
+      summary: Update OAuth provider (Global Admin)
+      tags:
+        - Admin - OAuth Providers
+      description: Updates a pre-registered OAuth provider. All fields are optional.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 100
+                  description: Display name (e.g., "GitHub", "Google")
+                slug:
+                  type: string
+                  minLength: 1
+                  maxLength: 50
+                  pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+                  description: URL-safe identifier (lowercase alphanumeric + hyphens)
+                icon_url:
+                  type: string
+                  nullable: true
+                  description: Provider logo URL
+                auth_server_patterns:
+                  type: array
+                  items:
+                    type: string
+                  minItems: 1
+                  description: Regex patterns to match authorization server URLs
+                client_id:
+                  type: string
+                  minLength: 1
+                  description: OAuth App client ID
+                client_secret:
+                  type: string
+                  nullable: true
+                  description: OAuth App client secret (empty string to remove, null to keep
+                    existing)
+                authorization_endpoint:
+                  type: string
+                  minLength: 1
+                  description: OAuth authorization URL
+                token_endpoint:
+                  type: string
+                  minLength: 1
+                  description: OAuth token exchange URL
+                default_scopes:
+                  type: array
+                  items:
+                    type: string
+                  nullable: true
+                  description: Default scopes to request
+                pkce_required:
+                  type: boolean
+                  description: Whether PKCE is required for this provider
+                token_endpoint_auth_method:
+                  type: string
+                  enum:
+                    - client_secret_post
+                    - client_secret_basic
+                    - none
+                  description: How to send client credentials to token endpoint
+                enabled:
+                  type: boolean
+                  description: Whether this provider is enabled
+              additionalProperties: false
+      parameters:
+        - schema:
+            type: string
+          in: path
+          name: id
+          required: true
+          description: Provider ID
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Provider updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Indicates operation success
+                  message:
+                    type: string
+                    description: Success message
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        description: Provider unique identifier
+                      name:
+                        type: string
+                        description: Display name
+                      slug:
+                        type: string
+                        description: URL-safe identifier
+                      icon_url:
+                        type: string
+                        nullable: true
+                        description: Provider logo URL
+                      auth_server_patterns:
+                        type: array
+                        items:
+                          type: string
+                        description: Regex patterns to match authorization server URLs
+                      client_id:
+                        type: string
+                        description: OAuth App client ID
+                      has_client_secret:
+                        type: boolean
+                        description: Whether client secret is configured
+                      authorization_endpoint:
+                        type: string
+                        description: OAuth authorization URL
+                      token_endpoint:
+                        type: string
+                        description: OAuth token exchange URL
+                      default_scopes:
+                        type: array
+                        items:
+                          type: string
+                        nullable: true
+                        description: Default scopes to request
+                      pkce_required:
+                        type: boolean
+                        description: Whether PKCE is required
+                      token_endpoint_auth_method:
+                        type: string
+                        description: Client credential transmission method
+                      enabled:
+                        type: boolean
+                        description: Whether provider is enabled
+                      created_at:
+                        type: string
+                        description: ISO8601 timestamp
+                      updated_at:
+                        type: string
+                        description: ISO8601 timestamp
+                    required:
+                      - id
+                      - name
+                      - slug
+                      - auth_server_patterns
+                      - client_id
+                      - has_client_secret
+                      - authorization_endpoint
+                      - token_endpoint
+                      - pkce_required
+                      - token_endpoint_auth_method
+                      - enabled
+                      - created_at
+                      - updated_at
+                required:
+                  - success
+                  - message
+                  - data
+                description: Provider updated successfully
+        "400":
+          description: Bad Request - Invalid input
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates operation failure
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - success
+                  - error
+                description: Bad Request - Invalid input
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates operation failure
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - success
+                  - error
+                description: Unauthorized
+        "403":
+          description: Forbidden - Global admin required
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates operation failure
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - success
+                  - error
+                description: Forbidden - Global admin required
+        "404":
+          description: Provider not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates operation failure
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - success
+                  - error
+                description: Provider not found
+        "409":
+          description: Conflict - Slug already exists
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates operation failure
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - success
+                  - error
+                description: Conflict - Slug already exists
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates operation failure
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - success
+                  - error
+                description: Internal Server Error
+    delete:
+      summary: Delete OAuth provider (Global Admin)
+      tags:
+        - Admin - OAuth Providers
+      description: Deletes a pre-registered OAuth provider. Installations using this
+        provider will have oauth_provider_id set to null.
+      parameters:
+        - schema:
+            type: boolean
+            default: false
+          in: query
+          name: force
+          required: false
+          description: Force delete even if installations reference this provider
+        - schema:
+            type: string
+          in: path
+          name: id
+          required: true
+          description: Provider ID
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Provider deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Indicates operation success
+                  message:
+                    type: string
+                    description: Success message
+                required:
+                  - success
+                  - message
+                description: Provider deleted successfully
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates operation failure
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - success
+                  - error
+                description: Unauthorized
+        "403":
+          description: Forbidden - Global admin required
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates operation failure
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - success
+                  - error
+                description: Forbidden - Global admin required
+        "404":
+          description: Provider not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates operation failure
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - success
+                  - error
+                description: Provider not found
+        "409":
+          description: Conflict - Provider is in use by installations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates operation failure
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - success
+                  - error
+                description: Conflict - Provider is in use by installations
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates operation failure
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - success
+                  - error
+                description: Internal Server Error
   /api/gateway/me/mcp-configurations:
     get:
       summary: Get merged MCP configurations for gateway

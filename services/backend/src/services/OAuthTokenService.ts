@@ -10,6 +10,8 @@ export interface TokenExchangeParams {
 	clientId: string;
 	redirectUri: string;
 	tokenEndpoint: string;
+	clientSecret?: string | null;
+	tokenEndpointAuthMethod?: 'client_secret_post' | 'client_secret_basic' | 'none';
 }
 
 export interface TokenResponse {
@@ -24,6 +26,8 @@ export interface TokenRefreshParams {
 	refreshToken: string;
 	clientId: string;
 	tokenEndpoint: string;
+	clientSecret?: string | null;
+	tokenEndpointAuthMethod?: 'client_secret_post' | 'client_secret_basic' | 'none';
 }
 
 /**
@@ -40,34 +44,76 @@ export class OAuthTokenService {
 	/**
 	 * Exchanges authorization code for access token using PKCE verification
 	 *
+	 * Supports different token endpoint authentication methods:
+	 * - 'none': Public client, PKCE only (no client secret)
+	 * - 'client_secret_post': Client secret in request body (GitHub, most providers)
+	 * - 'client_secret_basic': HTTP Basic Auth header (some enterprise providers)
+	 *
 	 * @param params - Token exchange parameters
 	 * @returns Token response from OAuth server
 	 * @throws Error if token exchange fails
 	 */
 	async exchangeCodeForToken(params: TokenExchangeParams): Promise<TokenResponse> {
+		const authMethod = params.tokenEndpointAuthMethod || 'none';
+
 		this.logger.info(
-			{ tokenEndpoint: params.tokenEndpoint, clientId: params.clientId },
+			{
+				tokenEndpoint: params.tokenEndpoint,
+				clientId: params.clientId,
+				authMethod,
+				hasClientSecret: !!params.clientSecret
+			},
 			'Exchanging authorization code for token'
 		);
 
 		try {
-			// Build request body (application/x-www-form-urlencoded)
+			// Build request body based on auth method
 			const requestBody = new URLSearchParams({
 				grant_type: 'authorization_code',
 				code: params.code,
 				redirect_uri: params.redirectUri,
-				client_id: params.clientId,
 				code_verifier: params.codeVerifier, // PKCE verification
 			});
+
+			// Build headers
+			const headers: Record<string, string> = {
+				'Content-Type': 'application/x-www-form-urlencoded',
+				Accept: 'application/json',
+				'User-Agent': 'DeployStack/1.0',
+			};
+
+			// Handle authentication based on method
+			switch (authMethod) {
+				case 'client_secret_basic':
+					// HTTP Basic Auth: client_id:client_secret in Authorization header
+					if (params.clientSecret) {
+						const credentials = Buffer.from(`${params.clientId}:${params.clientSecret}`).toString('base64');
+						headers['Authorization'] = `Basic ${credentials}`;
+					} else {
+						// No secret, just send client_id in body as fallback
+						requestBody.set('client_id', params.clientId);
+					}
+					break;
+
+				case 'client_secret_post':
+					// Client secret in body (GitHub, most providers)
+					requestBody.set('client_id', params.clientId);
+					if (params.clientSecret) {
+						requestBody.set('client_secret', params.clientSecret);
+					}
+					break;
+
+				case 'none':
+				default:
+					// Public client - only client_id, no secret (PKCE-only)
+					requestBody.set('client_id', params.clientId);
+					break;
+			}
 
 			// Exchange code for token
 			const response = await fetch(params.tokenEndpoint, {
 				method: 'POST',
-				headers: {
-					'Content-Type': 'application/x-www-form-urlencoded',
-					Accept: 'application/json',
-					'User-Agent': 'DeployStack/1.0',
-				},
+				headers,
 				body: requestBody.toString(),
 				signal: AbortSignal.timeout(10000), // 10 second timeout
 			});
@@ -115,32 +161,73 @@ export class OAuthTokenService {
 	/**
 	 * Refreshes an access token using a refresh token
 	 *
+	 * Supports different token endpoint authentication methods:
+	 * - 'none': Public client (no client secret)
+	 * - 'client_secret_post': Client secret in request body
+	 * - 'client_secret_basic': HTTP Basic Auth header
+	 *
 	 * @param params - Token refresh parameters
 	 * @returns New token response from OAuth server
 	 * @throws Error if token refresh fails
 	 */
 	async refreshToken(params: TokenRefreshParams): Promise<TokenResponse> {
+		const authMethod = params.tokenEndpointAuthMethod || 'none';
+
 		this.logger.info(
-			{ tokenEndpoint: params.tokenEndpoint, clientId: params.clientId },
+			{
+				tokenEndpoint: params.tokenEndpoint,
+				clientId: params.clientId,
+				authMethod,
+				hasClientSecret: !!params.clientSecret
+			},
 			'Refreshing access token'
 		);
 
 		try {
-			// Build request body (application/x-www-form-urlencoded)
+			// Build request body
 			const requestBody = new URLSearchParams({
 				grant_type: 'refresh_token',
 				refresh_token: params.refreshToken,
-				client_id: params.clientId,
 			});
+
+			// Build headers
+			const headers: Record<string, string> = {
+				'Content-Type': 'application/x-www-form-urlencoded',
+				Accept: 'application/json',
+				'User-Agent': 'DeployStack/1.0',
+			};
+
+			// Handle authentication based on method
+			switch (authMethod) {
+				case 'client_secret_basic':
+					// HTTP Basic Auth
+					if (params.clientSecret) {
+						const credentials = Buffer.from(`${params.clientId}:${params.clientSecret}`).toString('base64');
+						headers['Authorization'] = `Basic ${credentials}`;
+					} else {
+						requestBody.set('client_id', params.clientId);
+					}
+					break;
+
+				case 'client_secret_post':
+					// Client secret in body
+					requestBody.set('client_id', params.clientId);
+					if (params.clientSecret) {
+						requestBody.set('client_secret', params.clientSecret);
+					}
+					break;
+
+				case 'none':
+				default:
+					// Public client
+					requestBody.set('client_id', params.clientId);
+					break;
+			}
 
 			// Request new access token
 			const response = await fetch(params.tokenEndpoint, {
 				method: 'POST',
-				headers: {
-					'Content-Type': 'application/x-www-form-urlencoded',
-					Accept: 'application/json',
-					'User-Agent': 'DeployStack/1.0',
-				},
+				headers,
 				body: requestBody.toString(),
 				signal: AbortSignal.timeout(10000), // 10 second timeout
 			});
