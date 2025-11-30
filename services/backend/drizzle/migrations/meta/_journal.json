@@ -36,6 +36,13 @@
       "when": 1764495432109,
       "tag": "0004_purple_valeria_richards",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1764530809447,
+      "tag": "0005_slim_absorbing_man",
+      "breakpoints": true
     }
   ]
 }

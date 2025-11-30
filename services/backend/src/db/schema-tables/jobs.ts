@@ -30,6 +30,7 @@ export const queueJobs = pgTable('queueJobs', {
   attempts: integer('attempts').notNull().default(0),
   max_attempts: integer('max_attempts').notNull().default(3),
   error: text('error'),
+  result: text('result'), // JSON - Worker result data
   batch_id: text('batch_id').references(() => queueJobBatches.id, { onDelete: 'cascade' }),
   created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),

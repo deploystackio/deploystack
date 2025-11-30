@@ -120,7 +120,7 @@ export class JobQueueService {
   /**
    * Update job status
    */
-  async updateJobStatus(jobId: string, status: JobStatus, error?: string): Promise<void> {
+  async updateJobStatus(jobId: string, status: JobStatus, error?: string, result?: unknown): Promise<void> {
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const updateData: any = {
@@ -134,6 +134,10 @@ export class JobQueueService {
 
       if (status === 'failed' && error) {
         updateData.error = error;
+      }
+
+      if (result !== undefined) {
+        updateData.result = JSON.stringify(result);
       }
 
       await this.db

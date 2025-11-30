@@ -7,6 +7,7 @@ import { EmailWorker } from './emailWorker';
 import { McpClientActivityMetricsCleanupWorker } from './mcpClientActivityMetricsCleanupWorker';
 import { CleanupOldJobsWorker } from './cleanupOldJobsWorker';
 import { RefreshOAuthTokensWorker } from './refreshOAuthTokensWorker';
+import { CleanupSatelliteHeartbeatsWorker } from './cleanupSatelliteHeartbeatsWorker';
 
 /**
  * Register all workers with the job processor
@@ -68,6 +69,12 @@ export function registerWorkers(
   processor.registerWorker(
     'refresh_oauth_tokens',
     new RefreshOAuthTokensWorker(db, logger)
+  );
+
+  // Register Satellite Heartbeat Cleanup Worker
+  processor.registerWorker(
+    'cleanup_satellite_heartbeats',
+    new CleanupSatelliteHeartbeatsWorker(db, logger)
   );
 
   // Log all registered workers dynamically

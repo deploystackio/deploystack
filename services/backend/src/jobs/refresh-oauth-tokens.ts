@@ -106,20 +106,23 @@ export async function refreshExpiringOAuthTokens(logger: FastifyBaseLogger) {
 				// Extract server URL from MCP server configuration
 				let serverUrl: string | null = null;
 
-				if (server.remotes && Array.isArray(server.remotes) && server.remotes.length > 0) {
+				// Parse JSON fields if they are strings (Drizzle returns TEXT fields as strings)
+				const remotes =
+					typeof server.remotes === 'string' ? JSON.parse(server.remotes) : server.remotes;
+				const packages =
+					typeof server.packages === 'string' ? JSON.parse(server.packages) : server.packages;
+
+				if (remotes && Array.isArray(remotes) && remotes.length > 0 && remotes[0] !== null) {
 					// Remote MCP server (HTTP/SSE)
-					const remote = server.remotes[0];
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
-					serverUrl = (remote as any).url;
+					serverUrl = remotes[0]?.url || null;
 				} else if (
-					server.packages &&
-					Array.isArray(server.packages) &&
-					server.packages.length > 0
+					packages &&
+					Array.isArray(packages) &&
+					packages.length > 0 &&
+					packages[0] !== null
 				) {
 					// Stdio MCP server with OAuth configuration
-					const pkg = server.packages[0];
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
-					serverUrl = (pkg as any).oauth_server_url || null;
+					serverUrl = packages[0]?.oauth_server_url || packages[0]?.url || null;
 				}
 
 				if (!serverUrl) {
@@ -155,10 +158,13 @@ export async function refreshExpiringOAuthTokens(logger: FastifyBaseLogger) {
 				// Decrypt refresh token
 				const decryptedRefreshToken = decrypt(token.refresh_token!, logger);
 
+				// Determine client ID: use stored DCR client ID or fall back to 'deploystack'
+				const clientId = installation.oauth_client_id || 'deploystack';
+
 				// Refresh access token
 				const newTokens = await tokenService.refreshToken({
 					refreshToken: decryptedRefreshToken,
-					clientId: 'deploystack', // Same client ID as authorization flow
+					clientId,
 					tokenEndpoint: discovery.metadata.token_endpoint,
 				});
 
@@ -174,6 +180,7 @@ export async function refreshExpiringOAuthTokens(logger: FastifyBaseLogger) {
 						userId: token.user_id,
 						oldExpiresAt: token.expires_at,
 						newExpiresIn: newTokens.expires_in,
+						clientId,
 						operation: 'refresh_expiring_oauth_tokens',
 					},
 					'Token refreshed successfully'

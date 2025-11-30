@@ -151,7 +151,7 @@ export class JobProcessorService {
       const result: WorkerResult = await worker.execute(payload, job.id);
 
       if (result.success) {
-        await this.jobQueueService.updateJobStatus(job.id, 'completed');
+        await this.jobQueueService.updateJobStatus(job.id, 'completed', undefined, result.data);
         this.logger.info({ jobId: job.id, jobType: job.type }, 'Job completed successfully');
 
         // Update batch progress if job is part of a batch

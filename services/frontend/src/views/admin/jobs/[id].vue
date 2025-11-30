@@ -223,8 +223,13 @@ onMounted(() => {
         </Card>
 
         <div>
-          <h3 class="text-lg font-semibold mb-4">Payload</h3>
+          <h3 class="text-lg font-semibold mb-4">Payload (Input)</h3>
           <CodeHighlight :code="formatPayload(job.payload)" language="json" />
+        </div>
+
+        <div v-if="job.result">
+          <h3 class="text-lg font-semibold mb-4">Result (Output)</h3>
+          <CodeHighlight :code="formatPayload(job.result)" language="json" />
         </div>
       </div>
     </div>

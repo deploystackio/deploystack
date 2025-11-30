@@ -1,6 +1,6 @@
 import { type FastifyInstance } from 'fastify';
 import { getDb, getSchema } from '../../db';
-import { eq, and, desc, sql } from 'drizzle-orm';
+import { eq, and, desc } from 'drizzle-orm';
 import { requireSatelliteAuth, requireUserOrSatelliteAuth } from '../../middleware/satelliteAuthMiddleware';
 
 // Reusable Schema Constants
@@ -292,44 +292,22 @@ export default async function satelliteHeartbeatRoute(server: FastifyInstance) {
       const healthyProcessCount = processes.filter(p => p.health_status === 'healthy').length;
       const totalProcessCount = processes.length;
       
-      // Record heartbeat with rolling 5K limit per satellite
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await db.transaction(async (tx: any) => {
-        // 1. Insert new heartbeat first (ensures it's always saved)
-        await tx
-          .insert(satelliteHeartbeats)
-          .values({
-            id: `hb_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            satellite_id: satelliteId,
-            status,
-            system_metrics: JSON.stringify(system_metrics),
-            process_count: totalProcessCount,
-            healthy_process_count: healthyProcessCount,
-            error_count,
-            response_time_ms: null, // Will be calculated by backend if needed
-            uptime_seconds: system_metrics.uptime_seconds || null,
-            version,
-            timestamp: now
-          });
-
-        // 2. Clean up excess records beyond 5000 per satellite
-        // Use window function to efficiently identify records beyond limit
-        await tx.execute(sql`
-          DELETE FROM "satelliteHeartbeats"
-          WHERE id IN (
-            SELECT id FROM (
-              SELECT id,
-                     ROW_NUMBER() OVER (
-                       PARTITION BY satellite_id
-                       ORDER BY timestamp DESC
-                     ) as row_num
-              FROM "satelliteHeartbeats"
-              WHERE satellite_id = ${satelliteId}
-            ) as subquery
-            WHERE row_num > 5000
-          )
-        `);
-      });
+      // Record heartbeat (cleanup is handled by background cron job)
+      await db
+        .insert(satelliteHeartbeats)
+        .values({
+          id: `hb_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          satellite_id: satelliteId,
+          status,
+          system_metrics: JSON.stringify(system_metrics),
+          process_count: totalProcessCount,
+          healthy_process_count: healthyProcessCount,
+          error_count,
+          response_time_ms: null, // Will be calculated by backend if needed
+          uptime_seconds: system_metrics.uptime_seconds || null,
+          version,
+          timestamp: now
+        });
       
       // Update process statuses if provided
       if (processes.length > 0) {

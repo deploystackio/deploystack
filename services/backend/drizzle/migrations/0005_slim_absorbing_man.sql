@@ -1,0 +1,1 @@
+ALTER TABLE "queueJobs" ADD COLUMN "result" text;

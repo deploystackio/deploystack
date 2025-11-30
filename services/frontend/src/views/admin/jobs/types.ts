@@ -10,6 +10,7 @@ export interface Job {
   attempts: number
   max_attempts: number
   error: string | null
+  result: string | null
   batch_id: string | null
   created_at: string
   updated_at: string
