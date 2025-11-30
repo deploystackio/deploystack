@@ -114,30 +114,14 @@ export class ToolSearchService {
    * Flatten unified tools into searchable format
    */
   private flattenTools(tools: UnifiedCachedTool[]): SearchableTool[] {
-    return tools.map(tool => {
-      const serverSlug = this.extractServerSlug(tool.namespacedName);
-      
-      return {
-        serverName: tool.serverName,
-        serverSlug: serverSlug,
-        toolName: tool.originalName,
-        namespacedName: tool.namespacedName,
-        description: tool.description,
-        transport: tool.transport
-      };
-    });
-  }
-
-  /**
-   * Extract server slug from namespaced name
-   * Example: "filesystem-read_file" -> "filesystem"
-   */
-  private extractServerSlug(namespacedName: string): string {
-    const dashIndex = namespacedName.indexOf('-');
-    if (dashIndex > 0) {
-      return namespacedName.substring(0, dashIndex);
-    }
-    return namespacedName;
+    return tools.map(tool => ({
+      serverName: tool.serverName,
+      serverSlug: tool.serverSlug, // Use stored serverSlug directly
+      toolName: tool.originalName,
+      namespacedName: tool.namespacedName,
+      description: tool.description,
+      transport: tool.transport
+    }));
   }
 
   /**

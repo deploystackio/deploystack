@@ -7,6 +7,7 @@ export interface MCPServerConfig {
   installation_id: string;       // Database ID from backend
   installation_name: string;     // e.g., "context7-john-R36no6FGoMFEZO9nWJJLT"
   team_id: string;              // Team UUID
+  server_slug: string;          // Server slug (e.g., "sequential", "brightdata-mcp-1")
   command: string;              // "npx" for Node.js packages
   args: string[];               // ["-y", "@upstash/context7"]
   env: Record<string, string>;  // Environment variables from three-tier config

@@ -240,30 +240,27 @@ export class McpServerWrapper {
       throw new Error('Invalid tool_path parameter - must be a non-empty string in format "serverName:toolName"');
     }
 
-    // Parse tool_path from "serverName:toolName" format to "serverName-toolName" (internal namespaced format)
+    // Validate tool_path format (serverSlug:toolName)
     const colonIndex = toolPath.indexOf(':');
     if (colonIndex <= 0) {
-      throw new Error(`Invalid tool_path format: ${toolPath}. Expected format: "serverName:toolName" (e.g., "github:create_issue")`);
+      throw new Error(`Invalid tool_path format: ${toolPath}. Expected format: "serverSlug:toolName" (e.g., "github:create_issue")`);
     }
 
-    const serverSlug = toolPath.substring(0, colonIndex);
-    const toolName = toolPath.substring(colonIndex + 1);
-    const namespacedToolName = `${serverSlug}-${toolName}`;
+    // tool_path format matches internal namespaced format (unified to colon separator)
+    const namespacedToolName = toolPath;
 
     this.logger.info({
       operation: 'execute_mcp_tool',
-      tool_path: toolPath,
-      namespaced_tool_name: namespacedToolName
-    }, `Executing tool: ${toolPath} (internal: ${namespacedToolName})`);
+      tool_path: toolPath
+    }, `Executing tool: ${toolPath}`);
 
     this.logger.debug({
       operation: 'execute_mcp_tool_debug',
       tool_path: toolPath,
-      namespaced_tool_name: namespacedToolName,
       arguments: toolArguments
     }, `Tool arguments for ${toolPath}`);
 
-    // Route to existing executeToolCall with namespaced format
+    // Route to executeToolCall with namespaced format
     return await this.executeToolCall(namespacedToolName, toolArguments);
   }
 
@@ -326,10 +323,10 @@ export class McpServerWrapper {
       namespaced_tool_name: namespacedToolName
     }, `Calling namespaced tool: ${namespacedToolName}`);
 
-    // Parse the server slug from the namespaced tool name
-    const dashIndex = namespacedToolName.indexOf('-');
-    if (dashIndex <= 0) {
-      throw new Error(`Invalid tool name format: ${namespacedToolName}. Expected format: serverSlug-toolName`);
+    // Validate namespaced tool name format (serverSlug:toolName)
+    const colonIndex = namespacedToolName.indexOf(':');
+    if (colonIndex <= 0) {
+      throw new Error(`Invalid tool name format: ${namespacedToolName}. Expected format: serverSlug:toolName`);
     }
 
     // Find the cached tool to get the original tool name and verify it exists

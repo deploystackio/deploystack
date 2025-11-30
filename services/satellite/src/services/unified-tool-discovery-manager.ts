@@ -12,10 +12,11 @@ import { RuntimeState } from '../process/runtime-state';
 export interface UnifiedCachedTool {
   serverName: string;           // Installation name (e.g., "filesystem-john-abc123")
   originalName: string;         // Tool name from server (e.g., "read_file")
-  namespacedName: string;       // User-facing name (e.g., "filesystem-read_file")
+  namespacedName: string;       // Namespaced name (e.g., "filesystem:read_file")
   description: string;          // Tool description
   inputSchema: any;            // JSON Schema for tool parameters
   transport: 'stdio' | 'http' | 'sse'; // Transport type for routing
+  serverSlug: string;           // Server slug for tool_path format (e.g., "brightdata-mcp-1")
   discoveredAt?: Date;          // When the tool was discovered
 }
 
@@ -171,9 +172,10 @@ export class UnifiedToolDiscoveryManager {
         description: tool.description,
         inputSchema: tool.inputSchema,
         transport: 'http' as const,
+        serverSlug: tool.serverSlug,
         discoveredAt: tool.discoveredAt
       })),
-      
+
       // Map stdio tools
       ...stdioTools.map(tool => ({
         serverName: tool.serverName,
@@ -181,7 +183,8 @@ export class UnifiedToolDiscoveryManager {
         namespacedName: tool.namespacedName,
         description: tool.description,
         inputSchema: tool.inputSchema,
-        transport: 'stdio' as const
+        transport: 'stdio' as const,
+        serverSlug: tool.serverSlug
       }))
     ];
 
@@ -197,7 +200,8 @@ export class UnifiedToolDiscoveryManager {
     if (stdioTool) {
       return {
         ...stdioTool,
-        transport: 'stdio'
+        transport: 'stdio',
+        serverSlug: stdioTool.serverSlug
       };
     }
 
@@ -211,6 +215,7 @@ export class UnifiedToolDiscoveryManager {
         description: remoteTool.description,
         inputSchema: remoteTool.inputSchema,
         transport: 'http',
+        serverSlug: remoteTool.serverSlug,
         discoveredAt: remoteTool.discoveredAt
       };
     }

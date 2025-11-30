@@ -344,6 +344,7 @@ export async function createServer() {
               installation_id: serverConfig.installation_id || serverName,
               installation_name: serverName,
               team_id: serverConfig.team_id || 'unknown',
+              server_slug: serverConfig.server_slug || serverName,
               command: serverConfig.command!,
               args: serverConfig.args!,
               env: serverConfig.env || {}

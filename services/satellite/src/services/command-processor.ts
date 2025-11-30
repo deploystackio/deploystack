@@ -320,6 +320,7 @@ export class CommandProcessor {
       installation_id: payload.installation_id as string,
       installation_name: payload.installation_name as string,
       team_id: payload.team_id as string,
+      server_slug: (payload.server_slug as string) || (payload.installation_name as string),
       command: payload.command as string,
       args: payload.args as string[],
       env: (payload.env as Record<string, string>) || {}

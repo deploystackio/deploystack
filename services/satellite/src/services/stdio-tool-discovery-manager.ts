@@ -9,10 +9,11 @@ import type { EventBus } from './event-bus';
 export interface CachedStdioTool {
   serverName: string;           // Installation name (e.g., "filesystem-john-abc123")
   originalName: string;         // Tool name from server (e.g., "read_file")
-  namespacedName: string;       // User-facing name (e.g., "filesystem-read_file")
+  namespacedName: string;       // Namespaced name (e.g., "filesystem:read_file")
   description: string;          // Tool description
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   inputSchema: any;            // JSON Schema for tool parameters
+  serverSlug: string;          // Server slug for tool_path format (e.g., "sequential")
 }
 
 /**
@@ -94,21 +95,22 @@ export class StdioToolDiscoveryManager {
         return [];
       }
 
-      // Extract server slug from installation name (e.g., "filesystem-john-abc123" -> "filesystem")
-      const serverSlug = this.extractServerSlug(installationName);
-      
+      // Get server slug from process config (e.g., "sequential", "brightdata-mcp-1")
+      const serverSlug = processInfo.config.server_slug;
+
       const cachedTools: CachedStdioTool[] = [];
       const toolSet = new Set<string>();
 
       for (const tool of response.tools) {
-        const namespacedName = `${serverSlug}-${tool.name}`;
-        
+        const namespacedName = `${serverSlug}:${tool.name}`;
+
         const cachedTool: CachedStdioTool = {
           serverName: installationName,
           originalName: tool.name,
           namespacedName: namespacedName,
           description: tool.description || '',
-          inputSchema: tool.inputSchema || {}
+          inputSchema: tool.inputSchema || {},
+          serverSlug: serverSlug
         };
 
         this.toolCache.set(namespacedName, cachedTool);
@@ -272,16 +274,4 @@ export class StdioToolDiscoveryManager {
     return stats;
   }
 
-  /**
-   * Extract server slug from installation name
-   * Examples:
-   *   "filesystem-john-R36no6FGoMFEZO9nWJJLT" -> "filesystem"
-   *   "context7-alice-S47mp8GHpNGFZP0oWKKMU" -> "context7"
-   */
-  private extractServerSlug(installationName: string): string {
-    // Installation name format: {server_slug}-{team_slug}-{installation_id}
-    // Take everything before the first hyphen
-    const parts = installationName.split('-');
-    return parts[0] || installationName;
-  }
 }

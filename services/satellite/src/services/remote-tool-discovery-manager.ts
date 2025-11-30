@@ -13,10 +13,11 @@ import { OAuthTokenService } from './oauth-token-service';
  */
 export interface CachedTool {
   originalName: string;
-  namespacedName: string; // e.g., "context7-resolve_library_id"
+  namespacedName: string; // e.g., "context7:resolve_library_id"
   description: string;
   inputSchema: any;
   serverName: string;
+  serverSlug: string;     // Server slug for tool_path format (e.g., "brightdata-mcp-1")
   discoveredAt: Date;
 }
 
@@ -407,16 +408,17 @@ export class RemoteToolDiscoveryManager {
 
       // Convert to cached tools with namespacing using server_slug for friendly names
       const discoveredAt = new Date();
+      // Use server_slug from config for friendly namespacing, fallback to server_name
+      const serverSlug = config.server_slug || config.server_name || serverName;
+
       const cachedTools: CachedTool[] = response.tools.map((tool: any) => {
-        // Use server_slug from config for friendly namespacing, fallback to server_name
-        const friendlyServerName = config.server_slug || config.server_name || serverName;
-        
         return {
           originalName: tool.name,
-          namespacedName: `${friendlyServerName}-${tool.name}`,
-          description: `[${friendlyServerName}] ${tool.description || 'No description'}`,
+          namespacedName: `${serverSlug}:${tool.name}`,
+          description: `[${serverSlug}] ${tool.description || 'No description'}`,
           inputSchema: tool.inputSchema || {},
           serverName: serverName, // Keep original serverName for routing
+          serverSlug: serverSlug, // Store slug for tool_path format
           discoveredAt: discoveredAt
         };
       });
