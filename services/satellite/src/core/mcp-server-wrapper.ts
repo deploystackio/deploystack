@@ -144,9 +144,14 @@ export class McpServerWrapper {
 
       this.logger.info({
         operation: 'tools_call_request_hierarchical',
+        tool_name: toolName
+      }, `Handling hierarchical tools/call for ${toolName}`);
+
+      this.logger.debug({
+        operation: 'tools_call_request_hierarchical_debug',
         tool_name: toolName,
         args: toolArgs
-      }, `Handling hierarchical tools/call for ${toolName}`);
+      }, `Hierarchical tools/call args for ${toolName}`);
 
       if (toolName === 'discover_mcp_tools') {
         return await this.handleDiscoverTools(toolArgs);
@@ -248,9 +253,15 @@ export class McpServerWrapper {
     this.logger.info({
       operation: 'execute_mcp_tool',
       tool_path: toolPath,
+      namespaced_tool_name: namespacedToolName
+    }, `Executing tool: ${toolPath} (internal: ${namespacedToolName})`);
+
+    this.logger.debug({
+      operation: 'execute_mcp_tool_debug',
+      tool_path: toolPath,
       namespaced_tool_name: namespacedToolName,
       arguments: toolArguments
-    }, `Executing tool: ${toolPath} (internal: ${namespacedToolName})`);
+    }, `Tool arguments for ${toolPath}`);
 
     // Route to existing executeToolCall with namespaced format
     return await this.executeToolCall(namespacedToolName, toolArguments);
@@ -565,32 +576,44 @@ export class McpServerWrapper {
     const finalUrl = this.buildMcpServerUrl(config.url, config.url_query_params);
 
     // Create transport
-    // TODO Phase 10: MCP SDK StreamableHTTPClientTransport doesn't currently support custom headers
-    // We need to either:
-    // 1. Fork/patch the SDK to accept custom headers in constructor
-    // 2. Use a custom fetch wrapper
-    // 3. Wait for SDK to add header support
-    // For now, we create the transport without headers - this will fail for OAuth-required servers
     const transport = new StreamableHTTPClientTransport(new URL(finalUrl));
 
-    // WORKAROUND: Monkey-patch the transport's fetch method to inject OAuth headers
+    // WORKAROUND: Patch global fetch temporarily to inject OAuth headers
+    // The MCP SDK doesn't currently support custom headers in StreamableHTTPClientTransport
+    let originalGlobalFetch: typeof fetch | null = null;
     if (Object.keys(headers).length > 0) {
-      const originalFetch = (transport as any).fetch || fetch;
-      (transport as any).fetch = async (input: any, init?: any) => {
+      originalGlobalFetch = global.fetch;
+      global.fetch = async (input: any, init?: any) => {
+        // Properly merge headers (handle both Headers object and plain object)
+        const mergedHeaders: Record<string, string> = {};
+
+        // Copy existing headers
+        if (init?.headers) {
+          if (init.headers instanceof Headers) {
+            init.headers.forEach((value: string, key: string) => {
+              mergedHeaders[key] = value;
+            });
+          } else {
+            Object.assign(mergedHeaders, init.headers);
+          }
+        }
+
+        // Add OAuth headers (overwrite to ensure our token is used)
+        Object.assign(mergedHeaders, headers);
+
         const modifiedInit = {
           ...init,
-          headers: {
-            ...(init?.headers || {}),
-            ...headers
-          }
+          headers: mergedHeaders
         };
-        return originalFetch(input, modifiedInit);
+
+        return originalGlobalFetch!(input, modifiedInit);
       };
 
       this.logger.debug({
-        operation: 'oauth_headers_monkey_patched',
-        server_name: serverName
-      }, 'Monkey-patched transport fetch to inject OAuth headers');
+        operation: 'oauth_headers_patched_global_fetch',
+        server_name: serverName,
+        headers_to_inject: Object.keys(headers)
+      }, 'Patched global fetch to inject OAuth headers for tool execution');
     }
 
     try {
@@ -660,6 +683,15 @@ export class McpServerWrapper {
       throw new Error(`HTTP MCP server error: ${errorMessage}`);
 
     } finally {
+      // Restore global fetch if we patched it
+      if (originalGlobalFetch) {
+        global.fetch = originalGlobalFetch;
+        this.logger.debug({
+          operation: 'oauth_headers_restored_global_fetch',
+          server_name: serverName
+        }, 'Restored global fetch after tool execution');
+      }
+
       try {
         await client.close();
         this.logger.debug({
