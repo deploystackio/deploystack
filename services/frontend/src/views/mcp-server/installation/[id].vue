@@ -199,6 +199,8 @@ const loadAndSetInstallation = async () => {
           v-if="activeTab === 'mcp-tools'"
           :installation="installation"
           :team-id="currentTeam.id"
+          :can-edit="canEditInstallation"
+          :user-role="userTeamRole"
         />
         <TeamConfiguration
           v-if="activeTab === 'environment'"

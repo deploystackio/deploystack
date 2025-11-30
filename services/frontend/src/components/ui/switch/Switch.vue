@@ -1,36 +1,33 @@
 <script setup lang="ts">
-import type { HTMLAttributes } from 'vue'
-import { reactiveOmit } from '@vueuse/core'
+import type { SwitchRootEmits, SwitchRootProps } from "reka-ui"
+import type { HTMLAttributes } from "vue"
+import { reactiveOmit } from "@vueuse/core"
 import {
   SwitchRoot,
-  type SwitchRootEmits,
-  type SwitchRootProps,
   SwitchThumb,
   useForwardPropsEmits,
-} from 'reka-ui'
-import { cn } from '@/lib/utils'
+} from "reka-ui"
+import { cn } from "@/lib/utils"
 
-const props = defineProps<SwitchRootProps & { class?: HTMLAttributes['class'] }>()
+const props = defineProps<SwitchRootProps & { class?: HTMLAttributes["class"] }>()
 
 const emits = defineEmits<SwitchRootEmits>()
 
-const delegatedProps = reactiveOmit(props, 'class')
+const delegatedProps = reactiveOmit(props, "class")
 
 const forwarded = useForwardPropsEmits(delegatedProps, emits)
 </script>
 
 <template>
   <SwitchRoot
-    data-slot="switch"
     v-bind="forwarded"
     :class="cn(
-      'w-[42px] h-[25px] bg-gray-300 data-[state=checked]:bg-primary rounded-full relative cursor-default transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50',
+      'peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-primary data-[state=unchecked]:bg-input',
       props.class,
     )"
   >
     <SwitchThumb
-      data-slot="switch-thumb"
-      :class="cn('block w-[21px] h-[21px] bg-white rounded-full transition-transform duration-100 translate-x-0.5 data-[state=checked]:translate-x-[19px] shadow-sm')"
+      :class="cn('pointer-events-none block h-5 w-5 rounded-full bg-background shadow-lg ring-0 transition-transform data-[state=checked]:translate-x-5')"
     >
       <slot name="thumb" />
     </SwitchThumb>

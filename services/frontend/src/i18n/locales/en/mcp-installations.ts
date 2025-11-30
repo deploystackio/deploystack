@@ -624,6 +624,7 @@ export default {
       },
       table: {
         columns: {
+          enabled: 'Enabled',
           toolName: 'Tool Name',
           description: 'Description',
           tokenCount: 'Token Count'
@@ -631,6 +632,13 @@ export default {
         values: {
           noDescription: 'No description provided'
         }
+      },
+      toggle: {
+        success: 'Tool "{toolName}" {action}',
+        enabled: 'enabled',
+        disabled: 'disabled',
+        errorTitle: 'Failed to update tool',
+        error: 'An error occurred while updating the tool status'
       },
       summary: {
         totalTools: 'Total Tools',

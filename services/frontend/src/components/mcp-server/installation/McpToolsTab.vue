@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { toast } from 'vue-sonner'
 import { useMcpToolsStore } from '@/stores/mcpToolsStore'
+import { McpToolsService } from '@/services/mcpToolsService'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Switch } from '@/components/ui/switch'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Chart } from '@/components/ui/chart'
 import { AlertCircle, Package, Wrench, Coins } from 'lucide-vue-next'
@@ -19,9 +22,14 @@ use([TooltipComponent, LegendComponent, PieChart, CanvasRenderer])
 interface Props {
   installation: McpInstallation
   teamId: string
+  canEdit?: boolean
+  userRole?: 'team_admin' | 'team_user' | null
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  canEdit: false,
+  userRole: null
+})
 const { t } = useI18n()
 const mcpToolsStore = useMcpToolsStore()
 
@@ -29,6 +37,7 @@ const mcpToolsStore = useMcpToolsStore()
 const tools = ref<any>(null)
 const isLoading = ref(true)
 const error = ref<string | null>(null)
+const togglingToolId = ref<string | null>(null)
 
 // Format token count with commas
 const formatTokenCount = (count: number) => {
@@ -57,6 +66,49 @@ async function loadTools() {
 const hasTools = computed(() => {
   return tools.value && tools.value.tools && tools.value.tools.length > 0
 })
+
+// Handle tool toggle
+async function handleToolToggle(toolId: string, toolName: string, currentDisabled: boolean) {
+  if (!props.canEdit) return
+
+  const newDisabledState = !currentDisabled
+  togglingToolId.value = toolId
+
+  // Optimistic update
+  const toolIndex = tools.value.tools.findIndex((t: { id: string }) => t.id === toolId)
+  if (toolIndex !== -1) {
+    tools.value.tools[toolIndex].is_disabled = newDisabledState
+  }
+
+  try {
+    const response = await McpToolsService.toggleToolStatus(
+      props.teamId,
+      props.installation.id,
+      toolId,
+      newDisabledState
+    )
+
+    const action = newDisabledState
+      ? t('mcpInstallations.details.mcpTools.toggle.disabled')
+      : t('mcpInstallations.details.mcpTools.toggle.enabled')
+
+    toast.success(t('mcpInstallations.details.mcpTools.toggle.success', { toolName, action }), {
+      description: response.message
+    })
+  } catch (err) {
+    // Revert optimistic update on error
+    if (toolIndex !== -1) {
+      tools.value.tools[toolIndex].is_disabled = currentDisabled
+    }
+
+    const errorMessage = err instanceof Error ? err.message : t('mcpInstallations.details.mcpTools.toggle.error')
+    toast.error(t('mcpInstallations.details.mcpTools.toggle.errorTitle'), {
+      description: errorMessage
+    })
+  } finally {
+    togglingToolId.value = null
+  }
+}
 
 // Pie chart configuration for token distribution
 const pieChartOption = computed<EChartsOption>(() => {
@@ -167,6 +219,7 @@ const pieChartOption = computed<EChartsOption>(() => {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead class="w-20">{{ t('mcpInstallations.details.mcpTools.table.columns.enabled') }}</TableHead>
               <TableHead>{{ t('mcpInstallations.details.mcpTools.table.columns.toolName') }}</TableHead>
               <TableHead>{{ t('mcpInstallations.details.mcpTools.table.columns.description') }}</TableHead>
               <TableHead class="text-right">{{ t('mcpInstallations.details.mcpTools.table.columns.tokenCount') }}</TableHead>
@@ -174,6 +227,13 @@ const pieChartOption = computed<EChartsOption>(() => {
           </TableHeader>
           <TableBody>
             <TableRow v-for="tool in tools.tools" :key="tool.id">
+              <TableCell class="align-top">
+                <Switch
+                  :model-value="!tool.is_disabled"
+                  :disabled="!props.canEdit || togglingToolId === tool.id"
+                  @update:model-value="handleToolToggle(tool.id, tool.tool_name, tool.is_disabled)"
+                />
+              </TableCell>
               <TableCell class="text-sm font-medium align-top whitespace-nowrap">{{ tool.tool_name }}</TableCell>
               <TableCell class="text-sm text-muted-foreground max-w-2xl">
                 <div class="whitespace-normal wrap-break-word">

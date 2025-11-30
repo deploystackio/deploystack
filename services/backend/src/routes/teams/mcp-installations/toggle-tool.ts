@@ -315,7 +315,7 @@ export default async function toggleToolRoute(server: FastifyInstance) {
 
       const action = is_disabled ? 'disabled' : 'enabled';
       const syncMessage = commandId
-        ? 'Change will sync to satellite within 2 seconds.'
+        ? 'Changes saved and sent to satellite.'
         : 'No active satellite available - change saved to database.';
 
       const successResponse: SuccessResponse = {
