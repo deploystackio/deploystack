@@ -87,7 +87,11 @@ export class JobQueueService {
 
       return result.length > 0 ? (result[0] as Job) : null;
     } catch (error) {
-      this.logger.error({ error }, 'Failed to get next pending job');
+      this.logger.error({
+        error,
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      }, 'Failed to get next pending job');
       throw error;
     }
   }

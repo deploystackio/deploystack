@@ -108,7 +108,11 @@ export class JobProcessorService {
         this.currentJobId = null;
       }
     } catch (error) {
-      this.logger.error({ error }, 'Error in processNextJob');
+      this.logger.error({
+        error,
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      }, 'Error in processNextJob');
     }
   }
 

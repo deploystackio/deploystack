@@ -237,7 +237,10 @@ describe('Database Service (db/index.ts)', () => {
         database: postgresConfig.database,
         user: postgresConfig.user,
         password: postgresConfig.password,
-        ssl: false
+        ssl: false,
+        connectionTimeoutMillis: 10000,
+        idleTimeoutMillis: 30000,
+        max: 20,
       });
       expect(mockedDrizzle).toHaveBeenCalled();
     });

@@ -84,7 +84,10 @@ async function createDatabaseInstance(config: DatabaseConfig, logger?: FastifyBa
     database: config.database!,
     user: config.user!,
     password: config.password!,
-    ssl: config.ssl ? { rejectUnauthorized: false } : false
+    ssl: config.ssl ? { rejectUnauthorized: false } : false,
+    connectionTimeoutMillis: 10000,  // 10s to acquire connection
+    idleTimeoutMillis: 30000,        // 30s idle before release
+    max: 20,                         // max pool size
   });
 
   // Create the Drizzle instance with the PostgreSQL pool
