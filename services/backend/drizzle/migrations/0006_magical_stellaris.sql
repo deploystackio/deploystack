@@ -1,0 +1,2 @@
+ALTER TABLE "mcpToolMetadata" ADD COLUMN "is_disabled" boolean DEFAULT false NOT NULL;--> statement-breakpoint
+CREATE INDEX "mcp_tool_metadata_disabled_idx" ON "mcpToolMetadata" USING btree ("installation_id","is_disabled");

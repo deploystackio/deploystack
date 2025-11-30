@@ -128,6 +128,9 @@ export const mcpToolMetadata = pgTable('mcpToolMetadata', {
   input_schema: jsonb('input_schema'), // JSON object stored as jsonb
   token_count: integer('token_count').notNull().default(0),
 
+  // Tool status
+  is_disabled: boolean('is_disabled').notNull().default(false),
+
   // Timestamps
   discovered_at: timestamp('discovered_at', { withTimezone: true }).notNull().defaultNow(),
   updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
@@ -135,6 +138,7 @@ export const mcpToolMetadata = pgTable('mcpToolMetadata', {
   installationIdx: index('mcp_tool_metadata_installation_idx').on(table.installation_id),
   teamIdx: index('mcp_tool_metadata_team_idx').on(table.team_id),
   uniqueInstallationTool: index('mcp_tool_metadata_unique_installation_tool').on(table.installation_id, table.tool_name),
+  disabledIdx: index('mcp_tool_metadata_disabled_idx').on(table.installation_id, table.is_disabled),
 }));
 
 // MCP OAuth Tokens - Encrypted OAuth tokens for MCP servers requiring OAuth

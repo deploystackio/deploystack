@@ -43,6 +43,13 @@
       "when": 1764530809447,
       "tag": "0005_slim_absorbing_man",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1764538785910,
+      "tag": "0006_magical_stellaris",
+      "breakpoints": true
     }
   ]
 }

@@ -37,10 +37,11 @@ const TOOL_SCHEMA = {
     description: { type: 'string', description: 'Tool description' },
     input_schema: { type: 'object', description: 'JSON Schema for tool input' },
     token_count: { type: 'number', description: 'Token count for this tool' },
+    is_disabled: { type: 'boolean', description: 'Whether the tool is disabled by team admin' },
     discovered_at: { type: 'string', description: 'ISO 8601 timestamp when tool was discovered' },
     updated_at: { type: 'string', description: 'ISO 8601 timestamp when tool was last updated' }
   },
-  required: ['id', 'tool_name', 'description', 'input_schema', 'token_count', 'discovered_at', 'updated_at']
+  required: ['id', 'tool_name', 'description', 'input_schema', 'token_count', 'is_disabled', 'discovered_at', 'updated_at']
 } as const;
 
 const TOOLS_SUCCESS_RESPONSE_SCHEMA = {
@@ -92,6 +93,7 @@ interface Tool {
   description: string;
   input_schema: unknown;
   token_count: number;
+  is_disabled: boolean;
   discovered_at: string;
   updated_at: string;
 }
@@ -230,6 +232,7 @@ export default async function getInstallationToolsRoute(server: FastifyInstance)
         description: tool.description,
         input_schema: tool.input_schema, // Already parsed by Drizzle (mode: 'json')
         token_count: tool.token_count,
+        is_disabled: tool.is_disabled,
         discovered_at: tool.discovered_at.toISOString(),
         updated_at: tool.updated_at.toISOString()
       }));

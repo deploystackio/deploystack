@@ -43,6 +43,7 @@ export const ROLE_DEFINITIONS = {
     'mcp.installations.delete',
     'mcp.tools.view',
     'mcp.tools.stats.view',
+    'mcp.tools.manage',
     'email.test',
     'preferences.view',
     'preferences.edit',
@@ -90,6 +91,7 @@ export const ROLE_DEFINITIONS = {
     'mcp.installations.delete',
     'mcp.tools.view',
     'mcp.tools.stats.view',
+    'mcp.tools.manage',
     'satellites.team.view',
   ],
   team_user: [
