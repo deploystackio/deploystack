@@ -133,6 +133,7 @@ export interface CreateMcpServerRequest {
 
 export interface UpdateMcpServerRequest {
   name?: string;
+  slug?: string;
   description?: string;
   long_description?: string;
   repository_url?: string;
@@ -537,6 +538,7 @@ export class McpCatalogService {
     
     // Only allow certain fields to be updated
     if (data.name !== undefined) updateData.name = data.name;
+    if (data.slug !== undefined) updateData.slug = data.slug;
     if (data.description !== undefined) updateData.description = data.description;
     if (data.long_description !== undefined) updateData.long_description = data.long_description;
     if (data.repository_url !== undefined) updateData.repository_url = data.repository_url;

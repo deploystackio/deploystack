@@ -166,6 +166,7 @@ const convertServerToFormData = (server: McpServer, readmeBase64: string = ''): 
   return {
     basic: {
       name: server.name || '',
+      slug: server.slug || '',
       description: server.description || '',
       long_description: server.long_description || '',
       category_id: server.category_id || '',
@@ -308,6 +309,7 @@ const handleSubmit = async (formData: McpServerFormData) => {
     const requestData: UpdateMcpServerRequest = {
       // Basic info
       name: formData.basic.name,
+      slug: formData.basic.slug || undefined,
       description: formData.basic.description,
       long_description: formData.basic.long_description || undefined,
       category_id: formData.basic.category_id || undefined,

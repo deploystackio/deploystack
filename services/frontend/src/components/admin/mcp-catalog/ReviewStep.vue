@@ -127,6 +127,13 @@ const formatJson = (jsonString: string) => {
         </dd>
       </div>
 
+      <div v-if="getBasicData().slug" class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+        <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.review.fields.slug') }}</dt>
+        <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
+          <span class="font-mono text-xs">{{ getBasicData().slug }}</span>
+        </dd>
+      </div>
+
       <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
         <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.review.fields.description') }}</dt>
         <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">

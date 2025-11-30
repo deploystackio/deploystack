@@ -327,6 +327,11 @@ export default {
         placeholder: 'Enter server name (e.g., "Playwright MCP")',
         description: 'A descriptive name for the MCP server'
       },
+      slug: {
+        label: 'Slug',
+        placeholder: 'my-server-name',
+        description: 'URL-friendly unique identifier (lowercase letters, numbers, and hyphens only)'
+      },
       description: {
         label: 'Short Description',
         placeholder: 'Brief description of what this server does',
@@ -619,6 +624,7 @@ export default {
       },
       fields: {
         serverName: 'Server Name',
+        slug: 'Slug',
         description: 'Description',
         detailedDescription: 'Detailed Description',
         category: 'Category',

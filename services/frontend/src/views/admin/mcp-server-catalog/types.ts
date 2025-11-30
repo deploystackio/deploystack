@@ -266,6 +266,7 @@ export interface CreateMcpServerRequest {
 
 export interface UpdateMcpServerRequest {
   name?: string
+  slug?: string
   description?: string
   long_description?: string
   github_account_id?: string
@@ -327,6 +328,7 @@ export interface McpServerFilters {
 // Form step data interfaces
 export interface BasicInfoFormData {
   name: string
+  slug?: string
   description: string
   long_description: string
   category_id: string

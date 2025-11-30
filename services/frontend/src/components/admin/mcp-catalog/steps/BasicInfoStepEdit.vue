@@ -58,6 +58,7 @@ const STORAGE_KEY = 'edit_basic_data'
 // Default form data structure
 const defaultData: BasicInfoFormData = {
   name: '',
+  slug: '',
   description: '',
   long_description: '',
   category_id: '',
@@ -187,6 +188,20 @@ onUnmounted(() => {
             @update:model-value="(value) => updateField('name', String(value))"
             :placeholder="t('mcpCatalog.form.basic.name.placeholder')"
             required
+          />
+        </SharedFormField>
+
+        <!-- Slug -->
+        <SharedFormField
+          :label="t('mcpCatalog.form.basic.slug.label')"
+          :description="t('mcpCatalog.form.basic.slug.description')"
+        >
+          <Input
+            id="slug"
+            :model-value="localData.slug"
+            @update:model-value="(value) => updateField('slug', String(value))"
+            :placeholder="t('mcpCatalog.form.basic.slug.placeholder')"
+            class="font-mono text-sm"
           />
         </SharedFormField>
 

@@ -302,6 +302,7 @@ const initializeStorageWithData = (data: McpServerFormData) => {
 const formData = ref<McpServerFormData>({
   basic: {
     name: '',
+    slug: '',
     description: '',
     long_description: '',
     category_id: '',

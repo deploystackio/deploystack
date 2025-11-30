@@ -928,7 +928,7 @@ describe('MCP Servers - Update Global', () => {
       
       expect(response).toEqual({
         success: false,
-        error: 'Server name already exists'
+        error: 'Server name or slug already exists'
       });
     });
 

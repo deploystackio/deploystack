@@ -1076,6 +1076,13 @@ export const UPDATE_GLOBAL_SERVER_REQUEST_SCHEMA = { type: 'object',
   properties: {
     // All fields from SERVER_FIELDS but optional
     name: SERVER_FIELDS.name,
+    slug: {
+      type: 'string',
+      minLength: 1,
+      maxLength: 255,
+      pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$',
+      description: 'URL-friendly unique identifier (lowercase alphanumeric with hyphens, e.g., "my-server-name")'
+    },
     description: SERVER_FIELDS.description,
     long_description: SERVER_FIELDS.long_description,
     repository_url: SERVER_FIELDS.repository_url,

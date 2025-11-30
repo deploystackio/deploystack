@@ -18,6 +18,7 @@ import {
 // TypeScript interface for update request
 interface UpdateGlobalServerRequest {
   name?: string;
+  slug?: string;
   description?: string;
   long_description?: string;
   repository_url?: string;
@@ -278,12 +279,19 @@ export default async function updateGlobalServer(server: FastifyInstance) {
       }, 'Failed to update global MCP server');
 
       // Handle specific error cases
-      if (error.message?.includes('UNIQUE constraint failed') || 
+      if (error.message?.includes('UNIQUE constraint failed') ||
           error.message?.includes('already exists') ||
           error.message?.includes('duplicate')) {
+        // Determine which field caused the conflict
+        let conflictField = 'name or slug';
+        if (error.message?.includes('slug')) {
+          conflictField = 'slug';
+        } else if (error.message?.includes('name')) {
+          conflictField = 'name';
+        }
         const errorResponse: ErrorResponse = {
           success: false,
-          error: 'Server name already exists'
+          error: `Server ${conflictField} already exists`
         };
         const jsonString = JSON.stringify(errorResponse);
         return reply.status(409).type('application/json').send(jsonString);

@@ -18835,6 +18835,13 @@
                     "maxLength": 255,
                     "description": "Server name (1-255 characters)"
                   },
+                  "slug": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255,
+                    "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                    "description": "URL-friendly unique identifier (lowercase alphanumeric with hyphens, e.g., \"my-server-name\")"
+                  },
                   "description": {
                     "type": "string",
                     "minLength": 1,
