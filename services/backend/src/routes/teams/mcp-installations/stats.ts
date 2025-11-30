@@ -336,20 +336,26 @@ export default async function getTeamMcpToolsStatsRoute(server: FastifyInstance)
       }
 
       // Step 5: Filter out installations with no tools and calculate averages
+      // Note: SQL aggregate functions (COUNT, SUM) return strings from the database driver
+      // We must convert them to numbers to avoid string concatenation in reduce operations
       const installationsWithTools = installationStats
-        .filter((inst: typeof installationStats[0]) => inst.tool_count > 0)
-        .map((inst: typeof installationStats[0]) => ({
-          installation_id: inst.installation_id,
-          installation_name: inst.installation_name,
-          server_slug: inst.server_slug || 'unknown',
-          server_name: inst.server_name || 'Unknown Server',
-          tool_count: inst.tool_count,
-          total_tokens: inst.total_tokens,
-          average_tokens_per_tool: inst.tool_count > 0
-            ? Math.round(inst.total_tokens / inst.tool_count)
-            : 0,
-          tools: toolsByInstallation.get(inst.installation_id) || []
-        }));
+        .filter((inst: typeof installationStats[0]) => Number(inst.tool_count) > 0)
+        .map((inst: typeof installationStats[0]) => {
+          const toolCount = Number(inst.tool_count);
+          const totalTokens = Number(inst.total_tokens);
+          return {
+            installation_id: inst.installation_id,
+            installation_name: inst.installation_name,
+            server_slug: inst.server_slug || 'unknown',
+            server_name: inst.server_name || 'Unknown Server',
+            tool_count: toolCount,
+            total_tokens: totalTokens,
+            average_tokens_per_tool: toolCount > 0
+              ? Math.round(totalTokens / toolCount)
+              : 0,
+            tools: toolsByInstallation.get(inst.installation_id) || []
+          };
+        });
 
       // Step 6: Calculate team-wide totals
       const totalInstallations = installationsWithTools.length;
