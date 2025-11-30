@@ -4,6 +4,7 @@ import { DynamicConfigManager } from './dynamic-config-manager';
 import { ProcessManager } from '../process/manager';
 import { RuntimeState } from '../process/runtime-state';
 import { StdioToolDiscoveryManager } from './stdio-tool-discovery-manager';
+import { UnifiedToolDiscoveryManager } from './unified-tool-discovery-manager';
 import { MCPServerConfig } from '../process/types';
 import { maskUrlForLogging } from '../utils/log-masker';
 
@@ -24,6 +25,7 @@ export class CommandProcessor {
   private processManager: ProcessManager | null;
   private runtimeState: RuntimeState | null;
   private stdioDiscoveryManager: StdioToolDiscoveryManager | null;
+  private unifiedToolDiscoveryManager: UnifiedToolDiscoveryManager | null = null;
   private processes: Map<string, ProcessInfo> = new Map();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private onConfigurationUpdate?: (config: any) => Promise<void>;
@@ -48,6 +50,13 @@ export class CommandProcessor {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   setConfigurationUpdateHandler(handler: (config: any) => Promise<void>): void {
     this.onConfigurationUpdate = handler;
+  }
+
+  /**
+   * Set unified tool discovery manager for disabled tools tracking
+   */
+  setUnifiedToolDiscoveryManager(manager: UnifiedToolDiscoveryManager): void {
+    this.unifiedToolDiscoveryManager = manager;
   }
 
   /**
@@ -159,9 +168,17 @@ export class CommandProcessor {
   }
 
   /**
-   * Handle configure command - update MCP server configuration
+   * Handle configure command - update MCP server configuration or handle specific actions
    */
   private async handleConfigureCommand(command: SatelliteCommand): Promise<CommandResult> {
+    const payload = command.payload;
+
+    // Check if this is an update_tool_status action
+    if (payload.action === 'update_tool_status') {
+      return await this.handleUpdateToolStatus(command);
+    }
+
+    // Default behavior: trigger configuration refresh
     this.logger.info({
       operation: 'command_configure',
       command_id: command.id
@@ -174,7 +191,7 @@ export class CommandProcessor {
           operation: 'command_configure_trigger',
           command_id: command.id
         }, 'Triggering configuration update from backend');
-        
+
         // This will fetch fresh config from backend and update all services
         await this.onConfigurationUpdate({});
       } else {
@@ -185,7 +202,7 @@ export class CommandProcessor {
       }
 
       const currentStats = this.configManager.getStats();
-      
+
       return {
         command_id: command.id,
         status: 'completed',
@@ -198,14 +215,112 @@ export class CommandProcessor {
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      
+
       this.logger.error({
         operation: 'command_configure_failed',
         command_id: command.id,
         error: errorMessage
       }, `Configure command failed: ${errorMessage}`);
-      
+
       throw error; // Re-throw to be handled by main command processor
+    }
+  }
+
+  /**
+   * Handle update_tool_status action - enable/disable a specific tool
+   */
+  private async handleUpdateToolStatus(command: SatelliteCommand): Promise<CommandResult> {
+    const payload = command.payload;
+    const { installation_id, tool_name, is_disabled, team_id, server_slug } = payload;
+
+    this.logger.info({
+      operation: 'update_tool_status',
+      command_id: command.id,
+      installation_id,
+      tool_name,
+      is_disabled,
+      team_id,
+      server_slug
+    }, `Processing update_tool_status: ${is_disabled ? 'disabling' : 'enabling'} tool ${tool_name}`);
+
+    // Validate required fields
+    if (!installation_id || !tool_name || typeof is_disabled !== 'boolean') {
+      const errorMsg = 'Missing required fields: installation_id, tool_name, or is_disabled';
+      this.logger.error({
+        operation: 'update_tool_status_validation_failed',
+        command_id: command.id,
+        installation_id,
+        tool_name,
+        is_disabled
+      }, errorMsg);
+
+      return {
+        command_id: command.id,
+        status: 'failed',
+        error: errorMsg
+      };
+    }
+
+    // Check if UnifiedToolDiscoveryManager is available
+    if (!this.unifiedToolDiscoveryManager) {
+      const errorMsg = 'UnifiedToolDiscoveryManager not available - cannot update tool status';
+      this.logger.error({
+        operation: 'update_tool_status_no_manager',
+        command_id: command.id
+      }, errorMsg);
+
+      return {
+        command_id: command.id,
+        status: 'failed',
+        error: errorMsg
+      };
+    }
+
+    try {
+      // Update the tool status in the unified discovery manager
+      this.unifiedToolDiscoveryManager.setToolDisabled(
+        installation_id as string,
+        tool_name as string,
+        is_disabled as boolean
+      );
+
+      const action = is_disabled ? 'disabled' : 'enabled';
+      this.logger.info({
+        operation: 'update_tool_status_success',
+        command_id: command.id,
+        installation_id,
+        tool_name,
+        is_disabled,
+        team_id,
+        server_slug
+      }, `Tool ${tool_name} ${action} successfully`);
+
+      return {
+        command_id: command.id,
+        status: 'completed',
+        result: {
+          tool_name,
+          is_disabled,
+          message: `Tool ${action} successfully`
+        }
+      };
+
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+      this.logger.error({
+        operation: 'update_tool_status_failed',
+        command_id: command.id,
+        installation_id,
+        tool_name,
+        error: errorMessage
+      }, `Failed to update tool status: ${errorMessage}`);
+
+      return {
+        command_id: command.id,
+        status: 'failed',
+        error: errorMessage
+      };
     }
   }
 

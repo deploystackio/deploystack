@@ -34,6 +34,12 @@ export class UnifiedToolDiscoveryManager {
   private configManager?: DynamicConfigManager;
   private isInitialized: boolean = false;
 
+  /**
+   * Tracks disabled tools per installation
+   * Key: installation_id, Value: Set of disabled tool names
+   */
+  private disabledTools: Map<string, Set<string>> = new Map();
+
   constructor(
     remoteToolManager: RemoteToolDiscoveryManager,
     stdioToolManager: StdioToolDiscoveryManager,
@@ -325,6 +331,67 @@ export class UnifiedToolDiscoveryManager {
    */
   isReady(): boolean {
     return this.isInitialized;
+  }
+
+  // =========================================================================
+  // DISABLED TOOLS MANAGEMENT
+  // =========================================================================
+
+  /**
+   * Mark a tool as disabled or enabled for an installation
+   */
+  setToolDisabled(installationId: string, toolName: string, disabled: boolean): void {
+    if (!this.disabledTools.has(installationId)) {
+      this.disabledTools.set(installationId, new Set());
+    }
+
+    const tools = this.disabledTools.get(installationId)!;
+    if (disabled) {
+      tools.add(toolName);
+      this.logger.info({
+        operation: 'tool_disabled',
+        installation_id: installationId,
+        tool_name: toolName
+      }, `Tool disabled: ${toolName}`);
+    } else {
+      tools.delete(toolName);
+      this.logger.info({
+        operation: 'tool_enabled',
+        installation_id: installationId,
+        tool_name: toolName
+      }, `Tool enabled: ${toolName}`);
+    }
+  }
+
+  /**
+   * Check if a tool is disabled for an installation
+   */
+  isToolDisabled(installationId: string, toolName: string): boolean {
+    const tools = this.disabledTools.get(installationId);
+    return tools?.has(toolName) ?? false;
+  }
+
+  /**
+   * Get all disabled tools for an installation
+   */
+  getDisabledTools(installationId: string): string[] {
+    const tools = this.disabledTools.get(installationId);
+    return tools ? Array.from(tools) : [];
+  }
+
+  /**
+   * Clear all disabled tools for an installation (used when installation is removed)
+   */
+  clearDisabledTools(installationId: string): void {
+    if (this.disabledTools.has(installationId)) {
+      const toolCount = this.disabledTools.get(installationId)!.size;
+      this.disabledTools.delete(installationId);
+      this.logger.debug({
+        operation: 'disabled_tools_cleared',
+        installation_id: installationId,
+        cleared_count: toolCount
+      }, `Cleared disabled tools for installation: ${installationId}`);
+    }
   }
 
   /**

@@ -260,8 +260,62 @@ export class McpServerWrapper {
       arguments: toolArguments
     }, `Tool arguments for ${toolPath}`);
 
+    // Check if tool exists and get cached tool info for disabled check
+    const cachedTool = this.toolDiscoveryManager.getTool(namespacedToolName);
+    if (!cachedTool) {
+      const allTools = this.toolDiscoveryManager.getAllTools();
+      throw new Error(`Tool not found: ${namespacedToolName}. Available tools: ${allTools.map(t => t.namespacedName).join(', ')}`);
+    }
+
+    // Check if tool is disabled
+    if (this.dynamicConfigManager) {
+      const config = this.dynamicConfigManager.getMcpServerConfig(cachedTool.serverName);
+      if (config?.installation_id) {
+        const isDisabled = this.toolDiscoveryManager.isToolDisabled(
+          config.installation_id,
+          cachedTool.originalName
+        );
+
+        if (isDisabled) {
+          this.logger.warn({
+            operation: 'execute_mcp_tool_disabled',
+            tool_path: toolPath,
+            installation_id: config.installation_id,
+            tool_name: cachedTool.originalName
+          }, `Tool execution blocked - tool is disabled: ${toolPath}`);
+
+          return this.createDisabledToolResponse(toolPath);
+        }
+      }
+    }
+
     // Route to executeToolCall with namespaced format
     return await this.executeToolCall(namespacedToolName, toolArguments);
+  }
+
+  /**
+   * Create LLM-friendly error response for disabled tools
+   */
+  private createDisabledToolResponse(toolPath: string): any {
+    const message = [
+      `Tool '${toolPath}' has been disabled by the team administrator.`,
+      '',
+      'This tool is currently unavailable and cannot be executed.',
+      '',
+      'Recommended actions:',
+      '1. Use discover_mcp_tools to find alternative tools that can accomplish your task',
+      '2. Contact your team administrator if you need this tool enabled',
+      '',
+      `Disabled tool: ${toolPath}`
+    ].join('\n');
+
+    return {
+      content: [{
+        type: 'text',
+        text: message
+      }],
+      isError: true
+    };
   }
 
   /**

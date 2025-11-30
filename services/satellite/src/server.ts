@@ -265,10 +265,11 @@ export async function createServer() {
 
   // Initialize Tool Search Service for hierarchical router (discover_mcp_tools meta-tool)
   const toolSearchService = new ToolSearchService(toolDiscoveryManager, server.log);
-  
+  toolSearchService.setConfigManager(dynamicConfigManager);
+
   server.log.info({
     operation: 'tool_search_service_initialized'
-  }, 'Tool Search Service initialized for hierarchical MCP router');
+  }, 'Tool Search Service initialized for hierarchical MCP router (disabled tool filtering enabled)');
 
   // Initialize MCP Server Wrapper with official SDK (replaces custom transport handlers)
   const mcpServerWrapper = new McpServerWrapper(server.log);
@@ -424,10 +425,14 @@ export async function createServer() {
     stdioToolDiscoveryManager
   );
 
+  // Set UnifiedToolDiscoveryManager for disabled tools tracking
+  commandProcessor.setUnifiedToolDiscoveryManager(toolDiscoveryManager);
+
   server.log.info({
     operation: 'command_processor_initialized',
-    stdio_support: true
-  }, 'Command Processor initialized with stdio process management support');
+    stdio_support: true,
+    disabled_tools_support: true
+  }, 'Command Processor initialized with stdio process management and disabled tools support');
 
   // Initialize Command Polling Service (will be started after registration)
   let commandPollingService: CommandPollingService | undefined;
