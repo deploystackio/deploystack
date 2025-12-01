@@ -4,6 +4,13 @@ import { useI18n } from 'vue-i18n'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Item } from '@/components/ui/item'
 
 interface EnvironmentVariable {
@@ -203,15 +210,18 @@ watch(() => props.serverData, (newData) => {
     })
 
     teamSchema.forEach((env) => {
-      newTeamEnv[env.name] = modelValue.value.team_env?.[env.name] || ''
+      const defaultValue = env.type === 'boolean' ? 'false' : ''
+      newTeamEnv[env.name] = modelValue.value.team_env?.[env.name] || defaultValue
     })
 
     teamHeadersSchema.forEach((header) => {
-      newTeamHeaders[header.name] = modelValue.value.team_headers?.[header.name] || ''
+      const defaultValue = header.type === 'boolean' ? 'false' : ''
+      newTeamHeaders[header.name] = modelValue.value.team_headers?.[header.name] || defaultValue
     })
 
     teamQueryParamsSchemaData.forEach((param) => {
-      newTeamQueryParams[param.name] = modelValue.value.team_url_query_params?.[param.name] || ''
+      const defaultValue = param.type === 'boolean' ? 'false' : ''
+      newTeamQueryParams[param.name] = modelValue.value.team_url_query_params?.[param.name] || defaultValue
     })
 
     userSchema.forEach((env) => {
@@ -247,6 +257,21 @@ const isTextarea = (envVar: EnvironmentVariable) => {
   return envVar.type === 'textarea' ||
          (envVar.description?.toLowerCase().includes('json')) ||
          (envVar.placeholder && envVar.placeholder.length > 100)
+}
+
+const isBoolean = (item: EnvironmentVariable | HeaderSchema | QueryParamSchema | ArgumentSchema) => {
+  return item.type === 'boolean'
+}
+
+// Update boolean values with proper reactivity
+const updateBooleanValue = (type: 'team_env' | 'team_headers' | 'team_url_query_params', key: string, value: string) => {
+  if (type === 'team_env') {
+    modelValue.value.team_env = { ...modelValue.value.team_env, [key]: value }
+  } else if (type === 'team_headers') {
+    modelValue.value.team_headers = { ...modelValue.value.team_headers, [key]: value }
+  } else if (type === 'team_url_query_params') {
+    modelValue.value.team_url_query_params = { ...modelValue.value.team_url_query_params, [key]: value }
+  }
 }
 </script>
 
@@ -348,18 +373,35 @@ const isTextarea = (envVar: EnvironmentVariable) => {
                 {{ envVar.description }}
               </div>
 
-              <div class="relative">
+              <!-- Boolean select -->
+              <Select
+                v-if="isBoolean(envVar)"
+                :model-value="modelValue.team_env[envVar.name]"
+                @update:model-value="(val) => updateBooleanValue('team_env', envVar.name, String(val))"
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select value" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="false">false</SelectItem>
+                  <SelectItem value="true">true</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <!-- Textarea for long values -->
+              <div v-else-if="isTextarea(envVar)" class="relative">
                 <Textarea
-                  v-if="isTextarea(envVar)"
                   :id="`team_${envVar.name}`"
                   v-model="modelValue.team_env[envVar.name]"
                   :placeholder="envVar.placeholder || t('mcpInstallations.teamConfiguration.editModal.form.placeholders.enterValue')"
                   class="min-h-[100px]"
                   :required="envVar.required"
                 />
+              </div>
 
+              <!-- Regular input -->
+              <div v-else class="relative">
                 <Input
-                  v-else
                   :id="`team_${envVar.name}`"
                   :type="getInputType(envVar)"
                   v-model="modelValue.team_env[envVar.name]"
@@ -416,7 +458,23 @@ const isTextarea = (envVar: EnvironmentVariable) => {
                 {{ header.description }}
               </div>
 
-              <div class="relative">
+              <!-- Boolean select -->
+              <Select
+                v-if="isBoolean(header)"
+                :model-value="modelValue.team_headers[header.name]"
+                @update:model-value="(val) => updateBooleanValue('team_headers', header.name, String(val))"
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select value" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="false">false</SelectItem>
+                  <SelectItem value="true">true</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <!-- Regular input -->
+              <div v-else class="relative">
                 <Input
                   :id="`team_header_${header.name}`"
                   :type="getInputType(header)"
@@ -474,7 +532,23 @@ const isTextarea = (envVar: EnvironmentVariable) => {
                 {{ param.description }}
               </div>
 
-              <div class="relative">
+              <!-- Boolean select -->
+              <Select
+                v-if="isBoolean(param)"
+                :model-value="modelValue.team_url_query_params[param.name]"
+                @update:model-value="(val) => updateBooleanValue('team_url_query_params', param.name, String(val))"
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select value" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="false">false</SelectItem>
+                  <SelectItem value="true">true</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <!-- Regular input -->
+              <div v-else class="relative">
                 <Input
                   :id="`team_query_param_${param.name}`"
                   :type="getInputType(param)"

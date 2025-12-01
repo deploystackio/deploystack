@@ -13,6 +13,13 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
   AlertDialog,
   AlertDialogContent,
   AlertDialogDescription,
@@ -170,7 +177,7 @@ const openEditModal = (item: any, type: 'arg' | 'env' | 'header' | 'query_param'
 
   editingItem.value = item
   editingType.value = type
-  editingValue.value = item.currentValue
+  editingValue.value = String(item.currentValue || '')
   showPassword.value = false
   formErrors.value = {}
   isEditModalOpen.value = true
@@ -200,6 +207,10 @@ const isTextarea = (item: any) => {
   return item.type === 'textarea' ||
          (item.description && item.description.toLowerCase().includes('json')) ||
          (item.placeholder && item.placeholder.length > 100)
+}
+
+const isBoolean = (item: any) => {
+  return item.type === 'boolean'
 }
 
 const validateForm = () => {
@@ -631,8 +642,21 @@ const modalTitle = computed(() => {
           <div class="space-y-2">
             <Label for="config-value">{{ t('mcpInstallations.teamConfiguration.editModal.form.labels.teamValue') }}</Label>
 
+            <!-- Boolean select -->
+            <div v-if="editingItem && isBoolean(editingItem)">
+              <Select v-model="editingValue">
+                <SelectTrigger>
+                  <SelectValue placeholder="Select value" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="false">false</SelectItem>
+                  <SelectItem value="true">true</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             <!-- Textarea for long values -->
-            <div v-if="editingItem && isTextarea(editingItem)" class="relative">
+            <div v-else-if="editingItem && isTextarea(editingItem)" class="relative">
               <Textarea
                 id="config-value"
                 v-model="editingValue"
