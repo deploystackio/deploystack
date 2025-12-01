@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.45.0 (2025-12-01)
+
+* feat(all): add user configuration support in installation process cd26a0e
+* feat(frontend): add boolean select input for environment variables bbd9b62
+* feat(frontend): implement server search and installation wizard 4a78930
+* fix(frontend): clean repository URL and improve validation logic 3862166
+* fix(frontend): implement category caching and loading logic 38fa102
+* chore(backend): release v0.49.0 b8459cd
+* chore(backend): release v0.49.0 cb8ca0a
+* chore(satellite): release v0.12.0 f8e0818
+* chore(satellite): release v0.12.0 86acd99
+
 ## 0.44.0 (2025-11-30)
 
 * chore(frontend): release v0.43.0 7d260ab
