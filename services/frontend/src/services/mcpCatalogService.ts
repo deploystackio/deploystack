@@ -7,7 +7,7 @@ import type {
   UpdateMcpServerRequest,
   McpServerFilters
 } from '@/views/admin/mcp-server-catalog/types'
-import type { McpCategory } from '@/services/mcpCategoriesService'
+import { McpCategoriesService, type McpCategory } from '@/services/mcpCategoriesService'
 import type { McpServerSearchParams, McpServerSearchResponse } from '@/types/mcp-catalog'
 
 export interface PaginationParams {
@@ -284,6 +284,7 @@ export class McpCatalogService {
   static async updateGlobalServer(serverId: string, serverData: UpdateMcpServerRequest): Promise<McpServer> {
     const response = await fetch(`${this.baseUrl}/api/mcp/servers/global/${serverId}`, {
       method: 'PUT',
+      mode: 'cors',
       credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
@@ -568,15 +569,10 @@ export class McpCatalogService {
 // This delegates to the dedicated McpCategoriesService
 export class McpCategoriesCache {
   static async getCategories(forceRefresh = false): Promise<McpCategory[]> {
-    // Import here to avoid circular dependencies
-    const { McpCategoriesService } = await import('@/services/mcpCategoriesService')
     return McpCategoriesService.getCategories(forceRefresh)
   }
 
   static clearCache(): void {
-    // Import here to avoid circular dependencies
-    import('@/services/mcpCategoriesService').then(({ McpCategoriesService }) => {
-      McpCategoriesService.clearCache()
-    })
+    McpCategoriesService.clearCache()
   }
 }

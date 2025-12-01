@@ -1,11 +1,16 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { DynamicIcon } from '@/components/ui/dynamic-icon'
 import { McpCatalogService } from '@/services/mcpCatalogService'
+import { useEventBus } from '@/composables/useEventBus'
 import type { McpCategory } from '@/services/mcpCategoriesService'
 
 const { t } = useI18n()
+const eventBus = useEventBus()
+
+// Storage key for categories cache
+const CATEGORIES_STORAGE_KEY = 'mcp_categories_cache'
 
 interface Props {
   categoryId?: string | null
@@ -29,25 +34,56 @@ const category = ref<McpCategory | null>(props.category)
 const isLoading = ref(false)
 const error = ref<string | null>(null)
 
-// Fetch category by ID if not provided as prop
-async function fetchCategory(categoryId: string): Promise<McpCategory | null> {
+// Find category from cached categories in storage
+function findCategoryFromCache(categoryId: string): McpCategory | null {
+  const cached = eventBus.getState<McpCategory[]>(CATEGORIES_STORAGE_KEY)
+  if (cached && Array.isArray(cached)) {
+    return cached.find(cat => cat.id === categoryId) || null
+  }
+  return null
+}
+
+// Fetch categories and cache them in storage
+async function fetchAndCacheCategories(): Promise<McpCategory[]> {
+  const categories = await McpCatalogService.getCategories()
+  eventBus.setState(CATEGORIES_STORAGE_KEY, categories)
+  return categories
+}
+
+// Load category - check storage cache first, then fetch if needed
+async function loadCategory(categoryId: string): Promise<void> {
+  // First, try to find in storage cache (prevents redundant API calls)
+  const cachedCategory = findCategoryFromCache(categoryId)
+  if (cachedCategory) {
+    category.value = cachedCategory
+    return
+  }
+
+  // Not in cache, fetch from API
   try {
     isLoading.value = true
-    const categories = await McpCatalogService.getCategories()
-    return categories.find(cat => cat.id === categoryId) || null
+    error.value = null
+    const categories = await fetchAndCacheCategories()
+    category.value = categories.find(cat => cat.id === categoryId) || null
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'Failed to fetch category'
     console.error('Failed to fetch category:', err)
-    return null
   } finally {
     isLoading.value = false
   }
 }
 
+// Watch for categoryId changes (handles re-renders without remount)
+watch(() => props.categoryId, (newId) => {
+  if (newId && !props.category) {
+    loadCategory(newId)
+  }
+}, { immediate: false })
+
 // Load category on mount if categoryId is provided but category is not
-onMounted(async () => {
+onMounted(() => {
   if (props.categoryId && !props.category) {
-    category.value = await fetchCategory(props.categoryId)
+    loadCategory(props.categoryId)
   }
 })
 

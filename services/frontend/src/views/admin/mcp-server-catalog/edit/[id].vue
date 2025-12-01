@@ -242,10 +242,12 @@ const handleSubmit = async (formData: McpServerFormData) => {
       git_branch: repositorySetupData?.git_branch !== undefined ? repositorySetupData.git_branch : formData.repository.git_branch
     }
 
-    // Get README markdown from storage and convert to base64
+    // Get README markdown from storage and convert to base64 (UTF-8 safe)
     const readmeData = eventBus.getState<{ readme_markdown: string }>('edit_readme_data')
     const readmeMarkdown = readmeData?.readme_markdown || ''
-    const readmeBase64 = readmeMarkdown ? btoa(readmeMarkdown) : ''
+    const readmeBase64 = readmeMarkdown
+      ? btoa(new TextEncoder().encode(readmeMarkdown).reduce((data, byte) => data + String.fromCharCode(byte), ''))
+      : ''
 
     // CRITICAL FIX: Synchronize environment variables from installation_methods to team_env_schema
     let finalConfigurationSchema = { ...formData.configuration_schema }
