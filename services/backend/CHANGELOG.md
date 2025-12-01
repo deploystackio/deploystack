@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.49.0 (2025-12-01)
+
+* chore(frontend): release v0.43.0 7d260ab
+* chore(frontend): release v0.43.0 86f1055
+* chore(frontend): release v0.44.0 086b98d
+* chore(frontend): release v0.44.0 589b69a
+* chore(satellite): release v0.12.0 f8e0818
+* chore(satellite): release v0.12.0 86acd99
+* feat(all): add cleanup job for satellite heartbeats and worker f2f0d7c
+* feat(all): add slug field for server identification and validation change a1b8088
+* feat(all): implement tool toggle functionality with optimistic updates 4189eb0
+* feat(backend): enhance database connection options and error logging 2ac4964
+* feat(backend): implement CRUD operations for OAuth providers ddb26bd
+* feat(backend): implement toggle tool status route for MCP installations a4f8713
+* feat(satellite): enhance logging for tool execution and OAuth header injection 0bd6546
+* feat(satellite): implement disabled tool management and filtering 7adc7b4
+* feat(satellite): unify tool path format to use serverSlug for namespacing 210a576
+* fix(backend): convert string values to numbers for tool statistics 17b970f
+
 ## 0.48.0 (2025-11-29)
 
 * chore(backend): release v0.47.0 2070153
