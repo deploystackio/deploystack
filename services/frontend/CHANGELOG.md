@@ -2,6 +2,18 @@
 
 ## 0.45.0 (2025-12-01)
 
+* docs(all): update feature list with per-tool access controls and catalog improvements d4ec492
+* chore(backend): release v0.49.0 b8459cd
+* chore(backend): release v0.49.0 cb8ca0a
+* chore(frontend): release v0.45.0 430bfe1
+* feat(all): add user configuration support in installation process cd26a0e
+* feat(frontend): add boolean select input for environment variables bbd9b62
+* feat(frontend): implement server search and installation wizard 4a78930
+* fix(frontend): clean repository URL and improve validation logic 3862166
+* fix(frontend): implement category caching and loading logic 38fa102
+
+## 0.45.0 (2025-12-01)
+
 * feat(all): add user configuration support in installation process cd26a0e
 * feat(frontend): add boolean select input for environment variables bbd9b62
 * feat(frontend): implement server search and installation wizard 4a78930
