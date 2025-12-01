@@ -72,7 +72,9 @@ const modelValue = defineModel<{
   team_env: Record<string, string>
   team_headers: Record<string, string>
   team_url_query_params: Record<string, string>
+  user_args: Record<string, string>
   user_env: Record<string, string>
+  user_headers: Record<string, string>
   user_url_query_params: Record<string, string>
 }>({ required: true })
 
@@ -194,14 +196,18 @@ watch(() => props.serverData, (newData) => {
     const newTeamEnv: Record<string, string> = {}
     const newTeamHeaders: Record<string, string> = {}
     const newTeamQueryParams: Record<string, string> = {}
+    const newUserArgs: Record<string, string> = {}
     const newUserEnv: Record<string, string> = {}
+    const newUserHeaders: Record<string, string> = {}
     const newUserQueryParams: Record<string, string> = {}
 
     const argsSchema = parseArgsSchema(newData.team_args_schema)
     const teamSchema = parseEnvSchema(newData.team_env_schema)
     const teamHeadersSchema = parseEnvSchema(newData.team_headers_schema)
     const teamQueryParamsSchemaData = parseEnvSchema(newData.team_url_query_params_schema)
+    const userArgsSchemaData = parseArgsSchema(newData.user_args_schema)
     const userSchema = parseEnvSchema(newData.user_env_schema)
+    const userHeadersSchemaData = parseEnvSchema(newData.user_headers_schema)
     const userQueryParamsSchemaData = parseEnvSchema(newData.user_url_query_params_schema)
 
     // Initialize team arguments array
@@ -224,12 +230,26 @@ watch(() => props.serverData, (newData) => {
       newTeamQueryParams[param.name] = modelValue.value.team_url_query_params?.[param.name] || defaultValue
     })
 
+    // Initialize user arguments
+    userArgsSchemaData.forEach((arg) => {
+      const defaultValue = arg.type === 'boolean' ? 'false' : ''
+      newUserArgs[arg.name] = modelValue.value.user_args?.[arg.name] || defaultValue
+    })
+
     userSchema.forEach((env) => {
-      newUserEnv[env.name] = ''
+      const defaultValue = env.type === 'boolean' ? 'false' : ''
+      newUserEnv[env.name] = modelValue.value.user_env?.[env.name] || defaultValue
+    })
+
+    // Initialize user headers
+    userHeadersSchemaData.forEach((header) => {
+      const defaultValue = header.type === 'boolean' ? 'false' : ''
+      newUserHeaders[header.name] = modelValue.value.user_headers?.[header.name] || defaultValue
     })
 
     userQueryParamsSchemaData.forEach((param) => {
-      newUserQueryParams[param.name] = ''
+      const defaultValue = param.type === 'boolean' ? 'false' : ''
+      newUserQueryParams[param.name] = modelValue.value.user_url_query_params?.[param.name] || defaultValue
     })
 
     modelValue.value = {
@@ -237,7 +257,9 @@ watch(() => props.serverData, (newData) => {
       team_env: newTeamEnv,
       team_headers: newTeamHeaders,
       team_url_query_params: newTeamQueryParams,
+      user_args: newUserArgs,
       user_env: newUserEnv,
+      user_headers: newUserHeaders,
       user_url_query_params: newUserQueryParams
     }
 
@@ -264,13 +286,21 @@ const isBoolean = (item: EnvironmentVariable | HeaderSchema | QueryParamSchema |
 }
 
 // Update boolean values with proper reactivity
-const updateBooleanValue = (type: 'team_env' | 'team_headers' | 'team_url_query_params', key: string, value: string) => {
+const updateBooleanValue = (type: 'team_env' | 'team_headers' | 'team_url_query_params' | 'user_args' | 'user_env' | 'user_headers' | 'user_url_query_params', key: string, value: string) => {
   if (type === 'team_env') {
     modelValue.value.team_env = { ...modelValue.value.team_env, [key]: value }
   } else if (type === 'team_headers') {
     modelValue.value.team_headers = { ...modelValue.value.team_headers, [key]: value }
   } else if (type === 'team_url_query_params') {
     modelValue.value.team_url_query_params = { ...modelValue.value.team_url_query_params, [key]: value }
+  } else if (type === 'user_args') {
+    modelValue.value.user_args = { ...modelValue.value.user_args, [key]: value }
+  } else if (type === 'user_env') {
+    modelValue.value.user_env = { ...modelValue.value.user_env, [key]: value }
+  } else if (type === 'user_headers') {
+    modelValue.value.user_headers = { ...modelValue.value.user_headers, [key]: value }
+  } else if (type === 'user_url_query_params') {
+    modelValue.value.user_url_query_params = { ...modelValue.value.user_url_query_params, [key]: value }
   }
 }
 </script>
@@ -573,37 +603,66 @@ const updateBooleanValue = (type: 'team_env' | 'team_headers' | 'team_url_query_
             {{ t('mcpInstallations.teamConfiguration.sections.userArgs.title') }}
           </h3>
           <p class="text-sm text-muted-foreground mt-1">
-            {{ userArgsSchema.length }} {{ userArgsSchema.length === 1 ? t('mcpInstallations.teamConfiguration.sections.userConfig.counter.single') : t('mcpInstallations.teamConfiguration.sections.userConfig.counter.plural') }}
+            {{ userArgsSchema.length }} {{ userArgsSchema.length === 1 ? 'argument' : 'arguments' }}
           </p>
         </div>
-
-        <div class="mb-4 p-3 bg-muted/50 rounded-md">
-          <p class="text-sm text-muted-foreground">
-            <strong>{{ t('mcpInstallations.teamConfiguration.sections.userEnv.infoNote') }}</strong> {{ t('mcpInstallations.teamConfiguration.sections.userEnv.individualConfig') }}
-          </p>
-        </div>
+        <p class="text-sm text-muted-foreground mb-6">
+          Your personal command line arguments for this MCP server.
+        </p>
 
         <div class="space-y-3">
-          <div v-for="(arg, index) in userArgsSchema" :key="`user_arg_${index}`" class="bg-background p-4 rounded-lg border">
-            <div class="flex items-center gap-2 mb-2">
-              <span class="font-medium font-mono">{{ arg.name }}</span>
-              <span v-if="arg.required" class="text-xs text-muted-foreground">
-                {{ t('mcpInstallations.teamConfiguration.userEnvDetails.required') }}
-              </span>
-              <span v-else class="text-xs text-muted-foreground">
-                {{ t('mcpInstallations.teamConfiguration.userEnvDetails.optional') }}
-              </span>
-            </div>
+          <Item
+            v-for="arg in userArgsSchema"
+            :key="`user_arg_${arg.name}`"
+            variant="filled"
+          >
+            <div class="space-y-2 w-full">
+              <div class="flex items-center gap-2">
+                <Label :for="`user_arg_${arg.name}`" class="flex items-center gap-2">
+                  {{ arg.name }}
+                  <span v-if="arg.required" class="text-xs text-gray-500">
+                    {{ t('mcpInstallations.teamConfiguration.userEnvDetails.required') }}
+                  </span>
+                  <span v-else class="text-xs text-gray-500">
+                    {{ t('mcpInstallations.teamConfiguration.userEnvDetails.optional') }}
+                  </span>
+                </Label>
+              </div>
 
-            <div v-if="arg.description" class="text-sm text-muted-foreground mb-2">
-              {{ arg.description }}
-            </div>
+              <div v-if="arg.description" class="text-sm text-gray-600">
+                {{ arg.description }}
+              </div>
 
-            <div class="flex items-center gap-4 text-xs text-muted-foreground">
-              <span>{{ t('mcpInstallations.teamConfiguration.userEnvDetails.typeLabel') }} <code class="bg-muted px-1 rounded">{{ arg.type || 'string' }}</code></span>
-              <span v-if="arg.placeholder">{{ t('mcpInstallations.teamConfiguration.userEnvDetails.placeholderLabel') }} "{{ arg.placeholder }}"</span>
+              <!-- Boolean select -->
+              <Select
+                v-if="isBoolean(arg)"
+                :model-value="modelValue.user_args[arg.name]"
+                @update:model-value="(val) => updateBooleanValue('user_args', arg.name, String(val))"
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select value" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="false">false</SelectItem>
+                  <SelectItem value="true">true</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <!-- Regular input -->
+              <div v-else class="relative">
+                <Input
+                  :id="`user_arg_${arg.name}`"
+                  :type="getArgInputType(arg)"
+                  v-model="modelValue.user_args[arg.name]"
+                  :placeholder="arg.placeholder || t('mcpInstallations.teamConfiguration.editModal.form.placeholders.enterValue')"
+                />
+              </div>
+
+              <div v-if="arg.type" class="text-xs text-gray-500">
+                {{ t('mcpInstallations.teamConfiguration.userEnvDetails.typeLabel') }} <code class="bg-gray-100 px-1 rounded">{{ arg.type }}</code>
+              </div>
             </div>
-          </div>
+          </Item>
         </div>
       </div>
 
@@ -614,37 +673,76 @@ const updateBooleanValue = (type: 'team_env' | 'team_headers' | 'team_url_query_
             {{ t('mcpInstallations.teamConfiguration.sections.userEnv.title') }}
           </h3>
           <p class="text-sm text-muted-foreground mt-1">
-            {{ userEnvSchema.length }} {{ userEnvSchema.length === 1 ? t('mcpInstallations.teamConfiguration.sections.userEnv.counter.single') : t('mcpInstallations.teamConfiguration.sections.userEnv.counter.plural') }}
+            {{ userEnvSchema.length }} {{ userEnvSchema.length === 1 ? 'variable' : 'variables' }}
           </p>
         </div>
-
-        <div class="mb-4 p-3 bg-muted/50 rounded-md">
-          <p class="text-sm text-muted-foreground">
-            <strong>{{ t('mcpInstallations.teamConfiguration.sections.userEnv.infoNote') }}</strong> {{ t('mcpInstallations.teamConfiguration.sections.userEnv.individualConfig') }}
-          </p>
-        </div>
+        <p class="text-sm text-muted-foreground mb-6">
+          Your personal environment variables for this MCP server.
+        </p>
 
         <div class="space-y-3">
-          <div v-for="envVar in userEnvSchema" :key="envVar.name" class="bg-background p-4 rounded-lg border">
-            <div class="flex items-center gap-2 mb-2">
-              <span class="font-medium font-mono">{{ envVar.name }}</span>
-              <span v-if="envVar.required" class="text-xs text-muted-foreground">
-                {{ t('mcpInstallations.teamConfiguration.userEnvDetails.required') }}
-              </span>
-              <span v-else class="text-xs text-muted-foreground">
-                {{ t('mcpInstallations.teamConfiguration.userEnvDetails.optional') }}
-              </span>
-            </div>
+          <Item
+            v-for="envVar in userEnvSchema"
+            :key="`user_env_${envVar.name}`"
+            variant="filled"
+          >
+            <div class="space-y-2 w-full">
+              <div class="flex items-center gap-2">
+                <Label :for="`user_env_${envVar.name}`" class="flex items-center gap-2">
+                  {{ envVar.name }}
+                  <span v-if="envVar.required" class="text-xs text-gray-500">
+                    {{ t('mcpInstallations.teamConfiguration.userEnvDetails.required') }}
+                  </span>
+                  <span v-else class="text-xs text-gray-500">
+                    {{ t('mcpInstallations.teamConfiguration.userEnvDetails.optional') }}
+                  </span>
+                </Label>
+              </div>
 
-            <div v-if="envVar.description" class="text-sm text-muted-foreground mb-2">
-              {{ envVar.description }}
-            </div>
+              <div v-if="envVar.description" class="text-sm text-gray-600">
+                {{ envVar.description }}
+              </div>
 
-            <div class="flex items-center gap-4 text-xs text-muted-foreground">
-              <span>{{ t('mcpInstallations.teamConfiguration.userEnvDetails.typeLabel') }} <code class="bg-muted px-1 rounded">{{ envVar.type || 'string' }}</code></span>
-              <span v-if="envVar.placeholder">{{ t('mcpInstallations.teamConfiguration.userEnvDetails.placeholderLabel') }} "{{ envVar.placeholder }}"</span>
+              <!-- Boolean select -->
+              <Select
+                v-if="isBoolean(envVar)"
+                :model-value="modelValue.user_env[envVar.name]"
+                @update:model-value="(val) => updateBooleanValue('user_env', envVar.name, String(val))"
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select value" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="false">false</SelectItem>
+                  <SelectItem value="true">true</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <!-- Textarea for long values -->
+              <div v-else-if="isTextarea(envVar)" class="relative">
+                <Textarea
+                  :id="`user_env_${envVar.name}`"
+                  v-model="modelValue.user_env[envVar.name]"
+                  :placeholder="envVar.placeholder || t('mcpInstallations.teamConfiguration.editModal.form.placeholders.enterValue')"
+                  class="min-h-[100px]"
+                />
+              </div>
+
+              <!-- Regular input -->
+              <div v-else class="relative">
+                <Input
+                  :id="`user_env_${envVar.name}`"
+                  :type="getInputType(envVar)"
+                  v-model="modelValue.user_env[envVar.name]"
+                  :placeholder="envVar.placeholder || t('mcpInstallations.teamConfiguration.editModal.form.placeholders.enterValue')"
+                />
+              </div>
+
+              <div v-if="envVar.type" class="text-xs text-gray-500">
+                {{ t('mcpInstallations.teamConfiguration.userEnvDetails.typeLabel') }} <code class="bg-gray-100 px-1 rounded">{{ envVar.type }}</code>
+              </div>
             </div>
-          </div>
+          </Item>
         </div>
       </div>
 
@@ -658,34 +756,133 @@ const updateBooleanValue = (type: 'team_env' | 'team_headers' | 'team_url_query_
             {{ userHeadersSchema.length }} {{ userHeadersSchema.length === 1 ? 'header' : 'headers' }}
           </p>
         </div>
-
-        <div class="mb-4 p-3 bg-muted/50 rounded-md">
-          <p class="text-sm text-muted-foreground">
-            <strong>{{ t('mcpInstallations.teamConfiguration.sections.userEnv.infoNote') }}</strong> {{ t('mcpInstallations.teamConfiguration.sections.userEnv.individualConfig') }}
-          </p>
-        </div>
+        <p class="text-sm text-muted-foreground mb-6">
+          Your personal HTTP headers for this MCP server.
+        </p>
 
         <div class="space-y-3">
-          <div v-for="header in userHeadersSchema" :key="header.name" class="bg-background p-4 rounded-lg border">
-            <div class="flex items-center gap-2 mb-2">
-              <span class="font-medium font-mono">{{ header.name }}</span>
-              <span v-if="header.required" class="text-xs text-muted-foreground">
-                {{ t('mcpInstallations.teamConfiguration.userEnvDetails.required') }}
-              </span>
-              <span v-else class="text-xs text-muted-foreground">
-                {{ t('mcpInstallations.teamConfiguration.userEnvDetails.optional') }}
-              </span>
-            </div>
+          <Item
+            v-for="header in userHeadersSchema"
+            :key="`user_header_${header.name}`"
+            variant="filled"
+          >
+            <div class="space-y-2 w-full">
+              <div class="flex items-center gap-2">
+                <Label :for="`user_header_${header.name}`" class="flex items-center gap-2">
+                  {{ header.name }}
+                  <span v-if="header.required" class="text-xs text-gray-500">
+                    {{ t('mcpInstallations.teamConfiguration.userEnvDetails.required') }}
+                  </span>
+                  <span v-else class="text-xs text-gray-500">
+                    {{ t('mcpInstallations.teamConfiguration.userEnvDetails.optional') }}
+                  </span>
+                </Label>
+              </div>
 
-            <div v-if="header.description" class="text-sm text-muted-foreground mb-2">
-              {{ header.description }}
-            </div>
+              <div v-if="header.description" class="text-sm text-gray-600">
+                {{ header.description }}
+              </div>
 
-            <div class="flex items-center gap-4 text-xs text-muted-foreground">
-              <span>{{ t('mcpInstallations.teamConfiguration.userEnvDetails.typeLabel') }} <code class="bg-muted px-1 rounded">{{ header.type || 'string' }}</code></span>
-              <span v-if="header.placeholder">{{ t('mcpInstallations.teamConfiguration.userEnvDetails.placeholderLabel') }} "{{ header.placeholder }}"</span>
+              <!-- Boolean select -->
+              <Select
+                v-if="isBoolean(header)"
+                :model-value="modelValue.user_headers[header.name]"
+                @update:model-value="(val) => updateBooleanValue('user_headers', header.name, String(val))"
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select value" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="false">false</SelectItem>
+                  <SelectItem value="true">true</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <!-- Regular input -->
+              <div v-else class="relative">
+                <Input
+                  :id="`user_header_${header.name}`"
+                  :type="getInputType(header)"
+                  v-model="modelValue.user_headers[header.name]"
+                  :placeholder="header.placeholder || 'Enter header value'"
+                />
+              </div>
+
+              <div v-if="header.type" class="text-xs text-gray-500">
+                {{ t('mcpInstallations.teamConfiguration.userEnvDetails.typeLabel') }} <code class="bg-gray-100 px-1 rounded">{{ header.type }}</code>
+              </div>
             </div>
-          </div>
+          </Item>
+        </div>
+      </div>
+
+      <!-- User URL Query Parameters Section -->
+      <div v-if="hasUserQueryParams">
+        <div class="mb-4">
+          <h3 class="text-lg font-semibold">
+            User URL Query Parameters
+          </h3>
+          <p class="text-sm text-muted-foreground mt-1">
+            {{ userQueryParamsSchema.length }} {{ userQueryParamsSchema.length === 1 ? 'query parameter' : 'query parameters' }}
+          </p>
+        </div>
+        <p class="text-sm text-muted-foreground mb-6">
+          Your personal URL query parameters for this MCP server.
+        </p>
+
+        <div class="space-y-3">
+          <Item
+            v-for="param in userQueryParamsSchema"
+            :key="`user_query_param_${param.name}`"
+            variant="filled"
+          >
+            <div class="space-y-2 w-full">
+              <div class="flex items-center gap-2">
+                <Label :for="`user_query_param_${param.name}`" class="flex items-center gap-2">
+                  {{ param.name }}
+                  <span v-if="param.required" class="text-xs text-gray-500">
+                    {{ t('mcpInstallations.teamConfiguration.userEnvDetails.required') }}
+                  </span>
+                  <span v-else class="text-xs text-gray-500">
+                    {{ t('mcpInstallations.teamConfiguration.userEnvDetails.optional') }}
+                  </span>
+                </Label>
+              </div>
+
+              <div v-if="param.description" class="text-sm text-gray-600">
+                {{ param.description }}
+              </div>
+
+              <!-- Boolean select -->
+              <Select
+                v-if="isBoolean(param)"
+                :model-value="modelValue.user_url_query_params[param.name]"
+                @update:model-value="(val) => updateBooleanValue('user_url_query_params', param.name, String(val))"
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select value" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="false">false</SelectItem>
+                  <SelectItem value="true">true</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <!-- Regular input -->
+              <div v-else class="relative">
+                <Input
+                  :id="`user_query_param_${param.name}`"
+                  :type="getInputType(param)"
+                  v-model="modelValue.user_url_query_params[param.name]"
+                  :placeholder="param.placeholder || 'Enter query parameter value'"
+                />
+              </div>
+
+              <div v-if="param.type" class="text-xs text-gray-500">
+                {{ t('mcpInstallations.teamConfiguration.userEnvDetails.typeLabel') }} <code class="bg-gray-100 px-1 rounded">{{ param.type }}</code>
+              </div>
+            </div>
+          </Item>
         </div>
       </div>
     </div>

@@ -42,7 +42,9 @@ interface InstallationFormData {
     team_env: Record<string, string>
     team_headers: Record<string, string>
     team_url_query_params: Record<string, string>
+    user_args: Record<string, string>
     user_env: Record<string, string>
+    user_headers: Record<string, string>
     user_url_query_params: Record<string, string>
   }
   platform: {
@@ -73,7 +75,9 @@ const formData = ref<InstallationFormData>({
     team_env: {},
     team_headers: {},
     team_url_query_params: {},
+    user_args: {},
     user_env: {},
+    user_headers: {},
     user_url_query_params: {}
   },
   platform: {
@@ -296,7 +300,9 @@ const submitInstallation = async () => {
       team_env: formData.value.environment.team_env,
       team_headers: formData.value.environment.team_headers,
       team_url_query_params: formData.value.environment.team_url_query_params,
+      user_args: formData.value.environment.user_args,
       user_environment_variables: formData.value.environment.user_env,
+      user_headers: formData.value.environment.user_headers,
       user_url_query_params: formData.value.environment.user_url_query_params,
       installation_name: props.serverData?.name || 'Unknown Server'
     }

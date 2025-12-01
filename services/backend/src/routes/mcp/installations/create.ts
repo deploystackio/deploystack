@@ -2,6 +2,7 @@ import { type FastifyInstance } from 'fastify';
 import { requireAuthenticationAny, requireOAuthScope } from '../../../middleware/oauthMiddleware';
 import { requireTeamPermission } from '../../../middleware/roleMiddleware';
 import { McpInstallationService } from '../../../services/mcpInstallationService';
+import { McpUserConfigurationService } from '../../../services/mcpUserConfigurationService';
 import { SatelliteCommandService } from '../../../services/satelliteCommandService';
 import { getDb } from '../../../db';
 import {
@@ -101,6 +102,42 @@ export default async function createInstallationRoute(server: FastifyInstance) {
         teamId,
         serverId: installationData.server_id
       }, 'MCP server installation created successfully');
+
+      // Check if user config data was provided and create user configuration
+      const hasUserConfig =
+        (installationData.user_args && Object.keys(installationData.user_args).length > 0) ||
+        (installationData.user_environment_variables && Object.keys(installationData.user_environment_variables).length > 0) ||
+        (installationData.user_headers && Object.keys(installationData.user_headers).length > 0) ||
+        (installationData.user_url_query_params && Object.keys(installationData.user_url_query_params).length > 0);
+
+      if (hasUserConfig) {
+        try {
+          const userConfigService = new McpUserConfigurationService(db, request.log);
+          await userConfigService.createUserConfiguration(
+            installation.id,
+            userId,
+            teamId,
+            {
+              user_args: installationData.user_args,
+              user_env: installationData.user_environment_variables,
+              user_headers: installationData.user_headers,
+              user_url_query_params: installationData.user_url_query_params
+            }
+          );
+          request.log.info({
+            operation: 'create_mcp_installation',
+            installationId: installation.id,
+            userId
+          }, 'User configuration created during installation');
+        } catch (userConfigError) {
+          // Log but don't fail - team installation succeeded
+          request.log.warn({
+            operation: 'create_mcp_installation',
+            installationId: installation.id,
+            error: userConfigError instanceof Error ? userConfigError.message : 'Unknown error'
+          }, 'Failed to create user configuration during installation');
+        }
+      }
 
       // Create satellite commands for immediate notification (3-second response goal)
       try {

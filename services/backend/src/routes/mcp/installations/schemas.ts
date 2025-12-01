@@ -119,10 +119,20 @@ export const CREATE_INSTALLATION_REQUEST_SCHEMA = {
       additionalProperties: { type: 'string' },
       description: 'Team-level shared URL query parameters'
     },
+    user_args: {
+      type: 'object',
+      additionalProperties: { type: 'string' },
+      description: 'User-level argument mappings (placeholder -> actual value)'
+    },
     user_environment_variables: {
       type: 'object',
       additionalProperties: { type: 'string' },
       description: 'User-level environment variables'
+    },
+    user_headers: {
+      type: 'object',
+      additionalProperties: { type: 'string' },
+      description: 'User-level HTTP headers (optional)'
     },
     user_url_query_params: {
       type: 'object',
@@ -610,7 +620,9 @@ export interface CreateInstallationRequest {
   team_env?: Record<string, string>;
   team_headers?: Record<string, string>;
   team_url_query_params?: Record<string, string>;
+  user_args?: Record<string, string>;
   user_environment_variables?: Record<string, string>;
+  user_headers?: Record<string, string>;
   user_url_query_params?: Record<string, string>;
 }
 
