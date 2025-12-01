@@ -2,6 +2,12 @@
 
 ## 0.49.0 (2025-12-01)
 
+* chore(backend): release v0.49.0 cb8ca0a
+* chore(satellite): release v0.12.0 f8e0818
+* chore(satellite): release v0.12.0 86acd99
+
+## 0.49.0 (2025-12-01)
+
 * chore(frontend): release v0.43.0 7d260ab
 * chore(frontend): release v0.43.0 86f1055
 * chore(frontend): release v0.44.0 086b98d
