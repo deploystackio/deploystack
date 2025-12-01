@@ -1,34 +1,29 @@
 <script setup lang="ts">
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRoute, useRouter } from 'vue-router'
+import { useRouter } from 'vue-router'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { DsProgressSteps, type ProgressStep } from '@/components/ui/ds-progress-steps'
 import { toast } from 'vue-sonner'
 import { McpInstallationService } from '@/services/mcpInstallationService'
 import { TeamService } from '@/services/teamService'
-import { McpCatalogService } from '@/services/mcpCatalogService'
 import { SatelliteService, type TeamSatellite } from '@/services/satelliteService'
 import { useEventBus } from '@/composables/useEventBus'
-import McpServerSelectionStep from './McpServerSelectionStep.vue'
 import EnvironmentVariablesStep from './EnvironmentVariablesStep.vue'
 import OAuthAuthorizationStep from './OAuthAuthorizationStep.vue'
 import SatelliteSelectionStep from './SatelliteSelectionStep.vue'
 import McpServerAvatar from '../McpServerAvatar.vue'
 import McpServerDetailsSheet from './McpServerDetailsSheet.vue'
 
-// Props
+// Props - now receives server data directly
 interface Props {
-  initialServerId?: string
-  initialStep?: number
+  serverId: string
+  serverData: any
 }
 
-withDefaults(defineProps<Props>(), {
-  initialServerId: '',
-  initialStep: 0
-})
+const props = defineProps<Props>()
 
 // Emits
 const emit = defineEmits<{
@@ -37,16 +32,11 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
-const route = useRoute()
 const router = useRouter()
 const eventBus = useEventBus()
 
 // Form data interface
 interface InstallationFormData {
-  server: {
-    server_id: string
-    server_data?: any
-  }
   environment: {
     team_args: string[]
     team_env: Record<string, string>
@@ -58,8 +48,6 @@ interface InstallationFormData {
   platform: {
     installation_type: string
     satellite_id: string
-    installation_id?: string
-    platform_config?: any
   }
 }
 
@@ -72,7 +60,6 @@ const environmentValidation = ref({
   isValid: true,
   missingFields: [] as string[]
 })
-const environmentStepTouched = ref(false)
 const currentTeamId = ref<string | null>(null)
 
 // Satellite selection state
@@ -81,9 +68,6 @@ const isFetchingSatellites = ref(false)
 
 // Form data with proper initialization
 const formData = ref<InstallationFormData>({
-  server: {
-    server_id: ''
-  },
   environment: {
     team_args: [],
     team_env: {},
@@ -100,7 +84,7 @@ const formData = ref<InstallationFormData>({
 
 // Computed property to check if server requires OAuth
 const requiresOAuth = computed(() => {
-  return formData.value.server.server_data?.requires_oauth === true
+  return props.serverData?.requires_oauth === true
 })
 
 // Computed property to determine if satellite step should be shown
@@ -110,7 +94,6 @@ const shouldShowSatelliteStep = computed(() => {
 
 // Progress steps for DsProgressSteps component
 const progressSteps = computed<ProgressStep[]>(() => {
-  // Skip the first step (server selection) for progress display
   const wizardSteps = []
 
   // Step 1: Satellite Selection (only if multiple satellites)
@@ -140,108 +123,41 @@ const progressSteps = computed<ProgressStep[]>(() => {
 const completedSteps = computed(() => {
   const completed: number[] = []
 
-  // If satellite step is shown and we've passed it
-  if (shouldShowSatelliteStep.value && currentStep.value > 1) {
+  if (shouldShowSatelliteStep.value && currentStep.value > 0) {
     completed.push(0) // Satellite step completed
-  }
-
-  // If we're on the final step (environment/oauth)
-  if (shouldShowSatelliteStep.value && currentStep.value > 2) {
-    completed.push(1)
-  } else if (!shouldShowSatelliteStep.value && currentStep.value > 1) {
-    completed.push(0)
   }
 
   return completed
 })
 
-// Current progress step (adjusted for skipped server selection)
+// Current progress step
 const currentProgressStep = computed(() => {
-  if (currentStep.value === 0) return -1 // Server selection, no progress shown
-
-  if (shouldShowSatelliteStep.value) {
-    // With satellite step: Step 1 = satellite (progress 0), Step 2 = environment (progress 1)
-    return currentStep.value - 1
-  } else {
-    // Without satellite step: Step 1 = environment (progress 0)
-    return currentStep.value - 1
-  }
+  return currentStep.value
 })
 
-// Additional computed properties
+// Step navigation
 const totalSteps = computed(() => {
-  // Server selection (0) + Satellite (1, conditional) + Environment/OAuth (2 or 1)
-  return shouldShowSatelliteStep.value ? 3 : 2
+  return shouldShowSatelliteStep.value ? 2 : 1
 })
-const isFirstStep = computed(() => currentStep.value === 0)
 const isLastStep = computed(() => currentStep.value === totalSteps.value - 1)
 const canGoNext = computed(() => !isLastStep.value)
-const canGoPrevious = computed(() => !isFirstStep.value)
 
-const canProceedFromEnvironment = computed(() => {
-  // If no server is selected, can't proceed
-  if (!formData.value.server.server_id) {
-    return false
-  }
-
-  // If OAuth is required, always allow proceeding (no validation needed for OAuth step)
+const canSubmit = computed(() => {
   if (requiresOAuth.value) {
     return true
   }
-
-  // Use the validation state from the EnvironmentVariablesStep component
   return environmentValidation.value.isValid
 })
 
-const canSubmit = computed(() => {
-  return formData.value.server.server_id &&
-         formData.value.platform.installation_type &&
-         canProceedFromEnvironment.value
-})
-
 const nextStep = () => {
-  // Determine which step we're on based on whether satellite step is shown
-  const environmentStepIndex = shouldShowSatelliteStep.value ? 2 : 1
-
-  // Mark environment step as touched when user tries to proceed from it
-  if (currentStep.value === environmentStepIndex) {
-    environmentStepTouched.value = true
-
-    // Check validation before proceeding
-    if (!environmentValidation.value.isValid) {
-      // Show error toast for missing required fields
-      if (environmentValidation.value.missingFields.length > 0) {
-        toast.error(t('mcpInstallations.wizard.environment.missingRequiredFields'), {
-          description: environmentValidation.value.missingFields.join(', ')
-        })
-      }
-      return
-    }
-  }
-
   if (canGoNext.value) {
     currentStep.value++
   }
 }
 
 const previousStep = () => {
-  if (canGoPrevious.value) {
+  if (currentStep.value > 0) {
     currentStep.value--
-
-    // Reset form data when going back to previous steps
-    if (currentStep.value === 0) {
-      // Going back to server selection - clear server data
-      formData.value.server.server_id = ''
-      formData.value.server.server_data = undefined
-      formData.value.environment.team_env = {}
-      formData.value.environment.user_env = {}
-      environmentStepTouched.value = false
-    } else if (shouldShowSatelliteStep.value && currentStep.value === 1) {
-      // Going back to satellite step - clear satellite selection
-      formData.value.platform.satellite_id = ''
-    } else if (!shouldShowSatelliteStep.value && currentStep.value === 1) {
-      // No satellite step, going back to server selection (step 0) - already handled above
-    }
   }
 }
 
@@ -269,7 +185,6 @@ const fetchSatellites = async () => {
     toast.error(t('mcpInstallations.wizard.satellite.errorFetching'), {
       description: errorMessage
     })
-    // Set empty array on error to allow wizard to continue
     satellites.value = []
   } finally {
     isFetchingSatellites.value = false
@@ -284,12 +199,10 @@ const initializeTeamContext = async () => {
       const storedTeamId = eventBus.getState<string>('selected_team_id')
 
       if (storedTeamId) {
-        // Try to find the stored team in available teams
         const storedTeam = userTeams.find(team => team.id === storedTeamId)
         if (storedTeam) {
           currentTeamId.value = storedTeam.id
         } else {
-          // Stored team not found, fallback to default team
           const defaultTeam = userTeams.find(team => team.is_default) || userTeams[0]
           if (defaultTeam) {
             currentTeamId.value = defaultTeam.id
@@ -297,7 +210,6 @@ const initializeTeamContext = async () => {
           }
         }
       } else {
-        // No stored team, use default team
         const defaultTeam = userTeams.find(team => team.is_default) || userTeams[0]
         if (defaultTeam) {
           currentTeamId.value = defaultTeam.id
@@ -313,76 +225,12 @@ const initializeTeamContext = async () => {
   }
 }
 
-// Form submission
-const submitInstallation = async () => {
-  try {
-    isSubmitting.value = true
+// Initialize environment form from server data
+const initializeEnvironmentForm = () => {
+  const serverData = props.serverData
+  if (!serverData) return
 
-    // Ensure we have a team ID
-    if (!currentTeamId.value) {
-      throw new Error('No team selected. Please refresh the page and try again.')
-    }
-
-    // Prepare installation data aligned with backend API
-    const installationData = {
-      server_id: formData.value.server.server_id,
-      installation_type: formData.value.platform.installation_type,
-      team_args: formData.value.environment.team_args,
-      team_env: formData.value.environment.team_env,
-      team_headers: formData.value.environment.team_headers,
-      team_url_query_params: formData.value.environment.team_url_query_params,
-      user_environment_variables: formData.value.environment.user_env,
-      user_url_query_params: formData.value.environment.user_url_query_params,
-      installation_name: formData.value.server.server_data?.name || 'Unknown Server'
-    }
-
-    // Call backend API to create installation with real team ID
-    const response = await McpInstallationService.createInstallation(currentTeamId.value, installationData)
-
-    if (response.success) {
-      // Show success toast
-      toast.success('Installation successful', {
-        description: `${formData.value.server.server_data?.name || 'MCP server'} has been installed.`
-      })
-
-      // Emit event to refresh installation list
-      eventBus.emit('mcp-installations-updated')
-
-      // Redirect to installation list
-      router.push('/mcp-server')
-    } else {
-      throw new Error(response.message || 'Failed to create installation')
-    }
-
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Failed to submit installation'
-    toast.error(t('mcpInstallations.notifications.installError'), {
-      description: errorMessage
-    })
-  } finally {
-    isSubmitting.value = false
-  }
-}
-
-// Handle server selection change
-const handleServerSelected = (serverData: any) => {
-  formData.value.server.server_data = serverData
-
-  // Reset environment variables when server changes
-  formData.value.environment.team_args = []
-  formData.value.environment.team_env = {}
-  formData.value.environment.user_env = {}
-
-  // Reset touched state when server changes
-  environmentStepTouched.value = false
-
-  // Reset validation state when server changes
-  environmentValidation.value = {
-    isValid: true, // Will be updated by the component
-    missingFields: []
-  }
-
-  // Pre-populate team arguments with empty values from new schema
+  // Pre-populate team arguments
   if (serverData.team_args_schema) {
     try {
       const teamArgsSchema = typeof serverData.team_args_schema === 'string'
@@ -397,7 +245,7 @@ const handleServerSelected = (serverData: any) => {
     }
   }
 
-  // Pre-populate team and user environment variables with empty values from new schema
+  // Pre-populate team environment variables
   if (serverData.team_env_schema) {
     try {
       const teamEnvSchema = typeof serverData.team_env_schema === 'string'
@@ -414,6 +262,7 @@ const handleServerSelected = (serverData: any) => {
     }
   }
 
+  // Pre-populate user environment variables
   if (serverData.user_env_schema) {
     try {
       const userEnvSchema = typeof serverData.user_env_schema === 'string'
@@ -428,6 +277,50 @@ const handleServerSelected = (serverData: any) => {
     } catch (error) {
       console.error('Error parsing user_env_schema:', error)
     }
+  }
+}
+
+// Form submission
+const submitInstallation = async () => {
+  try {
+    isSubmitting.value = true
+
+    if (!currentTeamId.value) {
+      throw new Error('No team selected. Please refresh the page and try again.')
+    }
+
+    const installationData = {
+      server_id: props.serverId,
+      installation_type: formData.value.platform.installation_type,
+      team_args: formData.value.environment.team_args,
+      team_env: formData.value.environment.team_env,
+      team_headers: formData.value.environment.team_headers,
+      team_url_query_params: formData.value.environment.team_url_query_params,
+      user_environment_variables: formData.value.environment.user_env,
+      user_url_query_params: formData.value.environment.user_url_query_params,
+      installation_name: props.serverData?.name || 'Unknown Server'
+    }
+
+    const response = await McpInstallationService.createInstallation(currentTeamId.value, installationData)
+
+    if (response.success) {
+      toast.success('Installation successful', {
+        description: `${props.serverData?.name || 'MCP server'} has been installed.`
+      })
+
+      eventBus.emit('mcp-installations-updated')
+      router.push('/mcp-server')
+    } else {
+      throw new Error(response.message || 'Failed to create installation')
+    }
+
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Failed to submit installation'
+    toast.error(t('mcpInstallations.notifications.installError'), {
+      description: errorMessage
+    })
+  } finally {
+    isSubmitting.value = false
   }
 }
 
@@ -447,27 +340,22 @@ const handleOAuthAuthorization = async () => {
   try {
     isSubmitting.value = true
 
-    // Ensure we have a team ID
     if (!currentTeamId.value) {
       throw new Error('No team selected. Please refresh the page and try again.')
     }
 
-    // Prepare authorization data
     const authorizationData = {
-      server_id: formData.value.server.server_id,
-      installation_name: formData.value.server.server_data?.name || 'Unknown Server',
+      server_id: props.serverId,
+      installation_name: props.serverData?.name || 'Unknown Server',
       installation_type: formData.value.platform.installation_type
     }
 
-    // Call backend to start OAuth flow
     const response = await McpInstallationService.startOAuthAuthorization(
       currentTeamId.value,
       authorizationData
     )
 
-    // Check if OAuth is required
     if (!response.requires_authorization) {
-      // Server doesn't require OAuth, should not reach here
       toast.success('Installation successful', {
         description: 'MCP server has been installed.'
       })
@@ -479,7 +367,6 @@ const handleOAuthAuthorization = async () => {
       return
     }
 
-    // Open OAuth popup window
     const popupWidth = 600
     const popupHeight = 700
     const left = window.screenX + (window.outerWidth - popupWidth) / 2
@@ -511,7 +398,6 @@ const handleOAuthAuthorization = async () => {
 
 // Handle OAuth popup messages
 const handleOAuthMessage = (event: MessageEvent) => {
-  // Security: Verify origin (allow both frontend and backend origins)
   const backendUrl = new URL(import.meta.env.VITE_DEPLOYSTACK_BACKEND_URL || 'http://localhost:3000')
   const allowedOrigins = [window.location.origin, backendUrl.origin]
 
@@ -520,118 +406,49 @@ const handleOAuthMessage = (event: MessageEvent) => {
     return
   }
 
-  // Handle success message
   if (event.data.type === 'oauth_success') {
-    // Close popup if still open
     if (oauthPopup.value && !oauthPopup.value.closed) {
       oauthPopup.value.close()
     }
     oauthPopup.value = null
 
-    // Show success toast
     toast.success('Installation successful', {
-      description: `${formData.value.server.server_data?.name || 'MCP server'} has been installed and connected.`
+      description: `${props.serverData?.name || 'MCP server'} has been installed and connected.`
     })
 
-    // Emit event to refresh installation list
     eventBus.emit('mcp-installations-updated')
-
-    // Redirect to installation list
     router.push('/mcp-server')
   }
 
-  // Handle error message
   else if (event.data.type === 'oauth_error') {
     const { error } = event.data
 
-    // Close popup if still open
     if (oauthPopup.value && !oauthPopup.value.closed) {
       oauthPopup.value.close()
     }
     oauthPopup.value = null
 
-    // Show error toast
     toast.error('Authentication failed', {
       description: error || 'OAuth authorization failed. Please try again.'
     })
   }
 }
 
-// Handle query parameters for pre-selection
-const handleQueryParameters = async () => {
-  const serverId = route.query.serverId as string
-  const step = route.query.step as string
-
-  if (serverId) {
-    try {
-      // Fetch server data from API
-      const serverData = await McpCatalogService.getServerById(serverId)
-
-      if (serverData) {
-        // Pre-populate form data
-        formData.value.server.server_id = serverId
-        formData.value.server.server_data = serverData
-
-        // Pre-populate environment variables with empty values from new schema
-        if (serverData.user_env_schema) {
-          try {
-            const userEnvSchema = typeof serverData.user_env_schema === 'string'
-              ? JSON.parse(serverData.user_env_schema)
-              : serverData.user_env_schema
-
-            if (Array.isArray(userEnvSchema)) {
-              userEnvSchema.forEach((env: any) => {
-                formData.value.environment.user_env[env.name] = ''
-              })
-            }
-          } catch (error) {
-            console.error('Error parsing user_env_schema:', error)
-          }
-        }
-
-        // Set initial step if specified
-        if (step === '2') {
-          currentStep.value = 1 // Step 2 = index 1
-        }
-      }
-    } catch (error) {
-      console.error('Error loading server from query parameters:', error)
-      toast.error(t('mcpInstallations.wizard.server.errorTitle'), {
-        description: 'Failed to load the specified server. Please try again.'
-      })
-    }
-  }
-}
+// Watch for serverData changes and reinitialize form
+watch(() => props.serverData, () => {
+  initializeEnvironmentForm()
+}, { immediate: true })
 
 onMounted(async () => {
-  // Initialize team context
   await initializeTeamContext()
-
-  // Fetch available satellites for the team
   await fetchSatellites()
 
-  // Handle query parameters for pre-selection
-  await handleQueryParameters()
-
-  // Listen for OAuth popup messages
   window.addEventListener('message', handleOAuthMessage)
-
-  // Listen for wizard reset events
-  eventBus.on('mcp-install-wizard-reset', () => {
-    currentStep.value = 0
-    formData.value = {
-      server: { server_id: '' },
-      environment: { team_args: [], team_env: {}, team_headers: {}, team_url_query_params: {}, user_env: {}, user_url_query_params: {} },
-      platform: { installation_type: 'global', satellite_id: '' }
-    }
-  })
 })
 
-// Cleanup on unmount
 onUnmounted(() => {
   window.removeEventListener('message', handleOAuthMessage)
 
-  // Close OAuth popup if still open
   if (oauthPopup.value && !oauthPopup.value.closed) {
     oauthPopup.value.close()
   }
@@ -640,170 +457,99 @@ onUnmounted(() => {
 
 <template>
   <div class="space-y-6">
-    <!-- Server Selection Step (shown when currentStep === 0) -->
-    <McpServerSelectionStep
-      v-if="currentStep === 0"
-      v-model="formData.server.server_id"
-      @server-selected="handleServerSelected"
-      @next-step="nextStep"
-    />
+    <!-- Server Info Card -->
+    <div
+      v-if="serverData"
+      data-slot="card"
+      class="text-card-foreground flex flex-col gap-6 rounded-xl border py-6 bg-white max-w-3xl mx-auto w-full"
+    >
+      <div class="px-6 md:flex md:items-center md:justify-between md:space-x-6 lg:space-x-8">
+        <!-- Avatar Image -->
+        <div class="flex-shrink-0 mb-4 md:mb-0 flex justify-center md:justify-start">
+          <McpServerAvatar
+            :icon-url="serverData.icon_url"
+            :server-name="serverData.name"
+            :size="72"
+            rounded="lg"
+          />
+        </div>
 
-    <!-- Server Info Header + Progress Steps (shown after server selection) -->
-    <template v-else>
-      <!-- Server Info Card -->
-      <div
-        v-if="formData.server.server_data"
-        data-slot="card"
-        class="text-card-foreground flex flex-col gap-6 rounded-xl border py-6 bg-white max-w-3xl mx-auto w-full"
-      >
-        <div class="px-6 md:flex md:items-center md:justify-between md:space-x-6 lg:space-x-8">
-          <!-- Avatar Image -->
-          <div class="flex-shrink-0 mb-4 md:mb-0 flex justify-center md:justify-start">
-            <McpServerAvatar
-              :icon-url="formData.server.server_data.icon_url"
-              :server-name="formData.server.server_data.name"
-              :size="72"
-              rounded="lg"
-            />
+        <!-- Server Information Grid -->
+        <dl class="flex-auto divide-y divide-gray-200 text-sm text-gray-600 md:grid md:grid-cols-2 md:gap-x-6 md:divide-y-0 md:w-80 md:flex-none lg:gap-x-8">
+          <!-- Server Name -->
+          <div class="max-md:flex max-md:justify-between max-md:py-4 max-md:first:pt-0 max-md:last:pb-0">
+            <dt class="font-medium text-gray-900">{{ t('mcpInstallations.wizard.server.name') }}</dt>
+            <dd class="md:mt-1">{{ serverData.name }}</dd>
           </div>
 
-          <!-- Server Information Grid -->
-          <dl class="flex-auto divide-y divide-gray-200 text-sm text-gray-600 md:grid md:grid-cols-2 md:gap-x-6 md:divide-y-0 md:w-80 md:flex-none lg:gap-x-8">
-            <!-- Server Name -->
-            <div class="max-md:flex max-md:justify-between max-md:py-4 max-md:first:pt-0 max-md:last:pb-0">
-              <dt class="font-medium text-gray-900">{{ t('mcpInstallations.wizard.server.name') }}</dt>
-              <dd class="md:mt-1">{{ formData.server.server_data.name }}</dd>
-            </div>
-
-            <!-- Author -->
-            <div class="max-md:flex max-md:justify-between max-md:py-4 max-md:first:pt-0 max-md:last:pb-0">
-              <dt class="font-medium text-gray-900">{{ t('mcpInstallations.wizard.server.author') }}</dt>
-              <dd class="md:mt-1">
-                {{ formData.server.server_data.organization || formData.server.server_data.author_name || 'Unknown' }}
-              </dd>
-            </div>
-          </dl>
-
-          <!-- Description -->
-          <div v-if="formData.server.server_data.description" class="mt-4 md:mt-0 md:ml-6 lg:flex-1">
-            <p class="text-sm text-gray-600">
-              {{ formData.server.server_data.description }}
-            </p>
+          <!-- Author -->
+          <div class="max-md:flex max-md:justify-between max-md:py-4 max-md:first:pt-0 max-md:last:pb-0">
+            <dt class="font-medium text-gray-900">{{ t('mcpInstallations.wizard.server.author') }}</dt>
+            <dd class="md:mt-1">
+              {{ serverData.organization || serverData.author_name || 'Unknown' }}
+            </dd>
           </div>
+        </dl>
 
-          <!-- Details Button -->
-          <div class="flex items-center w-full md:w-auto mt-4 md:mt-0">
+        <!-- Description -->
+        <div v-if="serverData.description" class="mt-4 md:mt-0 md:ml-6 lg:flex-1">
+          <p class="text-sm text-gray-600">
+            {{ serverData.description }}
+          </p>
+        </div>
+
+        <!-- Details Button -->
+        <div class="flex items-center w-full md:w-auto mt-4 md:mt-0">
+          <Button
+            variant="outline"
+            @click="isDetailsSheetOpen = true"
+            class="bg-white w-full md:w-auto"
+          >
+            Details
+          </Button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Progress Steps -->
+    <DsProgressSteps
+      :steps="progressSteps"
+      :current-step="currentProgressStep"
+      :completed-steps="completedSteps"
+      max-width="max-w-3xl"
+    >
+      <!-- Step Content 0: Satellite Selection if shown, otherwise Environment/OAuth -->
+      <template #step-content-0>
+        <!-- Satellite Selection (only if multiple satellites) -->
+        <div v-if="shouldShowSatelliteStep">
+          <SatelliteSelectionStep
+            v-model="formData.platform.satellite_id"
+            :satellites="satellites"
+            :is-loading="isFetchingSatellites"
+          />
+
+          <!-- Navigation Buttons for Satellite Step -->
+          <div class="flex flex-col sm:flex-row items-stretch sm:items-center sm:justify-between gap-3 mt-8 sm:mt-6">
+            <Button variant="outline" @click="handleCancel" class="w-full sm:w-auto">
+              {{ t('navigation.cancel') }}
+            </Button>
+
             <Button
-              variant="outline"
-              @click="isDetailsSheetOpen = true"
-              class="bg-white w-full md:w-auto"
+              @click="nextStep"
+              :disabled="!formData.platform.satellite_id"
+              class="w-full sm:w-auto"
             >
-              Details
+              {{ t('navigation.next') }}
             </Button>
           </div>
         </div>
-      </div>
 
-      <!-- Progress Steps -->
-      <DsProgressSteps
-        :steps="progressSteps"
-        :current-step="currentProgressStep"
-        :completed-steps="completedSteps"
-        max-width="max-w-3xl"
-      >
-        <!-- Step Content 0: Satellite Selection if shown, otherwise Environment/OAuth -->
-        <template #step-content-0>
-          <!-- Satellite Selection (only if multiple satellites) -->
-          <div v-if="shouldShowSatelliteStep">
-            <SatelliteSelectionStep
-              v-model="formData.platform.satellite_id"
-              :satellites="satellites"
-              :is-loading="isFetchingSatellites"
-            />
-
-            <!-- Navigation Buttons for Satellite Step -->
-            <div class="flex flex-col sm:flex-row items-stretch sm:items-center sm:justify-between gap-3 mt-8 sm:mt-6">
-              <Button variant="outline" @click="previousStep" class="w-full sm:w-auto">
-                {{ t('navigation.previous') }}
-              </Button>
-
-              <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-2">
-                <Button variant="ghost" @click="handleCancel" class="w-full sm:w-auto">
-                  {{ t('navigation.cancel') }}
-                </Button>
-
-                <Button
-                  @click="nextStep"
-                  :disabled="!formData.platform.satellite_id"
-                  class="w-full sm:w-auto"
-                >
-                  {{ t('navigation.next') }}
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Environment/OAuth Step (when satellite step is hidden) -->
-          <div v-else>
-            <!-- OAuth Authorization Step (if OAuth required) -->
-            <OAuthAuthorizationStep
-              v-if="requiresOAuth"
-              :server-data="formData.server.server_data"
-              :is-authorizing="isSubmitting"
-              @authorize="handleOAuthAuthorization"
-            />
-
-            <!-- Environment Variables Step (if OAuth NOT required) -->
-            <EnvironmentVariablesStep
-              v-else
-              v-model="formData.environment"
-              :server-data="formData.server.server_data"
-              @validation-change="handleValidationChange"
-            />
-
-            <!-- Navigation Buttons -->
-            <div class="flex flex-col sm:flex-row items-stretch sm:items-center sm:justify-between gap-3 mt-8 sm:mt-6">
-              <Button variant="outline" @click="previousStep" class="w-full sm:w-auto">
-                {{ t('navigation.previous') }}
-              </Button>
-
-              <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-2">
-                <Button variant="ghost" @click="handleCancel" class="w-full sm:w-auto">
-                  {{ t('navigation.cancel') }}
-                </Button>
-
-                <!-- OAuth: "Authorize & Install" button -->
-                <Button
-                  v-if="requiresOAuth"
-                  @click="handleOAuthAuthorization"
-                  :disabled="!formData.platform.installation_type || isSubmitting"
-                  class="w-full sm:w-auto"
-                >
-                  <Spinner v-if="isSubmitting" class="mr-2" />
-                  {{ t('mcpInstallations.wizard.authorizeAndInstall') }}
-                </Button>
-
-                <!-- Non-OAuth: "Install" button -->
-                <Button
-                  v-else
-                  @click="submitInstallation"
-                  :disabled="!canSubmit || isSubmitting"
-                  class="w-full sm:w-auto"
-                >
-                  <Spinner v-if="isSubmitting" class="mr-2" />
-                  {{ t('mcpInstallations.wizard.install') }}
-                </Button>
-              </div>
-            </div>
-          </div>
-        </template>
-
-        <!-- Environment/OAuth Step when satellite step is shown -->
-        <template #step-content-1>
+        <!-- Environment/OAuth Step (when satellite step is hidden) -->
+        <div v-else>
           <!-- OAuth Authorization Step (if OAuth required) -->
           <OAuthAuthorizationStep
             v-if="requiresOAuth"
-            :server-data="formData.server.server_data"
+            :server-data="serverData"
             :is-authorizing="isSubmitting"
             @authorize="handleOAuthAuthorization"
           />
@@ -812,26 +558,22 @@ onUnmounted(() => {
           <EnvironmentVariablesStep
             v-else
             v-model="formData.environment"
-            :server-data="formData.server.server_data"
+            :server-data="serverData"
             @validation-change="handleValidationChange"
           />
 
           <!-- Navigation Buttons -->
           <div class="flex flex-col sm:flex-row items-stretch sm:items-center sm:justify-between gap-3 mt-8 sm:mt-6">
-            <Button variant="outline" @click="previousStep" class="w-full sm:w-auto">
-              {{ t('navigation.previous') }}
+            <Button variant="outline" @click="handleCancel" class="w-full sm:w-auto">
+              {{ t('navigation.cancel') }}
             </Button>
 
             <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-2">
-              <Button variant="ghost" @click="handleCancel" class="w-full sm:w-auto">
-                {{ t('navigation.cancel') }}
-              </Button>
-
               <!-- OAuth: "Authorize & Install" button -->
               <Button
                 v-if="requiresOAuth"
                 @click="handleOAuthAuthorization"
-                :disabled="!formData.platform.installation_type || isSubmitting"
+                :disabled="isSubmitting"
                 class="w-full sm:w-auto"
               >
                 <Spinner v-if="isSubmitting" class="mr-2" />
@@ -850,14 +592,68 @@ onUnmounted(() => {
               </Button>
             </div>
           </div>
-        </template>
-      </DsProgressSteps>
-    </template>
+        </div>
+      </template>
+
+      <!-- Environment/OAuth Step when satellite step is shown -->
+      <template #step-content-1>
+        <!-- OAuth Authorization Step (if OAuth required) -->
+        <OAuthAuthorizationStep
+          v-if="requiresOAuth"
+          :server-data="serverData"
+          :is-authorizing="isSubmitting"
+          @authorize="handleOAuthAuthorization"
+        />
+
+        <!-- Environment Variables Step (if OAuth NOT required) -->
+        <EnvironmentVariablesStep
+          v-else
+          v-model="formData.environment"
+          :server-data="serverData"
+          @validation-change="handleValidationChange"
+        />
+
+        <!-- Navigation Buttons -->
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center sm:justify-between gap-3 mt-8 sm:mt-6">
+          <Button variant="outline" @click="previousStep" class="w-full sm:w-auto">
+            {{ t('navigation.previous') }}
+          </Button>
+
+          <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-2">
+            <Button variant="ghost" @click="handleCancel" class="w-full sm:w-auto">
+              {{ t('navigation.cancel') }}
+            </Button>
+
+            <!-- OAuth: "Authorize & Install" button -->
+            <Button
+              v-if="requiresOAuth"
+              @click="handleOAuthAuthorization"
+              :disabled="isSubmitting"
+              class="w-full sm:w-auto"
+            >
+              <Spinner v-if="isSubmitting" class="mr-2" />
+              {{ t('mcpInstallations.wizard.authorizeAndInstall') }}
+            </Button>
+
+            <!-- Non-OAuth: "Install" button -->
+            <Button
+              v-else
+              @click="submitInstallation"
+              :disabled="!canSubmit || isSubmitting"
+              class="w-full sm:w-auto"
+            >
+              <Spinner v-if="isSubmitting" class="mr-2" />
+              {{ t('mcpInstallations.wizard.install') }}
+            </Button>
+          </div>
+        </div>
+      </template>
+    </DsProgressSteps>
 
     <!-- Details Sheet -->
     <McpServerDetailsSheet
       v-model:open="isDetailsSheetOpen"
-      :server="formData.server.server_data ?? null"
+      :server="serverData ?? null"
     />
   </div>
 </template>

@@ -34,13 +34,7 @@ const handleInstall = () => {
 
   emit('install', props.server)
 
-  router.push({
-    path: '/mcp-server/install',
-    query: {
-      serverId: props.server.id,
-      step: '2'
-    }
-  })
+  router.push(`/mcp-server/install/${props.server.id}`)
 }
 
 const handleServerClick = () => {
@@ -54,9 +48,9 @@ const getServerDescription = (server: McpServer) => {
 
 const getRuntimeBadgeClass = (runtime: string | null | undefined) => {
   if (!runtime) return 'bg-gray-100 text-gray-800'
-  
+
   const runtimeLower = runtime.toLowerCase()
-  
+
   if (runtimeLower === 'node') {
     return 'bg-green-100 text-green-800'
   } else if (runtimeLower === 'python') {
@@ -64,7 +58,7 @@ const getRuntimeBadgeClass = (runtime: string | null | undefined) => {
   } else if (runtimeLower === 'http') {
     return 'bg-purple-100 text-purple-800'
   }
-  
+
   return 'bg-gray-100 text-gray-800'
 }
 

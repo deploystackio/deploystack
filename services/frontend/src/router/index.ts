@@ -100,10 +100,21 @@ const routes = [
     meta: { requiresSetup: true },
   },
   {
+    path: '/mcp-server/search',
+    name: 'McpServerSearch',
+    component: () => import('../views/mcp-server/search.vue'),
+    meta: { requiresSetup: true },
+  },
+  {
+    path: '/mcp-server/install/:id',
+    name: 'McpServerInstallById',
+    component: () => import('../views/mcp-server/install/[id].vue'),
+    meta: { requiresSetup: true },
+  },
+  {
     path: '/mcp-server/install',
     name: 'McpServerInstall',
-    component: () => import('../views/mcp-server/install.vue'),
-    meta: { requiresSetup: true },
+    redirect: '/mcp-server/search',
   },
   {
     path: '/mcp-server/view/:id',
