@@ -487,9 +487,11 @@ export class TeamService {
       }, `Found ${autoInstallServers.length} MCP servers marked for auto-installation`);
     }
 
-    // Import McpInstallationService dynamically to avoid circular dependencies
+    // Import services dynamically to avoid circular dependencies
     const { McpInstallationService } = await import('./mcpInstallationService');
+    const { SatelliteCommandService } = await import('./satelliteCommandService');
     const installationService = new McpInstallationService(db, logger || console as any);
+    const satelliteCommandService = new SatelliteCommandService(db, logger || console as any);
 
     let successCount = 0;
     let errorCount = 0;
@@ -498,8 +500,8 @@ export class TeamService {
     for (const server of autoInstallServers) {
       try {
         const installationName = server.name; // Use server name as installation name
-        
-        await installationService.createInstallation(
+
+        const installation = await installationService.createInstallation(
           teamId,
           userId,
           {
@@ -510,8 +512,35 @@ export class TeamService {
           }
         );
 
+        // Notify satellites about the new installation
+        try {
+          const commands = await satelliteCommandService.notifyMcpInstallation(
+            installation.id,
+            teamId,
+            userId
+          );
+
+          if (logger) {
+            logger.debug({
+              operation: 'auto_install_mcp_servers',
+              installationId: installation.id,
+              commandsCreated: commands.length,
+              satelliteIds: commands.map(c => c.satellite_id)
+            }, 'Satellite commands created for auto-installed MCP server');
+          }
+        } catch (commandError) {
+          // Log but don't fail - installation succeeded
+          if (logger) {
+            logger.warn({
+              error: commandError,
+              operation: 'auto_install_mcp_servers',
+              installationId: installation.id
+            }, 'Failed to create satellite commands for auto-installed MCP server');
+          }
+        }
+
         successCount++;
-        
+
         if (logger) {
           logger.debug({
             operation: 'auto_install_mcp_servers',
