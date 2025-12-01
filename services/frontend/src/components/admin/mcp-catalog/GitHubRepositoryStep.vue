@@ -30,6 +30,20 @@ const emit = defineEmits<Emits>()
 const repositoryUrl = ref(props.modelValue?.repository_url || '')
 const validationError = ref<string | null>(null)
 
+// Clean repository URL by removing query parameters and hash fragments
+// e.g., https://github.com/owner/repo?tab=readme-ov-file -> https://github.com/owner/repo
+const cleanRepositoryUrl = (url: string): string => {
+  if (!url || url.trim() === '') return ''
+  try {
+    const parsed = new URL(url)
+    // Return just the origin + pathname (no search params or hash)
+    return `${parsed.origin}${parsed.pathname}`.replace(/\/$/, '') // Also remove trailing slash
+  } catch {
+    // If URL parsing fails, do basic string cleanup
+    return url.split('?')[0]?.split('#')[0]?.replace(/\/$/, '') || url
+  }
+}
+
 // Basic repository URL validation (supports any Git platform)
 // Returns true if URL is empty (optional) or if it's a valid format
 const isValidRepositoryUrl = computed(() => {
@@ -60,19 +74,22 @@ const validateUrl = () => {
 
   validationError.value = null
 
+  // Clean the URL (remove query params and hash fragments)
+  const cleanedUrl = cleanRepositoryUrl(repositoryUrl.value)
+
   // Detect repository source from URL
   let source = 'github'
-  if (repositoryUrl.value.includes('github.com')) {
+  if (cleanedUrl.includes('github.com')) {
     source = 'github'
-  } else if (repositoryUrl.value.includes('gitlab.com')) {
+  } else if (cleanedUrl.includes('gitlab.com')) {
     source = 'gitlab'
-  } else if (repositoryUrl.value.includes('bitbucket.org')) {
+  } else if (cleanedUrl.includes('bitbucket.org')) {
     source = 'bitbucket'
   }
 
-  // Update parent component
+  // Update parent component with cleaned URL
   emit('update:modelValue', {
-    repository_url: repositoryUrl.value,
+    repository_url: cleanedUrl,
     repository_source: source,
     git_branch: 'main', // Default branch
     auto_populated: false
