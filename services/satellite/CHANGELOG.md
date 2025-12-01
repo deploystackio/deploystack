@@ -1,5 +1,57 @@
 # Changelog
 
+## 0.12.0 (2025-11-30)
+
+* chore(all): bump isomorphic-dompurify from 2.32.0 to 2.33.0 6243596
+* chore(all): update dependencies in package.json files 12bdfcd
+* chore(backend): release v0.46.0 772c0fa
+* chore(backend): release v0.46.0 1490b2a
+* chore(backend): release v0.47.0 2070153
+* chore(backend): release v0.47.0 cb03508
+* chore(backend): release v0.48.0 c6c7efc
+* chore(backend): release v0.48.0 dde356a
+* chore(deps): bump actions/checkout from 5 to 6 e5d84d1
+* chore(frontend): release v0.41.0 6f71964
+* chore(frontend): release v0.41.0 52da4b2
+* chore(frontend): release v0.42.0 94ca47c
+* chore(frontend): release v0.42.0 14e3b3b
+* chore(frontend): release v0.43.0 7d260ab
+* chore(frontend): release v0.43.0 86f1055
+* chore(frontend): release v0.44.0 086b98d
+* chore(frontend): release v0.44.0 589b69a
+* feat(all): add cleanup job for satellite heartbeats and worker f2f0d7c
+* feat(all): add server_count to MCP category schema and responses, view mcp server catalog 7bac93b
+* feat(all): add slug field for server identification and validation change a1b8088
+* feat(all): implement breadcrumbs and several frontend and UI improvements f3d3e70
+* feat(all): implement tool toggle functionality with optimistic updates 4189eb0
+* feat(backend): add API endpoint for retrieving team usage statistics 0be749b
+* feat(backend): add API endpoint to list featured MCP categories 79c6a53
+* feat(backend): add satellite command notifications for MCP installations 769d557
+* feat(backend): add total MCP server installation limit per team a9dff02
+* feat(backend): complete PostgreSQL-only database migration 88c52f8
+* feat(backend): enhance database connection options and error logging 2ac4964
+* feat(backend): enhance server list and search responses with category details 92a86a1
+* feat(backend): implement CRUD operations for OAuth providers ddb26bd
+* feat(backend): implement minimal server response format for list endpoints bf97cd6
+* feat(backend): implement toggle tool status route for MCP installations a4f8713
+* feat(frontend): add featured MCP servers page and related components 00f4897
+* feat(frontend): add MCP server limit to team management forms c47091a
+* feat(frontend): add spinner component and replace loading indicators 8f5bd9f
+* feat(frontend): add team usage indicator component and integration e035a86
+* feat(frontend): add team usage statistics component and API integration 0befca8
+* feat(frontend): implement settings menu components for client configuration 0eb2ae6
+* feat(frontend): replace switches with checkboxes for settings c144d10
+* feat(satellite): enhance logging for tool execution and OAuth header injection 0bd6546
+* feat(satellite): implement disabled tool management and filtering 7adc7b4
+* feat(satellite): unify tool path format to use serverSlug for namespacing 210a576
+* fix(backend): convert string values to numbers for tool statistics 17b970f
+* fix(backend): replace like with ilike for case-insensitive search e88c5fb
+* fix(backend): set git_branch to null if repository_url is absent bb16362
+* style(frontend): remove max-width from content area in settings and profile b9624a8
+* feature(backend): re-build the global settings - added name param dfab0ed
+* refactor(backend): use GlobalSettings for backend URL in OAuth routes 7aa72ca
+* refactor(satellite): enhance headers for Cloudflare compatibility 362987f
+
 ## 0.11.0 (2025-11-23)
 
 * chore(backend): release v0.45.0 482c6f4
