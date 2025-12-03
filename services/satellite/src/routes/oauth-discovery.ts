@@ -7,6 +7,9 @@ import { type FastifyInstance } from 'fastify';
  */
 export default async function oauthDiscoveryRoutes(server: FastifyInstance) {
   const backendUrl = process.env.DEPLOYSTACK_BACKEND_URL || 'http://localhost:3000';
+  // Public URL for OAuth metadata - what MCP clients will use to reach the backend
+  // Falls back to backendUrl for simple deployments where internal = external URL
+  const backendPublicUrl = process.env.DEPLOYSTACK_BACKEND_PUBLIC_URL || backendUrl;
   const satelliteUrl = process.env.DEPLOYSTACK_SATELLITE_URL || `http://localhost:${process.env.PORT || 3001}`;
 
   // RFC 9728: OAuth 2.0 Protected Resource Metadata
@@ -31,7 +34,7 @@ export default async function oauthDiscoveryRoutes(server: FastifyInstance) {
   }, async (request, reply) => {
     const metadata = {
       resource: satelliteUrl,
-      authorization_servers: [backendUrl]
+      authorization_servers: [backendPublicUrl]
     };
 
     server.log.debug({
@@ -81,15 +84,15 @@ export default async function oauthDiscoveryRoutes(server: FastifyInstance) {
     }
   }, async (request, reply) => {
     const metadata = {
-      issuer: backendUrl,
-      authorization_endpoint: `${backendUrl}/api/oauth2/auth`,
-      token_endpoint: `${backendUrl}/api/oauth2/token`,
-      introspection_endpoint: `${backendUrl}/api/oauth2/introspect`,
+      issuer: backendPublicUrl,
+      authorization_endpoint: `${backendPublicUrl}/api/oauth2/auth`,
+      token_endpoint: `${backendPublicUrl}/api/oauth2/token`,
+      introspection_endpoint: `${backendPublicUrl}/api/oauth2/introspect`,
       response_types_supported: ['code'],
       grant_types_supported: ['authorization_code'],
       code_challenge_methods_supported: ['S256'],
       scopes_supported: ['mcp:read', 'mcp:tools:execute', 'offline_access'],
-      registration_endpoint: `${backendUrl}/api/oauth2/register`
+      registration_endpoint: `${backendPublicUrl}/api/oauth2/register`
     };
 
     server.log.debug({
@@ -145,15 +148,15 @@ export default async function oauthDiscoveryRoutes(server: FastifyInstance) {
   }, async (request, reply) => {
     // Return the same metadata as OAuth authorization server for compatibility
     const metadata = {
-      issuer: backendUrl,
-      authorization_endpoint: `${backendUrl}/api/oauth2/auth`,
-      token_endpoint: `${backendUrl}/api/oauth2/token`,
-      introspection_endpoint: `${backendUrl}/api/oauth2/introspect`,
+      issuer: backendPublicUrl,
+      authorization_endpoint: `${backendPublicUrl}/api/oauth2/auth`,
+      token_endpoint: `${backendPublicUrl}/api/oauth2/token`,
+      introspection_endpoint: `${backendPublicUrl}/api/oauth2/introspect`,
       response_types_supported: ['code'],
       grant_types_supported: ['authorization_code'],
       code_challenge_methods_supported: ['S256'],
       scopes_supported: ['mcp:read', 'mcp:tools:execute', 'offline_access'],
-      registration_endpoint: `${backendUrl}/api/oauth2/register`
+      registration_endpoint: `${backendPublicUrl}/api/oauth2/register`
     };
 
     server.log.debug({

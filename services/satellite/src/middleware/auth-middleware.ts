@@ -173,10 +173,12 @@ export function requireScope(requiredScope: string) {
  */
 function sendAuthenticationRequired(reply: FastifyReply, _request: FastifyRequest) {
   const backendUrl = process.env.DEPLOYSTACK_BACKEND_URL || 'http://localhost:3000';
-  
+  // Public URL for OAuth - what MCP clients will use to reach the backend
+  const backendPublicUrl = process.env.DEPLOYSTACK_BACKEND_PUBLIC_URL || backendUrl;
+
   const wwwAuthenticate = `Bearer realm="DeployStack MCP Satellite", ` +
-    `authorizationUri="${backendUrl}/api/oauth2/auth", ` +
-    `tokenUri="${backendUrl}/api/oauth2/token", ` +
+    `authorizationUri="${backendPublicUrl}/api/oauth2/auth", ` +
+    `tokenUri="${backendPublicUrl}/api/oauth2/token", ` +
     `resource="deploystack:mcp:satellite"`;
 
   const errorResponse = {
@@ -186,8 +188,8 @@ function sendAuthenticationRequired(reply: FastifyReply, _request: FastifyReques
       message: 'Authentication required',
       data: {
         message: 'Bearer token required for MCP access',
-        authorization_uri: `${backendUrl}/api/oauth2/auth`,
-        token_uri: `${backendUrl}/api/oauth2/token`
+        authorization_uri: `${backendPublicUrl}/api/oauth2/auth`,
+        token_uri: `${backendPublicUrl}/api/oauth2/token`
       }
     },
     id: null
