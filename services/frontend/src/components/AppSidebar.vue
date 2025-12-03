@@ -120,12 +120,12 @@ const navigationItems = [
 // Helper function to check if a route is active
 const isRouteActive = (url: string) => {
   const currentPath = router.currentRoute.value.path
-  
+
   // Special case: '/teams' should only match exactly '/teams', not '/teams/manage/...'
   if (url === '/teams') {
     return currentPath === '/teams'
   }
-  
+
   // For all other routes, use startsWith for sub-route matching
   return currentPath.startsWith(url)
 }
@@ -421,7 +421,7 @@ onUnmounted(() => {
             <DropdownMenuTrigger as-child>
               <SidebarMenuButton size="lg" class="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground">
                 <Avatar class="h-8 w-8 rounded-lg">
-                  <AvatarImage src="https://www.shadcn-vue.com/avatars/shadcn.jpg" :alt="userName" />
+                  <AvatarImage src="/images/user.jpg" :alt="userName" />
                   <AvatarFallback class="rounded-lg">
                     {{ userLoading ? '...' : getUserInitials(userName || userEmail) }}
                   </AvatarFallback>
