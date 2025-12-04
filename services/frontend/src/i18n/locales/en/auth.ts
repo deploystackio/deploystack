@@ -2,6 +2,7 @@
 export default {
   logout: {
     title: 'Logout',
-    inProgressMessage: 'Logout in Progress... Redirecting to login.',
+    inProgressMessage: 'Logging out...',
+    successMessage: 'You have been logged out successfully. Redirecting to login...',
   },
 }
