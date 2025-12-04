@@ -27,7 +27,7 @@ const open = defineModel<boolean>('open', { required: true })
         <SheetTitle>Server Details</SheetTitle>
       </SheetHeader>
 
-      <div v-if="server" class="pt-4 pb-4 space-y-6">
+      <div v-if="server" class="px-4 pt-4 pb-4 space-y-6">
         <!-- Basic Information Section -->
         <div class="space-y-4">
 

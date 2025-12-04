@@ -480,26 +480,13 @@ onUnmounted(() => {
           />
         </div>
 
-        <!-- Server Information Grid -->
-        <dl class="flex-auto divide-y divide-gray-200 text-sm text-gray-600 md:grid md:grid-cols-2 md:gap-x-6 md:divide-y-0 md:w-80 md:flex-none lg:gap-x-8">
+        <!-- Server Info -->
+        <div class="flex-auto text-sm text-gray-600">
           <!-- Server Name -->
-          <div class="max-md:flex max-md:justify-between max-md:py-4 max-md:first:pt-0 max-md:last:pb-0">
-            <dt class="font-medium text-gray-900">{{ t('mcpInstallations.wizard.server.name') }}</dt>
-            <dd class="md:mt-1">{{ serverData.name }}</dd>
-          </div>
+          <p class="font-semibold text-gray-900">{{ serverData.name }}</p>
 
-          <!-- Author -->
-          <div class="max-md:flex max-md:justify-between max-md:py-4 max-md:first:pt-0 max-md:last:pb-0">
-            <dt class="font-medium text-gray-900">{{ t('mcpInstallations.wizard.server.author') }}</dt>
-            <dd class="md:mt-1">
-              {{ serverData.organization || serverData.author_name || 'Unknown' }}
-            </dd>
-          </div>
-        </dl>
-
-        <!-- Description -->
-        <div v-if="serverData.description" class="mt-4 md:mt-0 md:ml-6 lg:flex-1">
-          <p class="text-sm text-gray-600">
+          <!-- Description -->
+          <p v-if="serverData.description" class="mt-1 line-clamp-2">
             {{ serverData.description }}
           </p>
         </div>
