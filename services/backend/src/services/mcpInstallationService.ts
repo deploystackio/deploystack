@@ -704,6 +704,42 @@ export class McpInstallationService {
     return deleted;
   }
 
+  /**
+   * Get all installations for a specific MCP server
+   * Used for cascade deletion when a global server is removed
+   */
+  async getInstallationsByServerId(serverId: string): Promise<Array<{
+    id: string;
+    team_id: string;
+    installation_name: string;
+    server_id: string;
+    created_by: string;
+  }>> {
+    this.logger.debug({
+      operation: 'get_installations_by_server_id',
+      serverId
+    }, 'Getting all installations for MCP server');
+
+    const installations = await this.db
+      .select({
+        id: this.mcpServerInstallations.id,
+        team_id: this.mcpServerInstallations.team_id,
+        installation_name: this.mcpServerInstallations.installation_name,
+        server_id: this.mcpServerInstallations.server_id,
+        created_by: this.mcpServerInstallations.created_by
+      })
+      .from(this.mcpServerInstallations)
+      .where(eq(this.mcpServerInstallations.server_id, serverId));
+
+    this.logger.info({
+      operation: 'get_installations_by_server_id',
+      serverId,
+      installationsFound: installations.length
+    }, 'Retrieved installations for MCP server');
+
+    return installations;
+  }
+
   async generateClientConfig(
     installationId: string,
     teamId: string,

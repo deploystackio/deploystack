@@ -704,6 +704,7 @@ export default {
     updateSuccess: 'MCP server updated successfully',
     updateError: 'Failed to update MCP server: {error}',
     deleteSuccess: 'MCP server deleted successfully',
+    deletionQueued: '"{name}" has been queued for deletion. All team installations will be notified.',
     deleteError: 'Failed to delete MCP server: {error}',
     deleteConfirm: 'Are you sure you want to delete "{name}"? This action cannot be undone.',
     featureSuccess: 'Server featured successfully',

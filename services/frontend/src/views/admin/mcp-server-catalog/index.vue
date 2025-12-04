@@ -473,10 +473,10 @@ onMounted(async () => {
     fetchLanguages()
   ])
 
-  // Check for delete success message from query parameters
-  const deletedServerName = route.query.deleted as string
-  if (deletedServerName) {
-    toast.success(t('mcpCatalog.messages.deleteSuccess'))
+  // Check for deletion queued message from query parameters
+  const deletionQueuedServerName = route.query.deletionQueued as string
+  if (deletionQueuedServerName) {
+    toast.success(t('mcpCatalog.messages.deletionQueued', { name: deletionQueuedServerName }))
 
     // Clean up the query parameter
     router.replace({ query: {} })

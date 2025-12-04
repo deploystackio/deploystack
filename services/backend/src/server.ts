@@ -171,8 +171,8 @@ export async function initializeDatabaseDependentServices(
         const jobProcessorService = new JobProcessorService(dbInstance, server.log);
         server.log.debug('✅ JobProcessorService initialized');
         
-        // Register workers
-        registerWorkers(jobProcessorService, dbInstance, server.log);
+        // Register workers (pass eventBus for workers that need to emit events)
+        registerWorkers(jobProcessorService, dbInstance, server.log, server.eventBus);
         server.log.debug('✅ Workers registered');
         
         // Start processing jobs

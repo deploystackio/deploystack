@@ -14324,9 +14324,10 @@ paths:
       summary: Delete global MCP server (Global Admin only)
       tags:
         - MCP Servers
-      description: Delete an existing global MCP server - requires global admin
-        permissions. Only global servers can be deleted through this endpoint.
-        This action is irreversible.
+      description: Queues deletion of a global MCP server. The server and all team
+        installations will be removed via a background job. Each team with an
+        installation will be notified and satellites will be updated. Requires
+        global admin permissions.
       parameters:
         - schema:
             type: string
@@ -14338,8 +14339,8 @@ paths:
       security:
         - cookieAuth: []
       responses:
-        "200":
-          description: Global MCP server deleted successfully
+        "202":
+          description: Server deletion has been queued
           content:
             application/json:
               schema:
@@ -14347,32 +14348,37 @@ paths:
                 properties:
                   success:
                     type: boolean
-                    description: Indicates successful server deletion
+                    description: Indicates request was accepted
                   message:
                     type: string
-                    description: Success message
+                    description: Status message
                   data:
                     type: object
                     properties:
                       id:
                         type: string
-                        description: ID of the deleted server
+                        description: ID of the server being deleted
                       name:
                         type: string
-                        description: Name of the deleted server
-                      deleted_at:
+                        description: Name of the server being deleted
+                      job_id:
                         type: string
-                        format: date-time
-                        description: Deletion timestamp
+                        description: Background job ID for tracking
+                      status:
+                        type: string
+                        enum:
+                          - queued
+                        description: Deletion status
                     required:
                       - id
                       - name
-                      - deleted_at
+                      - job_id
+                      - status
                 required:
                   - success
                   - message
                   - data
-                description: Global MCP server deleted successfully
+                description: Server deletion has been queued
         "400":
           description: Bad Request - Invalid input or missing Content-Type header
           content:

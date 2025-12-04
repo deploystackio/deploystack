@@ -310,10 +310,10 @@ const deleteServer = async () => {
     const serverName = server.value?.name || 'Unknown Server'
     await McpCatalogService.deleteGlobalServer(serverId)
 
-    // Redirect to catalog with success message
+    // Redirect to catalog with success message (deletion is queued, not immediate)
     router.push({
       path: '/admin/mcp-server-catalog',
-      query: { deleted: serverName }
+      query: { deletionQueued: serverName }
     })
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'Failed to delete server'

@@ -14,6 +14,12 @@ vi.mock('../../../../../src/services/mcpCatalogService', () => ({
   }))
 }));
 
+vi.mock('../../../../../src/services/jobQueueService', () => ({
+  JobQueueService: vi.fn().mockImplementation(() => ({
+    createJob: vi.fn()
+  }))
+}));
+
 vi.mock('../../../../../src/db', () => ({
   getDb: vi.fn()
 }));
@@ -97,28 +103,36 @@ describe('MCP Servers - Delete Global', () => {
       const deleteCall = (mockFastify.delete as any).mock.calls.find(
         (call: any[]) => call[0] === '/mcp/servers/global/:id'
       );
-      
+
       expect(deleteCall).toBeDefined();
       const [, schema] = deleteCall;
-      
+
       expect(schema.schema).toBeDefined();
       expect(schema.schema.tags).toEqual(['MCP Servers']);
       expect(schema.schema.summary).toBe('Delete global MCP server (Global Admin only)');
-      expect(schema.schema.description).toBe('Delete an existing global MCP server - requires global admin permissions. Only global servers can be deleted through this endpoint. This action is irreversible.');
+      expect(schema.schema.description).toBe('Queues deletion of a global MCP server. The server and all team installations will be removed via a background job. Each team with an installation will be notified and satellites will be updated. Requires global admin permissions.');
     });
   });
 
   describe('DELETE /mcp/servers/global/:id', () => {
     let mockMcpService: any;
+    let mockJobQueueService: any;
 
     beforeEach(async () => {
       const { McpCatalogService } = await import('../../../../../src/services/mcpCatalogService');
+      const { JobQueueService } = await import('../../../../../src/services/jobQueueService');
+
       mockMcpService = {
         getServerById: vi.fn(),
         deleteServer: vi.fn()
       };
+      mockJobQueueService = {
+        createJob: vi.fn()
+      };
+
       (McpCatalogService as any).mockImplementation(() => mockMcpService);
-      
+      (JobQueueService as any).mockImplementation(() => mockJobQueueService);
+
       await deleteGlobalServer(mockFastify as FastifyInstance);
     });
 
@@ -148,7 +162,7 @@ describe('MCP Servers - Delete Global', () => {
       expect(mockReply.send).toHaveBeenCalledWith(expect.stringContaining('"error":"Server not found or not a global server"'));
     });
 
-    it('should successfully delete global server', async () => {
+    it('should successfully queue deletion for global server', async () => {
       const handler = routeHandlers['DELETE /mcp/servers/global/:id'];
       const mockServer = {
         id: 'test-server-id',
@@ -156,18 +170,26 @@ describe('MCP Servers - Delete Global', () => {
         description: 'Test server description',
         visibility: 'global'
       };
-      
+
       mockMcpService.getServerById.mockResolvedValue(mockServer);
-      mockMcpService.deleteServer.mockResolvedValue(true);
+      mockJobQueueService.createJob.mockResolvedValue({ id: 'job-123' });
 
       await handler(mockRequest, mockReply);
 
-      expect(mockReply.status).toHaveBeenCalledWith(200);
+      expect(mockReply.status).toHaveBeenCalledWith(202);
       expect(mockReply.type).toHaveBeenCalledWith('application/json');
       expect(mockReply.send).toHaveBeenCalledWith(expect.stringContaining('"success":true'));
+      expect(mockJobQueueService.createJob).toHaveBeenCalledWith(
+        'mcp_server_cascade_delete',
+        expect.objectContaining({
+          serverId: 'test-server-id',
+          serverName: 'Test Global Server',
+          serverDescription: 'Test server description'
+        })
+      );
     });
 
-    it('should handle deletion failure', async () => {
+    it('should handle job queue errors', async () => {
       const handler = routeHandlers['DELETE /mcp/servers/global/:id'];
       const mockServer = {
         id: 'test-server-id',
@@ -175,15 +197,15 @@ describe('MCP Servers - Delete Global', () => {
         description: 'Test server description',
         visibility: 'global'
       };
-      
+
       mockMcpService.getServerById.mockResolvedValue(mockServer);
-      mockMcpService.deleteServer.mockResolvedValue(false);
+      mockJobQueueService.createJob.mockRejectedValue(new Error('Job queue error'));
 
       await handler(mockRequest, mockReply);
 
-      expect(mockReply.status).toHaveBeenCalledWith(404);
+      expect(mockReply.status).toHaveBeenCalledWith(500);
       expect(mockReply.type).toHaveBeenCalledWith('application/json');
-      expect(mockReply.send).toHaveBeenCalledWith(expect.stringContaining('"error":"Server not found"'));
+      expect(mockReply.send).toHaveBeenCalledWith(expect.stringContaining('"error":"Failed to queue global MCP server deletion"'));
     });
 
     it('should handle service errors', async () => {
@@ -194,7 +216,7 @@ describe('MCP Servers - Delete Global', () => {
 
       expect(mockReply.status).toHaveBeenCalledWith(500);
       expect(mockReply.type).toHaveBeenCalledWith('application/json');
-      expect(mockReply.send).toHaveBeenCalledWith(expect.stringContaining('"error":"Failed to delete global MCP server"'));
+      expect(mockReply.send).toHaveBeenCalledWith(expect.stringContaining('"error":"Failed to queue global MCP server deletion"'));
     });
 
     it('should handle specific error messages', async () => {
@@ -222,15 +244,23 @@ describe('MCP Servers - Delete Global', () => {
 
   describe('Error Handling', () => {
     let mockMcpService: any;
+    let mockJobQueueService: any;
 
     beforeEach(async () => {
       const { McpCatalogService } = await import('../../../../../src/services/mcpCatalogService');
+      const { JobQueueService } = await import('../../../../../src/services/jobQueueService');
+
       mockMcpService = {
         getServerById: vi.fn(),
         deleteServer: vi.fn()
       };
+      mockJobQueueService = {
+        createJob: vi.fn()
+      };
+
       (McpCatalogService as any).mockImplementation(() => mockMcpService);
-      
+      (JobQueueService as any).mockImplementation(() => mockJobQueueService);
+
       await deleteGlobalServer(mockFastify as FastifyInstance);
     });
 
@@ -276,15 +306,23 @@ describe('MCP Servers - Delete Global', () => {
 
   describe('Response Format', () => {
     let mockMcpService: any;
+    let mockJobQueueService: any;
 
     beforeEach(async () => {
       const { McpCatalogService } = await import('../../../../../src/services/mcpCatalogService');
+      const { JobQueueService } = await import('../../../../../src/services/jobQueueService');
+
       mockMcpService = {
         getServerById: vi.fn(),
         deleteServer: vi.fn()
       };
+      mockJobQueueService = {
+        createJob: vi.fn()
+      };
+
       (McpCatalogService as any).mockImplementation(() => mockMcpService);
-      
+      (JobQueueService as any).mockImplementation(() => mockJobQueueService);
+
       await deleteGlobalServer(mockFastify as FastifyInstance);
     });
 
@@ -296,9 +334,9 @@ describe('MCP Servers - Delete Global', () => {
         description: 'Test server description',
         visibility: 'global'
       };
-      
+
       mockMcpService.getServerById.mockResolvedValue(mockServer);
-      mockMcpService.deleteServer.mockResolvedValue(true);
+      mockJobQueueService.createJob.mockResolvedValue({ id: 'job-123' });
 
       await handler(mockRequest, mockReply);
 
@@ -314,7 +352,9 @@ describe('MCP Servers - Delete Global', () => {
       expect(typeof response.message).toBe('string');
       expect(response.data).toHaveProperty('id');
       expect(response.data).toHaveProperty('name');
-      expect(response.data).toHaveProperty('deleted_at');
+      expect(response.data).toHaveProperty('job_id');
+      expect(response.data).toHaveProperty('status');
+      expect(response.data.status).toBe('queued');
     });
 
     it('should return response in correct format for error', async () => {
@@ -334,7 +374,7 @@ describe('MCP Servers - Delete Global', () => {
       expect(typeof response.error).toBe('string');
     });
 
-    it('should set correct HTTP status code for success', async () => {
+    it('should set correct HTTP status code for success (202 Accepted)', async () => {
       const handler = routeHandlers['DELETE /mcp/servers/global/:id'];
       const mockServer = {
         id: 'test-server-id',
@@ -342,13 +382,13 @@ describe('MCP Servers - Delete Global', () => {
         description: 'Test server description',
         visibility: 'global'
       };
-      
+
       mockMcpService.getServerById.mockResolvedValue(mockServer);
-      mockMcpService.deleteServer.mockResolvedValue(true);
+      mockJobQueueService.createJob.mockResolvedValue({ id: 'job-123' });
 
       await handler(mockRequest, mockReply);
 
-      expect(mockReply.status).toHaveBeenCalledWith(200);
+      expect(mockReply.status).toHaveBeenCalledWith(202);
       expect(mockReply.status).toHaveBeenCalledTimes(1);
     });
 
@@ -374,15 +414,23 @@ describe('MCP Servers - Delete Global', () => {
 
   describe('Performance', () => {
     let mockMcpService: any;
+    let mockJobQueueService: any;
 
     beforeEach(async () => {
       const { McpCatalogService } = await import('../../../../../src/services/mcpCatalogService');
+      const { JobQueueService } = await import('../../../../../src/services/jobQueueService');
+
       mockMcpService = {
         getServerById: vi.fn(),
         deleteServer: vi.fn()
       };
+      mockJobQueueService = {
+        createJob: vi.fn()
+      };
+
       (McpCatalogService as any).mockImplementation(() => mockMcpService);
-      
+      (JobQueueService as any).mockImplementation(() => mockJobQueueService);
+
       await deleteGlobalServer(mockFastify as FastifyInstance);
     });
 
@@ -390,7 +438,7 @@ describe('MCP Servers - Delete Global', () => {
       const handler = routeHandlers['DELETE /mcp/servers/global/:id'];
       mockMcpService.getServerById.mockResolvedValue(null);
 
-      const promises = Array.from({ length: 10 }, () => 
+      const promises = Array.from({ length: 10 }, () =>
         handler(mockRequest, mockReply)
       );
 
@@ -440,7 +488,7 @@ describe('MCP Servers - Delete Global', () => {
       const deleteCall = (mockFastify.delete as any).mock.calls[0];
       const [, schema] = deleteCall;
 
-      const hasAdminReference = 
+      const hasAdminReference =
         schema.schema.summary.toLowerCase().includes('admin') ||
         schema.schema.description.toLowerCase().includes('admin');
 
@@ -455,6 +503,119 @@ describe('MCP Servers - Delete Global', () => {
 
       expect(path).toBe('/mcp/servers/global/:id');
       expect(path).toContain(':id'); // Should have ID parameter
+    });
+  });
+
+  describe('Job Queue Integration', () => {
+    let mockMcpService: any;
+    let mockJobQueueService: any;
+
+    beforeEach(async () => {
+      const { McpCatalogService } = await import('../../../../../src/services/mcpCatalogService');
+      const { JobQueueService } = await import('../../../../../src/services/jobQueueService');
+
+      mockMcpService = {
+        getServerById: vi.fn(),
+        deleteServer: vi.fn()
+      };
+      mockJobQueueService = {
+        createJob: vi.fn()
+      };
+
+      (McpCatalogService as any).mockImplementation(() => mockMcpService);
+      (JobQueueService as any).mockImplementation(() => mockJobQueueService);
+
+      await deleteGlobalServer(mockFastify as FastifyInstance);
+    });
+
+    it('should create job with correct type', async () => {
+      const handler = routeHandlers['DELETE /mcp/servers/global/:id'];
+      const mockServer = {
+        id: 'test-server-id',
+        name: 'Test Global Server',
+        description: 'Test server description',
+        visibility: 'global'
+      };
+
+      mockMcpService.getServerById.mockResolvedValue(mockServer);
+      mockJobQueueService.createJob.mockResolvedValue({ id: 'job-123' });
+
+      await handler(mockRequest, mockReply);
+
+      expect(mockJobQueueService.createJob).toHaveBeenCalledWith(
+        'mcp_server_cascade_delete',
+        expect.any(Object)
+      );
+    });
+
+    it('should include user info in job payload', async () => {
+      const handler = routeHandlers['DELETE /mcp/servers/global/:id'];
+      const mockServer = {
+        id: 'test-server-id',
+        name: 'Test Global Server',
+        description: 'Test server description',
+        visibility: 'global'
+      };
+
+      mockMcpService.getServerById.mockResolvedValue(mockServer);
+      mockJobQueueService.createJob.mockResolvedValue({ id: 'job-123' });
+
+      await handler(mockRequest, mockReply);
+
+      expect(mockJobQueueService.createJob).toHaveBeenCalledWith(
+        'mcp_server_cascade_delete',
+        expect.objectContaining({
+          deletedBy: expect.objectContaining({
+            id: 'test-user-id',
+            email: 'test@example.com'
+          })
+        })
+      );
+    });
+
+    it('should include request metadata in job payload', async () => {
+      const handler = routeHandlers['DELETE /mcp/servers/global/:id'];
+      const mockServer = {
+        id: 'test-server-id',
+        name: 'Test Global Server',
+        description: 'Test server description',
+        visibility: 'global'
+      };
+
+      mockMcpService.getServerById.mockResolvedValue(mockServer);
+      mockJobQueueService.createJob.mockResolvedValue({ id: 'job-123' });
+
+      await handler(mockRequest, mockReply);
+
+      expect(mockJobQueueService.createJob).toHaveBeenCalledWith(
+        'mcp_server_cascade_delete',
+        expect.objectContaining({
+          metadata: expect.objectContaining({
+            ip: '127.0.0.1'
+          })
+        })
+      );
+    });
+
+    it('should return job_id in response', async () => {
+      const handler = routeHandlers['DELETE /mcp/servers/global/:id'];
+      const mockServer = {
+        id: 'test-server-id',
+        name: 'Test Global Server',
+        description: 'Test server description',
+        visibility: 'global'
+      };
+
+      mockMcpService.getServerById.mockResolvedValue(mockServer);
+      mockJobQueueService.createJob.mockResolvedValue({ id: 'job-456' });
+
+      await handler(mockRequest, mockReply);
+
+      const sendCall = (mockReply.send as any).mock.calls[0];
+      const responseString = sendCall[0];
+      const response = JSON.parse(responseString);
+
+      expect(response.data.job_id).toBe('job-456');
     });
   });
 });

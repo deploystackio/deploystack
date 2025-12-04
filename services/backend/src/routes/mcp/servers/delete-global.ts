@@ -1,17 +1,28 @@
 import { type FastifyInstance } from 'fastify';
 import { requireGlobalAdmin } from '../../../middleware/roleMiddleware';
 import { McpCatalogService } from '../../../services/mcpCatalogService';
+import { JobQueueService } from '../../../services/jobQueueService';
 import { getDb } from '../../../db';
-import { EVENT_NAMES } from '../../../events';
-import type { EventContext } from '../../../events/types';
 import {
   SERVER_ID_PARAM_SCHEMA,
-  DELETE_GLOBAL_SERVER_SUCCESS_RESPONSE_SCHEMA,
   COMMON_ERROR_RESPONSES,
   type ServerIdParams,
-  type DeleteGlobalServerSuccessResponse,
   type ErrorResponse
 } from './schemas';
+
+/**
+ * Response interface for queued server deletion
+ */
+interface DeleteGlobalServerQueuedResponse {
+  success: boolean;
+  message: string;
+  data: {
+    id: string;
+    name: string;
+    job_id: string;
+    status: 'queued';
+  };
+}
 
 export default async function deleteGlobalServer(server: FastifyInstance) {
   server.delete('/mcp/servers/global/:id', {
@@ -19,33 +30,48 @@ export default async function deleteGlobalServer(server: FastifyInstance) {
     schema: {
       tags: ['MCP Servers'],
       summary: 'Delete global MCP server (Global Admin only)',
-      description: 'Delete an existing global MCP server - requires global admin permissions. Only global servers can be deleted through this endpoint. This action is irreversible.',
+      description: 'Queues deletion of a global MCP server. The server and all team installations will be removed via a background job. Each team with an installation will be notified and satellites will be updated. Requires global admin permissions.',
       security: [{ cookieAuth: [] }],
-      
+
       // Fastify validation schema
       params: SERVER_ID_PARAM_SCHEMA,
-      
+
       response: {
-        200: {
-          ...DELETE_GLOBAL_SERVER_SUCCESS_RESPONSE_SCHEMA,
-          description: 'Global MCP server deleted successfully'
+        202: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', description: 'Indicates request was accepted' },
+            message: { type: 'string', description: 'Status message' },
+            data: {
+              type: 'object',
+              properties: {
+                id: { type: 'string', description: 'ID of the server being deleted' },
+                name: { type: 'string', description: 'Name of the server being deleted' },
+                job_id: { type: 'string', description: 'Background job ID for tracking' },
+                status: { type: 'string', enum: ['queued'], description: 'Deletion status' }
+              },
+              required: ['id', 'name', 'job_id', 'status']
+            }
+          },
+          required: ['success', 'message', 'data'],
+          description: 'Server deletion has been queued'
         },
         ...COMMON_ERROR_RESPONSES
       }
     }
   }, async (request, reply) => {
     const { id: serverId } = request.params as ServerIdParams;
-    
+
     request.log.info({
       operation: 'delete_global_mcp_server',
       userId: request.user?.id,
       serverId
-    }, 'Deleting global MCP server');
+    }, 'Queueing global MCP server deletion');
 
     try {
       const db = getDb();
       const mcpService = new McpCatalogService(db, request.log);
-      
+
       // First check if server exists and is global
       const existingServer = await mcpService.getServerById(serverId);
       if (!existingServer) {
@@ -54,7 +80,7 @@ export default async function deleteGlobalServer(server: FastifyInstance) {
           userId: request.user?.id,
           serverId
         }, 'Server not found');
-        
+
         const errorResponse: ErrorResponse = {
           success: false,
           error: 'Server not found'
@@ -70,7 +96,7 @@ export default async function deleteGlobalServer(server: FastifyInstance) {
           serverId,
           serverVisibility: existingServer.visibility
         }, 'Attempted to delete non-global server through global endpoint');
-        
+
         const errorResponse: ErrorResponse = {
           success: false,
           error: 'Server not found or not a global server'
@@ -79,95 +105,47 @@ export default async function deleteGlobalServer(server: FastifyInstance) {
         return reply.status(404).type('application/json').send(jsonString);
       }
 
-      // Store server info before deletion for response
-      const serverInfo = {
-        id: existingServer.id,
-        name: existingServer.name
-      };
+      // Create job queue service
+      const jobQueueService = new JobQueueService(db, request.log);
 
-      const deleted = await mcpService.deleteServer(
-        serverId,
-        request.user!.id,
-        'global_admin' // We know user is global admin due to middleware
-      );
+      // Create a background job for cascade deletion
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const userEmail = (request.user as any).email || 'unknown';
 
-      if (!deleted) {
-        request.log.warn({
-          operation: 'delete_global_mcp_server',
-          userId: request.user?.id,
-          serverId
-        }, 'Failed to delete server - server not found or insufficient permissions');
-        
-        const errorResponse: ErrorResponse = {
-          success: false,
-          error: 'Server not found'
-        };
-        const jsonString = JSON.stringify(errorResponse);
-        return reply.status(404).type('application/json').send(jsonString);
-      }
+      const job = await jobQueueService.createJob('mcp_server_cascade_delete', {
+        serverId: existingServer.id,
+        serverName: existingServer.name,
+        serverDescription: existingServer.description,
+        deletedBy: {
+          id: request.user!.id,
+          email: userEmail
+        },
+        metadata: {
+          ip: request.ip
+        }
+      });
 
       request.log.info({
         operation: 'delete_global_mcp_server',
         userId: request.user?.id,
         serverId,
-        serverName: serverInfo.name
-      }, 'Global MCP server deleted successfully');
+        serverName: existingServer.name,
+        jobId: job.id
+      }, 'Global MCP server deletion job queued');
 
-      // Emit MCP_SERVER_DELETED event
-      try {
-        const eventContext: EventContext = {
-          db,
-          logger: request.log,
-          user: {
-            id: request.user!.id,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            email: (request.user as any).email,
-            roleId: 'global_admin'
-          },
-          request: {
-            ip: request.ip,
-            userAgent: request.headers['user-agent'],
-            requestId: request.id
-          },
-          timestamp: new Date()
-        };
-
-        server.eventBus.emitWithContext(
-          EVENT_NAMES.MCP_SERVER_DELETED,
-          {
-            server: {
-              id: serverInfo.id,
-              name: serverInfo.name,
-              description: existingServer.description
-            },
-            deletedBy: {
-              id: request.user!.id,
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              email: (request.user as any).email
-            },
-            metadata: {
-              ip: request.ip
-            }
-          },
-          eventContext
-        );
-        request.log.info(`MCP_SERVER_DELETED event emitted for server: ${serverInfo.id}`);
-      } catch (eventError) {
-        request.log.error(eventError, `Failed to emit MCP_SERVER_DELETED event for server ${serverInfo.id}:`);
-        // Don't fail deletion if event emission fails
-      }
-
-      const response: DeleteGlobalServerSuccessResponse = {
+      const response: DeleteGlobalServerQueuedResponse = {
         success: true,
-        message: 'Global MCP server deleted successfully',
+        message: 'Server deletion has been queued. All team installations will be notified.',
         data: {
-          id: serverInfo.id,
-          name: serverInfo.name,
-          deleted_at: new Date().toISOString()
+          id: existingServer.id,
+          name: existingServer.name,
+          job_id: job.id,
+          status: 'queued'
         }
       };
       const jsonString = JSON.stringify(response);
-      return reply.status(200).type('application/json').send(jsonString);
+      return reply.status(202).type('application/json').send(jsonString);
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       request.log.error({
@@ -175,7 +153,7 @@ export default async function deleteGlobalServer(server: FastifyInstance) {
         userId: request.user?.id,
         serverId,
         error
-      }, 'Failed to delete global MCP server');
+      }, 'Failed to queue global MCP server deletion');
 
       // Handle specific error cases
       if (error.message?.includes('Server not found')) {
@@ -198,7 +176,7 @@ export default async function deleteGlobalServer(server: FastifyInstance) {
 
       const errorResponse: ErrorResponse = {
         success: false,
-        error: 'Failed to delete global MCP server'
+        error: 'Failed to queue global MCP server deletion'
       };
       const jsonString = JSON.stringify(errorResponse);
       return reply.status(500).type('application/json').send(jsonString);
