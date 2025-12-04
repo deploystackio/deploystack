@@ -646,6 +646,83 @@ export default async function satelliteConfigRoute(server: FastifyInstance) {
               }
             }
 
+            // Fetch and apply user-level HTTP configuration (Tier 3)
+            // User config overrides team config for headers and URL query params
+            if (created_by_user_id) {
+              try {
+                const httpUserConfigs = await db
+                  .select()
+                  .from(mcpUserConfigurations)
+                  .where(
+                    and(
+                      eq(mcpUserConfigurations.installation_id, installation.id),
+                      eq(mcpUserConfigurations.user_id, created_by_user_id)
+                    )
+                  )
+                  .limit(1);
+
+                const httpUserConfig = httpUserConfigs[0];
+
+                // Process user headers (overrides team headers)
+                if (httpUserConfig?.user_headers) {
+                  try {
+                    const userHeadersSchema = JSON.parse(server.user_headers_schema || '[]');
+                    const decryptedUserHeaders = await McpEnvStorage.retrieveUserEnv(
+                      httpUserConfig.user_headers,
+                      userHeadersSchema,
+                      { maskSecrets: false }, // Decrypt secrets for satellite
+                      request.log
+                    );
+                    serverConfig.headers = { ...serverConfig.headers, ...decryptedUserHeaders };
+
+                    request.log.debug({
+                      serverId: server.id,
+                      userId: created_by_user_id,
+                      userHeadersCount: Object.keys(decryptedUserHeaders).length
+                    }, 'Added user headers to HTTP configuration');
+                  } catch (error) {
+                    request.log.warn({
+                      serverId: server.id,
+                      userId: created_by_user_id,
+                      error: error instanceof Error ? error.message : String(error)
+                    }, 'Failed to decrypt and parse user_headers');
+                  }
+                }
+
+                // Process user URL query params (overrides team query params)
+                if (httpUserConfig?.user_url_query_params) {
+                  try {
+                    const userUrlQueryParamsSchema = JSON.parse(server.user_url_query_params_schema || '[]');
+                    const decryptedUserQueryParams = await McpEnvStorage.retrieveUserEnv(
+                      httpUserConfig.user_url_query_params,
+                      userUrlQueryParamsSchema,
+                      { maskSecrets: false }, // Decrypt secrets for satellite
+                      request.log
+                    );
+                    finalQueryParams = { ...finalQueryParams, ...decryptedUserQueryParams };
+
+                    request.log.debug({
+                      serverId: server.id,
+                      userId: created_by_user_id,
+                      userQueryParamsCount: Object.keys(decryptedUserQueryParams).length
+                    }, 'Added user URL query params to HTTP configuration');
+                  } catch (error) {
+                    request.log.warn({
+                      serverId: server.id,
+                      userId: created_by_user_id,
+                      error: error instanceof Error ? error.message : String(error)
+                    }, 'Failed to decrypt and parse user_url_query_params');
+                  }
+                }
+              } catch (error) {
+                request.log.warn({
+                  serverId: server.id,
+                  userId: created_by_user_id,
+                  error: error instanceof Error ? error.message : String(error)
+                }, 'Failed to fetch user configuration for HTTP transport');
+              }
+            }
+
             // Apply query params to URL if any exist
             if (finalUrl && Object.keys(finalQueryParams).length > 0) {
               try {
@@ -667,7 +744,7 @@ export default async function satelliteConfigRoute(server: FastifyInstance) {
             const secretQueryParams: string[] = [];
             const secretHeaders: string[] = [];
 
-            // Extract secret query params from schema
+            // Extract secret query params from team schema
             if (installation.team_url_query_params) {
               try {
                 const teamUrlQueryParamsSchema = JSON.parse(server.team_url_query_params_schema || '[]');
@@ -681,11 +758,29 @@ export default async function satelliteConfigRoute(server: FastifyInstance) {
                 request.log.debug({
                   serverId: server.id,
                   error: error instanceof Error ? error.message : String(error)
-                }, 'Failed to extract secret query param metadata');
+                }, 'Failed to extract secret query param metadata from team schema');
               }
             }
 
-            // Extract secret headers from schema
+            // Extract secret query params from user schema
+            try {
+              const userUrlQueryParamsSchema = JSON.parse(server.user_url_query_params_schema || '[]');
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              userUrlQueryParamsSchema.forEach((field: any) => {
+                if (field.type === 'secret' || field.type === 'password') {
+                  if (!secretQueryParams.includes(field.name)) {
+                    secretQueryParams.push(field.name);
+                  }
+                }
+              });
+            } catch (error) {
+              request.log.debug({
+                serverId: server.id,
+                error: error instanceof Error ? error.message : String(error)
+              }, 'Failed to extract secret query param metadata from user schema');
+            }
+
+            // Extract secret headers from team schema
             if (installation.team_headers) {
               try {
                 const teamHeadersSchema = JSON.parse(server.team_headers_schema || '[]');
@@ -699,8 +794,26 @@ export default async function satelliteConfigRoute(server: FastifyInstance) {
                 request.log.debug({
                   serverId: server.id,
                   error: error instanceof Error ? error.message : String(error)
-                }, 'Failed to extract secret header metadata');
+                }, 'Failed to extract secret header metadata from team schema');
               }
+            }
+
+            // Extract secret headers from user schema
+            try {
+              const userHeadersSchema = JSON.parse(server.user_headers_schema || '[]');
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              userHeadersSchema.forEach((field: any) => {
+                if (field.type === 'secret' || field.type === 'password') {
+                  if (!secretHeaders.includes(field.name)) {
+                    secretHeaders.push(field.name);
+                  }
+                }
+              });
+            } catch (error) {
+              request.log.debug({
+                serverId: server.id,
+                error: error instanceof Error ? error.message : String(error)
+              }, 'Failed to extract secret header metadata from user schema');
             }
 
             // Add secret metadata to config if any secrets found
