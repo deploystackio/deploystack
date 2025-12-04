@@ -54,6 +54,8 @@ const clearEditStorage = () => {
     'edit_claude_config',
     'edit_readme_data',
     'technical_extracted_env_vars_edit',
+    'technical_extracted_headers_edit',
+    'technical_remote_url',
     'mcp_edit_drafts'
   ]
 
