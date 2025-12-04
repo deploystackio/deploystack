@@ -1,0 +1,32 @@
+//- @description Email notification when an MCP server is installed to a team
+//- @variables userName, serverName, serverDescription, teamName, dashboardUrl
+extends layouts/base.pug
+
+block content
+  h1 MCP Server Installed
+
+  p Hi #{userName},
+
+  p
+    | The MCP server
+    strong #{serverName}
+    |  has been successfully installed to team
+    strong #{teamName}
+    | .
+
+  if serverDescription
+    .server-info
+      p
+        strong About this server:
+      p= serverDescription
+
+  p You can now use this MCP server in your AI coding assistant.
+
+  if dashboardUrl
+    .text-center
+      a.button(href=dashboardUrl) View in Dashboard
+
+  p.text-muted
+    | Best regards,
+    br
+    | The DeployStack Team

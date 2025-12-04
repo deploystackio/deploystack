@@ -7,6 +7,7 @@ import { EVENT_NAMES } from '../events';
 import { McpInstallationService } from '../services/mcpInstallationService';
 import { McpCatalogService } from '../services/mcpCatalogService';
 import { SatelliteCommandService } from '../services/satelliteCommandService';
+import { McpInstallationNotificationService } from '../services/mcpInstallationNotificationService';
 
 /**
  * Payload interface for MCP server cascade deletion jobs
@@ -40,6 +41,7 @@ export class McpServerCascadeDeletionWorker implements Worker {
   private installationService: McpInstallationService;
   private catalogService: McpCatalogService;
   private satelliteCommandService: SatelliteCommandService;
+  private notificationService: McpInstallationNotificationService;
 
   constructor(
     private readonly db: AnyDatabase,
@@ -49,6 +51,7 @@ export class McpServerCascadeDeletionWorker implements Worker {
     this.installationService = new McpInstallationService(this.db, this.logger);
     this.catalogService = new McpCatalogService(this.db, this.logger);
     this.satelliteCommandService = new SatelliteCommandService(this.db, this.logger);
+    this.notificationService = new McpInstallationNotificationService(this.db, this.logger);
   }
 
   async execute(payload: unknown, jobId: string): Promise<WorkerResult> {
@@ -106,6 +109,7 @@ export class McpServerCascadeDeletionWorker implements Worker {
             installation,
             serverId,
             serverName,
+            serverDescription,
             deletedBy,
             metadata,
             jobId
@@ -203,6 +207,7 @@ export class McpServerCascadeDeletionWorker implements Worker {
     },
     serverId: string,
     serverName: string,
+    serverDescription: string,
     deletedBy: { id: string; email: string },
     metadata: { ip: string },
     jobId: string
@@ -225,6 +230,24 @@ export class McpServerCascadeDeletionWorker implements Worker {
       deletedBy,
       metadata
     );
+
+    // Queue email notifications to all team members
+    try {
+      await this.notificationService.notifyInstallationDeleted(
+        serverName,
+        serverDescription,
+        teamId
+      );
+    } catch (notificationError) {
+      this.logger.warn({
+        jobId,
+        installationId,
+        teamId,
+        error: notificationError instanceof Error ? notificationError.message : String(notificationError),
+        operation: 'mcp_server_cascade_delete_notification_error'
+      }, 'Failed to queue notification emails, continuing with deletion');
+      // Don't fail the installation deletion if notification fails
+    }
 
     // Notify satellites to refresh configuration
     try {

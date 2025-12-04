@@ -1,0 +1,28 @@
+//- @description Email notification when an MCP server is removed from a team
+//- @variables userName, serverName, serverDescription, teamName
+extends layouts/base.pug
+
+block content
+  h1 MCP Server Removed
+
+  p Hi #{userName},
+
+  p
+    | The MCP server
+    strong #{serverName}
+    |  has been removed from team
+    strong #{teamName}
+    | .
+
+  if serverDescription
+    .server-info
+      p
+        strong Server that was removed:
+      p= serverDescription
+
+  p This MCP server is no longer available for use in your team. If you need to use it again, a team administrator can reinstall it from the MCP catalog.
+
+  p.text-muted
+    | Best regards,
+    br
+    | The DeployStack Team

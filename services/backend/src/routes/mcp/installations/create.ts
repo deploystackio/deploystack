@@ -4,6 +4,7 @@ import { requireTeamPermission } from '../../../middleware/roleMiddleware';
 import { McpInstallationService } from '../../../services/mcpInstallationService';
 import { McpUserConfigurationService } from '../../../services/mcpUserConfigurationService';
 import { SatelliteCommandService } from '../../../services/satelliteCommandService';
+import { McpInstallationNotificationService } from '../../../services/mcpInstallationNotificationService';
 import { getDb } from '../../../db';
 import {
   TEAM_ID_PARAM_SCHEMA,
@@ -201,6 +202,18 @@ export default async function createInstallationRoute(server: FastifyInstance) {
       } catch (eventError) {
         request.log.error(eventError, `Failed to emit MCP_INSTALLATION_CREATED event for installation ${installation.id}:`);
         // Don't fail installation creation if event emission fails
+      }
+
+      // Queue email notifications to all team members
+      try {
+        const notificationService = new McpInstallationNotificationService(db, request.log);
+        await notificationService.notifyInstallationCreated(
+          installationData.server_id,
+          teamId
+        );
+      } catch (notificationError) {
+        request.log.error(notificationError, `Failed to queue installation notification emails for installation ${installation.id}:`);
+        // Don't fail installation creation if notification fails
       }
 
       const response: InstallationSuccessResponse = {

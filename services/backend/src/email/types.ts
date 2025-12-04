@@ -137,6 +137,21 @@ export interface TestEmailVariables {
   supportEmail?: string;
 }
 
+export interface McpInstallationCreatedEmailVariables {
+  userName: string;
+  serverName: string;
+  serverDescription?: string;
+  teamName: string;
+  dashboardUrl?: string;
+}
+
+export interface McpInstallationDeletedEmailVariables {
+  userName: string;
+  serverName: string;
+  serverDescription?: string;
+  teamName: string;
+}
+
 // Template registry for type safety
 export interface TemplateVariableMap {
   welcome: WelcomeEmailVariables;
@@ -145,6 +160,8 @@ export interface TemplateVariableMap {
   'email-verification': EmailVerificationVariables;
   'password-changed': PasswordChangedEmailVariables;
   test: TestEmailVariables;
+  'mcp-installation-created': McpInstallationCreatedEmailVariables;
+  'mcp-installation-deleted': McpInstallationDeletedEmailVariables;
 }
 
 export type TemplateNames = keyof TemplateVariableMap;
