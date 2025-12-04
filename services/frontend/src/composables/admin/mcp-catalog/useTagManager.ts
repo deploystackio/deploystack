@@ -11,7 +11,7 @@ export function useTagManager(
   const newTag = ref('')
 
   const addTag = () => {
-    const trimmedTag = newTag.value.trim()
+    const trimmedTag = newTag.value.trim().toLowerCase()
     if (trimmedTag && !currentTags().includes(trimmedTag)) {
       updateTags([...currentTags(), trimmedTag])
       newTag.value = ''
