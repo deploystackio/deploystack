@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.13.0 (2025-12-04)
+
+* feat(all): add real-time MCP server config updates with automatic stdio restart ad287e4
+* feat(all): add user configuration support in installation process cd26a0e
+* feat(all): queue MCP server deletion as background job with cascade notifications 679fcb5
+* feat(backend): add email notifications for MCP installation events 448e687
+* feat(frontend): add boolean select input for environment variables bbd9b62
+* feat(frontend): implement server search and installation wizard 4a78930
+* feat(frontend): simplify checkbox value update handling in settings 8b7c3ac
+* feat(satellite): add support for public backend URL in OAuth configuration aebb814
+* chore(backend): release v0.49.0 b8459cd
+* chore(backend): release v0.49.0 cb8ca0a
+* chore(backend): release v0.50.0 cee81fb
+* chore(backend): release v0.50.0 56decfb
+* chore(frontend): release v0.45.0 b3fe4a0
+* chore(frontend): release v0.45.0 430bfe1
+* fix(backend): notify satellites when auto-installing MCP servers for new teams b3df717
+* fix(frontend): clean repository URL and improve validation logic 3862166
+* fix(frontend): clear additional edit-related storage keys 726626a
+* fix(frontend): implement category caching and loading logic 38fa102
+* fix(frontend): normalize tag input to lowercase on addition 50fc847
+* fix(frontend): remove hotlined profile picture 2fa3257
+* fix(frontend): update logout messages for clarity and consistency 5bf215b
+* style(frontend): adjust padding for server details display c19c47a
+* docs(all): update feature list with per-tool access controls and catalog improvements d4ec492
+
 ## 0.12.0 (2025-12-01)
 
 * chore(frontend): release v0.44.0 086b98d
