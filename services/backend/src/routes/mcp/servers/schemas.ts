@@ -23,7 +23,8 @@ const COMMON_FIELDS = {
   default_team_locked: { type: 'boolean', description: 'Whether this configuration is locked at team level by default' },
   visible_to_users: { type: 'boolean', description: 'Whether this configuration is visible to team users' },
   min_items: { type: 'number', description: 'Minimum number of items (for arrays)' },
-  max_items: { type: 'number', description: 'Maximum number of items (for arrays)' }
+  max_items: { type: 'number', description: 'Maximum number of items (for arrays)' },
+  order: { type: 'number', description: 'Order position for STDIO argument ordering' }
 } as const;
 
 // Schema factory functions to reduce duplication
@@ -214,17 +215,21 @@ export const LIST_SERVERS_QUERY_SCHEMA = {
 export const TEMPLATE_ARG_SCHEMA = {
   type: 'object',
   properties: {
-    value: { 
+    value: {
       type: 'string',
       description: 'Template argument value'
     },
-    locked: { 
+    locked: {
       type: 'boolean',
       description: 'Whether this template argument is locked'
     },
-    description: { 
+    description: {
       type: 'string',
       description: 'Optional description of the template argument'
+    },
+    order: {
+      type: 'number',
+      description: 'Order position for STDIO argument ordering'
     }
   },
   required: ['value', 'locked'],
@@ -315,7 +320,8 @@ const TEAM_ADDITIONAL_FIELDS = {
 export const TEAM_ARG_SCHEMA = createConfigSchema('team argument', {
   ...TEAM_ADDITIONAL_FIELDS,
   min_items: COMMON_FIELDS.min_items,
-  max_items: COMMON_FIELDS.max_items
+  max_items: COMMON_FIELDS.max_items,
+  order: COMMON_FIELDS.order
 }, ['default_team_locked']);
 
 export const TEAM_ENV_SCHEMA = createConfigSchema('team environment variable', TEAM_ADDITIONAL_FIELDS, ['default_team_locked', 'visible_to_users']);
@@ -327,7 +333,8 @@ export const TEAM_URL_QUERY_PARAM_SCHEMA = createConfigSchema('team URL query pa
 // User level - basic structure
 export const USER_ARG_SCHEMA = createConfigSchema('user argument', {
   min_items: COMMON_FIELDS.min_items,
-  max_items: COMMON_FIELDS.max_items
+  max_items: COMMON_FIELDS.max_items,
+  order: COMMON_FIELDS.order
 });
 
 export const USER_ENV_SCHEMA = createConfigSchema('user environment variable');
@@ -1417,6 +1424,7 @@ export interface TemplateArg {
   value: string;
   locked: boolean;
   description?: string;
+  order?: number;
 }
 
 export interface TemplateEnv extends BaseConfig {
@@ -1439,6 +1447,7 @@ export interface TeamConfig extends BaseConfig {
 export interface TeamArg extends TeamConfig {
   min_items?: number;
   max_items?: number;
+  order?: number;
 }
 
 // TeamEnv, TeamHeader, and TeamUrlQueryParam are just aliases for TeamConfig
@@ -1449,14 +1458,15 @@ export type TeamUrlQueryParam = TeamConfig;
 export interface UserConfig extends BaseConfig {
   min_items?: number;
   max_items?: number;
+  order?: number;
 }
 
 // UserArg is just an alias for UserConfig
 export type UserArg = UserConfig;
-// UserEnv, UserHeader, and UserUrlQueryParam omit the array-specific fields
-export type UserEnv = Omit<UserConfig, 'min_items' | 'max_items'>;
-export type UserHeader = Omit<UserConfig, 'min_items' | 'max_items'>;
-export type UserUrlQueryParam = Omit<UserConfig, 'min_items' | 'max_items'>;
+// UserEnv, UserHeader, and UserUrlQueryParam omit the array-specific fields and order (order is for args only)
+export type UserEnv = Omit<UserConfig, 'min_items' | 'max_items' | 'order'>;
+export type UserHeader = Omit<UserConfig, 'min_items' | 'max_items' | 'order'>;
+export type UserUrlQueryParam = Omit<UserConfig, 'min_items' | 'max_items' | 'order'>;
 
 export interface ConfigurationSchema {
   template_args?: TemplateArg[];

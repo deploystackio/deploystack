@@ -18,6 +18,7 @@ export interface ConfigItem {
   locked: boolean
   default_team_locked?: boolean
   visible_to_users?: boolean // For env vars, headers, and query params
+  order?: number // Preserve original argument order (important for STDIO servers)
 }
 
 export interface ConfigurationSchema {
@@ -39,6 +40,7 @@ export interface TemplateArg {
   value: string
   locked: boolean
   description?: string
+  order?: number
 }
 
 export interface TemplateEnvVar {
@@ -69,6 +71,7 @@ export interface TeamArgsSchema {
   required: boolean
   locked: boolean
   default_team_locked?: boolean
+  order?: number
 }
 
 export interface TeamEnvSchema {
@@ -107,6 +110,7 @@ export interface UserArgsSchema {
   description?: string
   required: boolean
   locked: boolean
+  order?: number
 }
 
 export interface UserEnvSchema {

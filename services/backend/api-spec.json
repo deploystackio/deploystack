@@ -17843,6 +17843,10 @@
                             "description": {
                               "type": "string",
                               "description": "Optional description of the template argument"
+                            },
+                            "order": {
+                              "type": "number",
+                              "description": "Order position for STDIO argument ordering"
                             }
                           },
                           "required": [
@@ -17995,6 +17999,10 @@
                             "max_items": {
                               "type": "number",
                               "description": "Maximum number of items (for arrays)"
+                            },
+                            "order": {
+                              "type": "number",
+                              "description": "Order position for STDIO argument ordering"
                             }
                           },
                           "required": [
@@ -18206,6 +18214,10 @@
                             "max_items": {
                               "type": "number",
                               "description": "Maximum number of items (for arrays)"
+                            },
+                            "order": {
+                              "type": "number",
+                              "description": "Order position for STDIO argument ordering"
                             }
                           },
                           "required": [
@@ -19296,6 +19308,10 @@
                         "description": {
                           "type": "string",
                           "description": "Optional description of the template argument"
+                        },
+                        "order": {
+                          "type": "number",
+                          "description": "Order position for STDIO argument ordering"
                         }
                       },
                       "required": [
@@ -19448,6 +19464,10 @@
                         "max_items": {
                           "type": "number",
                           "description": "Maximum number of items (for arrays)"
+                        },
+                        "order": {
+                          "type": "number",
+                          "description": "Order position for STDIO argument ordering"
                         }
                       },
                       "required": [
@@ -19659,6 +19679,10 @@
                         "max_items": {
                           "type": "number",
                           "description": "Maximum number of items (for arrays)"
+                        },
+                        "order": {
+                          "type": "number",
+                          "description": "Order position for STDIO argument ordering"
                         }
                       },
                       "required": [

@@ -200,7 +200,7 @@ export default async function gatewayMeMcpConfigurationsRoute(server: FastifyIns
         try {
           // Parse base configuration from packages
           const packages = JSON.parse(server.packages || '[]');
-          
+
           if (!packages || packages.length === 0) {
             request.log.warn({
               serverId: server.id,
@@ -220,10 +220,37 @@ export default async function gatewayMeMcpConfigurationsRoute(server: FastifyIns
 
           // Start with base configuration from package transport
           let finalCommand = packageConfig.transport.command || 'npx';
-          let finalArgs = [...(packageConfig.transport.args || [])];
           let finalEnv = { ...(packageConfig.transport.env || {}) };
 
-          // Apply team configuration with proper decryption
+          // Build args from three-tier configuration with proper order
+          interface ArgItem {
+            value: string;
+            order: number;
+            source: 'template' | 'team' | 'user';
+          }
+          const orderedArgs: ArgItem[] = [];
+
+          // 1. Parse template_args (fixed values with order)
+          try {
+            const templateArgs = JSON.parse(server.template_args || '[]');
+            /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+            templateArgs.forEach((arg: any, index: number) => {
+              if (arg.value !== undefined && arg.value !== '') {
+                orderedArgs.push({
+                  value: arg.value,
+                  order: arg.order ?? index,
+                  source: 'template'
+                });
+              }
+            });
+          } catch (error) {
+            request.log.warn({
+              serverId: server.id,
+              error: error instanceof Error ? error.message : String(error)
+            }, 'Failed to parse template_args');
+          }
+
+          // 2. Parse team_args_schema and get values from installation.team_args
           if (installation.team_args) {
             try {
               const teamArgsSchema = JSON.parse(server.team_args_schema || '[]');
@@ -233,28 +260,28 @@ export default async function gatewayMeMcpConfigurationsRoute(server: FastifyIns
                 { maskSecrets: false }, // Decrypt secrets for gateway
                 request.log
               );
-              
-              // Apply decrypted team arguments
-              if (Array.isArray(decryptedTeamArgs) && decryptedTeamArgs.length > 0) {
-                // Replace args based on team_args_schema
-                /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-                teamArgsSchema.forEach((schema: any, index: number) => {
-                  if (decryptedTeamArgs[index] !== undefined) {
-                    // Find the argument in finalArgs and replace it
-                    const argIndex = finalArgs.findIndex(arg => arg === schema.name);
-                    if (argIndex !== -1) {
-                      finalArgs[argIndex + 1] = decryptedTeamArgs[index]; // Replace the value after the argument name
-                    }
-                  }
-                });
-              }
+
+              // Map decrypted values back with their schema order
+              /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+              teamArgsSchema.forEach((schema: any, index: number) => {
+                const value = decryptedTeamArgs[index];
+                if (value !== undefined && value !== '') {
+                  orderedArgs.push({
+                    value: value,
+                    order: schema.order ?? (100 + index), // Team args after template args
+                    source: 'team'
+                  });
+                }
+              });
             } catch (error) {
               request.log.warn({
                 serverId: server.id,
                 error: error instanceof Error ? error.message : String(error)
-              }, 'Failed to decrypt and parse team_args');
+              }, 'Failed to decrypt and parse team_args for ordering');
             }
           }
+
+          // NOTE: Don't sort yet - user args will be added below with their order values
 
           // Apply team environment variables with proper decryption
           if (installation.team_env) {
@@ -296,7 +323,7 @@ export default async function gatewayMeMcpConfigurationsRoute(server: FastifyIns
           let configStatus: 'ready' | 'invalid' = 'ready';
           
           if (userConfig) {
-            // Apply user args with proper decryption
+            // Apply user args with proper decryption and ordering
             if (userConfig.user_args) {
               try {
                 const userArgsSchema = JSON.parse(server.user_args_schema || '[]');
@@ -306,18 +333,17 @@ export default async function gatewayMeMcpConfigurationsRoute(server: FastifyIns
                   { maskSecrets: false }, // Decrypt secrets for gateway
                   request.log
                 );
-                
-                // Replace user-specific arguments
+
+                // Add user args to orderedArgs with their schema order
                 /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-                userArgsSchema.forEach((schema: any) => {
-                  if (decryptedUserArgs[schema.name] !== undefined) {
-                    const argIndex = finalArgs.findIndex(arg => arg === schema.name);
-                    if (argIndex !== -1) {
-                      finalArgs[argIndex] = decryptedUserArgs[schema.name];
-                    } else {
-                      // Add new argument if not found
-                      finalArgs.push(decryptedUserArgs[schema.name]);
-                    }
+                userArgsSchema.forEach((schema: any, index: number) => {
+                  const value = decryptedUserArgs[schema.name];
+                  if (value !== undefined && value !== '') {
+                    orderedArgs.push({
+                      value: value,
+                      order: schema.order ?? (200 + index), // User args after template and team
+                      source: 'user' as const
+                    });
                   } else if (schema.required) {
                     configStatus = 'invalid';
                     request.log.warn({
@@ -371,6 +397,10 @@ export default async function gatewayMeMcpConfigurationsRoute(server: FastifyIns
               }, 'User configuration required but not found');
             }
           }
+
+          // Sort all args by order and extract values
+          orderedArgs.sort((a, b) => a.order - b.order);
+          const finalArgs = orderedArgs.map(arg => arg.value);
 
           servers.push({
             id: server.id,

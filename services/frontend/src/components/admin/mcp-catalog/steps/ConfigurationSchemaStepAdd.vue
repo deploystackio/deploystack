@@ -30,6 +30,7 @@ interface Props {
     claude_desktop_config?: {
       mcpServers?: {
         [key: string]: {
+          command?: string
           args?: string[]
           env?: Record<string, string>
           url?: string
@@ -143,6 +144,7 @@ const parseArgsIntelligently = (rawArgs: string[]): ConfigItem[] => {
         required: true,
         locked: true,
         default_team_locked: false,
+        order: index,
       })
     } else {
       items.push({
@@ -156,6 +158,7 @@ const parseArgsIntelligently = (rawArgs: string[]): ConfigItem[] => {
         required: true,
         locked: false,
         default_team_locked: true,
+        order: index,
       })
     }
   })
@@ -306,6 +309,7 @@ const loadFromExistingSchema = () => {
       required: true,
       locked: arg.locked,
       default_team_locked: false,
+      order: arg.order ?? index,
     })
   })
 
@@ -321,6 +325,7 @@ const loadFromExistingSchema = () => {
       required: arg.required || false,
       locked: arg.locked || false,
       default_team_locked: arg.default_team_locked || false,
+      order: arg.order,
     })
   })
 
@@ -334,6 +339,7 @@ const loadFromExistingSchema = () => {
       dataType: arg.type || 'string',
       required: arg.required || false,
       locked: arg.locked || false,
+      order: arg.order,
     })
   })
 
@@ -484,7 +490,8 @@ const assembleSchemaAndEmit = () => {
         schema.template_args!.push({
           value: item.value || '',
           locked: item.locked,
-          description: item.description
+          description: item.description,
+          order: item.order
         })
       } else if (item.category === 'team') {
         schema.team_args_schema!.push({
@@ -493,7 +500,8 @@ const assembleSchemaAndEmit = () => {
           description: item.description,
           required: item.required,
           locked: item.locked,
-          default_team_locked: item.default_team_locked
+          default_team_locked: item.default_team_locked,
+          order: item.order
         })
       } else if (item.category === 'user') {
         schema.user_args_schema!.push({
@@ -501,7 +509,8 @@ const assembleSchemaAndEmit = () => {
           type: item.dataType,
           description: item.description,
           required: item.required,
-          locked: item.locked
+          locked: item.locked,
+          order: item.order
         })
       }
     } else if (item.type === 'env') {
@@ -591,10 +600,69 @@ const emitModelValue = () => {
 }
 
 // Computed properties
-const argumentItems = computed(() => localData.value.filter(item => item.type === 'arg'))
+const argumentItems = computed(() => {
+  const args = localData.value.filter(item => item.type === 'arg')
+  // Sort by order to preserve original argument order (important for STDIO servers)
+  return args.sort((a, b) => (a.order ?? 999) - (b.order ?? 999))
+})
 const environmentItems = computed(() => localData.value.filter(item => item.type === 'env'))
 const headerItems = computed(() => localData.value.filter(item => item.type === 'header'))
 const queryParamItems = computed(() => localData.value.filter(item => item.type === 'query_param'))
+
+// Get Claude Desktop config preview for display - reflects current argument order
+const claudeConfigPreview = computed(() => {
+  const originalConfig = props.claudeConfig?.claude_desktop_config
+  if (!originalConfig?.mcpServers) return null
+
+  const serverName = Object.keys(originalConfig.mcpServers)[0]
+  if (!serverName) return null
+
+  const originalServerConfig = originalConfig.mcpServers[serverName]
+  if (!originalServerConfig) return null
+
+  // Build args array from current argumentItems order
+  const currentArgs = argumentItems.value.map(item => item.name)
+
+  // Reconstruct the config with current argument order
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const reconstructedConfig: any = {
+    mcpServers: {
+      [serverName]: {}
+    }
+  }
+
+  // Copy command if exists
+  if (originalServerConfig.command) {
+    reconstructedConfig.mcpServers[serverName].command = originalServerConfig.command
+  }
+
+  // Use current args order
+  if (currentArgs.length > 0) {
+    reconstructedConfig.mcpServers[serverName].args = currentArgs
+  }
+
+  // Copy env if exists
+  if (originalServerConfig.env && Object.keys(originalServerConfig.env).length > 0) {
+    reconstructedConfig.mcpServers[serverName].env = originalServerConfig.env
+  }
+
+  // Copy url/type/headers for HTTP servers
+  if (originalServerConfig.url) {
+    reconstructedConfig.mcpServers[serverName].url = originalServerConfig.url
+  }
+  if (originalServerConfig.type) {
+    reconstructedConfig.mcpServers[serverName].type = originalServerConfig.type
+  }
+  if (originalServerConfig.headers && Object.keys(originalServerConfig.headers).length > 0) {
+    reconstructedConfig.mcpServers[serverName].headers = originalServerConfig.headers
+  }
+
+  try {
+    return JSON.stringify(reconstructedConfig, null, 2)
+  } catch {
+    return null
+  }
+})
 
 const isFormValid = computed(() => {
   return formDataLocal.value.name.trim() !== '' && Object.keys(formErrors.value).length === 0
@@ -683,8 +751,18 @@ const handleSubmit = () => {
   }
 
   if (modalMode.value === 'add') {
+    // For new arg items, assign order at the end
+    if (newItem.type === 'arg' && newItem.order === undefined) {
+      const maxOrder = Math.max(...localData.value.filter(i => i.type === 'arg').map(i => i.order ?? -1), -1)
+      newItem.order = maxOrder + 1
+    }
     updatedData.push(newItem)
   } else {
+    // For edits, preserve the original order
+    const existingItem = localData.value[editingIndex.value]
+    if (existingItem && newItem.type === 'arg') {
+      newItem.order = existingItem.order
+    }
     updatedData[editingIndex.value] = newItem
   }
 
@@ -759,6 +837,70 @@ const handleArgDelete = (index: number) => {
   if (!argItem) return
   const globalIndex = localData.value.findIndex(item => item.id === argItem.id)
   handleDelete(globalIndex)
+}
+
+const handleArgMoveUp = (index: number) => {
+  if (index === 0) return
+  const args = argumentItems.value
+  const currentItem = args[index]
+  const prevItem = args[index - 1]
+  if (!currentItem || !prevItem) return
+
+  // Swap order values
+  const currentOrder = currentItem.order ?? index
+  const prevOrder = prevItem.order ?? (index - 1)
+
+  // Update in localData
+  const currentGlobalIndex = localData.value.findIndex(item => item.id === currentItem.id)
+  const prevGlobalIndex = localData.value.findIndex(item => item.id === prevItem.id)
+
+  const currentData = localData.value[currentGlobalIndex]
+  const prevData = localData.value[prevGlobalIndex]
+
+  if (currentGlobalIndex !== -1 && currentData) {
+    currentData.order = prevOrder
+  }
+  if (prevGlobalIndex !== -1 && prevData) {
+    prevData.order = currentOrder
+  }
+
+  // Trigger reactivity and emit
+  localData.value = [...localData.value]
+  nextTick(() => {
+    emitModelValue()
+  })
+}
+
+const handleArgMoveDown = (index: number) => {
+  const args = argumentItems.value
+  if (index >= args.length - 1) return
+  const currentItem = args[index]
+  const nextItem = args[index + 1]
+  if (!currentItem || !nextItem) return
+
+  // Swap order values
+  const currentOrder = currentItem.order ?? index
+  const nextOrder = nextItem.order ?? (index + 1)
+
+  // Update in localData
+  const currentGlobalIndex = localData.value.findIndex(item => item.id === currentItem.id)
+  const nextGlobalIndex = localData.value.findIndex(item => item.id === nextItem.id)
+
+  const currentData = localData.value[currentGlobalIndex]
+  const nextData = localData.value[nextGlobalIndex]
+
+  if (currentGlobalIndex !== -1 && currentData) {
+    currentData.order = nextOrder
+  }
+  if (nextGlobalIndex !== -1 && nextData) {
+    nextData.order = currentOrder
+  }
+
+  // Trigger reactivity and emit
+  localData.value = [...localData.value]
+  nextTick(() => {
+    emitModelValue()
+  })
 }
 
 const handleEnvAdd = () => openAddModal('env')
@@ -862,7 +1004,17 @@ watch(localData, () => {
       @add="handleArgAdd"
       @edit="handleArgEdit"
       @delete="handleArgDelete"
+      @move-up="handleArgMoveUp"
+      @move-down="handleArgMoveDown"
     />
+
+    <!-- Claude Desktop Config Preview - Only show for STDIO servers -->
+    <div v-if="!isHttpBasedServer && claudeConfigPreview" class="space-y-2">
+      <h4 class="text-sm font-medium text-muted-foreground">
+        {{ $t('mcpCatalog.form.configurationSchema.preview.title') }}
+      </h4>
+      <pre class="p-3 bg-muted rounded-md text-xs overflow-x-auto"><code>{{ claudeConfigPreview }}</code></pre>
+    </div>
 
     <!-- Environment Variables Section - Only show for STDIO servers -->
     <ConfigurationSchemaEnvironmentSection

@@ -12486,6 +12486,9 @@ paths:
                           description:
                             type: string
                             description: Optional description of the template argument
+                          order:
+                            type: number
+                            description: Order position for STDIO argument ordering
                         required:
                           - value
                           - locked
@@ -12600,6 +12603,9 @@ paths:
                           max_items:
                             type: number
                             description: Maximum number of items (for arrays)
+                          order:
+                            type: number
+                            description: Order position for STDIO argument ordering
                         required:
                           - name
                           - type
@@ -12763,6 +12769,9 @@ paths:
                           max_items:
                             type: number
                             description: Maximum number of items (for arrays)
+                          order:
+                            type: number
+                            description: Order position for STDIO argument ordering
                         required:
                           - name
                           - type
@@ -13574,6 +13583,9 @@ paths:
                       description:
                         type: string
                         description: Optional description of the template argument
+                      order:
+                        type: number
+                        description: Order position for STDIO argument ordering
                     required:
                       - value
                       - locked
@@ -13688,6 +13700,9 @@ paths:
                       max_items:
                         type: number
                         description: Maximum number of items (for arrays)
+                      order:
+                        type: number
+                        description: Order position for STDIO argument ordering
                     required:
                       - name
                       - type
@@ -13851,6 +13866,9 @@ paths:
                       max_items:
                         type: number
                         description: Maximum number of items (for arrays)
+                      order:
+                        type: number
+                        description: Order position for STDIO argument ordering
                     required:
                       - name
                       - type

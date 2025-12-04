@@ -29,7 +29,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 
-import { Terminal, Users, User } from 'lucide-vue-next'
+import { Terminal, Users, User, Globe } from 'lucide-vue-next'
 import ConfigurationSchemaEnvironmentSection from './ConfigurationSchemaEnvironmentSection.vue'
 import ConfigurationSchemaHeadersSection from './ConfigurationSchemaHeadersSection.vue'
 import ConfigurationSchemaQueryParamsSection from './ConfigurationSchemaQueryParamsSection.vue'
@@ -61,6 +61,7 @@ interface ConfigItem {
   locked: boolean
   default_team_locked?: boolean
   visible_to_users?: boolean // For env vars, headers, and query params
+  order?: number // For STDIO argument ordering
 }
 
 interface ConfigurationSchema {
@@ -82,6 +83,7 @@ interface TemplateArg {
   value: string
   locked: boolean
   description?: string
+  order?: number
 }
 
 interface TemplateEnvVar {
@@ -112,6 +114,7 @@ interface TeamArgsSchema {
   required: boolean
   locked: boolean
   default_team_locked?: boolean
+  order?: number
 }
 
 interface TeamEnvSchema {
@@ -150,6 +153,7 @@ interface UserArgsSchema {
   description?: string
   required: boolean
   locked: boolean
+  order?: number
 }
 
 interface UserEnvSchema {
@@ -254,6 +258,7 @@ const loadFromStorageSchema = () => {
       required: true,
       locked: arg.locked,
       default_team_locked: false,
+      order: (arg as { order?: number }).order ?? index,
     })
   })
 
@@ -285,6 +290,7 @@ const loadFromStorageSchema = () => {
       required: arg.required || false,
       locked: arg.locked || false,
       default_team_locked: arg.default_team_locked || false,
+      order: (arg as { order?: number }).order ?? index,
     })
   })
 
@@ -315,6 +321,7 @@ const loadFromStorageSchema = () => {
       dataType: arg.type || 'string',
       required: arg.required || false,
       locked: arg.locked || false,
+      order: (arg as { order?: number }).order ?? index,
     })
   })
 
@@ -434,7 +441,8 @@ const assembleSchemaAndSave = () => {
         schema.template_args!.push({
           value: item.value || '',
           locked: item.locked,
-          description: item.description
+          description: item.description,
+          order: item.order
         })
       } else if (item.category === 'team') {
         schema.team_args_schema!.push({
@@ -443,7 +451,8 @@ const assembleSchemaAndSave = () => {
           description: item.description,
           required: item.required,
           locked: item.locked,
-          default_team_locked: item.default_team_locked
+          default_team_locked: item.default_team_locked,
+          order: item.order
         })
       } else if (item.category === 'user') {
         schema.user_args_schema!.push({
@@ -451,7 +460,8 @@ const assembleSchemaAndSave = () => {
           type: item.dataType,
           description: item.description,
           required: item.required,
-          locked: item.locked
+          locked: item.locked,
+          order: item.order
         })
       }
     } else if (item.type === 'env') {
@@ -538,7 +548,9 @@ const assembleSchemaAndSave = () => {
 
 // Computed properties
 const argumentItems = computed(() => {
-  return localData.value.filter(item => item.type === 'arg')
+  const args = localData.value.filter(item => item.type === 'arg')
+  // Sort by order to preserve argument order (important for STDIO servers)
+  return args.sort((a, b) => (a.order ?? 999) - (b.order ?? 999))
 })
 
 const environmentItems = computed(() => {
@@ -561,6 +573,52 @@ const isHttpTransport = computed(() => {
 
   const transportType = technicalData.transport_type
   return transportType === 'http' || transportType === 'sse' || transportType === 'streamableHttp'
+})
+
+// Get Claude Desktop config preview for display - dynamically built from current argumentItems
+const claudeConfigPreview = computed(() => {
+  // For HTTP servers, no args preview needed
+  if (isHttpTransport.value) return null
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const technicalData = eventBus.getState(TECHNICAL_STORAGE_KEY) as any
+  if (!technicalData) return null
+
+  // Build args array from current argumentItems order
+  const currentArgs = argumentItems.value.map(item => item.name)
+
+  // Get server name and command from technical data
+  const serverName = technicalData.name || 'server'
+  const packages = technicalData.packages || []
+  const command = packages[0]?.name || 'npx'
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const config: any = {
+    mcpServers: {
+      [serverName]: {
+        command: command
+      }
+    }
+  }
+
+  if (currentArgs.length > 0) {
+    config.mcpServers[serverName].args = currentArgs
+  }
+
+  // Add env if present
+  const envItems = environmentItems.value
+  if (envItems.length > 0) {
+    config.mcpServers[serverName].env = {}
+    envItems.forEach(item => {
+      config.mcpServers[serverName].env[item.name] = item.value || `<${item.name}>`
+    })
+  }
+
+  try {
+    return JSON.stringify(config, null, 2)
+  } catch {
+    return null
+  }
 })
 
 const isFormValid = computed(() => {
@@ -662,8 +720,18 @@ const handleSubmit = () => {
   }
 
   if (modalMode.value === 'add') {
+    // For new arg items, assign order at the end
+    if (newItem.type === 'arg' && newItem.order === undefined) {
+      const maxOrder = Math.max(...localData.value.filter(i => i.type === 'arg').map(i => i.order ?? -1), -1)
+      newItem.order = maxOrder + 1
+    }
     updatedData.push(newItem)
   } else {
+    // For edits, preserve the original order
+    const existingItem = localData.value[editingIndex.value]
+    if (existingItem && newItem.type === 'arg') {
+      newItem.order = existingItem.order
+    }
     updatedData[editingIndex.value] = newItem
   }
 
@@ -762,6 +830,66 @@ const handleArgDelete = (index: number) => {
   if (!argItem) return
   const globalIndex = localData.value.findIndex(item => item.id === argItem.id)
   handleDelete(globalIndex)
+}
+
+const handleArgMoveUp = (index: number) => {
+  if (index === 0) return
+  const args = argumentItems.value
+  const currentItem = args[index]
+  const prevItem = args[index - 1]
+  if (!currentItem || !prevItem) return
+
+  // Swap order values
+  const currentOrder = currentItem.order ?? index
+  const prevOrder = prevItem.order ?? (index - 1)
+
+  // Update in localData
+  const currentGlobalIndex = localData.value.findIndex(item => item.id === currentItem.id)
+  const prevGlobalIndex = localData.value.findIndex(item => item.id === prevItem.id)
+
+  const currentData = localData.value[currentGlobalIndex]
+  const prevData = localData.value[prevGlobalIndex]
+
+  if (currentGlobalIndex !== -1 && currentData) {
+    currentData.order = prevOrder
+  }
+  if (prevGlobalIndex !== -1 && prevData) {
+    prevData.order = currentOrder
+  }
+
+  // Trigger reactivity and save
+  localData.value = [...localData.value]
+  assembleSchemaAndSave()
+}
+
+const handleArgMoveDown = (index: number) => {
+  const args = argumentItems.value
+  if (index >= args.length - 1) return
+  const currentItem = args[index]
+  const nextItem = args[index + 1]
+  if (!currentItem || !nextItem) return
+
+  // Swap order values
+  const currentOrder = currentItem.order ?? index
+  const nextOrder = nextItem.order ?? (index + 1)
+
+  // Update in localData
+  const currentGlobalIndex = localData.value.findIndex(item => item.id === currentItem.id)
+  const nextGlobalIndex = localData.value.findIndex(item => item.id === nextItem.id)
+
+  const currentData = localData.value[currentGlobalIndex]
+  const nextData = localData.value[nextGlobalIndex]
+
+  if (currentGlobalIndex !== -1 && currentData) {
+    currentData.order = nextOrder
+  }
+  if (nextGlobalIndex !== -1 && nextData) {
+    nextData.order = currentOrder
+  }
+
+  // Trigger reactivity and save
+  localData.value = [...localData.value]
+  assembleSchemaAndSave()
 }
 
 // Headers event handlers
@@ -936,17 +1064,51 @@ onUnmounted(() => {
 
 <template>
   <div class="space-y-6">
+    <!-- Server Type Indicator -->
+    <div v-if="isHttpTransport" class="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+      <Globe class="h-4 w-4 text-blue-600" />
+      <span class="text-sm font-medium text-blue-900">
+        {{ $t('mcpCatalog.form.configurationSchema.serverTypeIndicator.http') }}
+      </span>
+    </div>
+    <div v-else class="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+      <Terminal class="h-4 w-4 text-green-600" />
+      <span class="text-sm font-medium text-green-900">
+        {{ $t('mcpCatalog.form.configurationSchema.serverTypeIndicator.stdio') }}
+      </span>
+    </div>
 
-    <!-- Arguments Section - Now using shared component -->
+    <!-- Arguments Section - Only show for STDIO servers -->
     <ConfigurationSchemaArgumentsSection
+      v-if="!isHttpTransport"
       :items="argumentItems"
       :get-category-info="getCategoryInfo"
       @add="handleArgAdd"
       @edit="handleArgEdit"
       @delete="handleArgDelete"
+      @move-up="handleArgMoveUp"
+      @move-down="handleArgMoveDown"
     />
 
-    <!-- Headers Section - Now using shared component -->
+    <!-- Claude Desktop Config Preview - Only show for STDIO servers -->
+    <div v-if="!isHttpTransport && claudeConfigPreview" class="space-y-2">
+      <h4 class="text-sm font-medium text-muted-foreground">
+        {{ $t('mcpCatalog.form.configurationSchema.preview.title') }}
+      </h4>
+      <pre class="p-3 bg-muted rounded-md text-xs overflow-x-auto"><code>{{ claudeConfigPreview }}</code></pre>
+    </div>
+
+    <!-- Environment Variables Section - Only show for STDIO servers -->
+    <ConfigurationSchemaEnvironmentSection
+      v-if="!isHttpTransport"
+      :items="environmentItems"
+      :get-category-info="getCategoryInfo"
+      @add="handleEnvAdd"
+      @edit="handleEnvEdit"
+      @delete="handleEnvDelete"
+    />
+
+    <!-- Headers Section - Only show for HTTP servers -->
     <ConfigurationSchemaHeadersSection
       v-if="isHttpTransport"
       :items="headerItems"
@@ -956,7 +1118,7 @@ onUnmounted(() => {
       @delete="handleHeaderDelete"
     />
 
-    <!-- URL Query Parameters Section - Now using shared component -->
+    <!-- URL Query Parameters Section - Only show for HTTP servers -->
     <ConfigurationSchemaQueryParamsSection
       v-if="isHttpTransport"
       :items="queryParamItems"
@@ -964,15 +1126,6 @@ onUnmounted(() => {
       @add="handleQueryParamAdd"
       @edit="handleQueryParamEdit"
       @delete="handleQueryParamDelete"
-    />
-
-    <!-- Environment Variables Section - Now using shared component -->
-    <ConfigurationSchemaEnvironmentSection
-      :items="environmentItems"
-      :get-category-info="getCategoryInfo"
-      @add="handleEnvAdd"
-      @edit="handleEnvEdit"
-      @delete="handleEnvDelete"
     />
 
     <!-- Add/Edit Modal -->

@@ -1,6 +1,7 @@
 import { type FastifyInstance } from 'fastify';
 import { requireAuthenticationAny } from '../../../middleware/oauthMiddleware';
 import { McpUserConfigurationService } from '../../../services/mcpUserConfigurationService';
+import { SatelliteCommandService } from '../../../services/satelliteCommandService';
 import { getDb } from '../../../db';
 import {
   updateUserConfigurationSchema,
@@ -80,6 +81,26 @@ export default async function updateUserConfigurationRoute(server: FastifyInstan
           userId,
           authType
         }, 'Successfully updated MCP user configuration');
+
+        // Create satellite commands for immediate notification (restart MCP server with new config)
+        try {
+          const satelliteCommandService = new SatelliteCommandService(db, request.log);
+          const commands = await satelliteCommandService.notifyMcpUpdate(
+            installationId,
+            teamId,
+            userId
+          );
+
+          request.log.info({
+            operation: 'update_mcp_user_config',
+            installationId,
+            commandsCreated: commands.length,
+            satelliteIds: commands.map(c => c.satellite_id)
+          }, 'Satellite commands created for user configuration update');
+        } catch (commandError) {
+          request.log.error(commandError, `Failed to create satellite commands for user config update ${configId}:`);
+          // Don't fail update if command creation fails
+        }
 
         const successResponse: UserConfigUpdateSuccessResponse = {
           success: true,

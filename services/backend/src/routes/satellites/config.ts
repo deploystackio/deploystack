@@ -236,7 +236,7 @@ export default async function satelliteConfigRoute(server: FastifyInstance) {
     const { satelliteId } = request.params as SatelliteIdParams;
 
     const db = getDb();
-    const { satellites, mcpServerInstallations, mcpServers, teams } = getSchema();
+    const { satellites, mcpServerInstallations, mcpServers, teams, mcpUserConfigurations } = getSchema();
 
     try {
       // Verify satellite exists and get its configuration
@@ -383,7 +383,7 @@ export default async function satelliteConfigRoute(server: FastifyInstance) {
 
           // Parse base configuration based on transport type
           if (server.transport_type === 'stdio') {
-            // For stdio, use packages
+            // For stdio, use packages for command and env, but build args from three-tier schema
             const packages = JSON.parse(server.packages || '[]');
 
             if (!packages || packages.length === 0) {
@@ -405,8 +405,130 @@ export default async function satelliteConfigRoute(server: FastifyInstance) {
             }
 
             finalCommand = packageConfig.transport.command || 'npx';
-            finalArgs = [...(packageConfig.transport.args || [])];
             finalEnv = { ...(packageConfig.transport.env || {}) };
+
+            // Build args from three-tier configuration with proper order
+            // This replaces the old packages[0].transport.args approach
+            interface ArgItem {
+              value: string;
+              order: number;
+              source: 'template' | 'team' | 'user';
+            }
+            const orderedArgs: ArgItem[] = [];
+
+            // 1. Parse template_args (fixed values with order)
+            try {
+              const templateArgs = JSON.parse(server.template_args || '[]');
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              templateArgs.forEach((arg: any, index: number) => {
+                if (arg.value !== undefined && arg.value !== '') {
+                  orderedArgs.push({
+                    value: arg.value,
+                    order: arg.order ?? index,
+                    source: 'template'
+                  });
+                }
+              });
+            } catch (error) {
+              request.log.warn({
+                serverId: server.id,
+                error: error instanceof Error ? error.message : String(error)
+              }, 'Failed to parse template_args');
+            }
+
+            // 2. Parse team_args_schema and get values from installation.team_args
+            if (installation.team_args) {
+              try {
+                const teamArgsSchema = JSON.parse(server.team_args_schema || '[]');
+                const decryptedTeamArgs = await McpArgsStorage.retrieveTeamArgs(
+                  installation.team_args,
+                  teamArgsSchema,
+                  { maskSecrets: false }, // Decrypt secrets for satellite
+                  request.log
+                );
+
+                // Map decrypted values back with their schema order
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                teamArgsSchema.forEach((schema: any, index: number) => {
+                  const value = decryptedTeamArgs[index];
+                  if (value !== undefined && value !== '') {
+                    orderedArgs.push({
+                      value: value,
+                      order: schema.order ?? (100 + index), // Team args after template args
+                      source: 'team'
+                    });
+                  }
+                });
+              } catch (error) {
+                request.log.warn({
+                  serverId: server.id,
+                  error: error instanceof Error ? error.message : String(error)
+                }, 'Failed to decrypt and parse team_args for ordering');
+              }
+            }
+
+            // 3. Fetch and add user args for the installation creator
+            if (created_by_user_id) {
+              try {
+                const userConfigs = await db
+                  .select()
+                  .from(mcpUserConfigurations)
+                  .where(
+                    and(
+                      eq(mcpUserConfigurations.installation_id, installation.id),
+                      eq(mcpUserConfigurations.user_id, created_by_user_id)
+                    )
+                  )
+                  .limit(1);
+
+                const userConfig = userConfigs[0];
+                if (userConfig?.user_args) {
+                  const userArgsSchema = JSON.parse(server.user_args_schema || '[]');
+                  const decryptedUserArgs = await McpArgsStorage.retrieveUserArgs(
+                    userConfig.user_args,
+                    userArgsSchema,
+                    { maskSecrets: false }, // Decrypt secrets for satellite
+                    request.log
+                  );
+
+                  // Add user args to orderedArgs with their schema order
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  userArgsSchema.forEach((schema: any, index: number) => {
+                    const value = decryptedUserArgs[schema.name];
+                    if (value !== undefined && value !== '') {
+                      orderedArgs.push({
+                        value: value,
+                        order: schema.order ?? (200 + index), // User args after template and team
+                        source: 'user' as const
+                      });
+                    }
+                  });
+
+                  request.log.debug({
+                    serverId: server.id,
+                    userId: created_by_user_id,
+                    userArgsCount: Object.keys(decryptedUserArgs).length
+                  }, 'Added user args to configuration');
+                }
+              } catch (error) {
+                request.log.warn({
+                  serverId: server.id,
+                  userId: created_by_user_id,
+                  error: error instanceof Error ? error.message : String(error)
+                }, 'Failed to fetch or parse user args');
+              }
+            }
+
+            // Sort by order and extract values
+            orderedArgs.sort((a, b) => a.order - b.order);
+            finalArgs = orderedArgs.map(arg => arg.value);
+
+            request.log.debug({
+              serverId: server.id,
+              serverName: server.name,
+              argsCount: finalArgs.length,
+              argsOrder: orderedArgs.map(a => ({ value: a.value.substring(0, 20), order: a.order, source: a.source }))
+            }, 'Built args array from three-tier configuration');
           } else if (server.transport_type === 'http' || server.transport_type === 'sse') {
             // For HTTP/SSE, use remotes
             const remotes = JSON.parse(server.remotes || '[]');
@@ -434,36 +556,8 @@ export default async function satelliteConfigRoute(server: FastifyInstance) {
             finalHeaders = { ...(remoteConfig.headers || {}) };
           }
 
-          // Apply team configuration with proper decryption (like gateway)
-          if (installation.team_args) {
-            try {
-              const teamArgsSchema = JSON.parse(server.team_args_schema || '[]');
-              const decryptedTeamArgs = await McpArgsStorage.retrieveTeamArgs(
-                installation.team_args,
-                teamArgsSchema,
-                { maskSecrets: false }, // Decrypt secrets for satellite
-                request.log
-              );
-              
-              // Apply decrypted team arguments
-              if (Array.isArray(decryptedTeamArgs) && decryptedTeamArgs.length > 0) {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                teamArgsSchema.forEach((schema: any, index: number) => {
-                  if (decryptedTeamArgs[index] !== undefined) {
-                    const argIndex = finalArgs.findIndex(arg => arg === schema.name);
-                    if (argIndex !== -1) {
-                      finalArgs[argIndex + 1] = decryptedTeamArgs[index];
-                    }
-                  }
-                });
-              }
-            } catch (error) {
-              request.log.warn({
-                serverId: server.id,
-                error: error instanceof Error ? error.message : String(error)
-              }, 'Failed to decrypt and parse team_args');
-            }
-          }
+          // NOTE: Team args are now handled in the three-tier configuration block above
+          // with proper ordering support. The old findIndex-based approach is removed.
 
           // Apply team environment variables with proper decryption (like gateway)
           if (installation.team_env) {

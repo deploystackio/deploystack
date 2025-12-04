@@ -8,6 +8,7 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
 import { Button } from '@/components/ui/button'
+import { ButtonGroup } from '@/components/ui/button-group'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,7 +16,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Edit, Trash2, MoreHorizontal, Terminal, Lock } from 'lucide-vue-next'
+import { Plus, Edit, Trash2, MoreHorizontal, Terminal, Lock, ChevronUp, ChevronDown } from 'lucide-vue-next'
 
 const { t } = useI18n()
 
@@ -29,6 +30,7 @@ interface ArgumentItem {
   category: string
   required: boolean
   locked: boolean
+  order?: number
 }
 
 interface Props {
@@ -46,6 +48,8 @@ const emit = defineEmits<{
   'add': []
   'edit': [index: number]
   'delete': [index: number]
+  'move-up': [index: number]
+  'move-down': [index: number]
 }>()
 </script>
 
@@ -85,7 +89,28 @@ const emit = defineEmits<{
         <tbody>
           <tr v-for="(item, index) in items" :key="item.id">
             <td class="relative py-5 pr-6">
-              <div class="flex gap-x-6">
+              <div class="flex gap-x-4">
+                <!-- Sort buttons -->
+                <ButtonGroup orientation="vertical" class="shrink-0">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    class="h-6 w-6"
+                    :disabled="index === 0"
+                    @click="emit('move-up', index)"
+                  >
+                    <ChevronUp class="h-3 w-3" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    class="h-6 w-6"
+                    :disabled="index === items.length - 1"
+                    @click="emit('move-down', index)"
+                  >
+                    <ChevronDown class="h-3 w-3" />
+                  </Button>
+                </ButtonGroup>
                 <div class="flex-auto">
                   <div class="flex items-start gap-x-3">
                     <div class="text-sm/6 font-semibold text-gray-900">

@@ -145,6 +145,9 @@ export default {
         http: 'HTTP/SSE-Based Server - Configuring remote connection',
         stdio: 'STDIO-Based Server - Configuring local execution'
       },
+      preview: {
+        title: 'Original Configuration (argument order matters)'
+      },
       arguments: {
         title: 'Arguments Configuration',
         description: 'Configure command-line arguments for this MCP server',

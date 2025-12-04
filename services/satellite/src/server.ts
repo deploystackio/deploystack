@@ -316,12 +316,83 @@ export async function createServer() {
     // Notify tool discovery manager of configuration changes with changes parameter
     await toolDiscoveryManager.handleConfigurationUpdate(config, changes);
 
+    // Handle modified stdio servers - restart with new configuration
+    if (changes && changes.modifiedServers.length > 0) {
+      for (const serverName of changes.modifiedServers) {
+        const serverConfig = config.servers[serverName];
+        const transportType = serverConfig.transport_type || serverConfig.type;
+
+        if (transportType === 'stdio') {
+          try {
+            server.log.info({
+              operation: 'restart_modified_stdio_server',
+              server_name: serverName,
+              transport_type: transportType
+            }, `Restarting modified stdio server with new configuration: ${serverName}`);
+
+            // Check if process is running
+            const existing = runtimeState.getProcessByName(serverName);
+            if (existing) {
+              server.log.info({
+                operation: 'terminate_for_restart',
+                server_name: serverName,
+                pid: existing.process?.pid
+              }, `Terminating existing process for restart: ${serverName}`);
+
+              // Remove the existing process completely
+              await processManager.removeServerCompletely(serverName);
+
+              // Clear old tools from cache
+              stdioToolDiscoveryManager.clearServerTools(serverName);
+            }
+
+            // Build MCP server config for process spawning with new configuration
+            const processConfig = {
+              installation_id: serverConfig.installation_id || serverName,
+              installation_name: serverName,
+              team_id: serverConfig.team_id || 'unknown',
+              server_slug: serverConfig.server_slug || serverName,
+              command: serverConfig.command!,
+              args: serverConfig.args!,
+              env: serverConfig.env || {}
+            };
+
+            // Spawn the process with updated configuration
+            const processInfo = await processManager.spawnProcess(processConfig);
+
+            // Add to runtime state
+            runtimeState.addProcess(
+              processInfo,
+              processConfig.installation_id,
+              processConfig.installation_name,
+              processConfig.team_id
+            );
+
+            server.log.info({
+              operation: 'restart_modified_stdio_success',
+              server_name: serverName,
+              pid: processInfo.process.pid,
+              new_args: serverConfig.args
+            }, `Modified stdio server restarted successfully with new configuration: ${serverName}`);
+
+          } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            server.log.error({
+              operation: 'restart_modified_stdio_failed',
+              server_name: serverName,
+              error: errorMessage
+            }, `Failed to restart modified stdio server: ${errorMessage}`);
+          }
+        }
+      }
+    }
+
     // Auto-spawn stdio processes when servers are added
     if (changes && changes.addedServers.length > 0) {
       for (const serverName of changes.addedServers) {
         const serverConfig = config.servers[serverName];
         const transportType = serverConfig.transport_type || serverConfig.type;
-        
+
         if (transportType === 'stdio') {
           try {
             server.log.info({
