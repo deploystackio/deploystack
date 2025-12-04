@@ -146,6 +146,11 @@ function handleConnectionTested(result: { success: boolean; message: string }) {
 // Reactive form values
 const formValues = ref<Record<string, string | number | boolean>>({})
 
+// Update boolean setting value
+function updateBooleanValue(key: string, value: boolean) {
+  formValues.value[key] = value
+}
+
 // Create initial form values from settings
 function createInitialValues(settings: Setting[]) {
   const values: Record<string, string | number | boolean> = {}
@@ -370,14 +375,12 @@ async function handleSubmit(event: Event) {
                         <Checkbox
                           :id="`setting-${setting.key}`"
                           :checked="formValues[setting.key] as boolean"
-                          @update:checked="(value: boolean) => {
-                            formValues[setting.key] = value
-                          }"
+                          @update:checked="(value: boolean) => updateBooleanValue(setting.key, value)"
                         />
                         <div class="grid gap-1">
                           <label
                             :for="`setting-${setting.key}`"
-                            class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                            class="cursor-pointer text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                           >
                             {{ setting.name || setting.key }}
                           </label>
@@ -451,14 +454,12 @@ async function handleSubmit(event: Event) {
                           <Checkbox
                             :id="`setting-${setting.key}-desktop`"
                             :checked="formValues[setting.key] as boolean"
-                            @update:checked="(value: boolean) => {
-                              formValues[setting.key] = value
-                            }"
+                            @update:checked="(value: boolean) => updateBooleanValue(setting.key, value)"
                           />
                           <div class="grid gap-1">
                             <label
                               :for="`setting-${setting.key}-desktop`"
-                              class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                              class="cursor-pointer text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                             >
                               {{ setting.name || setting.key }}
                             </label>

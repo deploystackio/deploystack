@@ -1,30 +1,34 @@
 <script setup lang="ts">
-import type { CheckboxRootEmits, CheckboxRootProps } from "reka-ui"
-import type { HTMLAttributes } from "vue"
-import { reactiveOmit } from "@vueuse/core"
-import { Check } from "lucide-vue-next"
-import { CheckboxIndicator, CheckboxRoot, useForwardPropsEmits } from "reka-ui"
-import { cn } from "@/lib/utils"
+interface Props {
+  checked?: boolean
+  disabled?: boolean
+  id?: string
+  name?: string
+}
 
-const props = defineProps<CheckboxRootProps & { class?: HTMLAttributes["class"] }>()
-const emits = defineEmits<CheckboxRootEmits>()
+const props = withDefaults(defineProps<Props>(), {
+  checked: false,
+  disabled: false,
+})
 
-const delegatedProps = reactiveOmit(props, "class")
+const emit = defineEmits<{
+  'update:checked': [value: boolean]
+}>()
 
-const forwarded = useForwardPropsEmits(delegatedProps, emits)
+function handleChange(event: Event) {
+  const target = event.target as HTMLInputElement
+  emit('update:checked', target.checked)
+}
 </script>
 
 <template>
-  <CheckboxRoot
-    v-bind="forwarded"
-    :class="
-      cn('grid place-content-center peer h-4 w-4 shrink-0 rounded-sm border border-primary ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground',
-         props.class)"
-  >
-    <CheckboxIndicator class="grid place-content-center text-current">
-      <slot>
-        <Check class="h-4 w-4" />
-      </slot>
-    </CheckboxIndicator>
-  </CheckboxRoot>
+  <input
+    type="checkbox"
+    :id="props.id"
+    :name="props.name"
+    :checked="props.checked"
+    :disabled="props.disabled"
+    @change="handleChange"
+    class="size-4 cursor-pointer accent-primary"
+  />
 </template>
