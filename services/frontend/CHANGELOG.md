@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.46.0 (2025-12-05)
+
+* chore(frontend): release v0.46.0 5d8faca
+* chore(satellite): release v0.13.0 be96cc1
+* chore(satellite): release v0.13.0 fdbbcdf
+* feat(all): add real-time MCP server config updates with automatic stdio restart ad287e4
+* feat(backend): add user-level HTTP config overrides for headers and query params 7193e89
+
 ## 0.46.0 (2025-12-04)
 
 * feat(all): add real-time MCP server config updates with automatic stdio restart ad287e4
