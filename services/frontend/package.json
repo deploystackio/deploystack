@@ -57,7 +57,7 @@
     "release-it": "^19.0.6",
     "tailwindcss": "^4.1.16",
     "typescript": "~5.9.2",
-    "vite": "^7.2.4",
+    "vite": "^7.2.6",
     "vite-plugin-vue-devtools": "^8.0.5",
     "vue-i18n": "^11.2.2",
     "vue-tsc": "^3.1.5"
