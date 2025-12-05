@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.46.0 (2025-12-04)
+
+* feat(all): add real-time MCP server config updates with automatic stdio restart ad287e4
+* feat(all): queue MCP server deletion as background job with cascade notifications 679fcb5
+* feat(backend): add email notifications for MCP installation events 448e687
+* feat(backend): add user-level HTTP config overrides for headers and query params 7193e89
+* feat(frontend): simplify checkbox value update handling in settings 8b7c3ac
+* feat(satellite): add support for public backend URL in OAuth configuration aebb814
+* chore(backend): release v0.50.0 cee81fb
+* chore(backend): release v0.50.0 56decfb
+* chore(satellite): release v0.13.0 be96cc1
+* chore(satellite): release v0.13.0 fdbbcdf
+* fix(backend): notify satellites when auto-installing MCP servers for new teams b3df717
+* fix(frontend): clear additional edit-related storage keys 726626a
+* fix(frontend): normalize tag input to lowercase on addition 50fc847
+* fix(frontend): remove hotlined profile picture 2fa3257
+* fix(frontend): update logout messages for clarity and consistency 5bf215b
+* style(frontend): adjust padding for server details display c19c47a
+
 ## 0.45.0 (2025-12-01)
 
 * docs(all): update feature list with per-tool access controls and catalog improvements d4ec492
