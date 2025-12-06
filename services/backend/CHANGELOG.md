@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.50.0 (2025-12-06)
+
+* chore(backend): release v0.50.0 714a87d
+* chore(frontend): release v0.46.0 016a8c1
+* chore(frontend): release v0.46.0 5d8faca
+* fix(backend): set default value for DEPLOYSTACK_ENCRYPTION_SECRET 8359fc3
+* feat(backend): add user-level HTTP config overrides for headers and query params 7193e89
+
 ## 0.50.0 (2025-12-04)
 
 * chore(backend): release v0.50.0 56decfb
