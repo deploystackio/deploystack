@@ -23,7 +23,7 @@ export const globalSettings: GlobalSettingsModule = {
       name: 'Backend URL',
       defaultValue: 'http://localhost:3000',
       type: 'string',
-      description: 'Base URL for the application backend API.',
+      description: 'Base URL for the application backend API. Do not include /api/ path or trailing slash (e.g., https://backend.example.com).',
       encrypted: false,
       required: true
     },
