@@ -15,6 +15,7 @@ import { DynamicConfigManager } from '../services/dynamic-config-manager';
 import { OAuthTokenService } from '../services/oauth-token-service';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
+import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
 import { getVersionString } from '../config/version';
 
 /**
@@ -626,8 +627,20 @@ export class McpServerWrapper {
     // Build URL with query parameters
     const finalUrl = this.buildMcpServerUrl(config.url, config.url_query_params);
 
-    // Create transport
-    const transport = new StreamableHTTPClientTransport(new URL(finalUrl));
+    // Create transport based on configured transport_type
+    const transportType = config.transport_type || 'http';
+    const serverUrl = new URL(finalUrl);
+
+    this.logger.debug({
+      operation: 'transport_selection',
+      server_name: serverName,
+      transport_type: transportType,
+      server_url: config.url
+    }, `Using ${transportType} transport for tool call to ${serverName}`);
+
+    const transport = transportType === 'sse'
+      ? new SSEClientTransport(serverUrl)
+      : new StreamableHTTPClientTransport(serverUrl);
 
     // WORKAROUND: Patch global fetch temporarily to inject OAuth headers
     // The MCP SDK doesn't currently support custom headers in StreamableHTTPClientTransport
