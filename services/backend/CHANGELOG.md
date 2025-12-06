@@ -2,6 +2,18 @@
 
 ## <small>0.50.2 (2025-12-06)</small>
 
+* chore(backend): release v0.50.2 8b37db4
+* chore(satellite): release v0.13.1 50ba696
+* chore(satellite): release v0.13.1 45abee8
+* fix(backend): clarify backend API base URL description 1f6ef4e
+* fix(backend): emit USER_REGISTERED event for new GitHub users 8d84726
+* fix(backend): include drizzle migrations in Docker image bc4c9af, closes #546
+* fix(backend): update MCP installation email templates for clarity ee9c3bf
+* fix(backend): update run-local-postgres script for consistency dda8eb9
+* fix(satellite): respect transport_type for SSE MCP servers 96a05fa, closes #553
+
+## <small>0.50.2 (2025-12-06)</small>
+
 * chore(satellite): release v0.13.1 50ba696
 * chore(satellite): release v0.13.1 45abee8
 * fix(backend): clarify backend API base URL description 1f6ef4e
