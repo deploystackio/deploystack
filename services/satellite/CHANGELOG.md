@@ -1,5 +1,23 @@
 # Changelog
 
+## <small>0.13.1 (2025-12-06)</small>
+
+* fix(backend): clarify backend API base URL description 1f6ef4e
+* fix(backend): emit USER_REGISTERED event for new GitHub users 8d84726
+* fix(backend): include drizzle migrations in Docker image bc4c9af, closes #546
+* fix(backend): set default value for DEPLOYSTACK_ENCRYPTION_SECRET 8359fc3
+* fix(backend): update MCP installation email templates for clarity ee9c3bf
+* fix(backend): update run-local-postgres script for consistency dda8eb9
+* fix(ci): always pass --increment flag in release PR workflows 6f650be
+* fix(satellite): respect transport_type for SSE MCP servers 96a05fa, closes #553
+* chore(backend): release v0.50.0 b7e6d19
+* chore(backend): release v0.50.0 714a87d
+* chore(backend): release v0.50.1 615117f
+* chore(backend): release v0.50.1 c84b8a3
+* chore(frontend): release v0.46.0 016a8c1
+* chore(frontend): release v0.46.0 5d8faca
+* feat(backend): add user-level HTTP config overrides for headers and query params 7193e89
+
 ## 0.13.0 (2025-12-04)
 
 * chore(backend): release v0.50.0 cee81fb
