@@ -12,6 +12,9 @@ RUN npm install --omit=dev --no-package-lock
 # Copy pre-built files
 COPY services/backend/dist ./dist
 
+# Copy Drizzle migrations (required for database schema creation)
+COPY services/backend/drizzle ./drizzle
+
 # Create the shared directory structure
 RUN mkdir -p /shared/public/img/
 COPY services/shared/public/img/favicon.ico /shared/public/img/

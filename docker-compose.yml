@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:18-alpine
@@ -31,7 +29,7 @@ services:
       - NODE_ENV=production
       - PORT=3000
       - DEPLOYSTACK_FRONTEND_URL=http://localhost:8080
-      - DEPLOYSTACK_ENCRYPTION_SECRET=${DEPLOYSTACK_ENCRYPTION_SECRET}
+      - DEPLOYSTACK_ENCRYPTION_SECRET=${DEPLOYSTACK_ENCRYPTION_SECRET:-CHANGE_ME_HERE}
       - POSTGRES_HOST=postgres
       - POSTGRES_PORT=5432
       - POSTGRES_DATABASE=deploystack
