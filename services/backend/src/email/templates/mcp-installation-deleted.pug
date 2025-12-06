@@ -7,17 +7,14 @@ block content
 
   p Hi #{userName},
 
-  p
-    | The MCP server
-    strong #{serverName}
-    |  has been removed from team
-    strong #{teamName}
-    | .
+  p There is an MCP server change to your team #[strong #{teamName}].
+
+  p MCP server #[strong #{serverName}] has been removed.
 
   if serverDescription
     .server-info
       p
-        strong Server that was removed:
+        strong Server Description:
       p= serverDescription
 
   p This MCP server is no longer available for use in your team. If you need to use it again, a team administrator can reinstall it from the MCP catalog.

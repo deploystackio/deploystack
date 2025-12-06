@@ -7,17 +7,14 @@ block content
 
   p Hi #{userName},
 
-  p
-    | The MCP server
-    strong #{serverName}
-    |  has been successfully installed to team
-    strong #{teamName}
-    | .
+  p There is an MCP server change to your team #[strong #{teamName}].
+
+  p MCP server #[strong #{serverName}] has been installed.
 
   if serverDescription
     .server-info
       p
-        strong About this server:
+        strong Server Description:
       p= serverDescription
 
   p You can now use this MCP server in your AI coding assistant.
