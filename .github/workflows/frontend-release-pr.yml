@@ -65,10 +65,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.APP_INSTALLATION_TOKEN }}
           BETA_ARG: ${{ github.event.inputs.beta == 'true' && '--preRelease=beta' || '' }}
-          TYPE_ARG: ${{ github.event.inputs.type != 'patch' && format('--increment={0}', github.event.inputs.type) || '' }}
         run: |
-          # Let release-it handle version detection and incrementing properly
-          npm run release -- $TYPE_ARG --ci --verbose --no-git.push --no-git.commit --no-git.tag --no-github $BETA_ARG
+          # Always pass --increment explicitly to ensure version is bumped
+          npm run release -- --increment=${{ github.event.inputs.type }} --ci --verbose --no-git.push --no-git.commit --no-git.tag --no-github $BETA_ARG
         
       - name: get-npm-version
         id: package-version
