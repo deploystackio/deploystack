@@ -11,6 +11,8 @@ import { generateState } from 'arctic';
 import { GlobalSettingsInitService } from '../../global-settings';
 import { EmailService } from '../../email';
 import { GlobalSettings } from '../../global-settings/helpers';
+import { EVENT_NAMES } from '../../events';
+import type { EventContext } from '../../events/types';
 
 // Response schemas for GitHub OAuth API
 const errorResponseSchema = z.object({
@@ -369,6 +371,47 @@ export default async function githubAuthRoutes(fastify: FastifyInstance) {
         } catch (teamError) {
           // Don't fail login if team creation fails
           fastify.log.warn(teamError, 'Failed to create default team for GitHub user');
+        }
+
+        // Emit USER_REGISTERED event for new GitHub users
+        try {
+          const eventContext: EventContext = {
+            db,
+            logger: fastify.log,
+            user: {
+              id: newUserId,
+              email: newUserData.email,
+              roleId: newUserData.role_id
+            },
+            request: {
+              ip: request.ip,
+              userAgent: request.headers['user-agent'],
+              requestId: request.id
+            },
+            timestamp: new Date()
+          };
+
+          fastify.eventBus.emitWithContext(
+            EVENT_NAMES.USER_REGISTERED,
+            {
+              user: {
+                id: newUserId,
+                email: newUserData.email,
+                name: newUserData.username || `${newUserData.first_name || ''} ${newUserData.last_name || ''}`.trim() || newUserData.email,
+                createdAt: new Date()
+              },
+              metadata: {
+                registrationMethod: 'oauth',
+                ip: request.ip,
+                userAgent: request.headers['user-agent']
+              }
+            },
+            eventContext
+          );
+          fastify.log.info(`USER_REGISTERED event emitted for GitHub user: ${newUserId}`);
+        } catch (eventError) {
+          fastify.log.error(eventError, `Failed to emit USER_REGISTERED event for GitHub user ${newUserId}:`);
+          // Don't fail registration if event emission fails
         }
 
         // Create session using manual method (workaround for Lucia adapter issue)
