@@ -1,5 +1,18 @@
 # Changelog
 
+## <small>0.50.1 (2025-12-06)</small>
+
+* fix(backend): set default value for DEPLOYSTACK_ENCRYPTION_SECRET 8359fc3
+* fix(ci): always pass --increment flag in release PR workflows 6f650be
+* chore(backend): release v0.50.0 b7e6d19
+* chore(backend): release v0.50.0 714a87d
+* chore(frontend): release v0.46.0 016a8c1
+* chore(frontend): release v0.46.0 5d8faca
+* chore(satellite): release v0.13.0 be96cc1
+* chore(satellite): release v0.13.0 fdbbcdf
+* feat(all): add real-time MCP server config updates with automatic stdio restart ad287e4
+* feat(backend): add user-level HTTP config overrides for headers and query params 7193e89
+
 ## 0.50.0 (2025-12-06)
 
 * chore(backend): release v0.50.0 714a87d
