@@ -23,7 +23,16 @@ module.exports = {
     '@release-it/conventional-changelog': {
       preset: 'angular',
       infile: 'CHANGELOG.md',
-      whatBump: false
+      whatBump: false,
+      writerOpts: {
+        transform: (commit) => {
+          // Exclude release commits from changelog
+          if (commit.type === 'chore' && commit.subject && commit.subject.startsWith('release v')) {
+            return false;
+          }
+          return commit;
+        }
+      }
     }
   }
 };
