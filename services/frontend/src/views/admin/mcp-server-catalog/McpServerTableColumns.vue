@@ -30,6 +30,16 @@ import {
 import { DsTabs } from '@/components/ui/ds-tabs'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
+import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group'
+import { Spinner } from '@/components/ui/spinner'
+import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import {
   MoreVertical,
   Github,
@@ -40,7 +50,10 @@ import {
   Circle,
   CircleAlert,
   CircleMinus,
-  Trash2
+  Trash2,
+  Search,
+  SlidersHorizontal,
+  X
 } from 'lucide-vue-next'
 import McpServerStatusDialog from '@/components/mcp-server/McpServerStatusDialog.vue'
 import McpServerDeleteDialog from '@/components/mcp-server/McpServerDeleteDialog.vue'
@@ -50,6 +63,11 @@ import type { McpServer } from './types'
 interface Props {
   servers: McpServer[]
   selectedSource: 'all' | 'official_registry' | 'manual'
+  searchQuery: string
+  isSearching: boolean
+  isLoading: boolean
+  visibleFilters: Set<string>
+  filterValues: Record<string, string>
   onEditServer: (serverId: string) => void
   onToggleStatus: (serverId: string, newStatus: 'active' | 'disabled') => void
   onDeleteServer: (serverId: string) => Promise<void>
@@ -59,6 +77,11 @@ interface Emits {
   (e: 'selection-change', selectedIds: string[]): void
   (e: 'bulk-delete', selectedIds: string[]): Promise<void>
   (e: 'source-change', source: 'all' | 'official_registry' | 'manual'): void
+  (e: 'update:searchQuery', value: string): void
+  (e: 'search'): void
+  (e: 'filter-change', filters: Record<string, string>): void
+  (e: 'visible-filters-change', filters: Set<string>): void
+  (e: 'filter-values-change', values: Record<string, string>): void
 }
 
 const props = defineProps<Props>()
@@ -75,6 +98,75 @@ const sourceTabs = computed(() => [
 
 const handleSourceChange = (source: string) => {
   emit('source-change', source as 'all' | 'official_registry' | 'manual')
+}
+
+// Local search query (synced with parent via v-model)
+const localSearchQuery = ref(props.searchQuery)
+
+// Filter types
+type FilterType = 'status' | 'language' | 'runtime' | 'featured' | 'autoInstall'
+
+// Helper to update a single filter value
+const updateFilterValue = (filter: FilterType, value: string) => {
+  const newValues = { ...props.filterValues, [filter]: value }
+  emit('filter-values-change', newValues)
+  // Also emit filter-change for the parent to trigger search
+  const active: Record<string, string> = {}
+  for (const [key, val] of Object.entries(newValues)) {
+    if (val) {
+      active[key] = val
+    }
+  }
+  emit('filter-change', active)
+}
+
+// Toggle filter visibility (using prop from parent)
+const toggleFilter = (filter: FilterType) => {
+  const newFilters = new Set(props.visibleFilters)
+  if (newFilters.has(filter)) {
+    newFilters.delete(filter)
+  } else {
+    newFilters.add(filter)
+  }
+  emit('visible-filters-change', newFilters)
+}
+
+// Remove filter (reset value and hide)
+const removeFilter = (filter: FilterType) => {
+  // Reset value and emit
+  const newValues = { ...props.filterValues, [filter]: '' }
+  emit('filter-values-change', newValues)
+  // Hide the filter
+  const newFilters = new Set(props.visibleFilters)
+  newFilters.delete(filter)
+  emit('visible-filters-change', newFilters)
+  // Emit filter-change to trigger search
+  const active: Record<string, string> = {}
+  for (const [key, val] of Object.entries(newValues)) {
+    if (val) {
+      active[key] = val
+    }
+  }
+  emit('filter-change', active)
+}
+
+// Check if any filters are visible (using prop)
+const hasVisibleFilters = computed(() => props.visibleFilters.size > 0)
+
+// Watch for parent changes
+watch(() => props.searchQuery, (newValue) => {
+  localSearchQuery.value = newValue
+})
+
+// Handle search input change
+const handleSearchInput = (value: string | number) => {
+  localSearchQuery.value = String(value)
+  emit('update:searchQuery', String(value))
+}
+
+// Handle search submit (Enter key)
+const handleSearchSubmit = () => {
+  emit('search')
 }
 
 // Selection state
@@ -238,17 +330,159 @@ const getRepositoryLabel = (platform?: string) => {
     />
 
     <!-- Bulk actions toolbar -->
-    <div class="flex items-center justify-end my-5">
-      <Button
-        variant="outline"
-        size="sm"
-        :disabled="selectedCount === 0"
-        @click="handleBulkDeleteClick"
-        class="flex items-center gap-2"
-      >
-        <Trash2 class="h-4 w-4" />
-        {{ t('mcpCatalog.bulkDelete.button') }}
-      </Button>
+    <div class="flex items-center justify-between my-5">
+      <!-- Search Input -->
+      <InputGroup class="w-96" :disabled="isSearching">
+        <InputGroupInput
+          :model-value="localSearchQuery"
+          :placeholder="isSearching ? t('mcpCatalog.table.search.searching') : t('mcpCatalog.table.search.placeholder')"
+          :disabled="isSearching"
+          @update:model-value="handleSearchInput"
+          @keyup.enter="handleSearchSubmit"
+        />
+        <InputGroupAddon>
+          <Spinner v-if="isSearching" />
+          <Search v-else class="h-4 w-4" />
+        </InputGroupAddon>
+      </InputGroup>
+
+      <!-- Right side buttons -->
+      <div class="flex items-center gap-2">
+        <!-- Filters Dropdown -->
+        <DropdownMenu>
+          <DropdownMenuTrigger as-child>
+            <Button
+              variant="outline"
+              class="h-9 flex items-center gap-2"
+            >
+              <SlidersHorizontal class="h-4 w-4" />
+              {{ t('mcpCatalog.filters.button') }}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem @click="toggleFilter('status')">
+              {{ t('mcpCatalog.filters.status.label') }}
+            </DropdownMenuItem>
+            <DropdownMenuItem @click="toggleFilter('language')">
+              {{ t('mcpCatalog.filters.language.label') }}
+            </DropdownMenuItem>
+            <DropdownMenuItem @click="toggleFilter('runtime')">
+              {{ t('mcpCatalog.filters.runtime.label') }}
+            </DropdownMenuItem>
+            <DropdownMenuItem @click="toggleFilter('featured')">
+              {{ t('mcpCatalog.filters.featured.label') }}
+            </DropdownMenuItem>
+            <DropdownMenuItem @click="toggleFilter('autoInstall')">
+              {{ t('mcpCatalog.filters.autoInstall.label') }}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        <!-- Bulk Delete Button -->
+        <Button
+          variant="outline"
+          :disabled="selectedCount === 0"
+          @click="handleBulkDeleteClick"
+          class="h-9 flex items-center gap-2"
+        >
+          <Trash2 class="h-4 w-4" />
+          {{ t('mcpCatalog.bulkDelete.button') }}
+        </Button>
+      </div>
+    </div>
+
+    <!-- Active Filters Row -->
+    <div v-if="hasVisibleFilters" class="flex flex-wrap gap-2">
+      <!-- Status Filter -->
+      <div v-if="props.visibleFilters.has('status')" class="inline-flex items-center gap-2 rounded-md border bg-background px-3 py-1.5">
+        <span class="text-sm font-medium whitespace-nowrap">{{ t('mcpCatalog.filters.status.label') }}</span>
+        <Select :model-value="props.filterValues.status" @update:model-value="(v) => updateFilterValue('status', String(v ?? ''))">
+          <SelectTrigger class="h-7 w-[150px]">
+            <SelectValue :placeholder="t('mcpCatalog.filters.status.placeholder')" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="active">{{ t('mcpCatalog.status.active') }}</SelectItem>
+            <SelectItem value="disabled">{{ t('mcpCatalog.status.disabled') }}</SelectItem>
+            <SelectItem value="maintenance">{{ t('mcpCatalog.status.maintenance') }}</SelectItem>
+          </SelectContent>
+        </Select>
+        <Button variant="ghost" size="icon" class="h-6 w-6" @click="removeFilter('status')">
+          <X class="h-4 w-4" />
+        </Button>
+      </div>
+
+      <!-- Language Filter -->
+      <div v-if="props.visibleFilters.has('language')" class="inline-flex items-center gap-2 rounded-md border bg-background px-3 py-1.5">
+        <span class="text-sm font-medium whitespace-nowrap">{{ t('mcpCatalog.filters.language.label') }}</span>
+        <Select :model-value="props.filterValues.language" @update:model-value="(v) => updateFilterValue('language', String(v ?? ''))">
+          <SelectTrigger class="h-7 w-[150px]">
+            <SelectValue :placeholder="t('mcpCatalog.filters.language.placeholder')" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="javascript">JavaScript</SelectItem>
+            <SelectItem value="typescript">TypeScript</SelectItem>
+            <SelectItem value="python">Python</SelectItem>
+            <SelectItem value="go">Go</SelectItem>
+            <SelectItem value="rust">Rust</SelectItem>
+          </SelectContent>
+        </Select>
+        <Button variant="ghost" size="icon" class="h-6 w-6" @click="removeFilter('language')">
+          <X class="h-4 w-4" />
+        </Button>
+      </div>
+
+      <!-- Runtime Filter -->
+      <div v-if="props.visibleFilters.has('runtime')" class="inline-flex items-center gap-2 rounded-md border bg-background px-3 py-1.5">
+        <span class="text-sm font-medium whitespace-nowrap">{{ t('mcpCatalog.filters.runtime.label') }}</span>
+        <Select :model-value="props.filterValues.runtime" @update:model-value="(v) => updateFilterValue('runtime', String(v ?? ''))">
+          <SelectTrigger class="h-7 w-[150px]">
+            <SelectValue :placeholder="t('mcpCatalog.filters.runtime.placeholder')" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="node">Node.js</SelectItem>
+            <SelectItem value="python">Python</SelectItem>
+            <SelectItem value="go">Go</SelectItem>
+            <SelectItem value="docker">Docker</SelectItem>
+          </SelectContent>
+        </Select>
+        <Button variant="ghost" size="icon" class="h-6 w-6" @click="removeFilter('runtime')">
+          <X class="h-4 w-4" />
+        </Button>
+      </div>
+
+      <!-- Featured Filter -->
+      <div v-if="props.visibleFilters.has('featured')" class="inline-flex items-center gap-2 rounded-md border bg-background px-3 py-1.5">
+        <span class="text-sm font-medium whitespace-nowrap">{{ t('mcpCatalog.filters.featured.label') }}</span>
+        <Select :model-value="props.filterValues.featured" @update:model-value="(v) => updateFilterValue('featured', String(v ?? ''))">
+          <SelectTrigger class="h-7 w-[150px]">
+            <SelectValue :placeholder="t('mcpCatalog.filters.featured.placeholder')" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="yes">{{ t('mcpCatalog.filters.featured.yes') }}</SelectItem>
+            <SelectItem value="no">{{ t('mcpCatalog.filters.featured.no') }}</SelectItem>
+          </SelectContent>
+        </Select>
+        <Button variant="ghost" size="icon" class="h-6 w-6" @click="removeFilter('featured')">
+          <X class="h-4 w-4" />
+        </Button>
+      </div>
+
+      <!-- Auto Install Filter -->
+      <div v-if="props.visibleFilters.has('autoInstall')" class="inline-flex items-center gap-2 rounded-md border bg-background px-3 py-1.5">
+        <span class="text-sm font-medium whitespace-nowrap">{{ t('mcpCatalog.filters.autoInstall.label') }}</span>
+        <Select :model-value="props.filterValues.autoInstall" @update:model-value="(v) => updateFilterValue('autoInstall', String(v ?? ''))">
+          <SelectTrigger class="h-7 w-[150px]">
+            <SelectValue :placeholder="t('mcpCatalog.filters.autoInstall.placeholder')" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="yes">{{ t('mcpCatalog.filters.autoInstall.yes') }}</SelectItem>
+            <SelectItem value="no">{{ t('mcpCatalog.filters.autoInstall.no') }}</SelectItem>
+          </SelectContent>
+        </Select>
+        <Button variant="ghost" size="icon" class="h-6 w-6" @click="removeFilter('autoInstall')">
+          <X class="h-4 w-4" />
+        </Button>
+      </div>
     </div>
 
     <div class="rounded-md border">
@@ -264,21 +498,52 @@ const getRepositoryLabel = (platform?: string) => {
           </TableHead>
           <TableHead>{{ t('mcpCatalog.table.columns.name') }}</TableHead>
           <TableHead>{{ t('mcpCatalog.table.columns.category') }}</TableHead>
+          <TableHead>{{ t('mcpCatalog.table.columns.source') }}</TableHead>
           <TableHead>{{ t('mcpCatalog.table.columns.runtime') }}</TableHead>
           <TableHead>{{ t('mcpCatalog.table.columns.status') }}</TableHead>
           <TableHead class="w-[50px]"></TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
+        <!-- Loading State - Skeleton Rows -->
+        <template v-if="props.isLoading">
+          <TableRow v-for="i in 5" :key="`skeleton-${i}`">
+            <TableCell>
+              <Skeleton class="h-4 w-4" />
+            </TableCell>
+            <TableCell>
+              <div class="space-y-2">
+                <Skeleton class="h-4 w-[180px]" />
+                <Skeleton class="h-3 w-[120px]" />
+              </div>
+            </TableCell>
+            <TableCell>
+              <Skeleton class="h-5 w-[100px] rounded-full" />
+            </TableCell>
+            <TableCell>
+              <Skeleton class="h-5 w-[80px] rounded-full" />
+            </TableCell>
+            <TableCell>
+              <Skeleton class="h-5 w-[60px] rounded-full" />
+            </TableCell>
+            <TableCell>
+              <Skeleton class="h-5 w-[70px] rounded-full" />
+            </TableCell>
+            <TableCell>
+              <Skeleton class="h-8 w-8 rounded" />
+            </TableCell>
+          </TableRow>
+        </template>
+
         <!-- Empty State -->
-        <TableRow v-if="props.servers.length === 0">
-          <TableCell :colspan="6" class="h-24 text-center">
+        <TableRow v-else-if="props.servers.length === 0">
+          <TableCell :colspan="7" class="h-24 text-center">
             {{ t('mcpCatalog.table.noData') }}
           </TableCell>
         </TableRow>
 
         <!-- Data Rows -->
-        <TableRow v-for="server in props.servers" :key="server.id">
+        <TableRow v-else v-for="server in props.servers" :key="server.id">
           <!-- Checkbox -->
           <TableCell>
             <Checkbox
@@ -313,7 +578,14 @@ const getRepositoryLabel = (platform?: string) => {
 
           <!-- Category -->
           <TableCell>
-            <CategoryDisplay :category-id="server.category_id" />
+            <CategoryDisplay :category="server.category" />
+          </TableCell>
+
+          <!-- Source -->
+          <TableCell>
+            <div class="inline-flex items-center justify-center rounded-full border px-1.5 py-0.5 text-xs font-medium text-muted-foreground">
+              {{ t(`mcpCatalog.filters.source.${server.source}`) }}
+            </div>
           </TableCell>
 
           <!-- Runtime -->

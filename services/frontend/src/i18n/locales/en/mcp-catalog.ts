@@ -11,7 +11,8 @@ export default {
     noCategory: 'No category assigned',
     openMenu: 'Open menu',
     search: {
-      placeholder: 'Search servers by name, description, or tags...',
+      placeholder: 'Search MCP Server',
+      searching: 'Searching...',
       button: 'Search'
     },
     columns: {
@@ -20,6 +21,7 @@ export default {
       language: 'Language',
       runtime: 'Runtime',
       category: 'Category',
+      source: 'Source',
       status: 'Status',
       featured: 'Featured',
       created: 'Created',
@@ -860,6 +862,7 @@ export default {
   },
 
   filters: {
+    button: 'Filters',
     clear: 'Clear Filters',
     activeSearch: 'Search active - {count} results',
     filtersApplied: 'Filters applied - {count} results',
@@ -870,6 +873,7 @@ export default {
     },
     status: {
       label: 'Status',
+      placeholder: 'All',
       all: 'All Statuses',
       active: 'Active',
       deprecated: 'Deprecated',
@@ -878,23 +882,27 @@ export default {
     },
     language: {
       label: 'Language',
+      placeholder: 'All',
       all: 'All Languages'
     },
     runtime: {
       label: 'Runtime',
+      placeholder: 'All',
       all: 'All Runtimes'
     },
     featured: {
       label: 'Featured',
+      placeholder: 'All',
       all: 'All Servers',
-      yes: 'Featured Only',
-      no: 'Non-Featured'
+      yes: 'Yes',
+      no: 'No'
     },
     autoInstall: {
       label: 'Auto Install',
+      placeholder: 'All',
       all: 'All Servers',
-      yes: 'Auto Install Enabled',
-      no: 'Auto Install Disabled'
+      yes: 'Yes',
+      no: 'No'
     }
   },
 

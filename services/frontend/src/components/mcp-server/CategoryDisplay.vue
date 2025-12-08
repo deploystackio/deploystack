@@ -12,9 +12,15 @@ const eventBus = useEventBus()
 // Storage key for categories cache
 const CATEGORIES_STORAGE_KEY = 'mcp_categories_cache'
 
+interface CategoryData {
+  id: string
+  name: string
+  icon?: string | null
+}
+
 interface Props {
   categoryId?: string | null
-  category?: McpCategory | null
+  category?: CategoryData | McpCategory | null
   showNotProvided?: boolean
   iconClass?: string
   textClass?: string
@@ -30,7 +36,7 @@ const props = withDefaults(defineProps<Props>(), {
   containerClass: 'flex items-center gap-2'
 })
 
-const category = ref<McpCategory | null>(props.category)
+const category = ref<CategoryData | McpCategory | null>(props.category)
 const isLoading = ref(false)
 const error = ref<string | null>(null)
 

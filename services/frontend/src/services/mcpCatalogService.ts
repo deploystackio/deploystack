@@ -368,6 +368,7 @@ export class McpCatalogService {
     url.searchParams.append('q', params.q)
 
     // Optional parameters
+    if (params.source) url.searchParams.append('source', params.source)
     if (params.category) url.searchParams.append('category_id', params.category)
     if (params.language) url.searchParams.append('language', params.language)
     if (params.runtime) url.searchParams.append('runtime', params.runtime)

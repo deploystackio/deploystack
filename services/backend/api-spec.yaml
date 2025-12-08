@@ -11374,6 +11374,12 @@ paths:
                               type: string
                               nullable: true
                               description: Official registry name
+                            source:
+                              type: string
+                              enum:
+                                - official_registry
+                                - manual
+                              description: Source of the MCP server
                             created_at:
                               type: string
                               format: date-time
@@ -11394,6 +11400,7 @@ paths:
                             - status
                             - featured
                             - requires_oauth
+                            - source
                             - created_at
                             - updated_at
                         description: Array of server objects (minimal fields for listing)
@@ -11932,6 +11939,15 @@ paths:
         - schema:
             type: string
             enum:
+              - official_registry
+              - manual
+          in: query
+          name: source
+          required: false
+          description: "Filter by server source: official_registry or manual"
+        - schema:
+            type: string
+            enum:
               - "true"
               - "false"
           in: query
@@ -12093,6 +12109,12 @@ paths:
                               type: string
                               nullable: true
                               description: Official registry name
+                            source:
+                              type: string
+                              enum:
+                                - official_registry
+                                - manual
+                              description: Source of the MCP server
                             created_at:
                               type: string
                               format: date-time
@@ -12113,6 +12135,7 @@ paths:
                             - status
                             - featured
                             - requires_oauth
+                            - source
                             - created_at
                             - updated_at
                         description: Array of server objects (minimal fields for listing)

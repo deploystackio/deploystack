@@ -113,7 +113,12 @@ export const SEARCH_SERVERS_QUERY_SCHEMA = {
       enum: MCP_SERVER_STATUS_VALUES as unknown as string[],
       description: 'Filter by server status'
     },
-    featured: { 
+    source: {
+      type: 'string',
+      enum: ['official_registry', 'manual'],
+      description: 'Filter by server source: official_registry or manual'
+    },
+    featured: {
       type: 'string',
       enum: ['true', 'false'],
       description: 'Filter by featured status: true for featured servers, false for non-featured servers'
@@ -1184,10 +1189,11 @@ export const SERVER_LIST_ENTITY_SCHEMA = {
     author_name: { type: 'string', nullable: true, description: 'Author name' },
     organization: { type: 'string', nullable: true, description: 'Organization' },
     official_name: { type: 'string', nullable: true, description: 'Official registry name' },
+    source: { type: 'string', enum: ['official_registry', 'manual'], description: 'Source of the MCP server' },
     created_at: { type: 'string', format: 'date-time', description: 'Creation timestamp' },
     updated_at: { type: 'string', format: 'date-time', description: 'Last update timestamp' }
   },
-  required: ['id', 'name', 'slug', 'description', 'language', 'runtime', 'transport_type', 'visibility', 'status', 'featured', 'requires_oauth', 'created_at', 'updated_at']
+  required: ['id', 'name', 'slug', 'description', 'language', 'runtime', 'transport_type', 'visibility', 'status', 'featured', 'requires_oauth', 'source', 'created_at', 'updated_at']
 } as const;
 
 export const LIST_SERVERS_SUCCESS_RESPONSE_SCHEMA = {
@@ -1775,6 +1781,7 @@ export interface ServerListEntity {
   author_name: string | null;
   organization: string | null;
   official_name: string | null;
+  source: 'official_registry' | 'manual';
   created_at: string;
   updated_at: string;
 }
@@ -1972,6 +1979,7 @@ export function formatServerListResponse(
     author_name: server.author_name || null,
     organization: server.organization || null,
     official_name: server.official_name || null,
+    source: server.source || 'manual',
     created_at: server.created_at.toISOString(),
     updated_at: server.updated_at.toISOString()
   };

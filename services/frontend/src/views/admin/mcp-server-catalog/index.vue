@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter, useRoute } from 'vue-router'
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
@@ -8,19 +8,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Button } from '@/components/ui/button'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import {
-  Field,
-  FieldDescription,
-  FieldGroup,
-  FieldLabel,
-} from '@/components/ui/field'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,7 +18,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { Plus, RefreshCw, ExternalLink, X } from 'lucide-vue-next'
+import { Plus, RefreshCw, ExternalLink } from 'lucide-vue-next'
 import { Spinner } from '@/components/ui/spinner'
 import DashboardLayout from '@/components/DashboardLayout.vue'
 import { McpCatalogService, type PaginationMeta } from '@/services/mcpCatalogService'
@@ -109,49 +96,32 @@ const pagination = ref<PaginationMeta>({
 // Selection state
 const selectedServerIds = ref<string[]>([])
 
+// Visible filters state (lifted from child to preserve across loading)
+const visibleFilters = ref<Set<string>>(new Set())
+
+// Filter values state (lifted from child to preserve across loading)
+const filterValues = ref<Record<string, string>>({
+  status: '',
+  language: '',
+  runtime: '',
+  featured: '',
+  autoInstall: '',
+})
+
 // Handle selection change from table
 const handleSelectionChange = (selectedIds: string[]) => {
   selectedServerIds.value = selectedIds
 }
 
-// Available filter options (using 'all' instead of empty string for shadcn-vue compatibility)
-const statusOptions = [
-  { value: 'all', label: t('mcpCatalog.filters.status.all') },
-  { value: 'active', label: t('mcpCatalog.filters.status.active') },
-  { value: 'deprecated', label: t('mcpCatalog.filters.status.deprecated') },
-  { value: 'maintenance', label: t('mcpCatalog.filters.status.maintenance') },
-  { value: 'disabled', label: t('mcpCatalog.filters.status.disabled') }
-]
+// Handle visible filters change from table
+const handleVisibleFiltersChange = (filters: Set<string>) => {
+  visibleFilters.value = filters
+}
 
-const languageOptions = computed(() => [
-  { value: 'all', label: t('mcpCatalog.filters.language.all') },
-  ...availableLanguages.value.map(language => ({
-    value: language,
-    label: language
-  }))
-])
-
-// Computed runtime options (dynamic from API)
-const runtimeOptions = computed(() => [
-  { value: 'all', label: t('mcpCatalog.filters.runtime.all') },
-  ...availableRuntimes.value.map(runtime => ({
-    value: runtime,
-    label: runtime
-  }))
-])
-
-const featuredOptions = [
-  { value: 'all', label: t('mcpCatalog.filters.featured.all') },
-  { value: 'true', label: t('mcpCatalog.filters.featured.yes') },
-  { value: 'false', label: t('mcpCatalog.filters.featured.no') }
-]
-
-const autoInstallOptions = [
-  { value: 'all', label: t('mcpCatalog.filters.autoInstall.all') },
-  { value: 'true', label: t('mcpCatalog.filters.autoInstall.yes') },
-  { value: 'false', label: t('mcpCatalog.filters.autoInstall.no') }
-]
-
+// Handle filter values change from table
+const handleFilterValuesChange = (values: Record<string, string>) => {
+  filterValues.value = values
+}
 
 // Navigation handlers
 const handleAddServer = () => {
@@ -357,17 +327,6 @@ onUnmounted(() => {
 })
 
 
-// Check if any filters are active
-const hasActiveFilters = () => {
-  return !!searchQuery.value ||
-         selectedSource.value !== 'all' ||
-         selectedStatus.value !== 'all' ||
-         selectedLanguage.value !== 'all' ||
-         selectedRuntime.value !== 'all' ||
-         selectedFeatured.value !== 'all' ||
-         selectedAutoInstall.value !== 'all'
-}
-
 // Check if text search is active
 const hasTextSearch = () => {
   return !!searchQuery.value && searchQuery.value.trim().length > 0
@@ -488,25 +447,6 @@ const executeSearch = async () => {
   }
 }
 
-// Clear all filters
-const clearFilters = async () => {
-  isSearching.value = true
-  searchQuery.value = ''
-  selectedSource.value = 'all'
-  selectedStatus.value = 'all'
-  selectedLanguage.value = 'all'
-  selectedRuntime.value = 'all'
-  selectedFeatured.value = 'all'
-  selectedAutoInstall.value = 'all'
-  currentPage.value = 1
-
-  try {
-    await fetchServers()
-  } finally {
-    isSearching.value = false
-  }
-}
-
 // Handle source filter change from tabs
 const handleSourceChange = async (source: 'all' | 'official_registry' | 'manual') => {
   selectedSource.value = source
@@ -517,6 +457,34 @@ const handleSourceChange = async (source: 'all' | 'official_registry' | 'manual'
   } else {
     await fetchServers()
   }
+}
+
+// Handle filter change from McpServerTableColumns
+const handleFilterChange = async (filters: Record<string, string>) => {
+  // Map filter values from child component to parent state
+  selectedStatus.value = (filters.status as typeof selectedStatus.value) || 'all'
+  selectedLanguage.value = filters.language || 'all'
+  selectedRuntime.value = filters.runtime || 'all'
+
+  // Map 'yes'/'no' to 'true'/'false' for featured and autoInstall
+  if (filters.featured === 'yes') {
+    selectedFeatured.value = 'true'
+  } else if (filters.featured === 'no') {
+    selectedFeatured.value = 'false'
+  } else {
+    selectedFeatured.value = 'all'
+  }
+
+  if (filters.autoInstall === 'yes') {
+    selectedAutoInstall.value = 'true'
+  } else if (filters.autoInstall === 'no') {
+    selectedAutoInstall.value = 'false'
+  } else {
+    selectedAutoInstall.value = 'all'
+  }
+
+  // Execute search with new filters
+  await executeSearch()
 }
 
 // Note: Removed automatic watch-based search execution
@@ -639,178 +607,33 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <!-- Loading State -->
-      <div v-if="isLoading" class="text-muted-foreground">
-        {{ t('mcpCatalog.table.loading') }}
-      </div>
-
       <!-- Error State -->
-      <div v-else-if="error" class="text-red-500">
+      <div v-if="error" class="text-red-500">
         {{ t('mcpCatalog.table.error', { error }) }}
       </div>
 
       <!-- Data Table -->
       <div v-else class="space-y-4">
-        <!-- Search and Filters -->
-        <div class="space-y-4">
-          <!-- Search Input -->
-          <div class="flex items-center gap-2">
-            <Input
-              :placeholder="t('mcpCatalog.table.search.placeholder')"
-              v-model="searchQuery"
-              class="max-w-sm"
-              @keyup.enter="executeSearch"
-            />
-            <Button
-              @click="executeSearch"
-              :disabled="isSearching"
-              class="flex items-center gap-2"
-            >
-              <Spinner v-if="isSearching" class="mr-2" />
-              {{ t('mcpCatalog.table.search.button') }}
-            </Button>
-            <Button
-              v-if="hasActiveFilters()"
-              variant="ghost"
-              size="sm"
-              @click="clearFilters"
-              :disabled="isSearching"
-              class="flex items-center gap-2"
-            >
-              <X class="h-4 w-4" />
-              {{ t('mcpCatalog.filters.clear') }}
-            </Button>
-          </div>
-
-          <!-- Filter Fields -->
-          <FieldGroup>
-            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-              <!-- Status Filter -->
-              <Field>
-                <FieldLabel for="filter-status">
-                  {{ t('mcpCatalog.filters.status.label') }}
-                </FieldLabel>
-                <Select v-model="selectedStatus">
-                  <SelectTrigger id="filter-status">
-                    <SelectValue :placeholder="t('mcpCatalog.filters.status.all')" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem
-                      v-for="option in statusOptions"
-                      :key="option.value"
-                      :value="option.value"
-                    >
-                      {{ option.label }}
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </Field>
-
-              <!-- Language Filter -->
-              <Field>
-                <FieldLabel for="filter-language">
-                  {{ t('mcpCatalog.filters.language.label') }}
-                </FieldLabel>
-                <Select v-model="selectedLanguage">
-                  <SelectTrigger id="filter-language">
-                    <SelectValue :placeholder="t('mcpCatalog.filters.language.all')" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem
-                      v-for="option in languageOptions"
-                      :key="option.value"
-                      :value="option.value"
-                    >
-                      {{ option.label }}
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </Field>
-
-              <!-- Runtime Filter -->
-              <Field>
-                <FieldLabel for="filter-runtime">
-                  {{ t('mcpCatalog.filters.runtime.label') }}
-                </FieldLabel>
-                <Select v-model="selectedRuntime">
-                  <SelectTrigger id="filter-runtime">
-                    <SelectValue :placeholder="t('mcpCatalog.filters.runtime.all')" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem
-                      v-for="option in runtimeOptions"
-                      :key="option.value"
-                      :value="option.value"
-                    >
-                      {{ option.label }}
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </Field>
-
-              <!-- Featured Filter -->
-              <Field>
-                <FieldLabel for="filter-featured">
-                  {{ t('mcpCatalog.filters.featured.label') }}
-                </FieldLabel>
-                <Select v-model="selectedFeatured">
-                  <SelectTrigger id="filter-featured">
-                    <SelectValue :placeholder="t('mcpCatalog.filters.featured.all')" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem
-                      v-for="option in featuredOptions"
-                      :key="option.value"
-                      :value="option.value"
-                    >
-                      {{ option.label }}
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </Field>
-
-              <!-- Auto Install Filter -->
-              <Field>
-                <FieldLabel for="filter-auto-install">
-                  {{ t('mcpCatalog.filters.autoInstall.label') }}
-                </FieldLabel>
-                <Select v-model="selectedAutoInstall">
-                  <SelectTrigger id="filter-auto-install">
-                    <SelectValue :placeholder="t('mcpCatalog.filters.autoInstall.all')" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem
-                      v-for="option in autoInstallOptions"
-                      :key="option.value"
-                      :value="option.value"
-                    >
-                      {{ option.label }}
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </Field>
-            </div>
-
-            <!-- Active Filters Info -->
-            <FieldDescription v-if="hasTextSearch()">
-              {{ t('mcpCatalog.filters.activeSearch', { count: totalItems }) }}
-            </FieldDescription>
-            <FieldDescription v-else-if="hasActiveFilters()">
-              {{ t('mcpCatalog.filters.filtersApplied', { count: totalItems }) }}
-            </FieldDescription>
-          </FieldGroup>
-        </div>
-
         <!-- Servers Table Component -->
         <McpServerTableColumns
+          :is-loading="isLoading"
           :servers="servers"
           :selected-source="selectedSource"
+          :search-query="searchQuery"
+          :is-searching="isSearching"
+          :visible-filters="visibleFilters"
+          :filter-values="filterValues"
           :on-edit-server="handleEditServer"
           :on-toggle-status="handleToggleStatus"
           :on-delete-server="handleDeleteServer"
           @selection-change="handleSelectionChange"
           @bulk-delete="handleBulkDeleteServers"
           @source-change="handleSourceChange"
+          @update:search-query="(value) => searchQuery = value"
+          @search="executeSearch"
+          @filter-change="handleFilterChange"
+          @visible-filters-change="handleVisibleFiltersChange"
+          @filter-values-change="handleFilterValuesChange"
         />
 
         <!-- Pagination Controls -->
