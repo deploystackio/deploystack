@@ -54,7 +54,7 @@ export interface McpServer {
     icon: string | null
   } | null
   tags?: string[]
-  status: 'active' | 'deprecated' | 'maintenance'
+  status: 'active' | 'deprecated' | 'maintenance' | 'disabled'
   featured: boolean
   auto_install_new_default_team: boolean
   source: 'official_registry' | 'manual'
@@ -310,7 +310,7 @@ export interface UpdateMcpServerRequest {
   dependencies?: Record<string, any>
   category_id?: string
   tags?: string[]
-  status?: 'active' | 'deprecated' | 'maintenance'
+  status?: 'active' | 'deprecated' | 'maintenance' | 'disabled'
   featured?: boolean
   auto_install_new_default_team?: boolean
 }
@@ -320,7 +320,7 @@ export interface McpServerFilters {
   category_id?: string
   language?: string
   runtime?: string
-  status?: 'active' | 'deprecated' | 'maintenance'
+  status?: 'active' | 'deprecated' | 'maintenance' | 'disabled'
   featured?: boolean
   search?: string
 }
@@ -458,7 +458,8 @@ export const INSTALLATION_TYPE_OPTIONS = [
 export const STATUS_OPTIONS = [
   { value: 'active', label: 'Active' },
   { value: 'deprecated', label: 'Deprecated' },
-  { value: 'maintenance', label: 'Maintenance' }
+  { value: 'maintenance', label: 'Maintenance' },
+  { value: 'disabled', label: 'Disabled' }
 ]
 
 export const TRANSPORT_TYPE_OPTIONS = [

@@ -56,7 +56,8 @@ const error = ref<string | null>(null)
 
 // Search and filter state
 const searchQuery = ref('')
-const selectedStatus = ref<'active' | 'deprecated' | 'maintenance' | 'all'>('all')
+const selectedSource = ref<'all' | 'official_registry' | 'manual'>('all')
+const selectedStatus = ref<'active' | 'deprecated' | 'maintenance' | 'disabled' | 'all'>('all')
 const selectedLanguage = ref('all')
 const selectedRuntime = ref('all')
 const selectedFeatured = ref<'true' | 'false' | 'all'>('all')
@@ -105,12 +106,21 @@ const pagination = ref<PaginationMeta>({
   has_more: false
 })
 
+// Selection state
+const selectedServerIds = ref<string[]>([])
+
+// Handle selection change from table
+const handleSelectionChange = (selectedIds: string[]) => {
+  selectedServerIds.value = selectedIds
+}
+
 // Available filter options (using 'all' instead of empty string for shadcn-vue compatibility)
 const statusOptions = [
   { value: 'all', label: t('mcpCatalog.filters.status.all') },
   { value: 'active', label: t('mcpCatalog.filters.status.active') },
   { value: 'deprecated', label: t('mcpCatalog.filters.status.deprecated') },
-  { value: 'maintenance', label: t('mcpCatalog.filters.status.maintenance') }
+  { value: 'maintenance', label: t('mcpCatalog.filters.status.maintenance') },
+  { value: 'disabled', label: t('mcpCatalog.filters.status.disabled') }
 ]
 
 const languageOptions = computed(() => [
@@ -150,6 +160,81 @@ const handleAddServer = () => {
 
 const handleEditServer = (serverId: string) => {
   router.push(`/admin/mcp-server-catalog/view/${serverId}`)
+}
+
+const handleToggleStatus = async (serverId: string, newStatus: 'active' | 'disabled') => {
+  try {
+    await McpCatalogService.updateGlobalServerStatus(serverId, newStatus)
+
+    if (newStatus === 'disabled') {
+      toast.success(t('mcpCatalog.messages.disableSuccess'))
+    } else {
+      toast.success(t('mcpCatalog.messages.enableSuccess'))
+    }
+
+    // Refresh the table
+    if (hasTextSearch()) {
+      await searchServers()
+    } else {
+      await fetchServers()
+    }
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+    toast.error(t('mcpCatalog.messages.statusChangeError', { error: errorMessage }))
+  }
+}
+
+const handleDeleteServer = async (serverId: string): Promise<void> => {
+  try {
+    // Find server name for the toast message
+    const server = servers.value.find(s => s.id === serverId)
+    const serverName = server?.name || 'Unknown Server'
+
+    await McpCatalogService.deleteGlobalServer(serverId)
+
+    toast.success(t('mcpCatalog.messages.deletionQueued', { name: serverName }))
+
+    // Refresh the table
+    if (hasTextSearch()) {
+      await searchServers()
+    } else {
+      await fetchServers()
+    }
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+    toast.error(t('mcpCatalog.messages.deleteError', { error: errorMessage }))
+    throw err // Re-throw so the dialog knows deletion failed
+  }
+}
+
+const handleBulkDeleteServers = async (serverIds: string[]): Promise<void> => {
+  try {
+    const result = await McpCatalogService.bulkDeleteGlobalServers(serverIds)
+
+    if (result.total_skipped > 0) {
+      toast.success(t('mcpCatalog.bulkDelete.partialSuccess', {
+        queued: result.total_queued,
+        skipped: result.total_skipped
+      }))
+    } else {
+      toast.success(t('mcpCatalog.bulkDelete.success', {
+        queued: result.total_queued
+      }))
+    }
+
+    // Optimistically remove deleted servers from the UI
+    // (they're queued for deletion in background jobs, not immediately deleted from DB)
+    const queuedServerIds = new Set(result.jobs.map(job => job.server_id))
+    servers.value = servers.value.filter(server => !queuedServerIds.has(server.id))
+    totalItems.value = Math.max(0, totalItems.value - result.total_queued)
+
+    // Clear selection
+    selectedServerIds.value = []
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+    toast.error(t('mcpCatalog.bulkDelete.error', { error: errorMessage }))
+    throw err // Re-throw so the dialog knows deletion failed
+  }
 }
 
 // Sync registry handler
@@ -275,6 +360,7 @@ onUnmounted(() => {
 // Check if any filters are active
 const hasActiveFilters = () => {
   return !!searchQuery.value ||
+         selectedSource.value !== 'all' ||
          selectedStatus.value !== 'all' ||
          selectedLanguage.value !== 'all' ||
          selectedRuntime.value !== 'all' ||
@@ -302,6 +388,9 @@ const searchServers = async (): Promise<void> => {
     }
 
     // Add filters if selected (skip 'all' values)
+    if (selectedSource.value !== 'all') {
+      searchParams.source = selectedSource.value
+    }
     if (selectedStatus.value !== 'all') {
       searchParams.status = selectedStatus.value
     }
@@ -345,6 +434,9 @@ const fetchServers = async (): Promise<void> => {
     }
 
     // Add active filters
+    if (selectedSource.value !== 'all') {
+      filters.source = selectedSource.value
+    }
     if (selectedStatus.value !== 'all') {
       filters.status = selectedStatus.value
     }
@@ -400,6 +492,7 @@ const executeSearch = async () => {
 const clearFilters = async () => {
   isSearching.value = true
   searchQuery.value = ''
+  selectedSource.value = 'all'
   selectedStatus.value = 'all'
   selectedLanguage.value = 'all'
   selectedRuntime.value = 'all'
@@ -411,6 +504,18 @@ const clearFilters = async () => {
     await fetchServers()
   } finally {
     isSearching.value = false
+  }
+}
+
+// Handle source filter change from tabs
+const handleSourceChange = async (source: 'all' | 'official_registry' | 'manual') => {
+  selectedSource.value = source
+  selectedServerIds.value = [] // Clear selection when switching source
+  currentPage.value = 1
+  if (hasTextSearch()) {
+    await searchServers()
+  } else {
+    await fetchServers()
   }
 }
 
@@ -699,7 +804,13 @@ onUnmounted(() => {
         <!-- Servers Table Component -->
         <McpServerTableColumns
           :servers="servers"
+          :selected-source="selectedSource"
           :on-edit-server="handleEditServer"
+          :on-toggle-status="handleToggleStatus"
+          :on-delete-server="handleDeleteServer"
+          @selection-change="handleSelectionChange"
+          @bulk-delete="handleBulkDeleteServers"
+          @source-change="handleSourceChange"
         />
 
         <!-- Pagination Controls -->
@@ -709,6 +820,8 @@ onUnmounted(() => {
           :page-size="pageSize"
           :total-items="totalItems"
           :is-loading="isLoading"
+          :selected-count="selectedServerIds.length"
+          :total-rows="servers.length"
           @page-change="handlePageChange"
           @page-size-change="handlePageSizeChange"
         />

@@ -15,6 +15,25 @@ export interface PaginationParams {
   offset?: number
 }
 
+export interface BulkDeleteJob {
+  server_id: string
+  server_name: string
+  job_id: string
+}
+
+export interface BulkDeleteSkipped {
+  server_id: string
+  reason: string
+}
+
+export interface BulkDeleteResponse {
+  total_requested: number
+  total_queued: number
+  total_skipped: number
+  jobs: BulkDeleteJob[]
+  skipped: BulkDeleteSkipped[]
+}
+
 export interface FeaturedCategory {
   id: string
   name: string
@@ -317,6 +336,29 @@ export class McpCatalogService {
   }
 
   /**
+   * Bulk delete global MCP servers (admin only)
+   * Creates background jobs for each server deletion
+   */
+  static async bulkDeleteGlobalServers(serverIds: string[]): Promise<BulkDeleteResponse> {
+    const response = await fetch(`${this.baseUrl}/api/mcp/servers/global/bulk-delete`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ server_ids: serverIds }),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.message || `Failed to bulk delete MCP servers: ${response.status}`)
+    }
+
+    const data = await response.json()
+    return data.data
+  }
+
+  /**
    * Search MCP servers with advanced filters
    */
   static async searchServers(params: McpServerSearchParams): Promise<McpServerSearchResponse> {
@@ -518,8 +560,34 @@ export class McpCatalogService {
   /**
    * Update server status (admin only)
    */
-  static async updateStatus(serverId: string, status: 'active' | 'deprecated' | 'maintenance'): Promise<McpServer> {
+  static async updateStatus(serverId: string, status: 'active' | 'deprecated' | 'maintenance' | 'disabled'): Promise<McpServer> {
     return this.updateGlobalServer(serverId, { status })
+  }
+
+  /**
+   * Update global server status using dedicated PATCH endpoint (admin only)
+   * This endpoint is specifically for status changes and returns previous status
+   */
+  static async updateGlobalServerStatus(
+    serverId: string,
+    status: 'active' | 'deprecated' | 'maintenance' | 'disabled'
+  ): Promise<{ id: string; name: string; slug: string; status: string; previous_status: string; updated_at: string }> {
+    const response = await fetch(`${this.baseUrl}/api/mcp/servers/global/${serverId}/status`, {
+      method: 'PATCH',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ status }),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.message || `Failed to update server status: ${response.status}`)
+    }
+
+    const data = await response.json()
+    return data.data
   }
 
   /**

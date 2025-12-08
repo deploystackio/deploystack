@@ -16,7 +16,9 @@ import getLanguages from './servers/languages';
 import getRuntimes from './servers/runtimes';
 import createGlobalServer from './servers/create-global';
 import updateGlobalServer from './servers/update-global';
+import updateGlobalServerStatus from './servers/update-global-status';
 import deleteGlobalServer from './servers/delete-global';
+import bulkDeleteGlobalServers from './servers/bulk-delete-global';
 
 import listTeamServers from './teams/list-servers';
 import createTeamServer from './teams/create-server';
@@ -52,7 +54,9 @@ export default async function mcpRoutes(server: FastifyInstance) {
   // Global server management (global_admin only)
   await server.register(createGlobalServer);
   await server.register(updateGlobalServer);
+  await server.register(updateGlobalServerStatus);
   await server.register(deleteGlobalServer);
+  await server.register(bulkDeleteGlobalServers);
   
   // Team server management
   await server.register(listTeamServers);

@@ -33,7 +33,9 @@ export default {
       view: 'View Details',
       manage: 'Manage',
       feature: 'Feature',
-      unfeature: 'Unfeature'
+      unfeature: 'Unfeature',
+      enable: 'Enable',
+      disable: 'Disable'
     }
   },
 
@@ -42,6 +44,29 @@ export default {
     description: 'Are you sure you want to delete "{serverName}"? This action cannot be undone.',
     cancel: 'Cancel',
     confirm: 'Delete'
+  },
+
+  bulkDelete: {
+    button: 'Delete',
+    dialogTitle: 'Delete MCP Servers',
+    dialogDescription: 'You are about to delete {count} server(s). This will create background jobs to process the deletion.',
+    dialogWarning: 'All teams with installations will be notified. This action cannot be undone.',
+    cancel: 'Cancel',
+    confirm: 'Delete Servers',
+    deleting: 'Deleting...',
+    success: 'Queued {queued} server(s) for deletion',
+    partialSuccess: 'Queued {queued} server(s) for deletion. {skipped} server(s) were skipped.',
+    error: 'Failed to delete servers: {error}'
+  },
+
+  statusDialog: {
+    disableTitle: 'Disable MCP Server',
+    disableDescription: 'Are you sure you want to disable "{serverName}"? After disabling, the server cannot be installed by teams.',
+    enableTitle: 'Enable MCP Server',
+    enableDescription: 'Are you sure you want to enable "{serverName}"? This will make the server available for installation.',
+    cancel: 'Cancel',
+    confirmDisable: 'Disable',
+    confirmEnable: 'Enable'
   },
 
   form: {
@@ -486,6 +511,7 @@ export default {
         validConfiguration: 'Valid Configuration',
         invalidConfiguration: 'Invalid Configuration',
         helpText: 'Provide the Claude Desktop configuration for this MCP server in JSON format',
+        helpTextEdit: 'This is a preview of the current configuration. Edit individual arguments in the Configuration Schema step.',
         showExampleButton: 'Show example Config',
         preview: {
           title: 'Configuration Preview',
@@ -667,7 +693,8 @@ export default {
   status: {
     active: 'Active',
     deprecated: 'Deprecated',
-    maintenance: 'Maintenance'
+    maintenance: 'Maintenance',
+    disabled: 'Disabled'
   },
 
   languages: {
@@ -711,7 +738,10 @@ export default {
     deleteError: 'Failed to delete MCP server: {error}',
     deleteConfirm: 'Are you sure you want to delete "{name}"? This action cannot be undone.',
     featureSuccess: 'Server featured successfully',
-    unfeatureSuccess: 'Server unfeatured successfully'
+    unfeatureSuccess: 'Server unfeatured successfully',
+    enableSuccess: 'Server enabled successfully',
+    disableSuccess: 'Server disabled successfully',
+    statusChangeError: 'Failed to change server status: {error}'
   },
 
   edit: {
@@ -820,24 +850,31 @@ export default {
   },
 
   pagination: {
-    showing: 'Showing {start} to {end} of {total} servers',
-    noItems: 'No servers to display',
-    itemsPerPage: 'Items per page:',
+    rowsPerPage: 'Rows per page',
     pageInfo: 'Page {current} of {total}',
-    previous: 'Previous',
-    next: 'Next'
+    firstPage: 'Go to first page',
+    previousPage: 'Go to previous page',
+    nextPage: 'Go to next page',
+    lastPage: 'Go to last page',
+    rowsSelected: '{selected} of {total} row(s) selected.'
   },
 
   filters: {
     clear: 'Clear Filters',
     activeSearch: 'Search active - {count} results',
     filtersApplied: 'Filters applied - {count} results',
+    source: {
+      all: 'All',
+      official_registry: 'Official Registry',
+      manual: 'Manual'
+    },
     status: {
       label: 'Status',
       all: 'All Statuses',
       active: 'Active',
       deprecated: 'Deprecated',
-      maintenance: 'Maintenance'
+      maintenance: 'Maintenance',
+      disabled: 'Disabled'
     },
     language: {
       label: 'Language',

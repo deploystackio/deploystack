@@ -324,6 +324,18 @@ export class McpInstallationService {
       throw new Error('Server not found');
     }
 
+    // Check if server is disabled
+    if (server[0].status === 'disabled') {
+      this.logger.warn({
+        operation: 'create_installation',
+        teamId,
+        serverId: data.server_id,
+        serverStatus: server[0].status
+      }, 'Cannot install disabled MCP server');
+
+      throw new Error('Cannot install server: server is currently disabled');
+    }
+
     // Check total MCP server installation limit (applies to all transport types)
     this.logger.debug({
       operation: 'create_installation',

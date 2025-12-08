@@ -93,7 +93,7 @@ export const mcpServers = pgTable('mcpServers', {
   // Metadata & Status
   category_id: text('category_id').references(() => mcpCategories.id),
   tags: text('tags'), // JSON array: ["browser", "automation", "testing"]
-  status: text('status').notNull().default('active'), // 'active', 'deprecated', 'maintenance'
+  status: text('status').notNull().default('active'), // 'active', 'deprecated', 'maintenance', 'disabled'
   featured: boolean('featured').notNull().default(false),
   auto_install_new_default_team: boolean('auto_install_new_default_team').notNull().default(false),
 

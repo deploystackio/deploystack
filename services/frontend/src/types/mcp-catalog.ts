@@ -3,7 +3,8 @@ export interface McpServerSearchParams {
   category?: string
   language?: string
   runtime?: string
-  status?: 'active' | 'deprecated' | 'maintenance'
+  status?: 'active' | 'deprecated' | 'maintenance' | 'disabled'
+  source?: 'official_registry' | 'manual'
   featured?: boolean
   sort_by?: 'name' | 'github_stars'
   limit?: number

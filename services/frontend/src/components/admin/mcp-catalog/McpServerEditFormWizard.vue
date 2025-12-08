@@ -247,31 +247,99 @@ const initializeStorageWithData = (data: McpServerFormData) => {
     eventBus.setState('edit_configuration_schema', fullConfigSchema)
   }
 
-  // Initialize Claude Desktop config from packages/remotes
+  // Initialize Claude Desktop config
+  // PRIORITY: Use schema fields (source of truth after editing) over packages (legacy/original data)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let serverConfig: any = null
 
-  if (technicalData.remotes && Array.isArray(technicalData.remotes) && technicalData.remotes.length > 0) {
-    // HTTP/SSE server from remotes - find first valid remote with url
+  // Check if we have schema data (this is the source of truth after user edits)
+  const configSchema = data.configuration_schema
+  const hasSchemaArgs = configSchema && (
+    (configSchema.template_args && configSchema.template_args.length > 0) ||
+    (configSchema.team_args_schema && configSchema.team_args_schema.length > 0) ||
+    (configSchema.user_args_schema && configSchema.user_args_schema.length > 0)
+  )
+
+  // First, try to find a valid remote (HTTP/SSE server)
+  // Note: remotes may contain [null] from DB, so we must find a truly valid entry
+  const validRemote = technicalData.remotes && Array.isArray(technicalData.remotes)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const remote = technicalData.remotes.find((r: any) => r && typeof r === 'object' && r.url)
-    if (remote) {
-      serverConfig = {
-        url: remote.url,
-        type: remote.type || 'sse',
-        headers: remote.headers || {}
-      }
+    ? technicalData.remotes.find((r: any) => r && typeof r === 'object' && r.url)
+    : null
+
+  // Then, try to find a valid package (STDIO server) - needed for command
+  const validPackage = technicalData.packages && Array.isArray(technicalData.packages)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ? technicalData.packages.find((p: any) => p && typeof p === 'object' && p.transport)
+    : null
+
+  if (validRemote) {
+    // HTTP/SSE server from remotes
+    serverConfig = {
+      url: validRemote.url,
+      type: validRemote.type || 'sse',
+      headers: validRemote.headers || {}
     }
-  } else if (technicalData.packages && Array.isArray(technicalData.packages) && technicalData.packages.length > 0) {
-    // STDIO server from packages - find first valid package
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const pkg = technicalData.packages.find((p: any) => p && typeof p === 'object')
-    if (pkg && pkg.transport) {
-      serverConfig = {
-        command: pkg.transport.command || 'npx',
-        args: pkg.transport.args || [],
-        env: pkg.env || {}
-      }
+  } else if (hasSchemaArgs) {
+    // STDIO server - build args from schema fields (source of truth)
+     
+    const allArgs: { value: string; order: number }[] = []
+
+    // Template args (static values)
+    if (configSchema.template_args && Array.isArray(configSchema.template_args)) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      configSchema.template_args.forEach((arg: any, index: number) => {
+        allArgs.push({ value: arg.value, order: arg.order ?? index })
+      })
+    }
+
+    // Team args
+    if (configSchema.team_args_schema && Array.isArray(configSchema.team_args_schema)) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      configSchema.team_args_schema.forEach((arg: any, index: number) => {
+        allArgs.push({ value: arg.name, order: arg.order ?? (100 + index) })
+      })
+    }
+
+    // User args
+    if (configSchema.user_args_schema && Array.isArray(configSchema.user_args_schema)) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      configSchema.user_args_schema.forEach((arg: any, index: number) => {
+        allArgs.push({ value: arg.name, order: arg.order ?? (200 + index) })
+      })
+    }
+
+    // Sort by order and extract values
+    allArgs.sort((a, b) => a.order - b.order)
+    const argsArray = allArgs.map(arg => arg.value)
+
+    // Build env from schema
+     
+    const envObj: Record<string, string> = {}
+    if (configSchema.team_env_schema && Array.isArray(configSchema.team_env_schema)) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      configSchema.team_env_schema.forEach((env: any) => {
+        envObj[env.name] = `<${env.name}>`
+      })
+    }
+    if (configSchema.user_env_schema && Array.isArray(configSchema.user_env_schema)) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      configSchema.user_env_schema.forEach((env: any) => {
+        envObj[env.name] = `<${env.name}>`
+      })
+    }
+
+    serverConfig = {
+      command: validPackage?.transport?.command || 'npx',
+      args: argsArray,
+      env: envObj
+    }
+  } else if (validPackage) {
+    // Fallback: STDIO server from packages (legacy data without schema)
+    serverConfig = {
+      command: validPackage.transport.command || 'npx',
+      args: validPackage.transport.args || [],
+      env: validPackage.env || {}
     }
   }
 

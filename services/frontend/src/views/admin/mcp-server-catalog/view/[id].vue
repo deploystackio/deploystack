@@ -9,21 +9,12 @@ import { Badge } from '@/components/ui/badge'
 import CategoryDisplay from '@/components/mcp-server/CategoryDisplay.vue'
 import ContentWrapper from '@/components/ContentWrapper.vue'
 import McpServerAvatar from '@/components/mcp-server/McpServerAvatar.vue'
-import { Github, GitBranch, Globe, ExternalLink, Package, Settings, Calendar, Tag, Trash2, AlertTriangle, Edit, Terminal, Users, User, Lock, Unlock, Link } from 'lucide-vue-next'
+import { Github, GitBranch, Globe, ExternalLink, Package, Settings, Calendar, Tag, Trash2, Edit, Terminal, Users, User, Lock, Unlock, Link } from 'lucide-vue-next'
 import DashboardLayout from '@/components/DashboardLayout.vue'
 
 import { McpCatalogService } from '@/services/mcpCatalogService'
 import type { McpServer } from '../types'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import McpServerDeleteDialog from '@/components/mcp-server/McpServerDeleteDialog.vue'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -138,6 +129,36 @@ const displayTemplateArgs = computed(() => {
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const parsed = JSON.parse(server.value.template_args as any)
+    return Array.isArray(parsed) ? parsed.filter(arg => arg != null) : []
+  } catch {
+    return []
+  }
+})
+
+const displayTeamArgsSchema = computed(() => {
+  if (!server.value?.team_args_schema) return []
+  // Handle both array and JSON string formats
+  if (Array.isArray(server.value.team_args_schema)) {
+    return server.value.team_args_schema.filter(arg => arg != null)
+  }
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const parsed = JSON.parse(server.value.team_args_schema as any)
+    return Array.isArray(parsed) ? parsed.filter(arg => arg != null) : []
+  } catch {
+    return []
+  }
+})
+
+const displayUserArgsSchema = computed(() => {
+  if (!server.value?.user_args_schema) return []
+  // Handle both array and JSON string formats
+  if (Array.isArray(server.value.user_args_schema)) {
+    return server.value.user_args_schema.filter(arg => arg != null)
+  }
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const parsed = JSON.parse(server.value.user_args_schema as any)
     return Array.isArray(parsed) ? parsed.filter(arg => arg != null) : []
   } catch {
     return []
@@ -775,7 +796,7 @@ const getRepositoryLabel = (platform: string | undefined) => {
 
             <!-- Template Args (Only for stdio/sse transport) -->
             <div v-if="displayTemplateArgs.length > 0 && displayTransportType !== 'http'" class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
-              <dt class="text-sm/6 font-medium text-gray-900">Args</dt>
+              <dt class="text-sm/6 font-medium text-gray-900">Static Args</dt>
               <dd class="mt-2 text-sm text-gray-900 sm:col-span-2 sm:mt-0">
                 <ul role="list" class="divide-y divide-gray-100 rounded-md border border-gray-200">
                   <li
@@ -791,6 +812,72 @@ const getRepositoryLabel = (platform: string | undefined) => {
                             <code class="bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs font-mono">{{ arg.value || arg }}</code>
                             <Lock v-if="arg.locked" class="h-3 w-3 text-red-500" title="Locked by global admin" />
                             <Unlock v-else class="h-3 w-3 text-green-500" title="Configurable" />
+                          </div>
+                          <span v-if="arg.description" class="truncate text-xs text-gray-500 mt-1">{{ arg.description }}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+                </ul>
+              </dd>
+            </div>
+
+            <!-- Team Args (Only for stdio/sse transport) -->
+            <div v-if="displayTeamArgsSchema.length > 0 && displayTransportType !== 'http'" class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+              <dt class="text-sm/6 font-medium text-gray-900">Team Args</dt>
+              <dd class="mt-2 text-sm text-gray-900 sm:col-span-2 sm:mt-0">
+                <ul role="list" class="divide-y divide-gray-100 rounded-md border border-gray-200">
+                  <li
+                    v-for="(arg, index) in displayTeamArgsSchema"
+                    :key="index"
+                    class="flex items-center justify-between py-4 pr-5 pl-4 text-sm/6"
+                  >
+                    <div class="flex w-0 flex-1 items-center">
+                      <Users class="size-5 shrink-0 text-gray-400" aria-hidden="true" />
+                      <div class="ml-4 flex min-w-0 flex-1 gap-2">
+                        <div class="flex flex-col">
+                          <div class="flex items-center gap-2">
+                            <code class="bg-green-50 text-green-700 px-2 py-1 rounded text-xs font-mono">{{ arg.name }}</code>
+                            <Badge v-if="arg.required" variant="default" class="text-xs">Required</Badge>
+                            <Badge v-else variant="secondary" class="text-xs">Optional</Badge>
+                            <Lock v-if="arg.locked" class="h-3 w-3 text-red-500" title="Locked by global admin" />
+                            <Unlock v-else class="h-3 w-3 text-green-500" title="Team configurable" />
+                          </div>
+                          <div class="flex items-center gap-2 mt-1">
+                            <span class="text-xs text-gray-500">Type: {{ arg.type }}</span>
+                          </div>
+                          <span v-if="arg.description" class="truncate text-xs text-gray-500 mt-1">{{ arg.description }}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+                </ul>
+              </dd>
+            </div>
+
+            <!-- User Args (Only for stdio/sse transport) -->
+            <div v-if="displayUserArgsSchema.length > 0 && displayTransportType !== 'http'" class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+              <dt class="text-sm/6 font-medium text-gray-900">User Args</dt>
+              <dd class="mt-2 text-sm text-gray-900 sm:col-span-2 sm:mt-0">
+                <ul role="list" class="divide-y divide-gray-100 rounded-md border border-gray-200">
+                  <li
+                    v-for="(arg, index) in displayUserArgsSchema"
+                    :key="index"
+                    class="flex items-center justify-between py-4 pr-5 pl-4 text-sm/6"
+                  >
+                    <div class="flex w-0 flex-1 items-center">
+                      <User class="size-5 shrink-0 text-gray-400" aria-hidden="true" />
+                      <div class="ml-4 flex min-w-0 flex-1 gap-2">
+                        <div class="flex flex-col">
+                          <div class="flex items-center gap-2">
+                            <code class="bg-purple-50 text-purple-700 px-2 py-1 rounded text-xs font-mono">{{ arg.name }}</code>
+                            <Badge v-if="arg.required" variant="default" class="text-xs">Required</Badge>
+                            <Badge v-else variant="secondary" class="text-xs">Optional</Badge>
+                            <Lock v-if="arg.locked" class="h-3 w-3 text-red-500" title="Locked by team admin" />
+                            <Unlock v-else class="h-3 w-3 text-green-500" title="User configurable" />
+                          </div>
+                          <div class="flex items-center gap-2 mt-1">
+                            <span class="text-xs text-gray-500">Type: {{ arg.type }}</span>
                           </div>
                           <span v-if="arg.description" class="truncate text-xs text-gray-500 mt-1">{{ arg.description }}</span>
                         </div>
@@ -1109,41 +1196,12 @@ const getRepositoryLabel = (platform: string | undefined) => {
       </ContentWrapper>
 
       <!-- Delete Confirmation Dialog -->
-      <AlertDialog :open="showDeleteDialog" @update:open="showDeleteDialog = $event">
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle class="flex items-center gap-2 text-red-600">
-              <AlertTriangle class="h-5 w-5" />
-              {{ t('mcpCatalog.edit.deleteDialog.title') }}
-            </AlertDialogTitle>
-            <AlertDialogDescription class="space-y-2">
-              <p>{{ t('mcpCatalog.edit.deleteDialog.warning') }}</p>
-              <p class="font-medium">{{ t('mcpCatalog.edit.deleteDialog.serverName') }}: "{{ server?.name }}"</p>
-              <div class="bg-red-50 p-3 rounded-md">
-                <p class="text-sm text-red-800">{{ t('mcpCatalog.edit.deleteDialog.consequences') }}</p>
-                <ul class="text-xs text-red-700 mt-2 space-y-1">
-                  <li>• {{ t('mcpCatalog.edit.deleteDialog.consequencesList.server') }}</li>
-                  <li>• {{ t('mcpCatalog.edit.deleteDialog.consequencesList.configurations') }}</li>
-                  <li>• {{ t('mcpCatalog.edit.deleteDialog.consequencesList.history') }}</li>
-                </ul>
-              </div>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel @click="showDeleteDialog = false">
-              {{ t('mcpCatalog.edit.deleteDialog.cancel') }}
-            </AlertDialogCancel>
-            <AlertDialogAction
-              @click="deleteServer"
-              :disabled="isDeleting"
-              class="bg-red-600 hover:bg-red-700 flex items-center gap-2"
-            >
-              <Trash2 class="h-4 w-4" />
-              {{ isDeleting ? t('mcpCatalog.edit.deleteDialog.deleting') : t('mcpCatalog.edit.deleteDialog.confirm') }}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <McpServerDeleteDialog
+        v-model:open="showDeleteDialog"
+        :server-name="server?.name || ''"
+        :is-deleting="isDeleting"
+        @confirm="deleteServer"
+      />
     </div>
   </DashboardLayout>
 </template>

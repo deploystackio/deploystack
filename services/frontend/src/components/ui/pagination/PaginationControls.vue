@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Button } from '@/components/ui/button'
+import { Label } from '@/components/ui/label'
 import {
   Select,
   SelectContent,
@@ -9,7 +10,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { ChevronLeft, ChevronRight } from 'lucide-vue-next'
+import {
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+} from 'lucide-vue-next'
 
 interface Props {
   currentPage: number
@@ -17,6 +23,9 @@ interface Props {
   totalItems: number
   isLoading?: boolean
   pageSizeOptions?: number[]
+  // Optional selection support
+  selectedCount?: number
+  totalRows?: number
 }
 
 interface Emits {
@@ -26,7 +35,7 @@ interface Emits {
 
 const props = withDefaults(defineProps<Props>(), {
   isLoading: false,
-  pageSizeOptions: () => [10, 20, 50, 100]
+  pageSizeOptions: () => [10, 20, 30, 40, 50]
 })
 
 const emit = defineEmits<Emits>()
@@ -34,19 +43,20 @@ const { t } = useI18n()
 
 // Computed properties
 const totalPages = computed(() => Math.ceil(props.totalItems / props.pageSize))
-const startItem = computed(() => {
-  if (props.totalItems === 0) return 0
-  return (props.currentPage - 1) * props.pageSize + 1
-})
-const endItem = computed(() => {
-  const end = props.currentPage * props.pageSize
-  return Math.min(end, props.totalItems)
-})
 
 const canGoPrevious = computed(() => props.currentPage > 1 && !props.isLoading)
 const canGoNext = computed(() => props.currentPage < totalPages.value && !props.isLoading)
 
+// Selection support
+const hasSelection = computed(() => props.selectedCount !== undefined && props.totalRows !== undefined)
+
 // Event handlers
+function firstPage() {
+  if (canGoPrevious.value) {
+    emit('page-change', 1)
+  }
+}
+
 function previousPage() {
   if (canGoPrevious.value) {
     emit('page-change', props.currentPage - 1)
@@ -59,9 +69,15 @@ function nextPage() {
   }
 }
 
-function handlePageSizeChange(newPageSize: any) {
-  if (newPageSize) {
-    const size = typeof newPageSize === 'string' ? parseInt(newPageSize, 10) : Number(newPageSize)
+function lastPage() {
+  if (canGoNext.value) {
+    emit('page-change', totalPages.value)
+  }
+}
+
+function handlePageSizeChange(newPageSize: unknown) {
+  if (newPageSize && typeof newPageSize === 'string') {
+    const size = parseInt(newPageSize, 10)
     if (size !== props.pageSize && !isNaN(size)) {
       emit('page-size-change', size)
     }
@@ -70,34 +86,37 @@ function handlePageSizeChange(newPageSize: any) {
 </script>
 
 <template>
-  <div class="flex items-center justify-between space-x-2 py-4">
-    <!-- Left side: Items info -->
-    <div class="flex-1 text-sm text-muted-foreground">
-      <span v-if="totalItems > 0">
-        {{ t('mcpCatalog.pagination.showing', {
-          start: startItem,
-          end: endItem,
-          total: totalItems
-        }) }}
-      </span>
-      <span v-else>
-        {{ t('mcpCatalog.pagination.noItems') }}
-      </span>
+  <div class="flex items-center justify-between px-4 py-4">
+    <!-- Left side: Selection info (only shown when selection is enabled) -->
+    <div
+      v-if="hasSelection"
+      class="flex-1 text-sm text-muted-foreground"
+    >
+      {{ t('mcpCatalog.pagination.rowsSelected', {
+        selected: selectedCount,
+        total: totalRows
+      }) }}
     </div>
 
-    <!-- Right side: Controls -->
-    <div class="flex items-center space-x-6">
-      <!-- Items per page selector -->
-      <div class="flex items-center space-x-2">
-        <span class="text-sm text-muted-foreground whitespace-nowrap">
-          {{ t('mcpCatalog.pagination.itemsPerPage') }}
-        </span>
+    <!-- Right side: All controls grouped together -->
+    <div class="flex w-full items-center gap-8 lg:w-fit" :class="{ 'justify-end': !hasSelection }">
+      <!-- Rows per page selector (hidden on mobile) -->
+      <div class="hidden items-center gap-2 lg:flex">
+        <Label
+          for="rows-per-page"
+          class="text-sm font-medium"
+        >
+          {{ t('mcpCatalog.pagination.rowsPerPage') }}
+        </Label>
         <Select
           :model-value="String(pageSize)"
           @update:model-value="handlePageSizeChange"
           :disabled="isLoading"
         >
-          <SelectTrigger class="h-8 w-[80px]">
+          <SelectTrigger
+            id="rows-per-page"
+            class="w-20"
+          >
             <SelectValue />
           </SelectTrigger>
           <SelectContent side="top">
@@ -113,7 +132,7 @@ function handlePageSizeChange(newPageSize: any) {
       </div>
 
       <!-- Page info -->
-      <div class="text-sm text-muted-foreground whitespace-nowrap">
+      <div class="flex w-fit items-center justify-center text-sm font-medium">
         {{ t('mcpCatalog.pagination.pageInfo', {
           current: currentPage,
           total: totalPages
@@ -121,26 +140,53 @@ function handlePageSizeChange(newPageSize: any) {
       </div>
 
       <!-- Navigation buttons -->
-      <div class="flex items-center space-x-2">
+      <div class="ml-auto flex items-center gap-2 lg:ml-0">
+        <!-- First page (hidden on mobile) -->
         <Button
           variant="outline"
-          size="sm"
+          size="icon"
+          class="hidden size-8 lg:flex"
+          :disabled="!canGoPrevious"
+          @click="firstPage"
+        >
+          <span class="sr-only">{{ t('mcpCatalog.pagination.firstPage') }}</span>
+          <ChevronsLeft class="size-4" />
+        </Button>
+
+        <!-- Previous page -->
+        <Button
+          variant="outline"
+          size="icon"
+          class="size-8"
           :disabled="!canGoPrevious"
           @click="previousPage"
-          class="h-8 px-3"
         >
-          <ChevronLeft class="h-4 w-4 mr-1" />
-          {{ t('mcpCatalog.pagination.previous') }}
+          <span class="sr-only">{{ t('mcpCatalog.pagination.previousPage') }}</span>
+          <ChevronLeft class="size-4" />
         </Button>
+
+        <!-- Next page -->
         <Button
           variant="outline"
-          size="sm"
+          size="icon"
+          class="size-8"
           :disabled="!canGoNext"
           @click="nextPage"
-          class="h-8 px-3"
         >
-          {{ t('mcpCatalog.pagination.next') }}
-          <ChevronRight class="h-4 w-4 ml-1" />
+          <span class="sr-only">{{ t('mcpCatalog.pagination.nextPage') }}</span>
+          <ChevronRight class="size-4" />
+        </Button>
+
+        <!-- Last page (hidden on mobile) -->
+        <Button
+          variant="outline"
+          size="icon"
+          class="hidden size-8 lg:flex"
+          :disabled="!canGoNext"
+          @click="lastPage"
+        >
+          <span class="sr-only">{{ t('mcpCatalog.pagination.lastPage') }}</span>
+          <ChevronsRight class="size-4" />
         </Button>
       </div>
     </div>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref, computed } from 'vue'
 import { Badge } from '@/components/ui/badge'
 import { useI18n } from 'vue-i18n'
 import { useEventBus } from '@/composables/useEventBus'
@@ -13,6 +13,21 @@ interface Props {
 
 interface Emits {
   (e: 'update:modelValue', value: ReviewFormData): void
+}
+
+// Configuration Schema types
+interface ConfigurationSchema {
+  template_args?: { value: string; locked: boolean; description?: string; order?: number }[]
+  team_args_schema?: { name: string; type: string; description?: string; required: boolean; locked: boolean; order?: number }[]
+  user_args_schema?: { name: string; type: string; description?: string; required: boolean; locked: boolean; order?: number }[]
+  team_env_schema?: { name: string; type: string; description?: string; required: boolean; locked: boolean; visible_to_users?: boolean }[]
+  user_env_schema?: { name: string; type: string; description?: string; required: boolean; locked: boolean }[]
+  template_headers?: { name: string; value: string; locked: boolean; description?: string }[]
+  team_headers_schema?: { name: string; type: string; description?: string; required: boolean; locked: boolean; visible_to_users?: boolean }[]
+  user_headers_schema?: { name: string; type: string; description?: string; required: boolean; locked: boolean }[]
+  template_url_query_params?: { name: string; value: string; locked: boolean; description?: string }[]
+  team_url_query_params_schema?: { name: string; type: string; description?: string; required: boolean; locked: boolean; visible_to_users?: boolean }[]
+  user_url_query_params_schema?: { name: string; type: string; description?: string; required: boolean; locked: boolean }[]
 }
 
 const props = defineProps<Props>()
@@ -29,10 +44,112 @@ const freshRepositoryData = ref<any>(null)
 const freshRepositorySetupData = ref<any>(null)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const freshTechnicalData = ref<any>(null)
+ 
+const freshConfigurationSchema = ref<ConfigurationSchema | null>(null)
 
 const claudeConfig = ref<string>('')
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const parsedConfig = ref<any>(null)
+
+// Check if transport type is HTTP-based (no STDIO config needed)
+const isHttpTransport = computed(() => {
+  const technicalData = freshTechnicalData.value || props.formData.technical
+  if (!technicalData) return false
+  const transportType = technicalData.transport_type
+  return transportType === 'http' || transportType === 'sse' || transportType === 'streamableHttp'
+})
+
+// Build Claude Desktop config from configuration schema (same logic as ConfigurationSchemaStepEdit)
+const assembledClaudeConfig = computed(() => {
+  // For HTTP servers, no args preview needed
+  if (isHttpTransport.value) return null
+
+  const technicalData = freshTechnicalData.value || props.formData.technical
+  const basicData = freshBasicData.value || props.formData.basic
+  const schema = freshConfigurationSchema.value || props.formData.configuration_schema
+
+  if (!technicalData || !schema) return null
+
+  // Build args array from configuration schema
+  // Collect all arguments with their order
+  const allArgs: { value: string; order: number }[] = []
+
+  // Template args (static values)
+  if (schema.template_args && Array.isArray(schema.template_args)) {
+    schema.template_args.forEach((arg, index) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      allArgs.push({ value: arg.value, order: (arg as any).order ?? index })
+    })
+  }
+
+  // Team args (show placeholder)
+  if (schema.team_args_schema && Array.isArray(schema.team_args_schema)) {
+    schema.team_args_schema.forEach((arg, index) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      allArgs.push({ value: arg.name, order: (arg as any).order ?? (100 + index) })
+    })
+  }
+
+  // User args (show placeholder)
+  if (schema.user_args_schema && Array.isArray(schema.user_args_schema)) {
+    schema.user_args_schema.forEach((arg, index) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      allArgs.push({ value: arg.name, order: (arg as any).order ?? (200 + index) })
+    })
+  }
+
+  // Sort by order
+  allArgs.sort((a, b) => a.order - b.order)
+  const currentArgs = allArgs.map(arg => arg.value)
+
+  // Get server name and command from technical data
+  const serverName = basicData?.name || technicalData.name || 'server'
+  const packages = technicalData.packages || []
+  const command = packages[0]?.transport?.command || packages[0]?.name || 'npx'
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const config: any = {
+    mcpServers: {
+      [serverName]: {
+        command: command
+      }
+    }
+  }
+
+  if (currentArgs.length > 0) {
+    config.mcpServers[serverName].args = currentArgs
+  }
+
+  // Add env from configuration schema
+  const envItems: { name: string; value?: string }[] = []
+
+  // Team env schema
+  if (schema.team_env_schema && Array.isArray(schema.team_env_schema)) {
+    schema.team_env_schema.forEach(env => {
+      envItems.push({ name: env.name })
+    })
+  }
+
+  // User env schema
+  if (schema.user_env_schema && Array.isArray(schema.user_env_schema)) {
+    schema.user_env_schema.forEach(env => {
+      envItems.push({ name: env.name })
+    })
+  }
+
+  if (envItems.length > 0) {
+    config.mcpServers[serverName].env = {}
+    envItems.forEach(item => {
+      config.mcpServers[serverName].env[item.name] = `<${item.name}>`
+    })
+  }
+
+  try {
+    return JSON.stringify(config, null, 2)
+  } catch {
+    return null
+  }
+})
 
 // Function to load fresh data from storage
 const loadFreshData = () => {
@@ -41,15 +158,22 @@ const loadFreshData = () => {
   freshRepositoryData.value = eventBus.getState('edit_repository_data')
   freshRepositorySetupData.value = eventBus.getState('edit_repository_setup_data')
   freshTechnicalData.value = eventBus.getState('edit_technical_data')
+  freshConfigurationSchema.value = eventBus.getState<ConfigurationSchema>('edit_configuration_schema')
 
-  // Get the stored Claude Desktop config
-  const storedConfig = eventBus.getState<string>('edit_claude_config', '') || ''
-  claudeConfig.value = storedConfig
+  // Use assembled config from configuration schema, fall back to stored edit_claude_config
+  const assembled = assembledClaudeConfig.value
+  if (assembled) {
+    claudeConfig.value = assembled
+  } else {
+    // Fallback to original stored config
+    const storedConfig = eventBus.getState<string>('edit_claude_config', '') || ''
+    claudeConfig.value = storedConfig
+  }
 
   // Parse it for display
   try {
-    if (storedConfig) {
-      parsedConfig.value = JSON.parse(storedConfig)
+    if (claudeConfig.value) {
+      parsedConfig.value = JSON.parse(claudeConfig.value)
     }
   } catch {
     // Invalid JSON, will show raw text
@@ -64,7 +188,8 @@ const handleStorageChange = (data: { key: string; oldValue: any; newValue: any }
       data.key === 'edit_repository_data' ||
       data.key === 'edit_repository_setup_data' ||
       data.key === 'edit_technical_data' ||
-      data.key === 'edit_claude_config') {
+      data.key === 'edit_claude_config' ||
+      data.key === 'edit_configuration_schema') {
     loadFreshData()
   }
 }

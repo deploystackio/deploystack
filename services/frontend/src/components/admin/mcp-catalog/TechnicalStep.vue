@@ -73,6 +73,7 @@ watch(remoteUrl, (newUrl) => {
 
 // Local state for Claude Desktop config
 const jsonInput = ref('')
+const hasLoadedFromStorage = ref(false) // Flag to prevent watch from overwriting storage on mount
 const validationError = ref<string | null>(null)
 const isValid = ref(false)
 const extractedServerName = ref<string>('')
@@ -290,6 +291,9 @@ const loadLatestConfigFromStorage = () => {
   } else {
     convertExistingDataToJson()
   }
+
+  // Mark as loaded so future changes will be saved to storage
+  hasLoadedFromStorage.value = true
 }
 
 // Convert existing installation_methods to Claude Desktop JSON format
@@ -501,8 +505,10 @@ watch(jsonInput, (newValue) => {
     return
   }
 
-  // Don't save to storage if we're updating from storage (prevent recursion)
-  if (!isUpdatingFromStorage.value) {
+  // Don't save to storage if:
+  // 1. We're updating from storage (prevent recursion)
+  // 2. This is the initial mount and value is empty (prevent overwriting stored config)
+  if (!isUpdatingFromStorage.value && (hasLoadedFromStorage.value || newValue.trim() !== '')) {
     eventBus.setState(CLAUDE_CONFIG_KEY, newValue)
   }
 
@@ -803,14 +809,15 @@ onUnmounted(() => {
               id="claude-config"
               v-model="jsonInput"
               :placeholder="t('mcpCatalog.form.technical.claudeConfig.placeholder')"
+              :readonly="isEditMode"
               class="min-h-[300px] font-mono text-sm"
-              :class="{ 'border-destructive': validationError }"
+              :class="{ 'border-destructive': validationError, 'bg-muted': isEditMode }"
             />
 
             <!-- Action Buttons Row -->
             <div class="flex justify-between items-center">
-              <!-- Show Example Button with Hover Card -->
-              <HoverCard>
+              <!-- Show Example Button with Hover Card (only in create mode) -->
+              <HoverCard v-if="!isEditMode">
                 <HoverCardTrigger as-child>
                   <Button
                     variant="outline"
@@ -831,6 +838,8 @@ onUnmounted(() => {
                   </div>
                 </HoverCardContent>
               </HoverCard>
+              <!-- Empty div to maintain flex layout in edit mode -->
+              <div v-else></div>
 
               <!-- Format Button -->
               <button
@@ -852,7 +861,7 @@ onUnmounted(() => {
 
             <!-- Help Text -->
             <p class="text-xs text-muted-foreground">
-              {{ t('mcpCatalog.form.technical.claudeConfig.helpText') }}
+              {{ isEditMode ? t('mcpCatalog.form.technical.claudeConfig.helpTextEdit') : t('mcpCatalog.form.technical.claudeConfig.helpText') }}
             </p>
           </div>
         </dd>

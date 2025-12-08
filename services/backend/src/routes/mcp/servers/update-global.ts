@@ -47,7 +47,7 @@ interface UpdateGlobalServerRequest {
   dependencies?: Record<string, any>;
   category_id?: string;
   tags?: string[];
-  status?: 'active' | 'deprecated' | 'maintenance';
+  status?: 'active' | 'deprecated' | 'maintenance' | 'disabled';
   featured?: boolean;
   auto_install_new_default_team?: boolean;
 }

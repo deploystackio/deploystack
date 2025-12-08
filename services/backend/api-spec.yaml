@@ -11206,6 +11206,7 @@ paths:
               - active
               - deprecated
               - maintenance
+              - disabled
           in: query
           name: status
           required: false
@@ -11220,6 +11221,16 @@ paths:
           required: false
           description: "Filter by featured status: true for featured servers, false for
             non-featured servers"
+        - schema:
+            type: string
+            enum:
+              - official_registry
+              - manual
+          in: query
+          name: source
+          required: false
+          description: "Filter by source: official_registry for servers synced from MCP
+            Registry, manual for manually added servers"
         - schema:
             type: boolean
           in: query
@@ -11339,6 +11350,7 @@ paths:
                                 - active
                                 - deprecated
                                 - maintenance
+                                - disabled
                               description: Server status
                             featured:
                               type: boolean
@@ -11645,6 +11657,7 @@ paths:
                           - active
                           - deprecated
                           - maintenance
+                          - disabled
                         description: Server status
                       featured:
                         type: boolean
@@ -11911,6 +11924,7 @@ paths:
               - active
               - deprecated
               - maintenance
+              - disabled
           in: query
           name: status
           required: false
@@ -12055,6 +12069,7 @@ paths:
                                 - active
                                 - deprecated
                                 - maintenance
+                                - disabled
                               description: Server status
                             featured:
                               type: boolean
@@ -13227,6 +13242,7 @@ paths:
                           - active
                           - deprecated
                           - maintenance
+                          - disabled
                         description: Server status
                       featured:
                         type: boolean
@@ -13559,6 +13575,7 @@ paths:
                     - active
                     - deprecated
                     - maintenance
+                    - disabled
                   description: Server status
                 featured:
                   type: boolean
@@ -14159,6 +14176,7 @@ paths:
                           - active
                           - deprecated
                           - maintenance
+                          - disabled
                         description: Server status
                       featured:
                         type: boolean
@@ -14397,6 +14415,420 @@ paths:
                   - message
                   - data
                 description: Server deletion has been queued
+        "400":
+          description: Bad Request - Invalid input or missing Content-Type header
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates the operation failed
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                  details:
+                    description: Additional error details
+                required:
+                  - success
+                  - error
+                description: Bad Request - Invalid input or missing Content-Type header
+        "401":
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates the operation failed
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                  details:
+                    description: Additional error details
+                required:
+                  - success
+                  - error
+                description: Unauthorized - Authentication required
+        "403":
+          description: Forbidden - Global admin permissions required
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates the operation failed
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                  details:
+                    description: Additional error details
+                required:
+                  - success
+                  - error
+                description: Forbidden - Global admin permissions required
+        "404":
+          description: Not Found - Server not found or access denied
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates the operation failed
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                  details:
+                    description: Additional error details
+                required:
+                  - success
+                  - error
+                description: Not Found - Server not found or access denied
+        "409":
+          description: Conflict - Server name already exists
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates the operation failed
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                  details:
+                    description: Additional error details
+                required:
+                  - success
+                  - error
+                description: Conflict - Server name already exists
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates the operation failed
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                  details:
+                    description: Additional error details
+                required:
+                  - success
+                  - error
+                description: Internal Server Error
+  /api/mcp/servers/global/{id}/status:
+    patch:
+      summary: Update global MCP server status (Global Admin only)
+      tags:
+        - MCP Servers
+      description: 'Update the status of a global MCP server. Setting status to
+        "disabled" will prevent new installations. Requires global admin
+        permissions. Requires Content-Type: application/json header when sending
+        request body.'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum:
+                    - active
+                    - deprecated
+                    - maintenance
+                    - disabled
+                  description: New server status
+              required:
+                - status
+              additionalProperties: false
+        required: true
+      parameters:
+        - schema:
+            type: string
+            minLength: 1
+          in: path
+          name: id
+          required: true
+          description: Server ID is required
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Server status updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Indicates successful status update
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        description: Server ID
+                      name:
+                        type: string
+                        description: Server name
+                      slug:
+                        type: string
+                        description: Server slug
+                      status:
+                        type: string
+                        enum:
+                          - active
+                          - deprecated
+                          - maintenance
+                          - disabled
+                        description: Updated server status
+                      previous_status:
+                        type: string
+                        enum:
+                          - active
+                          - deprecated
+                          - maintenance
+                          - disabled
+                        description: Previous server status
+                      updated_at:
+                        type: string
+                        format: date-time
+                        description: Last update timestamp
+                    required:
+                      - id
+                      - name
+                      - slug
+                      - status
+                      - previous_status
+                      - updated_at
+                required:
+                  - success
+                  - data
+                additionalProperties: false
+                description: Server status updated successfully
+        "400":
+          description: Bad Request - Invalid input or missing Content-Type header
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates the operation failed
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                  details:
+                    description: Additional error details
+                required:
+                  - success
+                  - error
+                description: Bad Request - Invalid input or missing Content-Type header
+        "401":
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates the operation failed
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                  details:
+                    description: Additional error details
+                required:
+                  - success
+                  - error
+                description: Unauthorized - Authentication required
+        "403":
+          description: Forbidden - Global admin permissions required
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates the operation failed
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                  details:
+                    description: Additional error details
+                required:
+                  - success
+                  - error
+                description: Forbidden - Global admin permissions required
+        "404":
+          description: Not Found - Server not found or access denied
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates the operation failed
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                  details:
+                    description: Additional error details
+                required:
+                  - success
+                  - error
+                description: Not Found - Server not found or access denied
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates the operation failed
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                  details:
+                    description: Additional error details
+                required:
+                  - success
+                  - error
+                description: Internal Server Error
+  /api/mcp/servers/global/bulk-delete:
+    post:
+      summary: Bulk delete global MCP servers (Global Admin only)
+      tags:
+        - MCP Servers
+      description: "Queues deletion of multiple global MCP servers. Each server and
+        all its team installations will be removed via background jobs. Teams
+        with installations will be notified and satellites will be updated.
+        Requires global admin permissions. Requires Content-Type:
+        application/json header."
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                server_ids:
+                  type: array
+                  items:
+                    type: string
+                    minLength: 1
+                  minItems: 1
+                  maxItems: 100
+                  uniqueItems: true
+                  description: Array of server IDs to delete (1-100 unique IDs)
+              required:
+                - server_ids
+              additionalProperties: false
+        required: true
+      security:
+        - cookieAuth: []
+      responses:
+        "202":
+          description: Server deletions have been queued
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Indicates request was accepted
+                  message:
+                    type: string
+                    description: Status message
+                  data:
+                    type: object
+                    properties:
+                      total_requested:
+                        type: number
+                        description: Total number of server IDs requested
+                      total_queued:
+                        type: number
+                        description: Number of servers successfully queued for deletion
+                      total_skipped:
+                        type: number
+                        description: Number of servers skipped
+                      jobs:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            server_id:
+                              type: string
+                              description: Server ID
+                            server_name:
+                              type: string
+                              description: Server name
+                            job_id:
+                              type: string
+                              description: Background job ID for tracking
+                          required:
+                            - server_id
+                            - server_name
+                            - job_id
+                        description: Array of queued deletion jobs
+                      skipped:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            server_id:
+                              type: string
+                              description: Server ID
+                            reason:
+                              type: string
+                              description: Reason for skipping
+                          required:
+                            - server_id
+                            - reason
+                        description: Array of skipped servers with reasons
+                    required:
+                      - total_requested
+                      - total_queued
+                      - total_skipped
+                      - jobs
+                      - skipped
+                required:
+                  - success
+                  - message
+                  - data
+                description: Server deletions have been queued
         "400":
           description: Bad Request - Invalid input or missing Content-Type header
           content:

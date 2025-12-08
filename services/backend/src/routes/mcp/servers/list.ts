@@ -93,6 +93,10 @@ export default async function listServers(server: FastifyInstance) {
         filters.featured = query.featured === 'true';
       }
 
+      if (query.source) {
+        filters.source = query.source;
+      }
+
       if (query.search) {
         filters.search = query.search;
       }

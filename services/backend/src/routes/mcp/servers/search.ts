@@ -101,7 +101,7 @@ export default async function searchServers(server: FastifyInstance) {
       const limit = parseInt(queryParams.limit || '20') || 20;
       const offset = parseInt(queryParams.offset || '0') || 0;
       const featured = queryParams.featured === 'true' ? true : queryParams.featured === 'false' ? false : undefined;
-      const status = queryParams.status as 'active' | 'deprecated' | 'maintenance' | undefined;
+      const status = queryParams.status as 'active' | 'deprecated' | 'maintenance' | 'disabled' | undefined;
       const sortBy = (queryParams.sort_by as 'name' | 'github_stars') || 'name';
 
       // Build filters object - use 'search' internally (service expects 'search', not 'q')

@@ -13,6 +13,10 @@
 export const CONFIG_VALUE_TYPES = ['string', 'number', 'boolean', 'secret'] as const;
 export type ConfigValueType = typeof CONFIG_VALUE_TYPES[number];
 
+// MCP Server Status Values - Single source of truth
+export const MCP_SERVER_STATUS_VALUES = ['active', 'deprecated', 'maintenance', 'disabled'] as const;
+export type McpServerStatus = typeof MCP_SERVER_STATUS_VALUES[number];
+
 // Common field definitions to eliminate repetition
 const COMMON_FIELDS = {
   name: { type: 'string', description: 'Configuration name' },
@@ -75,7 +79,7 @@ const SERVER_FIELDS = {
   dependencies: { type: 'object', description: 'Package dependencies' },
   category_id: { type: 'string', description: 'Category ID' },
   tags: { type: 'array', items: { type: 'string' }, description: 'Server tags' },
-  status: { type: 'string', enum: ['active', 'deprecated', 'maintenance'], description: 'Server status' },
+  status: { type: 'string', enum: MCP_SERVER_STATUS_VALUES as unknown as string[], description: 'Server status' },
   featured: { type: 'boolean', description: 'Whether server is featured' },
   auto_install_new_default_team: { type: 'boolean', description: 'Auto-install for new default teams' },
   requires_oauth: { type: 'boolean', description: 'Whether this server requires OAuth authentication' }
@@ -104,9 +108,9 @@ export const SEARCH_SERVERS_QUERY_SCHEMA = {
       type: 'string',
       description: 'Filter by runtime environment'
     },
-    status: { 
+    status: {
       type: 'string',
-      enum: ['active', 'deprecated', 'maintenance'],
+      enum: MCP_SERVER_STATUS_VALUES as unknown as string[],
       description: 'Filter by server status'
     },
     featured: { 
@@ -163,42 +167,47 @@ export const SERVER_ID_PARAM_SCHEMA = {
 export const LIST_SERVERS_QUERY_SCHEMA = {
   type: 'object',
   properties: {
-    category_id: { 
+    category_id: {
       type: 'string',
       description: 'Filter by category ID'
     },
-    language: { 
+    language: {
       type: 'string',
       description: 'Filter by programming language'
     },
-    runtime: { 
+    runtime: {
       type: 'string',
       description: 'Filter by runtime environment'
     },
-    status: { 
+    status: {
       type: 'string',
-      enum: ['active', 'deprecated', 'maintenance'],
+      enum: MCP_SERVER_STATUS_VALUES as unknown as string[],
       description: 'Filter by server status'
     },
-    featured: { 
+    featured: {
       type: 'string',
       enum: ['true', 'false'],
       description: 'Filter by featured status: true for featured servers, false for non-featured servers'
     },
-    auto_install_new_default_team: { 
+    source: {
+      type: 'string',
+      enum: ['official_registry', 'manual'],
+      description: 'Filter by source: official_registry for servers synced from MCP Registry, manual for manually added servers'
+    },
+    auto_install_new_default_team: {
       type: 'boolean',
       description: 'Filter by auto-install flag'
     },
-    search: { 
+    search: {
       type: 'string',
       description: 'Search query for server name and description'
     },
-    limit: { 
+    limit: {
       type: 'string',
       pattern: '^\\d+$',
       description: 'Limit must be a number between 1 and 100'
     },
-    offset: { 
+    offset: {
       type: 'string',
       pattern: '^\\d+$',
       description: 'Offset must be non-negative'
@@ -878,9 +887,9 @@ export const SERVER_ENTITY_SCHEMA = {
       nullable: true,
       description: 'Server tags'
     },
-    status: { 
-      type: 'string', 
-      enum: ['active', 'deprecated', 'maintenance'],
+    status: {
+      type: 'string',
+      enum: MCP_SERVER_STATUS_VALUES as unknown as string[],
       description: 'Server status'
     },
     featured: { 
@@ -967,7 +976,7 @@ export const CREATE_GLOBAL_SERVER_SUCCESS_RESPONSE_SCHEMA = createSuccessRespons
 export const DELETE_GLOBAL_SERVER_SUCCESS_RESPONSE_SCHEMA = {
   type: 'object',
   properties: {
-    success: { 
+    success: {
       type: 'boolean',
       description: 'Indicates successful server deletion'
     },
@@ -998,6 +1007,88 @@ export const DELETE_GLOBAL_SERVER_SUCCESS_RESPONSE_SCHEMA = {
   required: ['success', 'message', 'data']
 } as const;
 
+// =============================================================================
+// BULK DELETE GLOBAL SERVERS SCHEMAS
+// =============================================================================
+
+export const BULK_DELETE_GLOBAL_SERVERS_REQUEST_SCHEMA = {
+  type: 'object',
+  properties: {
+    server_ids: {
+      type: 'array',
+      items: { type: 'string', minLength: 1 },
+      minItems: 1,
+      maxItems: 100,
+      uniqueItems: true,
+      description: 'Array of server IDs to delete (1-100 unique IDs)'
+    }
+  },
+  required: ['server_ids'],
+  additionalProperties: false
+} as const;
+
+export const BULK_DELETE_JOB_ITEM_SCHEMA = {
+  type: 'object',
+  properties: {
+    server_id: { type: 'string', description: 'Server ID' },
+    server_name: { type: 'string', description: 'Server name' },
+    job_id: { type: 'string', description: 'Background job ID for tracking' }
+  },
+  required: ['server_id', 'server_name', 'job_id']
+} as const;
+
+export const BULK_DELETE_SKIPPED_ITEM_SCHEMA = {
+  type: 'object',
+  properties: {
+    server_id: { type: 'string', description: 'Server ID' },
+    reason: { type: 'string', description: 'Reason for skipping' }
+  },
+  required: ['server_id', 'reason']
+} as const;
+
+export const BULK_DELETE_GLOBAL_SERVERS_SUCCESS_RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    success: {
+      type: 'boolean',
+      description: 'Indicates request was accepted'
+    },
+    message: {
+      type: 'string',
+      description: 'Status message'
+    },
+    data: {
+      type: 'object',
+      properties: {
+        total_requested: {
+          type: 'number',
+          description: 'Total number of server IDs requested'
+        },
+        total_queued: {
+          type: 'number',
+          description: 'Number of servers successfully queued for deletion'
+        },
+        total_skipped: {
+          type: 'number',
+          description: 'Number of servers skipped'
+        },
+        jobs: {
+          type: 'array',
+          items: BULK_DELETE_JOB_ITEM_SCHEMA,
+          description: 'Array of queued deletion jobs'
+        },
+        skipped: {
+          type: 'array',
+          items: BULK_DELETE_SKIPPED_ITEM_SCHEMA,
+          description: 'Array of skipped servers with reasons'
+        }
+      },
+      required: ['total_requested', 'total_queued', 'total_skipped', 'jobs', 'skipped']
+    }
+  },
+  required: ['success', 'message', 'data']
+} as const;
+
 // Standardized error responses
 export const COMMON_ERROR_RESPONSES = {
   400: { ...ERROR_RESPONSE_SCHEMA, description: 'Bad Request - Invalid input or missing Content-Type header' },
@@ -1006,6 +1097,55 @@ export const COMMON_ERROR_RESPONSES = {
   404: { ...ERROR_RESPONSE_SCHEMA, description: 'Not Found - Server not found or access denied' },
   409: { ...ERROR_RESPONSE_SCHEMA, description: 'Conflict - Server name already exists' },
   500: { ...ERROR_RESPONSE_SCHEMA, description: 'Internal Server Error' }
+} as const;
+
+// =============================================================================
+// UPDATE GLOBAL SERVER STATUS SCHEMAS
+// =============================================================================
+
+export const UPDATE_GLOBAL_SERVER_STATUS_REQUEST_SCHEMA = {
+  type: 'object',
+  properties: {
+    status: {
+      type: 'string',
+      enum: MCP_SERVER_STATUS_VALUES as unknown as string[],
+      description: 'New server status'
+    }
+  },
+  required: ['status'],
+  additionalProperties: false
+} as const;
+
+export const UPDATE_GLOBAL_SERVER_STATUS_SUCCESS_RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    success: {
+      type: 'boolean',
+      description: 'Indicates successful status update'
+    },
+    data: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', description: 'Server ID' },
+        name: { type: 'string', description: 'Server name' },
+        slug: { type: 'string', description: 'Server slug' },
+        status: {
+          type: 'string',
+          enum: MCP_SERVER_STATUS_VALUES as unknown as string[],
+          description: 'Updated server status'
+        },
+        previous_status: {
+          type: 'string',
+          enum: MCP_SERVER_STATUS_VALUES as unknown as string[],
+          description: 'Previous server status'
+        },
+        updated_at: { type: 'string', format: 'date-time', description: 'Last update timestamp' }
+      },
+      required: ['id', 'name', 'slug', 'status', 'previous_status', 'updated_at']
+    }
+  },
+  required: ['success', 'data'],
+  additionalProperties: false
 } as const;
 
 // Category object schema for embedding in server list responses
@@ -1037,7 +1177,7 @@ export const SERVER_LIST_ENTITY_SCHEMA = {
     owner_team_id: { type: 'string', nullable: true, description: 'Owning team ID' },
     category: CATEGORY_EMBED_SCHEMA,
     tags: { type: 'array', items: { type: 'string' }, nullable: true, description: 'Server tags' },
-    status: { type: 'string', enum: ['active', 'deprecated', 'maintenance'], description: 'Server status' },
+    status: { type: 'string', enum: MCP_SERVER_STATUS_VALUES as unknown as string[], description: 'Server status' },
     featured: { type: 'boolean', description: 'Whether server is featured' },
     requires_oauth: { type: 'boolean', description: 'Whether server requires OAuth' },
     github_stars: { type: 'number', nullable: true, description: 'GitHub stars count' },
@@ -1329,8 +1469,9 @@ export interface ListServersQueryParams {
   category_id?: string;
   language?: string;
   runtime?: string;
-  status?: 'active' | 'deprecated' | 'maintenance';
+  status?: McpServerStatus;
   featured?: 'true' | 'false';
+  source?: 'official_registry' | 'manual';
   auto_install_new_default_team?: boolean;
   search?: string;
   limit?: string;
@@ -1389,7 +1530,7 @@ export interface ServerEntity {
   dependencies: Record<string, any> | null;
   category_id: string | null;
   tags: string[] | null;
-  status: 'active' | 'deprecated' | 'maintenance';
+  status: McpServerStatus;
   featured: boolean;
   auto_install_new_default_team: boolean;
   requires_oauth: boolean;
@@ -1578,6 +1719,33 @@ export interface DeleteGlobalServerSuccessResponse {
   };
 }
 
+export interface BulkDeleteGlobalServersRequest {
+  server_ids: string[];
+}
+
+export interface BulkDeleteJobItem {
+  server_id: string;
+  server_name: string;
+  job_id: string;
+}
+
+export interface BulkDeleteSkippedItem {
+  server_id: string;
+  reason: string;
+}
+
+export interface BulkDeleteGlobalServersSuccessResponse {
+  success: boolean;
+  message: string;
+  data: {
+    total_requested: number;
+    total_queued: number;
+    total_skipped: number;
+    jobs: BulkDeleteJobItem[];
+    skipped: BulkDeleteSkippedItem[];
+  };
+}
+
 // Category embed interface for list responses
 export interface CategoryEmbed {
   id: string;
@@ -1600,7 +1768,7 @@ export interface ServerListEntity {
   owner_team_id: string | null;
   category: CategoryEmbed | null;
   tags: string[] | null;
-  status: 'active' | 'deprecated' | 'maintenance';
+  status: McpServerStatus;
   featured: boolean;
   requires_oauth: boolean;
   github_stars: number | null;
@@ -1650,6 +1818,22 @@ export interface ReadmeEntity {
 export interface GetReadmeSuccessResponse {
   success: boolean;
   data: ReadmeEntity;
+}
+
+export interface UpdateGlobalServerStatusRequest {
+  status: McpServerStatus;
+}
+
+export interface UpdateGlobalServerStatusSuccessResponse {
+  success: boolean;
+  data: {
+    id: string;
+    name: string;
+    slug: string;
+    status: McpServerStatus;
+    previous_status: McpServerStatus;
+    updated_at: string;
+  };
 }
 
 // =============================================================================

@@ -662,7 +662,7 @@ export interface ServerDetails {
   github_stars: number | null;
   language: string;
   runtime: string;
-  status: 'active' | 'deprecated' | 'maintenance';
+  status: 'active' | 'deprecated' | 'maintenance' | 'disabled';
   tags: string[] | null;
   environment_variables: any[] | null; // eslint-disable-line @typescript-eslint/no-explicit-any
   args: any[] | null; // eslint-disable-line @typescript-eslint/no-explicit-any

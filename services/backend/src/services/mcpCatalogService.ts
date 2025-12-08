@@ -53,7 +53,7 @@ export interface McpServer {
   dependencies?: string; // JSON
   category_id?: string;
   tags?: string; // JSON
-  status: 'active' | 'deprecated' | 'maintenance';
+  status: 'active' | 'deprecated' | 'maintenance' | 'disabled';
   featured: boolean;
   auto_install_new_default_team: boolean;
   requires_oauth: boolean;
@@ -173,7 +173,7 @@ export interface UpdateMcpServerRequest {
   dependencies?: any;
   category_id?: string;
   tags?: string[];
-  status?: 'active' | 'deprecated' | 'maintenance';
+  status?: 'active' | 'deprecated' | 'maintenance' | 'disabled';
   featured?: boolean;
   auto_install_new_default_team?: boolean;
 }
@@ -183,8 +183,9 @@ export interface McpServerFilters {
   category_id?: string;
   language?: string;
   runtime?: string;
-  status?: 'active' | 'deprecated' | 'maintenance';
+  status?: 'active' | 'deprecated' | 'maintenance' | 'disabled';
   featured?: boolean;
+  source?: 'official_registry' | 'manual';
   search?: string;
   tags?: string;
 }
@@ -293,6 +294,9 @@ export class McpCatalogService {
       }
       if (filters.featured !== undefined) {
         whereConditions.push(eq(this.mcpServers.featured, filters.featured));
+      }
+      if (filters.source) {
+        whereConditions.push(eq(this.mcpServers.source, filters.source));
       }
       if (filters.search) {
         const searchTerm = `%${filters.search}%`;
