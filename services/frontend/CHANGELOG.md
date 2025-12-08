@@ -7,6 +7,14 @@
 * chore(all): exclude release commits from changelog e990f583d0744ee15a543d5f3c1628fa382701f6
 * chore(deps): update dependencies in package.json and service packages c062e49b1843cbe6ac5223123bcdbecf7702c2c1
 * style(frontend): reorder source filter tabs and bulk actions toolbar ee7431120552dc2ec4c86b86826143b5ebfb00af
+
+## 0.47.0 (2025-12-08)
+
+* feat(frontend): add source filter to MCP server catalog 92afca1b20ce2f63d69a6d1af16a0277c0b63d27
+* feat(satellite): add wildcard search for MCP tools and limit results a75e4859bd5dc8cc1d7ab4c0a7f1ffefc00826bd
+* chore(all): exclude release commits from changelog e990f583d0744ee15a543d5f3c1628fa382701f6
+* chore(deps): update dependencies in package.json and service packages c062e49b1843cbe6ac5223123bcdbecf7702c2c1
+* style(frontend): reorder source filter tabs and bulk actions toolbar ee7431120552dc2ec4c86b86826143b5ebfb00af
 * fix(backend): clarify backend API base URL description 1f6ef4eb74daa924fc9f619a319ae4c01f01d4e1
 * fix(backend): emit USER_REGISTERED event for new GitHub users 8d84726ede875665f170869cef8db2ac41feb52e
 * fix(backend): include drizzle migrations in Docker image bc4c9aff9c7519bb7f0e7653170661544a1093e2, closes #546
