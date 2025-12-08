@@ -92,17 +92,17 @@ export class McpServerWrapper {
       const metaTools = [
         {
           name: 'discover_mcp_tools',
-          description: 'Search for MCP tools using 1-3 keywords only. Examples: "markdown", "github create", "database query". Avoid long descriptions. Use tool name or main function as keywords. Returns tool paths for execute_mcp_tool.',
+          description: 'Search for MCP tools using 1-3 keywords only. Examples: "markdown", "github create", "database query". Use "*" to list all available tools (max 20). Avoid long descriptions. Use tool name or main function as keywords. Returns tool paths for execute_mcp_tool.',
           inputSchema: {
             type: 'object',
             properties: {
               query: {
                 type: 'string',
-                description: 'Short search query with 1-3 keywords (e.g., "markdown", "github", "database postgres"). Avoid full sentences.'
+                description: 'Short search query with 1-3 keywords (e.g., "markdown", "github", "database postgres"). Use "*" to list all tools. Avoid full sentences.'
               },
               limit: {
                 type: 'number',
-                description: 'Maximum number of results to return (default: 10)',
+                description: 'Maximum number of results to return (default: 10, max: 20 for wildcard)',
                 default: 10
               }
             },
@@ -186,17 +186,39 @@ export class McpServerWrapper {
       throw new Error('Invalid query parameter - must be a non-empty string');
     }
 
+    // Handle wildcard query "*" - list all tools (max 20)
+    const isWildcard = query.trim() === '*';
+    const wildcardLimit = 20;
+
     this.logger.info({
       operation: 'discover_mcp_tools',
       query: query,
-      limit: limit
-    }, `Discovering tools with query: "${query}"`);
+      limit: isWildcard ? wildcardLimit : limit,
+      is_wildcard: isWildcard
+    }, `Discovering tools with query: "${query}"${isWildcard ? ' (wildcard mode)' : ''}`);
 
     const startTime = Date.now();
-    const results = this.toolSearchService.search(query, limit);
+
+    let results;
+    let totalAvailable = 0;
+    let truncationMessage: string | undefined;
+
+    if (isWildcard) {
+      // Wildcard: return all tools up to max 20
+      results = this.toolSearchService.listAll(wildcardLimit);
+      totalAvailable = this.toolSearchService.getEnabledToolCount();
+
+      if (totalAvailable > wildcardLimit) {
+        truncationMessage = `Showing ${wildcardLimit} of ${totalAvailable} available tools. Use specific keywords (e.g., "github", "database", "markdown") to find additional tools not shown here.`;
+      }
+    } else {
+      // Normal search
+      results = this.toolSearchService.search(query, limit);
+    }
+
     const searchTime = Date.now() - startTime;
 
-    const response = {
+    const response: any = {
       tools: results.map(result => ({
         tool_path: result.tool_path,
         description: result.description,
@@ -209,12 +231,21 @@ export class McpServerWrapper {
       query: query
     };
 
+    // Add truncation notice for wildcard queries with more tools available
+    if (truncationMessage) {
+      response.notice = truncationMessage;
+      response.total_available = totalAvailable;
+    }
+
     this.logger.info({
       operation: 'discover_mcp_tools_success',
       query: query,
       results_count: results.length,
-      search_time_ms: searchTime
-    }, `Discovery complete: found ${results.length} tools in ${searchTime}ms`);
+      search_time_ms: searchTime,
+      is_wildcard: isWildcard,
+      total_available: totalAvailable,
+      was_truncated: !!truncationMessage
+    }, `Discovery complete: found ${results.length} tools in ${searchTime}ms${truncationMessage ? ` (truncated from ${totalAvailable})` : ''}`);
 
     return {
       content: [

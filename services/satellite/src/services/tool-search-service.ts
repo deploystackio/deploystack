@@ -179,6 +179,60 @@ export class ToolSearchService {
   }
 
   /**
+   * List all available tools without search filtering
+   * Used when query is "*" to return all tools
+   * Filters out disabled tools
+   */
+  listAll(limit: number = 20): ToolSearchResult[] {
+    const startTime = Date.now();
+
+    // Get tools from single source of truth
+    const allTools = this.toolDiscoveryManager.getAllTools();
+
+    if (allTools.length === 0) {
+      this.logger.warn({
+        operation: 'tool_list_all_no_tools'
+      }, 'No tools available');
+      return [];
+    }
+
+    // Filter out disabled tools
+    const enabledTools = this.filterDisabledTools(allTools);
+
+    // Convert to searchable format
+    const searchableTools = this.flattenTools(enabledTools);
+
+    const listTime = Date.now() - startTime;
+
+    this.logger.info({
+      operation: 'tool_list_all_executed',
+      total_tools: allTools.length,
+      enabled_tools: searchableTools.length,
+      returned_tools: Math.min(searchableTools.length, limit),
+      list_time_ms: listTime,
+      limit: limit
+    }, `List all completed: returning ${Math.min(searchableTools.length, limit)}/${searchableTools.length} tools in ${listTime}ms`);
+
+    // Return up to limit tools
+    return searchableTools.slice(0, limit).map(tool => ({
+      tool_path: `${tool.serverSlug}:${tool.toolName}`,
+      description: tool.description,
+      server_name: tool.serverSlug,
+      transport: tool.transport,
+      score: 0 // Perfect score for direct listing
+    }));
+  }
+
+  /**
+   * Get total count of enabled tools (for wildcard truncation message)
+   */
+  getEnabledToolCount(): number {
+    const allTools = this.toolDiscoveryManager.getAllTools();
+    const enabledTools = this.filterDisabledTools(allTools);
+    return enabledTools.length;
+  }
+
+  /**
    * Get statistics about search service
    */
   getStats() {
