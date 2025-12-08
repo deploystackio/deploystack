@@ -8,6 +8,14 @@
 * chore(deps): update dependencies in package.json and service packages c062e49b1843cbe6ac5223123bcdbecf7702c2c1
 * style(frontend): reorder source filter tabs and bulk actions toolbar ee7431120552dc2ec4c86b86826143b5ebfb00af
 
+## 0.51.0 (2025-12-08)
+
+* feat(frontend): add source filter to MCP server catalog 92afca1b20ce2f63d69a6d1af16a0277c0b63d27
+* feat(satellite): add wildcard search for MCP tools and limit results a75e4859bd5dc8cc1d7ab4c0a7f1ffefc00826bd
+* chore(all): exclude release commits from changelog e990f583d0744ee15a543d5f3c1628fa382701f6
+* chore(deps): update dependencies in package.json and service packages c062e49b1843cbe6ac5223123bcdbecf7702c2c1
+* style(frontend): reorder source filter tabs and bulk actions toolbar ee7431120552dc2ec4c86b86826143b5ebfb00af
+
 ## <small>0.50.2 (2025-12-06)</small>
 
 * chore(backend): release v0.50.2 8b37db4
