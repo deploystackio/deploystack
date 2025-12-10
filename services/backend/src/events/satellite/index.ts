@@ -26,6 +26,9 @@ const handlerModules = [
   () => import('./mcp-server-respawned'),
   () => import('./mcp-server-restarted'),
   () => import('./mcp-tools-discovered'),
+  () => import('./mcp-server-status-changed'),
+  () => import('./mcp-server-logs'),
+  () => import('./mcp-request-logs'),
   // Add new handlers here - they will be automatically registered
 ];
 

@@ -20,6 +20,9 @@ export type EventType =
   | 'mcp.server.permanently_failed'
   | 'mcp.server.dormant'
   | 'mcp.server.respawned'
+  | 'mcp.server.status_changed'
+  | 'mcp.server.logs'
+  | 'mcp.request.logs'
   | 'mcp.tools.discovered'
   | 'mcp.tools.updated'
   | 'config.refreshed'
@@ -130,6 +133,39 @@ export interface EventDataMap {
     respawn_duration_ms: number;
   };
 
+  'mcp.server.status_changed': {
+    installation_id: string;
+    team_id: string;
+    status: 'provisioning' | 'command_received' | 'connecting' | 'discovering_tools' | 'syncing_tools' | 'online' | 'offline' | 'error' | 'requires_reauth' | 'permanently_failed';
+    status_message?: string;
+    timestamp: string;
+  };
+
+  'mcp.server.logs': {
+    installation_id: string;
+    team_id: string;
+    logs: Array<{
+      level: 'info' | 'warn' | 'error' | 'debug';
+      message: string;
+      metadata?: Record<string, unknown>;
+      timestamp: string;
+    }>;
+  };
+
+  'mcp.request.logs': {
+    installation_id: string;
+    team_id: string;
+    requests: Array<{
+      user_id?: string;
+      tool_name: string;
+      tool_params: Record<string, unknown>;
+      response_time_ms: number;
+      success: boolean;
+      error_message?: string;
+      timestamp: string;
+    }>;
+  };
+
   'mcp.tools.discovered': {
     installation_id: string;
     installation_name: string;
@@ -224,6 +260,9 @@ export function isValidEventType(type: string): type is EventType {
     'mcp.server.permanently_failed',
     'mcp.server.dormant',
     'mcp.server.respawned',
+    'mcp.server.status_changed',
+    'mcp.server.logs',
+    'mcp.request.logs',
     'mcp.tools.discovered',
     'mcp.tools.updated',
     'config.refreshed',

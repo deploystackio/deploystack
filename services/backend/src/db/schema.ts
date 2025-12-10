@@ -68,6 +68,8 @@ export {
   mcpUserConfigurations,
   mcpToolMetadata,
   mcpOauthTokens,
+  mcpServerLogs,
+  mcpRequestLogs,
 } from './schema-tables/mcp-installations';
 
 // OAuth2 Authorization System Tables

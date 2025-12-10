@@ -188,9 +188,10 @@ export async function refreshExpiringOAuthTokens(logger: FastifyBaseLogger) {
 
 				successCount++;
 			} catch (error) {
+				const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 				logger.error(
 					{
-						error: error instanceof Error ? error.message : 'Unknown error',
+						error: errorMessage,
 						tokenId: token.id,
 						installationId: installation.id,
 						serverId: server.id,
@@ -198,6 +199,39 @@ export async function refreshExpiringOAuthTokens(logger: FastifyBaseLogger) {
 					},
 					'Failed to refresh token'
 				);
+
+				// Phase 11: Update installation status to requires_reauth
+				try {
+					await db
+						.update(mcpServerInstallations)
+						.set({
+							status: 'requires_reauth',
+							status_message: `OAuth token refresh failed: ${errorMessage}. Please re-authenticate.`,
+							status_updated_at: new Date(),
+						})
+						.where(eq(mcpServerInstallations.id, installation.id));
+
+					logger.warn(
+						{
+							operation: 'oauth_refresh_status_update',
+							installation_id: installation.id,
+							team_id: installation.team_id,
+							server_id: server.id,
+							error: errorMessage,
+						},
+						'OAuth refresh failed, installation status set to requires_reauth'
+					);
+				} catch (statusUpdateError) {
+					logger.error(
+						{
+							error: statusUpdateError instanceof Error ? statusUpdateError.message : 'Unknown error',
+							installation_id: installation.id,
+							operation: 'oauth_refresh_status_update',
+						},
+						'Failed to update installation status after OAuth refresh failure'
+					);
+				}
+
 				failureCount++;
 			}
 		}

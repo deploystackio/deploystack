@@ -12819,6 +12819,494 @@
         }
       }
     },
+    "/api/teams/{teamId}/mcp/installations/{installationId}/status": {
+      "get": {
+        "summary": "Get installation status",
+        "tags": [
+          "MCP Installations"
+        ],
+        "description": "Retrieves the current status of a specific MCP installation including status message and timestamps. Requires mcp.installations.view permission.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "teamId",
+            "required": true,
+            "description": "Team ID that owns the installation"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "installationId",
+            "required": true,
+            "description": "Installation ID"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Installation status retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "installation_id": {
+                          "type": "string",
+                          "description": "Installation unique identifier"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "provisioning",
+                            "command_received",
+                            "connecting",
+                            "discovering_tools",
+                            "syncing_tools",
+                            "online",
+                            "offline",
+                            "error",
+                            "requires_reauth",
+                            "permanently_failed"
+                          ],
+                          "description": "Current status of the MCP server installation"
+                        },
+                        "status_message": {
+                          "type": [
+                            "null",
+                            "string"
+                          ],
+                          "description": "Human-readable status message or error details"
+                        },
+                        "status_updated_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "description": "ISO 8601 timestamp when status was last updated"
+                        },
+                        "last_health_check_at": {
+                          "type": [
+                            "null",
+                            "string"
+                          ],
+                          "format": "date-time",
+                          "description": "ISO 8601 timestamp when health was last checked"
+                        }
+                      },
+                      "required": [
+                        "installation_id",
+                        "status",
+                        "status_updated_at"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "description": "Installation status retrieved successfully"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates failure"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message detailing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Unauthorized - Authentication required"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Insufficient permissions or not a team member",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates failure"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message detailing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Forbidden - Insufficient permissions or not a team member"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found - Installation does not exist or does not belong to specified team",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates failure"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message detailing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Not Found - Installation does not exist or does not belong to specified team"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates failure"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message detailing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Internal Server Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teams/{teamId}/mcp/installations/{installationId}/logs": {
+      "get": {
+        "summary": "Get installation logs",
+        "tags": [
+          "MCP Installations"
+        ],
+        "description": "Retrieves logs for a specific MCP installation with pagination and optional level filtering. Requires mcp.installations.view permission. Logs are returned newest first.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "description": "Number of logs to return (max 100)"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            },
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "description": "Pagination offset"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "info",
+                "warn",
+                "error",
+                "debug"
+              ]
+            },
+            "in": "query",
+            "name": "level",
+            "required": false,
+            "description": "Filter by log level"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "teamId",
+            "required": true,
+            "description": "Team ID that owns the installation"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "installationId",
+            "required": true,
+            "description": "Installation ID"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Installation logs retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "logs": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "description": "Log entry unique identifier"
+                              },
+                              "level": {
+                                "type": "string",
+                                "enum": [
+                                  "info",
+                                  "warn",
+                                  "error",
+                                  "debug"
+                                ],
+                                "description": "Log level"
+                              },
+                              "message": {
+                                "type": "string",
+                                "description": "Log message content"
+                              },
+                              "metadata": {
+                                "type": [
+                                  "null",
+                                  "object"
+                                ],
+                                "description": "Structured metadata (nullable)"
+                              },
+                              "created_at": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "ISO 8601 timestamp when log was created"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "level",
+                              "message",
+                              "created_at"
+                            ]
+                          },
+                          "description": "Array of log entries"
+                        },
+                        "total": {
+                          "type": "integer",
+                          "description": "Total number of logs matching criteria"
+                        },
+                        "limit": {
+                          "type": "integer",
+                          "description": "Number of logs returned per page"
+                        },
+                        "offset": {
+                          "type": "integer",
+                          "description": "Current pagination offset"
+                        }
+                      },
+                      "required": [
+                        "logs",
+                        "total",
+                        "limit",
+                        "offset"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "description": "Installation logs retrieved successfully"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates failure"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message detailing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Unauthorized - Authentication required"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Insufficient permissions or not a team member",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates failure"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message detailing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Forbidden - Insufficient permissions or not a team member"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found - Installation does not exist or does not belong to specified team",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates failure"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message detailing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Not Found - Installation does not exist or does not belong to specified team"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates failure"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message detailing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Internal Server Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/teams/{teamId}/satellites": {
       "get": {
         "summary": "Get available satellites for team",

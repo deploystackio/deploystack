@@ -284,6 +284,7 @@ export default async function oauthCallbackRoute(server: FastifyInstance) {
 				});
 
 				// Update installation: mark as complete, clear OAuth pending state and temporary fields
+				// Phase 11: Reset status to 'connecting' after successful re-authentication
 				await db
 					.update(mcpServerInstallations)
 					.set({
@@ -295,6 +296,10 @@ export default async function oauthCallbackRoute(server: FastifyInstance) {
 						oauth_token_endpoint: null,
 						oauth_token_endpoint_auth_method: null,
 						oauth_client_secret: null, // Clear encrypted secret (tokens are now stored separately)
+						// Phase 11: Reset status after successful OAuth (re-authentication or initial auth)
+						status: 'connecting',
+						status_message: 'Re-authenticated successfully, waiting for satellite to reconnect',
+						status_updated_at: new Date(),
 						updated_at: new Date(),
 					})
 					.where(eq(mcpServerInstallations.id, installation.id));

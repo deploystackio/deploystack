@@ -335,6 +335,18 @@ export async function registerDebugRoutes(server: FastifyInstance) {
       const stdioServers = Object.values(currentConfig.servers)
         .filter(s => s.enabled !== false && (s.transport_type === 'stdio' || s.type === 'stdio')).length;
 
+      // Phase 10: Get server availability status
+      const serverStatusMap = toolDiscoveryManager.getAllServerStatuses();
+      const serverStatusStats = toolDiscoveryManager.getServerStatusStats();
+      const serverStatusData: Record<string, { status: string; last_updated: string; message?: string }> = {};
+      for (const [serverSlug, entry] of serverStatusMap) {
+        serverStatusData[serverSlug] = {
+          status: entry.status,
+          last_updated: entry.lastUpdated.toISOString(),
+          message: entry.message
+        };
+      }
+
       const debugInfo = {
         timestamp: new Date().toISOString(),
         satellite_info: {
@@ -349,6 +361,11 @@ export async function registerDebugRoutes(server: FastifyInstance) {
           total_dormant: totalDormant,
           total_configured: totalConfigured,
           total_servers: totalRunning + totalDormant + totalConfigured
+        },
+        // Phase 10: Server availability status
+        server_status: {
+          stats: serverStatusStats,
+          servers: serverStatusData
         },
         tools: {
           total_tools: allTools.length,

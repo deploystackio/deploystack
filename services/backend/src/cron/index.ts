@@ -5,6 +5,9 @@ import { createMcpClientActivityMetricsCleanupJob } from './jobs/mcpClientActivi
 import { createCleanupOldJobsJob } from './jobs/cleanupOldJobs';
 import { createRefreshOAuthTokensJob } from './jobs/refreshOAuthTokens';
 import { createCleanupSatelliteHeartbeatsJob } from './jobs/cleanupSatelliteHeartbeats';
+import { createCleanupMcpServerLogsJob } from './jobs/cleanupMcpServerLogs';
+import { createMcpHealthCheckJob } from './jobs/mcpHealthCheck';
+import { createMcpCredentialValidationJob } from './jobs/mcpCredentialValidation';
 // import { createExampleCronJob } from './jobs/exampleJob';
 
 /**
@@ -41,6 +44,15 @@ export function initializeCronJobs(
 
   // Cleanup satellite heartbeats (every 3 minutes)
   cronManager.register(createCleanupSatelliteHeartbeatsJob());
+
+  // Cleanup MCP server logs (every 10 minutes, 100-line limit per installation)
+  cronManager.register(createCleanupMcpServerLogsJob());
+
+  // MCP health check (every 3 minutes, cumulative at template level)
+  cronManager.register(createMcpHealthCheckJob());
+
+  // MCP credential validation (every 1 minute, per-installation 15-min interval)
+  cronManager.register(createMcpCredentialValidationJob());
 
   // Example cron job - commented out, uncomment to test
   // cronManager.register(createExampleCronJob());

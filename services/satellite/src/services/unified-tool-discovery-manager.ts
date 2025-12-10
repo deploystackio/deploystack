@@ -7,6 +7,27 @@ import { ProcessManager } from '../process/manager';
 import { RuntimeState } from '../process/runtime-state';
 
 /**
+ * Server availability status for tool filtering (Phase 10)
+ */
+export type ServerAvailabilityStatus =
+  | 'online'
+  | 'offline'
+  | 'error'
+  | 'requires_reauth'
+  | 'permanently_failed'
+  | 'connecting'
+  | 'discovering_tools';
+
+/**
+ * Server status tracking entry
+ */
+export interface ServerStatusEntry {
+  status: ServerAvailabilityStatus;
+  lastUpdated: Date;
+  message?: string;
+}
+
+/**
  * Unified cached tool interface that merges both remote and stdio tool types
  */
 export interface UnifiedCachedTool {
@@ -40,6 +61,12 @@ export class UnifiedToolDiscoveryManager {
    */
   private disabledTools: Map<string, Set<string>> = new Map();
 
+  /**
+   * Tracks server availability status for tool filtering (Phase 10)
+   * Key: serverSlug, Value: ServerStatusEntry
+   */
+  private serverStatus: Map<string, ServerStatusEntry> = new Map();
+
   constructor(
     remoteToolManager: RemoteToolDiscoveryManager,
     stdioToolManager: StdioToolDiscoveryManager,
@@ -50,6 +77,14 @@ export class UnifiedToolDiscoveryManager {
     this.remoteToolManager = remoteToolManager;
     this.stdioToolManager = stdioToolManager;
     this.logger = logger.child({ component: 'UnifiedToolDiscoveryManager' });
+
+    // Phase 10: Wire up status callbacks from discovery managers
+    this.remoteToolManager.setStatusCallback((serverSlug, status, message) => {
+      this.setServerStatus(serverSlug, status, message);
+    });
+    this.stdioToolManager.setStatusCallback((serverSlug, status, message) => {
+      this.setServerStatus(serverSlug, status, message);
+    });
   }
 
   /**
@@ -164,6 +199,7 @@ export class UnifiedToolDiscoveryManager {
 
   /**
    * Get all cached tools (merged from both stdio and remote HTTP/SSE managers)
+   * Filters out tools from unavailable servers (Phase 10)
    */
   getAllTools(): UnifiedCachedTool[] {
     const remoteTools = this.remoteToolManager.getCachedTools();
@@ -194,7 +230,44 @@ export class UnifiedToolDiscoveryManager {
       }))
     ];
 
-    return unifiedTools;
+    // Filter out tools from unavailable servers (Phase 10)
+    return unifiedTools.filter(tool => {
+      const status = this.serverStatus.get(tool.serverSlug);
+      // If no status recorded, assume available (unknown = available)
+      if (!status) return true;
+      // Only include tools from 'online' servers
+      return status.status === 'online';
+    });
+  }
+
+  /**
+   * Get all cached tools WITHOUT status filtering (for debug/internal use)
+   */
+  getAllToolsUnfiltered(): UnifiedCachedTool[] {
+    const remoteTools = this.remoteToolManager.getCachedTools();
+    const stdioTools = this.stdioToolManager.getAllTools();
+
+    return [
+      ...remoteTools.map(tool => ({
+        serverName: tool.serverName,
+        originalName: tool.originalName,
+        namespacedName: tool.namespacedName,
+        description: tool.description,
+        inputSchema: tool.inputSchema,
+        transport: 'http' as const,
+        serverSlug: tool.serverSlug,
+        discoveredAt: tool.discoveredAt
+      })),
+      ...stdioTools.map(tool => ({
+        serverName: tool.serverName,
+        originalName: tool.originalName,
+        namespacedName: tool.namespacedName,
+        description: tool.description,
+        inputSchema: tool.inputSchema,
+        transport: 'stdio' as const,
+        serverSlug: tool.serverSlug
+      }))
+    ];
   }
 
   /**
@@ -415,5 +488,124 @@ export class UnifiedToolDiscoveryManager {
         tools_by_server: stdioStats.tools_by_server
       }
     };
+  }
+
+  // =========================================================================
+  // SERVER STATUS TRACKING (Phase 10)
+  // =========================================================================
+
+  /**
+   * Set server availability status (Phase 10)
+   * Called by discovery managers when discovery succeeds or fails
+   */
+  setServerStatus(
+    serverSlug: string,
+    status: ServerAvailabilityStatus,
+    message?: string
+  ): void {
+    const previousStatus = this.serverStatus.get(serverSlug);
+    const statusChanged = !previousStatus || previousStatus.status !== status;
+
+    this.serverStatus.set(serverSlug, {
+      status,
+      lastUpdated: new Date(),
+      message
+    });
+
+    if (statusChanged) {
+      this.logger.info({
+        operation: 'server_status_changed',
+        server_slug: serverSlug,
+        previous_status: previousStatus?.status || 'unknown',
+        new_status: status,
+        message
+      }, `Server ${serverSlug} status changed: ${previousStatus?.status || 'unknown'} -> ${status}`);
+    } else {
+      this.logger.debug({
+        operation: 'server_status_updated',
+        server_slug: serverSlug,
+        status,
+        message
+      }, `Server ${serverSlug} status updated: ${status}`);
+    }
+  }
+
+  /**
+   * Get server availability status (Phase 10)
+   */
+  getServerStatus(serverSlug: string): ServerStatusEntry | undefined {
+    return this.serverStatus.get(serverSlug);
+  }
+
+  /**
+   * Get all server statuses (Phase 10)
+   */
+  getAllServerStatuses(): Map<string, ServerStatusEntry> {
+    return new Map(this.serverStatus);
+  }
+
+  /**
+   * Check if a server is available for tool execution (Phase 10)
+   */
+  isServerAvailable(serverSlug: string): boolean {
+    const status = this.serverStatus.get(serverSlug);
+    // If no status recorded, assume available (unknown = available)
+    if (!status) return true;
+    return status.status === 'online';
+  }
+
+  /**
+   * Clear server status (used when server is removed)
+   */
+  clearServerStatus(serverSlug: string): void {
+    if (this.serverStatus.has(serverSlug)) {
+      this.serverStatus.delete(serverSlug);
+      this.logger.debug({
+        operation: 'server_status_cleared',
+        server_slug: serverSlug
+      }, `Cleared status for server: ${serverSlug}`);
+    }
+  }
+
+  /**
+   * Get server status statistics (Phase 10)
+   */
+  getServerStatusStats(): {
+    total: number;
+    online: number;
+    offline: number;
+    error: number;
+    requires_reauth: number;
+    other: number;
+  } {
+    const stats = {
+      total: this.serverStatus.size,
+      online: 0,
+      offline: 0,
+      error: 0,
+      requires_reauth: 0,
+      other: 0
+    };
+
+    for (const entry of this.serverStatus.values()) {
+      switch (entry.status) {
+        case 'online':
+          stats.online++;
+          break;
+        case 'offline':
+          stats.offline++;
+          break;
+        case 'error':
+          stats.error++;
+          break;
+        case 'requires_reauth':
+          stats.requires_reauth++;
+          break;
+        default:
+          stats.other++;
+      }
+    }
+
+    return stats;
   }
 }

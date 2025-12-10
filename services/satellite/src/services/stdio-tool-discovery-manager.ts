@@ -4,6 +4,15 @@ import { RuntimeState } from '../process/runtime-state';
 import type { EventBus } from './event-bus';
 
 /**
+ * Status callback for Phase 10 local status tracking
+ */
+export type StdioServerStatusCallback = (
+  serverSlug: string,
+  status: 'online' | 'offline' | 'error' | 'requires_reauth' | 'connecting' | 'discovering_tools',
+  message?: string
+) => void;
+
+/**
  * Cached tool from stdio MCP server
  */
 export interface CachedStdioTool {
@@ -27,6 +36,7 @@ export interface CachedStdioTool {
 export class StdioToolDiscoveryManager {
   private toolCache = new Map<string, CachedStdioTool>();
   private toolsByServer = new Map<string, Set<string>>();
+  private statusCallback?: StdioServerStatusCallback;
 
   constructor(
     private processManager: ProcessManager,
@@ -38,6 +48,72 @@ export class StdioToolDiscoveryManager {
     // Tools remain cached even when processes go dormant
     // This allows instant tool calls - the process will respawn automatically
     // Only clear tools when explicitly requested (e.g., server uninstalled)
+  }
+
+  /**
+   * Set status callback for Phase 10 local status tracking
+   */
+  setStatusCallback(callback: StdioServerStatusCallback): void {
+    this.statusCallback = callback;
+  }
+
+  /**
+   * Emit status change event to backend
+   */
+  private emitStatusChange(
+    installationId: string,
+    teamId: string,
+    status: 'provisioning' | 'command_received' | 'connecting' | 'discovering_tools' | 'syncing_tools' | 'online' | 'offline' | 'error' | 'requires_reauth' | 'permanently_failed',
+    statusMessage?: string
+  ): void {
+    if (!this.eventBus) {
+      return;
+    }
+
+    this.eventBus.emit('mcp.server.status_changed', {
+      installation_id: installationId,
+      team_id: teamId,
+      status,
+      status_message: statusMessage,
+      timestamp: new Date().toISOString()
+    });
+
+    this.logger.debug({
+      operation: 'status_change_emitted',
+      installation_id: installationId,
+      team_id: teamId,
+      status,
+      status_message: statusMessage
+    }, `Emitted status change: ${status}`);
+  }
+
+  /**
+   * Determine status based on error type
+   */
+  private getStatusFromError(errorMessage: string): {
+    status: 'offline' | 'error' | 'requires_reauth';
+    message: string;
+  } {
+    const lowerError = errorMessage.toLowerCase();
+
+    // Process spawn/connection errors -> offline
+    if (lowerError.includes('spawn') ||
+        lowerError.includes('enoent') ||
+        lowerError.includes('not found') ||
+        lowerError.includes('not running') ||
+        lowerError.includes('timeout') ||
+        lowerError.includes('timed out')) {
+      return { status: 'offline', message: `Process error: ${errorMessage}` };
+    }
+
+    // Permission errors -> error with specific message
+    if (lowerError.includes('eacces') ||
+        lowerError.includes('permission denied')) {
+      return { status: 'error', message: `Permission error: ${errorMessage}` };
+    }
+
+    // Default -> generic error
+    return { status: 'error', message: errorMessage };
   }
 
   /**
@@ -172,6 +248,11 @@ export class StdioToolDiscoveryManager {
         this.logger.warn({ error }, 'Failed to emit mcp.tools.discovered event (non-fatal)');
       }
 
+      // Phase 10: Notify about successful discovery (set status to 'online')
+      if (this.statusCallback) {
+        this.statusCallback(serverSlug, 'online');
+      }
+
       return cachedTools;
 
     } catch (error) {
@@ -181,6 +262,21 @@ export class StdioToolDiscoveryManager {
         installation_name: installationName,
         error: errorMessage
       }, `Failed to discover tools from ${installationName}`);
+
+      // Emit status change based on error type
+      const config = processInfo.config;
+      if (config.installation_id && config.team_id) {
+        const { status, message } = this.getStatusFromError(errorMessage);
+        this.emitStatusChange(config.installation_id, config.team_id, status, message);
+      }
+
+      // Phase 10: Notify about discovery failure
+      if (this.statusCallback) {
+        const serverSlug = processInfo.config.server_slug;
+        const { status, message } = this.getStatusFromError(errorMessage);
+        this.statusCallback(serverSlug, status, message);
+      }
+
       throw error;
     }
   }

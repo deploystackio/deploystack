@@ -33,6 +33,15 @@ interface ServerToolState {
 }
 
 /**
+ * Status callback for Phase 10 local status tracking
+ */
+export type ServerStatusCallback = (
+  serverSlug: string,
+  status: 'online' | 'offline' | 'error' | 'requires_reauth' | 'connecting' | 'discovering_tools',
+  message?: string
+) => void;
+
+/**
  * Remote Tool Discovery Manager
  * Discovers and caches tools from remote MCP servers at startup
  */
@@ -44,10 +53,18 @@ export class RemoteToolDiscoveryManager {
   private configManager?: DynamicConfigManager;
   private eventBus?: EventBus;
   private oauthTokenService?: OAuthTokenService;
+  private statusCallback?: ServerStatusCallback;
 
   constructor(logger: FastifyBaseLogger, eventBus?: EventBus) {
     this.logger = logger.child({ component: 'RemoteToolDiscoveryManager' });
     this.eventBus = eventBus;
+  }
+
+  /**
+   * Set status callback for Phase 10 local status tracking
+   */
+  setStatusCallback(callback: ServerStatusCallback): void {
+    this.statusCallback = callback;
   }
 
   /**
@@ -68,6 +85,75 @@ export class RemoteToolDiscoveryManager {
     this.logger.debug({
       operation: 'tool_discovery_oauth_service_set'
     }, 'OAuth token service set for tool discovery');
+  }
+
+  /**
+   * Emit status change event to backend
+   */
+  private emitStatusChange(
+    installationId: string,
+    teamId: string,
+    status: 'provisioning' | 'command_received' | 'connecting' | 'discovering_tools' | 'syncing_tools' | 'online' | 'offline' | 'error' | 'requires_reauth' | 'permanently_failed',
+    statusMessage?: string
+  ): void {
+    if (!this.eventBus) {
+      return;
+    }
+
+    this.eventBus.emit('mcp.server.status_changed', {
+      installation_id: installationId,
+      team_id: teamId,
+      status,
+      status_message: statusMessage,
+      timestamp: new Date().toISOString()
+    });
+
+    this.logger.debug({
+      operation: 'status_change_emitted',
+      installation_id: installationId,
+      team_id: teamId,
+      status,
+      status_message: statusMessage
+    }, `Emitted status change: ${status}`);
+  }
+
+  /**
+   * Determine status based on error type
+   */
+  private getStatusFromError(errorMessage: string): {
+    status: 'offline' | 'error' | 'requires_reauth';
+    message: string;
+  } {
+    const lowerError = errorMessage.toLowerCase();
+
+    // Connection errors -> offline
+    if (lowerError.includes('econnrefused') ||
+        lowerError.includes('enotfound') ||
+        lowerError.includes('etimedout') ||
+        lowerError.includes('timeout') ||
+        lowerError.includes('connection refused') ||
+        lowerError.includes('network error')) {
+      return { status: 'offline', message: `Server not responding: ${errorMessage}` };
+    }
+
+    // Phase 11: HTTP 401/403 -> requires_reauth (token likely expired or revoked)
+    if (lowerError.includes('401') || lowerError.includes('unauthorized')) {
+      return { status: 'requires_reauth', message: `Authentication failed (HTTP 401). Please re-authenticate: ${errorMessage}` };
+    }
+
+    if (lowerError.includes('403') || lowerError.includes('forbidden')) {
+      return { status: 'requires_reauth', message: `Access forbidden (HTTP 403). Please re-authenticate: ${errorMessage}` };
+    }
+
+    // OAuth/Auth errors -> requires_reauth
+    if (lowerError.includes('oauth') ||
+        lowerError.includes('authorization required') ||
+        lowerError.includes('token') && (lowerError.includes('expired') || lowerError.includes('invalid'))) {
+      return { status: 'requires_reauth', message: `OAuth re-authorization required: ${errorMessage}` };
+    }
+
+    // Default -> generic error
+    return { status: 'error', message: errorMessage };
   }
 
   /**
@@ -444,6 +530,11 @@ export class RemoteToolDiscoveryManager {
         sdk_used: true
       }, `Successfully discovered ${cachedTools.length} tools from ${serverName} using MCP SDK in ${responseTime}ms`);
 
+      // Phase 10: Notify about successful discovery (set status to 'online')
+      if (this.statusCallback) {
+        this.statusCallback(serverSlug, 'online');
+      }
+
       return cachedTools;
 
     } catch (error) {
@@ -458,6 +549,19 @@ export class RemoteToolDiscoveryManager {
         error: errorMessage,
         sdk_used: true
       }, `Tool discovery failed for ${serverName} after ${responseTime}ms using MCP SDK: ${errorMessage}`);
+
+      // Emit status change based on error type
+      if (config.installation_id && config.team_id) {
+        const { status, message } = this.getStatusFromError(errorMessage);
+        this.emitStatusChange(config.installation_id, config.team_id, status, message);
+      }
+
+      // Phase 10: Notify about discovery failure
+      if (this.statusCallback) {
+        const serverSlug = config.server_slug || config.server_name || serverName;
+        const { status, message } = this.getStatusFromError(errorMessage);
+        this.statusCallback(serverSlug, status, message);
+      }
 
       throw error;
     } finally {

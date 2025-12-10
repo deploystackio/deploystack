@@ -10,6 +10,9 @@ import { CleanupOldJobsWorker } from './cleanupOldJobsWorker';
 import { RefreshOAuthTokensWorker } from './refreshOAuthTokensWorker';
 import { CleanupSatelliteHeartbeatsWorker } from './cleanupSatelliteHeartbeatsWorker';
 import { McpServerCascadeDeletionWorker } from './mcpServerCascadeDeletionWorker';
+import { CleanupMcpServerLogsWorker } from './cleanupMcpServerLogsWorker';
+import { McpHealthCheckWorker } from './mcpHealthCheckWorker';
+import { McpCredentialValidationWorker } from './mcpCredentialValidationWorker';
 
 /**
  * Register all workers with the job processor
@@ -78,6 +81,24 @@ export function registerWorkers(
   processor.registerWorker(
     'cleanup_satellite_heartbeats',
     new CleanupSatelliteHeartbeatsWorker(db, logger)
+  );
+
+  // Register MCP Server Logs Cleanup Worker
+  processor.registerWorker(
+    'cleanup_mcp_server_logs',
+    new CleanupMcpServerLogsWorker(db, logger)
+  );
+
+  // Register MCP Health Check Worker
+  processor.registerWorker(
+    'mcp_health_check',
+    new McpHealthCheckWorker(db, logger)
+  );
+
+  // Register MCP Credential Validation Worker
+  processor.registerWorker(
+    'mcp_credential_validation',
+    new McpCredentialValidationWorker(db, logger)
   );
 
   // Register MCP Server Cascade Deletion Worker (requires eventBus)

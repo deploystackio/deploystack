@@ -7,6 +7,7 @@ import { StdioToolDiscoveryManager } from './stdio-tool-discovery-manager';
 import { UnifiedToolDiscoveryManager } from './unified-tool-discovery-manager';
 import { MCPServerConfig } from '../process/types';
 import { maskUrlForLogging } from '../utils/log-masker';
+import type { EventBus } from './event-bus';
 
 export interface ProcessInfo {
   id: string;
@@ -26,6 +27,7 @@ export class CommandProcessor {
   private runtimeState: RuntimeState | null;
   private stdioDiscoveryManager: StdioToolDiscoveryManager | null;
   private unifiedToolDiscoveryManager: UnifiedToolDiscoveryManager | null = null;
+  private eventBus: EventBus | null = null;
   private processes: Map<string, ProcessInfo> = new Map();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private onConfigurationUpdate?: (config: any) => Promise<void>;
@@ -57,6 +59,48 @@ export class CommandProcessor {
    */
   setUnifiedToolDiscoveryManager(manager: UnifiedToolDiscoveryManager): void {
     this.unifiedToolDiscoveryManager = manager;
+  }
+
+  /**
+   * Set event bus for status event emission
+   */
+  setEventBus(eventBus: EventBus): void {
+    this.eventBus = eventBus;
+  }
+
+  /**
+   * Emit status change event to backend
+   */
+  private emitStatusChange(
+    installationId: string,
+    teamId: string,
+    status: 'provisioning' | 'command_received' | 'connecting' | 'discovering_tools' | 'syncing_tools' | 'online' | 'offline' | 'error' | 'requires_reauth' | 'permanently_failed',
+    statusMessage?: string
+  ): void {
+    if (!this.eventBus) {
+      this.logger.debug({
+        operation: 'status_change_no_event_bus',
+        installation_id: installationId,
+        status
+      }, 'EventBus not available, skipping status emission');
+      return;
+    }
+
+    this.eventBus.emit('mcp.server.status_changed', {
+      installation_id: installationId,
+      team_id: teamId,
+      status,
+      status_message: statusMessage,
+      timestamp: new Date().toISOString()
+    });
+
+    this.logger.debug({
+      operation: 'status_change_emitted',
+      installation_id: installationId,
+      team_id: teamId,
+      status,
+      status_message: statusMessage
+    }, `Emitted status change: ${status}`);
   }
 
   /**
@@ -450,16 +494,32 @@ export class CommandProcessor {
       correlation_id: command.correlation_id
     }, `Spawning stdio MCP server from Backend command`);
 
+    // Emit "connecting" status at start
+    this.emitStatusChange(
+      config.installation_id,
+      config.team_id,
+      'connecting',
+      'Connecting to MCP server process'
+    );
+
     try {
       // Spawn process (includes MCP handshake)
       const processInfo = await this.processManager.spawnProcess(config);
-      
+
       // Add to runtime state
       this.runtimeState.addProcess(
         processInfo,
         config.installation_id,
         config.installation_name,
         config.team_id
+      );
+
+      // Emit "discovering_tools" status
+      this.emitStatusChange(
+        config.installation_id,
+        config.team_id,
+        'discovering_tools',
+        'Discovering available tools from MCP server'
       );
 
       // Discover tools
@@ -474,6 +534,14 @@ export class CommandProcessor {
           correlation_id: command.correlation_id
         }, 'Tool discovery failed but process running');
       }
+
+      // Emit "online" status on success
+      this.emitStatusChange(
+        config.installation_id,
+        config.team_id,
+        'online',
+        'MCP server is online and ready'
+      );
 
       this.logger.info({
         operation: 'spawn_stdio_success',
@@ -497,7 +565,15 @@ export class CommandProcessor {
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      
+
+      // Emit "error" status on failure
+      this.emitStatusChange(
+        config.installation_id,
+        config.team_id,
+        'error',
+        `Failed to spawn MCP server: ${errorMessage}`
+      );
+
       this.logger.error({
         operation: 'spawn_stdio_failed',
         installation_name: config.installation_name,
@@ -505,7 +581,7 @@ export class CommandProcessor {
         error: errorMessage,
         correlation_id: command.correlation_id
       }, `Failed to spawn stdio MCP server`);
-      
+
       throw error;
     }
   }
@@ -638,8 +714,19 @@ export class CommandProcessor {
 
   /**
    * Handle health check command - check health of HTTP MCP servers
+   * Supports two modes:
+   * 1. General health check (default): Check all running processes
+   * 2. Credential validation: Check specific installation's credentials via tools/list
    */
   private async handleHealthCheckCommand(command: SatelliteCommand): Promise<CommandResult> {
+    const payload = command.payload;
+
+    // Check if this is a credential validation request (Phase 9)
+    if (payload.check_type === 'credential_validation' && payload.installation_id) {
+      return await this.handleCredentialValidation(command);
+    }
+
+    // Default: General health check
     this.logger.debug({
       operation: 'command_health_check',
       command_id: command.id
@@ -689,6 +776,260 @@ export class CommandProcessor {
         healthy_servers: healthResults.filter(r => r.health_status === 'healthy').length
       }
     };
+  }
+
+  /**
+   * Handle credential validation for a specific installation (Phase 9)
+   * Tries to call tools/list with the installation's credentials
+   */
+  private async handleCredentialValidation(command: SatelliteCommand): Promise<CommandResult> {
+    const { installation_id } = command.payload;
+
+    // Validate installation_id is present
+    if (!installation_id) {
+      this.logger.warn({
+        operation: 'credential_validation_missing_id',
+        command_id: command.id
+      }, 'Credential validation command missing installation_id');
+
+      return {
+        command_id: command.id,
+        status: 'completed',
+        result: {
+          credential_validation: {
+            valid: false,
+            error: 'Missing installation_id in command payload'
+          }
+        }
+      };
+    }
+
+    this.logger.debug({
+      operation: 'credential_validation',
+      command_id: command.id,
+      installation_id
+    }, 'Processing credential validation command');
+
+    // Find server config by installation_id
+    const currentConfig = this.configManager.getCurrentConfiguration();
+    let serverConfig: typeof currentConfig.servers[string] | null = null;
+    let serverName: string | null = null;
+    let teamId: string | null = null;
+
+    for (const [name, config] of Object.entries(currentConfig.servers)) {
+      if (config.installation_id === installation_id) {
+        serverConfig = config;
+        serverName = name;
+        teamId = config.team_id ?? null;
+        break;
+      }
+    }
+
+    if (!serverConfig || !serverName || !teamId) {
+      this.logger.warn({
+        operation: 'credential_validation_config_not_found',
+        command_id: command.id,
+        installation_id
+      }, `Server config not found for installation ${installation_id}`);
+
+      return {
+        command_id: command.id,
+        status: 'completed',
+        result: {
+          credential_validation: {
+            installation_id,
+            valid: false,
+            error: 'Server configuration not found on this satellite'
+          }
+        }
+      };
+    }
+
+    // After validation, these are guaranteed to be non-null
+    const validatedTeamId: string = teamId;
+
+    // Only validate HTTP/SSE servers (stdio uses different patterns)
+    if (serverConfig.transport_type === 'stdio') {
+      this.logger.debug({
+        operation: 'credential_validation_skipped_stdio',
+        command_id: command.id,
+        installation_id,
+        server_name: serverName
+      }, 'Skipping credential validation for stdio server');
+
+      return {
+        command_id: command.id,
+        status: 'completed',
+        result: {
+          credential_validation: {
+            installation_id,
+            valid: true, // stdio servers don't have HTTP credentials to validate
+            skipped: true,
+            reason: 'stdio_transport'
+          }
+        }
+      };
+    }
+
+    // Validate URL exists
+    if (!serverConfig.url) {
+      return {
+        command_id: command.id,
+        status: 'completed',
+        result: {
+          credential_validation: {
+            installation_id,
+            valid: false,
+            error: 'No URL configured for server'
+          }
+        }
+      };
+    }
+
+    const startTime = Date.now();
+
+    try {
+      // Try to call tools/list with credentials
+      const response = await fetch(serverConfig.url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...serverConfig.headers
+        },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: 'credential-validation',
+          method: 'tools/list',
+          params: {}
+        }),
+        signal: AbortSignal.timeout(serverConfig.timeout || 15000)
+      });
+
+      const responseTime = Date.now() - startTime;
+
+      if (response.ok) {
+        // Check if response is valid JSON-RPC
+        const responseData = await response.json() as { error?: { message?: string } };
+
+        if (responseData.error) {
+          // JSON-RPC error (could be auth failure)
+          const errorMessage = responseData.error.message ?? 'Unknown error';
+          const isAuthError = errorMessage.toLowerCase().includes('auth') ||
+                              errorMessage.toLowerCase().includes('unauthorized') ||
+                              errorMessage.toLowerCase().includes('forbidden') ||
+                              response.status === 401 ||
+                              response.status === 403;
+
+          this.logger.info({
+            operation: 'credential_validation_failed',
+            command_id: command.id,
+            installation_id,
+            server_name: serverName,
+            error: errorMessage,
+            is_auth_error: isAuthError,
+            response_time_ms: responseTime
+          }, `Credential validation failed for ${serverName}: ${errorMessage}`);
+
+          if (isAuthError) {
+            // Emit requires_reauth status
+            this.emitStatusChange(installation_id, validatedTeamId, 'requires_reauth', errorMessage);
+          }
+
+          return {
+            command_id: command.id,
+            status: 'completed',
+            result: {
+              credential_validation: {
+                installation_id,
+                valid: false,
+                error: errorMessage,
+                needs_reauth: isAuthError,
+                response_time_ms: responseTime
+              }
+            }
+          };
+        }
+
+        // Success - credentials are valid
+        this.logger.info({
+          operation: 'credential_validation_success',
+          command_id: command.id,
+          installation_id,
+          server_name: serverName,
+          response_time_ms: responseTime
+        }, `Credential validation passed for ${serverName}`);
+
+        return {
+          command_id: command.id,
+          status: 'completed',
+          result: {
+            credential_validation: {
+              installation_id,
+              valid: true,
+              response_time_ms: responseTime
+            }
+          }
+        };
+      } else {
+        // HTTP error
+        const isAuthError = response.status === 401 || response.status === 403;
+        const errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+
+        this.logger.info({
+          operation: 'credential_validation_http_error',
+          command_id: command.id,
+          installation_id,
+          server_name: serverName,
+          status_code: response.status,
+          is_auth_error: isAuthError,
+          response_time_ms: responseTime
+        }, `Credential validation HTTP error for ${serverName}: ${errorMessage}`);
+
+        if (isAuthError) {
+          // Emit requires_reauth status
+          this.emitStatusChange(installation_id, validatedTeamId, 'requires_reauth', errorMessage);
+        }
+
+        return {
+          command_id: command.id,
+          status: 'completed',
+          result: {
+            credential_validation: {
+              installation_id,
+              valid: false,
+              error: errorMessage,
+              needs_reauth: isAuthError,
+              response_time_ms: responseTime
+            }
+          }
+        };
+      }
+    } catch (error) {
+      const responseTime = Date.now() - startTime;
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+      this.logger.error({
+        operation: 'credential_validation_error',
+        command_id: command.id,
+        installation_id,
+        server_name: serverName,
+        error: errorMessage,
+        response_time_ms: responseTime
+      }, `Credential validation error for ${serverName}: ${errorMessage}`);
+
+      return {
+        command_id: command.id,
+        status: 'completed',
+        result: {
+          credential_validation: {
+            installation_id,
+            valid: false,
+            error: errorMessage,
+            response_time_ms: responseTime
+          }
+        }
+      };
+    }
   }
 
   /**

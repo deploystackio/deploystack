@@ -110,6 +110,11 @@ export const mcpServers = pgTable('mcpServers', {
   // OAuth Support
   requires_oauth: boolean('requires_oauth').notNull().default(false),
 
+  // Health Check Status (for cumulative health checks at template level)
+  health_status: text('health_status').notNull().default('unknown'), // 'unknown' | 'online' | 'offline'
+  last_health_check_at: timestamp('last_health_check_at', { withTimezone: true }), // When health was last checked
+  health_check_error: text('health_check_error'), // Error message if offline
+
   // Timestamps
   created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),

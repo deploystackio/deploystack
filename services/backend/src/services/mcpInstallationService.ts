@@ -557,9 +557,9 @@ export class McpInstallationService {
       created_by: userId,
       installation_name: data.installation_name,
       installation_type: data.installation_type || 'global',
-      team_args: data.team_args 
+      team_args: data.team_args
         ? await this.encryptArguments(
-            data.team_args, 
+            data.team_args,
             this.parseJsonField(server[0].team_args_schema, [])
           )
         : null,
@@ -575,6 +575,12 @@ export class McpInstallationService {
       team_url_query_params: data.team_url_query_params
         ? JSON.stringify(data.team_url_query_params)
         : null,
+      // Installation status tracking
+      status: 'provisioning',
+      status_message: 'Waiting for satellite to pick up installation',
+      status_updated_at: now,
+      last_health_check_at: null,
+      last_credential_check_at: null,
       created_at: now,
       updated_at: now,
       last_used_at: null

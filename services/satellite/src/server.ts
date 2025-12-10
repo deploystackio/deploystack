@@ -783,6 +783,7 @@ export async function createServer() {
     (dynamicConfigManager as any).eventBus = eventBus;
     (remoteToolDiscoveryManager as any).eventBus = eventBus;
     (stdioToolDiscoveryManager as any).eventBus = eventBus;
+    mcpServerWrapper.setEventBus(eventBus);
 
     server.log.info({
       operation: 'event_bus_services_configured_existing',
@@ -924,6 +925,10 @@ export async function createServer() {
       // Update StdioToolDiscoveryManager with EventBus
       (stdioToolDiscoveryManager as any).eventBus = eventBus;
       server.log.debug({ operation: 'stdio_tool_discovery_event_bus_set' }, 'StdioToolDiscoveryManager configured with EventBus');
+
+      // Update McpServerWrapper with EventBus for request log emission
+      mcpServerWrapper.setEventBus(eventBus);
+      server.log.debug({ operation: 'mcp_server_wrapper_event_bus_set' }, 'McpServerWrapper configured with EventBus');
 
       server.log.info({
         operation: 'event_bus_services_configured',

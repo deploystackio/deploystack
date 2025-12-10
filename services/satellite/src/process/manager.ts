@@ -14,6 +14,18 @@ import { nsjailConfig, mcpCacheBaseDir } from '../config/nsjail';
  * Handles spawning, communication, and lifecycle management of stdio-based MCP servers
  * Adapted from gateway for multi-tenant satellite architecture
  */
+/**
+ * Buffered log entry for batching
+ */
+interface BufferedLogEntry {
+  installation_id: string;
+  team_id: string;
+  level: 'info' | 'warn' | 'error' | 'debug';
+  message: string;
+  metadata?: Record<string, unknown>;
+  timestamp: string;
+}
+
 export class ProcessManager extends EventEmitter {
   private processes = new Map<string, ProcessInfo>();
   private processIdsByName = new Map<string, string>();
@@ -23,16 +35,96 @@ export class ProcessManager extends EventEmitter {
   private runtimeState?: RuntimeState;
   private respawningProcesses = new Map<string, Promise<ProcessInfo>>(); // installationName -> respawn promise
 
+  // Log batching for mcp.server.logs events
+  private logBuffer: BufferedLogEntry[] = [];
+  private logFlushTimeout: NodeJS.Timeout | null = null;
+  private readonly LOG_BATCH_INTERVAL_MS = 3000; // 3 seconds
+  private readonly LOG_BATCH_MAX_SIZE = 20; // Max logs before forced flush
+
   constructor(logger: Logger, eventBus?: EventBus, runtimeState?: RuntimeState) {
     super();
     this.logger = logger;
     this.eventBus = eventBus;
     this.runtimeState = runtimeState;
-    
+
     // Listen for process exits to detect crashes and attempt restart
     this.on('processExit', (processInfo, code, signal) => {
       this.handleProcessExit(processInfo, code, signal);
     });
+  }
+
+  /**
+   * Buffer a log entry for batch emission
+   */
+  private bufferLogEntry(entry: BufferedLogEntry): void {
+    this.logBuffer.push(entry);
+
+    // If buffer is full, flush immediately
+    if (this.logBuffer.length >= this.LOG_BATCH_MAX_SIZE) {
+      this.flushLogBuffer();
+    } else {
+      this.scheduleLogFlush();
+    }
+  }
+
+  /**
+   * Schedule a log buffer flush after the batch interval
+   */
+  private scheduleLogFlush(): void {
+    if (!this.logFlushTimeout) {
+      this.logFlushTimeout = setTimeout(() => {
+        this.flushLogBuffer();
+      }, this.LOG_BATCH_INTERVAL_MS);
+    }
+  }
+
+  /**
+   * Flush buffered logs, grouped by installation_id
+   */
+  private flushLogBuffer(): void {
+    if (this.logFlushTimeout) {
+      clearTimeout(this.logFlushTimeout);
+      this.logFlushTimeout = null;
+    }
+
+    if (this.logBuffer.length === 0 || !this.eventBus) {
+      return;
+    }
+
+    // Group logs by installation_id
+    const grouped = new Map<string, BufferedLogEntry[]>();
+    for (const entry of this.logBuffer) {
+      const key = entry.installation_id;
+      if (!grouped.has(key)) {
+        grouped.set(key, []);
+      }
+      grouped.get(key)!.push(entry);
+    }
+
+    // Emit one event per installation
+    for (const [installationId, logs] of grouped) {
+      const teamId = logs[0].team_id;
+
+      this.eventBus.emit('mcp.server.logs', {
+        installation_id: installationId,
+        team_id: teamId,
+        logs: logs.map(log => ({
+          level: log.level,
+          message: log.message,
+          metadata: log.metadata,
+          timestamp: log.timestamp
+        }))
+      });
+
+      this.logger.debug({
+        operation: 'server_logs_flushed',
+        installation_id: installationId,
+        log_count: logs.length
+      }, `Flushed ${logs.length} server logs for ${installationId}`);
+    }
+
+    // Clear the buffer
+    this.logBuffer = [];
   }
   
   /**
@@ -165,7 +257,20 @@ export class ProcessManager extends EventEmitter {
       } catch (error) {
         this.logger.warn({ error }, 'Failed to emit mcp.server.permanently_failed event (non-fatal)');
       }
-      
+
+      // Phase 13: Also emit mcp.server.status_changed so backend updates installation status
+      try {
+        this.eventBus?.emit('mcp.server.status_changed', {
+          installation_id: processInfo.config.installation_id,
+          team_id: processInfo.config.team_id,
+          status: 'permanently_failed',
+          status_message: `Process crashed ${(this.restartAttempts.get(installationName) || []).length} times in 5 minutes. Manual restart required.`,
+          timestamp: new Date().toISOString()
+        });
+      } catch (error) {
+        this.logger.warn({ error }, 'Failed to emit mcp.server.status_changed event (non-fatal)');
+      }
+
       // Mark as permanently failed (process already removed from maps in exit handler)
       // Emit event so RuntimeState can update status
       this.emit('restartLimitExceeded', processInfo);
@@ -890,6 +995,21 @@ export class ProcessManager extends EventEmitter {
           installation_name: config.installation_name,
           output: stderrOutput
         }, `MCP server info: ${config.installation_name}`);
+
+        // Buffer stderr output for mcp.server.logs event
+        // Split by newlines in case there are multiple log lines
+        const lines = stderrOutput.split('\n');
+        for (const line of lines) {
+          if (line.trim()) {
+            this.bufferLogEntry({
+              installation_id: config.installation_id,
+              team_id: config.team_id,
+              level: 'error', // stderr typically contains errors/warnings
+              message: line.trim(),
+              timestamp: new Date().toISOString()
+            });
+          }
+        }
       }
     });
 

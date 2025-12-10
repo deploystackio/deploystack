@@ -13,10 +13,26 @@ import { ProcessManager } from '../process/manager';
 import { ToolSearchService } from '../services/tool-search-service';
 import { DynamicConfigManager } from '../services/dynamic-config-manager';
 import { OAuthTokenService } from '../services/oauth-token-service';
+import type { EventBus } from '../services/event-bus';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
 import { getVersionString } from '../config/version';
+
+/**
+ * Buffered request log entry for batching
+ */
+interface BufferedRequestEntry {
+  installation_id: string;
+  team_id: string;
+  user_id?: string;
+  tool_name: string;
+  tool_params: Record<string, unknown>;
+  response_time_ms: number;
+  success: boolean;
+  error_message?: string;
+  timestamp: string;
+}
 
 /**
  * MCP Server Wrapper
@@ -29,8 +45,15 @@ export class McpServerWrapper {
   private toolSearchService?: ToolSearchService;
   private dynamicConfigManager?: DynamicConfigManager;
   private oauthTokenService?: OAuthTokenService;
+  private eventBus?: EventBus;
   private transports = new Map<string, { transport: StreamableHTTPServerTransport; server: Server }>();
   private registeredTools = new Set<string>();
+
+  // Request log batching for mcp.request.logs events
+  private requestLogBuffer: BufferedRequestEntry[] = [];
+  private requestLogFlushTimeout: NodeJS.Timeout | null = null;
+  private readonly REQUEST_LOG_BATCH_INTERVAL_MS = 3000; // 3 seconds
+  private readonly REQUEST_LOG_BATCH_MAX_SIZE = 20; // Max logs before forced flush
 
   constructor(logger: FastifyBaseLogger) {
     this.logger = logger.child({ component: 'McpServerWrapper' });
@@ -68,6 +91,17 @@ export class McpServerWrapper {
     this.logger.debug({
       operation: 'oauth_token_service_set'
     }, 'OAuth token service set');
+  }
+
+  /**
+   * Set EventBus for emitting request logs (Phase 7)
+   */
+  setEventBus(eventBus: EventBus): void {
+    this.eventBus = eventBus;
+
+    this.logger.debug({
+      operation: 'event_bus_set'
+    }, 'EventBus set for request log emission');
   }
 
   /**
@@ -293,36 +327,81 @@ export class McpServerWrapper {
     }, `Tool arguments for ${toolPath}`);
 
     // Check if tool exists and get cached tool info for disabled check
+    // Note: getTool searches unfiltered cache, so we can find tools from offline servers
     const cachedTool = this.toolDiscoveryManager.getTool(namespacedToolName);
     if (!cachedTool) {
       const allTools = this.toolDiscoveryManager.getAllTools();
       throw new Error(`Tool not found: ${namespacedToolName}. Available tools: ${allTools.map(t => t.namespacedName).join(', ')}`);
     }
 
+    // Phase 10: Check if server is available before executing tool
+    const serverStatus = this.toolDiscoveryManager.getServerStatus(cachedTool.serverSlug);
+    if (serverStatus && serverStatus.status !== 'online') {
+      this.logger.warn({
+        operation: 'execute_mcp_tool_server_unavailable',
+        tool_path: toolPath,
+        server_slug: cachedTool.serverSlug,
+        server_status: serverStatus.status,
+        status_message: serverStatus.message
+      }, `Tool execution blocked - server is ${serverStatus.status}: ${toolPath}`);
+
+      return this.createUnavailableServerResponse(toolPath, cachedTool.serverSlug, serverStatus.status, serverStatus.message);
+    }
+
+    // Get config for disabled check and request logging context
+    const config = this.dynamicConfigManager?.getMcpServerConfig(cachedTool.serverName);
+
     // Check if tool is disabled
-    if (this.dynamicConfigManager) {
-      const config = this.dynamicConfigManager.getMcpServerConfig(cachedTool.serverName);
-      if (config?.installation_id) {
-        const isDisabled = this.toolDiscoveryManager.isToolDisabled(
-          config.installation_id,
-          cachedTool.originalName
-        );
+    if (config?.installation_id) {
+      const isDisabled = this.toolDiscoveryManager.isToolDisabled(
+        config.installation_id,
+        cachedTool.originalName
+      );
 
-        if (isDisabled) {
-          this.logger.warn({
-            operation: 'execute_mcp_tool_disabled',
-            tool_path: toolPath,
-            installation_id: config.installation_id,
-            tool_name: cachedTool.originalName
-          }, `Tool execution blocked - tool is disabled: ${toolPath}`);
+      if (isDisabled) {
+        this.logger.warn({
+          operation: 'execute_mcp_tool_disabled',
+          tool_path: toolPath,
+          installation_id: config.installation_id,
+          tool_name: cachedTool.originalName
+        }, `Tool execution blocked - tool is disabled: ${toolPath}`);
 
-          return this.createDisabledToolResponse(toolPath);
-        }
+        return this.createDisabledToolResponse(toolPath);
       }
     }
 
-    // Route to executeToolCall with namespaced format
-    return await this.executeToolCall(namespacedToolName, toolArguments);
+    // Execute tool with request logging (Phase 7)
+    const startTime = Date.now();
+    let success = false;
+    let errorMessage: string | undefined;
+    let result: any;
+
+    try {
+      result = await this.executeToolCall(namespacedToolName, toolArguments);
+      success = true;
+    } catch (error) {
+      errorMessage = error instanceof Error ? error.message : String(error);
+      throw error;
+    } finally {
+      const responseTimeMs = Date.now() - startTime;
+
+      // Buffer request log if we have installation context
+      if (config?.installation_id && config?.team_id) {
+        this.bufferRequestLogEntry({
+          installation_id: config.installation_id,
+          team_id: config.team_id,
+          user_id: config.user_id,
+          tool_name: toolPath,
+          tool_params: toolArguments,
+          response_time_ms: responseTimeMs,
+          success,
+          error_message: errorMessage,
+          timestamp: new Date().toISOString()
+        });
+      }
+    }
+
+    return result;
   }
 
   /**
@@ -340,6 +419,51 @@ export class McpServerWrapper {
       '',
       `Disabled tool: ${toolPath}`
     ].join('\n');
+
+    return {
+      content: [{
+        type: 'text',
+        text: message
+      }],
+      isError: true
+    };
+  }
+
+  /**
+   * Create LLM-friendly error response for unavailable servers (Phase 10)
+   */
+  private createUnavailableServerResponse(
+    toolPath: string,
+    serverSlug: string,
+    status: string,
+    statusMessage?: string
+  ): any {
+    const statusMessages: Record<string, string> = {
+      'offline': 'The server is currently offline or unreachable.',
+      'error': 'The server encountered an error and is not operational.',
+      'requires_reauth': 'The server requires re-authentication. Please re-authorize this MCP server in the dashboard.',
+      'permanently_failed': 'The server has permanently failed and cannot be used.',
+      'connecting': 'The server is currently connecting. Please try again in a moment.',
+      'discovering_tools': 'The server is still discovering tools. Please try again in a moment.'
+    };
+
+    const statusDescription = statusMessages[status] || `The server is in ${status} state.`;
+
+    const message = [
+      `Tool '${toolPath}' cannot be executed because the MCP server '${serverSlug}' is unavailable.`,
+      '',
+      `Status: ${status}`,
+      statusDescription,
+      statusMessage ? `Details: ${statusMessage}` : '',
+      '',
+      'Recommended actions:',
+      '1. Use discover_mcp_tools to find alternative tools from other servers',
+      status === 'requires_reauth'
+        ? '2. Visit the dashboard to re-authorize this MCP server'
+        : '2. Wait for the server to come back online and try again',
+      '',
+      `Unavailable server: ${serverSlug}`
+    ].filter(Boolean).join('\n');
 
     return {
       content: [{
@@ -1072,6 +1196,9 @@ export class McpServerWrapper {
    * Cleanup all sessions and resources
    */
   async cleanup(): Promise<void> {
+    // Flush any remaining request logs before cleanup
+    await this.flushRequestLogBuffer();
+
     // Close all transports
     for (const [sessionId, session] of this.transports) {
       try {
@@ -1084,12 +1211,143 @@ export class McpServerWrapper {
         }, 'Failed to cleanup transport');
       }
     }
-    
+
     this.transports.clear();
     this.registeredTools.clear();
-    
+
     this.logger.info({
       operation: 'mcp_server_cleanup_complete'
     }, 'MCP server cleanup completed');
+  }
+
+  // ==================== Request Log Batching (Phase 7) ====================
+
+  /**
+   * Buffer a request log entry for batched emission
+   */
+  private bufferRequestLogEntry(entry: BufferedRequestEntry): void {
+    this.requestLogBuffer.push(entry);
+
+    this.logger.debug({
+      operation: 'request_log_buffered',
+      installation_id: entry.installation_id,
+      tool_name: entry.tool_name,
+      buffer_size: this.requestLogBuffer.length
+    }, `Buffered request log for ${entry.tool_name} (buffer: ${this.requestLogBuffer.length})`);
+
+    // Flush immediately if buffer is full
+    if (this.requestLogBuffer.length >= this.REQUEST_LOG_BATCH_MAX_SIZE) {
+      this.flushRequestLogBuffer();
+    } else {
+      this.scheduleRequestLogFlush();
+    }
+  }
+
+  /**
+   * Schedule a request log flush after the batch interval
+   */
+  private scheduleRequestLogFlush(): void {
+    if (this.requestLogFlushTimeout) {
+      return; // Already scheduled
+    }
+
+    this.requestLogFlushTimeout = setTimeout(() => {
+      this.flushRequestLogBuffer();
+    }, this.REQUEST_LOG_BATCH_INTERVAL_MS);
+  }
+
+  /**
+   * Flush all buffered request logs to the backend via EventBus
+   */
+  private async flushRequestLogBuffer(): Promise<void> {
+    if (this.requestLogFlushTimeout) {
+      clearTimeout(this.requestLogFlushTimeout);
+      this.requestLogFlushTimeout = null;
+    }
+
+    if (this.requestLogBuffer.length === 0) {
+      return;
+    }
+
+    if (!this.eventBus) {
+      this.logger.warn({
+        operation: 'request_log_flush_skipped',
+        buffer_size: this.requestLogBuffer.length,
+        reason: 'no_event_bus'
+      }, 'Skipping request log flush - EventBus not available');
+      this.requestLogBuffer = [];
+      return;
+    }
+
+    // Group logs by installation_id + team_id for efficient emission
+    const groupedLogs = new Map<string, {
+      installation_id: string;
+      team_id: string;
+      requests: Array<{
+        user_id?: string;
+        tool_name: string;
+        tool_params: Record<string, unknown>;
+        response_time_ms: number;
+        success: boolean;
+        error_message?: string;
+        timestamp: string;
+      }>;
+    }>();
+
+    for (const entry of this.requestLogBuffer) {
+      const key = `${entry.installation_id}:${entry.team_id}`;
+
+      if (!groupedLogs.has(key)) {
+        groupedLogs.set(key, {
+          installation_id: entry.installation_id,
+          team_id: entry.team_id,
+          requests: []
+        });
+      }
+
+      groupedLogs.get(key)!.requests.push({
+        user_id: entry.user_id,
+        tool_name: entry.tool_name,
+        tool_params: entry.tool_params,
+        response_time_ms: entry.response_time_ms,
+        success: entry.success,
+        error_message: entry.error_message,
+        timestamp: entry.timestamp
+      });
+    }
+
+    const totalLogs = this.requestLogBuffer.length;
+    this.requestLogBuffer = [];
+
+    // Emit events for each installation group
+    for (const [, data] of groupedLogs) {
+      try {
+        await this.eventBus.emit('mcp.request.logs', {
+          installation_id: data.installation_id,
+          team_id: data.team_id,
+          requests: data.requests
+        });
+
+        this.logger.debug({
+          operation: 'request_logs_emitted',
+          installation_id: data.installation_id,
+          team_id: data.team_id,
+          request_count: data.requests.length
+        }, `Emitted ${data.requests.length} request logs for installation ${data.installation_id}`);
+      } catch (error) {
+        this.logger.error({
+          operation: 'request_log_emit_failed',
+          installation_id: data.installation_id,
+          team_id: data.team_id,
+          error: error instanceof Error ? error.message : String(error)
+        }, `Failed to emit request logs for installation ${data.installation_id}`);
+      }
+    }
+
+    this.logger.info({
+      operation: 'request_log_buffer_flushed',
+      total_logs: totalLogs,
+      groups: groupedLogs.size
+    }, `Flushed ${totalLogs} request logs across ${groupedLogs.size} installations`);
   }
 }

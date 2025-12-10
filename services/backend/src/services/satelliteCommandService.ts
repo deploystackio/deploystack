@@ -302,4 +302,28 @@ export class SatelliteCommandService {
     });
   }
 
+  /**
+   * Phase 13: Notify satellites that an MCP server has recovered and needs tool rediscovery
+   * Creates high priority configure commands for all global satellites
+   */
+  async notifyMcpRecovery(installationId: string, teamId: string): Promise<SatelliteCommand[]> {
+    this.logger.info({
+      operation: 'notify_mcp_recovery',
+      installationId,
+      teamId
+    }, `Notifying satellites of MCP server recovery for installation ${installationId}`);
+
+    return await this.createCommandForAllGlobalSatellites({
+      commandType: 'configure',
+      priority: 'high',
+      payload: {
+        event: 'mcp_recovery',
+        installation_id: installationId,
+        team_id: teamId
+      },
+      targetTeamId: teamId,
+      expiresInMinutes: 5
+    });
+  }
+
 }
