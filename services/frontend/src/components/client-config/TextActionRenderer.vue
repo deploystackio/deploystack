@@ -9,10 +9,12 @@ import { useI18n } from 'vue-i18n'
 interface Props {
   action: TextAction
   showCopyButton?: boolean
+  hideHeader?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  showCopyButton: true
+  showCopyButton: true,
+  hideHeader: false
 })
 
 const emit = defineEmits<{
@@ -31,8 +33,8 @@ async function handleCopy() {
 
 <template>
   <div class="space-y-2">
-    <label v-if="action.title" class="text-sm font-medium">{{ action.title }}</label>
-    <p v-if="action.description" class="text-sm text-muted-foreground">{{ action.description }}</p>
+    <label v-if="action.title && !hideHeader" class="text-sm font-medium">{{ action.title }}</label>
+    <p v-if="action.description && !hideHeader" class="text-sm text-muted-foreground">{{ action.description }}</p>
 
     <Textarea
       :model-value="action.content"

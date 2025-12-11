@@ -5,6 +5,8 @@ import { useI18n } from 'vue-i18n'
 import { toast } from 'vue-sonner'
 import NavbarLayout from '@/components/NavbarLayout.vue'
 import { DsPageHeading } from '@/components/ui/ds-page-heading'
+import { DsCard } from '@/components/ui/ds-card'
+import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { SettingsMenu, SettingsMenuGroup, SettingsMenuItem, SettingsMenuSeparator } from '@/components/ui/settings-menu'
 import { GatewayConfigService, type ClientConfigResponse, type ConfigAction, type ClientInfo, type ClientCategory } from '@/services/satelliteConfigService'
@@ -61,17 +63,6 @@ function handleMobileSelectChange(value: unknown) {
   if (category && client) {
     router.push(`/client-configuration/${category}/${client}`)
   }
-}
-
-// Get display name for client ID
-function getClientDisplayName(clientId: string): string {
-  const client = supportedClients.value.find(c => c.id === clientId)
-  if (client) {
-    return client.name
-  }
-
-  // Fallback: convert kebab-case to Title Case
-  return clientId.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
 }
 
 // Load supported clients
@@ -236,10 +227,6 @@ onMounted(async () => {
 
           <!-- Client Configuration Content -->
           <div v-else-if="selectedClient" class="space-y-6">
-            <h2 class="text-xl font-semibold">
-              {{ getClientDisplayName(selectedClient) }}
-            </h2>
-
             <!-- Loading State -->
             <div v-if="isLoadingConfig" class="text-center py-8 text-muted-foreground">
               {{ t('satelliteConfig.modal.loading') }}
@@ -250,41 +237,64 @@ onMounted(async () => {
               <!-- Connection Setup Actions -->
               <template v-for="(action, index) in connectionActions" :key="`conn-${index}`">
                 <!-- Link Actions (One-Click Install) -->
-                <div v-if="action.type === 'link'" class="space-y-2">
-                  <label v-if="action.name" class="text-sm font-medium">{{ action.name }}</label>
-                  <p v-if="action.description" class="text-sm text-muted-foreground">{{ action.description }}</p>
+                <DsCard v-if="action.type === 'link'" :title="action.name || 'Install'">
+                  <p v-if="action.description" class="text-sm mb-4">{{ action.description }}</p>
                   <LinkActionRenderer :action="action" @click="handleLinkClick" />
-                </div>
+                </DsCard>
 
                 <!-- Steps Actions -->
-                <div v-else-if="action.type === 'steps'" class="space-y-2">
-                  <label v-if="action.title" class="text-sm font-medium">{{ action.title }}</label>
-                  <p v-if="action.description" class="text-sm text-muted-foreground">{{ action.description }}</p>
+                <DsCard v-else-if="action.type === 'steps'" :title="action.title || 'Steps'">
+                  <p v-if="action.description" class="text-sm mb-4">{{ action.description }}</p>
                   <StepsActionRenderer :action="action" />
-                </div>
+                </DsCard>
 
                 <!-- Command Actions -->
-                <CommandActionRenderer
-                  v-else-if="action.type === 'command'"
-                  :action="action"
-                  @copy="handleCopy"
-                />
+                <DsCard v-else-if="action.type === 'command'" :title="action.title || 'Command'">
+                  <p v-if="action.description" class="text-sm mb-4">{{ action.description }}</p>
+                  <CommandActionRenderer
+                    :action="action"
+                    :hide-header="true"
+                    :show-copy-button="false"
+                  />
+                  <template #footer-actions>
+                    <Button @click="handleCopy(action.command)">
+                      {{ t('satelliteConfig.button.copy') }}
+                    </Button>
+                  </template>
+                </DsCard>
 
                 <!-- JSON Actions -->
-                <JsonActionRenderer
-                  v-else-if="action.type === 'json'"
-                  :action="action"
-                  @copy="handleCopy"
-                />
+                <DsCard v-else-if="action.type === 'json'" :title="action.title || 'Configuration'">
+                  <p v-if="action.description" class="text-sm mb-4">{{ action.description }}</p>
+                  <JsonActionRenderer
+                    :action="action"
+                    :hide-header="true"
+                    :show-copy-button="false"
+                  />
+                  <template #footer-actions>
+                    <Button @click="handleCopy(action.jsonContent || JSON.stringify(action.servers || action.mcpServers || action.inputs, null, 2))">
+                      {{ t('satelliteConfig.button.copy') }}
+                    </Button>
+                  </template>
+                </DsCard>
               </template>
 
 
               <!-- Text Actions (AI Instructions) -->
               <template v-for="(action, index) in textActions" :key="`text-${index}`">
-                <TextActionRenderer
-                  :action="action"
-                  @copy="handleCopy"
-                />
+                <DsCard :title="action.title || 'Instructions'">
+                  <p v-if="action.description" class="text-sm mb-4">{{ action.description }}</p>
+                  <TextActionRenderer
+                    :action="action"
+                    :hide-header="true"
+                    :show-copy-button="false"
+                  />
+                  <template #footer-actions>
+                    <Button @click="handleCopy(action.content)">
+                      {{ t('satelliteConfig.button.copy') }}
+                    </Button>
+                  </template>
+                </DsCard>
               </template>
             </template>
           </div>
