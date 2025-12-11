@@ -238,11 +238,6 @@ const routes = [
         component: () => import('../views/admin/teams/[id].vue'),
       },
       {
-        path: 'teams/edit/:id',
-        name: 'AdminTeamEdit',
-        component: () => import('../views/admin/teams/edit/[id].vue'),
-      },
-      {
         path: 'mcp-server-catalog',
         name: 'AdminMcpServerCatalog',
         component: () => import('../views/admin/mcp-server-catalog/index.vue'),

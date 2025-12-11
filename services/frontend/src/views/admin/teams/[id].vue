@@ -11,10 +11,8 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb'
-import { Button } from '@/components/ui/button'
 import { DsPageHeading } from '@/components/ui/ds-page-heading'
 import { SettingsMenu, SettingsMenuGroup, SettingsMenuItem } from '@/components/ui/settings-menu'
-import { Pencil } from 'lucide-vue-next'
 import NavbarLayout from '@/components/NavbarLayout.vue'
 import { TeamService } from '@/services/teamService'
 import TeamDetailGeneral from '@/components/admin/teams/TeamDetailGeneral.vue'
@@ -86,8 +84,14 @@ onMounted(async () => {
   }
 })
 
-const goToEdit = () => {
-  router.push(`/admin/teams/edit/${teamId}`)
+// Handle team update from child components
+const handleTeamUpdated = (updatedTeam: Team) => {
+  team.value = updatedTeam
+  // Update breadcrumbs with new team name
+  setBreadcrumbs([
+    { label: t('adminTeams.title'), href: '/admin/teams' },
+    { label: updatedTeam.name }
+  ])
 }
 </script>
 
@@ -108,16 +112,6 @@ const goToEdit = () => {
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
-
-      <template #actions>
-        <Button
-          variant="outline"
-          @click="goToEdit"
-        >
-          <Pencil class="h-4 w-4 mr-2" />
-          {{ t('adminTeams.teamDetail.actions.edit') }}
-        </Button>
-      </template>
     </DsPageHeading>
 
     <DsPageHeading v-else-if="isLoading" :title="t('adminTeams.teamDetail.titleLoading')" />
@@ -170,8 +164,8 @@ const goToEdit = () => {
 
         <!-- Content Area -->
         <div class="flex-1">
-          <TeamDetailGeneral v-if="currentSection === 'general'" :team="team" />
-          <TeamDetailLimits v-else-if="currentSection === 'limits'" :team="team" />
+          <TeamDetailGeneral v-if="currentSection === 'general'" :team="team" @updated="handleTeamUpdated" />
+          <TeamDetailLimits v-else-if="currentSection === 'limits'" :team="team" @updated="handleTeamUpdated" />
           <TeamDetailMembers v-else-if="currentSection === 'members'" :team-id="teamId" />
         </div>
       </div>
