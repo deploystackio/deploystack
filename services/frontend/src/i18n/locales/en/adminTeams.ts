@@ -44,6 +44,7 @@ export default {
         totalMcpLimit: 'Total MCP Server Limit',
         mcpLimit: 'Non-HTTP MCP Limit',
         teamDetails: 'Team Details',
+        limits: 'Limits',
         members: 'Members',
       },
       values: {
