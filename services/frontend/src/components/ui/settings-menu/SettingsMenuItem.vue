@@ -16,8 +16,8 @@ const props = withDefaults(defineProps<Props>(), {
 const itemClass = computed(() => [
   'flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors',
   props.active
-    ? 'bg-secondary text-secondary-foreground font-medium border border-border'
-    : 'text-muted-foreground hover:bg-secondary/50 hover:text-foreground border border-transparent'
+    ? 'bg-neutral-200 text-foreground font-medium'
+    : 'text-muted-foreground hover:bg-neutral-200 hover:text-foreground'
 ])
 </script>
 
