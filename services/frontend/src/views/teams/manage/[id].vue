@@ -6,9 +6,18 @@ import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Loader2, AlertTriangle } from 'lucide-vue-next'
-import { DsTabs, DsTabsItem } from '@/components/ui/ds-tabs'
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb'
+import { SettingsMenu, SettingsMenuGroup, SettingsMenuItem } from '@/components/ui/settings-menu'
 import NavbarLayout from '@/components/NavbarLayout.vue'
-import { TeamInfo, TeamMembers, TeamUsage, TeamDangerZone } from '@/components/teams/manage'
+import { DsPageHeading } from '@/components/ui/ds-page-heading'
+import { TeamInfo, TeamMembers, TeamUsage } from '@/components/teams/manage'
 import { TeamService, type Team } from '@/services/teamService'
 import { useEventBus } from '@/composables/useEventBus'
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
@@ -45,13 +54,6 @@ const canManageMembers = computed(() => {
 const canDeleteTeam = computed(() => {
   return team.value?.is_owner === true &&
          !team.value?.is_default
-})
-
-// Mock member count for badge (in real implementation, this would come from team data)
-const memberCount = computed(() => {
-  if (!team.value) return 0
-  // For now, return 1 (just the owner) - in real implementation, get from team.members.length
-  return 1
 })
 
 // Load team data
@@ -100,7 +102,7 @@ const handleTeamSelected = (data: { teamId: string; teamName: string }) => {
 // Initialize tab from query parameter
 const initializeTab = () => {
   const tabFromQuery = route.query.tab as string
-  if (tabFromQuery && ['team-info', 'members', 'usage', 'danger-zone'].includes(tabFromQuery)) {
+  if (tabFromQuery && ['team-info', 'members', 'usage'].includes(tabFromQuery)) {
     activeTab.value = tabFromQuery
   }
 }
@@ -115,6 +117,24 @@ watch(
   },
   { immediate: false } // Don't run immediately since onMounted handles the initial load
 )
+
+// Watch for query parameter changes to update active tab
+watch(
+  () => route.query.tab,
+  (newTab) => {
+    if (newTab && ['team-info', 'members', 'usage'].includes(newTab as string)) {
+      activeTab.value = newTab as string
+    } else if (!newTab) {
+      activeTab.value = 'team-info'
+    }
+  }
+)
+
+// Helper to build tab URL
+const getTabUrl = (tab: string) => {
+  const base = `/teams/manage/${teamId.value}`
+  return tab === 'team-info' ? base : `${base}?tab=${tab}`
+}
 
 // Load data on mount
 onMounted(() => {
@@ -137,7 +157,23 @@ onUnmounted(() => {
 
 <template>
   <NavbarLayout>
-    <div class="space-y-6">
+    <DsPageHeading :title="t('teams.title')">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink href="/teams">
+              {{ t('teams.title') }}
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>{{ team?.name || t('teams.manage.loading') }}</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+    </DsPageHeading>
+
+    <div class="space-y-6 mt-6">
       <!-- Loading State -->
       <div v-if="isLoading" class="flex items-center justify-center py-12">
         <div class="flex items-center gap-3 text-muted-foreground">
@@ -168,41 +204,54 @@ onUnmounted(() => {
         </div>
       </Alert>
 
-      <!-- Team Management with Tabs -->
-      <div v-else-if="team">
-        <DsTabs v-model="activeTab" variant="underlined" class="mb-10">
-          <DsTabsItem value="team-info" label="Team Info" />
-          <DsTabsItem
-            value="members"
-            label="Members"
-            :badge="memberCount > 1 ? memberCount : undefined"
-          />
-          <DsTabsItem value="usage" label="Usage" />
-          <DsTabsItem value="danger-zone" label="Danger Zone" />
-        </DsTabs>
+      <!-- Team Management with Sidebar Navigation -->
+      <div v-else-if="team" class="flex flex-col md:flex-row md:space-x-12">
+        <!-- Sidebar Navigation -->
+        <aside class="md:w-1/5 mb-6 md:mb-0">
+          <SettingsMenu>
+            <SettingsMenuGroup>
+              <SettingsMenuItem
+                :to="getTabUrl('team-info')"
+                :active="activeTab === 'team-info'"
+              >
+                General
+              </SettingsMenuItem>
+              <SettingsMenuItem
+                :to="getTabUrl('members')"
+                :active="activeTab === 'members'"
+              >
+                Members
+              </SettingsMenuItem>
+              <SettingsMenuItem
+                :to="getTabUrl('usage')"
+                :active="activeTab === 'usage'"
+              >
+                Usage
+              </SettingsMenuItem>
+            </SettingsMenuGroup>
+          </SettingsMenu>
+        </aside>
 
-        <!-- Tab Content -->
-        <TeamInfo
-          v-if="activeTab === 'team-info'"
-          :team="team"
-          :can-edit-name="canEditName"
-          :can-edit-description="canEditDescription"
-          @team-updated="handleTeamUpdated"
-        />
-        <TeamMembers
-          v-if="activeTab === 'members'"
-          :team="team"
-          :can-manage-members="canManageMembers"
-        />
-        <TeamUsage
-          v-if="activeTab === 'usage'"
-          :team="team"
-        />
-        <TeamDangerZone
-          v-if="activeTab === 'danger-zone'"
-          :team="team"
-          :can-delete-team="canDeleteTeam"
-        />
+        <!-- Content Area -->
+        <div class="flex-1">
+          <TeamInfo
+            v-if="activeTab === 'team-info'"
+            :team="team"
+            :can-edit-name="canEditName"
+            :can-edit-description="canEditDescription"
+            :can-delete-team="canDeleteTeam"
+            @team-updated="handleTeamUpdated"
+          />
+          <TeamMembers
+            v-if="activeTab === 'members'"
+            :team="team"
+            :can-manage-members="canManageMembers"
+          />
+          <TeamUsage
+            v-if="activeTab === 'usage'"
+            :team="team"
+          />
+        </div>
       </div>
     </div>
   </NavbarLayout>

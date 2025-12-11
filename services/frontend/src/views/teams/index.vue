@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-vue-next'
 import NavbarLayout from '@/components/NavbarLayout.vue'
+import { DsPageHeading } from '@/components/ui/ds-page-heading'
 import AddTeamModal from '@/components/teams/AddTeamModal.vue'
 import { TeamService, type TeamWithRole, type Team } from '@/services/teamService'
 import { UserService } from '@/services/userService'
@@ -178,12 +179,8 @@ onUnmounted(() => {
 
 <template>
   <NavbarLayout>
-    <div class="space-y-6">
-      <!-- Header -->
-      <div class="flex items-center justify-between">
-        <div>
-          <p class="text-muted-foreground">{{ t('teams.description') }}</p>
-        </div>
+    <DsPageHeading :title="t('teams.title')">
+      <template #actions>
         <Button
           @click="showAddModal = true"
           class="flex items-center gap-2"
@@ -191,8 +188,10 @@ onUnmounted(() => {
           <Plus class="h-4 w-4" />
           {{ t('teams.addButton') }}
         </Button>
-      </div>
+      </template>
+    </DsPageHeading>
 
+    <div class="space-y-6 mt-6">
       <!-- Loading State -->
       <div v-if="isLoading" class="text-muted-foreground">
         {{ t('teams.table.loading') }}

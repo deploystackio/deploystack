@@ -3,6 +3,7 @@ import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import NavbarLayout from '@/components/NavbarLayout.vue'
+import { DsPageHeading } from '@/components/ui/ds-page-heading'
 import { useEventBus } from '@/composables/useEventBus'
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
 import { useMcpToolsStatsStore } from '@/stores/mcpToolsStatsStore'
@@ -149,7 +150,9 @@ onUnmounted(() => {
 
 <template>
   <NavbarLayout>
-    <div class="space-y-6">
+    <DsPageHeading :title="t('statistics.title')" />
+
+    <div class="space-y-6 mt-6">
       <!-- Error Alert -->
       <Alert v-if="error" variant="destructive">
         <AlertCircle class="h-4 w-4" />

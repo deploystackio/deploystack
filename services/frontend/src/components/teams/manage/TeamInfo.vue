@@ -1,28 +1,45 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import {
   Save,
   Lock,
   Calendar,
   Users,
   Hash,
-  AlertTriangle
+  AlertTriangle,
+  Trash2,
+  XCircle,
+  Shield
 } from 'lucide-vue-next'
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { TeamService, type Team } from '@/services/teamService'
+import { DsCard } from '@/components/ui/ds-card'
 import { z } from 'zod'
 
 const { t } = useI18n()
+const router = useRouter()
 
 interface Props {
   team: Team
   canEditName: boolean
   canEditDescription: boolean
+  canDeleteTeam: boolean
 }
 
 const props = defineProps<Props>()
@@ -34,6 +51,11 @@ const emit = defineEmits<{
 // Form state
 const isSaving = ref(false)
 const saveError = ref<string | null>(null)
+
+// Delete state
+const isDeleting = ref(false)
+const deleteError = ref<string | null>(null)
+const showDeleteDialog = ref(false)
 
 // Form data
 const formData = ref({
@@ -123,6 +145,29 @@ const saveTeam = async () => {
   }
 }
 
+// Delete team
+const deleteTeam = async () => {
+  try {
+    isDeleting.value = true
+    deleteError.value = null
+    const teamName = props.team.name || 'Unknown Team'
+
+    await TeamService.deleteTeam(props.team.id)
+
+    toast.success(t('teams.messages.deleteSuccess', { teamName }), {
+      description: t('teams.messages.deleteSuccessDescription')
+    })
+
+    router.push('/teams')
+  } catch (err) {
+    deleteError.value = err instanceof Error ? err.message : 'Failed to delete team'
+    console.error('Error deleting team:', err)
+  } finally {
+    isDeleting.value = false
+    showDeleteDialog.value = false
+  }
+}
+
 // Update form data when team prop changes
 const updateFormData = () => {
   formData.value = {
@@ -138,15 +183,11 @@ watch(() => props.team, () => {
 </script>
 
 <template>
-  <div class="space-y-6">
+  <div>
     <!-- Team Information Section -->
-    <div>
-      <div class="px-4 sm:px-0">
-        <h3 class="text-base/7 font-semibold text-gray-900">{{ t('teams.manage.teamDetails') }}</h3>
-        <p class="mt-1 max-w-2xl text-sm/6 text-gray-500">{{ t('teams.manage.teamDetailsDescription') }}</p>
-      </div>
-      <div class="mt-6 border-t border-gray-100">
-        <dl class="divide-y divide-gray-100">
+    <DsCard :title="t('teams.manage.teamDetails')">
+      <p class="text-sm mb-6">{{ t('teams.manage.teamDetailsDescription') }}</p>
+      <dl class="divide-y divide-gray-100">
           <!-- Team Name -->
           <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
             <dt class="text-sm/6 font-medium text-gray-900 flex items-center gap-2">
@@ -242,20 +283,145 @@ watch(() => props.team, () => {
             </dd>
           </div>
         </dl>
-      </div>
-    </div>
 
-    <!-- Form Actions -->
-    <div class="flex items-center justify-end pt-4 border-t">
-      <Button
-        @click="saveTeam"
-        :disabled="!hasChanges || isSaving"
-        class="gap-2"
-      >
-        <Spinner v-if="isSaving" class="mr-2" />
-        <Save v-else class="h-4 w-4" />
-        {{ t('teams.manage.save') }}
-      </Button>
-    </div>
+      <template #footer-actions>
+        <Button
+          @click="saveTeam"
+          :disabled="!hasChanges || isSaving"
+          class="gap-2"
+        >
+          <Spinner v-if="isSaving" class="mr-2" />
+          <Save v-else class="h-4 w-4" />
+          {{ t('teams.manage.save') }}
+        </Button>
+      </template>
+    </DsCard>
+
+    <!-- Danger Zone Section -->
+    <DsCard :title="t('teams.manage.dangerZone.title')">
+      <!-- Delete Error Display -->
+      <Alert v-if="deleteError" variant="destructive" class="mb-4">
+        <XCircle class="h-4 w-4" />
+        <AlertDescription>{{ deleteError }}</AlertDescription>
+      </Alert>
+
+      <!-- Default Team Protection Notice -->
+      <Alert v-if="!canDeleteTeam && team.is_default" class="border-blue-200 bg-blue-50 text-blue-800">
+        <Shield class="h-4 w-4" />
+        <AlertDescription>
+          {{ t('teams.manage.dangerZone.defaultTeamProtection') }}
+        </AlertDescription>
+      </Alert>
+
+      <!-- Insufficient Permissions Notice -->
+      <Alert v-else-if="!canDeleteTeam" class="border-amber-200 bg-amber-50 text-amber-800">
+        <AlertTriangle class="h-4 w-4" />
+        <AlertDescription>
+          {{ t('teams.manage.dangerZone.insufficientPermissions') }}
+        </AlertDescription>
+      </Alert>
+
+      <!-- Delete Team Content -->
+      <div v-else class="space-y-4">
+        <p class="text-sm text-muted-foreground">
+          {{ t('teams.manage.dangerZone.deleteTeamDescription') }}
+        </p>
+
+        <!-- What gets deleted -->
+        <div class="bg-muted/50 border rounded-lg p-4">
+          <h4 class="text-sm font-medium mb-3">{{ t('teams.manage.dangerZone.willDelete.title') }}</h4>
+          <ul class="text-xs space-y-2">
+            <li class="flex items-start gap-2">
+              <XCircle class="h-3 w-3 text-destructive mt-0.5 shrink-0" />
+              {{ t('teams.manage.dangerZone.willDelete.servers') }}
+            </li>
+            <li class="flex items-start gap-2">
+              <XCircle class="h-3 w-3 text-destructive mt-0.5 shrink-0" />
+              {{ t('teams.manage.dangerZone.willDelete.credentials') }}
+            </li>
+            <li class="flex items-start gap-2">
+              <XCircle class="h-3 w-3 text-destructive mt-0.5 shrink-0" />
+              {{ t('teams.manage.dangerZone.willDelete.variables') }}
+            </li>
+            <li class="flex items-start gap-2">
+              <XCircle class="h-3 w-3 text-destructive mt-0.5 shrink-0" />
+              {{ t('teams.manage.dangerZone.willDelete.history') }}
+            </li>
+            <li class="flex items-start gap-2">
+              <XCircle class="h-3 w-3 text-destructive mt-0.5 shrink-0" />
+              {{ t('teams.manage.dangerZone.willDelete.members') }}
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <template v-if="canDeleteTeam" #footer-actions>
+        <Button
+          variant="destructive"
+          @click="showDeleteDialog = true"
+          class="gap-2"
+        >
+          <Trash2 class="h-4 w-4" />
+          {{ t('teams.manage.dangerZone.deleteButton') }}
+        </Button>
+      </template>
+    </DsCard>
+
+    <!-- Delete Confirmation Dialog -->
+    <AlertDialog :open="showDeleteDialog" @update:open="showDeleteDialog = $event">
+      <AlertDialogContent class="sm:max-w-[500px]">
+        <AlertDialogHeader>
+          <AlertDialogTitle class="flex items-center gap-2 text-destructive">
+            <AlertTriangle class="h-5 w-5" />
+            {{ t('teams.manage.deleteDialog.title') }}
+          </AlertDialogTitle>
+          <AlertDialogDescription class="space-y-4">
+            <p>{{ t('teams.manage.deleteDialog.warning') }}</p>
+
+            <div class="rounded-lg border p-3 bg-muted/50">
+              <p class="font-medium text-sm mb-1">{{ t('teams.manage.deleteDialog.teamName') }}:</p>
+              <p class="font-mono text-sm">"{{ team.name }}"</p>
+            </div>
+
+            <div class="rounded-lg border-destructive/50 bg-destructive/5 p-4 space-y-3">
+              <p class="text-sm font-medium text-destructive">{{ t('teams.manage.deleteDialog.consequences') }}</p>
+              <ul class="text-xs space-y-2">
+                <li class="flex items-start gap-2">
+                  <XCircle class="h-3 w-3 text-destructive mt-0.5 shrink-0" />
+                  {{ t('teams.manage.deleteDialog.consequencesList.servers') }}
+                </li>
+                <li class="flex items-start gap-2">
+                  <XCircle class="h-3 w-3 text-destructive mt-0.5 shrink-0" />
+                  {{ t('teams.manage.deleteDialog.consequencesList.credentials') }}
+                </li>
+                <li class="flex items-start gap-2">
+                  <XCircle class="h-3 w-3 text-destructive mt-0.5 shrink-0" />
+                  {{ t('teams.manage.deleteDialog.consequencesList.variables') }}
+                </li>
+                <li class="flex items-start gap-2">
+                  <XCircle class="h-3 w-3 text-destructive mt-0.5 shrink-0" />
+                  {{ t('teams.manage.deleteDialog.consequencesList.history') }}
+                </li>
+              </ul>
+            </div>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel @click="showDeleteDialog = false">
+            {{ t('teams.manage.deleteDialog.cancel') }}
+          </AlertDialogCancel>
+          <Button
+            variant="destructive"
+            @click="deleteTeam"
+            :disabled="isDeleting"
+            class="gap-2"
+          >
+            <Spinner v-if="isDeleting" class="mr-2" />
+            <Trash2 v-else class="h-4 w-4" />
+            {{ t('teams.manage.deleteDialog.confirm') }}
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   </div>
 </template>

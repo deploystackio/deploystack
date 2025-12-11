@@ -5,14 +5,15 @@ import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import {
-  Loader2,
   AlertTriangle,
   Server,
   RefreshCw,
   HardDrive,
   Globe
 } from 'lucide-vue-next'
+import { Skeleton } from '@/components/ui/skeleton'
 import { TeamService, type Team, type TeamUsageData } from '@/services/teamService'
+import { DsCard } from '@/components/ui/ds-card'
 
 const { t } = useI18n()
 
@@ -77,14 +78,29 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="space-y-6">
+  <div>
     <!-- Loading State -->
-    <div v-if="isLoading" class="flex items-center justify-center py-12">
-      <div class="flex items-center gap-3 text-muted-foreground">
-        <Loader2 class="h-5 w-5 animate-spin" />
-        {{ t('teams.manage.usage.loading') }}
-      </div>
-    </div>
+    <DsCard v-if="isLoading" :title="t('teams.manage.usage.title')">
+      <Skeleton class="h-4 w-64 mb-6" />
+      <dl class="divide-y divide-gray-100">
+        <div v-for="i in 3" :key="i" class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+          <dt class="flex items-center gap-2">
+            <Skeleton class="h-4 w-4 rounded" />
+            <Skeleton class="h-4 w-32" />
+          </dt>
+          <dd class="mt-1 sm:col-span-2 sm:mt-0">
+            <div class="space-y-2 max-w-md">
+              <div class="flex justify-between">
+                <Skeleton class="h-4 w-16" />
+                <Skeleton class="h-4 w-10" />
+              </div>
+              <Skeleton class="h-2 w-full rounded-full" />
+              <Skeleton class="h-3 w-48" />
+            </div>
+          </dd>
+        </div>
+      </dl>
+    </DsCard>
 
     <!-- Error State -->
     <Alert v-else-if="error" variant="destructive">
@@ -105,14 +121,9 @@ onMounted(() => {
     </Alert>
 
     <!-- Usage Content -->
-    <div v-else-if="usageData">
-      <div class="px-4 sm:px-0">
-        <h3 class="text-base/7 font-semibold text-gray-900">{{ t('teams.manage.usage.title') }}</h3>
-        <p class="mt-1 max-w-2xl text-sm/6 text-gray-500">{{ t('teams.manage.usage.description') }}</p>
-      </div>
-
-      <div class="mt-6 border-t border-gray-100">
-        <dl class="divide-y divide-gray-100">
+    <DsCard v-else-if="usageData" :title="t('teams.manage.usage.title')">
+      <p class="text-sm mb-6">{{ t('teams.manage.usage.description') }}</p>
+      <dl class="divide-y divide-gray-100">
           <!-- Total MCP Servers -->
           <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
             <dt class="text-sm/6 font-medium text-gray-900 flex items-center gap-2">
@@ -181,11 +192,9 @@ onMounted(() => {
               </div>
             </dd>
           </div>
-        </dl>
-      </div>
+      </dl>
 
-      <!-- Refresh Button -->
-      <div class="flex items-center justify-end pt-4 border-t">
+      <template #footer-actions>
         <Button
           variant="outline"
           @click="loadUsageData"
@@ -195,7 +204,7 @@ onMounted(() => {
           <RefreshCw class="h-4 w-4" :class="isLoading ? 'animate-spin' : ''" />
           {{ t('teams.manage.usage.refresh') }}
         </Button>
-      </div>
-    </div>
+      </template>
+    </DsCard>
   </div>
 </template>

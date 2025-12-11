@@ -3,8 +3,10 @@ import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Users, UserPlus, Info, AlertTriangle, Loader2 } from 'lucide-vue-next'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Users, UserPlus, Info, AlertTriangle } from 'lucide-vue-next'
 import MemberRow from './MemberRow.vue'
+import { DsCard } from '@/components/ui/ds-card'
 import type { Team } from '@/services/teamService'
 import { UserService, type User } from '@/services/userService'
 import { getEnv } from '@/utils/env'
@@ -185,86 +187,94 @@ defineExpose({
 </script>
 
 <template>
-  <div class="space-y-6">
-    <!-- Default Team Notice -->
-    <Alert v-if="isDefaultTeam" class="border-blue-200 bg-blue-50 text-blue-800">
-      <Info class="h-4 w-4" />
-      <AlertDescription>
-        {{ t('teams.manage.members.defaultTeamNotice') }}
-      </AlertDescription>
-    </Alert>
-
-    <!-- Team Members Overview -->
-    <div class="flex items-center justify-between">
-      <div>
-        <h3 class="text-lg font-semibold">{{ t('teams.manage.members.title') }}</h3>
-        <p class="text-sm text-muted-foreground">
-          {{ t('teams.manage.members.memberCount', { current: memberCount, max: 3 }) }}
-        </p>
-      </div>
-
-      <Button
-        v-if="canAddMembers"
-        size="sm"
-        class="gap-2"
-        @click="handleAddMember"
-      >
-        <UserPlus class="h-4 w-4" />
-        {{ t('teams.manage.members.addMember') }}
-      </Button>
-    </div>
-
-    <!-- Loading State -->
-    <div v-if="(isLoadingUser && isDefaultTeam) || (isLoadingMembers && !isDefaultTeam)" class="flex items-center justify-center py-8">
-      <div class="flex items-center gap-3 text-muted-foreground">
-        <Loader2 class="h-5 w-5 animate-spin" />
-        {{ isDefaultTeam ? t('teams.manage.members.loadingUser') : t('teams.manage.members.loadingMembers') }}
-      </div>
-    </div>
-
-    <!-- Error State -->
-    <Alert v-else-if="(userError && isDefaultTeam) || (membersError && !isDefaultTeam)" variant="destructive" class="mb-4">
-      <AlertTriangle class="h-4 w-4" />
-      <AlertDescription>{{ isDefaultTeam ? userError : membersError }}</AlertDescription>
-    </Alert>
-
-    <!-- Members List -->
-    <div v-else class="space-y-4">
-      <MemberRow
-        v-for="member in members"
-        :key="member.id"
-        :member="member"
-        :can-manage-members="canManageMembers"
-        @remove-member="handleRemoveMember"
-        @edit-role="handleEditRole"
-      />
-    </div>
-
-    <!-- Empty State for No Additional Members (only for non-default teams) -->
-    <div v-if="memberCount === 0 && !isDefaultTeam" class="text-center py-8 border-2 border-dashed border-muted rounded-lg">
-      <Users class="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-      <h4 class="text-lg font-medium mb-2">{{ t('teams.manage.members.noMembers.title') }}</h4>
-      <p class="text-sm text-muted-foreground mb-4">
-        {{ t('teams.manage.members.noMembers.description') }}
+  <div>
+    <DsCard :title="t('teams.manage.members.title')">
+      <p class="text-sm text-muted-foreground">
+        {{ t('teams.manage.members.memberCount', { current: memberCount, max: 3 }) }}
       </p>
-      <Button v-if="canAddMembers" class="gap-2" @click="handleAddMember">
-        <UserPlus class="h-4 w-4" />
-        {{ t('teams.manage.members.noMembers.addFirstMember') }}
-      </Button>
-    </div>
 
-    <!-- Team Limits Info -->
-    <div class="bg-white dark:bg-card border rounded-lg p-4">
-      <h4 class="text-sm font-medium mb-2 flex items-center gap-2">
-        <Info class="h-4 w-4" />
-        {{ t('teams.manage.members.info.title') }}
-      </h4>
-      <div class="text-xs text-muted-foreground space-y-1">
+      <div class="text-sm text-muted-foreground mt-4 mb-6 space-y-1">
         <p>• {{ t('teams.manage.members.info.maxMembers') }}</p>
         <p>• {{ t('teams.manage.members.info.adminAccess') }}</p>
         <p>• {{ t('teams.manage.members.info.userAccess') }}</p>
-        <p v-if="isDefaultTeam">• {{ t('teams.manage.members.info.defaultTeamNote') }}</p>
       </div>
-    </div>
+
+      <!-- Default Team Notice -->
+      <Alert v-if="isDefaultTeam" class="border-blue-200 bg-blue-50 text-blue-800 mb-6">
+        <Info class="h-4 w-4" />
+        <AlertDescription>
+          {{ t('teams.manage.members.defaultTeamNotice') }}
+        </AlertDescription>
+      </Alert>
+
+      <!-- Loading State with Skeleton -->
+      <div v-if="(isLoadingUser && isDefaultTeam) || (isLoadingMembers && !isDefaultTeam)" class="space-y-4">
+        <div v-for="i in 2" :key="i" class="flex items-center justify-between py-4 border-b last:border-b-0">
+          <div class="flex items-center gap-4">
+            <Skeleton class="h-10 w-10 rounded-full" />
+            <div class="space-y-2">
+              <Skeleton class="h-4 w-32" />
+              <Skeleton class="h-3 w-48" />
+            </div>
+          </div>
+          <div class="flex items-center gap-4">
+            <Skeleton class="h-5 w-16 rounded-full" />
+            <Skeleton class="h-3 w-24" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Error State -->
+      <Alert v-else-if="(userError && isDefaultTeam) || (membersError && !isDefaultTeam)" variant="destructive" class="mb-4">
+        <AlertTriangle class="h-4 w-4" />
+        <AlertDescription>{{ isDefaultTeam ? userError : membersError }}</AlertDescription>
+      </Alert>
+
+      <!-- Members List -->
+      <div v-else-if="members.length > 0" class="space-y-4">
+        <MemberRow
+          v-for="member in members"
+          :key="member.id"
+          :member="member"
+          :can-manage-members="canManageMembers"
+          @remove-member="handleRemoveMember"
+          @edit-role="handleEditRole"
+        />
+      </div>
+
+      <!-- Empty State for No Additional Members (only for non-default teams) -->
+      <div v-else-if="memberCount === 0 && !isDefaultTeam" class="text-center py-8 border-2 border-dashed border-muted rounded-lg">
+        <Users class="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+        <h4 class="text-lg font-medium mb-2">{{ t('teams.manage.members.noMembers.title') }}</h4>
+        <p class="text-sm text-muted-foreground mb-4">
+          {{ t('teams.manage.members.noMembers.description') }}
+        </p>
+        <Button v-if="canAddMembers" class="gap-2" @click="handleAddMember">
+          <UserPlus class="h-4 w-4" />
+          {{ t('teams.manage.members.noMembers.addFirstMember') }}
+        </Button>
+      </div>
+
+      <template #footer-status>
+        <span>
+          Read more about teams in our
+          <a
+            href="https://docs.deploystack.io/general/teams"
+            target="_blank"
+            class="text-primary underline underline-offset-4 hover:text-primary/80"
+          >team documentation</a>.
+        </span>
+      </template>
+
+      <template v-if="canAddMembers" #footer-actions>
+        <Button
+          class="gap-2"
+          @click="handleAddMember"
+        >
+          <UserPlus class="h-4 w-4" />
+          {{ t('teams.manage.members.addMember') }}
+        </Button>
+      </template>
+    </DsCard>
   </div>
 </template>

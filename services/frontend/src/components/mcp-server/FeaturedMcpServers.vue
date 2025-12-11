@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRouter, useRoute } from 'vue-router'
 import { Button } from '@/components/ui/button'
 import { Loader2 } from 'lucide-vue-next'
 import { McpCatalogService } from '@/services/mcpCatalogService'
@@ -29,8 +28,6 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
-const router = useRouter()
-const route = useRoute()
 
 // State
 const featuredServers = ref<McpServer[]>([])
@@ -47,10 +44,6 @@ const gridCols = computed(() => {
     return 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
   }
   return 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
-})
-
-const shouldShowBrowseAllButton = computed(() => {
-  return route.path !== '/mcp-server/install'
 })
 
 // Methods
@@ -134,16 +127,5 @@ onMounted(() => {
       />
     </div>
 
-    <!-- Show More Link -->
-    <div v-if="featuredServers.length > 0 && shouldShowBrowseAllButton" class="text-center">
-      <Button
-        variant="ghost"
-        size="sm"
-        @click="router.push('/mcp-server/install')"
-        class="text-sm text-gray-600 hover:text-gray-900"
-      >
-        Browse all servers →
-      </Button>
-    </div>
   </div>
 </template>

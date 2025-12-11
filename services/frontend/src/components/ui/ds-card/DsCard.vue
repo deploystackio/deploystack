@@ -7,7 +7,7 @@ defineProps<Props>()
 </script>
 
 <template>
-  <div class="rounded-lg border border-neutral-200 bg-white">
+  <div class="rounded-lg border border-neutral-200 bg-white mb-8 last:mb-0">
     <!-- Content Area -->
     <div class="p-6">
       <h4 class="text-xl font-medium leading-8 tracking-tight text-foreground">
