@@ -261,7 +261,7 @@ defineExpose({
           <a
             href="https://docs.deploystack.io/general/teams"
             target="_blank"
-            class="text-primary underline underline-offset-4 hover:text-primary/80"
+            class="link"
           >team documentation</a>.
         </span>
       </template>

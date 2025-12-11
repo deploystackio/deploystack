@@ -175,3 +175,8 @@ a[role="button"] {
   }
 }
 
+/* Utility class for blue links */
+.link {
+  @apply text-blue-600 underline underline-offset-4 hover:text-blue-800;
+}
+
