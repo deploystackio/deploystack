@@ -5,7 +5,8 @@ import { useI18n } from 'vue-i18n'
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
 import { toast } from 'vue-sonner'
 import { useEventBus } from '@/composables/useEventBus'
-import { SidebarNav, type NavItem } from '@/components/ui/sidebar-nav'
+import { SettingsMenu, SettingsMenuGroup, SettingsMenuItem } from '@/components/ui/settings-menu'
+import { DsPageHeading } from '@/components/ui/ds-page-heading'
 import type { GlobalSettingGroup, Setting } from '@/components/globalSettings/GlobalSettingsSidebarNav.vue'
 import NavbarLayout from '@/components/NavbarLayout.vue'
 import { getEnv } from '@/utils/env'
@@ -14,14 +15,7 @@ import { Spinner } from '@/components/ui/spinner'
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Field, FieldGroup, FieldLabel, FieldDescription } from '@/components/ui/field'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
-import { Separator } from '@/components/ui/separator'
+import { DsCard } from '@/components/ui/ds-card'
 import { getSettingsComponent } from '@/composables/useSettingsComponentRegistry'
 
 const { t } = useI18n()
@@ -91,13 +85,6 @@ const selectedGroup = computed(() => {
   return group
 })
 
-// Transform setting groups to nav items for SidebarNav component
-const sidebarNavItems = computed((): NavItem[] => {
-  return settingGroups.value.map(group => ({
-    title: group.name,
-    href: `/admin/settings/${group.id}`
-  }))
-})
 
 // Check if the selected group has a custom component
 const customComponent = computed(() => {
@@ -211,9 +198,7 @@ function isFrontendBaseUrlSetting(setting: Setting | undefined): boolean {
 }
 
 // Form submission
-async function handleSubmit(event: Event) {
-  event.preventDefault()
-
+async function handleSubmit() {
   if (!selectedGroup.value) return
 
   // Convert form values to API format
@@ -317,6 +302,8 @@ async function handleSubmit(event: Event) {
 
 <template>
   <NavbarLayout>
+    <DsPageHeading :title="t('globalSettings.title')" />
+
     <!-- Mobile Navigation - Show tabs on small screens -->
     <div class="block md:hidden mb-6">
       <nav class="flex space-x-1 p-1 bg-muted/50 rounded-lg overflow-x-auto">
@@ -341,8 +328,19 @@ async function handleSubmit(event: Event) {
     <div class="space-y-6 pb-16">
       <div class="flex flex-col space-y-8 md:flex-row md:space-x-12 md:space-y-0">
         <!-- Desktop Sidebar Navigation -->
-        <aside class="hidden md:block md:w-1/5">
-          <SidebarNav :items="sidebarNavItems" />
+        <aside class="hidden md:block w-56 shrink-0">
+          <SettingsMenu>
+            <SettingsMenuGroup>
+              <SettingsMenuItem
+                v-for="group in settingGroups"
+                :key="group.id"
+                :to="`/admin/settings/${group.id}`"
+                :active="currentGroupId === group.id"
+              >
+                {{ group.name }}
+              </SettingsMenuItem>
+            </SettingsMenuGroup>
+          </SettingsMenu>
         </aside>
 
         <!-- Content Area -->
@@ -364,156 +362,74 @@ async function handleSubmit(event: Event) {
             />
 
             <!-- Fallback: Standard Form (for groups without custom components) -->
-            <div v-else>
-              <!-- Mobile: Form without Card wrapper -->
-              <div class="md:hidden">
-                <form v-if="selectedGroup.settings && selectedGroup.settings.length > 0" @submit="handleSubmit">
-                  <FieldGroup>
-                    <template v-for="setting in selectedGroup.settings" :key="setting.key">
-                      <!-- Boolean Checkbox -->
-                      <div v-if="setting.type === 'boolean'" class="flex items-start gap-3">
-                        <Checkbox
-                          :id="`setting-${setting.key}`"
-                          :checked="formValues[setting.key] as boolean"
-                          @update:checked="(value: boolean) => updateBooleanValue(setting.key, value)"
-                        />
-                        <div class="grid gap-1">
-                          <label
-                            :for="`setting-${setting.key}`"
-                            class="cursor-pointer text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                          >
-                            {{ setting.name || setting.key }}
-                          </label>
-                          <p v-if="setting.description" class="text-muted-foreground text-sm">
-                            {{ setting.description }}
-                          </p>
-                        </div>
-                      </div>
+            <DsCard v-else :title="selectedGroup.name">
+              <p v-if="selectedGroup.description" class="text-sm text-muted-foreground mb-6">
+                {{ selectedGroup.description }}
+              </p>
 
-                      <!-- String/Number Input with Field -->
-                      <Field v-else>
-                        <FieldLabel :for="`setting-${setting.key}`">
-                          {{ setting.name || setting.key }}
-                        </FieldLabel>
-                        <Input
-                          v-if="setting.type === 'string'"
-                          :id="`setting-${setting.key}`"
-                          :type="setting.is_encrypted ? 'password' : 'text'"
-                          v-model="formValues[setting.key] as string"
-                        />
-                        <Input
-                          v-else-if="setting.type === 'number'"
-                          :id="`setting-${setting.key}`"
-                          type="number"
-                          v-model.number="formValues[setting.key] as number"
-                        />
-                        <FieldDescription v-if="setting.description">
-                          {{ setting.description }}
-                        </FieldDescription>
-                        <p v-if="setting.is_encrypted" class="text-xs text-muted-foreground">
-                          {{ t('globalSettings.form.encryptedValue') }}
-                        </p>
-                      </Field>
-                    </template>
-                  </FieldGroup>
+              <FieldGroup v-if="selectedGroup.settings && selectedGroup.settings.length > 0">
+                <template v-for="setting in selectedGroup.settings" :key="setting.key">
+                  <!-- Boolean Checkbox -->
+                  <div v-if="setting.type === 'boolean'" class="flex items-start gap-3">
+                    <Checkbox
+                      :id="`setting-${setting.key}`"
+                      :checked="formValues[setting.key] as boolean"
+                      @update:checked="(value: boolean) => updateBooleanValue(setting.key, value)"
+                    />
+                    <div class="grid gap-1">
+                      <label
+                        :for="`setting-${setting.key}`"
+                        class="cursor-pointer text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                      >
+                        {{ setting.name || setting.key }}
+                      </label>
+                      <p v-if="setting.description" class="text-muted-foreground text-sm">
+                        {{ setting.description }}
+                      </p>
+                    </div>
+                  </div>
 
-                  <Button
-                    type="submit"
-                    :disabled="isSubmitting"
-                    class="w-full sm:w-auto mt-7"
-                  >
-                    <Spinner v-if="isSubmitting" class="mr-2" />
-                    {{ t('globalSettings.form.saveChanges') }}
-                  </Button>
-                </form>
-                <div v-else-if="selectedGroup && (!selectedGroup.settings || selectedGroup.settings.length === 0)">
-                  <p class="text-sm text-muted-foreground">{{ t('globalSettings.form.noSettings') }}</p>
-                </div>
-                <div v-else>
-                  <p class="text-sm text-muted-foreground">{{ t('globalSettings.form.groupNotFound') }}</p>
-                </div>
+                  <!-- String/Number Input with Field -->
+                  <Field v-else>
+                    <FieldLabel :for="`setting-${setting.key}`">
+                      {{ setting.name || setting.key }}
+                    </FieldLabel>
+                    <Input
+                      v-if="setting.type === 'string'"
+                      :id="`setting-${setting.key}`"
+                      :type="setting.is_encrypted ? 'password' : 'text'"
+                      v-model="formValues[setting.key] as string"
+                    />
+                    <Input
+                      v-else-if="setting.type === 'number'"
+                      :id="`setting-${setting.key}`"
+                      type="number"
+                      v-model.number="formValues[setting.key] as number"
+                    />
+                    <FieldDescription v-if="setting.description">
+                      {{ setting.description }}
+                    </FieldDescription>
+                    <p v-if="setting.is_encrypted" class="text-xs text-muted-foreground">
+                      {{ t('globalSettings.form.encryptedValue') }}
+                    </p>
+                  </Field>
+                </template>
+              </FieldGroup>
+
+              <div v-else-if="!selectedGroup.settings || selectedGroup.settings.length === 0">
+                <p class="text-sm text-muted-foreground">{{ t('globalSettings.form.noSettings') }}</p>
               </div>
 
-              <!-- Desktop: Form with Card wrapper -->
-              <Card class="hidden md:block">
-                <CardHeader class="pb-3">
-                  <CardTitle>
-                    {{ selectedGroup.name }}
-                  </CardTitle>
-                  <CardDescription v-if="selectedGroup.description">
-                    {{ selectedGroup.description }}
-                  </CardDescription>
-                </CardHeader>
-                <Separator />
-                <CardContent class="pt-10">
-                  <form v-if="selectedGroup.settings && selectedGroup.settings.length > 0" @submit="handleSubmit">
-                    <FieldGroup>
-                      <template v-for="setting in selectedGroup.settings" :key="setting.key">
-                        <!-- Boolean Checkbox -->
-                        <div v-if="setting.type === 'boolean'" class="flex items-start gap-3">
-                          <Checkbox
-                            :id="`setting-${setting.key}-desktop`"
-                            :checked="formValues[setting.key] as boolean"
-                            @update:checked="(value: boolean) => updateBooleanValue(setting.key, value)"
-                          />
-                          <div class="grid gap-1">
-                            <label
-                              :for="`setting-${setting.key}-desktop`"
-                              class="cursor-pointer text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                            >
-                              {{ setting.name || setting.key }}
-                            </label>
-                            <p v-if="setting.description" class="text-muted-foreground text-sm">
-                              {{ setting.description }}
-                            </p>
-                          </div>
-                        </div>
-
-                        <!-- String/Number Input with Field -->
-                        <Field v-else>
-                          <FieldLabel :for="`setting-${setting.key}-desktop`">
-                            {{ setting.name || setting.key }}
-                          </FieldLabel>
-                          <Input
-                            v-if="setting.type === 'string'"
-                            :id="`setting-${setting.key}-desktop`"
-                            :type="setting.is_encrypted ? 'password' : 'text'"
-                            v-model="formValues[setting.key] as string"
-                          />
-                          <Input
-                            v-else-if="setting.type === 'number'"
-                            :id="`setting-${setting.key}-desktop`"
-                            type="number"
-                            v-model.number="formValues[setting.key] as number"
-                          />
-                          <FieldDescription v-if="setting.description">
-                            {{ setting.description }}
-                          </FieldDescription>
-                          <p v-if="setting.is_encrypted" class="text-xs text-muted-foreground">
-                            {{ t('globalSettings.form.encryptedValue') }}
-                          </p>
-                        </Field>
-                      </template>
-                    </FieldGroup>
-
-                    <Button
-                      type="submit"
-                      :disabled="isSubmitting"
-                      class="mt-7"
-                    >
-                      <Spinner v-if="isSubmitting" class="mr-2" />
-                      {{ t('globalSettings.form.saveChanges') }}
-                    </Button>
-                  </form>
-                  <div v-else-if="selectedGroup && (!selectedGroup.settings || selectedGroup.settings.length === 0)">
-                    <p class="text-sm text-muted-foreground">{{ t('globalSettings.form.noSettings') }}</p>
-                  </div>
-                  <div v-else>
-                    <p class="text-sm text-muted-foreground">{{ t('globalSettings.form.groupNotFound') }}</p>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+              <template v-if="selectedGroup.settings && selectedGroup.settings.length > 0" #footer-actions>
+                <Button
+                  :disabled="isSubmitting"
+                  @click="handleSubmit"
+                >
+                  <Spinner v-if="isSubmitting" class="mr-2" />
+                  {{ t('globalSettings.form.saveChanges') }}
+                </Button>
+              </template>
+            </DsCard>
           </div>
 
           <div v-else-if="!currentGroupId && settingGroups.length > 0">
