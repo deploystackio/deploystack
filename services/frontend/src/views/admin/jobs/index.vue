@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { RefreshCw, Clock, Play, CheckCircle2, XCircle, Search, X } from 'lucide-vue-next'
 import { Spinner } from '@/components/ui/spinner'
 import { Button } from '@/components/ui/button'
-import DashboardLayout from '@/components/DashboardLayout.vue'
+import NavbarLayout from '@/components/NavbarLayout.vue'
 import { JobsService } from '@/services/jobsService'
 import JobTableColumns from './JobTableColumns.vue'
 import PaginationControls from '@/components/ui/pagination/PaginationControls.vue'
@@ -185,7 +185,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <DashboardLayout>
+  <NavbarLayout>
     <div class="space-y-6">
       <div>
         <p class="text-muted-foreground">
@@ -344,5 +344,5 @@ onMounted(async () => {
         />
       </div>
     </div>
-  </DashboardLayout>
+  </NavbarLayout>
 </template>

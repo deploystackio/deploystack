@@ -4,7 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
 import { toast } from 'vue-sonner'
-import DashboardLayout from '@/components/DashboardLayout.vue'
+import NavbarLayout from '@/components/NavbarLayout.vue'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { SettingsMenu, SettingsMenuGroup, SettingsMenuItem, SettingsMenuSeparator } from '@/components/ui/settings-menu'
 import { GatewayConfigService, type ClientConfigResponse, type ConfigAction, type ClientInfo, type ClientCategory } from '@/services/satelliteConfigService'
@@ -169,7 +169,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <DashboardLayout>
+  <NavbarLayout>
     <!-- Main Content -->
     <div class="space-y-6 pb-16">
       <!-- Mobile Navigation -->
@@ -295,5 +295,5 @@ onMounted(async () => {
         </div>
       </div>
     </div>
-  </DashboardLayout>
+  </NavbarLayout>
 </template>

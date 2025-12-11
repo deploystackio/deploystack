@@ -6,7 +6,7 @@ import { toast } from 'vue-sonner'
 import { useEventBus } from '@/composables/useEventBus'
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
 import { McpCatalogService } from '@/services/mcpCatalogService'
-import DashboardLayout from '@/components/DashboardLayout.vue'
+import NavbarLayout from '@/components/NavbarLayout.vue'
 import McpServerInstallWizard from '@/components/mcp-server/wizard/McpServerInstallWizard.vue'
 import { Spinner } from '@/components/ui/spinner'
 import { Button } from '@/components/ui/button'
@@ -79,7 +79,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <DashboardLayout>
+  <NavbarLayout>
     <div class="space-y-6">
       <!-- Loading State -->
       <div v-if="isLoading" class="flex items-center justify-center py-24">
@@ -109,5 +109,5 @@ onMounted(() => {
         @cancel="handleWizardCancel"
       />
     </div>
-  </DashboardLayout>
+  </NavbarLayout>
 </template>

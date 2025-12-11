@@ -7,7 +7,7 @@ import { Spinner } from '@/components/ui/spinner'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Loader2, AlertTriangle } from 'lucide-vue-next'
 import { DsTabs, DsTabsItem } from '@/components/ui/ds-tabs'
-import DashboardLayout from '@/components/DashboardLayout.vue'
+import NavbarLayout from '@/components/NavbarLayout.vue'
 import { TeamInfo, TeamMembers, TeamUsage, TeamDangerZone } from '@/components/teams/manage'
 import { TeamService, type Team } from '@/services/teamService'
 import { useEventBus } from '@/composables/useEventBus'
@@ -136,7 +136,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <DashboardLayout>
+  <NavbarLayout>
     <div class="space-y-6">
       <!-- Loading State -->
       <div v-if="isLoading" class="flex items-center justify-center py-12">
@@ -205,5 +205,5 @@ onUnmounted(() => {
         />
       </div>
     </div>
-  </DashboardLayout>
+  </NavbarLayout>
 </template>

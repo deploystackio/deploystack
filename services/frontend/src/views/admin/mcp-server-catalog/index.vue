@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Plus, RefreshCw, ExternalLink } from 'lucide-vue-next'
 import { Spinner } from '@/components/ui/spinner'
-import DashboardLayout from '@/components/DashboardLayout.vue'
+import NavbarLayout from '@/components/NavbarLayout.vue'
 import { McpCatalogService, type PaginationMeta } from '@/services/mcpCatalogService'
 import { useEventBus } from '@/composables/useEventBus'
 import McpServerTableColumns from './McpServerTableColumns.vue'
@@ -581,7 +581,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <DashboardLayout>
+  <NavbarLayout>
     <div class="space-y-6">
       <!-- Header -->
       <div class="flex items-center justify-between">
@@ -780,5 +780,5 @@ onUnmounted(() => {
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
-  </DashboardLayout>
+  </NavbarLayout>
 </template>

@@ -7,7 +7,7 @@ import { toast } from 'vue-sonner'
 import { useEventBus } from '@/composables/useEventBus'
 import { SidebarNav, type NavItem } from '@/components/ui/sidebar-nav'
 import type { GlobalSettingGroup, Setting } from '@/components/globalSettings/GlobalSettingsSidebarNav.vue'
-import DashboardLayout from '@/components/DashboardLayout.vue'
+import NavbarLayout from '@/components/NavbarLayout.vue'
 import { getEnv } from '@/utils/env'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
@@ -316,7 +316,7 @@ async function handleSubmit(event: Event) {
 </script>
 
 <template>
-  <DashboardLayout>
+  <NavbarLayout>
     <!-- Mobile Navigation - Show tabs on small screens -->
     <div class="block md:hidden mb-6">
       <nav class="flex space-x-1 p-1 bg-muted/50 rounded-lg overflow-x-auto">
@@ -525,5 +525,5 @@ async function handleSubmit(event: Event) {
         </div>
       </div>
     </div>
-  </DashboardLayout>
+  </NavbarLayout>
 </template>

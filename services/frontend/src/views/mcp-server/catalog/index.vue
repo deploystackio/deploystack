@@ -2,7 +2,7 @@
 import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { McpCategoriesService } from '@/services/mcpCategoriesService'
-import DashboardLayout from '@/components/DashboardLayout.vue'
+import NavbarLayout from '@/components/NavbarLayout.vue'
 
 const router = useRouter()
 
@@ -20,9 +20,9 @@ onMounted(async () => {
 </script>
 
 <template>
-  <DashboardLayout>
+  <NavbarLayout>
     <div class="flex items-center justify-center min-h-[50vh]">
       <div class="text-muted-foreground">Loading catalog...</div>
     </div>
-  </DashboardLayout>
+  </NavbarLayout>
 </template>

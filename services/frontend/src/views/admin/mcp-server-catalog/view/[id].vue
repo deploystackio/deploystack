@@ -10,7 +10,7 @@ import CategoryDisplay from '@/components/mcp-server/CategoryDisplay.vue'
 import ContentWrapper from '@/components/ContentWrapper.vue'
 import McpServerAvatar from '@/components/mcp-server/McpServerAvatar.vue'
 import { Github, GitBranch, Globe, ExternalLink, Package, Settings, Calendar, Tag, Trash2, Edit, Terminal, Users, User, Lock, Unlock, Link } from 'lucide-vue-next'
-import DashboardLayout from '@/components/DashboardLayout.vue'
+import NavbarLayout from '@/components/NavbarLayout.vue'
 
 import { McpCatalogService } from '@/services/mcpCatalogService'
 import type { McpServer } from '../types'
@@ -380,7 +380,7 @@ const getRepositoryLabel = (platform: string | undefined) => {
 </script>
 
 <template>
-  <DashboardLayout>
+  <NavbarLayout>
     <div class="space-y-6">
       <!-- Header with Manage Dropdown -->
       <div class="flex items-center justify-end">
@@ -1203,5 +1203,5 @@ const getRepositoryLabel = (platform: string | undefined) => {
         @confirm="deleteServer"
       />
     </div>
-  </DashboardLayout>
+  </NavbarLayout>
 </template>

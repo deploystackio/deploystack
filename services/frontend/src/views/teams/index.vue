@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-vue-next'
-import DashboardLayout from '@/components/DashboardLayout.vue'
+import NavbarLayout from '@/components/NavbarLayout.vue'
 import AddTeamModal from '@/components/teams/AddTeamModal.vue'
 import { TeamService, type TeamWithRole, type Team } from '@/services/teamService'
 import { UserService } from '@/services/userService'
@@ -177,7 +177,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <DashboardLayout>
+  <NavbarLayout>
     <div class="space-y-6">
       <!-- Header -->
       <div class="flex items-center justify-between">
@@ -230,5 +230,5 @@ onUnmounted(() => {
         @team-created="handleTeamCreated"
       />
     </div>
-  </DashboardLayout>
+  </NavbarLayout>
 </template>

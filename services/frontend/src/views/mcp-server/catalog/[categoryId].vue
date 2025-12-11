@@ -4,7 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
 import { toast } from 'vue-sonner'
-import DashboardLayout from '@/components/DashboardLayout.vue'
+import NavbarLayout from '@/components/NavbarLayout.vue'
 import { Badge } from '@/components/ui/badge'
 import {
   Empty,
@@ -109,7 +109,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <DashboardLayout>
+  <NavbarLayout>
     <div class="space-y-6 pb-16">
       <div class="flex flex-col space-y-8 md:flex-row md:space-x-12 md:space-y-0 md:min-h-[calc(100vh-12rem)]">
         <!-- Desktop Sidebar -->
@@ -230,5 +230,5 @@ onMounted(async () => {
         </div>
       </div>
     </div>
-  </DashboardLayout>
+  </NavbarLayout>
 </template>

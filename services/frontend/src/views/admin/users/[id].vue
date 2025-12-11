@@ -5,7 +5,7 @@ import { useI18n } from 'vue-i18n'
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
 import { Badge } from '@/components/ui/badge'
 import { Mail, Github, Shield, Users, Crown, UserCheck } from 'lucide-vue-next'
-import DashboardLayout from '@/components/DashboardLayout.vue'
+import NavbarLayout from '@/components/NavbarLayout.vue'
 import UserActionsGroup from '@/components/admin/UserActionsGroup.vue'
 import { getEnv } from '@/utils/env'
 import type { User } from './types'
@@ -137,7 +137,7 @@ const authTypeBadge = computed(() => {
 </script>
 
 <template>
-  <DashboardLayout>
+  <NavbarLayout>
     <div class="space-y-6">
       <!-- Loading State -->
       <div v-if="isLoading" class="text-muted-foreground">
@@ -303,5 +303,5 @@ const authTypeBadge = computed(() => {
         </div>
       </div>
     </div>
-  </DashboardLayout>
+  </NavbarLayout>
 </template>

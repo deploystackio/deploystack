@@ -9,7 +9,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { CodeHighlight } from '@/components/ui/code-highlight'
 import { Copy, RefreshCw, ExternalLink } from 'lucide-vue-next'
 import { toast } from 'vue-sonner'
-import DashboardLayout from '@/components/DashboardLayout.vue'
+import NavbarLayout from '@/components/NavbarLayout.vue'
 import { JobsService } from '@/services/jobsService'
 import type { Job } from './types'
 
@@ -113,7 +113,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <DashboardLayout>
+  <NavbarLayout>
     <div class="space-y-6">
       <div class="flex justify-end">
         <Button
@@ -233,5 +233,5 @@ onMounted(() => {
         </div>
       </div>
     </div>
-  </DashboardLayout>
+  </NavbarLayout>
 </template>

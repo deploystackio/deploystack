@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Plus, Search, CheckCircle } from 'lucide-vue-next'
 import { Spinner } from '@/components/ui/spinner'
-import DashboardLayout from '@/components/DashboardLayout.vue'
+import NavbarLayout from '@/components/NavbarLayout.vue'
 import { CredentialsService } from '@/services/credentialsService'
 import { UserService } from '@/services/userService'
 import { TeamService, type Team } from '@/services/teamService'
@@ -278,7 +278,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <DashboardLayout>
+  <NavbarLayout>
     <div class="space-y-6">
       <!-- Header -->
       <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -379,5 +379,5 @@ onUnmounted(() => {
         @update:open="(open) => { if (!open) handleModalClose() }"
       />
     </div>
-  </DashboardLayout>
+  </NavbarLayout>
 </template>

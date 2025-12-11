@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
-import DashboardLayout from '@/components/DashboardLayout.vue'
+import NavbarLayout from '@/components/NavbarLayout.vue'
 import McpServerSquareCard from '@/components/mcp-server/McpServerSquareCard.vue'
 import FeaturedMcpServers from '@/components/mcp-server/FeaturedMcpServers.vue'
 import PaginationControls from '@/components/ui/pagination/PaginationControls.vue'
@@ -134,7 +134,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <DashboardLayout>
+  <NavbarLayout>
     <div :class="shouldShowResults ? 'pt-2' : 'pt-10'">
       <div class="mx-auto max-w-2xl">
         <!-- Header - hide when we have search results -->
@@ -339,5 +339,5 @@ onMounted(() => {
         </div>
       </div>
     </div>
-  </DashboardLayout>
+  </NavbarLayout>
 </template>

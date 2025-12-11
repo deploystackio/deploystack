@@ -6,7 +6,7 @@ import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
 import { toast } from 'vue-sonner'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft } from 'lucide-vue-next'
-import DashboardLayout from '@/components/DashboardLayout.vue'
+import NavbarLayout from '@/components/NavbarLayout.vue'
 import McpServerAddFormWizard from '@/components/admin/mcp-catalog/McpServerAddFormWizard.vue'
 import { McpCatalogService } from '@/services/mcpCatalogService'
 import type { CreateMcpServerRequest } from './types'
@@ -62,7 +62,7 @@ const handleCancel = () => {
 </script>
 
 <template>
-  <DashboardLayout>
+  <NavbarLayout>
     <div class="space-y-6">
       <!-- Header with back button -->
       <div class="flex items-center gap-4">
@@ -78,5 +78,5 @@ const handleCancel = () => {
         @cancel="handleCancel"
       />
     </div>
-  </DashboardLayout>
+  </NavbarLayout>
 </template>

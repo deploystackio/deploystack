@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { Loader2 } from 'lucide-vue-next'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import DashboardLayout from '@/components/DashboardLayout.vue'
+import NavbarLayout from '@/components/NavbarLayout.vue'
 import McpServerFormWizard from '@/components/admin/mcp-catalog/McpServerEditFormWizard.vue'
 import { McpCatalogService } from '@/services/mcpCatalogService'
 import { useEventBus } from '@/composables/useEventBus'
@@ -399,7 +399,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <DashboardLayout>
+  <NavbarLayout>
     <div class="space-y-6">
       <!-- Loading State -->
       <div v-if="isLoading" class="flex items-center justify-center py-12">
@@ -442,5 +442,5 @@ onMounted(() => {
         @cancel="handleCancel"
       />
     </div>
-  </DashboardLayout>
+  </NavbarLayout>
 </template>

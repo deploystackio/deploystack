@@ -2,7 +2,7 @@
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import DashboardLayout from '@/components/DashboardLayout.vue'
+import NavbarLayout from '@/components/NavbarLayout.vue'
 import { useEventBus } from '@/composables/useEventBus'
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
 import { useMcpToolsStatsStore } from '@/stores/mcpToolsStatsStore'
@@ -148,7 +148,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <DashboardLayout>
+  <NavbarLayout>
     <div class="space-y-6">
       <!-- Error Alert -->
       <Alert v-if="error" variant="destructive">
@@ -372,5 +372,5 @@ onUnmounted(() => {
         </Card>
       </template>
     </div>
-  </DashboardLayout>
+  </NavbarLayout>
 </template>

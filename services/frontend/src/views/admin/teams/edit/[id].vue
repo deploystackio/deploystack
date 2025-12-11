@@ -7,7 +7,7 @@ import { toast } from 'vue-sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { RefreshCw } from 'lucide-vue-next'
-import DashboardLayout from '@/components/DashboardLayout.vue'
+import NavbarLayout from '@/components/NavbarLayout.vue'
 import TeamEditForm from '@/components/admin/teams/TeamEditForm.vue'
 import { TeamService } from '@/services/teamService'
 import type { Team, UpdateTeamAdminRequest } from '../types'
@@ -85,7 +85,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <DashboardLayout>
+  <NavbarLayout>
     <div class="space-y-6">
       <!-- Loading State -->
       <div v-if="isLoading" class="flex items-center justify-center py-12">
@@ -129,5 +129,5 @@ onMounted(() => {
         </CardContent>
       </Card>
     </div>
-  </DashboardLayout>
+  </NavbarLayout>
 </template>

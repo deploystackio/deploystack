@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
 import { Input } from '@/components/ui/input'
-import DashboardLayout from '@/components/DashboardLayout.vue'
+import NavbarLayout from '@/components/NavbarLayout.vue'
 import { getEnv } from '@/utils/env'
 import UserTableColumns from './UserTableColumns.vue'
 import type { User, UsersApiResponse } from './types'
@@ -85,7 +85,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <DashboardLayout>
+  <NavbarLayout>
     <div class="space-y-6">
       <!-- Header -->
       <div>
@@ -120,5 +120,5 @@ onMounted(async () => {
         />
       </div>
     </div>
-  </DashboardLayout>
+  </NavbarLayout>
 </template>

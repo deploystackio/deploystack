@@ -6,7 +6,7 @@ import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Users, Crown, UserCheck, Pencil } from 'lucide-vue-next'
-import DashboardLayout from '@/components/DashboardLayout.vue'
+import NavbarLayout from '@/components/NavbarLayout.vue'
 import { TeamService } from '@/services/teamService'
 import { getEnv } from '@/utils/env'
 import type { Team } from './types'
@@ -124,7 +124,7 @@ const goToEdit = () => {
 </script>
 
 <template>
-  <DashboardLayout>
+  <NavbarLayout>
     <div class="space-y-6">
       <!-- Edit Button -->
       <div v-if="team" class="flex justify-end">
@@ -276,5 +276,5 @@ const goToEdit = () => {
         </div>
       </div>
     </div>
-  </DashboardLayout>
+  </NavbarLayout>
 </template>

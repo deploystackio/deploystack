@@ -2,7 +2,7 @@
 import { ref, onMounted, onUnmounted, computed, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import DashboardLayout from '@/components/DashboardLayout.vue'
+import NavbarLayout from '@/components/NavbarLayout.vue'
 import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-vue-next'
 import { toast } from 'vue-sonner'
@@ -412,7 +412,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <DashboardLayout>
+  <NavbarLayout>
     <div class="space-y-6">
       <!-- Header -->
       <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -504,5 +504,5 @@ onUnmounted(() => {
       :step="2"
       target-element="get-configuration-button"
     />
-  </DashboardLayout>
+  </NavbarLayout>
 </template>

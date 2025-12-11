@@ -3,7 +3,7 @@ import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { DsTabs, DsTabsItem } from '@/components/ui/ds-tabs'
-import DashboardLayout from '@/components/DashboardLayout.vue'
+import NavbarLayout from '@/components/NavbarLayout.vue'
 import { InstallationInfo, McpToolsTab, TeamConfiguration, UserConfiguration, DangerZone } from '@/components/mcp-server/installation'
 import { McpInstallationService } from '@/services/mcpInstallationService'
 import { TeamService, type Team } from '@/services/teamService'
@@ -163,7 +163,7 @@ const loadAndSetInstallation = async () => {
 </script>
 
 <template>
-  <DashboardLayout>
+  <NavbarLayout>
     <div class="space-y-6">
       <!-- Loading State -->
       <div v-if="isLoading" class="text-muted-foreground">
@@ -226,5 +226,5 @@ const loadAndSetInstallation = async () => {
         />
       </div>
     </div>
-  </DashboardLayout>
+  </NavbarLayout>
 </template>

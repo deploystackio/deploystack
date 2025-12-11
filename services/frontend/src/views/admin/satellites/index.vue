@@ -6,7 +6,7 @@ import { toast } from 'vue-sonner'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { RefreshCw, Key } from 'lucide-vue-next'
-import DashboardLayout from '@/components/DashboardLayout.vue'
+import NavbarLayout from '@/components/NavbarLayout.vue'
 import SatelliteTableColumns from './SatelliteTableColumns.vue'
 import { SatelliteService, type Satellite, type SatelliteListParams } from '@/services/satelliteService'
 import { useEventBus } from '@/composables/useEventBus'
@@ -164,7 +164,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <DashboardLayout>
+  <NavbarLayout>
     <div class="space-y-6">
       <!-- Header -->
       <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -251,5 +251,5 @@ onUnmounted(() => {
         </div>
       </div>
     </div>
-  </DashboardLayout>
+  </NavbarLayout>
 </template>

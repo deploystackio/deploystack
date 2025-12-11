@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { ArrowLeft, RefreshCw, Copy } from 'lucide-vue-next'
 import { toast } from 'vue-sonner'
-import DashboardLayout from '@/components/DashboardLayout.vue'
+import NavbarLayout from '@/components/NavbarLayout.vue'
 import { JobsService } from '@/services/jobsService'
 import JobTableColumns from '../JobTableColumns.vue'
 import type { BatchInfo, Job } from '../types'
@@ -101,7 +101,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <DashboardLayout>
+  <NavbarLayout>
     <div class="space-y-6">
       <div class="flex items-center justify-between">
         <Button variant="ghost" @click="handleBack">
@@ -216,5 +216,5 @@ onMounted(async () => {
         </div>
       </div>
     </div>
-  </DashboardLayout>
+  </NavbarLayout>
 </template>

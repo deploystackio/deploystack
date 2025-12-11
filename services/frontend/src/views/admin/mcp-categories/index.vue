@@ -6,7 +6,7 @@ import { toast } from 'vue-sonner'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-vue-next'
-import DashboardLayout from '@/components/DashboardLayout.vue'
+import NavbarLayout from '@/components/NavbarLayout.vue'
 import CategoryModal from '@/components/admin/mcp-categories/CategoryModal.vue'
 import { McpCategoriesService, type McpCategory } from '@/services/mcpCategoriesService'
 import { useEventBus } from '@/composables/useEventBus'
@@ -121,7 +121,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <DashboardLayout>
+  <NavbarLayout>
     <div class="space-y-6">
       <!-- Header -->
       <div class="flex items-center justify-between">
@@ -174,5 +174,5 @@ onUnmounted(() => {
         @category-updated="() => handleCategorySuccess('updated')"
       />
     </div>
-  </DashboardLayout>
+  </NavbarLayout>
 </template>

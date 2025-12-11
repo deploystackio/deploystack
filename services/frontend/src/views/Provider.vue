@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
-import DashboardLayout from '@/components/DashboardLayout.vue'
+import NavbarLayout from '@/components/NavbarLayout.vue'
 import { useI18n } from 'vue-i18n'
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
 
@@ -13,7 +13,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <DashboardLayout>
+  <NavbarLayout>
     <div class="rounded-xl border bg-card text-card-foreground shadow">
       <div class="p-6">
         <h2 class="text-2xl font-bold">{{ t('pages.provider.title') }}</h2>
@@ -23,5 +23,5 @@ onMounted(() => {
         </div>
       </div>
     </div>
-  </DashboardLayout>
+  </NavbarLayout>
 </template>

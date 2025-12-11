@@ -26,7 +26,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { ArrowLeft, Key, Shield, Calendar, User, AlertTriangle, Trash2, Settings, Edit, CheckCircle } from 'lucide-vue-next'
-import DashboardLayout from '@/components/DashboardLayout.vue'
+import NavbarLayout from '@/components/NavbarLayout.vue'
 import { CredentialsService } from '@/services/credentialsService'
 import { TeamService, type Team } from '@/services/teamService'
 import { useEventBus } from '@/composables/useEventBus'
@@ -457,7 +457,7 @@ const cancelEditName = () => {
 </script>
 
 <template>
-  <DashboardLayout>
+  <NavbarLayout>
     <div class="space-y-6">
       <!-- Back Button and Edit Credential Dropdown -->
       <div class="flex items-center justify-between mb-4">
@@ -855,5 +855,5 @@ const cancelEditName = () => {
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
-  </DashboardLayout>
+  </NavbarLayout>
 </template>

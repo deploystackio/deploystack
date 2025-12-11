@@ -3,7 +3,7 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
-import DashboardLayout from '@/components/DashboardLayout.vue'
+import NavbarLayout from '@/components/NavbarLayout.vue'
 import McpServerReadme from '@/components/mcp-server/view/McpServerReadme.vue'
 import McpServerInfoSidebar from '@/components/mcp-server/view/McpServerInfoSidebar.vue'
 import { McpCatalogService } from '@/services/mcpCatalogService'
@@ -76,7 +76,7 @@ const installServer = () => {
 </script>
 
 <template>
-  <DashboardLayout>
+  <NavbarLayout>
     <div class="space-y-6">
       <div v-if="isLoading" class="text-muted-foreground text-center py-12">
         {{ t('mcpInstallations.view.loading') }}
@@ -101,5 +101,5 @@ const installServer = () => {
         />
       </div>
     </div>
-  </DashboardLayout>
+  </NavbarLayout>
 </template>

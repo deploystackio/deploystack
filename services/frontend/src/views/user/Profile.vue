@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
 import { toast } from 'vue-sonner'
 import AccountSidebarNav from '@/components/account/AccountSidebarNav.vue'
-import DashboardLayout from '@/components/DashboardLayout.vue'
+import NavbarLayout from '@/components/NavbarLayout.vue'
 import {
   Card,
   CardContent,
@@ -129,7 +129,7 @@ async function handleProfileSubmit(event: Event) {
 </script>
 
 <template>
-  <DashboardLayout>
+  <NavbarLayout>
     <!-- Mobile Navigation - Show tabs on small screens -->
     <div class="block md:hidden mb-6">
       <nav class="flex space-x-1 p-1 bg-muted/50 rounded-lg">
@@ -242,5 +242,5 @@ async function handleProfileSubmit(event: Event) {
         </div>
       </div>
     </div>
-  </DashboardLayout>
+  </NavbarLayout>
 </template>

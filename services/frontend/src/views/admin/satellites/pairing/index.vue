@@ -5,7 +5,7 @@ import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
 import { toast } from 'vue-sonner'
 import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-vue-next'
-import DashboardLayout from '@/components/DashboardLayout.vue'
+import NavbarLayout from '@/components/NavbarLayout.vue'
 import TokenTable from '@/components/admin/satellites/TokenTable.vue'
 import CreateTokenModal from '@/components/admin/satellites/CreateTokenModal.vue'
 import { SatelliteTokenService, type RegistrationToken } from '@/services/satelliteTokenService'
@@ -90,7 +90,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <DashboardLayout>
+  <NavbarLayout>
     <div class="space-y-6">
       <!-- Header -->
       <div class="flex justify-end">
@@ -128,5 +128,5 @@ onMounted(async () => {
         @token-created="handleTokenCreated"
       />
     </div>
-  </DashboardLayout>
+  </NavbarLayout>
 </template>
