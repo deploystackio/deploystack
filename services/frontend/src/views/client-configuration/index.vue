@@ -2,9 +2,9 @@
 import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
 import { toast } from 'vue-sonner'
 import NavbarLayout from '@/components/NavbarLayout.vue'
+import { DsPageHeading } from '@/components/ui/ds-page-heading'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { SettingsMenu, SettingsMenuGroup, SettingsMenuItem, SettingsMenuSeparator } from '@/components/ui/settings-menu'
 import { GatewayConfigService, type ClientConfigResponse, type ConfigAction, type ClientInfo, type ClientCategory } from '@/services/satelliteConfigService'
@@ -17,7 +17,6 @@ import TextActionRenderer from '@/components/client-config/TextActionRenderer.vu
 const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
-const { setBreadcrumbs } = useBreadcrumbs()
 
 // State
 const clientCategories = ref<ClientCategory[]>([])
@@ -163,15 +162,16 @@ watch([selectedCategoryFromRoute, selectedClientFromRoute], async ([newCategory,
 })
 
 onMounted(async () => {
-  setBreadcrumbs([{ label: t('clientConfiguration.title') }])
   await loadSupportedClients()
 })
 </script>
 
 <template>
   <NavbarLayout>
+    <DsPageHeading :title="t('clientConfiguration.title')" />
+
     <!-- Main Content -->
-    <div class="space-y-6 pb-16">
+    <div class="space-y-6 pb-16 mt-6">
       <!-- Mobile Navigation -->
       <div v-if="!isLoading" class="md:hidden">
         <Select :model-value="mobileSelectValue" @update:model-value="handleMobileSelectChange">
@@ -203,7 +203,7 @@ onMounted(async () => {
 
       <div class="flex flex-col space-y-8 md:flex-row md:space-x-12 md:space-y-0 md:min-h-[calc(100vh-12rem)]">
         <!-- Desktop Sidebar Navigation -->
-        <aside class="hidden md:block md:w-1/5 md:border-r md:pr-8">
+        <aside class="hidden md:block md:w-1/5 md:pr-8">
           <SettingsMenu v-if="!isLoading">
             <template v-for="(category, categoryIndex) in clientCategories" :key="category.id">
               <SettingsMenuGroup :title="category.name">

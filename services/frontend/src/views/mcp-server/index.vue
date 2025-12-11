@@ -3,11 +3,11 @@ import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import NavbarLayout from '@/components/NavbarLayout.vue'
+import { DsPageHeading } from '@/components/ui/ds-page-heading'
 import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-vue-next'
 import { toast } from 'vue-sonner'
 import { useEventBus } from '@/composables/useEventBus'
-import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
 import McpInstallationsCard from '@/components/mcp-server/McpInstallationsCard.vue'
 import McpInstallationsEmptyState from '@/components/mcp-server/McpInstallationsEmptyState.vue'
 import type { McpInstallation } from '@/types/mcp-installations'
@@ -18,7 +18,6 @@ import TeamUsageIndicator from '@/components/teams/TeamUsageIndicator.vue'
 const { t } = useI18n()
 const router = useRouter()
 const eventBus = useEventBus()
-const { setBreadcrumbs } = useBreadcrumbs()
 
 // State
 const installations = ref<McpInstallation[]>([])
@@ -214,8 +213,6 @@ const checkForPendingNotification = () => {
 
 // Lifecycle
 onMounted(async () => {
-  setBreadcrumbs([{ label: t('mcpInstallations.title') }])
-
   // Initialize team context first
   await initializeSelectedTeam()
 
@@ -251,24 +248,22 @@ onUnmounted(() => {
 
 <template>
   <NavbarLayout>
-    <div class="space-y-6">
-      <!-- Header -->
-      <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div class="flex-1">
-          <TeamUsageIndicator v-if="selectedTeam" :team-id="selectedTeam.id" />
-        </div>
-        <div v-if="selectedTeam" class="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-          <Button
-            @click="handleInstallServer"
-            class="flex items-center justify-center gap-2"
-          >
-            <Plus class="h-4 w-4" />
-            {{ t('mcpInstallations.actions.install') }}
-          </Button>
-        </div>
-      </div>
+    <DsPageHeading :title="t('mcpInstallations.title')">
+      <template #actions>
+        <Button
+          v-if="selectedTeam"
+          @click="handleInstallServer"
+          class="flex items-center gap-2"
+        >
+          <Plus class="h-4 w-4" />
+          {{ t('mcpInstallations.actions.install') }}
+        </Button>
+      </template>
+    </DsPageHeading>
 
-
+    <div class="space-y-6 mt-6">
+      <!-- Team Usage Indicator -->
+      <TeamUsageIndicator v-if="selectedTeam" :team-id="selectedTeam.id" />
 
       <!-- No team selected state -->
       <div v-if="!selectedTeam" class="text-center py-12">

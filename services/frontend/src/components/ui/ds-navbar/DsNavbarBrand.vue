@@ -8,7 +8,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
-import { Separator } from '@/components/ui/separator'
 import { Users, ChevronDown, Check } from 'lucide-vue-next'
 import type { Team } from '@/services/teamService'
 
@@ -46,7 +45,7 @@ const goToHome = () => {
       />
     </button>
 
-    <Separator orientation="vertical" class="h-6" />
+    <span class="text-xl text-muted-foreground/50">/</span>
 
     <DropdownMenu>
       <DropdownMenuTrigger as-child>

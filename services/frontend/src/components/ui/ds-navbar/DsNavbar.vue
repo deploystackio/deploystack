@@ -203,7 +203,7 @@ onUnmounted(() => {
   >
     <!-- Row 1: Brand + Team Selector + User Menu -->
     <div>
-      <div class="mx-auto flex h-14 max-w-[1200px] items-center justify-between px-4 sm:px-6 lg:px-8">
+      <div class="flex h-14 items-center justify-between px-4 sm:px-6 lg:px-8">
         <!-- Left: Brand + Team Selector -->
         <div class="flex items-center gap-4">
           <DsNavbarBrand
@@ -245,7 +245,7 @@ onUnmounted(() => {
 
     <!-- Row 2: Navigation Links -->
     <div class="hidden md:block">
-      <div class="mx-auto flex h-12 max-w-[1200px] items-center gap-1 px-4 sm:px-6 lg:px-8">
+      <div class="flex h-12 items-center gap-1 px-4 sm:px-6 lg:px-8">
         <DsNavbarLinks :items="navigationItems" />
         <DsNavbarTeamsMenu />
         <DsNavbarAdminMenu :is-visible="isGlobalAdmin" />
