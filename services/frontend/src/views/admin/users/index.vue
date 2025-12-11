@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
 import { Input } from '@/components/ui/input'
+import { DsPageHeading } from '@/components/ui/ds-page-heading'
 import NavbarLayout from '@/components/NavbarLayout.vue'
 import { getEnv } from '@/utils/env'
 import UserTableColumns from './UserTableColumns.vue'
@@ -86,11 +87,9 @@ onMounted(async () => {
 
 <template>
   <NavbarLayout>
+    <DsPageHeading :title="t('adminUsers.title')" />
+
     <div class="space-y-6">
-      <!-- Header -->
-      <div>
-        <p class="text-muted-foreground">{{ t('adminUsers.description') }}</p>
-      </div>
 
       <!-- Loading State -->
       <div v-if="isLoading" class="text-muted-foreground">

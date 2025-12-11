@@ -1,48 +1,119 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import { toast } from 'vue-sonner'
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
-import { Badge } from '@/components/ui/badge'
-import { Mail, Github, Shield, Users, Crown, UserCheck } from 'lucide-vue-next'
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
+import { Button } from '@/components/ui/button'
+import { Spinner } from '@/components/ui/spinner'
+import { DsPageHeading } from '@/components/ui/ds-page-heading'
+import { SettingsMenu, SettingsMenuGroup, SettingsMenuItem } from '@/components/ui/settings-menu'
 import NavbarLayout from '@/components/NavbarLayout.vue'
-import UserActionsGroup from '@/components/admin/UserActionsGroup.vue'
 import { getEnv } from '@/utils/env'
-import type { User } from './types'
-
-interface Team {
-  id: string
-  name: string
-  slug: string
-  description: string | null
-  owner_id: string
-  created_at: string
-  updated_at: string
-  role?: 'team_admin' | 'team_user'
-  is_owner?: boolean
-}
-
-interface TeamsResponse {
-  success: boolean
-  teams: Team[]
-}
+import { UserService } from '@/services/userService'
+import UserDetailGeneral from './components/UserDetailGeneral.vue'
+import UserDetailTeams from './components/UserDetailTeams.vue'
+import type { User as UserType } from './types'
 
 const { t } = useI18n()
 const route = useRoute()
+const router = useRouter()
 const { setBreadcrumbs } = useBreadcrumbs()
 
-const user = ref<User | null>(null)
-const teams = ref<Team[]>([])
+const user = ref<UserType | null>(null)
 const isLoading = ref(true)
-const isLoadingTeams = ref(false)
 const error = ref<string | null>(null)
-const teamsError = ref<string | null>(null)
 
 const apiUrl = getEnv('VITE_DEPLOYSTACK_BACKEND_URL') || ''
 const userId = route.params.id as string
 
+// Current section from query params (default to 'general')
+const currentSection = computed(() => {
+  const section = route.query.section as string
+  return section === 'teams' ? 'teams' : 'general'
+})
+
+// Navigation menu items
+const menuItems = [
+  { id: 'general', label: 'General' },
+  { id: 'teams', label: 'Teams' }
+]
+
+// Password reset functionality
+const isResetLoading = ref(false)
+
+const canResetPassword = computed(() => {
+  return user.value?.auth_type === 'email_signup'
+})
+
+const handlePasswordReset = async () => {
+  if (!user.value) return
+
+  try {
+    isResetLoading.value = true
+    const result = await UserService.adminResetPassword(user.value.email)
+
+    if (result.success) {
+      toast.success(t('adminUsers.userDetail.actions.resetPasswordSuccess', {
+        email: user.value.email
+      }))
+    }
+  } catch (error) {
+    const errorKey = 'adminUsers.userDetail.actions.resetPasswordError'
+    let errorText = error instanceof Error ? error.message : 'Unknown error'
+
+    if (error instanceof Error) {
+      switch (error.message) {
+        case 'INVALID_USER':
+          errorText = 'User not found or not eligible for password reset'
+          break
+        case 'UNAUTHORIZED':
+          errorText = 'You are not authorized to perform this action'
+          break
+        case 'FORBIDDEN':
+          errorText = 'This action is forbidden'
+          break
+        case 'SERVICE_UNAVAILABLE':
+          errorText = 'Email service is currently unavailable'
+          break
+      }
+    }
+
+    toast.error(t(errorKey, { error: errorText }))
+  } finally {
+    isResetLoading.value = false
+  }
+}
+
+// Navigate to a section
+function navigateToSection(sectionId: string) {
+  router.push({
+    path: route.path,
+    query: { section: sectionId }
+  })
+}
+
 // Fetch user details from API
-async function fetchUser(id: string): Promise<User> {
+async function fetchUser(id: string): Promise<UserType> {
   if (!apiUrl) {
     throw new Error('VITE_DEPLOYSTACK_BACKEND_URL is not configured.')
   }
@@ -59,25 +130,16 @@ async function fetchUser(id: string): Promise<User> {
   return await response.json()
 }
 
-// Fetch user teams from API
-async function fetchUserTeams(id: string): Promise<TeamsResponse> {
-  if (!apiUrl) {
-    throw new Error('VITE_DEPLOYSTACK_BACKEND_URL is not configured.')
-  }
+// Computed properties for display
+const displayName = computed(() => {
+  if (!user.value) return ''
+  const firstName = user.value.first_name || ''
+  const lastName = user.value.last_name || ''
+  const fullName = `${firstName} ${lastName}`.trim()
+  return fullName || user.value.username
+})
 
-  const response = await fetch(`${apiUrl}/api/users/${id}/teams`, {
-    credentials: 'include'
-  })
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}))
-    throw new Error(errorData.error || `Failed to fetch user teams: ${response.statusText} (status: ${response.status})`)
-  }
-
-  return await response.json()
-}
-
-// Load user and teams on component mount
+// Load user on component mount
 onMounted(async () => {
   setBreadcrumbs([
     { label: t('adminUsers.title'), href: '/admin/users' },
@@ -94,19 +156,6 @@ onMounted(async () => {
       { label: t('adminUsers.title'), href: '/admin/users' },
       { label: user.value.username }
     ])
-
-    // Fetch teams after user is loaded
-    try {
-      isLoadingTeams.value = true
-      const teamsResponse = await fetchUserTeams(userId)
-      teams.value = teamsResponse.teams
-      teamsError.value = null
-    } catch (err) {
-      teamsError.value = err instanceof Error ? err.message : 'Failed to load teams'
-      teams.value = []
-    } finally {
-      isLoadingTeams.value = false
-    }
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'An unknown error occurred'
     user.value = null
@@ -114,30 +163,72 @@ onMounted(async () => {
     isLoading.value = false
   }
 })
-
-// Computed properties for display
-const displayName = computed(() => {
-  if (!user.value) return ''
-  const firstName = user.value.first_name || ''
-  const lastName = user.value.last_name || ''
-  const fullName = `${firstName} ${lastName}`.trim()
-  return fullName || user.value.username
-})
-
-const authTypeBadge = computed(() => {
-  if (!user.value) return null
-  const isEmail = user.value.auth_type === 'email_signup'
-  return {
-    variant: (isEmail ? 'default' : 'secondary') as 'default' | 'secondary',
-    icon: isEmail ? Mail : Github,
-    text: isEmail ? t('adminUsers.userDetail.values.email') : t('adminUsers.userDetail.values.github')
-  }
-})
-
 </script>
 
 <template>
   <NavbarLayout>
+    <!-- Header with breadcrumbs and actions -->
+    <DsPageHeading v-if="user" :title="displayName">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink href="/admin/users">
+              {{ t('adminUsers.title') }}
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>{{ user.username }}</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
+      <template #actions>
+        <AlertDialog>
+          <AlertDialogTrigger as-child>
+            <Button
+              variant="outline"
+              :disabled="!canResetPassword || isResetLoading"
+              :title="!canResetPassword ? t('adminUsers.userDetail.actions.resetPasswordDisabled') : undefined"
+            >
+              <Spinner v-if="isResetLoading" class="mr-2" />
+              {{ t('adminUsers.userDetail.actions.forceResetPassword') }}
+            </Button>
+          </AlertDialogTrigger>
+
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {{ t('adminUsers.userDetail.actions.resetPasswordConfirm.title') }}
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {{ t('adminUsers.userDetail.actions.resetPasswordConfirm.description', {
+                  username: user.username
+                }) }}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+
+            <AlertDialogFooter>
+              <AlertDialogCancel>
+                {{ t('adminUsers.userDetail.actions.resetPasswordConfirm.cancel') }}
+              </AlertDialogCancel>
+              <AlertDialogAction as-child>
+                <Button
+                  @click="handlePasswordReset"
+                  :disabled="isResetLoading"
+                >
+                  <Spinner v-if="isResetLoading" class="mr-2" />
+                  {{ t('adminUsers.userDetail.actions.resetPasswordConfirm.confirm') }}
+                </Button>
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </template>
+    </DsPageHeading>
+
+    <DsPageHeading v-else-if="isLoading" :title="t('adminUsers.userDetail.titleLoading')" />
+
     <div class="space-y-6">
       <!-- Loading State -->
       <div v-if="isLoading" class="text-muted-foreground">
@@ -149,157 +240,45 @@ const authTypeBadge = computed(() => {
         {{ t('adminUsers.userDetail.errorLoading', { error }) }}
       </div>
 
-      <!-- User Details -->
-      <div v-else-if="user">
-        <!-- User Actions Group -->
-        <UserActionsGroup :user="user" />
+      <!-- User Details with Settings Menu Layout -->
+      <div v-else-if="user" class="flex flex-col space-y-8 md:flex-row md:space-x-12 md:space-y-0">
+        <!-- Desktop Sidebar Navigation -->
+        <aside class="hidden md:block w-56 shrink-0">
+          <SettingsMenu>
+            <SettingsMenuGroup>
+              <SettingsMenuItem
+                v-for="item in menuItems"
+                :key="item.id"
+                :to="`/admin/users/${userId}?section=${item.id}`"
+                :active="currentSection === item.id"
+              >
+                {{ item.label }}
+              </SettingsMenuItem>
+            </SettingsMenuGroup>
+          </SettingsMenu>
+        </aside>
 
-        <div class="px-4 sm:px-0">
-          <h3 class="text-base/7 font-semibold text-gray-900">{{ t('adminUsers.userDetail.userInformation') }}</h3>
-          <p class="mt-1 max-w-2xl text-sm/6 text-gray-500">{{ t('adminUsers.userDetail.personalDetails') }}</p>
+        <!-- Mobile Navigation -->
+        <div class="block md:hidden">
+          <nav class="flex space-x-1 p-1 bg-muted/50 rounded-lg">
+            <button
+              v-for="item in menuItems"
+              :key="item.id"
+              @click="navigateToSection(item.id)"
+              class="flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors"
+              :class="currentSection === item.id
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'"
+            >
+              {{ item.label }}
+            </button>
+          </nav>
         </div>
-        <div class="mt-6 border-t border-gray-100">
-          <dl class="divide-y divide-gray-100">
-            <!-- Full Name -->
-            <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
-              <dt class="text-sm/6 font-medium text-gray-900">{{ t('adminUsers.userDetail.fields.fullName') }}</dt>
-              <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
-                {{ displayName === user.username ? t('adminUsers.userDetail.values.notProvided') : displayName }}
-              </dd>
-            </div>
 
-            <!-- Username -->
-            <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
-              <dt class="text-sm/6 font-medium text-gray-900">{{ t('adminUsers.userDetail.fields.username') }}</dt>
-              <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">{{ user.username }}</dd>
-            </div>
-
-            <!-- Email -->
-            <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
-              <dt class="text-sm/6 font-medium text-gray-900">{{ t('adminUsers.userDetail.fields.emailAddress') }}</dt>
-              <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">{{ user.email }}</dd>
-            </div>
-
-            <!-- Role -->
-            <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
-              <dt class="text-sm/6 font-medium text-gray-900">{{ t('adminUsers.userDetail.fields.role') }}</dt>
-              <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
-                {{ user.role ? user.role.name : t('adminUsers.userDetail.values.noRoleAssigned') }}
-              </dd>
-            </div>
-
-            <!-- Registration Method -->
-            <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
-              <dt class="text-sm/6 font-medium text-gray-900">{{ t('adminUsers.userDetail.fields.registrationMethod') }}</dt>
-              <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
-                <Badge
-                  v-if="authTypeBadge"
-                  :variant="authTypeBadge.variant"
-                  class="flex items-center gap-1 w-fit"
-                >
-                  <component :is="authTypeBadge.icon" class="h-3 w-3" />
-                  {{ authTypeBadge.text }}
-                </Badge>
-              </dd>
-            </div>
-
-            <!-- GitHub ID (if applicable) -->
-            <div v-if="user.github_id" class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
-              <dt class="text-sm/6 font-medium text-gray-900">{{ t('adminUsers.userDetail.fields.githubId') }}</dt>
-              <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
-                <span class="font-mono">{{ user.github_id }}</span>
-              </dd>
-            </div>
-
-            <!-- User Details -->
-            <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
-              <dt class="text-sm/6 font-medium text-gray-900">{{ t('adminUsers.userDetail.fields.accountDetails') }}</dt>
-              <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
-                <div class="space-y-2">
-                  <div><span class="font-medium">{{ t('adminUsers.userDetail.values.firstName') }}</span> {{ user.first_name || t('adminUsers.userDetail.values.notProvided') }}</div>
-                  <div><span class="font-medium">{{ t('adminUsers.userDetail.values.lastName') }}</span> {{ user.last_name || t('adminUsers.userDetail.values.notProvided') }}</div>
-                  <div><span class="font-medium">{{ t('adminUsers.userDetail.values.userId') }}</span> <span class="font-mono text-xs">{{ user.id }}</span></div>
-                </div>
-              </dd>
-            </div>
-
-            <!-- Permissions (if role exists) -->
-            <div v-if="user.role && user.role.permissions.length > 0" class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
-              <dt class="text-sm/6 font-medium text-gray-900">{{ t('adminUsers.userDetail.fields.permissions') }}</dt>
-              <dd class="mt-2 text-sm text-gray-900 sm:col-span-2 sm:mt-0">
-                <ul role="list" class="divide-y divide-gray-100 rounded-md border border-gray-200">
-                  <li
-                    v-for="permission in user.role.permissions"
-                    :key="permission"
-                    class="flex items-center justify-between py-4 pr-5 pl-4 text-sm/6"
-                  >
-                    <div class="flex w-0 flex-1 items-center">
-                      <Shield class="size-5 shrink-0 text-gray-400" aria-hidden="true" />
-                      <div class="ml-4 flex min-w-0 flex-1 gap-2">
-                        <span class="truncate font-medium">{{ permission }}</span>
-                      </div>
-                    </div>
-                    <div class="ml-4 shrink-0">
-                      <Badge variant="outline" class="text-xs">{{ t('adminUsers.userDetail.values.active') }}</Badge>
-                    </div>
-                  </li>
-                </ul>
-              </dd>
-            </div>
-
-            <!-- Teams -->
-            <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
-              <dt class="text-sm/6 font-medium text-gray-900">Teams</dt>
-              <dd class="mt-2 text-sm text-gray-900 sm:col-span-2 sm:mt-0">
-                <!-- Teams Loading State -->
-                <div v-if="isLoadingTeams" class="text-muted-foreground text-sm">
-                  Loading teams...
-                </div>
-
-                <!-- Teams Error State -->
-                <div v-else-if="teamsError" class="text-red-500 text-sm">
-                  Error loading teams: {{ teamsError }}
-                </div>
-
-                <!-- No Teams -->
-                <div v-else-if="teams.length === 0" class="text-gray-500 text-sm">
-                  No teams found for this user.
-                </div>
-
-                <!-- Teams List -->
-                <ul v-else role="list" class="divide-y divide-gray-100 rounded-md border border-gray-200">
-                  <li
-                    v-for="team in teams"
-                    :key="team.id"
-                    class="flex items-center justify-between py-4 pr-5 pl-4 text-sm/6"
-                  >
-                    <div class="flex w-0 flex-1 items-center">
-                      <Users class="size-5 shrink-0 text-gray-400" aria-hidden="true" />
-                      <div class="ml-4 flex min-w-0 flex-1 gap-2">
-                        <div class="flex flex-col">
-                          <span class="truncate font-medium">{{ team.name }}</span>
-                          <span v-if="team.description" class="truncate text-xs text-gray-500">{{ team.description }}</span>
-                          <span class="truncate text-xs text-gray-400">Created: {{ new Date(team.created_at).toLocaleDateString() }}</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div class="ml-4 shrink-0 flex gap-2">
-                      <!-- Owner Badge -->
-                      <Badge v-if="team.is_owner" variant="default" class="text-xs flex items-center gap-1">
-                        <Crown class="h-3 w-3" />
-                        Owner
-                      </Badge>
-                      <!-- Role Badge -->
-                      <Badge v-else-if="team.role" variant="outline" class="text-xs flex items-center gap-1">
-                        <UserCheck class="h-3 w-3" />
-                        {{ team.role === 'team_admin' ? 'Admin' : 'Member' }}
-                      </Badge>
-                    </div>
-                  </li>
-                </ul>
-              </dd>
-            </div>
-          </dl>
+        <!-- Content Area -->
+        <div class="flex-1">
+          <UserDetailGeneral v-if="currentSection === 'general'" :user="user" />
+          <UserDetailTeams v-else-if="currentSection === 'teams'" :user-id="userId" />
         </div>
       </div>
     </div>
