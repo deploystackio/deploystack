@@ -192,8 +192,47 @@ const canProceedFromGitHub = computed(() => {
 })
 
 const canProceedFromClaudeConfig = computed(() => {
-  return formData.value.claudeConfig.claude_desktop_config &&
-         Object.keys(formData.value.claudeConfig.claude_desktop_config).length > 0
+  const config = formData.value.claudeConfig.claude_desktop_config as any
+
+  if (!config || Object.keys(config).length === 0) {
+    return false
+  }
+
+  // Check if this is an HTTP config (fake structure with 'remote-server')
+  if (config.mcpServers && config.mcpServers['remote-server']) {
+    const remoteServer = config.mcpServers['remote-server']
+    // For HTTP: URL must be non-empty and valid
+    if (!remoteServer.url || remoteServer.url.trim() === '') {
+      return false
+    }
+    // Strict URL validation
+    try {
+      const parsedUrl = new URL(remoteServer.url)
+
+      // Must use HTTP or HTTPS
+      if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+        return false
+      }
+
+      // Must have a valid hostname (not empty, not just a single character)
+      const hostname = parsedUrl.hostname
+      if (!hostname || hostname.length < 2) {
+        return false
+      }
+
+      // For non-localhost, require at least one dot (domain.tld format)
+      if (hostname !== 'localhost' && !hostname.includes('.')) {
+        return false
+      }
+
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  // For stdio config: if we got here, it's valid (already validated in StdioServerInput)
+  return true
 })
 
 const canSubmit = computed(() => {

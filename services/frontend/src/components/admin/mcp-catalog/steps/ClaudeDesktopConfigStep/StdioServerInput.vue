@@ -5,7 +5,6 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { AlertCircle } from 'lucide-vue-next'
 import ClaudeConfigJsonInput from './ClaudeConfigJsonInput.vue'
 import ClaudeConfigPreview from './ClaudeConfigPreview.vue'
-import ClaudeConfigExamples from './ClaudeConfigExamples.vue'
 
 interface Props {
   modelValue: {
@@ -33,7 +32,7 @@ const extractedEnvVars = ref<string[]>([])
 const validateJson = (jsonString: string) => {
   try {
     if (!jsonString.trim()) {
-      return { isValid: false, error: t('mcpCatalog.form.claudeConfig.validation.required') }
+      return { isValid: false, error: null }
     }
 
     const parsed = JSON.parse(jsonString)
@@ -98,7 +97,7 @@ watch(jsonInput, (newValue) => {
       raw_json: newValue
     })
   } else {
-    validationError.value = validation.error || 'Invalid configuration'
+    validationError.value = validation.error
     isValid.value = false
     extractedServerName.value = ''
     extractedCommand.value = ''
@@ -157,8 +156,5 @@ const formatJson = () => {
       :is-url-based-server="false"
       :headers="[]"
     />
-
-    <!-- Examples Component -->
-    <ClaudeConfigExamples />
   </div>
 </template>

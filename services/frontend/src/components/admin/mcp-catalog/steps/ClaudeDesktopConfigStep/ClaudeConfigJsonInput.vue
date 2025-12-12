@@ -19,6 +19,7 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 
+const hasContent = computed(() => props.modelValue.trim().length > 0)
 const statusIcon = computed(() => props.isValid ? CheckCircle : AlertCircle)
 const statusColor = computed(() => props.isValid ? 'text-green-600' : 'text-red-600')
 
@@ -31,7 +32,7 @@ const handleFormat = () => {
   <div class="space-y-2">
     <div class="flex items-center justify-between">
       <Label for="claude-config">{{ t('mcpCatalog.form.claudeConfig.label') }}</Label>
-      <div class="flex items-center gap-2">
+      <div v-if="hasContent" class="flex items-center gap-2">
         <component :is="statusIcon" :class="['h-4 w-4', statusColor]" />
         <span :class="['text-sm', statusColor]">
           {{ isValid ? t('mcpCatalog.form.claudeConfig.validConfiguration') : t('mcpCatalog.form.claudeConfig.invalidConfiguration') }}

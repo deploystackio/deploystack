@@ -860,7 +860,7 @@ onUnmounted(() => {
       </div>
 
       <!-- Configuration Preview (when valid) -->
-      <div v-if="isValid" class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+      <div v-if="isValid && isStdioTransport" class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
         <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.technical.claudeConfig.preview.title') }}</dt>
         <dd class="mt-1 sm:col-span-2 sm:mt-0">
           <div class="space-y-4">

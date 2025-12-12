@@ -2,8 +2,6 @@
 import { ref, computed, watch } from 'vue'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Select,
   SelectContent,
@@ -11,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { AlertCircle, CheckCircle, Link as LinkIcon } from 'lucide-vue-next'
+import { AlertCircle, CheckCircle } from 'lucide-vue-next'
 
 interface Props {
   modelValue?: {
@@ -38,16 +36,31 @@ const isValid = ref(false)
 
 // Validate URL
 const validateUrl = (url: string) => {
+  // Allow empty URLs (optional field)
   if (!url.trim()) {
-    return { isValid: false, error: 'URL is required' }
+    return { isValid: false, error: null }
   }
 
   try {
     const parsedUrl = new URL(url)
+
+    // Must use HTTP or HTTPS
     if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
       return { isValid: false, error: 'URL must use HTTP or HTTPS protocol' }
     }
-    return { isValid: true }
+
+    // Must have a valid hostname (not empty, not just a single character)
+    const hostname = parsedUrl.hostname
+    if (!hostname || hostname.length < 2) {
+      return { isValid: false, error: 'Invalid hostname' }
+    }
+
+    // For non-localhost, require at least one dot (domain.tld format)
+    if (hostname !== 'localhost' && !hostname.includes('.')) {
+      return { isValid: false, error: 'Invalid domain format' }
+    }
+
+    return { isValid: true, error: null }
   } catch {
     return { isValid: false, error: 'Please enter a valid URL' }
   }
@@ -66,7 +79,7 @@ const emitUpdate = () => {
       type: transportType.value
     })
   } else {
-    validationError.value = validation.error || 'Invalid URL'
+    validationError.value = validation.error
     isValid.value = false
 
     // Still emit for editing purposes
@@ -83,6 +96,7 @@ watch([urlInput, transportType], () => {
 }, { immediate: true })
 
 // Computed properties
+const hasUrl = computed(() => urlInput.value.trim().length > 0)
 const statusIcon = computed(() => isValid.value ? CheckCircle : AlertCircle)
 const statusColor = computed(() => isValid.value ? 'text-green-600' : 'text-red-600')
 </script>
@@ -122,7 +136,7 @@ const statusColor = computed(() => isValid.value ? 'text-green-600' : 'text-red-
     <div class="space-y-2">
       <div class="flex items-center justify-between">
         <Label for="server-url">Server URL</Label>
-        <div class="flex items-center gap-2">
+        <div v-if="hasUrl" class="flex items-center gap-2">
           <component :is="statusIcon" :class="['h-4 w-4', statusColor]" />
           <span :class="['text-sm', statusColor]">
             {{ isValid ? 'Valid URL' : 'Invalid URL' }}
@@ -143,34 +157,5 @@ const statusColor = computed(() => isValid.value ? 'text-green-600' : 'text-red-
       </p>
     </div>
 
-    <!-- Validation Error -->
-    <Alert v-if="validationError" variant="destructive">
-      <AlertCircle class="h-4 w-4" />
-      <AlertDescription>
-        {{ validationError }}
-      </AlertDescription>
-    </Alert>
-
-    <!-- Configuration Preview -->
-    <Card v-if="isValid" class="border-green-200 bg-green-50">
-      <CardHeader>
-        <CardTitle class="text-sm text-green-800">Configuration Preview</CardTitle>
-      </CardHeader>
-      <CardContent class="space-y-3">
-        <div>
-          <Label class="text-xs text-green-700">Transport Type</Label>
-          <code class="ml-2 text-sm bg-green-100 px-2 py-1 rounded">
-            {{ transportType === 'sse' ? 'SSE (Server-Sent Events)' : 'HTTP (Streamable)' }}
-          </code>
-        </div>
-        <div>
-          <Label class="text-xs text-green-700">Server URL</Label>
-          <div class="flex items-center gap-2 mt-1">
-            <LinkIcon class="h-4 w-4 text-green-600" />
-            <code class="text-sm bg-green-100 px-2 py-1 rounded break-all">{{ urlInput }}</code>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
   </div>
 </template>
