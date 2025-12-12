@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useRouter } from 'vue-router'
 import {
   Table,
   TableBody,
@@ -10,31 +9,16 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Eye } from 'lucide-vue-next'
+import { Skeleton } from '@/components/ui/skeleton'
+import { CircleCheck, CircleX, CircleAlert, CircleMinus } from 'lucide-vue-next'
 import type { Job } from './types'
 
 interface Props {
   jobs: Job[]
+  isLoading?: boolean
 }
 
 const props = defineProps<Props>()
-const router = useRouter()
-
-const getStatusVariant = (status: string) => {
-  switch (status) {
-    case 'completed':
-      return 'default'
-    case 'failed':
-      return 'destructive'
-    case 'processing':
-      return 'secondary'
-    case 'pending':
-      return 'outline'
-    default:
-      return 'outline'
-  }
-}
 
 const formatRelativeTime = (dateString: string): string => {
   const date = new Date(dateString)
@@ -45,14 +29,6 @@ const formatRelativeTime = (dateString: string): string => {
   if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`
   if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`
   return `${Math.floor(seconds / 86400)}d ago`
-}
-
-const truncateId = (id: string): string => {
-  return id.length > 8 ? `${id.substring(0, 8)}...` : id
-}
-
-const handleViewJob = (jobId: string) => {
-  router.push(`/admin/jobs/${jobId}`)
 }
 
 const sortedJobs = computed(() => {
@@ -72,19 +48,41 @@ const sortedJobs = computed(() => {
           <TableHead>Status</TableHead>
           <TableHead>Created</TableHead>
           <TableHead>Attempts</TableHead>
-          <TableHead class="w-[100px]">Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
-        <TableRow v-if="sortedJobs.length === 0">
-          <TableCell :colspan="6" class="h-24 text-center">
-            No jobs found
-          </TableCell>
-        </TableRow>
+        <template v-if="isLoading">
+          <TableRow v-for="i in 5" :key="`skeleton-${i}`">
+            <TableCell>
+              <Skeleton class="h-4 w-20" />
+            </TableCell>
+            <TableCell>
+              <Skeleton class="h-5 w-24" />
+            </TableCell>
+            <TableCell>
+              <Skeleton class="h-5 w-20" />
+            </TableCell>
+            <TableCell>
+              <Skeleton class="h-4 w-16" />
+            </TableCell>
+            <TableCell>
+              <Skeleton class="h-4 w-12" />
+            </TableCell>
+          </TableRow>
+        </template>
 
-        <TableRow v-for="job in sortedJobs" :key="job.id">
-          <TableCell class="font-mono text-sm">
-            <span :title="job.id">{{ truncateId(job.id) }}</span>
+        <template v-else>
+          <TableRow v-if="sortedJobs.length === 0">
+            <TableCell :colspan="5" class="h-24 text-center">
+              No jobs found
+            </TableCell>
+          </TableRow>
+
+          <TableRow v-for="job in sortedJobs" :key="job.id">
+          <TableCell class="text-sm">
+            <RouterLink :to="`/admin/jobs/${job.id}`" class="link">
+              {{ job.id }}
+            </RouterLink>
           </TableCell>
 
           <TableCell>
@@ -94,9 +92,25 @@ const sortedJobs = computed(() => {
           </TableCell>
 
           <TableCell>
-            <Badge :variant="getStatusVariant(job.status)">
-              {{ job.status }}
-            </Badge>
+            <div class="inline-flex items-center justify-center rounded-full border px-1.5 py-0.5 text-xs font-medium text-muted-foreground gap-1">
+              <CircleCheck
+                v-if="job.status === 'completed'"
+                class="size-3 fill-green-500 text-green-500 dark:fill-green-400 dark:text-green-400"
+              />
+              <CircleMinus
+                v-else-if="job.status === 'pending'"
+                class="size-3 text-muted-foreground"
+              />
+              <CircleAlert
+                v-else-if="job.status === 'processing'"
+                class="size-3 fill-yellow-500 text-yellow-500 dark:fill-yellow-400 dark:text-yellow-400"
+              />
+              <CircleX
+                v-else-if="job.status === 'failed'"
+                class="size-3 fill-red-500 text-red-500 dark:fill-red-400 dark:text-red-400"
+              />
+              <span>{{ job.status }}</span>
+            </div>
           </TableCell>
 
           <TableCell class="text-sm text-muted-foreground">
@@ -110,19 +124,8 @@ const sortedJobs = computed(() => {
               {{ job.attempts }} / {{ job.max_attempts }}
             </span>
           </TableCell>
-
-          <TableCell>
-            <Button
-              variant="outline"
-              size="sm"
-              @click="handleViewJob(job.id)"
-              class="h-8"
-            >
-              <Eye class="h-4 w-4 mr-2" />
-              View
-            </Button>
-          </TableCell>
         </TableRow>
+        </template>
       </TableBody>
     </Table>
   </div>

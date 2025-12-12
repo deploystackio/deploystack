@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, nextTick } from 'vue'
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
-import { RefreshCw, Clock, Play, CheckCircle2, XCircle, Search, X } from 'lucide-vue-next'
+import { Clock, Play, CheckCircle2, XCircle, X } from 'lucide-vue-next'
 import { Spinner } from '@/components/ui/spinner'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { DsPageHeading } from '@/components/ui/ds-page-heading'
 import NavbarLayout from '@/components/NavbarLayout.vue'
@@ -136,6 +137,8 @@ const fetchJobs = async (): Promise<void> => {
 }
 
 const refreshData = async (): Promise<void> => {
+  isLoading.value = true
+  await nextTick()
   await Promise.all([fetchStats(), fetchJobs()])
 }
 
@@ -154,6 +157,8 @@ const handlePageSizeChange = async (newPageSize: number) => {
 
 const handleSearch = async () => {
   isSearching.value = true
+  isLoading.value = true
+  await nextTick()
   currentPage.value = 1
   try {
     await fetchJobs()
@@ -198,7 +203,10 @@ onMounted(async () => {
             <Clock class="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div class="text-2xl font-bold">{{ stats.pending }}</div>
+            <div class="text-2xl font-bold h-8">
+              <Skeleton v-if="isLoading" class="h-6 w-12" />
+              <template v-else>{{ stats.pending }}</template>
+            </div>
             <p class="text-xs text-muted-foreground">Waiting to process</p>
           </CardContent>
         </Card>
@@ -209,7 +217,10 @@ onMounted(async () => {
             <Play class="h-4 w-4 text-yellow-600" />
           </CardHeader>
           <CardContent>
-            <div class="text-2xl font-bold">{{ stats.processing }}</div>
+            <div class="text-2xl font-bold h-8">
+              <Skeleton v-if="isLoading" class="h-6 w-12" />
+              <template v-else>{{ stats.processing }}</template>
+            </div>
             <p class="text-xs text-muted-foreground">Currently running</p>
           </CardContent>
         </Card>
@@ -220,9 +231,13 @@ onMounted(async () => {
             <CheckCircle2 class="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div class="text-2xl font-bold">{{ stats.completed }}</div>
-            <p class="text-xs text-muted-foreground">
-              {{ stats.totalToday }} today
+            <div class="text-2xl font-bold h-8">
+              <Skeleton v-if="isLoading" class="h-6 w-12" />
+              <template v-else>{{ stats.completed }}</template>
+            </div>
+            <p class="text-xs text-muted-foreground h-4">
+              <Skeleton v-if="isLoading" class="h-3 w-16" />
+              <template v-else>{{ stats.totalToday }} today</template>
             </p>
           </CardContent>
         </Card>
@@ -233,23 +248,23 @@ onMounted(async () => {
             <XCircle class="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent>
-            <div class="text-2xl font-bold">{{ stats.failed }}</div>
-            <p class="text-xs text-muted-foreground">
-              Avg: {{ formatDuration(stats.averageDuration) }}
+            <div class="text-2xl font-bold h-8">
+              <Skeleton v-if="isLoading" class="h-6 w-12" />
+              <template v-else>{{ stats.failed }}</template>
+            </div>
+            <p class="text-xs text-muted-foreground h-4">
+              <template v-if="isLoading">Avg: <Skeleton class="h-3 w-10 inline-block align-middle" /></template>
+              <template v-else>Avg: {{ formatDuration(stats.averageDuration) }}</template>
             </p>
           </CardContent>
         </Card>
       </div>
 
-      <div v-if="isLoading" class="text-muted-foreground">
-        Loading jobs...
-      </div>
-
-      <div v-else-if="error" class="text-red-500">
+      <div v-if="error" class="text-red-500">
         Error: {{ error }}
       </div>
 
-      <div v-else class="space-y-4">
+      <div v-else class="space-y-8">
         <div class="flex flex-wrap items-center gap-3">
           <Input
             v-model="searchJobId"
@@ -302,10 +317,10 @@ onMounted(async () => {
               :disabled="isSearching"
               @click="handleSearch"
               size="sm"
+              class="min-w-[70px]"
             >
-              <Spinner v-if="isSearching" class="h-4 w-4 mr-2" />
-              <Search v-else class="h-4 w-4 mr-2" />
-              Search
+              <Spinner v-if="isSearching" />
+              <template v-else>Search</template>
             </Button>
 
             <Button
@@ -323,23 +338,26 @@ onMounted(async () => {
               size="sm"
               @click="refreshData"
               :disabled="isLoading"
+              class="min-w-[76px]"
             >
-              <RefreshCw class="h-4 w-4 mr-2" :class="{ 'animate-spin': isLoading }" />
-              Refresh
+              <Spinner v-if="isLoading && !isSearching" />
+              <template v-else>Refresh</template>
             </Button>
           </div>
         </div>
 
-        <JobTableColumns :jobs="jobs" />
+        <JobTableColumns :jobs="jobs" :is-loading="isLoading" />
 
-        <PaginationControls
-          :current-page="currentPage"
-          :page-size="pageSize"
-          :total-items="totalItems"
-          :is-loading="isLoading"
-          @page-change="handlePageChange"
-          @page-size-change="handlePageSizeChange"
-        />
+        <div v-if="totalItems > 0" class="flex justify-end">
+          <PaginationControls
+            :current-page="currentPage"
+            :page-size="pageSize"
+            :total-items="totalItems"
+            :is-loading="isLoading"
+            @page-change="handlePageChange"
+            @page-size-change="handlePageSizeChange"
+          />
+        </div>
       </div>
     </div>
   </NavbarLayout>
