@@ -25,6 +25,11 @@ export default {
     },
   },
 
+  featuredList: {
+    title: 'Featured MCP Servers',
+    browseCatalog: 'Browse Catalog',
+  },
+
   catalog: {
     title: 'Server Catalog',
     description: 'Browse all available MCP servers',

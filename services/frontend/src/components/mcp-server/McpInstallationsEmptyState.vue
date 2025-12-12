@@ -1,48 +1,51 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
-import { Plus, PackagePlus } from 'lucide-vue-next'
-import FeaturedMcpServers from './FeaturedMcpServers.vue'
-
-const emit = defineEmits<{
-  installServer: []
-}>()
+import { useRouter } from 'vue-router'
+import { Info } from 'lucide-vue-next'
+import { Button } from '@/components/ui/button'
+import {
+  Empty,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+  EmptyDescription,
+  EmptyContent,
+} from '@/components/ui/empty'
+import McpFeaturedList from './McpFeaturedList.vue'
 
 const { t } = useI18n()
+const router = useRouter()
 
-const handleInstallServer = () => {
-  emit('installServer')
+const handleBrowseCatalog = () => {
+  router.push('/mcp-server/search')
 }
 </script>
 
 <template>
-  <div class="space-y-8">
-    <div class="pt-20">
-      <button
-        type="button"
-        @click="handleInstallServer"
-        class="relative block w-full max-w-2xl mx-auto rounded-lg border-2 border-dashed border-muted-foreground/25 p-12 text-center hover:border-muted-foreground/40 hover:bg-muted/20 focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:outline-hidden transition-all duration-200 group"
-      >
-        <div class="mx-auto size-16 text-muted-foreground/60 group-hover:text-muted-foreground/80 transition-colors duration-200">
-          <PackagePlus class="w-full h-full" stroke-width="1.25" />
-        </div>
-        <div class="mt-4 space-y-2">
-          <span class="block text-sm font-semibold text-foreground group-hover:text-foreground/90 transition-colors duration-200">
+  <div class="flex flex-col lg:flex-row items-stretch justify-start gap-4 lg:gap-8 py-6 lg:py-10">
+    <div class="flex flex-col items-stretch justify-start gap-5 flex-1 w-full">
+      <Empty class="border border-solid">
+        <EmptyHeader>
+          <EmptyMedia variant="icon">
+            <Info class="h-5 w-5" />
+          </EmptyMedia>
+          <EmptyTitle>
             {{ t('mcpInstallations.emptyState.title') }}
-          </span>
-          <span class="block text-sm text-muted-foreground group-hover:text-muted-foreground/80 transition-colors duration-200">
+          </EmptyTitle>
+          <EmptyDescription>
             {{ t('mcpInstallations.emptyState.description') }}
-          </span>
-          <div class="mt-4 inline-flex items-center gap-1.5 text-xs text-primary font-medium group-hover:text-primary/80 transition-colors duration-200">
-            <Plus class="h-3.5 w-3.5" />
-            {{ t('mcpInstallations.actions.install') }}
-          </div>
-        </div>
-      </button>
+          </EmptyDescription>
+        </EmptyHeader>
+        <EmptyContent>
+          <Button @click="handleBrowseCatalog">
+            {{ t('mcpInstallations.featuredList.browseCatalog') }}
+          </Button>
+        </EmptyContent>
+      </Empty>
     </div>
 
-    <!-- Featured MCP Servers -->
-    <div class="mt-20 max-w-7xl">
-      <FeaturedMcpServers />
+    <div class="w-full lg:w-80 shrink-0">
+      <McpFeaturedList />
     </div>
   </div>
 </template>
