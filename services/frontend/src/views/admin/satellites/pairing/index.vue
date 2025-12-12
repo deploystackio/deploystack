@@ -3,12 +3,22 @@ import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
 import { toast } from 'vue-sonner'
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb'
 import { Button } from '@/components/ui/button'
+import { DsPageHeading } from '@/components/ui/ds-page-heading'
 import { Plus } from 'lucide-vue-next'
 import NavbarLayout from '@/components/NavbarLayout.vue'
 import TokenTable from '@/components/admin/satellites/TokenTable.vue'
 import CreateTokenModal from '@/components/admin/satellites/CreateTokenModal.vue'
 import { SatelliteTokenService, type RegistrationToken } from '@/services/satelliteTokenService'
+import { UserService } from '@/services/userService'
 
 const { t } = useI18n()
 const { setBreadcrumbs } = useBreadcrumbs()
@@ -18,6 +28,7 @@ const tokens = ref<RegistrationToken[]>([])
 const isLoading = ref(true)
 const error = ref<string | null>(null)
 const isCreateModalOpen = ref(false)
+const currentUserName = ref<string>('')
 
 // Fetch tokens from API
 const fetchTokens = async (): Promise<void> => {
@@ -48,7 +59,12 @@ const fetchTokens = async (): Promise<void> => {
 
 // Handle token creation
 const handleTokenCreated = (newToken: RegistrationToken) => {
-  tokens.value.unshift(newToken) // Add to beginning of list
+  // Add creator_name from current user since API doesn't return it
+  const tokenWithCreatorName = {
+    ...newToken,
+    creator_name: currentUserName.value || newToken.created_by
+  }
+  tokens.value.unshift(tokenWithCreatorName)
   isCreateModalOpen.value = false
 
   toast.success(t('satellites.pairing.toasts.tokenCreated.title'), {
@@ -85,25 +101,44 @@ onMounted(async () => {
     { label: t('satellites.title'), href: '/admin/satellites' },
     { label: t('satellites.pairing.title') }
   ])
+
+  // Fetch current user info for creator_name on new tokens
+  const user = await UserService.getCurrentUser()
+  if (user) {
+    // Format as "username (email)" to match API response
+    currentUserName.value = user.username ? `${user.username} (${user.email})` : user.email
+  }
+
   await fetchTokens()
 })
 </script>
 
 <template>
   <NavbarLayout>
-    <div class="space-y-6">
-      <!-- Header -->
-      <div class="flex justify-end">
-        <Button
-          @click="isCreateModalOpen = true"
-          variant="default"
-          class="flex items-center gap-2"
-        >
-          <Plus class="h-4 w-4" />
+    <DsPageHeading :title="t('satellites.pairing.title')">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink href="/admin/satellites">
+              {{ t('satellites.title') }}
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>{{ t('satellites.pairing.title') }}</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
+      <template #actions>
+        <Button @click="isCreateModalOpen = true">
+          <Plus class="h-4 w-4 mr-2" />
           {{ t('satellites.actions.createToken') }}
         </Button>
-      </div>
+      </template>
+    </DsPageHeading>
 
+    <div class="space-y-6">
       <!-- Loading State -->
       <div v-if="isLoading" class="text-muted-foreground">
         {{ t('satellites.pairing.loading') }}

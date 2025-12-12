@@ -9,6 +9,7 @@ import { DsPageHeading } from '@/components/ui/ds-page-heading'
 import { RefreshCw, Key } from 'lucide-vue-next'
 import NavbarLayout from '@/components/NavbarLayout.vue'
 import SatelliteTableColumns from './SatelliteTableColumns.vue'
+import PaginationControls from '@/components/ui/pagination/PaginationControls.vue'
 import { SatelliteService, type Satellite, type SatelliteListParams } from '@/services/satelliteService'
 import { useEventBus } from '@/composables/useEventBus'
 
@@ -28,7 +29,7 @@ const canManageSatellites = ref(true) // Trust router-level permission checking
 
 // Pagination
 const currentPage = ref(1)
-const itemsPerPage = ref(20)
+const pageSize = ref(20)
 const totalItems = ref(0)
 const totalPages = ref(0)
 
@@ -59,7 +60,7 @@ const fetchSatellites = async (forceRefresh = false): Promise<void> => {
 
     const params: SatelliteListParams = {
       page: currentPage.value,
-      limit: itemsPerPage.value
+      limit: pageSize.value
     }
 
     if (statusFilter.value) {
@@ -145,6 +146,12 @@ const handlePageChange = (page: number) => {
   fetchSatellites()
 }
 
+const handlePageSizeChange = (newSize: number) => {
+  pageSize.value = newSize
+  currentPage.value = 1
+  fetchSatellites()
+}
+
 // Load data on component mount
 onMounted(async () => {
   setBreadcrumbs([{ label: t('satellites.title') }])
@@ -215,34 +222,16 @@ onUnmounted(() => {
           :can-manage-satellites="canManageSatellites"
         />
 
-        <!-- Pagination Info -->
-        <div v-if="totalItems > 0" class="flex items-center justify-between text-sm text-muted-foreground">
-          <div>
-            {{ t('satellites.pagination.showing', {
-              start: (currentPage - 1) * itemsPerPage + 1,
-              end: Math.min(currentPage * itemsPerPage, totalItems),
-              total: totalItems
-            }) }}
-          </div>
-          <div class="flex items-center gap-2">
-            <Button
-              @click="handlePageChange(currentPage - 1)"
-              :disabled="currentPage <= 1"
-              variant="outline"
-              size="sm"
-            >
-              {{ t('satellites.pagination.previous') }}
-            </Button>
-            <span>{{ t('satellites.pagination.page', { current: currentPage, total: totalPages }) }}</span>
-            <Button
-              @click="handlePageChange(currentPage + 1)"
-              :disabled="currentPage >= totalPages"
-              variant="outline"
-              size="sm"
-            >
-              {{ t('satellites.pagination.next') }}
-            </Button>
-          </div>
+        <!-- Pagination -->
+        <div v-if="totalItems > 0" class="flex justify-end">
+          <PaginationControls
+            :current-page="currentPage"
+            :page-size="pageSize"
+            :total-items="totalItems"
+            :is-loading="isLoading"
+            @page-change="handlePageChange"
+            @page-size-change="handlePageSizeChange"
+          />
         </div>
       </div>
     </div>

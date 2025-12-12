@@ -22,7 +22,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
-import { Trash2, Clock, Globe, Users, Shield } from 'lucide-vue-next'
+import { Trash2, Clock, Globe, Users, Shield, CircleCheck, CircleX, CircleMinus } from 'lucide-vue-next'
 import type { RegistrationToken } from '@/services/satelliteTokenService'
 
 interface Props {
@@ -171,13 +171,21 @@ const goToUser = (userId: string) => {
           >
             <!-- Status -->
             <TableCell>
-              <Badge
-                :variant="getTokenStatus(token).variant"
-                class="flex items-center gap-1"
-              >
-                <component :is="getTokenStatus(token).icon" class="h-3 w-3" />
-                {{ getTokenStatus(token).label }}
-              </Badge>
+              <div class="inline-flex items-center justify-center rounded-full border px-1.5 py-0.5 text-xs font-medium text-muted-foreground gap-1">
+                <CircleCheck
+                  v-if="!token.used && new Date() <= new Date(token.expires_at)"
+                  class="size-3 fill-green-500 text-green-500 dark:fill-green-400 dark:text-green-400"
+                />
+                <CircleX
+                  v-else-if="new Date() > new Date(token.expires_at)"
+                  class="size-3 fill-red-500 text-red-500 dark:fill-red-400 dark:text-red-400"
+                />
+                <CircleMinus
+                  v-else
+                  class="size-3 text-muted-foreground"
+                />
+                <span>{{ getTokenStatus(token).label }}</span>
+              </div>
             </TableCell>
 
             <!-- Type -->
@@ -206,15 +214,13 @@ const goToUser = (userId: string) => {
 
             <!-- Created By -->
             <TableCell>
-              <Button
-                variant="ghost"
-                class="flex items-center gap-2 h-auto p-0 text-left font-normal hover:bg-transparent"
-                @click="goToUser(token.created_by)"
+              <a
+                class="link text-sm"
+                :href="`/admin/users/${token.created_by}`"
+                @click.prevent="goToUser(token.created_by)"
               >
-                <span class="text-sm text-teal-700 hover:text-teal-800 hover:underline">
-                  {{ token.creator_name || token.created_by }}
-                </span>
-              </Button>
+                {{ token.creator_name || token.created_by }}
+              </a>
             </TableCell>
 
             <!-- Created -->
