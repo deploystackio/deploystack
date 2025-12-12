@@ -1,5 +1,44 @@
 # Changelog
 
+## 0.14.0 (2025-12-12)
+
+* fix(backend): filter disabled servers from regular users, allow global_admin to see all 652696709215ab13de3697722a28e0643cefef76
+* fix(frontend): handle validation error in StdioServerInput component 46a685513f2a952e60450fdd3ac5105c45e1f775
+* feat(all): add SSE endpoint for streaming MCP client activity 305b0518aa48f072bf9614287323b73dc3bd1dec
+* feat(all): add SSE streaming to MCP metrics endpoint a3ce7487c1d55cf750d9cf6de9aa187997bfb781
+* feat(all): implement OAuth pending flows to prevent orphaned installations 8e83df53bbe09ca628ef74347fd6d9c7aafb3400
+* feat(backend): add SSE plugin with heartbeat interval for server events 9e75a8976ff59da9a0558713ba2a38c168e4d8ac
+* feat(frontend): add DsCard component and update action renderers 8d33715c534798b33985c7f5373ece383b01b01f
+* feat(frontend): add loading skeletons for satellite table display 5049c9f86d43260413f58bc00f301e3f7ed1abdb
+* feat(frontend): add navigation buttons to configuration schema step a869274d40a86149581544bf30d4fdb2c830bf56
+* feat(frontend): add source filter to MCP server catalog 92afca1b20ce2f63d69a6d1af16a0277c0b63d27
+* feat(frontend): add team detail components for general, limits, and members 5cd579a3e7e16cd2593e53eedbd170d6480c61e1
+* feat(frontend): add utility class for blue links and update usage e5530322bf167315790f7841556211e8a489c919
+* feat(frontend): enhance configuration schema steps with navigation buttons 4295c1b65f36d0f62b9ad2a9ed14ef8506344090
+* feat(frontend): enhance GitHub App settings with connection test feedback 56bf18b509aebab67a3bd3153a5cafe46d34eec3
+* feat(frontend): enhance job details and status display with skeletons 9cfbdaa4ed9b57bc1e4d64a56bdbd9c52bd7d7e8
+* feat(frontend): enhance token and satellite status display with icons 00c9f76d1506065476d44ea5da4a93eba1778bf3
+* feat(frontend): enhance validation for HTTP server configuration 4c6a684f0e869cb72379682c6aba45c31cf326b9
+* feat(frontend): implement admin and team navigation menus 2ed385f85cfab2c161193e93411e1a8ecb050d29
+* feat(frontend): implement DsCard component and refactor team management UI ab6b4ca9349cb40c3bd8a6804abcae68b0b472c0
+* feat(frontend): implement featured MCP servers list and browsing option bf759aea7b6fda071ecdd2092052f14d0c61aefd
+* feat(frontend): implement team edit functionality with validation 81cd1287852554d0e5d25b726ebc757b5b005786
+* feat(frontend): implement user detail view with password reset functionality f929ae009b38ba2fa043753381aa2b803c111213
+* feat(frontend): implement wizard stepper component for navigation 85c8cd3aded76feffb045be39466ebf4ba9ca49f
+* feat(frontend): implement wizard stepper for MCP server configuration 462f4bab4ef0a6b55a4d5f3795b3d161647817a1
+* feat(frontend): update account sidebar navigation with settings menu e04ac097b9785f688f3679008b97166b264df5d8
+* feat(frontend): update color variables and improve navbar layout e70d25092eb03a80365d7355c0e05ed6e5e3882a
+* feat(satellite): add wildcard search for MCP tools and limit results a75e4859bd5dc8cc1d7ab4c0a7f1ffefc00826bd
+* refactor(frontend): improve SMTP settings UI with toast notifications e26c3354dc3fb51421afa161cafbecba1e5f601b
+* refactor(frontend): replace horizontal icon with vertical icon in tables 7e23e220a3a4d552511eb6697d02197008b5f1ef
+* refactor(frontend): simplify header structure in multiple components 7c9902ee814c58aae246fc6e417cbb695204d2fb
+* style(frontend): reorder source filter tabs and bulk actions toolbar ee7431120552dc2ec4c86b86826143b5ebfb00af
+* style(frontend): update text color for improved visibility in headings d8b33431541c93c2d5f6b816d6dcf82c49b872f7
+* style(frontend): update text colors for improved visibility in settings menu 73178874f32b44ba360daadecfec4ab499ce7134
+* feat(backend,satellite): add MCP server status lifecycle tracking with health checks, logs, and auto-recovery dd384d0bb4c001a8b72a39319a59fa8f3f7c4449
+* chore(all): exclude release commits from changelog e990f583d0744ee15a543d5f3c1628fa382701f6
+* chore(deps): update dependencies in package.json and service packages c062e49b1843cbe6ac5223123bcdbecf7702c2c1
+
 ## <small>0.13.1 (2025-12-06)</small>
 
 * chore(backend): release v0.50.0 b7e6d19
