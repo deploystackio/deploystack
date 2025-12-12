@@ -6,7 +6,8 @@ import { toast } from 'vue-sonner'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { DsPageHeading } from '@/components/ui/ds-page-heading'
-import { RefreshCw, Key } from 'lucide-vue-next'
+import { Key } from 'lucide-vue-next'
+import { Spinner } from '@/components/ui/spinner'
 import NavbarLayout from '@/components/NavbarLayout.vue'
 import SatelliteTableColumns from './SatelliteTableColumns.vue'
 import PaginationControls from '@/components/ui/pagination/PaginationControls.vue'
@@ -185,9 +186,10 @@ onUnmounted(() => {
         <Button
           @click="handleRefresh"
           :disabled="isRefreshing"
+          class="min-w-[85px]"
         >
-          <RefreshCw :class="['h-4 w-4 mr-2', { 'animate-spin': isRefreshing }]" />
-          {{ t('satellites.actions.refresh') }}
+          <Spinner v-if="isRefreshing" />
+          <template v-else>{{ t('satellites.actions.refresh') }}</template>
         </Button>
       </template>
     </DsPageHeading>
@@ -220,6 +222,7 @@ onUnmounted(() => {
           :satellites="filteredSatellites"
           :on-status-update="handleStatusUpdate"
           :can-manage-satellites="canManageSatellites"
+          :is-loading="isLoading || isRefreshing"
         />
 
         <!-- Pagination -->

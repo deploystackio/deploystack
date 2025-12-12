@@ -27,6 +27,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { Skeleton } from '@/components/ui/skeleton'
 import { ChevronDown, CircleCheck, CircleMinus, CircleAlert, CircleX } from 'lucide-vue-next'
 import type { Satellite } from '@/services/satelliteService'
 import { SatelliteService } from '@/services/satelliteService'
@@ -37,6 +38,7 @@ interface Props {
   satellites: Satellite[]
   onStatusUpdate: (satelliteId: string, newStatus: Satellite['status']) => void
   canManageSatellites: boolean
+  isLoading?: boolean
 }
 
 const props = defineProps<Props>()
@@ -120,12 +122,24 @@ const getTypeText = (type: Satellite['satellite_type']): string => {
         </TableRow>
       </TableHeader>
       <TableBody>
-        <TableRow v-if="sortedSatellites.length === 0">
-          <TableCell :colspan="6" class="h-24 text-center">
-            {{ t('satellites.table.noData') }}
-          </TableCell>
-        </TableRow>
-        <TableRow v-for="satellite in sortedSatellites" :key="satellite.id">
+        <template v-if="isLoading">
+          <TableRow v-for="i in 5" :key="`skeleton-${i}`">
+            <TableCell><Skeleton class="h-4 w-32" /></TableCell>
+            <TableCell><Skeleton class="h-5 w-16" /></TableCell>
+            <TableCell><Skeleton class="h-5 w-20" /></TableCell>
+            <TableCell><Skeleton class="h-4 w-24" /></TableCell>
+            <TableCell><Skeleton class="h-5 w-28" /></TableCell>
+            <TableCell><Skeleton class="h-8 w-[100px]" /></TableCell>
+          </TableRow>
+        </template>
+
+        <template v-else>
+          <TableRow v-if="sortedSatellites.length === 0">
+            <TableCell :colspan="6" class="h-24 text-center">
+              {{ t('satellites.table.noData') }}
+            </TableCell>
+          </TableRow>
+          <TableRow v-for="satellite in sortedSatellites" :key="satellite.id">
           <TableCell class="font-medium">
             {{ satellite.name }}
           </TableCell>
@@ -201,6 +215,7 @@ const getTypeText = (type: Satellite['satellite_type']): string => {
             </DropdownMenu>
           </TableCell>
         </TableRow>
+        </template>
       </TableBody>
     </Table>
   </div>
