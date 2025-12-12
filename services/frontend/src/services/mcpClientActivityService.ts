@@ -37,8 +37,35 @@ export class McpClientActivityService {
   private static baseUrl = getEnv('VITE_DEPLOYSTACK_BACKEND_URL')
 
   /**
+   * Get SSE stream URL for real-time client activity updates
+   *
+   * @param teamId - Team ID to filter activity by
+   * @param params - Optional query parameters
+   * @returns SSE stream URL
+   */
+  static getStreamUrl(
+    teamId: string,
+    params: GetClientActivityParams = {}
+  ): string {
+    if (typeof teamId !== 'string' || !teamId) {
+      throw new Error(
+        'teamId must be a non-empty string. Did you pass the team object instead of team.id?'
+      )
+    }
+
+    const queryParams = new URLSearchParams()
+    queryParams.append('team_id', teamId)
+    if (params.limit) queryParams.append('limit', params.limit.toString())
+    if (params.active_within_minutes) {
+      queryParams.append('active_within_minutes', params.active_within_minutes.toString())
+    }
+
+    return `${this.baseUrl}/api/users/me/mcp/client-activity/stream?${queryParams.toString()}`
+  }
+
+  /**
    * Get current user's active MCP client connections for a specific team
-   * 
+   *
    * @param teamId - Team ID to filter activity by (must be a string)
    * @param params - Optional query parameters
    * @returns MCP client activity response

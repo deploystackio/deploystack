@@ -4033,6 +4033,65 @@
         }
       }
     },
+    "/api/users/me/mcp/client-activity/stream": {
+      "get": {
+        "summary": "Stream MCP client activity via SSE",
+        "tags": [
+          "Users",
+          "MCP"
+        ],
+        "description": "Real-time stream of MCP client activity using Server-Sent Events. Pushes updates every 10 seconds.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "query",
+            "name": "team_id",
+            "required": true,
+            "description": "Team ID to filter activity by"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "description": "Number of results (1-100)"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1440,
+              "default": 30
+            },
+            "in": "query",
+            "name": "active_within_minutes",
+            "required": false,
+            "description": "Show clients active within N minutes (1-1440)"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
     "/api/users/me/preferences": {
       "get": {
         "summary": "Get user preferences",
