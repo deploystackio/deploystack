@@ -1,6 +1,6 @@
 <script setup lang="ts">
 interface Props {
-  title: string
+  title?: string
 }
 
 defineProps<Props>()
@@ -10,10 +10,10 @@ defineProps<Props>()
   <div class="rounded-lg border border-neutral-200 bg-white mb-8 last:mb-0">
     <!-- Content Area -->
     <div class="p-6">
-      <h4 class="text-xl font-medium leading-8 tracking-tight text-foreground">
+      <h4 v-if="title" class="text-xl font-medium leading-8 tracking-tight text-foreground">
         {{ title }}
       </h4>
-      <div v-if="$slots.default" class="mt-4">
+      <div v-if="$slots.default" :class="{ 'mt-4': title }">
         <slot />
       </div>
     </div>

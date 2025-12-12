@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Edit, Trash2, Globe, MoreHorizontal, Lock } from 'lucide-vue-next'
+import { Edit, Trash2, Globe, MoreHorizontal, Lock } from 'lucide-vue-next'
 
 // Simple interface for header items (reusing existing structure)
 interface HeaderItem {
@@ -41,7 +41,6 @@ interface Props {
 
 defineProps<Props>()
 const emit = defineEmits<{
-  'add': []
   'edit': [index: number]
   'delete': [index: number]
 }>()
@@ -49,26 +48,6 @@ const emit = defineEmits<{
 
 <template>
   <div class="space-y-4">
-    <div>
-      <h4 class="text-md font-medium">{{ $t('mcpCatalog.form.configurationSchema.headers.title') }}</h4>
-      <p class="text-sm text-muted-foreground">
-        {{ $t('mcpCatalog.form.configurationSchema.headers.description') }}
-      </p>
-    </div>
-
-    <!-- Header with Add Button -->
-    <div class="flex items-center justify-between">
-      <div></div>
-      <Button
-        type="button"
-        @click="emit('add')"
-        class="flex items-center gap-2"
-      >
-        <Plus class="h-4 w-4" />
-        {{ $t('mcpCatalog.form.configurationSchema.headers.addButton') }}
-      </Button>
-    </div>
-
     <!-- Headers Display with Edit Actions -->
     <div v-if="items.length > 0" class="overflow-hidden">
       <table class="w-full text-left">

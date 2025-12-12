@@ -902,18 +902,21 @@ onUnmounted(() => {
       </DsCard>
 
       <!-- Step 4: Configuration Schema -->
-      <DsCard v-else-if="currentStep === 3" :title="t('mcpCatalog.form.steps.configurationSchema')">
+      <div v-else-if="currentStep === 3" class="space-y-6">
+        <h2 class="text-lg font-semibold">{{ t('mcpCatalog.form.steps.configurationSchema') }}</h2>
+
         <ConfigurationSchemaStepEdit />
 
-        <template #footer-actions>
+        <!-- Navigation Buttons -->
+        <div class="flex justify-end gap-3 pt-4">
           <Button variant="outline" @click="previousStep">
             {{ t('mcpCatalog.form.navigation.previous') }}
           </Button>
           <Button @click="nextStep">
             {{ t('mcpCatalog.form.navigation.next') }}
           </Button>
-        </template>
-      </DsCard>
+        </div>
+      </div>
 
       <!-- Step 5: README -->
       <DsCard v-else-if="currentStep === 4" title="README">
