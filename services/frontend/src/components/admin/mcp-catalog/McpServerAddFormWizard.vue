@@ -5,7 +5,7 @@ import { useI18n } from 'vue-i18n'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { ProgressBars } from '@/components/ui/progress-bars'
+import { DsStepper, type WizardStep } from '@/components/ui/ds-stepper'
 import { DsCard } from '@/components/ui/ds-card'
 import { FileText, Github, Settings } from 'lucide-vue-next'
 import { McpCatalogService } from '@/services/mcpCatalogService'
@@ -99,10 +99,10 @@ const steps = [
   }
 ]
 
-// Progress steps for ProgressBars component
-const progressSteps = computed(() => {
+// Wizard steps for WizardStepper component
+const wizardSteps = computed((): WizardStep[] => {
   return steps.map((step, index) => {
-    let status: 'completed' | 'current' | 'pending' | 'error' = 'pending'
+    let status: 'completed' | 'current' | 'pending' = 'pending'
 
     if (index < currentStep.value) {
       status = 'completed'
@@ -110,55 +110,12 @@ const progressSteps = computed(() => {
       status = 'current'
     }
 
-    // Check for errors
-    if (index === 0 && githubFetchError.value) {
-      status = 'error'
-    }
-
     return {
       id: step.key,
       label: step.label,
-      status,
-      clickable: index < currentStep.value // Only completed steps are clickable
+      status
     }
   })
-})
-
-// Calculate progress percentage
-const progressPercentage = computed(() => {
-  // Progress should match visual step positions:
-// Step 1 (index 0): 0%
-// Step 2 (index 1): 33%
-// Step 3 (index 2): 66%
-// Step 4 (index 3): 100%
-return (currentStep.value / (steps.length - 1)) * 100
-})
-
-// Progress title based on current step
-const progressTitle = computed(() => {
-  if (isSubmitting.value) {
-    return t('mcpCatalog.form.navigation.creating')
-  }
-  if (isFetchingGitHub.value) {
-    return t('mcpCatalog.form.navigation.fetching')
-  }
-  if (githubFetchError.value) {
-    return t('mcpCatalog.form.errors.githubFetch')
-  }
-
-  const currentStepData = steps[currentStep.value]
-  if (!currentStepData) {
-    return t('mcpCatalog.form.steps.configuring')
-  }
-  return `${currentStepData.label} - ${t('mcpCatalog.form.steps.configuring')}`
-})
-
-// Progress variant based on state
-const progressVariant = computed(() => {
-  if (githubFetchError.value || submitError.value) return 'destructive'
-  if (isSubmitting.value) return 'default' // Keep default while submitting
-  // Only show success after actual completion (would need to be handled by parent component)
-  return 'default'
 })
 
 // State
@@ -267,10 +224,9 @@ const goToStep = (stepIndex: number) => {
   }
 }
 
-// Handle step click from ProgressBars
-
-const handleStepClick = (step: any, index: number) => {
-  if (step.clickable) {
+// Handle step click from WizardStepper
+const handleStepClick = (step: WizardStep, index: number) => {
+  if (step.status === 'completed') {
     goToStep(index)
   }
 }
@@ -482,28 +438,25 @@ const submitForm = async () => {
 </script>
 
 <template>
-  <div class="space-y-6">
-    <!-- Progress Bar Navigation -->
-    <ProgressBars
-      :steps="progressSteps"
-      :progress="progressPercentage"
-      :title="progressTitle"
-      :variant="progressVariant"
-      size="md"
+  <div class="flex gap-8">
+    <!-- Wizard Stepper (Left Sidebar) -->
+    <DsStepper
+      :steps="wizardSteps"
       interactive
-      styled
       @step-click="handleStepClick"
     />
 
-    <!-- Error Message -->
-    <Alert v-if="submitError" variant="destructive">
-      <AlertDescription>
-        {{ submitError }}
-      </AlertDescription>
-    </Alert>
+    <!-- Step Content (Right Side) -->
+    <div class="flex-1 space-y-6">
+      <!-- Error Message -->
+      <Alert v-if="submitError" variant="destructive">
+        <AlertDescription>
+          {{ submitError }}
+        </AlertDescription>
+      </Alert>
 
-    <!-- Step 1: GitHub Repository -->
-    <DsCard v-if="currentStep === 0" :title="t('mcpCatalog.form.steps.github')">
+      <!-- Step 1: GitHub Repository -->
+      <DsCard v-if="currentStep === 0" :title="t('mcpCatalog.form.steps.github')">
       <GitHubRepositoryStep
         v-model="formData.repository"
         :form-data="compatibleFormData"
@@ -587,5 +540,6 @@ const submitForm = async () => {
         </Button>
       </template>
     </DsCard>
+    </div>
   </div>
 </template>
