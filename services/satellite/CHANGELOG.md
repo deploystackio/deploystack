@@ -2,6 +2,8 @@
 
 ## 0.14.0 (2025-12-12)
 
+## 0.14.0 (2025-12-12)
+
 * fix(backend): filter disabled servers from regular users, allow global_admin to see all 652696709215ab13de3697722a28e0643cefef76
 * fix(frontend): handle validation error in StdioServerInput component 46a685513f2a952e60450fdd3ac5105c45e1f775
 * feat(all): add SSE endpoint for streaming MCP client activity 305b0518aa48f072bf9614287323b73dc3bd1dec
