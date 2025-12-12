@@ -6142,6 +6142,86 @@
         }
       }
     },
+    "/api/me/metrics/mcp/client-activity/stream": {
+      "get": {
+        "summary": "Stream MCP client activity metrics via SSE",
+        "tags": [
+          "Users",
+          "Metrics",
+          "MCP"
+        ],
+        "description": "Real-time stream of MCP client activity metrics using Server-Sent Events. Pushes updates every 15 seconds.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "query",
+            "name": "team_id",
+            "required": true,
+            "description": "Team ID to filter metrics"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "1h",
+                "3h",
+                "6h",
+                "12h",
+                "24h",
+                "3d"
+              ]
+            },
+            "in": "query",
+            "name": "time_range",
+            "required": false,
+            "description": "Time range for metrics (maximum 3 days for MCP client activity)"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "15m"
+              ]
+            },
+            "in": "query",
+            "name": "interval",
+            "required": false,
+            "description": "Bucket interval for aggregation (only 15m supported for MCP client activity)"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "satellite_id",
+            "required": false,
+            "description": "Optional satellite ID to filter metrics"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "auth_identifier",
+            "required": false,
+            "description": "Optional auth identifier to filter metrics"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
     "/api/settings": {
       "get": {
         "summary": "List all global settings",

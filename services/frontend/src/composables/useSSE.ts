@@ -39,6 +39,17 @@ export function useSSE<T>(
   let eventSource: EventSource | null = null
   let reconnectTimeout: number | null = null
   let currentUrl: string | null = null
+  let isUnloading = false
+
+  // Close connections before page unload to prevent browser warnings
+  const handleBeforeUnload = () => {
+    isUnloading = true
+    disconnect()
+  }
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('beforeunload', handleBeforeUnload)
+  }
 
   function connect(url: string) {
     currentUrl = url
@@ -84,6 +95,9 @@ export function useSSE<T>(
         isConnected.value = false
         isLoading.value = false
 
+        // Don't reconnect if page is unloading
+        if (isUnloading) return
+
         // Schedule reconnect
         if (reconnectTimeout) clearTimeout(reconnectTimeout)
         reconnectTimeout = window.setTimeout(() => {
@@ -113,6 +127,9 @@ export function useSSE<T>(
 
   onUnmounted(() => {
     disconnect()
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+    }
   })
 
   return {

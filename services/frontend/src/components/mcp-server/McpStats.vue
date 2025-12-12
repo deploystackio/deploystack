@@ -1,31 +1,20 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { computed, onMounted, onUnmounted } from 'vue'
 import { useEventBus } from '@/composables/useEventBus'
+import { useSSE } from '@/composables/useSSE'
 import { LineChart } from '@/components/ui/chart'
 import { McpClientActivityMetricsService } from '@/services/mcpClientActivityMetricsService'
+import type { McpClientActivityMetricsResponse } from '@/services/mcpClientActivityMetricsService'
 
 const eventBus = useEventBus()
 
-const isLoading = ref(true)
-const error = ref<string | null>(null)
-const requestData = ref<number[]>([])
-const timeLabels = ref<string[]>([])
-
-const totalRequests = computed(() => 
-  requestData.value.reduce((sum, val) => sum + val, 0)
-)
-
-const averageRequests = computed(() => 
-  requestData.value.length > 0 
-    ? Math.round(totalRequests.value / requestData.value.length) 
-    : 0
-)
-
-const peakRequests = computed(() => 
-  requestData.value.length > 0 
-    ? Math.max(...requestData.value) 
-    : 0
-)
+const {
+  data: metricsData,
+  isLoading,
+  error,
+  connect,
+  disconnect
+} = useSSE<McpClientActivityMetricsResponse['data']>('mcp_metrics')
 
 function formatTimeLabel(timestamp: string): string {
   const date = new Date(timestamp)
@@ -34,44 +23,62 @@ function formatTimeLabel(timestamp: string): string {
   return `${hour}:${minute}`
 }
 
-async function fetchMetrics() {
+const requestData = computed(() =>
+  metricsData.value?.buckets.map(bucket => bucket.request_count) ?? []
+)
+
+const timeLabels = computed(() =>
+  metricsData.value?.buckets.map(bucket => formatTimeLabel(bucket.timestamp)) ?? []
+)
+
+const totalRequests = computed(() =>
+  requestData.value.reduce((sum, val) => sum + val, 0)
+)
+
+const averageRequests = computed(() =>
+  requestData.value.length > 0
+    ? Math.round(totalRequests.value / requestData.value.length)
+    : 0
+)
+
+const peakRequests = computed(() =>
+  requestData.value.length > 0
+    ? Math.max(...requestData.value)
+    : 0
+)
+
+function connectToTeam(teamId: string) {
+  const url = McpClientActivityMetricsService.getStreamUrl({
+    team_id: teamId,
+    time_range: '3h',
+    interval: '15m'
+  })
+  connect(url)
+}
+
+function handleTeamChange() {
   const teamId = eventBus.getState<string>('selected_team_id')
-  
-  if (!teamId) {
-    error.value = 'No team selected'
-    console.warn('No team selected - cannot fetch metrics')
-    isLoading.value = false
-    return
-  }
-  
-  try {
-    isLoading.value = true
-    error.value = null
-    
-    const response = await McpClientActivityMetricsService.getMetrics({
-      team_id: teamId,
-      time_range: '3h',
-      interval: '15m'
-    })
-    
-    requestData.value = response.data.buckets.map(bucket => bucket.request_count)
-    timeLabels.value = response.data.buckets.map(bucket => formatTimeLabel(bucket.timestamp))
-  } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Failed to fetch metrics'
-    console.error('Failed to fetch MCP metrics:', err)
-    requestData.value = []
-    timeLabels.value = []
-  } finally {
-    isLoading.value = false
+
+  if (teamId) {
+    connectToTeam(teamId)
+  } else {
+    disconnect()
   }
 }
 
-onMounted(async () => {
-  await fetchMetrics()
-  
-  eventBus.on('team-selected', async () => {
-    await fetchMetrics()
-  })
+onMounted(() => {
+  const teamId = eventBus.getState<string>('selected_team_id')
+
+  if (teamId) {
+    connectToTeam(teamId)
+  }
+
+  eventBus.on('team-selected', handleTeamChange)
+})
+
+onUnmounted(() => {
+  eventBus.off('team-selected', handleTeamChange)
+  disconnect()
 })
 </script>
 
@@ -83,8 +90,8 @@ onMounted(async () => {
 
     <div v-if="error" class="text-center py-8">
       <p class="text-sm text-destructive mb-2">{{ error }}</p>
-      <button 
-        @click="fetchMetrics" 
+      <button
+        @click="handleTeamChange"
         class="text-sm text-primary hover:underline"
       >
         Retry

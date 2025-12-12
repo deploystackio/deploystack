@@ -92,4 +92,27 @@ export class McpClientActivityMetricsService {
 
     return response.json()
   }
+
+  /**
+   * Get SSE stream URL for real-time metrics updates
+   *
+   * @param params - Query parameters including required team_id
+   * @returns SSE stream URL
+   */
+  static getStreamUrl(params: GetMetricsParams): string {
+    if (!params.team_id || typeof params.team_id !== 'string') {
+      throw new Error('team_id is required and must be a string')
+    }
+
+    const queryParams = new URLSearchParams()
+
+    queryParams.append('team_id', params.team_id)
+
+    if (params.time_range) queryParams.append('time_range', params.time_range)
+    if (params.interval) queryParams.append('interval', params.interval)
+    if (params.satellite_id) queryParams.append('satellite_id', params.satellite_id)
+    if (params.auth_identifier) queryParams.append('auth_identifier', params.auth_identifier)
+
+    return `${this.baseUrl}/api/me/metrics/mcp/client-activity/stream?${queryParams.toString()}`
+  }
 }
