@@ -11,7 +11,7 @@ interface Props {
   canChangePassword?: boolean
 }
 
-const props = withDefaults(defineProps<Props>(), {
+withDefaults(defineProps<Props>(), {
   canChangePassword: true
 })
 

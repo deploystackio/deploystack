@@ -97,7 +97,7 @@ watch(jsonInput, (newValue) => {
       raw_json: newValue
     })
   } else {
-    validationError.value = validation.error
+    validationError.value = validation.error ?? null
     isValid.value = false
     extractedServerName.value = ''
     extractedCommand.value = ''

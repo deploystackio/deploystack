@@ -4,7 +4,6 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import NavbarLayout from '@/components/NavbarLayout.vue'
 import { Button } from '@/components/ui/button'
-import { Plus } from 'lucide-vue-next'
 import { toast } from 'vue-sonner'
 import { useEventBus } from '@/composables/useEventBus'
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
@@ -415,7 +414,7 @@ onUnmounted(() => {
   <NavbarLayout>
     <div class="space-y-6">
       <!-- Header -->
-      <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mt-8">
         <div class="flex-1">
           <TeamUsageIndicator v-if="selectedTeam" :team-id="selectedTeam.id" />
         </div>
@@ -425,7 +424,7 @@ onUnmounted(() => {
             @click="handleOpenConfigModal"
             variant="outline"
             :class="[
-              'flex items-center justify-center gap-2 bg-black text-white border-black hover:bg-black/90 hover:border-black hover:text-white',
+              'flex items-center justify-center gap-2',
               showStep2ButtonHighZIndex ? 'relative z-[10000]' : ''
             ]"
           >
@@ -435,8 +434,7 @@ onUnmounted(() => {
             @click="handleInstallServer"
             class="flex items-center justify-center gap-2"
           >
-            <Plus class="h-4 w-4" />
-            {{ t('mcpInstallations.actions.install') }}
+            {{ t('mcpInstallations.featuredList.browseCatalog') }}
           </Button>
         </div>
       </div>

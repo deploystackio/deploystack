@@ -5,7 +5,6 @@ import { useRouter } from 'vue-router'
 import NavbarLayout from '@/components/NavbarLayout.vue'
 import { DsPageHeading } from '@/components/ui/ds-page-heading'
 import { Button } from '@/components/ui/button'
-import { Plus } from 'lucide-vue-next'
 import { toast } from 'vue-sonner'
 import { useEventBus } from '@/composables/useEventBus'
 import McpInstallationsCard from '@/components/mcp-server/McpInstallationsCard.vue'
@@ -255,8 +254,7 @@ onUnmounted(() => {
           @click="handleInstallServer"
           class="flex items-center gap-2"
         >
-          <Plus class="h-4 w-4" />
-          {{ t('mcpInstallations.actions.install') }}
+          {{ t('mcpInstallations.featuredList.browseCatalog') }}
         </Button>
       </template>
     </DsPageHeading>

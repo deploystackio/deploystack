@@ -394,7 +394,6 @@ watch(
 )
 
 // Computed properties
-const currentStepData = computed(() => steps[currentStep.value] || null)
 const isFirstStep = computed(() => currentStep.value === 0)
 const isLastStep = computed(() => currentStep.value === steps.length - 1)
 const canGoNext = computed(() => !isLastStep.value)

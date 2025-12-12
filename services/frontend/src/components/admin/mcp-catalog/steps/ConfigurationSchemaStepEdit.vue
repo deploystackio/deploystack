@@ -29,7 +29,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 
-import { Terminal, Users, User, Globe, Plus } from 'lucide-vue-next'
+import { Terminal, Users, User, Plus } from 'lucide-vue-next'
 import { DsCard } from '@/components/ui/ds-card'
 import ConfigurationSchemaEnvironmentSection from './ConfigurationSchemaEnvironmentSection.vue'
 import ConfigurationSchemaHeadersSection from './ConfigurationSchemaHeadersSection.vue'

@@ -11,7 +11,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Terminal, Users, User, Globe, Plus } from 'lucide-vue-next'
+import { Terminal, Users, User, Plus } from 'lucide-vue-next'
 import { DsCard } from '@/components/ui/ds-card'
 import { Button } from '@/components/ui/button'
 import ConfigurationSchemaEnvironmentSection from './ConfigurationSchemaEnvironmentSection.vue'
