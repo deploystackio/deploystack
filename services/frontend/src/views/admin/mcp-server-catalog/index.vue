@@ -21,6 +21,7 @@ import {
 import { Plus, RefreshCw, ExternalLink } from 'lucide-vue-next'
 import { Spinner } from '@/components/ui/spinner'
 import NavbarLayout from '@/components/NavbarLayout.vue'
+import { DsPageHeading } from '@/components/ui/ds-page-heading'
 import { McpCatalogService, type PaginationMeta } from '@/services/mcpCatalogService'
 import { useEventBus } from '@/composables/useEventBus'
 import McpServerTableColumns from './McpServerTableColumns.vue'
@@ -582,31 +583,27 @@ onUnmounted(() => {
 
 <template>
   <NavbarLayout>
-    <div class="space-y-6">
-      <!-- Header -->
-      <div class="flex items-center justify-between">
-        <div>
-          <p class="text-muted-foreground">{{ t('mcpCatalog.description') }}</p>
-        </div>
-        <div class="flex items-center gap-2">
-          <Button
-            variant="outline"
-            @click="isSyncModalOpen = true"
-            class="flex items-center gap-2"
-          >
-            <RefreshCw class="h-4 w-4" />
-            {{ t('mcpCatalog.registrySync.button') }}
-          </Button>
-          <Button
-            @click="handleAddServer"
-            class="flex items-center gap-2"
-          >
-            <Plus class="h-4 w-4" />
-            {{ t('mcpCatalog.addButton') }}
-          </Button>
-        </div>
-      </div>
+    <DsPageHeading :title="t('mcpCatalog.title')">
+      <template #actions>
+        <Button
+          variant="outline"
+          @click="isSyncModalOpen = true"
+          class="flex items-center gap-2"
+        >
+          <RefreshCw class="h-4 w-4" />
+          {{ t('mcpCatalog.registrySync.button') }}
+        </Button>
+        <Button
+          @click="handleAddServer"
+          class="flex items-center gap-2"
+        >
+          <Plus class="h-4 w-4" />
+          {{ t('mcpCatalog.addButton') }}
+        </Button>
+      </template>
+    </DsPageHeading>
 
+    <div class="space-y-6 mt-6">
       <!-- Error State -->
       <div v-if="error" class="text-red-500">
         {{ t('mcpCatalog.table.error', { error }) }}

@@ -556,7 +556,9 @@ const getRepositoryLabel = (platform?: string) => {
           <!-- Name -->
           <TableCell>
             <div class="space-y-1">
-              <div>{{ server.name }}</div>
+              <RouterLink :to="`/admin/mcp-server-catalog/view/${server.id}`" class="link">
+                {{ server.name }}
+              </RouterLink>
               <!-- Repository Link -->
               <div v-if="server.repository_url" class="flex items-center gap-1">
                 <component

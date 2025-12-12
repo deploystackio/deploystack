@@ -102,12 +102,9 @@ watch(repositoryUrl, validateUrl)
 
 <template>
   <div class="space-y-6">
-    <div>
-      <h2 class="text-2xl font-semibold mb-2">GitHub Repository</h2>
-      <p class="text-muted-foreground">
-        Enter the GitHub repository URL for your MCP server
-      </p>
-    </div>
+    <p class="text-sm text-muted-foreground">
+      Enter the GitHub repository URL for your MCP server.
+    </p>
 
     <div class="space-y-2">
       <Label for="repository-url">Repository URL (Optional)</Label>

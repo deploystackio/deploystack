@@ -6,10 +6,10 @@ import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { ProgressBars } from '@/components/ui/progress-bars'
+import { DsCard } from '@/components/ui/ds-card'
 import { FileText, Github, Settings } from 'lucide-vue-next'
 import { McpCatalogService } from '@/services/mcpCatalogService'
 import { useEventBus } from '@/composables/useEventBus'
-import ContentWrapper from '@/components/ContentWrapper.vue'
 import GitHubRepositoryStep from '@/components/admin/mcp-catalog/GitHubRepositoryStep.vue'
 import ClaudeDesktopConfigStep from '@/components/admin/mcp-catalog/ClaudeDesktopConfigStep.vue'
 import ConfigurationSchemaStepAdd from '@/components/admin/mcp-catalog/steps/ConfigurationSchemaStepAdd.vue'
@@ -502,58 +502,27 @@ const submitForm = async () => {
       </AlertDescription>
     </Alert>
 
-    <!-- Step Content -->
-    <ContentWrapper>
-      <!-- Repository Step -->
+    <!-- Step 1: GitHub Repository -->
+    <DsCard v-if="currentStep === 0" :title="t('mcpCatalog.form.steps.github')">
       <GitHubRepositoryStep
-        v-if="currentStep === 0"
         v-model="formData.repository"
         :form-data="compatibleFormData"
       />
 
-      <!-- Claude Config Step -->
-      <ClaudeDesktopConfigStep
-        v-else-if="currentStep === 1"
-        v-model="formData.claudeConfig"
-      />
+      <!-- GitHub Fetch Error -->
+      <Alert v-if="githubFetchError" variant="destructive" class="mt-4">
+        <AlertDescription>
+          {{ githubFetchError }}
+          <br>
+          <span class="text-sm">{{ t('mcpCatalog.validation.githubUrlInvalid') }}</span>
+        </AlertDescription>
+      </Alert>
 
-      <!-- Configuration Schema Step -->
-      <ConfigurationSchemaStepAdd
-        v-else-if="currentStep === 2"
-        v-model="formData.configuration_schema"
-        :claudeConfig="formData.claudeConfig"
-      />
-
-      <!-- Basic Info Step -->
-      <BasicInfoStepAdd
-        v-else-if="currentStep === 3"
-        v-model="formData.basic"
-        :form-data="compatibleFormData"
-      />
-    </ContentWrapper>
-
-    <!-- Navigation Buttons -->
-    <div class="flex items-center justify-between">
-      <Button
-        v-if="canGoPrevious"
-        variant="outline"
-        @click="previousStep"
-      >
-        {{ t('mcpCatalog.form.navigation.previous') }}
-      </Button>
-      <div v-else></div>
-
-      <div class="flex items-center gap-2">
-        <Button
-          variant="ghost"
-          @click="handleCancel"
-        >
+      <template #footer-actions>
+        <Button variant="outline" @click="handleCancel">
           {{ cancelText }}
         </Button>
-
-        <!-- Special GitHub step button with loading -->
         <Button
-          v-if="currentStep === 0"
           @click="handleGitHubStepNext"
           :disabled="!canProceedFromGitHub || isFetchingGitHub"
           class="min-w-[120px]"
@@ -561,35 +530,62 @@ const submitForm = async () => {
           <Spinner v-if="isFetchingGitHub" class="mr-2" />
           {{ t('mcpCatalog.form.navigation.next') }}
         </Button>
+      </template>
+    </DsCard>
 
-        <!-- Normal next button for Claude config and new Schema step -->
+    <!-- Step 2: Claude Desktop Config -->
+    <DsCard v-else-if="currentStep === 1" :title="t('mcpCatalog.form.steps.claudeConfig')">
+      <ClaudeDesktopConfigStep v-model="formData.claudeConfig" />
+
+      <template #footer-actions>
+        <Button variant="outline" @click="previousStep">
+          {{ t('mcpCatalog.form.navigation.previous') }}
+        </Button>
         <Button
-          v-else-if="currentStep === 1 || currentStep === 2"
           @click="nextStep"
-          :disabled="currentStep === 1 && !canProceedFromClaudeConfig"
+          :disabled="!canProceedFromClaudeConfig"
         >
           {{ t('mcpCatalog.form.navigation.next') }}
         </Button>
+      </template>
+    </DsCard>
 
-        <!-- Submit button for final step -->
+    <!-- Step 3: Configuration Schema -->
+    <DsCard v-else-if="currentStep === 2" :title="t('mcpCatalog.form.steps.configurationSchema')">
+      <ConfigurationSchemaStepAdd
+        v-model="formData.configuration_schema"
+        :claudeConfig="formData.claudeConfig"
+      />
+
+      <template #footer-actions>
+        <Button variant="outline" @click="previousStep">
+          {{ t('mcpCatalog.form.navigation.previous') }}
+        </Button>
+        <Button @click="nextStep">
+          {{ t('mcpCatalog.form.navigation.next') }}
+        </Button>
+      </template>
+    </DsCard>
+
+    <!-- Step 4: Basic Info -->
+    <DsCard v-else-if="currentStep === 3" :title="t('mcpCatalog.form.steps.basic')">
+      <BasicInfoStepAdd
+        v-model="formData.basic"
+        :form-data="compatibleFormData"
+      />
+
+      <template #footer-actions>
+        <Button variant="outline" @click="previousStep">
+          {{ t('mcpCatalog.form.navigation.previous') }}
+        </Button>
         <Button
-          v-else
           @click="submitForm"
           :disabled="!canSubmit || isSubmitting"
         >
           <Spinner v-if="isSubmitting" class="mr-2" />
           {{ t('mcpCatalog.form.navigation.submit') }}
         </Button>
-      </div>
-    </div>
-
-    <!-- GitHub Fetch Error (show below navigation) -->
-    <Alert v-if="githubFetchError && currentStep === 0" variant="destructive" class="mt-4">
-      <AlertDescription>
-        {{ githubFetchError }}
-        <br>
-        <span class="text-sm">{{ t('mcpCatalog.validation.githubUrlInvalid') }}</span>
-      </AlertDescription>
-    </Alert>
+      </template>
+    </DsCard>
   </div>
 </template>

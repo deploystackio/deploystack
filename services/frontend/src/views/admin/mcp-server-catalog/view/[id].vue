@@ -9,19 +9,21 @@ import { Badge } from '@/components/ui/badge'
 import CategoryDisplay from '@/components/mcp-server/CategoryDisplay.vue'
 import ContentWrapper from '@/components/ContentWrapper.vue'
 import McpServerAvatar from '@/components/mcp-server/McpServerAvatar.vue'
-import { Github, GitBranch, Globe, ExternalLink, Package, Settings, Calendar, Tag, Trash2, Edit, Terminal, Users, User, Lock, Unlock, Link } from 'lucide-vue-next'
+import { Github, GitBranch, Globe, ExternalLink, Package, Calendar, Tag, Terminal, Users, User, Lock, Unlock, Link } from 'lucide-vue-next'
 import NavbarLayout from '@/components/NavbarLayout.vue'
+import { DsPageHeading } from '@/components/ui/ds-page-heading'
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb'
 
 import { McpCatalogService } from '@/services/mcpCatalogService'
 import type { McpServer } from '../types'
 import McpServerDeleteDialog from '@/components/mcp-server/McpServerDeleteDialog.vue'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -381,31 +383,37 @@ const getRepositoryLabel = (platform: string | undefined) => {
 
 <template>
   <NavbarLayout>
-    <div class="space-y-6">
-      <!-- Header with Manage Dropdown -->
-      <div class="flex items-center justify-end">
-        <!-- Manage Server Dropdown -->
-        <DropdownMenu v-if="server">
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" :disabled="isDeleting">
-              <Settings class="h-4 w-4 mr-2" />
-              {{ t('mcpCatalog.edit.actions.manageServer') }}
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem @click="handleEditServer">
-              <Edit class="h-4 w-4 mr-2" />
-              {{ t('mcpCatalog.edit.actions.editServer') }}
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem @click="showDeleteDialog = true" class="text-red-600 focus:text-red-600">
-              <Trash2 class="h-4 w-4 mr-2" />
-              {{ t('mcpCatalog.edit.actions.deleteServer') }}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
+    <DsPageHeading :title="server?.name || t('mcpCatalog.edit.titleLoading')">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink as-child>
+              <RouterLink to="/admin/mcp-server-catalog">
+                {{ t('mcpCatalog.title') }}
+              </RouterLink>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>{{ server?.name || t('mcpCatalog.edit.titleLoading') }}</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
 
+      <template #actions>
+        <div v-if="server" class="flex items-center gap-2">
+          <Button variant="outline" @click="handleEditServer">
+            Edit
+          </Button>
+          <span class="text-neutral-300">|</span>
+          <Button variant="outline" :disabled="isDeleting" @click="showDeleteDialog = true" class="text-red-600 hover:text-red-600">
+            Delete
+          </Button>
+        </div>
+      </template>
+    </DsPageHeading>
+
+    <div class="space-y-6 mt-6">
       <!-- Loading State -->
       <div v-if="isLoading" class="text-muted-foreground">
         {{ t('mcpCatalog.edit.loading') }}

@@ -4,9 +4,16 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
 import { toast } from 'vue-sonner'
-import { Button } from '@/components/ui/button'
-import { ArrowLeft } from 'lucide-vue-next'
 import NavbarLayout from '@/components/NavbarLayout.vue'
+import { DsPageHeading } from '@/components/ui/ds-page-heading'
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb'
 import McpServerAddFormWizard from '@/components/admin/mcp-catalog/McpServerAddFormWizard.vue'
 import { McpCatalogService } from '@/services/mcpCatalogService'
 import type { CreateMcpServerRequest } from './types'
@@ -25,10 +32,6 @@ onMounted(() => {
     { label: t('mcpCatalog.form.title') }
   ])
 })
-
-const goBack = () => {
-  router.push('/admin/mcp-server-catalog')
-}
 
 const handleSubmit = async (formData: FinalPayload) => {
   try {
@@ -63,15 +66,25 @@ const handleCancel = () => {
 
 <template>
   <NavbarLayout>
-    <div class="space-y-6">
-      <!-- Header with back button -->
-      <div class="flex items-center gap-4">
-        <Button variant="ghost" size="sm" @click="goBack" class="flex items-center gap-2">
-          <ArrowLeft class="h-4 w-4" />
-          {{ t('mcpCatalog.edit.backToCatalog') }}
-        </Button>
-      </div>
+    <DsPageHeading :title="t('mcpCatalog.form.title')">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink as-child>
+              <RouterLink to="/admin/mcp-server-catalog">
+                {{ t('mcpCatalog.title') }}
+              </RouterLink>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>{{ t('mcpCatalog.form.title') }}</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+    </DsPageHeading>
 
+    <div class="mt-6">
       <!-- Form Wizard Component -->
       <McpServerAddFormWizard
         @submit="handleSubmit"

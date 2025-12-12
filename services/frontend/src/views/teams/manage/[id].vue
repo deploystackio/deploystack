@@ -161,8 +161,10 @@ onUnmounted(() => {
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbLink href="/teams">
-              {{ t('teams.title') }}
+            <BreadcrumbLink as-child>
+              <RouterLink to="/teams">
+                {{ t('teams.title') }}
+              </RouterLink>
             </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />

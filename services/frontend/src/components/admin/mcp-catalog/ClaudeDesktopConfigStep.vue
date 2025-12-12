@@ -57,13 +57,9 @@ watch([httpConfig, stdioConfig, activeTab], () => {
 
 <template>
   <div class="space-y-6">
-    <!-- Header -->
-    <div>
-      <h2 class="text-xl font-semibold">Server Transport Type</h2>
-      <p class="text-sm text-muted-foreground mt-1">
-        Choose how your MCP server will be accessed
-      </p>
-    </div>
+    <p class="text-sm text-muted-foreground">
+      Choose how your MCP server will be accessed.
+    </p>
 
     <!-- Transport Type Tabs -->
     <DsTabs v-model="activeTab" variant="pills">

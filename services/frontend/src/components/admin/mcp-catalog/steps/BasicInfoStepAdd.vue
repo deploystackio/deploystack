@@ -86,13 +86,10 @@ loadCategories()
 
 <template>
   <div class="space-y-6">
-    <div class="px-4 sm:px-0">
-      <h3 class="text-base/7 font-semibold text-gray-900">{{ t('mcpCatalog.form.basic.title') }}</h3>
-      <p class="mt-1 max-w-2xl text-sm/6 text-gray-500">
-        {{ t('mcpCatalog.form.basic.subtitle') }}
-        <span v-if="isAutoPopulated"> (auto-populated from GitHub)</span>
-      </p>
-    </div>
+    <p class="text-sm text-muted-foreground">
+      {{ t('mcpCatalog.form.basic.subtitle') }}
+      <span v-if="isAutoPopulated"> (auto-populated from GitHub)</span>
+    </p>
 
     <!-- Auto-population success indicator -->
     <Alert v-if="isAutoPopulated" class="border-green-200 bg-green-50">

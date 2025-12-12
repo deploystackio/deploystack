@@ -10,6 +10,15 @@ import { Spinner } from '@/components/ui/spinner'
 import { Loader2 } from 'lucide-vue-next'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import NavbarLayout from '@/components/NavbarLayout.vue'
+import { DsPageHeading } from '@/components/ui/ds-page-heading'
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb'
 import McpServerFormWizard from '@/components/admin/mcp-catalog/McpServerEditFormWizard.vue'
 import { McpCatalogService } from '@/services/mcpCatalogService'
 import { useEventBus } from '@/composables/useEventBus'
@@ -400,7 +409,33 @@ onMounted(() => {
 
 <template>
   <NavbarLayout>
-    <div class="space-y-6">
+    <DsPageHeading :title="serverData?.name || t('mcpCatalog.edit.titleLoading')">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink as-child>
+              <RouterLink to="/admin/mcp-server-catalog">
+                {{ t('mcpCatalog.title') }}
+              </RouterLink>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbLink as-child>
+              <RouterLink :to="`/admin/mcp-server-catalog/view/${serverId}`">
+                {{ serverData?.name || t('mcpCatalog.edit.titleLoading') }}
+              </RouterLink>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>{{ t('mcpCatalog.form.navigation.edit') }}</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+    </DsPageHeading>
+
+    <div class="space-y-6 mt-6">
       <!-- Loading State -->
       <div v-if="isLoading" class="flex items-center justify-center py-12">
         <div class="flex items-center gap-2 text-muted-foreground">
