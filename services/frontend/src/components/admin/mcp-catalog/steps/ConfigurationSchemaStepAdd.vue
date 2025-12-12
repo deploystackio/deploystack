@@ -11,7 +11,9 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Terminal, Users, User, Globe } from 'lucide-vue-next'
+import { Terminal, Users, User, Globe, Plus } from 'lucide-vue-next'
+import { DsCard } from '@/components/ui/ds-card'
+import { Button } from '@/components/ui/button'
 import ConfigurationSchemaEnvironmentSection from './ConfigurationSchemaEnvironmentSection.vue'
 import ConfigurationSchemaHeadersSection from './ConfigurationSchemaHeadersSection.vue'
 import ConfigurationSchemaQueryParamsSection from './ConfigurationSchemaQueryParamsSection.vue'
@@ -982,69 +984,83 @@ watch(localData, () => {
 
 <template>
   <div class="space-y-6">
-    <!-- Server Type Indicator -->
-    <div v-if="isHttpBasedServer" class="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-      <Globe class="h-4 w-4 text-blue-600" />
-      <span class="text-sm font-medium text-blue-900">
-        {{ $t('mcpCatalog.form.configurationSchema.serverTypeIndicator.http') }}
-      </span>
-    </div>
-    <div v-else class="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
-      <Terminal class="h-4 w-4 text-green-600" />
-      <span class="text-sm font-medium text-green-900">
-        {{ $t('mcpCatalog.form.configurationSchema.serverTypeIndicator.stdio') }}
-      </span>
-    </div>
-
     <!-- Arguments Section - Only show for STDIO servers -->
-    <ConfigurationSchemaArgumentsSection
-      v-if="!isHttpBasedServer"
-      :items="argumentItems"
-      :get-category-info="getCategoryInfo"
-      @add="handleArgAdd"
-      @edit="handleArgEdit"
-      @delete="handleArgDelete"
-      @move-up="handleArgMoveUp"
-      @move-down="handleArgMoveDown"
-    />
+    <DsCard v-if="!isHttpBasedServer" :title="$t('mcpCatalog.form.configurationSchema.arguments.title')">
+      <ConfigurationSchemaArgumentsSection
+        :items="argumentItems"
+        :get-category-info="getCategoryInfo"
+        @edit="handleArgEdit"
+        @delete="handleArgDelete"
+        @move-up="handleArgMoveUp"
+        @move-down="handleArgMoveDown"
+      />
 
-    <!-- Claude Desktop Config Preview - Only show for STDIO servers -->
-    <div v-if="!isHttpBasedServer && claudeConfigPreview" class="space-y-2">
-      <h4 class="text-sm font-medium text-muted-foreground">
-        {{ $t('mcpCatalog.form.configurationSchema.preview.title') }}
-      </h4>
-      <pre class="p-3 bg-muted rounded-md text-xs overflow-x-auto"><code>{{ claudeConfigPreview }}</code></pre>
-    </div>
+      <!-- Claude Desktop Config Preview -->
+      <div v-if="claudeConfigPreview" class="space-y-2 mt-4">
+        <h4 class="text-sm font-medium text-muted-foreground">
+          {{ $t('mcpCatalog.form.configurationSchema.preview.title') }}
+        </h4>
+        <pre class="p-3 bg-muted rounded-md text-xs overflow-x-auto"><code>{{ claudeConfigPreview }}</code></pre>
+      </div>
+
+      <template #footer-actions>
+        <Button @click="handleArgAdd">
+          <Plus class="h-4 w-4 mr-2" />
+          {{ $t('mcpCatalog.form.configurationSchema.arguments.addButton') }}
+        </Button>
+      </template>
+    </DsCard>
 
     <!-- Environment Variables Section - Only show for STDIO servers -->
-    <ConfigurationSchemaEnvironmentSection
-      v-if="!isHttpBasedServer"
-      :items="environmentItems"
-      :get-category-info="getCategoryInfo"
-      @add="handleEnvAdd"
-      @edit="handleEnvEdit"
-      @delete="handleEnvDelete"
-    />
+    <DsCard v-if="!isHttpBasedServer" :title="$t('mcpCatalog.form.configurationSchema.environment.title')">
+      <ConfigurationSchemaEnvironmentSection
+        :items="environmentItems"
+        :get-category-info="getCategoryInfo"
+        @edit="handleEnvEdit"
+        @delete="handleEnvDelete"
+      />
+
+      <template #footer-actions>
+        <Button @click="handleEnvAdd">
+          <Plus class="h-4 w-4 mr-2" />
+          {{ $t('mcpCatalog.form.configurationSchema.environment.addButton') }}
+        </Button>
+      </template>
+    </DsCard>
 
     <!-- Headers Configuration Section - Always show for HTTP servers -->
-    <ConfigurationSchemaHeadersSection
-      v-if="isHttpBasedServer"
-      :items="headerItems"
-      :get-category-info="getCategoryInfo"
-      @add="handleHeaderAdd"
-      @edit="handleHeaderEdit"
-      @delete="handleHeaderDelete"
-    />
+    <DsCard v-if="isHttpBasedServer" :title="$t('mcpCatalog.form.configurationSchema.headers.title')">
+      <ConfigurationSchemaHeadersSection
+        :items="headerItems"
+        :get-category-info="getCategoryInfo"
+        @edit="handleHeaderEdit"
+        @delete="handleHeaderDelete"
+      />
+
+      <template #footer-actions>
+        <Button @click="handleHeaderAdd">
+          <Plus class="h-4 w-4 mr-2" />
+          {{ $t('mcpCatalog.form.configurationSchema.headers.addButton') }}
+        </Button>
+      </template>
+    </DsCard>
 
     <!-- URL Query Parameters Configuration Section - Always show for HTTP servers -->
-    <ConfigurationSchemaQueryParamsSection
-      v-if="isHttpBasedServer"
-      :items="queryParamItems"
-      :get-category-info="getCategoryInfo"
-      @add="handleQueryParamAdd"
-      @edit="handleQueryParamEdit"
-      @delete="handleQueryParamDelete"
-    />
+    <DsCard v-if="isHttpBasedServer" :title="$t('mcpCatalog.form.configurationSchema.urlQueryParams.title')">
+      <ConfigurationSchemaQueryParamsSection
+        :items="queryParamItems"
+        :get-category-info="getCategoryInfo"
+        @edit="handleQueryParamEdit"
+        @delete="handleQueryParamDelete"
+      />
+
+      <template #footer-actions>
+        <Button @click="handleQueryParamAdd">
+          <Plus class="h-4 w-4 mr-2" />
+          {{ $t('mcpCatalog.form.configurationSchema.urlQueryParams.addButton') }}
+        </Button>
+      </template>
+    </DsCard>
 
     <!-- Add/Edit Modal -->
     <ConfigItemModal

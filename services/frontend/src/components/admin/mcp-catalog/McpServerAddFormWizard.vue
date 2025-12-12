@@ -503,22 +503,23 @@ const submitForm = async () => {
       </template>
     </DsCard>
 
-    <!-- Step 3: Configuration Schema -->
-    <DsCard v-else-if="currentStep === 2" :title="t('mcpCatalog.form.steps.configurationSchema')">
+    <!-- Step 3: Configuration Schema (uses its own DsCards for each section) -->
+    <div v-else-if="currentStep === 2">
       <ConfigurationSchemaStepAdd
         v-model="formData.configuration_schema"
         :claudeConfig="formData.claudeConfig"
       />
 
-      <template #footer-actions>
+      <!-- Navigation buttons -->
+      <div class="flex justify-end gap-2 mt-6">
         <Button variant="outline" @click="previousStep">
           {{ t('mcpCatalog.form.navigation.previous') }}
         </Button>
         <Button @click="nextStep">
           {{ t('mcpCatalog.form.navigation.next') }}
         </Button>
-      </template>
-    </DsCard>
+      </div>
+    </div>
 
     <!-- Step 4: Basic Info -->
     <DsCard v-else-if="currentStep === 3" :title="t('mcpCatalog.form.steps.basic')">
