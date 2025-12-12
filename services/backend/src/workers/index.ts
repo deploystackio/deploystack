@@ -13,6 +13,7 @@ import { McpServerCascadeDeletionWorker } from './mcpServerCascadeDeletionWorker
 import { CleanupMcpServerLogsWorker } from './cleanupMcpServerLogsWorker';
 import { McpHealthCheckWorker } from './mcpHealthCheckWorker';
 import { McpCredentialValidationWorker } from './mcpCredentialValidationWorker';
+import { CleanupExpiredOAuthPendingFlowsWorker } from './cleanupExpiredOAuthPendingFlowsWorker';
 
 /**
  * Register all workers with the job processor
@@ -99,6 +100,12 @@ export function registerWorkers(
   processor.registerWorker(
     'mcp_credential_validation',
     new McpCredentialValidationWorker(db, logger)
+  );
+
+  // Register OAuth Pending Flows Cleanup Worker
+  processor.registerWorker(
+    'cleanup_expired_oauth_pending_flows',
+    new CleanupExpiredOAuthPendingFlowsWorker(db, logger)
   );
 
   // Register MCP Server Cascade Deletion Worker (requires eventBus)

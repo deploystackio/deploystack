@@ -26096,9 +26096,9 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "installation_id": {
+                    "flow_id": {
                       "type": "string",
-                      "description": "Unique installation ID for the pending OAuth installation"
+                      "description": "Unique flow ID for the pending OAuth flow"
                     },
                     "authorization_url": {
                       "type": "string",
@@ -26116,7 +26116,7 @@
                     }
                   },
                   "required": [
-                    "installation_id",
+                    "flow_id",
                     "authorization_url",
                     "requires_authorization",
                     "expires_at"
@@ -26259,7 +26259,7 @@
         }
       }
     },
-    "/api/teams/{teamId}/mcp/installations/{installationId}/oauth/callback": {
+    "/api/teams/{teamId}/mcp/oauth/callback/{flowId}": {
       "get": {
         "tags": [
           "MCP Installations",
@@ -26311,7 +26311,7 @@
             "in": "path",
             "name": "teamId",
             "required": true,
-            "description": "Team ID that owns the installation"
+            "description": "Team ID"
           },
           {
             "schema": {
@@ -26319,9 +26319,9 @@
               "minLength": 1
             },
             "in": "path",
-            "name": "installationId",
+            "name": "flowId",
             "required": true,
-            "description": "Installation ID"
+            "description": "OAuth flow ID"
           }
         ],
         "responses": {

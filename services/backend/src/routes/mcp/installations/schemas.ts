@@ -56,23 +56,41 @@ export const TEAM_AND_INSTALLATION_PARAMS_SCHEMA = {
 export const CLIENT_CONFIG_PARAMS_SCHEMA = {
   type: 'object',
   properties: {
-    teamId: { 
-      type: 'string', 
+    teamId: {
+      type: 'string',
       minLength: 1,
       description: 'Team ID that owns the installation'
     },
-    installationId: { 
-      type: 'string', 
+    installationId: {
+      type: 'string',
       minLength: 1,
       description: 'MCP installation ID'
     },
-    clientType: { 
-      type: 'string', 
+    clientType: {
+      type: 'string',
       enum: ['claude-desktop', 'vscode', 'cursor'],
       description: 'Client type for configuration generation'
     }
   },
   required: ['teamId', 'installationId', 'clientType'],
+  additionalProperties: false
+} as const;
+
+export const FLOW_ID_PARAM_SCHEMA = {
+  type: 'object',
+  properties: {
+    teamId: {
+      type: 'string',
+      minLength: 1,
+      description: 'Team ID'
+    },
+    flowId: {
+      type: 'string',
+      minLength: 1,
+      description: 'OAuth flow ID'
+    }
+  },
+  required: ['teamId', 'flowId'],
   additionalProperties: false
 } as const;
 
@@ -562,9 +580,9 @@ export const CLIENT_CONFIG_SUCCESS_RESPONSE_SCHEMA = {
 export const OAUTH_AUTHORIZE_SUCCESS_RESPONSE_SCHEMA = {
   type: 'object',
   properties: {
-    installation_id: {
+    flow_id: {
       type: 'string',
-      description: 'Unique installation ID for the pending OAuth installation'
+      description: 'Unique flow ID for the pending OAuth flow'
     },
     authorization_url: {
       type: 'string',
@@ -581,7 +599,7 @@ export const OAUTH_AUTHORIZE_SUCCESS_RESPONSE_SCHEMA = {
       description: 'ISO 8601 timestamp when the OAuth state expires'
     }
   },
-  required: ['installation_id', 'authorization_url', 'requires_authorization', 'expires_at']
+  required: ['flow_id', 'authorization_url', 'requires_authorization', 'expires_at']
 } as const;
 
 // =============================================================================
@@ -610,6 +628,11 @@ export interface ClientConfigParams {
   teamId: string;
   installationId: string;
   clientType: 'claude-desktop' | 'vscode' | 'cursor';
+}
+
+export interface FlowIdParams {
+  teamId: string;
+  flowId: string;
 }
 
 export interface CreateInstallationRequest {
@@ -742,7 +765,7 @@ export interface OAuthAuthorizeRequest {
 }
 
 export interface OAuthAuthorizeSuccessResponse {
-  installation_id: string;
+  flow_id: string;
   authorization_url: string;
   requires_authorization: boolean;
   expires_at: string;

@@ -42,6 +42,47 @@ export const mcpOauthProviders = pgTable('mcpOauthProviders', {
   enabledIdx: index('mcp_oauth_providers_enabled_idx').on(table.enabled),
 }));
 
+// OAuth Pending Flows - Temporary storage for OAuth flows before installation creation
+export const oauthPendingFlows = pgTable('oauthPendingFlows', {
+  // Primary key
+  id: text('id').primaryKey(), // nanoid - used as flow_id
+
+  // Foreign Keys
+  team_id: text('team_id').notNull().references(() => teams.id, { onDelete: 'cascade' }),
+  server_id: text('server_id').notNull().references(() => mcpServers.id, { onDelete: 'cascade' }),
+  created_by: text('created_by').notNull().references(() => authUser.id, { onDelete: 'cascade' }),
+
+  // OAuth Flow State
+  oauth_state: text('oauth_state').notNull(), // State parameter for CSRF protection
+  oauth_code_verifier: text('oauth_code_verifier').notNull(), // PKCE verifier
+
+  // OAuth Dynamic Client Registration (RFC 7591)
+  oauth_client_id: text('oauth_client_id').notNull(), // Dynamically registered client_id
+  oauth_client_secret: text('oauth_client_secret'), // Encrypted client_secret (if provided)
+
+  // Pre-registered OAuth Provider (for non-DCR auth servers)
+  oauth_provider_id: text('oauth_provider_id').references(() => mcpOauthProviders.id, { onDelete: 'set null' }),
+  oauth_token_endpoint: text('oauth_token_endpoint').notNull(), // Token endpoint for callback
+  oauth_token_endpoint_auth_method: text('oauth_token_endpoint_auth_method').notNull(), // Auth method
+
+  // Installation Data (stored temporarily until flow completes)
+  installation_name: text('installation_name').notNull(),
+  installation_type: text('installation_type').notNull().default('global'), // 'global' or 'team'
+  team_config: text('team_config'), // JSON: team_args, team_env, team_headers, team_url_query_params
+
+  // Expiration
+  expires_at: timestamp('expires_at', { withTimezone: true }).notNull(), // Flow expires in 10 minutes
+
+  // Timestamps
+  created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  // Indexes
+  oauthStateIdx: index('oauth_pending_flows_state_idx').on(table.oauth_state), // Fast callback lookup
+  expiresAtIdx: index('oauth_pending_flows_expires_at_idx').on(table.expires_at), // Fast cleanup query
+  teamServerIdx: index('oauth_pending_flows_team_server_idx').on(table.team_id, table.server_id),
+  createdByIdx: index('oauth_pending_flows_created_by_idx').on(table.created_by),
+}));
+
 // MCP Server Installations - Team installations (Tier 2)
 export const mcpServerInstallations = pgTable('mcpServerInstallations', {
   id: text('id').primaryKey(),

@@ -71,6 +71,13 @@
       "when": 1765290134010,
       "tag": "0009_lame_wallow",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1765571682540,
+      "tag": "0010_young_jimmy_woo",
+      "breakpoints": true
     }
   ]
 }

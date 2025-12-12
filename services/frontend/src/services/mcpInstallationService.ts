@@ -494,7 +494,7 @@ export class McpInstallationService {
       team_env?: Record<string, string>
     }
   ): Promise<{
-    installation_id: string
+    flow_id: string
     authorization_url: string
     requires_authorization: boolean
   }> {

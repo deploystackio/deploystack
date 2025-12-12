@@ -64,6 +64,7 @@ export {
 // MCP Installation and Configuration Tables
 export {
   mcpOauthProviders,
+  oauthPendingFlows,
   mcpServerInstallations,
   mcpUserConfigurations,
   mcpToolMetadata,

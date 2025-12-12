@@ -2,16 +2,15 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { getDb, getSchema } from '../../../db';
 import { eq, and } from 'drizzle-orm';
 import { OAuthTokenService } from '../../../services/OAuthTokenService';
-import { OAuthDiscoveryService } from '../../../services/OAuthDiscoveryService';
 import { encrypt, decrypt } from '../../../utils/encryption';
 import { GlobalSettingsInitService } from '../../../global-settings';
 import { GlobalSettings } from '../../../global-settings';
 import { nanoid } from 'nanoid';
 import {
 	OAUTH_CALLBACK_QUERY_SCHEMA,
-	TEAM_AND_INSTALLATION_PARAMS_SCHEMA,
+	FLOW_ID_PARAM_SCHEMA,
 	type OAuthCallbackQuery,
-	type TeamAndInstallationParams,
+	type FlowIdParams,
 } from './schemas';
 
 /**
@@ -31,21 +30,21 @@ import {
  */
 export default async function oauthCallbackRoute(server: FastifyInstance) {
 	server.get(
-		'/teams/:teamId/mcp/installations/:installationId/oauth/callback',
+		'/teams/:teamId/mcp/oauth/callback/:flowId',
 		{
 			schema: {
 				description: 'OAuth callback endpoint for MCP server authentication',
 				tags: ['MCP Installations', 'OAuth'],
-				params: TEAM_AND_INSTALLATION_PARAMS_SCHEMA,
+				params: FLOW_ID_PARAM_SCHEMA,
 				querystring: OAUTH_CALLBACK_QUERY_SCHEMA,
 			},
 		},
 		async (request: FastifyRequest, reply: FastifyReply) => {
 			const query = request.query as OAuthCallbackQuery;
-			const params = request.params as TeamAndInstallationParams;
-			const { teamId, installationId } = params;
+			const params = request.params as FlowIdParams;
+			const { teamId, flowId } = params;
 			const db = getDb();
-			const { mcpServerInstallations, mcpServers, mcpOauthTokens } = getSchema();
+			const { oauthPendingFlows, mcpServerInstallations, mcpServers, mcpOauthTokens } = getSchema();
 
 			// Check for OAuth errors from provider
 			if (query.error) {
@@ -53,7 +52,7 @@ export default async function oauthCallbackRoute(server: FastifyInstance) {
 					{
 						error: query.error,
 						description: query.error_description,
-						installationId,
+						flowId,
 						teamId,
 					},
 					'OAuth callback received error from provider'
@@ -96,150 +95,84 @@ export default async function oauthCallbackRoute(server: FastifyInstance) {
 			// Validate required parameters
 			if (!query.state || !query.code) {
 				request.log.error(
-					{ state: query.state, hasCode: !!query.code, installationId },
+					{ state: query.state, hasCode: !!query.code, flowId },
 					'Missing required OAuth parameters'
 				);
 				return reply.code(400).send({ error: 'Missing required OAuth parameters (state or code)' });
 			}
 
-			// Find pending installation by state
-			const [installation] = await db
+			// Find pending flow by flowId and state
+			const [flow] = await db
 				.select()
-				.from(mcpServerInstallations)
+				.from(oauthPendingFlows)
 				.where(
 					and(
-						eq(mcpServerInstallations.id, installationId),
-						eq(mcpServerInstallations.team_id, teamId),
-						eq(mcpServerInstallations.oauth_state, query.state),
-						eq(mcpServerInstallations.oauth_pending, true)
+						eq(oauthPendingFlows.id, flowId),
+						eq(oauthPendingFlows.team_id, teamId),
+						eq(oauthPendingFlows.oauth_state, query.state)
 					)
 				)
 				.limit(1);
 
-			if (!installation) {
+			if (!flow) {
 				request.log.error(
-					{ state: query.state, installationId, teamId },
-					'No pending installation found for state'
+					{ state: query.state, flowId, teamId },
+					'No pending flow found for state'
 				);
-				return reply.code(404).send({ error: 'Installation not found or OAuth state invalid' });
+				return reply.code(404).send({ error: 'Flow not found or OAuth state invalid' });
 			}
 
 			// Check if expired
-			if (
-				installation.oauth_pending_expires_at &&
-				installation.oauth_pending_expires_at < new Date()
-			) {
-				request.log.warn({ installationId }, 'OAuth pending installation expired');
+			if (flow.expires_at < new Date()) {
+				request.log.warn({ flowId }, 'OAuth pending flow expired');
 
-				// Delete expired installation
-				await db.delete(mcpServerInstallations).where(eq(mcpServerInstallations.id, installation.id));
+				// Delete expired flow
+				await db.delete(oauthPendingFlows).where(eq(oauthPendingFlows.id, flow.id));
 
-				return reply.code(400).send({ error: 'Installation expired. Please try again.' });
-			}
-
-			// Validate code_verifier exists
-			if (!installation.oauth_code_verifier) {
-				request.log.error({ installationId }, 'Missing oauth_code_verifier in installation');
-				return reply.code(500).send({ error: 'Invalid installation state' });
+				return reply.code(400).send({ error: 'Flow expired. Please try again.' });
 			}
 
 			// Get MCP server details
 			const [mcpServer] = await db
 				.select()
 				.from(mcpServers)
-				.where(eq(mcpServers.id, installation.server_id))
+				.where(eq(mcpServers.id, flow.server_id))
 				.limit(1);
 
 			if (!mcpServer) {
-				request.log.error({ serverId: installation.server_id }, 'MCP server not found');
+				request.log.error({ serverId: flow.server_id }, 'MCP server not found');
 				return reply.code(404).send({ error: 'MCP server not found' });
 			}
 
 			try {
 				// Construct redirect URI (must match what was sent in authorization request)
 				const backendUrl = await GlobalSettings.get('global.backend_url', 'http://localhost:3000');
-				const redirectUri = `${backendUrl}/api/teams/${teamId}/mcp/installations/${installationId}/oauth/callback`;
+				const redirectUri = `${backendUrl}/api/teams/${teamId}/mcp/oauth/callback/${flowId}`;
 
-				// Get OAuth configuration from installation record
-				// These were stored during authorization phase (Phase 4)
-				const clientId = installation.oauth_client_id || 'deploystack';
-				let tokenEndpoint = installation.oauth_token_endpoint;
-				const tokenEndpointAuthMethod = (installation.oauth_token_endpoint_auth_method || 'none') as 'client_secret_post' | 'client_secret_basic' | 'none';
+				// Get OAuth configuration from flow record
+				const clientId = flow.oauth_client_id;
+				const tokenEndpoint = flow.oauth_token_endpoint;
+				const tokenEndpointAuthMethod = flow.oauth_token_endpoint_auth_method as 'client_secret_post' | 'client_secret_basic' | 'none';
 
 				// Decrypt client secret if present (for pre-registered providers)
 				let clientSecret: string | null = null;
-				if (installation.oauth_client_secret) {
+				if (flow.oauth_client_secret) {
 					try {
-						clientSecret = decrypt(installation.oauth_client_secret, request.log);
+						clientSecret = decrypt(flow.oauth_client_secret, request.log);
 					} catch {
-						request.log.error({ installationId: installation.id }, 'Failed to decrypt client secret');
+						request.log.error({ flowId: flow.id }, 'Failed to decrypt client secret');
 						// Continue without client secret - may fail at token exchange
 					}
-				}
-
-				// Fallback to OAuth discovery if token endpoint not stored (backwards compatibility)
-				if (!tokenEndpoint) {
-					request.log.info(
-						{ installationId: installation.id },
-						'Token endpoint not stored, falling back to OAuth discovery'
-					);
-
-					// Extract server URL from packages or remotes
-					let serverUrl: string | null = null;
-
-					// Parse JSON fields if they are strings (Drizzle returns TEXT fields as strings)
-					const packages = typeof mcpServer.packages === 'string'
-						? JSON.parse(mcpServer.packages)
-						: mcpServer.packages;
-
-					const remotes = typeof mcpServer.remotes === 'string'
-						? JSON.parse(mcpServer.remotes)
-						: mcpServer.remotes;
-
-					// Check packages first (with null check)
-					if (packages && Array.isArray(packages) && packages.length > 0 && packages[0] !== null) {
-						// Stdio MCP server - check if it has OAuth configuration
-						const pkg = packages[0];
-						// eslint-disable-next-line @typescript-eslint/no-explicit-any
-						serverUrl = (pkg as any).oauth_server_url || null;
-					}
-
-					// Always check remotes if we don't have a URL yet (not else if!)
-					if (!serverUrl && remotes && Array.isArray(remotes) && remotes.length > 0) {
-						// Remote MCP server (HTTP/SSE)
-						const remote = remotes[0];
-						// eslint-disable-next-line @typescript-eslint/no-explicit-any
-						serverUrl = (remote as any).url;
-					}
-
-					if (!serverUrl) {
-						request.log.error(
-							{ serverId: mcpServer.id, packages, remotes },
-							'Cannot determine server URL for OAuth discovery'
-						);
-						throw new Error('Cannot determine server URL for OAuth discovery');
-					}
-
-					// Discover OAuth endpoints
-					const discoveryService = new OAuthDiscoveryService(request.log);
-					const discovery = await discoveryService.detectAndDiscoverOAuth(serverUrl);
-
-					if (!discovery.requiresOauth || !discovery.metadata) {
-						request.log.error({ serverUrl, discovery }, 'OAuth discovery failed or server does not require OAuth');
-						throw new Error('OAuth discovery failed');
-					}
-
-					tokenEndpoint = discovery.metadata.token_endpoint;
 				}
 
 				request.log.info(
 					{
 						clientId,
-						installationId: installation.id,
+						flowId: flow.id,
 						tokenEndpoint,
 						authMethod: tokenEndpointAuthMethod,
 						hasClientSecret: !!clientSecret,
-						hasProviderId: !!installation.oauth_provider_id
+						hasProviderId: !!flow.oauth_provider_id
 					},
 					'Using OAuth configuration for token exchange'
 				);
@@ -249,7 +182,7 @@ export default async function oauthCallbackRoute(server: FastifyInstance) {
 				const tokenService = new OAuthTokenService(request.log as any);
 				const tokenResponse = await tokenService.exchangeCodeForToken({
 					code: query.code,
-					codeVerifier: installation.oauth_code_verifier,
+					codeVerifier: flow.oauth_code_verifier,
 					clientId,
 					redirectUri,
 					tokenEndpoint,
@@ -262,6 +195,40 @@ export default async function oauthCallbackRoute(server: FastifyInstance) {
 					? new Date(Date.now() + tokenResponse.expires_in * 1000)
 					: null;
 
+				// Parse team config
+				const teamConfig = flow.team_config ? JSON.parse(flow.team_config) : {};
+
+				// CREATE INSTALLATION NOW (after successful OAuth - not before!)
+				const installationId = nanoid();
+				await db.insert(mcpServerInstallations).values({
+					id: installationId,
+					team_id: flow.team_id,
+					server_id: flow.server_id,
+					created_by: flow.created_by,
+					installation_name: flow.installation_name,
+					installation_type: flow.installation_type,
+					team_args: teamConfig.team_args ? JSON.stringify(teamConfig.team_args) : null,
+					team_env: teamConfig.team_env ? JSON.stringify(teamConfig.team_env) : null,
+					team_headers: teamConfig.team_headers ? JSON.stringify(teamConfig.team_headers) : null,
+					team_url_query_params: teamConfig.team_url_query_params ? JSON.stringify(teamConfig.team_url_query_params) : null,
+					// DO NOT set oauth_pending fields - installation is complete from the start
+					oauth_state: null,
+					oauth_code_verifier: null,
+					oauth_pending: false,
+					oauth_pending_expires_at: null,
+					oauth_client_id: null,
+					oauth_client_secret: null,
+					oauth_provider_id: null,
+					oauth_token_endpoint: null,
+					oauth_token_endpoint_auth_method: null,
+					status: 'connecting',
+					status_message: 'Authenticated successfully, waiting for satellite to connect',
+					status_updated_at: new Date(),
+					created_at: new Date(),
+					updated_at: new Date(),
+					last_used_at: null,
+				});
+
 				// Encrypt tokens
 				const encryptedAccessToken = encrypt(tokenResponse.access_token, request.log);
 				const encryptedRefreshToken = tokenResponse.refresh_token
@@ -271,9 +238,9 @@ export default async function oauthCallbackRoute(server: FastifyInstance) {
 				// Store encrypted tokens
 				await db.insert(mcpOauthTokens).values({
 					id: nanoid(),
-					installation_id: installation.id,
-					user_id: installation.created_by,
-					team_id: installation.team_id,
+					installation_id: installationId,
+					user_id: flow.created_by,
+					team_id: flow.team_id,
 					access_token: encryptedAccessToken,
 					refresh_token: encryptedRefreshToken,
 					token_type: tokenResponse.token_type || 'Bearer',
@@ -283,60 +250,44 @@ export default async function oauthCallbackRoute(server: FastifyInstance) {
 					updated_at: new Date(),
 				});
 
-				// Update installation: mark as complete, clear OAuth pending state and temporary fields
-				// Phase 11: Reset status to 'connecting' after successful re-authentication
-				await db
-					.update(mcpServerInstallations)
-					.set({
-						oauth_pending: false,
-						oauth_state: null, // Clear state (security)
-						oauth_code_verifier: null, // Clear verifier (security)
-						oauth_pending_expires_at: null,
-						// Clear temporary OAuth fields (security - no longer needed after token exchange)
-						oauth_token_endpoint: null,
-						oauth_token_endpoint_auth_method: null,
-						oauth_client_secret: null, // Clear encrypted secret (tokens are now stored separately)
-						// Phase 11: Reset status after successful OAuth (re-authentication or initial auth)
-						status: 'connecting',
-						status_message: 'Re-authenticated successfully, waiting for satellite to reconnect',
-						status_updated_at: new Date(),
-						updated_at: new Date(),
-					})
-					.where(eq(mcpServerInstallations.id, installation.id));
+				// DELETE the flow (critical - prevents reuse and cleans up temporary data)
+				await db.delete(oauthPendingFlows).where(eq(oauthPendingFlows.id, flow.id));
 
 				// Create satellite commands for immediate notification
 				try {
 					const { SatelliteCommandService } = await import('../../../services/satelliteCommandService');
 					const satelliteCommandService = new SatelliteCommandService(db, request.log);
 					const commands = await satelliteCommandService.notifyMcpInstallation(
-						installation.id,
-						installation.team_id,
-						installation.created_by
+						installationId,
+						flow.team_id,
+						flow.created_by
 					);
 
 					request.log.info(
 						{
-							installationId: installation.id,
+							installationId,
+							flowId: flow.id,
 							commandsCreated: commands.length,
 							satelliteIds: commands.map(c => c.satellite_id)
 						},
 						'Satellite commands created for OAuth MCP installation'
 					);
 				} catch (commandError) {
-					request.log.error(commandError, `Failed to create satellite commands for installation ${installation.id}:`);
+					request.log.error(commandError, `Failed to create satellite commands for installation ${installationId}:`);
 					// Don't fail OAuth completion if command creation fails
 				}
 
 				request.log.info(
 					{
-						installationId: installation.id,
+						installationId,
+						flowId: flow.id,
 						serverId: mcpServer.id,
-						teamId: installation.team_id,
-						userId: installation.created_by,
-						providerId: installation.oauth_provider_id,
+						teamId: flow.team_id,
+						userId: flow.created_by,
+						providerId: flow.oauth_provider_id,
 						authMethod: tokenEndpointAuthMethod,
 					},
-					'OAuth flow completed successfully'
+					'OAuth flow completed successfully - installation created'
 				);
 
 				// Return HTML page that posts message to opener and closes
@@ -372,13 +323,13 @@ export default async function oauthCallbackRoute(server: FastifyInstance) {
 				request.log.error(
 					{
 						error: error instanceof Error ? error.message : 'Unknown error',
-						installationId: installation.id,
+						flowId: flow.id,
 					},
 					'OAuth callback processing failed'
 				);
 
-				// Clean up failed installation
-				await db.delete(mcpServerInstallations).where(eq(mcpServerInstallations.id, installation.id));
+				// Clean up failed flow (NOT installation, since we didn't create one yet)
+				await db.delete(oauthPendingFlows).where(eq(oauthPendingFlows.id, flow.id));
 
 				// Render error page that posts message to opener
 				const frontendUrl = await GlobalSettingsInitService.getPageUrl();

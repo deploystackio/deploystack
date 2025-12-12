@@ -368,7 +368,7 @@ const handleOAuthAuthorization = async () => {
 
       emit('complete', {
         ...authorizationData,
-        id: response.installation_id
+        id: response.flow_id
       })
       return
     }

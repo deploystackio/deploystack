@@ -77,7 +77,7 @@ export default async function authorizeRoute(server: FastifyInstance) {
 
     try {
       const db = getDb();
-      const { mcpServers, mcpServerInstallations } = getSchema();
+      const { mcpServers, oauthPendingFlows } = getSchema();
 
       // Get MCP server from catalog
       const [mcpServer] = await db
@@ -169,12 +169,12 @@ export default async function authorizeRoute(server: FastifyInstance) {
         return reply.status(500).type('application/json').send(jsonString);
       }
 
-      // Create pending installation
-      const installationId = nanoid();
+      // Create pending flow
+      const flowId = nanoid();
 
       // Get backend URL from global settings for OAuth callback
       const backendUrl = await GlobalSettings.get('global.backend_url', 'http://localhost:3000');
-      const redirectUri = `${backendUrl}/api/teams/${teamId}/mcp/installations/${installationId}/oauth/callback`;
+      const redirectUri = `${backendUrl}/api/teams/${teamId}/mcp/oauth/callback/${flowId}`;
 
       // Discover OAuth endpoints and check for dynamic client registration
       const discoveryService = new OAuthDiscoveryService(request.log);
@@ -306,36 +306,32 @@ export default async function authorizeRoute(server: FastifyInstance) {
       // State expires in 10 minutes
       const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
-      // Store pending installation with provider reference
-      await db.insert(mcpServerInstallations).values({
-        id: installationId,
+      // Serialize team config (if provided)
+      const teamConfigJson = body.team_config ? JSON.stringify(body.team_config) : null;
+
+      // Store pending flow (NOT installation - installation created after OAuth completes)
+      await db.insert(oauthPendingFlows).values({
+        id: flowId,
         team_id: teamId,
         server_id: mcpServer.id,
         created_by: userId,
-        installation_name: body.installation_name || mcpServer.name,
-        installation_type: body.installation_type,
-        team_args: null,
-        team_env: body.team_config ? JSON.stringify(body.team_config) : null,
-        team_headers: null,
-        team_url_query_params: null,
         oauth_state: state,
         oauth_code_verifier: pkce.code_verifier,
-        oauth_pending: true,
-        oauth_pending_expires_at: expiresAt,
         oauth_client_id: clientId,
         oauth_client_secret: clientSecret ? encrypt(clientSecret, request.log) : null,
-        // NEW: Store provider reference and token endpoint for callback handler
         oauth_provider_id: providerId,
         oauth_token_endpoint: tokenEndpoint,
         oauth_token_endpoint_auth_method: tokenEndpointAuthMethod,
+        installation_name: body.installation_name || mcpServer.name,
+        installation_type: body.installation_type,
+        team_config: teamConfigJson,
+        expires_at: expiresAt,
         created_at: new Date(),
-        updated_at: new Date(),
-        last_used_at: null
       });
 
       request.log.info({
         operation: 'oauth_authorization_initiated',
-        installationId,
+        flowId,
         serverId: mcpServer.id,
         teamId,
         userId,
@@ -345,7 +341,7 @@ export default async function authorizeRoute(server: FastifyInstance) {
       }, 'OAuth authorization initiated successfully');
 
       const successResponse: OAuthAuthorizeSuccessResponse = {
-        installation_id: installationId,
+        flow_id: flowId,
         authorization_url: authUrl.toString(),
         requires_authorization: true,
         expires_at: expiresAt.toISOString()

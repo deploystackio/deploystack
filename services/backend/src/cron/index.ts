@@ -8,6 +8,7 @@ import { createCleanupSatelliteHeartbeatsJob } from './jobs/cleanupSatelliteHear
 import { createCleanupMcpServerLogsJob } from './jobs/cleanupMcpServerLogs';
 import { createMcpHealthCheckJob } from './jobs/mcpHealthCheck';
 import { createMcpCredentialValidationJob } from './jobs/mcpCredentialValidation';
+import { createCleanupExpiredOAuthPendingFlowsJob } from './jobs/cleanupExpiredOAuthPendingFlows';
 // import { createExampleCronJob } from './jobs/exampleJob';
 
 /**
@@ -53,6 +54,9 @@ export function initializeCronJobs(
 
   // MCP credential validation (every 1 minute, per-installation 15-min interval)
   cronManager.register(createMcpCredentialValidationJob());
+
+  // Cleanup expired OAuth pending flows (every 3 minutes)
+  cronManager.register(createCleanupExpiredOAuthPendingFlowsJob());
 
   // Example cron job - commented out, uncomment to test
   // cronManager.register(createExampleCronJob());
