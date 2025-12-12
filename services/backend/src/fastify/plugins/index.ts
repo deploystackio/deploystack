@@ -2,6 +2,7 @@ import { FastifyInstance } from 'fastify'
 import fastifyCors from '@fastify/cors'
 import fastifyFormbody from '@fastify/formbody'
 import fastifyRateLimit from '@fastify/rate-limit'
+import fastifySSE from '@fastify/sse'
 
 export const registerFastifyPlugins = async (server: FastifyInstance): Promise<void> => {
   // Build allowed origins array
@@ -37,6 +38,12 @@ export const registerFastifyPlugins = async (server: FastifyInstance): Promise<v
     timeWindow: '1 minute' // Default: 1 minute window
   })
   server.log.info('Rate limiting plugin registered (per-route configuration enabled)');
+
+  // Register SSE (Server-Sent Events) plugin
+  await server.register(fastifySSE, {
+    heartbeatInterval: 30000 // Send heartbeat every 30 seconds to keep connections alive
+  })
+  server.log.info('SSE plugin registered (heartbeat interval: 30s)');
 
   // Favicon plugin is now registered in server.ts after Swagger to exclude it from documentation
 
