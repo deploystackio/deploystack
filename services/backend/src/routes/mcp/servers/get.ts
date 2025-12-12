@@ -100,7 +100,7 @@ export default async function getServer(server: FastifyInstance) {
       let hasAccess = false;
 
       if (userRole === 'global_admin') {
-        // Global admin can access all servers
+        // Global admin can access all servers (including disabled)
         hasAccess = true;
       } else if (server.visibility === 'global') {
         // All authenticated users can access global servers
@@ -108,6 +108,11 @@ export default async function getServer(server: FastifyInstance) {
       } else if (server.visibility === 'team' && server.owner_team_id) {
         // Team servers: check if user is a member of the owning team
         hasAccess = teamIds.includes(server.owner_team_id);
+      }
+
+      // Regular users (non-admin) cannot access disabled servers
+      if (hasAccess && userRole !== 'global_admin' && server.status === 'disabled') {
+        hasAccess = false;
       }
 
       if (!hasAccess) {

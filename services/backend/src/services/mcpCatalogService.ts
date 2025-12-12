@@ -276,8 +276,14 @@ export class McpCatalogService {
           )
         )
       );
+
+      // Regular users only see active servers (not disabled/deprecated/maintenance)
+      // unless they explicitly filter by a specific status
+      if (!filters?.status) {
+        whereConditions.push(eq(this.mcpServers.status, 'active'));
+      }
     }
-    
+
     // Apply additional filters
     if (filters) {
       if (filters.category_id) {
