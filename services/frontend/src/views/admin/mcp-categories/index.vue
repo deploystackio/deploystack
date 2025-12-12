@@ -5,6 +5,7 @@ import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
 import { toast } from 'vue-sonner'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { DsPageHeading } from '@/components/ui/ds-page-heading'
 import { Plus } from 'lucide-vue-next'
 import NavbarLayout from '@/components/NavbarLayout.vue'
 import CategoryModal from '@/components/admin/mcp-categories/CategoryModal.vue'
@@ -122,21 +123,16 @@ onUnmounted(() => {
 
 <template>
   <NavbarLayout>
-    <div class="space-y-6">
-      <!-- Header -->
-      <div class="flex items-center justify-between">
-        <div>
-          <p class="text-muted-foreground">{{ t('mcpCategories.description') }}</p>
-        </div>
-        <Button
-          @click="handleAddCategory"
-          class="flex items-center gap-2"
-        >
-          <Plus class="h-4 w-4" />
+    <DsPageHeading :title="t('mcpCategories.title')">
+      <template #actions>
+        <Button @click="handleAddCategory">
+          <Plus class="h-4 w-4 mr-2" />
           {{ t('mcpCategories.addButton') }}
         </Button>
-      </div>
+      </template>
+    </DsPageHeading>
 
+    <div class="space-y-6">
       <!-- Loading State -->
       <div v-if="isLoading" class="text-muted-foreground">
         {{ t('mcpCategories.table.loading') }}

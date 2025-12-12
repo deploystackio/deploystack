@@ -5,6 +5,7 @@ import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
 import { toast } from 'vue-sonner'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { DsPageHeading } from '@/components/ui/ds-page-heading'
 import { RefreshCw, Key } from 'lucide-vue-next'
 import NavbarLayout from '@/components/NavbarLayout.vue'
 import SatelliteTableColumns from './SatelliteTableColumns.vue'
@@ -165,32 +166,26 @@ onUnmounted(() => {
 
 <template>
   <NavbarLayout>
-    <div class="space-y-6">
-      <!-- Header -->
-      <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div class="flex-1">
-          <p class="text-muted-foreground">{{ t('satellites.description') }}</p>
-        </div>
-        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-          <Button
-            @click="$router.push('/admin/satellites/pairing')"
-            variant="outline"
-            class="flex items-center justify-center gap-2 bg-black text-white border-black hover:bg-black/90 hover:border-black hover:text-white"
-          >
-            <Key class="h-4 w-4" />
-            {{ t('satellites.actions.pairing') }}
-          </Button>
-          <Button
-            @click="handleRefresh"
-            :disabled="isRefreshing"
-            class="flex items-center justify-center gap-2"
-          >
-            <RefreshCw :class="{ 'animate-spin': isRefreshing }" class="h-4 w-4" />
-            {{ t('satellites.actions.refresh') }}
-          </Button>
-        </div>
-      </div>
+    <DsPageHeading :title="t('satellites.title')">
+      <template #actions>
+        <Button
+          @click="$router.push('/admin/satellites/pairing')"
+          variant="outline"
+        >
+          <Key class="h-4 w-4 mr-2" />
+          {{ t('satellites.actions.pairing') }}
+        </Button>
+        <Button
+          @click="handleRefresh"
+          :disabled="isRefreshing"
+        >
+          <RefreshCw :class="['h-4 w-4 mr-2', { 'animate-spin': isRefreshing }]" />
+          {{ t('satellites.actions.refresh') }}
+        </Button>
+      </template>
+    </DsPageHeading>
 
+    <div class="space-y-6">
       <!-- Loading State -->
       <div v-if="isLoading" class="text-muted-foreground">
         {{ t('satellites.table.loading') }}

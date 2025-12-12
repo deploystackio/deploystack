@@ -27,7 +27,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { MoreHorizontal, Edit, Trash2 } from 'lucide-vue-next'
+import { MoreVertical, Edit, Trash2 } from 'lucide-vue-next'
 import { DynamicIcon } from '@/components/ui/dynamic-icon'
 import type { McpCategory } from '@/services/mcpCategoriesService'
 
@@ -90,7 +90,7 @@ const formatDate = (dateString: string) => {
           <TableHead>{{ t('mcpCategories.table.columns.icon') }}</TableHead>
           <TableHead>{{ t('mcpCategories.table.columns.sortOrder') }}</TableHead>
           <TableHead>{{ t('mcpCategories.table.columns.createdAt') }}</TableHead>
-          <TableHead class="w-[100px]">{{ t('mcpCategories.table.columns.actions') }}</TableHead>
+          <TableHead class="w-[50px]"></TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -133,7 +133,7 @@ const formatDate = (dateString: string) => {
               <DropdownMenuTrigger as-child>
                 <Button variant="ghost" class="h-8 w-8 p-0">
                   <span class="sr-only">{{ t('mcpCategories.table.openMenu') }}</span>
-                  <MoreHorizontal class="h-4 w-4" />
+                  <MoreVertical class="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
