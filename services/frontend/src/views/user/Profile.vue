@@ -5,13 +5,8 @@ import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
 import { toast } from 'vue-sonner'
 import AccountSidebarNav from '@/components/account/AccountSidebarNav.vue'
 import NavbarLayout from '@/components/NavbarLayout.vue'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { DsCard } from '@/components/ui/ds-card'
+import { DsPageHeading } from '@/components/ui/ds-page-heading'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { Input } from '@/components/ui/input'
@@ -130,6 +125,8 @@ async function handleProfileSubmit(event: Event) {
 
 <template>
   <NavbarLayout>
+    <DsPageHeading :title="t('userAccount.title')" />
+
     <!-- Mobile Navigation - Show tabs on small screens -->
     <div class="block md:hidden mb-6">
       <nav class="flex space-x-1 p-1 bg-muted/50 rounded-lg">
@@ -172,72 +169,70 @@ async function handleProfileSubmit(event: Event) {
 
           <!-- Profile Section -->
           <div v-else class="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>{{ t('userAccount.profile.title') }}</CardTitle>
-                <CardDescription>
-                  {{ t('userAccount.profile.description') }}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form class="space-y-6" @submit="handleProfileSubmit">
-                  <div class="space-y-2">
-                    <Label for="first_name">{{ t('userAccount.profile.form.firstName.label') }}</Label>
-                    <Input
-                      id="first_name"
-                      type="text"
-                      v-model="profileForm.first_name"
-                      class="w-full"
-                      :disabled="isSubmittingProfile"
-                    />
-                  </div>
-
-                  <div class="space-y-2">
-                    <Label for="last_name">{{ t('userAccount.profile.form.lastName.label') }}</Label>
-                    <Input
-                      id="last_name"
-                      type="text"
-                      v-model="profileForm.last_name"
-                      class="w-full"
-                      :disabled="isSubmittingProfile"
-                    />
-                  </div>
-
-                  <div class="space-y-2">
-                    <Label for="username">{{ t('userAccount.profile.form.username.label') }}</Label>
-                    <Input
-                      id="username"
-                      type="text"
-                      v-model="profileForm.username"
-                      class="w-full"
-                      :disabled="!canChangeUsername || isSubmittingProfile"
-                    />
-                    <p v-if="!canChangeUsername" class="text-xs text-muted-foreground">
-                      {{ t('userAccount.profile.form.username.disabledHelp', { authType: authTypeDisplayName }) }}
-                    </p>
-                  </div>
-
-                  <div class="space-y-2">
-                    <Label for="email">{{ t('userAccount.profile.form.email.label') }}</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      v-model="profileForm.email"
-                      class="w-full"
-                      :disabled="isSubmittingProfile"
-                    />
-                  </div>
-
-                  <Button
-                    type="submit"
+            <DsCard :title="t('userAccount.profile.title')">
+              <p class="text-sm text-muted-foreground mb-6">
+                {{ t('userAccount.profile.description') }}
+              </p>
+              <form id="profile-form" class="space-y-6" @submit="handleProfileSubmit">
+                <div class="space-y-2">
+                  <Label for="first_name">{{ t('userAccount.profile.form.firstName.label') }}</Label>
+                  <Input
+                    id="first_name"
+                    type="text"
+                    v-model="profileForm.first_name"
+                    class="w-full"
                     :disabled="isSubmittingProfile"
-                  >
-                    <Spinner v-if="isSubmittingProfile" class="mr-2" />
-                    {{ t('userAccount.profile.form.saveButton') }}
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
+                  />
+                </div>
+
+                <div class="space-y-2">
+                  <Label for="last_name">{{ t('userAccount.profile.form.lastName.label') }}</Label>
+                  <Input
+                    id="last_name"
+                    type="text"
+                    v-model="profileForm.last_name"
+                    class="w-full"
+                    :disabled="isSubmittingProfile"
+                  />
+                </div>
+
+                <div class="space-y-2">
+                  <Label for="username">{{ t('userAccount.profile.form.username.label') }}</Label>
+                  <Input
+                    id="username"
+                    type="text"
+                    v-model="profileForm.username"
+                    class="w-full"
+                    :disabled="!canChangeUsername || isSubmittingProfile"
+                  />
+                  <p v-if="!canChangeUsername" class="text-xs text-muted-foreground">
+                    {{ t('userAccount.profile.form.username.disabledHelp', { authType: authTypeDisplayName }) }}
+                  </p>
+                </div>
+
+                <div class="space-y-2">
+                  <Label for="email">{{ t('userAccount.profile.form.email.label') }}</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    v-model="profileForm.email"
+                    class="w-full"
+                    :disabled="isSubmittingProfile"
+                  />
+                </div>
+              </form>
+
+              <template #footer-actions>
+                <Button
+                  type="submit"
+                  form="profile-form"
+                  :disabled="isSubmittingProfile"
+                >
+                  <Spinner v-if="isSubmittingProfile" class="mr-2" />
+                  {{ t('userAccount.profile.form.saveButton') }}
+                </Button>
+              </template>
+            </DsCard>
           </div>
         </div>
       </div>

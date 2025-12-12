@@ -6,13 +6,8 @@ import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
 import { toast } from 'vue-sonner'
 import AccountSidebarNav from '@/components/account/AccountSidebarNav.vue'
 import NavbarLayout from '@/components/NavbarLayout.vue'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { DsCard } from '@/components/ui/ds-card'
+import { DsPageHeading } from '@/components/ui/ds-page-heading'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { Input } from '@/components/ui/input'
@@ -143,6 +138,8 @@ async function handleSecuritySubmit(event: Event) {
 
 <template>
   <NavbarLayout>
+    <DsPageHeading :title="t('userAccount.title')" />
+
     <!-- Mobile Navigation - Show tabs on small screens -->
     <div class="block md:hidden mb-6">
       <nav class="flex space-x-1 p-1 bg-muted/50 rounded-lg">
@@ -185,83 +182,76 @@ async function handleSecuritySubmit(event: Event) {
 
           <!-- Security Section -->
           <div v-else class="space-y-6">
-            <Card v-if="canChangePassword">
-              <CardHeader>
-                <CardTitle>{{ t('userAccount.security.title') }}</CardTitle>
-                <CardDescription>
-                  {{ t('userAccount.security.description') }}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form class="space-y-6" @submit="handleSecuritySubmit">
-                  <div class="space-y-2">
-                    <Label for="current_password">{{ t('userAccount.security.form.currentPassword.label') }}</Label>
-                    <Input
-                      id="current_password"
-                      type="password"
-                      v-model="securityForm.current_password"
-                      class="w-full"
-                      :disabled="isSubmittingSecurity"
-                      required
-                    />
-                  </div>
-
-                  <div class="space-y-2">
-                    <Label for="new_password">{{ t('userAccount.security.form.newPassword.label') }}</Label>
-                    <Input
-                      id="new_password"
-                      type="password"
-                      v-model="securityForm.new_password"
-                      class="w-full"
-                      :disabled="isSubmittingSecurity"
-                      minlength="8"
-                      required
-                    />
-                    <p class="text-xs text-muted-foreground">{{ t('userAccount.security.form.newPassword.help') }}</p>
-                  </div>
-
-                  <div class="space-y-2">
-                    <Label for="confirm_password">{{ t('userAccount.security.form.confirmPassword.label') }}</Label>
-                    <Input
-                      id="confirm_password"
-                      type="password"
-                      v-model="securityForm.confirm_password"
-                      class="w-full"
-                      :disabled="isSubmittingSecurity"
-                      required
-                    />
-                  </div>
-
-                  <Button
-                    type="submit"
+            <DsCard v-if="canChangePassword" :title="t('userAccount.security.title')">
+              <p class="text-sm text-muted-foreground mb-6">
+                {{ t('userAccount.security.description') }}
+              </p>
+              <form id="security-form" class="space-y-6" @submit="handleSecuritySubmit">
+                <div class="space-y-2">
+                  <Label for="current_password">{{ t('userAccount.security.form.currentPassword.label') }}</Label>
+                  <Input
+                    id="current_password"
+                    type="password"
+                    v-model="securityForm.current_password"
+                    class="w-full"
                     :disabled="isSubmittingSecurity"
-                  >
-                    <Spinner v-if="isSubmittingSecurity" class="mr-2" />
-                    {{ t('userAccount.security.form.changeButton') }}
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
-            
-            <!-- Message for non-email users -->
-            <Card v-else>
-              <CardHeader>
-                <CardTitle>{{ t('userAccount.security.unavailable.title') }}</CardTitle>
-                <CardDescription>
-                  {{ t('userAccount.security.unavailable.description') }}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div class="text-center py-8">
-                  <p class="text-muted-foreground mb-4">
-                    {{ t('userAccount.security.unavailable.message', { authType: authTypeDisplayName }) }}
-                  </p>
-                  <p class="text-sm text-muted-foreground">
-                    {{ t('userAccount.security.unavailable.help', { provider: providerName, settingsLocation: settingsLocation }) }}
-                  </p>
+                    required
+                  />
                 </div>
-              </CardContent>
-            </Card>
+
+                <div class="space-y-2">
+                  <Label for="new_password">{{ t('userAccount.security.form.newPassword.label') }}</Label>
+                  <Input
+                    id="new_password"
+                    type="password"
+                    v-model="securityForm.new_password"
+                    class="w-full"
+                    :disabled="isSubmittingSecurity"
+                    minlength="8"
+                    required
+                  />
+                  <p class="text-xs text-muted-foreground">{{ t('userAccount.security.form.newPassword.help') }}</p>
+                </div>
+
+                <div class="space-y-2">
+                  <Label for="confirm_password">{{ t('userAccount.security.form.confirmPassword.label') }}</Label>
+                  <Input
+                    id="confirm_password"
+                    type="password"
+                    v-model="securityForm.confirm_password"
+                    class="w-full"
+                    :disabled="isSubmittingSecurity"
+                    required
+                  />
+                </div>
+              </form>
+
+              <template #footer-actions>
+                <Button
+                  type="submit"
+                  form="security-form"
+                  :disabled="isSubmittingSecurity"
+                >
+                  <Spinner v-if="isSubmittingSecurity" class="mr-2" />
+                  {{ t('userAccount.security.form.changeButton') }}
+                </Button>
+              </template>
+            </DsCard>
+
+            <!-- Message for non-email users -->
+            <DsCard v-else :title="t('userAccount.security.unavailable.title')">
+              <p class="text-sm text-muted-foreground mb-4">
+                {{ t('userAccount.security.unavailable.description') }}
+              </p>
+              <div class="text-center py-8">
+                <p class="text-muted-foreground mb-4">
+                  {{ t('userAccount.security.unavailable.message', { authType: authTypeDisplayName }) }}
+                </p>
+                <p class="text-sm text-muted-foreground">
+                  {{ t('userAccount.security.unavailable.help', { provider: providerName, settingsLocation: settingsLocation }) }}
+                </p>
+              </div>
+            </DsCard>
           </div>
         </div>
       </div>
