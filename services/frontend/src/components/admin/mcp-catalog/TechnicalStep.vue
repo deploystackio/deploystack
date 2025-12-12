@@ -676,16 +676,8 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <!-- Header Section -->
-  <div class="px-4 sm:px-0">
-    <h3 class="text-base/7 font-semibold text-gray-900">{{ t('mcpCatalog.form.technical.title') }}</h3>
-    <p class="mt-1 max-w-2xl text-sm/6 text-gray-500">
-      {{ t('mcpCatalog.form.technical.subtitle') }}
-    </p>
-  </div>
-
   <!-- Structured Form Fields -->
-  <div class="mt-6 border-t border-gray-100">
+  <div>
     <dl class="divide-y divide-gray-100">
       <!-- Runtime (Read-only in edit mode) -->
       <div v-if="isEditMode" class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">

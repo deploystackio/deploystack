@@ -158,14 +158,6 @@ onUnmounted(() => {
 
 <template>
   <div class="space-y-6">
-    <div class="px-4 sm:px-0">
-      <h3 class="text-base/7 font-semibold text-gray-900">{{ t('mcpCatalog.form.basic.title') }}</h3>
-      <p class="mt-1 max-w-2xl text-sm/6 text-gray-500">
-        {{ t('mcpCatalog.form.basic.subtitle') }}
-        <span v-if="isAutoPopulated"> (auto-populated from GitHub)</span>
-      </p>
-    </div>
-
     <!-- Auto-population success indicator -->
     <Alert v-if="isAutoPopulated" class="border-green-200 bg-green-50">
       <CheckCircle class="h-4 w-4 text-green-600" />
@@ -174,7 +166,7 @@ onUnmounted(() => {
       </AlertDescription>
     </Alert>
 
-    <div class="mt-6 border-t border-gray-100">
+    <div>
       <dl class="divide-y divide-gray-100">
         <!-- Server Name -->
         <SharedFormField

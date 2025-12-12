@@ -63,13 +63,6 @@ onMounted(() => {
 
 <template>
   <div class="space-y-6">
-    <div>
-      <h2 class="text-2xl font-semibold mb-2">README Content</h2>
-      <p class="text-muted-foreground">
-        Enter the README content in Markdown format
-      </p>
-    </div>
-
     <div class="space-y-4">
       <!-- README Input -->
       <div class="space-y-2">

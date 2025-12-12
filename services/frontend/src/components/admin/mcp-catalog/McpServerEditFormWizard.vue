@@ -17,11 +17,11 @@ import { useI18n } from 'vue-i18n'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { ProgressBars } from '@/components/ui/progress-bars'
+import { DsStepper, type WizardStep } from '@/components/ui/ds-stepper'
+import { DsCard } from '@/components/ui/ds-card'
 import { FileText, GitBranch, Code, Settings, CheckCircle, BookOpen } from 'lucide-vue-next'
 import { McpCatalogService } from '@/services/mcpCatalogService'
 import { useEventBus } from '@/composables/useEventBus'
-import ContentWrapper from '@/components/ContentWrapper.vue'
 import BasicInfoStepEdit from '@/components/admin/mcp-catalog/steps/BasicInfoStepEdit.vue'
 import TechnicalStep from '@/components/admin/mcp-catalog/TechnicalStep.vue'
 import ConfigurationSchemaStepEdit from '@/components/admin/mcp-catalog/steps/ConfigurationSchemaStepEdit.vue'
@@ -106,10 +106,10 @@ const steps = [
   }
 ]
 
-// Progress steps for ProgressBars component
-const progressSteps = computed(() => {
+// Wizard steps for DsStepper component
+const wizardSteps = computed((): WizardStep[] => {
   return steps.map((step, index) => {
-    let status: 'completed' | 'current' | 'pending' | 'error' = 'pending'
+    let status: 'completed' | 'current' | 'pending' = 'pending'
 
     if (index < currentStep.value) {
       status = 'completed'
@@ -117,58 +117,12 @@ const progressSteps = computed(() => {
       status = 'current'
     }
 
-    // Check for errors
-    if (index === 0 && repositoryFetchError.value) {
-      status = 'error'
-    }
-
     return {
       id: step.key,
       label: step.label,
-      status,
-      clickable: index < currentStep.value // Only completed steps are clickable
+      status
     }
   })
-})
-
-// Calculate progress percentage
-const progressPercentage = computed(() => {
-  // Progress should match visual step positions:
-  // For 5 steps: 0%, 25%, 50%, 75%, 100%
-  const totalSteps = steps.length
-  if (totalSteps <= 1) return 0
-
-  const progressIncrement = 100 / (totalSteps - 1)
-  return currentStep.value * progressIncrement
-})
-
-// Progress title based on current step
-const progressTitle = computed(() => {
-  if (props.isSubmitting || internalIsSubmitting.value) {
-    return props.mode === 'edit'
-      ? t('mcpCatalog.form.navigation.updating')
-      : t('mcpCatalog.form.navigation.creating')
-  }
-  if (isFetchingRepository.value) {
-    return t('mcpCatalog.form.navigation.fetching')
-  }
-  if (repositoryFetchError.value) {
-    return t('mcpCatalog.form.errors.repositoryFetch')
-  }
-
-  const currentStepData = steps[currentStep.value]
-  if (!currentStepData) {
-    return t('mcpCatalog.form.steps.configuring')
-  }
-  return `${currentStepData.label} - ${t('mcpCatalog.form.steps.configuring')}`
-})
-
-// Progress variant based on state
-const progressVariant = computed(() => {
-  if (repositoryFetchError.value || submitError.value) return 'destructive'
-  if (props.isSubmitting || internalIsSubmitting.value) return 'default' // Keep default while submitting
-  // Only show success after actual completion (would need to be handled by parent component)
-  return 'default'
 })
 
 // State
@@ -474,10 +428,9 @@ const goToStep = (stepIndex: number) => {
   }
 }
 
-// Handle step click from ProgressBars
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const handleStepClick = (step: any, index: number) => {
-  if (step.clickable) {
+// Handle step click from DsStepper
+const handleStepClick = (step: WizardStep, index: number) => {
+  if (step.status === 'completed') {
     goToStep(index)
   }
 }
@@ -860,122 +813,149 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="space-y-6">
-    <!-- Progress Bar Navigation -->
-    <ProgressBars
-      :steps="progressSteps"
-      :progress="progressPercentage"
-      :title="progressTitle"
-      :variant="progressVariant"
-      size="md"
+  <div class="flex gap-8">
+    <!-- Wizard Stepper (Left Sidebar) -->
+    <DsStepper
+      :steps="wizardSteps"
       interactive
-      styled
       @step-click="handleStepClick"
     />
 
-    <!-- Error Message -->
-    <Alert v-if="submitError" variant="destructive">
-      <AlertDescription>
-        {{ submitError }}
-      </AlertDescription>
-    </Alert>
+    <!-- Step Content (Right Side) -->
+    <div class="flex-1 space-y-6">
+      <!-- Error Message -->
+      <Alert v-if="submitError" variant="destructive">
+        <AlertDescription>
+          {{ submitError }}
+        </AlertDescription>
+      </Alert>
 
-    <!-- Step Content -->
-    <ContentWrapper>
-      <component
-        :is="currentStepData?.component"
-        v-if="currentStepData?.key === 'basic'"
-        v-model="formData[currentStepData.key]"
-        :form-data="formData"
-        :mode="props.mode"
-        @update:modelValue="(newValue: any) => { if (currentStepData?.key && currentStepData.key !== 'configurationSchema') { (formData as any)[currentStepData.key] = newValue } }"
-        @update:formData="(newFormData: any) => formData = newFormData"
-      />
-      <component
-        :is="currentStepData?.component"
-        v-else-if="currentStepData?.key === 'technical'"
-        :form-data="formData"
-        :mode="props.mode"
-        @update:formData="(newFormData: any) => formData = newFormData"
-      />
-      <ConfigurationSchemaStepEdit
-        v-else-if="currentStepData?.key === 'configurationSchema'"
-      />
-      <component
-        :is="currentStepData?.component"
-        v-else-if="currentStepData?.key === 'repository'"
-        v-model="formData.repository_setup"
-        :form-data="formData"
-        @update:modelValue="(newValue: any) => formData.repository_setup = newValue"
-        @update:formData="(newFormData: any) => formData = newFormData"
-      />
-      <component
-        :is="currentStepData?.component"
-        v-else-if="currentStepData"
-        v-model="formData[currentStepData.key]"
-        :form-data="formData"
-        @update:modelValue="(newValue: any) => { if (currentStepData?.key && currentStepData.key !== 'configurationSchema') { (formData as any)[currentStepData.key] = newValue } }"
-        @update:formData="(newFormData: any) => formData = newFormData"
-      />
-    </ContentWrapper>
+      <!-- Step 1: Repository -->
+      <DsCard v-if="currentStep === 0" :title="t('mcpCatalog.form.steps.repository')">
+        <RepositoryStep
+          v-model="formData.repository_setup"
+          :form-data="formData"
+          @update:modelValue="(newValue: any) => formData.repository_setup = newValue"
+          @update:formData="(newFormData: any) => formData = newFormData"
+        />
 
-    <!-- Navigation Buttons -->
-    <div class="flex items-center justify-between">
-      <Button
-        v-if="canGoPrevious"
-        variant="outline"
-        @click="previousStep"
-      >
-        {{ t('mcpCatalog.form.navigation.previous') }}
-      </Button>
-      <div v-else></div>
+        <!-- Repository Fetch Error -->
+        <Alert v-if="repositoryFetchError" variant="destructive" class="mt-4">
+          <AlertDescription>
+            {{ repositoryFetchError }}
+            <br>
+            <span class="text-sm">{{ t('mcpCatalog.validation.repositoryUrlInvalid') }}</span>
+          </AlertDescription>
+        </Alert>
 
-      <div class="flex items-center gap-2">
-        <Button
-          variant="ghost"
-          @click="handleCancel"
-        >
-          {{ cancelText }}
-        </Button>
+        <template #footer-actions>
+          <Button variant="outline" @click="handleCancel">
+            {{ cancelText }}
+          </Button>
+          <Button
+            @click="handleRepositoryStepNext"
+            :disabled="!canProceedFromRepository || isFetchingRepository"
+            class="min-w-[120px]"
+          >
+            <Spinner v-if="isFetchingRepository" class="mr-2" />
+            {{ t('mcpCatalog.form.navigation.next') }}
+          </Button>
+        </template>
+      </DsCard>
 
-        <!-- Special Repository step button with loading -->
-        <Button
-          v-if="currentStep === 0"
-          @click="handleRepositoryStepNext"
-          :disabled="!canProceedFromRepository || isFetchingRepository"
-          class="min-w-[120px]"
-        >
-          <Spinner v-if="isFetchingRepository" class="mr-2" />
-          {{ t('mcpCatalog.form.navigation.next') }}
-        </Button>
+      <!-- Step 2: Basic Info -->
+      <DsCard v-else-if="currentStep === 1" :title="t('mcpCatalog.form.steps.basic')">
+        <BasicInfoStepEdit
+          v-model="formData.basic"
+          :form-data="formData"
+          :mode="props.mode"
+          @update:modelValue="(newValue: any) => formData.basic = newValue"
+          @update:formData="(newFormData: any) => formData = newFormData"
+        />
 
-        <!-- Normal next button for other steps -->
-        <Button
-          v-else-if="canGoNext"
-          @click="nextStep"
-        >
-          {{ t('mcpCatalog.form.navigation.next') }}
-        </Button>
+        <template #footer-actions>
+          <Button variant="outline" @click="previousStep">
+            {{ t('mcpCatalog.form.navigation.previous') }}
+          </Button>
+          <Button @click="nextStep">
+            {{ t('mcpCatalog.form.navigation.next') }}
+          </Button>
+        </template>
+      </DsCard>
 
-        <!-- Submit button for final step -->
-        <Button
-          v-else
-          @click="submitForm"
-          :disabled="props.isSubmitting || internalIsSubmitting"
-        >
-          <Spinner v-if="props.isSubmitting || internalIsSubmitting" class="mr-2" />
-          {{ props.mode === 'edit' ? t('mcpCatalog.form.navigation.update') : t('mcpCatalog.form.navigation.submit') }}
-        </Button>
-      </div>
+      <!-- Step 3: Technical -->
+      <DsCard v-else-if="currentStep === 2" :title="t('mcpCatalog.form.steps.technical')">
+        <TechnicalStep
+          :form-data="formData"
+          :mode="props.mode"
+          @update:formData="(newFormData: any) => formData = newFormData"
+        />
+
+        <template #footer-actions>
+          <Button variant="outline" @click="previousStep">
+            {{ t('mcpCatalog.form.navigation.previous') }}
+          </Button>
+          <Button @click="nextStep">
+            {{ t('mcpCatalog.form.navigation.next') }}
+          </Button>
+        </template>
+      </DsCard>
+
+      <!-- Step 4: Configuration Schema -->
+      <DsCard v-else-if="currentStep === 3" :title="t('mcpCatalog.form.steps.configurationSchema')">
+        <ConfigurationSchemaStepEdit />
+
+        <template #footer-actions>
+          <Button variant="outline" @click="previousStep">
+            {{ t('mcpCatalog.form.navigation.previous') }}
+          </Button>
+          <Button @click="nextStep">
+            {{ t('mcpCatalog.form.navigation.next') }}
+          </Button>
+        </template>
+      </DsCard>
+
+      <!-- Step 5: README -->
+      <DsCard v-else-if="currentStep === 4" title="README">
+        <ReadmeStep
+          v-model="formData.readme"
+          :form-data="formData"
+          @update:modelValue="(newValue: any) => formData.readme = newValue"
+          @update:formData="(newFormData: any) => formData = newFormData"
+        />
+
+        <template #footer-actions>
+          <Button variant="outline" @click="previousStep">
+            {{ t('mcpCatalog.form.navigation.previous') }}
+          </Button>
+          <Button @click="nextStep">
+            {{ t('mcpCatalog.form.navigation.next') }}
+          </Button>
+        </template>
+      </DsCard>
+
+      <!-- Step 6: Review -->
+      <DsCard v-else-if="currentStep === 5" :title="t('mcpCatalog.form.steps.review')">
+        <ReviewStep
+          v-model="formData.review"
+          :form-data="formData"
+          @update:modelValue="(newValue: any) => formData.review = newValue"
+          @update:formData="(newFormData: any) => formData = newFormData"
+        />
+
+        <template #footer-actions>
+          <Button variant="outline" @click="previousStep">
+            {{ t('mcpCatalog.form.navigation.previous') }}
+          </Button>
+          <Button
+            @click="submitForm"
+            :disabled="props.isSubmitting || internalIsSubmitting"
+          >
+            <Spinner v-if="props.isSubmitting || internalIsSubmitting" class="mr-2" />
+            {{ props.mode === 'edit' ? t('mcpCatalog.form.navigation.update') : t('mcpCatalog.form.navigation.submit') }}
+          </Button>
+        </template>
+      </DsCard>
     </div>
-
-    <!-- Repository Fetch Error (show below navigation) -->
-    <Alert v-if="repositoryFetchError && currentStep === 0" variant="destructive" class="mt-4">
-      <AlertDescription>
-        {{ repositoryFetchError }}
-        <br>
-        <span class="text-sm">{{ t('mcpCatalog.validation.repositoryUrlInvalid') }}</span>
-      </AlertDescription>
-    </Alert>
   </div>
 </template>

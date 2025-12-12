@@ -131,13 +131,6 @@ onMounted(() => {
 
 <template>
   <div class="space-y-6">
-    <div>
-      <h2 class="text-2xl font-semibold mb-2">Repository Configuration</h2>
-      <p class="text-muted-foreground">
-        Configure the repository where your MCP server is hosted
-      </p>
-    </div>
-
     <div class="space-y-4">
       <!-- Repository URL -->
       <div class="space-y-2">
