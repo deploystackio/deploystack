@@ -6,28 +6,26 @@ import { toast } from 'vue-sonner'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import {
-  Save,
   Lock,
   Calendar,
   Users,
   Hash,
   AlertTriangle,
-  Trash2,
   XCircle,
   Shield
 } from 'lucide-vue-next'
 import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { TeamService, type Team } from '@/services/teamService'
 import { DsCard } from '@/components/ui/ds-card'
 import { z } from 'zod'
@@ -56,6 +54,7 @@ const saveError = ref<string | null>(null)
 const isDeleting = ref(false)
 const deleteError = ref<string | null>(null)
 const showDeleteDialog = ref(false)
+const confirmationText = ref('')
 
 // Form data
 const formData = ref({
@@ -95,6 +94,10 @@ const formattedUpdatedDate = computed(() => {
     month: 'long',
     day: 'numeric'
   })
+})
+
+const isConfirmationValid = computed(() => {
+  return confirmationText.value === 'sudo delete team'
 })
 
 // Save team changes
@@ -288,11 +291,9 @@ watch(() => props.team, () => {
         <Button
           @click="saveTeam"
           :disabled="!hasChanges || isSaving"
-          class="gap-2"
         >
           <Spinner v-if="isSaving" class="mr-2" />
-          <Save v-else class="h-4 w-4" />
-          {{ t('teams.manage.save') }}
+          {{ isSaving ? t('teams.manage.saving') : t('teams.manage.save') }}
         </Button>
       </template>
     </DsCard>
@@ -323,34 +324,19 @@ watch(() => props.team, () => {
 
       <!-- Delete Team Content -->
       <div v-else class="space-y-4">
-        <p class="text-sm text-muted-foreground">
+        <p class="text-sm">
           {{ t('teams.manage.dangerZone.deleteTeamDescription') }}
         </p>
 
         <!-- What gets deleted -->
-        <div class="bg-muted/50 border rounded-lg p-4">
-          <h4 class="text-sm font-medium mb-3">{{ t('teams.manage.dangerZone.willDelete.title') }}</h4>
-          <ul class="text-xs space-y-2">
-            <li class="flex items-start gap-2">
-              <XCircle class="h-3 w-3 text-destructive mt-0.5 shrink-0" />
-              {{ t('teams.manage.dangerZone.willDelete.servers') }}
-            </li>
-            <li class="flex items-start gap-2">
-              <XCircle class="h-3 w-3 text-destructive mt-0.5 shrink-0" />
-              {{ t('teams.manage.dangerZone.willDelete.credentials') }}
-            </li>
-            <li class="flex items-start gap-2">
-              <XCircle class="h-3 w-3 text-destructive mt-0.5 shrink-0" />
-              {{ t('teams.manage.dangerZone.willDelete.variables') }}
-            </li>
-            <li class="flex items-start gap-2">
-              <XCircle class="h-3 w-3 text-destructive mt-0.5 shrink-0" />
-              {{ t('teams.manage.dangerZone.willDelete.history') }}
-            </li>
-            <li class="flex items-start gap-2">
-              <XCircle class="h-3 w-3 text-destructive mt-0.5 shrink-0" />
-              {{ t('teams.manage.dangerZone.willDelete.members') }}
-            </li>
+        <div>
+          <h4 class="text-sm font-medium mb-2">{{ t('teams.manage.dangerZone.willDelete.title') }}</h4>
+          <ul class="text-sm space-y-1 list-disc list-inside">
+            <li>{{ t('teams.manage.dangerZone.willDelete.servers') }}</li>
+            <li>{{ t('teams.manage.dangerZone.willDelete.credentials') }}</li>
+            <li>{{ t('teams.manage.dangerZone.willDelete.variables') }}</li>
+            <li>{{ t('teams.manage.dangerZone.willDelete.history') }}</li>
+            <li>{{ t('teams.manage.dangerZone.willDelete.members') }}</li>
           </ul>
         </div>
       </div>
@@ -359,23 +345,24 @@ watch(() => props.team, () => {
         <Button
           variant="destructive"
           @click="showDeleteDialog = true"
-          class="gap-2"
         >
-          <Trash2 class="h-4 w-4" />
           {{ t('teams.manage.dangerZone.deleteButton') }}
         </Button>
       </template>
     </DsCard>
 
     <!-- Delete Confirmation Dialog -->
-    <AlertDialog :open="showDeleteDialog" @update:open="showDeleteDialog = $event">
-      <AlertDialogContent class="sm:max-w-[500px]">
-        <AlertDialogHeader>
-          <AlertDialogTitle class="flex items-center gap-2 text-destructive">
-            <AlertTriangle class="h-5 w-5" />
-            {{ t('teams.manage.deleteDialog.title') }}
-          </AlertDialogTitle>
-          <AlertDialogDescription class="space-y-4">
+    <Dialog
+      :open="showDeleteDialog"
+      @update:open="(value) => {
+        showDeleteDialog = value
+        if (!value) confirmationText = ''
+      }"
+    >
+      <DialogContent class="sm:max-w-[600px]">
+        <DialogHeader>
+          <DialogTitle>{{ t('teams.manage.deleteDialog.title') }}</DialogTitle>
+          <DialogDescription class="space-y-4">
             <p>{{ t('teams.manage.deleteDialog.warning') }}</p>
 
             <div class="rounded-lg border p-3 bg-muted/50">
@@ -383,45 +370,49 @@ watch(() => props.team, () => {
               <p class="font-mono text-sm">"{{ team.name }}"</p>
             </div>
 
-            <div class="rounded-lg border-destructive/50 bg-destructive/5 p-4 space-y-3">
-              <p class="text-sm font-medium text-destructive">{{ t('teams.manage.deleteDialog.consequences') }}</p>
-              <ul class="text-xs space-y-2">
-                <li class="flex items-start gap-2">
-                  <XCircle class="h-3 w-3 text-destructive mt-0.5 shrink-0" />
-                  {{ t('teams.manage.deleteDialog.consequencesList.servers') }}
-                </li>
-                <li class="flex items-start gap-2">
-                  <XCircle class="h-3 w-3 text-destructive mt-0.5 shrink-0" />
-                  {{ t('teams.manage.deleteDialog.consequencesList.credentials') }}
-                </li>
-                <li class="flex items-start gap-2">
-                  <XCircle class="h-3 w-3 text-destructive mt-0.5 shrink-0" />
-                  {{ t('teams.manage.deleteDialog.consequencesList.variables') }}
-                </li>
-                <li class="flex items-start gap-2">
-                  <XCircle class="h-3 w-3 text-destructive mt-0.5 shrink-0" />
-                  {{ t('teams.manage.deleteDialog.consequencesList.history') }}
-                </li>
+            <div>
+              <p class="text-sm font-medium mb-2">{{ t('teams.manage.deleteDialog.consequences') }}</p>
+              <ul class="text-sm space-y-1 list-disc list-inside">
+                <li>{{ t('teams.manage.deleteDialog.consequencesList.servers') }}</li>
+                <li>{{ t('teams.manage.deleteDialog.consequencesList.credentials') }}</li>
+                <li>{{ t('teams.manage.deleteDialog.consequencesList.variables') }}</li>
+                <li>{{ t('teams.manage.deleteDialog.consequencesList.history') }}</li>
               </ul>
             </div>
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel @click="showDeleteDialog = false">
+
+            <div class="space-y-2">
+              <Label for="delete-confirmation">
+                {{ t('teams.manage.deleteDialog.confirmationLabel') }}
+              </Label>
+              <Input
+                id="delete-confirmation"
+                v-model="confirmationText"
+                :placeholder="t('teams.manage.deleteDialog.confirmationPlaceholder')"
+                class="font-mono"
+              />
+              <p class="text-xs text-muted-foreground">
+                {{ t('teams.manage.deleteDialog.confirmationRequired') }}
+              </p>
+            </div>
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button
+            variant="outline"
+            @click="showDeleteDialog = false"
+          >
             {{ t('teams.manage.deleteDialog.cancel') }}
-          </AlertDialogCancel>
+          </Button>
           <Button
             variant="destructive"
             @click="deleteTeam"
-            :disabled="isDeleting"
-            class="gap-2"
+            :disabled="!isConfirmationValid || isDeleting"
           >
             <Spinner v-if="isDeleting" class="mr-2" />
-            <Trash2 v-else class="h-4 w-4" />
-            {{ t('teams.manage.deleteDialog.confirm') }}
+            {{ isDeleting ? t('teams.manage.deleteDialog.deleting') : t('teams.manage.deleteDialog.confirm') }}
           </Button>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   </div>
 </template>

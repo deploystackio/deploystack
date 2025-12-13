@@ -277,6 +277,9 @@ export default {
           variables: 'All global environment variables',
           history: 'Complete deployment history and logs'
         },
+        confirmationRequired: 'Type "sudo delete team" to confirm',
+        confirmationLabel: 'Confirmation',
+        confirmationPlaceholder: 'Type: sudo delete team',
         cancel: 'Cancel',
         confirm: 'Delete Team',
         deleting: 'Deleting...'

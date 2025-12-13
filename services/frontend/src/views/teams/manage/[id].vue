@@ -83,7 +83,21 @@ const loadTeam = async () => {
 
 // Handle team updates
 const handleTeamUpdated = (updatedTeam: Team) => {
-  team.value = updatedTeam
+  // Merge updated team data while preserving permission fields
+  // that may not be returned by the update endpoint
+  if (team.value) {
+    team.value = {
+      ...team.value,
+      ...updatedTeam,
+      // Explicitly preserve permission fields if they're not in the update response
+      role: updatedTeam.role ?? team.value.role,
+      is_admin: updatedTeam.is_admin ?? team.value.is_admin,
+      is_owner: updatedTeam.is_owner ?? team.value.is_owner,
+      member_count: updatedTeam.member_count ?? team.value.member_count,
+    }
+  } else {
+    team.value = updatedTeam
+  }
 }
 
 // Handle team selection from sidebar

@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Users, UserPlus, Info, AlertTriangle } from 'lucide-vue-next'
+import { Users, Info, AlertTriangle } from 'lucide-vue-next'
 import MemberRow from './MemberRow.vue'
 import { DsCard } from '@/components/ui/ds-card'
 import type { Team } from '@/services/teamService'
@@ -249,8 +249,7 @@ defineExpose({
         <p class="text-sm text-muted-foreground mb-4">
           {{ t('teams.manage.members.noMembers.description') }}
         </p>
-        <Button v-if="canAddMembers" class="gap-2" @click="handleAddMember">
-          <UserPlus class="h-4 w-4" />
+        <Button v-if="canAddMembers" @click="handleAddMember">
           {{ t('teams.manage.members.noMembers.addFirstMember') }}
         </Button>
       </div>
@@ -268,10 +267,8 @@ defineExpose({
 
       <template v-if="canAddMembers" #footer-actions>
         <Button
-          class="gap-2"
           @click="handleAddMember"
         >
-          <UserPlus class="h-4 w-4" />
           {{ t('teams.manage.members.addMember') }}
         </Button>
       </template>
