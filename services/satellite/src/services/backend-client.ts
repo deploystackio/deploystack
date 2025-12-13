@@ -1,6 +1,6 @@
 import { FastifyBaseLogger } from 'fastify';
 import { platform, arch, totalmem } from 'os';
-import { readFile, writeFile, access } from 'fs/promises';
+import { readFile, writeFile, access, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { SatelliteEvent } from '../events/registry';
 import { getVersionString } from '../config/version';
@@ -103,6 +103,67 @@ export class BackendClient {
       connection_status: 'disconnected',
       last_check: new Date().toISOString()
     };
+  }
+
+  /**
+   * Ensure persistent data directory exists with proper permissions
+   * Called during server initialization before any file operations
+   */
+  public async ensureDirectoryExists(): Promise<void> {
+    try {
+      await access(this.persistentDataPath);
+      this.logger.debug({
+        operation: 'persistent_directory_exists',
+        path: this.persistentDataPath
+      }, 'Persistent data directory exists');
+    } catch (error) {
+      const accessError = error as NodeJS.ErrnoException;
+
+      if (accessError.code === 'ENOENT') {
+        // Directory doesn't exist, create it
+        this.logger.info({
+          operation: 'creating_persistent_directory',
+          path: this.persistentDataPath
+        }, 'Creating persistent data directory');
+
+        try {
+          await mkdir(this.persistentDataPath, { recursive: true, mode: 0o755 });
+
+          this.logger.info({
+            operation: 'persistent_directory_created',
+            path: this.persistentDataPath
+          }, '✅ Persistent data directory created successfully');
+
+        } catch (mkdirError) {
+          const mkdirErrno = mkdirError as NodeJS.ErrnoException;
+
+          if (mkdirErrno.code === 'EACCES' || mkdirErrno.code === 'EPERM') {
+            this.logger.fatal({
+              operation: 'persistent_directory_creation_failed',
+              path: this.persistentDataPath,
+              error: mkdirErrno.message,
+              errno: mkdirErrno.code,
+              fix: 'chown -R 1001:1001 /path/to/volume'
+            }, '❌ FATAL: Cannot create persistent data directory due to permission denied');
+
+            throw new Error(
+              `Permission denied creating ${this.persistentDataPath}. ` +
+              `Docker volume permission issue. Fix: chown -R 1001:1001 <volume-mountpoint>`
+            );
+          }
+          throw mkdirError;
+        }
+      } else {
+        // Other access errors (not ENOENT)
+        this.logger.error({
+          operation: 'persistent_directory_access_failed',
+          path: this.persistentDataPath,
+          error: accessError.message,
+          errno: accessError.code
+        }, 'Failed to access persistent data directory');
+        throw error;
+      }
+    }
   }
 
   /**
@@ -500,22 +561,48 @@ export class BackendClient {
    */
   async savePersistedData(data: PersistedSatelliteData): Promise<void> {
     try {
+      // Double-check directory exists (defensive programming)
+      await this.ensureDirectoryExists();
+
       const fileContent = JSON.stringify(data, null, 2);
       await writeFile(this.keyFilePath, fileContent, 'utf-8');
-      
+
       this.logger.info({
         operation: 'persistent_data_saved',
         file_path: this.keyFilePath,
         satellite_id: data.satellite_id,
         satellite_name: data.satellite_name
-      }, 'Satellite data saved to persistent storage');
-      
+      }, '✅ Satellite credentials saved to persistent storage');
+
     } catch (error) {
+      const errno = error as NodeJS.ErrnoException;
+
+      // Handle permission-specific errors with detailed guidance
+      if (errno.code === 'EACCES' || errno.code === 'EPERM') {
+        this.logger.fatal({
+          operation: 'persistent_data_save_permission_denied',
+          file_path: this.keyFilePath,
+          error: errno.message,
+          errno: errno.code,
+          help: 'Check Docker volume permissions. Expected uid=1001, gid=1001',
+          fix_command: 'docker run --rm -v deploystack_satellite_persistent:/data alpine chown -R 1001:1001 /data'
+        }, '❌ FATAL: Cannot save credentials due to permission denied. Satellite cannot persist registration.');
+
+        // This is CRITICAL - satellite will fail on restart without credentials
+        throw new Error(
+          `Permission denied writing ${this.keyFilePath}. ` +
+          `Docker volume permissions issue. Fix: chown -R 1001:1001 /path/to/volume`
+        );
+      }
+
+      // Generic error handling
       this.logger.error({
         operation: 'persistent_data_save_error',
         file_path: this.keyFilePath,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: errno.message || 'Unknown error',
+        errno: errno.code
       }, 'Failed to save satellite data to persistent storage');
+
       throw error;
     }
   }

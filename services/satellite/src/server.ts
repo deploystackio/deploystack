@@ -212,7 +212,19 @@ export async function createServer() {
   // Initialize Backend Client (needed by EventBus)
   const backendUrl = process.env.DEPLOYSTACK_BACKEND_URL || 'http://localhost:3000';
   const backendClient = new BackendClient(backendUrl, server.log);
-  
+
+  // Ensure persistent data directory exists before attempting any operations
+  try {
+    await backendClient.ensureDirectoryExists();
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    server.log.fatal({
+      operation: 'persistent_directory_initialization_failed',
+      error: errorMessage
+    }, 'Failed to initialize persistent storage directory - cannot continue');
+    process.exit(1);
+  }
+
   // Initialize MCP Activity Tracker for personal dashboard feature
   const activityTracker = new McpActivityTracker(server.log);
   server.decorate('activityTracker', activityTracker);

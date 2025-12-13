@@ -17,6 +17,12 @@ RUN mkdir -p /opt/deploystack/mcp-cache && \
 
 WORKDIR /app
 
+# Create persistent_data directory with proper ownership
+# This prevents Docker volume permission issues when running as non-root user
+RUN mkdir -p /app/persistent_data && \
+    chown -R deploystack:deploystack /app/persistent_data && \
+    chmod 755 /app/persistent_data
+
 # Copy package files
 COPY services/satellite/package.json ./
 
