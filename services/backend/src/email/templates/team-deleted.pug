@@ -1,0 +1,30 @@
+//- @description Email notification when a team is deleted
+//- @variables userName, teamName
+extends layouts/base.pug
+
+block content
+  h1 Team Deleted
+
+  p Hi #{userName},
+
+  p Your team #[strong #{teamName}] has been removed from DeployStack.
+
+  h2 What was removed?
+
+  p The following items were removed as part of the team deletion:
+
+  ul
+    li
+      strong All team members&nbsp;
+      | - All users have been removed from the team
+    li
+      strong All MCP servers&nbsp;
+      | - All MCP server installations have been uninstalled
+
+  p
+    | If you need to use MCP servers again, you can create a new team or use your default team.
+
+  p.text-muted
+    | Best regards,
+    br
+    | The DeployStack Team

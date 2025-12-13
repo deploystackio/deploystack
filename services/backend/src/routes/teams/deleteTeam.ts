@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { TeamService } from '../../services/teamService';
 import { requirePermission } from '../../middleware/roleMiddleware';
@@ -87,7 +88,31 @@ export default async function deleteTeamRoute(server: FastifyInstance) {
       }
 
       // Delete the team
-      await TeamService.deleteTeam(teamId);
+      await TeamService.deleteTeam(teamId, request.user!.id, server.log);
+
+      // Queue team deletion email
+      try {
+        const jobQueueService = (server as any).jobQueueService;
+        if (jobQueueService) {
+          await jobQueueService.createJob('send_email', {
+            to: (request.user as any).email,
+            subject: 'Team Deleted Successfully',
+            template: 'team-deleted',
+            variables: {
+              userName: (request.user as any).username || (request.user as any).email,
+              teamName: existingTeam.name
+            }
+          });
+          server.log.info({
+            operation: 'team_deleted',
+            teamId,
+            userEmail: (request.user as any).email
+          }, 'Team deletion email queued');
+        }
+      } catch (emailError) {
+        server.log.error(emailError, 'Failed to queue team deletion email - team deletion succeeded but email not sent');
+        // Don't fail team deletion if email queueing fails
+      }
 
       const successResponse: DeleteSuccessResponse = {
         success: true,

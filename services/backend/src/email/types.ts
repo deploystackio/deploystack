@@ -152,6 +152,17 @@ export interface McpInstallationDeletedEmailVariables {
   teamName: string;
 }
 
+export interface TeamCreatedEmailVariables {
+  userName: string;
+  teamName: string;
+  teamDescription?: string;
+}
+
+export interface TeamDeletedEmailVariables {
+  userName: string;
+  teamName: string;
+}
+
 // Template registry for type safety
 export interface TemplateVariableMap {
   welcome: WelcomeEmailVariables;
@@ -162,6 +173,8 @@ export interface TemplateVariableMap {
   test: TestEmailVariables;
   'mcp-installation-created': McpInstallationCreatedEmailVariables;
   'mcp-installation-deleted': McpInstallationDeletedEmailVariables;
+  'team-created': TeamCreatedEmailVariables;
+  'team-deleted': TeamDeletedEmailVariables;
 }
 
 export type TemplateNames = keyof TemplateVariableMap;

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { FastifyInstance } from 'fastify';
 import { TeamService } from '../../services/teamService';
 import { requirePermission } from '../../middleware/roleMiddleware';
@@ -93,6 +94,31 @@ export default async function createTeamRoute(server: FastifyInstance) {
         owner_id: request.user.id,
       });
 
+      // Queue team creation email
+      try {
+        const jobQueueService = (server as any).jobQueueService;
+        if (jobQueueService) {
+          await jobQueueService.createJob('send_email', {
+            to: (request.user as any).email,
+            subject: 'Team Created Successfully',
+            template: 'team-created',
+            variables: {
+              userName: (request.user as any).username || (request.user as any).email,
+              teamName: team.name,
+              teamDescription: team.description || undefined
+            }
+          });
+          server.log.info({
+            operation: 'team_created',
+            teamId: team.id,
+            userEmail: (request.user as any).email
+          }, 'Team creation email queued');
+        }
+      } catch (emailError) {
+        server.log.error(emailError, 'Failed to queue team creation email - team creation succeeded but email not sent');
+        // Don't fail team creation if email queueing fails
+      }
+
       // Emit TEAM_CREATED event
       try {
         const eventContext: EventContext = {
@@ -100,7 +126,7 @@ export default async function createTeamRoute(server: FastifyInstance) {
           logger: server.log,
           user: {
             id: request.user.id,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+             
             email: (request.user as any).email,
             roleId: 'unknown' // We'd need to fetch this from DB if needed
           },
@@ -122,7 +148,7 @@ export default async function createTeamRoute(server: FastifyInstance) {
             },
             createdBy: {
               id: request.user.id,
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+               
               email: (request.user as any).email
             },
             metadata: {

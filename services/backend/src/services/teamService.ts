@@ -1,9 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { eq, and, count } from 'drizzle-orm';
+import { eq, and, count, or } from 'drizzle-orm';
 import { getDb, getSchema } from '../db/index';
 import { generateId } from 'lucia';
 import { GlobalSettings } from '../global-settings/helpers';
 import type { FastifyBaseLogger } from 'fastify';
+import { McpInstallationService } from './mcpInstallationService';
+import { SatelliteCommandService } from './satelliteCommandService';
 
 export interface Team {
   id: string;
@@ -281,9 +283,99 @@ export class TeamService {
   /**
    * Delete team
    */
-  static async deleteTeam(teamId: string): Promise<boolean> {
+  static async deleteTeam(teamId: string, userId: string, logger: FastifyBaseLogger): Promise<boolean> {
     const { db, schema } = this.getDbAndSchema();
-    // Delete team memberships first (cascade should handle this, but being explicit)
+
+    // Delete all MCP installations for this team
+    // This will remove the database records and create satellite commands to kill processes
+    try {
+      const installationService = new McpInstallationService(db, logger);
+      const satelliteCommandService = new SatelliteCommandService(db, logger);
+
+      // Get all MCP installations for this team
+      const installations = await installationService.getTeamInstallations(teamId, userId);
+
+      let deletedCount = 0;
+      let totalCommands = 0;
+
+      // Delete each installation and create satellite commands
+      for (const installation of installations) {
+        try {
+          // 1. Delete installation from database
+          const deleted = await installationService.deleteInstallation(installation.id, teamId);
+          if (deleted) {
+            deletedCount++;
+          }
+
+          // 2. Create satellite commands to kill processes (fire-and-forget)
+          try {
+            const commands = await satelliteCommandService.notifyMcpInstallation(
+              installation.id,
+              teamId,
+              userId
+            );
+            totalCommands += commands.length;
+          } catch (commandError) {
+            logger.error(commandError, `Failed to create satellite commands for installation ${installation.id}`);
+            // Continue even if satellite command creation fails
+          }
+        } catch (installationError) {
+          logger.error(installationError, `Failed to delete installation ${installation.id}`);
+          // Continue with other installations even if one fails
+        }
+      }
+
+      logger.info({
+        operation: 'team_deletion',
+        teamId,
+        totalInstallations: installations.length,
+        installationsDeleted: deletedCount,
+        satelliteCommandsCreated: totalCommands
+      }, 'MCP installations deleted and satellite commands created for team deletion');
+
+    } catch (error) {
+      logger.error(error, 'Failed to delete MCP installations - proceeding with team deletion anyway');
+      // Don't fail team deletion if installation deletion fails
+    }
+
+    // Handle satellite commands - preserve pending commands so satellites can pick them up
+    // Set target_team_id to NULL for pending commands (allows team deletion without blocking satellite execution)
+    await (db as any)
+      .update(schema.satelliteCommands)
+      .set({ target_team_id: null })
+      .where(
+        and(
+          eq(schema.satelliteCommands.target_team_id, teamId),
+          eq(schema.satelliteCommands.status, 'pending')
+        )
+      );
+
+    // Delete non-pending satellite commands (completed/failed/executing) since they're no longer needed
+    await (db as any)
+      .delete(schema.satelliteCommands)
+      .where(
+        and(
+          eq(schema.satelliteCommands.target_team_id, teamId),
+          or(
+            eq(schema.satelliteCommands.status, 'completed'),
+            eq(schema.satelliteCommands.status, 'failed'),
+            eq(schema.satelliteCommands.status, 'acknowledged'),
+            eq(schema.satelliteCommands.status, 'executing')
+          )
+        )
+      );
+
+    // Delete satellite processes for this team
+    await (db as any)
+      .delete(schema.satelliteProcesses)
+      .where(eq(schema.satelliteProcesses.team_id, teamId));
+
+    // Delete satellite usage logs for this team
+    await (db as any)
+      .delete(schema.satelliteUsageLogs)
+      .where(eq(schema.satelliteUsageLogs.team_id, teamId));
+
+    // Delete team memberships (cascade should handle this, but being explicit)
     await (db as any)
       .delete(schema.teamMemberships)
       .where(eq(schema.teamMemberships.team_id, teamId));

@@ -1,0 +1,40 @@
+//- @description Email notification when a new team is created
+//- @variables userName, teamName, teamDescription
+extends layouts/base.pug
+
+block content
+  h1 Team Created Successfully
+
+  p Hi #{userName},
+
+  p Your new team has been created successfully!
+
+  .team-info
+    p
+      strong Team Name:
+      |  #{teamName}
+
+    if teamDescription
+      p
+        strong Description:
+        |  #{teamDescription}
+
+  h2 What's next?
+
+  p Now that your team is set up, here are some things you can do:
+
+  ul
+    li
+      strong Add MCP servers&nbsp;
+      | - Browse our catalog and add tools to your team. MCP servers give you access to powerful integrations like GitHub, databases, and more.
+    li
+      strong Add team members&nbsp;
+      | - Invite your colleagues to collaborate. Share secure access to MCP tools without sharing credentials.
+
+  p
+    | Visit your dashboard to get started with your new team.
+
+  p.text-muted
+    | Best regards,
+    br
+    | The DeployStack Team
