@@ -5042,6 +5042,15 @@
             "schema": {
               "type": "string"
             },
+            "in": "query",
+            "name": "satelliteId",
+            "required": false,
+            "description": "Satellite ID to generate configuration for (optional, defaults to first active satellite)"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
             "in": "path",
             "name": "category",
             "required": true,
@@ -5377,6 +5386,15 @@
         ],
         "description": "Returns all configuration actions for the specified MCP client. Consider using /config/:category/:client for filtered results.",
         "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "satelliteId",
+            "required": false,
+            "description": "Satellite ID to generate configuration for (optional, defaults to first active satellite)"
+          },
           {
             "schema": {
               "type": "string",

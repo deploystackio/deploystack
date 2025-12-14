@@ -104,8 +104,13 @@ export class GatewayConfigService {
   private static baseUrl = getEnv('VITE_DEPLOYSTACK_BACKEND_URL')
 
   // Updated to use the new satellite endpoint with category filtering
-  static async getClientConfig(client: string, category: string = 'connection'): Promise<ClientConfigResponse> {
-    const response = await fetch(`${this.baseUrl}/api/me/satellite/config/${category}/${client}`, {
+  static async getClientConfig(
+    client: string,
+    satelliteId?: string,
+    category: string = 'connection'
+  ): Promise<ClientConfigResponse> {
+    const queryParams = satelliteId ? `?satelliteId=${satelliteId}` : ''
+    const response = await fetch(`${this.baseUrl}/api/me/satellite/config/${category}/${client}${queryParams}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -122,8 +127,9 @@ export class GatewayConfigService {
   }
 
   // Get all configuration actions for a client (all categories)
-  static async getAllClientConfig(client: string): Promise<ClientConfigResponse> {
-    const response = await fetch(`${this.baseUrl}/api/me/satellite/config/${client}`, {
+  static async getAllClientConfig(client: string, satelliteId?: string): Promise<ClientConfigResponse> {
+    const queryParams = satelliteId ? `?satelliteId=${satelliteId}` : ''
+    const response = await fetch(`${this.baseUrl}/api/me/satellite/config/${client}${queryParams}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',

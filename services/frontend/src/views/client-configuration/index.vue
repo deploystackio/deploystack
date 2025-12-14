@@ -10,6 +10,8 @@ import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { SettingsMenu, SettingsMenuGroup, SettingsMenuItem, SettingsMenuSeparator } from '@/components/ui/settings-menu'
 import { GatewayConfigService, type ClientConfigResponse, type ConfigAction, type ClientInfo, type ClientCategory } from '@/services/satelliteConfigService'
+import { SatelliteService, type TeamSatellite } from '@/services/satelliteService'
+import { TeamService } from '@/services/teamService'
 import LinkActionRenderer from '@/components/client-config/LinkActionRenderer.vue'
 import StepsActionRenderer from '@/components/client-config/StepsActionRenderer.vue'
 import CommandActionRenderer from '@/components/client-config/CommandActionRenderer.vue'
@@ -29,6 +31,11 @@ const actions = ref<ConfigAction[]>([])
 const isLoading = ref(true)
 const isLoadingConfig = ref(false)
 const error = ref<string | null>(null)
+
+// Satellite state
+const availableSatellites = ref<TeamSatellite[]>([])
+const selectedSatelliteId = ref('')
+const isLoadingSatellites = ref(false)
 
 // Computed
 const selectedClientFromRoute = computed(() => {
@@ -108,11 +115,64 @@ async function loadSupportedClients() {
   }
 }
 
+// Load available satellites for user's team
+async function loadAvailableSatellites() {
+  isLoadingSatellites.value = true
+  try {
+    // Get user's teams
+    const userTeams = await TeamService.getUserTeams()
+
+    if (!userTeams || userTeams.length === 0) {
+      toast.error('No teams found for user')
+      return
+    }
+
+    // Get user's first team (default team)
+    const firstTeam = userTeams[0]
+    if (!firstTeam) {
+      toast.error('No default team found')
+      return
+    }
+
+    const teamId = firstTeam.id
+    const response = await SatelliteService.getTeamSatellites(teamId)
+
+    // CRITICAL: Filter ONLY active satellites (status='active')
+    availableSatellites.value = response.data.satellites.filter((s: TeamSatellite) => s.status === 'active')
+
+    // Auto-select first satellite if only one or if none selected
+    if (availableSatellites.value.length === 1) {
+      const firstSatellite = availableSatellites.value[0]
+      if (firstSatellite) {
+        selectedSatelliteId.value = firstSatellite.id
+      }
+    } else if (availableSatellites.value.length > 0 && !selectedSatelliteId.value) {
+      const firstSatellite = availableSatellites.value[0]
+      if (firstSatellite) {
+        selectedSatelliteId.value = firstSatellite.id
+      }
+    }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Failed to load satellites'
+    toast.error(errorMessage)
+  } finally {
+    isLoadingSatellites.value = false
+  }
+}
+
 // Load configuration from API
 async function loadConfiguration(category: string, client: string) {
+  if (!selectedSatelliteId.value) {
+    return
+  }
+
   isLoadingConfig.value = true
   try {
-    const response: ClientConfigResponse = await GatewayConfigService.getClientConfig(client, category)
+    const response: ClientConfigResponse = await GatewayConfigService.getClientConfig(
+      client,
+      selectedSatelliteId.value,
+      category
+    )
     actions.value = response
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Failed to load configuration'
@@ -148,11 +208,21 @@ watch([selectedCategoryFromRoute, selectedClientFromRoute], async ([newCategory,
   if (newCategory && newClient && (newCategory !== selectedCategory.value || newClient !== selectedClient.value)) {
     selectedCategory.value = newCategory
     selectedClient.value = newClient
-    await loadConfiguration(newCategory, newClient)
+    if (selectedSatelliteId.value) {
+      await loadConfiguration(newCategory, newClient)
+    }
+  }
+})
+
+// Watch for satellite changes to reload current configuration
+watch(selectedSatelliteId, async () => {
+  if (selectedCategory.value && selectedClient.value) {
+    await loadConfiguration(selectedCategory.value, selectedClient.value)
   }
 })
 
 onMounted(async () => {
+  await loadAvailableSatellites()
   await loadSupportedClients()
 })
 </script>
@@ -195,6 +265,33 @@ onMounted(async () => {
       <div class="flex flex-col space-y-8 md:flex-row md:space-x-12 md:space-y-0 md:min-h-[calc(100vh-12rem)]">
         <!-- Desktop Sidebar Navigation -->
         <aside class="hidden md:block md:w-1/5 md:pr-8">
+          <!-- Satellite Selection -->
+          <div class="mb-6">
+            <label class="text-sm font-medium mb-2 block md:pl-3">Select Satellite</label>
+            <Select
+              v-model="selectedSatelliteId"
+              :disabled="isLoadingSatellites || availableSatellites.length === 0"
+            >
+              <SelectTrigger>
+                <SelectValue
+                  :placeholder="isLoadingSatellites ? 'Loading satellites...' : 'Select satellite'"
+                />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem
+                  v-for="satellite in availableSatellites"
+                  :key="satellite.id"
+                  :value="satellite.id"
+                >
+                  {{ satellite.name }}
+                  <span class="text-xs text-muted-foreground ml-2">
+                    ({{ satellite.satellite_type === 'global' ? 'Global' : 'Team' }})
+                  </span>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           <SettingsMenu v-if="!isLoading">
             <template v-for="(category, categoryIndex) in clientCategories" :key="category.id">
               <SettingsMenuGroup :title="category.name">

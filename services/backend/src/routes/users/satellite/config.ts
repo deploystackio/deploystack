@@ -1,14 +1,18 @@
 import { type FastifyInstance } from 'fastify';
 import { requireAuthenticationAny, requireOAuthScope } from '../../../middleware/oauthMiddleware';
+import { getDb, getSchema } from '../../../db';
+import { eq, and, or, isNull } from 'drizzle-orm';
 import fs from 'fs';
 import path from 'path';
 import {
   CLIENT_PARAM_SCHEMA,
   CLIENT_CATEGORY_PARAM_SCHEMA,
+  SATELLITE_ID_QUERY_SCHEMA,
   SUCCESS_RESPONSE_SCHEMA,
   ERROR_RESPONSE_SCHEMA,
   type ClientParams,
   type ClientCategoryParams,
+  type SatelliteIdQuery,
   type ErrorResponse,
   type JsonAction,
   type LinkAction,
@@ -23,9 +27,44 @@ function createBase64Config(config: object): string {
   return Buffer.from(JSON.stringify(config)).toString('base64');
 }
 
+// Helper function to get satellite URL from database
+async function getSatelliteUrl(
+  satelliteId: string | undefined,
+  teamId: string,
+  db: ReturnType<typeof getDb>,
+  satellites: ReturnType<typeof getSchema>['satellites']
+): Promise<string> {
+  // Build query condition - if satelliteId provided, use it; otherwise get first active satellite
+  const query = satelliteId
+    ? eq(satellites.id, satelliteId)
+    : or(
+        and(eq(satellites.satellite_type, 'global'), isNull(satellites.team_id)),
+        and(eq(satellites.satellite_type, 'team'), eq(satellites.team_id, teamId))
+      );
+
+  const satelliteRecords = await db
+    .select({ satellite_url: satellites.satellite_url })
+    .from(satellites)
+    .where(
+      and(
+        eq(satellites.status, 'active'),  // CRITICAL: Only active satellites
+        query
+      )
+    )
+    .limit(1);
+
+  if (satelliteRecords.length === 0) {
+    throw new Error('No active satellites available');
+  }
+
+  return satelliteRecords[0].satellite_url;
+}
+
 // Client configuration generator - now returns array of actions
-export function generateClientConfig(clientType: string): ClientConfigResponse {
-  const satelliteUrl = 'https://satellite.deploystack.io';
+export async function generateClientConfig(
+  clientType: string,
+  satelliteUrl: string
+): Promise<ClientConfigResponse> {
   const actions: ClientConfigResponse = [];
 
   // Read AI instruction files from local directory
@@ -239,7 +278,10 @@ export function generateClientConfig(clientType: string): ClientConfigResponse {
 
 export default async function getClientConfig(server: FastifyInstance) {
   // New route with category filtering
-  server.get('/me/satellite/config/:category/:client', {
+  server.get<{
+    Params: ClientCategoryParams;
+    Querystring: SatelliteIdQuery;
+  }>('/me/satellite/config/:category/:client', {
     preValidation: [
       requireAuthenticationAny(),
       requireOAuthScope('mcp:read')
@@ -253,6 +295,7 @@ export default async function getClientConfig(server: FastifyInstance) {
         { bearerAuth: [] }
       ],
       params: CLIENT_CATEGORY_PARAM_SCHEMA,
+      querystring: SATELLITE_ID_QUERY_SCHEMA,
       response: {
         200: {
           ...SUCCESS_RESPONSE_SCHEMA,
@@ -275,9 +318,35 @@ export default async function getClientConfig(server: FastifyInstance) {
   }, async (request, reply) => {
     try {
       const { category, client } = request.params as ClientCategoryParams;
+      const { satelliteId } = request.query as SatelliteIdQuery;
+      const userId = request.user!.id;
 
-      // Generate all client-specific configuration actions
-      const allActions = generateClientConfig(client);
+      const db = getDb();
+      const { satellites, teams } = getSchema();
+
+      // Get user's default team
+      const defaultTeam = await db
+        .select({ id: teams.id })
+        .from(teams)
+        .where(
+          and(
+            eq(teams.owner_id, userId),
+            eq(teams.is_default, true)
+          )
+        )
+        .limit(1);
+
+      if (defaultTeam.length === 0) {
+        throw new Error('No default team found for user');
+      }
+
+      const teamId = defaultTeam[0].id;
+
+      // Get satellite URL from database
+      const satelliteUrl = await getSatelliteUrl(satelliteId, teamId, db, satellites);
+
+      // Generate all client-specific configuration actions with dynamic URL
+      const allActions = await generateClientConfig(client, satelliteUrl);
 
       // Filter by category
       const filteredActions = allActions.filter(action => action.category === category);
@@ -295,7 +364,10 @@ export default async function getClientConfig(server: FastifyInstance) {
   });
 
   // Keep legacy route for backward compatibility (returns all actions)
-  server.get('/me/satellite/config/:client', {
+  server.get<{
+    Params: ClientParams;
+    Querystring: SatelliteIdQuery;
+  }>('/me/satellite/config/:client', {
     preValidation: [
       requireAuthenticationAny(),
       requireOAuthScope('mcp:read')
@@ -309,6 +381,7 @@ export default async function getClientConfig(server: FastifyInstance) {
         { bearerAuth: [] }
       ],
       params: CLIENT_PARAM_SCHEMA,
+      querystring: SATELLITE_ID_QUERY_SCHEMA,
       response: {
         200: {
           ...SUCCESS_RESPONSE_SCHEMA,
@@ -331,9 +404,35 @@ export default async function getClientConfig(server: FastifyInstance) {
   }, async (request, reply) => {
     try {
       const { client } = request.params as ClientParams;
+      const { satelliteId } = request.query as SatelliteIdQuery;
+      const userId = request.user!.id;
 
-      // Generate client-specific configuration actions
-      const configActions = generateClientConfig(client);
+      const db = getDb();
+      const { satellites, teams } = getSchema();
+
+      // Get user's default team
+      const defaultTeam = await db
+        .select({ id: teams.id })
+        .from(teams)
+        .where(
+          and(
+            eq(teams.owner_id, userId),
+            eq(teams.is_default, true)
+          )
+        )
+        .limit(1);
+
+      if (defaultTeam.length === 0) {
+        throw new Error('No default team found for user');
+      }
+
+      const teamId = defaultTeam[0].id;
+
+      // Get satellite URL from database
+      const satelliteUrl = await getSatelliteUrl(satelliteId, teamId, db, satellites);
+
+      // Generate client-specific configuration actions with dynamic URL
+      const configActions = await generateClientConfig(client, satelliteUrl);
 
       const jsonString = JSON.stringify(configActions);
       return reply.status(200).type('application/json').send(jsonString);

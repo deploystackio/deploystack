@@ -16,9 +16,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  Field,
+  FieldLabel,
+} from '@/components/ui/field'
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
+import { AlertCircle } from 'lucide-vue-next'
 import { GatewayConfigService, type ClientConfigResponse, type ClientInfo, type ConfigAction } from '@/services/satelliteConfigService'
+import { SatelliteService, type TeamSatellite } from '@/services/satelliteService'
+import { TeamService } from '@/services/teamService'
 import { toast } from 'vue-sonner'
 import LinkActionRenderer from '@/components/client-config/LinkActionRenderer.vue'
 import StepsActionRenderer from '@/components/client-config/StepsActionRenderer.vue'
@@ -38,6 +50,9 @@ const emit = defineEmits<{
 const { t } = useI18n()
 
 // State
+const availableSatellites = ref<TeamSatellite[]>([])
+const selectedSatelliteId = ref('')
+const isLoadingSatellites = ref(false)
 const selectedClient = ref('')
 const actions = ref<ConfigAction[]>([])
 const isLoading = ref(false)
@@ -72,19 +87,75 @@ const copyableContent = computed(() => {
   return ''
 })
 
-// Load supported clients when modal opens
+// Load supported clients and satellites when modal opens
 watch(() => props.open, async (isOpen) => {
-  if (isOpen && supportedClients.value.length === 0) {
-    await loadSupportedClients()
+  if (isOpen) {
+    await loadAvailableSatellites()
+    if (supportedClients.value.length === 0) {
+      await loadSupportedClients()
+    }
+  }
+})
+
+// Reload configuration when satellite changes
+watch(selectedSatelliteId, async () => {
+  if (selectedClient.value && selectedSatelliteId.value) {
+    await loadConfiguration(selectedClient.value)
   }
 })
 
 // Load configuration when client changes
 watch(selectedClient, async (newClient) => {
-  if (newClient) {
+  if (newClient && selectedSatelliteId.value) {
     await loadConfiguration(newClient)
   }
 })
+
+// Load available satellites for user's team
+async function loadAvailableSatellites() {
+  isLoadingSatellites.value = true
+  try {
+    // Get user's teams
+    const userTeams = await TeamService.getUserTeams()
+
+    if (!userTeams || userTeams.length === 0) {
+      toast.error('No teams found for user')
+      return
+    }
+
+    // Get user's first team (default team)
+    const firstTeam = userTeams[0]
+    if (!firstTeam) {
+      toast.error('No default team found')
+      return
+    }
+
+    const teamId = firstTeam.id
+    const response = await SatelliteService.getTeamSatellites(teamId)
+
+    // CRITICAL: Filter ONLY active satellites (status='active')
+    // Inactive, maintenance, and error satellites are hidden from selection
+    availableSatellites.value = response.data.satellites.filter((s: TeamSatellite) => s.status === 'active')
+
+    // Auto-select first satellite if only one or if none selected
+    if (availableSatellites.value.length === 1) {
+      const firstSatellite = availableSatellites.value[0]
+      if (firstSatellite) {
+        selectedSatelliteId.value = firstSatellite.id
+      }
+    } else if (availableSatellites.value.length > 0 && !selectedSatelliteId.value) {
+      const firstSatellite = availableSatellites.value[0]
+      if (firstSatellite) {
+        selectedSatelliteId.value = firstSatellite.id
+      }
+    }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Failed to load satellites'
+    toast.error(errorMessage)
+  } finally {
+    isLoadingSatellites.value = false
+  }
+}
 
 // Load supported clients from API
 async function loadSupportedClients() {
@@ -109,9 +180,18 @@ async function loadSupportedClients() {
 
 // Load configuration from API (only connection category)
 async function loadConfiguration(client: string) {
+  if (!selectedSatelliteId.value) {
+    toast.error('Please select a satellite first')
+    return
+  }
+
   isLoading.value = true
   try {
-    const response: ClientConfigResponse = await GatewayConfigService.getClientConfig(client, 'connection')
+    const response: ClientConfigResponse = await GatewayConfigService.getClientConfig(
+      client,
+      selectedSatelliteId.value,
+      'connection'
+    )
     actions.value = response
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Failed to load configuration'
@@ -173,26 +253,74 @@ function handleLinkClick(action: { url: string; name?: string }) {
       </AlertDialogHeader>
 
       <div class="space-y-6">
-        <!-- Client Selection Dropdown -->
-        <div class="space-y-2">
-          <label class="text-sm font-medium">{{ t('satelliteConfig.modal.clientLabel') }}</label>
-          <Select v-model="selectedClient" :disabled="isLoadingClients">
-            <SelectTrigger class="w-full">
-              <SelectValue
-                :placeholder="isLoadingClients ? 'Loading clients...' : t('satelliteConfig.modal.selectPlaceholder')"
-              />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem
-                v-for="client in supportedClients"
-                :key="client.id"
-                :value="client.id"
-              >
-                {{ client.name }}
-              </SelectItem>
-            </SelectContent>
-          </Select>
+        <!-- Client and Satellite Selection - Side by Side on Desktop -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Client Selection (LEFT) -->
+          <Field>
+            <FieldLabel for="client-select">{{ t('satelliteConfig.modal.clientLabel') }}</FieldLabel>
+            <Select
+              v-model="selectedClient"
+              :disabled="!selectedSatelliteId || isLoadingClients || supportedClients.length === 0"
+            >
+              <SelectTrigger id="client-select">
+                <SelectValue
+                  :placeholder="
+                    !selectedSatelliteId
+                      ? 'Select a satellite first'
+                      : isLoadingClients
+                      ? 'Loading clients...'
+                      : t('satelliteConfig.modal.selectPlaceholder')
+                  "
+                />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem
+                  v-for="client in supportedClients"
+                  :key="client.id"
+                  :value="client.id"
+                >
+                  {{ client.name }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </Field>
+
+          <!-- Satellite Selection (RIGHT) -->
+          <Field>
+            <FieldLabel for="satellite-select">Select Satellite</FieldLabel>
+            <Select
+              v-model="selectedSatelliteId"
+              :disabled="isLoadingSatellites || availableSatellites.length === 0"
+            >
+              <SelectTrigger id="satellite-select">
+                <SelectValue
+                  :placeholder="isLoadingSatellites ? 'Loading satellites...' : 'Select satellite'"
+                />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem
+                  v-for="satellite in availableSatellites"
+                  :key="satellite.id"
+                  :value="satellite.id"
+                >
+                  {{ satellite.name }}
+                  <span class="text-xs text-muted-foreground ml-2">
+                    ({{ satellite.satellite_type === 'global' ? 'Global' : 'Team' }})
+                  </span>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </Field>
         </div>
+
+        <!-- No Satellites Available Alert -->
+        <Alert v-if="!isLoadingSatellites && availableSatellites.length === 0">
+          <AlertCircle class="h-4 w-4 text-destructive" />
+          <AlertTitle>No Satellites Available</AlertTitle>
+          <AlertDescription>
+            No active satellites available. Please contact your administrator.
+          </AlertDescription>
+        </Alert>
 
         <!-- Loading State -->
         <div v-if="isLoading" class="text-center py-8 text-muted-foreground">
@@ -200,7 +328,7 @@ function handleLinkClick(action: { url: string; name?: string }) {
         </div>
 
         <!-- Actions Rendering -->
-        <div v-else class="space-y-6">
+        <div v-else-if="availableSatellites.length > 0" class="space-y-6">
           <template v-for="(action, index) in actions" :key="index">
             <!-- Link Actions (One-Click Install) -->
             <div v-if="action.type === 'link'" class="space-y-2">

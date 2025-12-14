@@ -54,7 +54,8 @@ export default async function listClients(server: FastifyInstance) {
       // Loop through all client types and extract their categories
       for (const client of CLIENT_TYPES) {
         try {
-          const actions = generateClientConfig(client.id);
+          // Use placeholder URL since we're only discovering categories, not generating actual configs
+          const actions = await generateClientConfig(client.id, 'https://placeholder.satellite.url');
           server.log.debug({ clientId: client.id, actionsCount: actions.length }, 'Generated client config');
 
           // Extract unique categories from this client's actions

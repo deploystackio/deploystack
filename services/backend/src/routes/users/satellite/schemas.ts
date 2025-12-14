@@ -80,6 +80,17 @@ export const CLIENT_CATEGORY_PARAM_SCHEMA = {
   additionalProperties: false
 } as const;
 
+export const SATELLITE_ID_QUERY_SCHEMA = {
+  type: 'object',
+  properties: {
+    satelliteId: {
+      type: 'string',
+      description: 'Satellite ID to generate configuration for (optional, defaults to first active satellite)'
+    }
+  },
+  additionalProperties: false
+} as const;
+
 // New response schema for array-based configuration with actions
 export const SUCCESS_RESPONSE_SCHEMA = {
   type: 'array',
@@ -234,6 +245,10 @@ export interface ClientParams {
 export interface ClientCategoryParams {
   category: string;
   client: ClientType;
+}
+
+export interface SatelliteIdQuery {
+  satelliteId?: string;
 }
 
 export interface ClientsListResponse {
