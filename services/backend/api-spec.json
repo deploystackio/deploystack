@@ -13528,6 +13528,10 @@
                                 ],
                                 "description": "Team ID (null for global satellites)"
                               },
+                              "satellite_url": {
+                                "type": "string",
+                                "description": "Publicly accessible satellite URL"
+                              },
                               "last_heartbeat": {
                                 "type": [
                                   "null",
@@ -13542,7 +13546,8 @@
                               "satellite_type",
                               "status",
                               "capabilities",
-                              "team_id"
+                              "team_id",
+                              "satellite_url"
                             ]
                           },
                           "description": "Array of available satellites (global and team-specific)"
@@ -34546,6 +34551,10 @@
                     ],
                     "description": "Satellite capabilities"
                   },
+                  "satellite_url": {
+                    "type": "string",
+                    "description": "Publicly accessible satellite URL (optional - auto-detected if not provided)"
+                  },
                   "system_info": {
                     "type": "object",
                     "properties": {
@@ -35319,6 +35328,10 @@
                   "version": {
                     "type": "string",
                     "description": "Satellite software version"
+                  },
+                  "satellite_url": {
+                    "type": "string",
+                    "description": "Publicly accessible satellite URL (optional - only sent on first heartbeat after startup)"
                   }
                 },
                 "required": [

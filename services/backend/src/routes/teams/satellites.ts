@@ -48,12 +48,16 @@ const SATELLITE_SCHEMA = {
       type: ['string', 'null'],
       description: 'Team ID (null for global satellites)'
     },
+    satellite_url: {
+      type: 'string',
+      description: 'Publicly accessible satellite URL'
+    },
     last_heartbeat: {
       type: ['string', 'null'],
       description: 'ISO 8601 timestamp of last communication'
     }
   },
-  required: ['id', 'name', 'satellite_type', 'status', 'capabilities', 'team_id']
+  required: ['id', 'name', 'satellite_type', 'status', 'capabilities', 'team_id', 'satellite_url']
 } as const;
 
 const SATELLITES_SUCCESS_RESPONSE_SCHEMA = {
@@ -111,6 +115,7 @@ interface Satellite {
   status: 'active';
   capabilities: string[];
   team_id: string | null;
+  satellite_url: string;
   last_heartbeat: string | null;
 }
 
@@ -136,6 +141,7 @@ interface SatelliteRecord {
   status: 'active' | 'inactive' | 'maintenance' | 'error';
   capabilities: string;
   team_id: string | null;
+  satellite_url: string;
   last_heartbeat: Date | null;
 }
 
@@ -201,6 +207,7 @@ export default async function getTeamSatellitesRoute(server: FastifyInstance) {
           status: satellites.status,
           capabilities: satellites.capabilities,
           team_id: satellites.team_id,
+          satellite_url: satellites.satellite_url,
           last_heartbeat: satellites.last_heartbeat
         })
         .from(satellites)
@@ -244,6 +251,7 @@ export default async function getTeamSatellitesRoute(server: FastifyInstance) {
           status: 'active' as const,
           capabilities: capabilitiesArray,
           team_id: sat.team_id,
+          satellite_url: sat.satellite_url,
           last_heartbeat: sat.last_heartbeat ? sat.last_heartbeat.toISOString() : null
         };
       });
