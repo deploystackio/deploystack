@@ -5,10 +5,11 @@ FROM node:24-bookworm-slim
 # Create deploystack user with home directory
 RUN useradd -m -d /opt/deploystack -s /bin/bash deploystack
 
-# Install only essential runtime dependencies
+# Install essential runtime dependencies including gosu for privilege dropping
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     ca-certificates \
+    gosu \
     && rm -rf /var/lib/apt/lists/*
 
 # Create mcp-cache base directory with proper ownership
@@ -32,6 +33,10 @@ RUN npm install --omit=dev --no-package-lock
 # Copy pre-built files
 COPY services/satellite/dist ./dist
 
+# Copy entrypoint script
+COPY services/satellite/scripts/docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
 # Create a default .env file with development defaults
 # NODE_ENV=development ensures no nsjail isolation is used
 RUN echo "NODE_ENV=development" > .env && \
@@ -40,7 +45,6 @@ RUN echo "NODE_ENV=development" > .env && \
 
 EXPOSE 3001
 
-# Run as deploystack user
-USER deploystack
-
+# Use entrypoint script that fixes permissions and drops privileges
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 CMD ["node", "--env-file=.env", "dist/index.js"]
