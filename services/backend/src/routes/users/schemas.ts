@@ -133,44 +133,48 @@ export const USER_PROFILE_SCHEMA = {
 export const TEAM_ITEM_SCHEMA = {
   type: 'object',
   properties: {
-    id: { 
+    id: {
       type: 'string',
       description: 'Team unique identifier'
     },
-    name: { 
+    name: {
       type: 'string',
       description: 'Team name'
     },
-    slug: { 
+    slug: {
       type: 'string',
       description: 'Team URL-friendly identifier'
     },
-    description: { 
+    description: {
       type: ['string', 'null'],
       description: 'Team description'
     },
-    owner_id: { 
+    owner_id: {
       type: 'string',
       description: 'User ID of the team owner'
     },
-    created_at: { 
+    is_default: {
+      type: 'boolean',
+      description: 'Whether this is the default team'
+    },
+    created_at: {
       type: ['string', 'null'],
       description: 'Team creation timestamp (ISO 8601)'
     },
-    updated_at: { 
+    updated_at: {
       type: ['string', 'null'],
       description: 'Team last update timestamp (ISO 8601)'
     },
-    role: { 
+    role: {
       type: 'string',
       description: 'User role within this team (team_admin or team_user)'
     },
-    is_owner: { 
+    is_owner: {
       type: 'boolean',
       description: 'Whether the current user owns this team'
     }
   },
-  required: ['id', 'name', 'slug', 'owner_id', 'role', 'is_owner'],
+  required: ['id', 'name', 'slug', 'owner_id', 'is_default', 'role', 'is_owner'],
   additionalProperties: false
 } as const;
 
@@ -305,6 +309,7 @@ export interface TeamItem {
   slug: string;
   description: string | null;
   owner_id: string;
+  is_default: boolean;
   created_at: string | null;
   updated_at: string | null;
   role: string;

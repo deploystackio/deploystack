@@ -60,6 +60,7 @@ export default async function getCurrentUserTeamsRoute(server: FastifyInstance) 
         slug: String(team.slug),
         description: team.description ? String(team.description) : null,
         owner_id: String(team.owner_id),
+        is_default: Boolean(team.is_default),
         created_at: team.created_at ? team.created_at.toISOString() : null,
         updated_at: team.updated_at ? team.updated_at.toISOString() : null,
         role: String(team.role),

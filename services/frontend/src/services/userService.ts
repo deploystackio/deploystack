@@ -384,4 +384,45 @@ export class UserService {
       throw error;
     }
   }
+
+  /**
+   * Delete current user account
+   * This will permanently delete the account and all associated data
+   */
+  static async deleteMyAccount(): Promise<{ success: boolean; message?: string; error?: string; owned_teams?: Array<{ id: string; name: string }> }> {
+    try {
+      const apiUrl = this.getApiUrl();
+      const response = await fetch(`${apiUrl}/api/users/me`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        // Special handling for 400 - user owns non-default teams
+        if (response.status === 400 && data.owned_teams) {
+          return {
+            success: false,
+            error: data.error,
+            owned_teams: data.owned_teams
+          };
+        }
+
+        throw new Error(data.error || `Failed to delete account: ${response.statusText} (status: ${response.status})`);
+      }
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to delete account due to an API error.');
+      }
+
+      // Clear cache since user no longer exists
+      this.clearCache();
+
+      return data;
+    } catch (error) {
+      console.error('Delete account error:', error);
+      throw error;
+    }
+  }
 }

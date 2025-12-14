@@ -1,0 +1,56 @@
+//- @description Email notification when a user account is deleted
+//- @variables userName, userEmail, deletionDate, supportEmail
+extends layouts/base.pug
+
+block content
+  h1 Account Deleted
+
+  p Hi #{userName},
+
+  p This email confirms that your DeployStack account has been permanently deleted on #{new Date(deletionDate).toLocaleDateString()}.
+
+  h2 What was deleted?
+
+  p The following data has been permanently removed from our systems:
+
+  ul
+    li
+      strong Your user account&nbsp;
+      | - All personal information associated with #{userEmail}
+    li
+      strong Your default team&nbsp;
+      | - Your personal team and all associated data
+    li
+      strong All MCP server installations&nbsp;
+      | - All MCP servers configured in your default team
+    li
+      strong All team memberships&nbsp;
+      | - You have been removed from all teams where you were a member
+    li
+      strong All user preferences&nbsp;
+      | - All configuration settings and preferences
+    li
+      strong All active sessions&nbsp;
+      | - You have been logged out from all devices
+
+  h2 Important Information
+
+  p
+    strong This action is permanent and cannot be undone.
+
+  p You will no longer be able to:
+
+  ul
+    li Log in with your email address: #{userEmail}
+    li Access any data from your deleted account
+    li Recover any MCP server configurations or settings
+
+  p
+    | If you did not request this deletion or believe this was done in error, please contact our support team immediately at&nbsp;
+    strong #{supportEmail || 'support@deploystack.io'}
+    | .
+
+  p.text-muted
+    | Thank you for using DeployStack.
+    br
+    | The DeployStack Team

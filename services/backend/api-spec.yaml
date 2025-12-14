@@ -2364,6 +2364,119 @@ paths:
                   - success
                   - error
                 description: Internal Server Error
+    delete:
+      summary: Delete my account
+      tags:
+        - Users
+      description: Permanently delete your own account. This action is irreversible
+        and will remove all your data including your default team, MCP
+        installations, preferences, and sessions. You cannot delete your account
+        if you own non-default teams - you must delete those teams first. You
+        will be removed from all teams where you are a member (but not owner).
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Account deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Indicates if the operation was successful
+                  message:
+                    type: string
+                    description: Success message
+                required:
+                  - success
+                  - message
+                description: Account deleted successfully
+        "400":
+          description: Bad Request - Cannot delete account while owning non-default teams
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates the operation failed
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                  owned_teams:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          description: Team ID
+                        name:
+                          type: string
+                          description: Team name
+                    description: List of non-default teams owned by the user
+                required:
+                  - success
+                  - error
+                description: Bad Request - Cannot delete account while owning non-default teams
+        "401":
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates the operation failed
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                required:
+                  - success
+                  - error
+                description: Unauthorized - Authentication required
+        "404":
+          description: Not Found - User or default team not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates the operation failed
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                required:
+                  - success
+                  - error
+                description: Not Found - User or default team not found
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates the operation failed
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                required:
+                  - success
+                  - error
+                description: Internal Server Error
   /api/users/me/teams:
     get:
       summary: Get current user teams
@@ -2405,6 +2518,9 @@ paths:
                         owner_id:
                           type: string
                           description: User ID of the team owner
+                        is_default:
+                          type: boolean
+                          description: Whether this is the default team
                         created_at:
                           type:
                             - "null"
@@ -2426,6 +2542,7 @@ paths:
                         - name
                         - slug
                         - owner_id
+                        - is_default
                         - role
                         - is_owner
                       additionalProperties: false
