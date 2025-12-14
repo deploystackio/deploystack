@@ -309,7 +309,7 @@ export class TeamService {
 
           // 2. Create satellite commands to kill processes (fire-and-forget)
           try {
-            const commands = await satelliteCommandService.notifyMcpInstallation(
+            const commands = await satelliteCommandService.notifyMcpDeletion(
               installation.id,
               teamId,
               userId

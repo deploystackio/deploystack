@@ -326,4 +326,23 @@ export class SatelliteCommandService {
     });
   }
 
+  /**
+   * Convenience method for MCP deletion events
+   * Creates immediate priority configure commands for all global satellites
+   */
+  async notifyMcpDeletion(installationId: string, teamId: string, userId?: string): Promise<SatelliteCommand[]> {
+    return await this.createCommandForAllGlobalSatellites({
+      commandType: 'configure',
+      priority: 'immediate',
+      payload: {
+        event: 'mcp_installation_deleted',
+        installation_id: installationId,
+        team_id: teamId
+      },
+      targetTeamId: teamId,
+      expiresInMinutes: 5,
+      createdBy: userId
+    });
+  }
+
 }

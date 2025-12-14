@@ -251,7 +251,7 @@ export class McpServerCascadeDeletionWorker implements Worker {
 
     // Notify satellites to refresh configuration
     try {
-      const commands = await this.satelliteCommandService.notifyMcpInstallation(
+      const commands = await this.satelliteCommandService.notifyMcpDeletion(
         installationId,
         teamId,
         deletedBy.id

@@ -89,12 +89,12 @@ export default async function deleteInstallationRoute(server: FastifyInstance) {
       // Create satellite commands for configuration update notification
       try {
         const satelliteCommandService = new SatelliteCommandService(db, request.log);
-        const commands = await satelliteCommandService.notifyMcpInstallation(
+        const commands = await satelliteCommandService.notifyMcpDeletion(
           installationId,
           teamId,
           userId
         );
-        
+
         request.log.info({
           operation: 'delete_mcp_installation',
           installationId,
