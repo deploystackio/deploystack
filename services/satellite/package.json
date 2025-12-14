@@ -1,6 +1,6 @@
 {
   "name": "@deploystack/satellite",
-  "version": "0.14.0",
+  "version": "0.14.1",
   "description": "DeployStack Satellite - MCP Server Management Service",
   "main": "dist/index.js",
   "scripts": {
