@@ -9,6 +9,8 @@ import { DsCard } from '@/components/ui/ds-card'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { SettingsMenu, SettingsMenuGroup, SettingsMenuItem, SettingsMenuSeparator } from '@/components/ui/settings-menu'
+import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@/components/ui/empty'
+import { ServerOff } from 'lucide-vue-next'
 import { GatewayConfigService, type ClientConfigResponse, type ConfigAction, type ClientInfo, type ClientCategory } from '@/services/satelliteConfigService'
 import { SatelliteService, type TeamSatellite } from '@/services/satelliteService'
 import { TeamService } from '@/services/teamService'
@@ -328,6 +330,19 @@ onMounted(async () => {
             <div v-if="isLoadingConfig" class="text-center py-8 text-muted-foreground">
               {{ t('satelliteConfig.modal.loading') }}
             </div>
+
+            <!-- No Satellites Available -->
+            <Empty v-else-if="!isLoadingSatellites && availableSatellites.length === 0" class="py-12">
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <ServerOff class="h-12 w-12" />
+                </EmptyMedia>
+              </EmptyHeader>
+              <EmptyTitle>No Satellites Available</EmptyTitle>
+              <EmptyDescription>
+                No active satellites available. Please contact your administrator to set up a satellite.
+              </EmptyDescription>
+            </Empty>
 
             <!-- Actions Rendering -->
             <template v-else>
