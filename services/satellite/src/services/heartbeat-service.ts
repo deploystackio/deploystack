@@ -31,6 +31,7 @@ export interface HeartbeatPayload {
   normalized_data?: NormalizedHeartbeatData;  // New normalized format for scale
   error_count: number;
   version: string;
+  satellite_url?: string;  // Optional - only sent on first heartbeat after startup
 }
 
 export class HeartbeatService {
@@ -44,6 +45,7 @@ export class HeartbeatService {
   private heartbeatCount: number = 0;
   private commandProcessor?: CommandProcessor;
   private heartbeatDataBuilder?: HeartbeatDataBuilder;
+  private hasUpdatedUrlThisSession: boolean = false;  // Flag to track if URL was sent this session
 
   constructor(
     satelliteId: string, 
@@ -172,6 +174,27 @@ export class HeartbeatService {
         }
       }
 
+      // Check if this is the first heartbeat - include satellite_url to update backend
+      let satelliteUrl: string | undefined;
+      if (!this.hasUpdatedUrlThisSession) {
+        // Read satellite URL from environment
+        // Send empty string if not set to signal backend to auto-detect
+        satelliteUrl = process.env.DEPLOYSTACK_SATELLITE_URL || '';
+
+        if (satelliteUrl && satelliteUrl !== '') {
+          this.logger.info({
+            operation: 'satellite_url_first_heartbeat',
+            satellite_url: satelliteUrl,
+            heartbeat_number: this.heartbeatCount
+          }, 'Sending explicit satellite URL in first heartbeat to update backend');
+        } else {
+          this.logger.info({
+            operation: 'satellite_url_autodetect',
+            heartbeat_number: this.heartbeatCount
+          }, 'Sending empty URL to signal backend to auto-detect from request headers');
+        }
+      }
+
       // Create heartbeat payload
       const payload: HeartbeatPayload = {
         status: 'active',
@@ -180,7 +203,8 @@ export class HeartbeatService {
         processes_by_team: processesByTeam,
         normalized_data: normalizedData,
         error_count: 0,
-        version: '0.1.0'
+        version: '0.1.0',
+        satellite_url: satelliteUrl  // Only present on first heartbeat
       };
 
       // Send heartbeat via backend client
@@ -193,6 +217,16 @@ export class HeartbeatService {
           heartbeat_number: this.heartbeatCount,
           response_time_ms: result.response_time_ms
         }, `Heartbeat sent successfully (#${this.heartbeatCount})`);
+
+        // Mark URL as updated after first successful heartbeat
+        if (!this.hasUpdatedUrlThisSession) {
+          this.hasUpdatedUrlThisSession = true;
+          this.logger.info({
+            operation: 'satellite_url_update_complete',
+            satelliteId: this.satelliteId,
+            heartbeat_number: this.heartbeatCount
+          }, 'Satellite URL update sent - subsequent heartbeats will not include URL');
+        }
       } else {
         this.logger.warn({
           operation: 'heartbeat_send_failed',

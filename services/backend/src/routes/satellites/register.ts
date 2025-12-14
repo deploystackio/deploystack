@@ -23,6 +23,10 @@ const SATELLITE_REGISTRATION_SCHEMA = {
       default: ['stdio', 'http', 'sse'],
       description: 'Satellite capabilities'
     },
+    satellite_url: {
+      type: 'string',
+      description: 'Publicly accessible satellite URL (optional - auto-detected if not provided)'
+    },
     system_info: {
       type: 'object',
       properties: {
@@ -88,6 +92,7 @@ const REGISTRATION_STATUS_SCHEMA = {
 interface RegistrationRequest {
   name: string;
   capabilities?: string[];
+  satellite_url?: string; // Optional - auto-detected if not provided
   system_info?: {
     os: string;
     arch: string;
@@ -114,6 +119,27 @@ interface RegistrationErrorResponse {
   error: string;
   message: string;
   instructions?: string;
+}
+
+/**
+ * Auto-detect satellite URL from request context
+ * Uses X-Forwarded-* headers if available (reverse proxy support)
+ * Falls back to request.protocol and request.hostname
+ */
+function detectSatelliteUrl(request: RegistrationTokenRequest): string {
+  // Check for reverse proxy headers first
+  const forwardedProto = request.headers['x-forwarded-proto'] as string | undefined;
+  const forwardedHost = request.headers['x-forwarded-host'] as string | undefined;
+
+  if (forwardedProto && forwardedHost) {
+    return `${forwardedProto}://${forwardedHost}`;
+  }
+
+  // Fallback to direct request properties
+  const protocol = request.protocol || 'http';
+  const hostname = request.hostname;
+
+  return `${protocol}://${hostname}`;
 }
 
 export default async function satelliteRegisterRoute(server: FastifyInstance) {
@@ -167,15 +193,25 @@ export default async function satelliteRegisterRoute(server: FastifyInstance) {
     }
   }, async (request: RegistrationTokenRequest, reply) => {
     const db = getDb();
-    
+
     try {
-      const { name, capabilities = ['stdio', 'http', 'sse'], system_info } = request.body as RegistrationRequest;
+      const { name, capabilities = ['stdio', 'http', 'sse'], system_info, satellite_url } = request.body as RegistrationRequest;
       const tokenData = request.registrationToken!;
-      
+
       // Extract token scope and determine satellite type
       const tokenRecord = tokenData.tokenRecord;
       const satelliteType = tokenRecord.token_type; // 'global' or 'team'
       const teamId = tokenRecord.team_id; // null for global, team ID for team tokens
+
+      // Determine final satellite URL (provided or auto-detected)
+      const finalSatelliteUrl = satellite_url || detectSatelliteUrl(request);
+
+      server.log.debug({
+        operation: 'satellite_registration',
+        provided_url: satellite_url,
+        detected_url: finalSatelliteUrl,
+        auto_detected: !satellite_url
+      }, 'Satellite URL determination');
       
       // Check if satellite name already exists
       const satellites = getSchema().satellites;
@@ -205,6 +241,7 @@ export default async function satelliteRegisterRoute(server: FastifyInstance) {
         name: name,
         satellite_type: satelliteType,
         team_id: teamId,
+        satellite_url: finalSatelliteUrl,
         status: 'inactive' as const, // Requires admin activation
         capabilities: JSON.stringify(capabilities),
         api_key_hash: apiKeyHash,
@@ -222,6 +259,7 @@ export default async function satelliteRegisterRoute(server: FastifyInstance) {
           .set({
             satellite_type: satelliteData.satellite_type,
             team_id: satelliteData.team_id,
+            satellite_url: satelliteData.satellite_url,
             status: satelliteData.status,
             capabilities: satelliteData.capabilities,
             api_key_hash: satelliteData.api_key_hash,

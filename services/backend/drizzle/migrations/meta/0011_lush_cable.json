@@ -1,0 +1,14 @@
+{
+  "id": "f8c5e2a1-b3d4-4c9e-8f7a-6b5c4d3e2f1a",
+  "prevId": "0010_young_jimmy_woo",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {},
+  "enums": {},
+  "schemas": {},
+  "_meta": {
+    "schemas": {},
+    "tables": {},
+    "columns": {}
+  }
+}

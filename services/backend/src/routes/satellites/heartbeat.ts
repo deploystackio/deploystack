@@ -1,7 +1,28 @@
-import { type FastifyInstance } from 'fastify';
+import { type FastifyInstance, type FastifyRequest } from 'fastify';
 import { getDb, getSchema } from '../../db';
 import { eq, and, desc } from 'drizzle-orm';
 import { requireSatelliteAuth, requireUserOrSatelliteAuth } from '../../middleware/satelliteAuthMiddleware';
+
+/**
+ * Auto-detect satellite URL from request context
+ * Uses X-Forwarded-* headers if available (reverse proxy support)
+ * Falls back to request.protocol and request.hostname
+ */
+function detectSatelliteUrl(request: FastifyRequest): string {
+  // Check for reverse proxy headers first
+  const forwardedProto = request.headers['x-forwarded-proto'] as string | undefined;
+  const forwardedHost = request.headers['x-forwarded-host'] as string | undefined;
+
+  if (forwardedProto && forwardedHost) {
+    return `${forwardedProto}://${forwardedHost}`;
+  }
+
+  // Fallback to direct request properties
+  const protocol = request.protocol || 'http';
+  const hostname = request.hostname;
+
+  return `${protocol}://${hostname}`;
+}
 
 // Reusable Schema Constants
 const SATELLITE_ID_PARAM_SCHEMA = {
@@ -20,12 +41,12 @@ const SATELLITE_ID_PARAM_SCHEMA = {
 const HEARTBEAT_REQUEST_SCHEMA = {
   type: 'object',
   properties: {
-    status: { 
-      type: 'string', 
+    status: {
+      type: 'string',
       enum: ['active', 'degraded', 'error'],
       description: 'Current satellite status'
     },
-    system_metrics: { 
+    system_metrics: {
       type: 'object',
       properties: {
         cpu_usage_percent: { type: 'number', minimum: 0, maximum: 100 },
@@ -38,20 +59,20 @@ const HEARTBEAT_REQUEST_SCHEMA = {
       required: ['cpu_usage_percent', 'memory_usage_mb'],
       description: 'System resource metrics'
     },
-    processes: { 
+    processes: {
       type: 'array',
       items: {
         type: 'object',
         properties: {
           id: { type: 'string', description: 'Process ID' },
           server_name: { type: 'string', description: 'MCP server name' },
-          status: { 
-            type: 'string', 
+          status: {
+            type: 'string',
             enum: ['pending', 'starting', 'running', 'stopping', 'stopped', 'failed'],
             description: 'Process status'
           },
-          health_status: { 
-            type: 'string', 
+          health_status: {
+            type: 'string',
             enum: ['healthy', 'unhealthy', 'unknown'],
             description: 'Process health status'
           },
@@ -70,14 +91,18 @@ const HEARTBEAT_REQUEST_SCHEMA = {
       },
       description: 'List of running MCP server processes'
     },
-    error_count: { 
-      type: 'integer', 
+    error_count: {
+      type: 'integer',
       minimum: 0,
       description: 'Recent error count'
     },
-    version: { 
+    version: {
       type: 'string',
       description: 'Satellite software version'
+    },
+    satellite_url: {
+      type: 'string',
+      description: 'Publicly accessible satellite URL (optional - only sent on first heartbeat after startup)'
     }
   },
   required: ['status', 'system_metrics'],
@@ -175,6 +200,7 @@ interface HeartbeatRequest {
   }>;
   error_count?: number;
   version?: string;
+  satellite_url?: string; // Optional - only sent on first heartbeat after startup
 }
 
 interface StatusResponse {
@@ -254,7 +280,7 @@ export default async function satelliteHeartbeatRoute(server: FastifyInstance) {
     }
   }, async (request, reply) => {
     const { satelliteId } = request.params as SatelliteIdParams;
-    const { status, system_metrics, processes = [], error_count = 0, version } = request.body as HeartbeatRequest;
+    const { status, system_metrics, processes = [], error_count = 0, version, satellite_url } = request.body as HeartbeatRequest;
 
     const db = getDb();
     const { satellites, satelliteHeartbeats, satelliteProcesses } = getSchema();
@@ -266,7 +292,7 @@ export default async function satelliteHeartbeatRoute(server: FastifyInstance) {
         .from(satellites)
         .where(eq(satellites.id, satelliteId))
         .limit(1);
-      
+
       if (satellite.length === 0) {
         const errorResponse: ErrorResponse = {
           success: false,
@@ -275,17 +301,55 @@ export default async function satelliteHeartbeatRoute(server: FastifyInstance) {
         const jsonString = JSON.stringify(errorResponse);
         return reply.status(404).type('application/json').send(jsonString);
       }
-      
+
       const now = new Date();
-      
-      // Update satellite last_heartbeat and set status to active
+
+      // Prepare update data
+      const updateData: {
+        last_heartbeat: Date;
+        status: 'active';
+        updated_at: Date;
+        satellite_url?: string;
+      } = {
+        last_heartbeat: now,
+        status: 'active', // Automatically activate satellite when it sends heartbeat
+        updated_at: now
+      };
+
+      // Update satellite URL if provided in heartbeat (first heartbeat after startup)
+      // satellite_url field is only present on first heartbeat after satellite restart
+      if (satellite_url !== undefined) {
+        let finalSatelliteUrl: string;
+
+        if (satellite_url === '') {
+          // Empty string signals auto-detect from request headers
+          finalSatelliteUrl = detectSatelliteUrl(request);
+          request.log.info({
+            operation: 'satellite_url_update_autodetect',
+            satelliteId,
+            satellite_url: finalSatelliteUrl,
+            headers: {
+              'x-forwarded-proto': request.headers['x-forwarded-proto'],
+              'x-forwarded-host': request.headers['x-forwarded-host']
+            }
+          }, 'Auto-detected satellite URL from request headers (first heartbeat after startup)');
+        } else {
+          // Explicit URL from DEPLOYSTACK_SATELLITE_URL env var
+          finalSatelliteUrl = satellite_url;
+          request.log.info({
+            operation: 'satellite_url_update_explicit',
+            satelliteId,
+            satellite_url: finalSatelliteUrl
+          }, 'Updating satellite URL from explicit configuration (first heartbeat after startup)');
+        }
+
+        updateData.satellite_url = finalSatelliteUrl;
+      }
+
+      // Update satellite last_heartbeat, status, and optionally satellite_url
       await db
         .update(satellites)
-        .set({ 
-          last_heartbeat: now,
-          status: 'active', // Automatically activate satellite when it sends heartbeat
-          updated_at: now
-        })
+        .set(updateData)
         .where(eq(satellites.id, satelliteId));
       
       // Count healthy and total processes

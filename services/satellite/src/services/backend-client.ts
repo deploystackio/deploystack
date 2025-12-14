@@ -16,6 +16,7 @@ export interface BackendConnectionStatus {
 export interface SatelliteRegistrationData {
   name: string;
   capabilities: string[];
+  satellite_url?: string; // Optional - auto-detected if not provided
   system_info: {
     os: string;
     arch: string;
@@ -405,7 +406,7 @@ export class BackendClient {
       throw new Error('Satellite name is required - must be provided via DEPLOYSTACK_SATELLITE_NAME environment variable');
     }
     const satelliteName = name;
-    
+
     // Collect system information
     const systemInfo = {
       os: `${platform()} ${process.platform}`,
@@ -421,9 +422,13 @@ export class BackendClient {
       'sse'    // SSE MCP servers (future)
     ];
 
+    // Read satellite URL from environment (optional)
+    const satelliteUrl = process.env.DEPLOYSTACK_SATELLITE_URL || undefined;
+
     return {
       name: satelliteName,
       capabilities,
+      satellite_url: satelliteUrl, // Include if configured
       system_info: systemInfo
     };
   }

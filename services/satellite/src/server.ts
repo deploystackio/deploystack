@@ -623,11 +623,13 @@ export async function createServer() {
           satellite_id: satelliteId,
           response_time_ms: heartbeatResult.response_time_ms
         }, 'Existing credentials verified successfully - skipping registration');
-        
+
         // Update last verified timestamp
         await backendClient.updateLastVerified();
+
+        // Skip registration when credentials are valid
         skipRegistration = true;
-        
+
       } else {
         server.log.warn({
           operation: 'credentials_verification_failed',

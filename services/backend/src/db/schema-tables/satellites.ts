@@ -18,6 +18,7 @@ export const satellites = pgTable('satellites', {
   api_key_hash: text('api_key_hash').notNull(), // Argon2 hashed API key for satellite authentication
   last_heartbeat: timestamp('last_heartbeat', { withTimezone: true }), // Timestamp of last communication
   system_info: text('system_info'), // JSON: Hardware and OS information
+  satellite_url: text('satellite_url').notNull(), // Publicly accessible satellite URL
   config: text('config'), // JSON: Satellite-specific configuration and policies
   created_by: text('created_by').notNull().references(() => authUser.id),
   created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
