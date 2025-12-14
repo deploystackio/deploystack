@@ -729,6 +729,10 @@ export async function createServer() {
       server.decorate('tokenIntrospectionService', tokenIntrospectionService);
       server.decorate('oauthTokenService', oauthTokenService);
 
+      // Configure command processor with token services for cache invalidation
+      commandProcessor.setTokenIntrospectionService(tokenIntrospectionService);
+      commandProcessor.setOAuthTokenService(oauthTokenService);
+
       server.log.info({
         operation: 'oauth_services_initialized',
         satellite_id: satelliteId,
@@ -818,6 +822,10 @@ export async function createServer() {
     // Store OAuth services on server instance for access by routes
     server.decorate('tokenIntrospectionService', tokenIntrospectionService);
     server.decorate('oauthTokenService', oauthTokenService);
+
+    // Configure command processor with token services for cache invalidation
+    commandProcessor.setTokenIntrospectionService(tokenIntrospectionService);
+    commandProcessor.setOAuthTokenService(oauthTokenService);
 
     server.log.info({
       operation: 'oauth_services_initialized',

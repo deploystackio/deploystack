@@ -254,4 +254,28 @@ export class OAuthTokenService {
       operation: 'oauth_tokens_cache_cleared_all'
     }, 'Cleared all OAuth token cache');
   }
+
+  /**
+   * Clear all cached tokens for a specific user
+   */
+  clearUserCache(userId: string): number {
+    let cleared = 0;
+
+    // Cache key format: `${installationId}:${userId}:${teamId}`
+    for (const cacheKey of this.tokenCache.keys()) {
+      const parts = cacheKey.split(':');
+      if (parts.length === 3 && parts[1] === userId) {
+        this.tokenCache.delete(cacheKey);
+        cleared++;
+      }
+    }
+
+    this.logger.info({
+      operation: 'oauth_tokens_user_cache_cleared',
+      user_id: userId,
+      cleared_count: cleared
+    }, `Cleared ${cleared} OAuth cache entries for user ${userId}`);
+
+    return cleared;
+  }
 }

@@ -5,7 +5,7 @@ import type { FastifyBaseLogger } from 'fastify';
 import { nanoid } from 'nanoid';
 
 // Match schema enum from satelliteCommands table
-export type CommandType = 'spawn' | 'kill' | 'restart' | 'configure' | 'health_check';
+export type CommandType = 'spawn' | 'kill' | 'restart' | 'configure' | 'health_check' | 'invalidate_user_token_cache';
 export type CommandPriority = 'immediate' | 'high' | 'normal' | 'low';
 
 export interface SatelliteCommand {
@@ -89,7 +89,7 @@ export class SatelliteCommandService {
     await this.db.insert(satelliteCommands).values(commands.map(cmd => ({
       id: cmd.id,
       satellite_id: cmd.satellite_id,
-      command_type: cmd.command_type as 'spawn' | 'kill' | 'restart' | 'configure' | 'health_check',
+      command_type: cmd.command_type as 'spawn' | 'kill' | 'restart' | 'configure' | 'health_check' | 'invalidate_user_token_cache',
       priority: cmd.priority as 'immediate' | 'high' | 'normal' | 'low',
       payload: cmd.payload,
       status: 'pending' as const,
@@ -158,7 +158,7 @@ export class SatelliteCommandService {
     await this.db.insert(satelliteCommands).values({
       id: command.id,
       satellite_id: command.satellite_id,
-      command_type: command.command_type as 'spawn' | 'kill' | 'restart' | 'configure' | 'health_check',
+      command_type: command.command_type as 'spawn' | 'kill' | 'restart' | 'configure' | 'health_check' | 'invalidate_user_token_cache',
       priority: command.priority as 'immediate' | 'high' | 'normal' | 'low',
       payload: command.payload,
       status: 'pending' as const,
@@ -236,7 +236,7 @@ export class SatelliteCommandService {
     await this.db.insert(satelliteCommands).values(commands.map(cmd => ({
       id: cmd.id,
       satellite_id: cmd.satellite_id,
-      command_type: cmd.command_type as 'spawn' | 'kill' | 'restart' | 'configure' | 'health_check',
+      command_type: cmd.command_type as 'spawn' | 'kill' | 'restart' | 'configure' | 'health_check' | 'invalidate_user_token_cache',
       priority: cmd.priority as 'immediate' | 'high' | 'normal' | 'low',
       payload: cmd.payload,
       status: 'pending' as const,
@@ -342,6 +342,29 @@ export class SatelliteCommandService {
       targetTeamId: teamId,
       expiresInMinutes: 5,
       createdBy: userId
+    });
+  }
+
+  /**
+   * Notify satellites to invalidate all cached tokens for a SPECIFIC deleted user
+   * This ensures only the deleted user's tokens are removed from cache
+   */
+  async notifyUserDeletion(userId: string, userEmail: string): Promise<SatelliteCommand[]> {
+    this.logger.info({
+      operation: 'notify_user_deletion',
+      userId,
+      userEmail
+    }, `Notifying satellites to invalidate tokens for deleted user: ${userEmail}`);
+
+    return await this.createCommandForAllGlobalSatellites({
+      commandType: 'invalidate_user_token_cache',
+      priority: 'immediate',
+      payload: {
+        event: 'user_deleted',
+        user_id: userId,
+        user_email: userEmail
+      },
+      expiresInMinutes: 5
     });
   }
 

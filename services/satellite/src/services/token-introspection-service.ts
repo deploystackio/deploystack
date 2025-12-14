@@ -212,4 +212,41 @@ export class TokenIntrospectionService {
       cache_hit_ratio: 'Not implemented' // Could track this if needed
     };
   }
+
+  /**
+   * Invalidate all cached tokens for a specific user
+   */
+  invalidateUserTokens(userId: string): number {
+    let invalidated = 0;
+
+    for (const [key, value] of this.tokenCache.entries()) {
+      if (value.result.valid && value.result.user?.id === userId) {
+        this.tokenCache.delete(key);
+        invalidated++;
+      }
+    }
+
+    this.logger.info({
+      operation: 'user_tokens_invalidated',
+      user_id: userId,
+      count: invalidated
+    }, `Invalidated ${invalidated} cached tokens for user ${userId}`);
+
+    return invalidated;
+  }
+
+  /**
+   * Clear all cached tokens (emergency use)
+   */
+  clearAllTokens(): number {
+    const count = this.tokenCache.size;
+    this.tokenCache.clear();
+
+    this.logger.info({
+      operation: 'all_tokens_cleared',
+      count
+    }, `Cleared all ${count} cached tokens`);
+
+    return count;
+  }
 }

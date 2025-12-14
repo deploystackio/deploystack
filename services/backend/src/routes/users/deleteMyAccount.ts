@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { FastifyInstance, FastifyRequest } from 'fastify';
-import { and, eq, ne } from 'drizzle-orm';
+import { and, eq, ne, or } from 'drizzle-orm';
 import { getDb, getSchema } from '../../db/index';
 import { McpInstallationService } from '../../services/mcpInstallationService';
 import { SatelliteCommandService } from '../../services/satelliteCommandService';
@@ -360,15 +360,120 @@ export default async function deleteMyAccountRoute(server: FastifyInstance) {
         // Don't fail account deletion if event emission fails
       }
 
-      // STEP 7: Delete satellite commands targeting this team
+      // STEP 6.5: Invalidate satellite token caches
       server.log.debug({
-        operation: 'account_deletion_delete_satellite_commands',
+        operation: 'account_deletion_invalidate_satellite_cache',
+        userId,
+        userEmail: user.email
+      }, 'Sending cache invalidation commands to satellites');
+
+      try {
+        const satelliteCommandService = new SatelliteCommandService(db, server.log);
+        const commands = await satelliteCommandService.notifyUserDeletion(userId, user.email);
+
+        server.log.info({
+          operation: 'account_deletion_cache_invalidation_sent',
+          userId,
+          userEmail: user.email,
+          satelliteCommandsCreated: commands.length
+        }, `Cache invalidation sent to ${commands.length} satellites`);
+      } catch (cacheError) {
+        server.log.error(cacheError, 'Failed to send cache invalidation - continuing deletion');
+        // Non-fatal: caches expire naturally within 5 minutes
+      }
+
+      // STEP 7: Handle satellite commands - preserve pending commands
+      server.log.debug({
+        operation: 'account_deletion_handle_satellite_commands',
         userId,
         teamId
-      }, 'Deleting satellite commands for team');
+      }, 'Handling satellite commands');
 
-      await db.delete(schema.satelliteCommands)
-        .where(eq(schema.satelliteCommands.target_team_id, teamId));
+      // Set target_team_id = NULL for PENDING commands for this team (allows team deletion without blocking satellite execution)
+      await db
+        .update(schema.satelliteCommands)
+        .set({ target_team_id: null })
+        .where(
+          and(
+            eq(schema.satelliteCommands.target_team_id, teamId),
+            eq(schema.satelliteCommands.status, 'pending')
+          )
+        );
+
+      // Delete non-pending satellite commands for this team (completed/failed/executing) since they're no longer needed
+      await db
+        .delete(schema.satelliteCommands)
+        .where(
+          and(
+            eq(schema.satelliteCommands.target_team_id, teamId),
+            or(
+              eq(schema.satelliteCommands.status, 'completed'),
+              eq(schema.satelliteCommands.status, 'failed'),
+              eq(schema.satelliteCommands.status, 'acknowledged'),
+              eq(schema.satelliteCommands.status, 'executing')
+            )
+          )
+        );
+
+      // Handle ALL commands created by this user (for any team) - set created_by = NULL for pending, delete completed
+      await db
+        .update(schema.satelliteCommands)
+        .set({ created_by: null })
+        .where(
+          and(
+            eq(schema.satelliteCommands.created_by, userId),
+            eq(schema.satelliteCommands.status, 'pending')
+          )
+        );
+
+      await db
+        .delete(schema.satelliteCommands)
+        .where(
+          and(
+            eq(schema.satelliteCommands.created_by, userId),
+            or(
+              eq(schema.satelliteCommands.status, 'completed'),
+              eq(schema.satelliteCommands.status, 'failed'),
+              eq(schema.satelliteCommands.status, 'acknowledged'),
+              eq(schema.satelliteCommands.status, 'executing')
+            )
+          )
+        );
+
+      server.log.info({
+        operation: 'account_deletion_satellite_commands_handled',
+        userId,
+        teamId
+      }, 'Satellite commands handled - pending commands preserved');
+
+      // STEP 7.5: Delete satellite-related records
+      server.log.debug({
+        operation: 'account_deletion_delete_satellite_data',
+        userId,
+        teamId
+      }, 'Deleting satellite-related data');
+
+      // Delete satellite processes for user's default team
+      await db.delete(schema.satelliteProcesses)
+        .where(eq(schema.satelliteProcesses.team_id, teamId));
+
+      // Delete satellite usage logs for user's default team
+      await db.delete(schema.satelliteUsageLogs)
+        .where(eq(schema.satelliteUsageLogs.team_id, teamId));
+
+      // Delete MCP client activity records for the user
+      await db.delete(schema.mcpClientActivity)
+        .where(eq(schema.mcpClientActivity.user_id, userId));
+
+      // Delete MCP client activity metrics for the user
+      await db.delete(schema.mcpClientActivityMetrics)
+        .where(eq(schema.mcpClientActivityMetrics.user_id, userId));
+
+      server.log.info({
+        operation: 'account_deletion_satellite_data_deleted',
+        userId,
+        teamId
+      }, 'Satellite-related data deleted');
 
       // STEP 8: Delete the default team
       server.log.debug({

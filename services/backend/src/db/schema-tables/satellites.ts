@@ -68,7 +68,7 @@ export const satelliteCommands = pgTable('satelliteCommands', {
   id: text('id').primaryKey(),
   satellite_id: text('satellite_id').notNull().references(() => satellites.id, { onDelete: 'cascade' }),
   command_type: text('command_type', {
-    enum: ['spawn', 'kill', 'restart', 'configure', 'health_check']
+    enum: ['spawn', 'kill', 'restart', 'configure', 'health_check', 'invalidate_user_token_cache']
   }).notNull(),
   priority: text('priority', { enum: ['immediate', 'high', 'normal', 'low'] }).notNull().default('normal'),
   payload: text('payload').notNull(), // JSON command data with team context

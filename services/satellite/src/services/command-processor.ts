@@ -28,6 +28,10 @@ export class CommandProcessor {
   private stdioDiscoveryManager: StdioToolDiscoveryManager | null;
   private unifiedToolDiscoveryManager: UnifiedToolDiscoveryManager | null = null;
   private eventBus: EventBus | null = null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private tokenIntrospectionService: any | null = null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private oauthTokenService: any | null = null;
   private processes: Map<string, ProcessInfo> = new Map();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private onConfigurationUpdate?: (config: any) => Promise<void>;
@@ -66,6 +70,22 @@ export class CommandProcessor {
    */
   setEventBus(eventBus: EventBus): void {
     this.eventBus = eventBus;
+  }
+
+  /**
+   * Set token introspection service for cache invalidation
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  setTokenIntrospectionService(service: any): void {
+    this.tokenIntrospectionService = service;
+  }
+
+  /**
+   * Set OAuth token service for cache invalidation
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  setOAuthTokenService(service: any): void {
+    this.oauthTokenService = service;
   }
 
   /**
@@ -174,6 +194,9 @@ export class CommandProcessor {
           break;
         case 'health_check':
           result = await this.handleHealthCheckCommand(command);
+          break;
+        case 'invalidate_user_token_cache':
+          result = await this.handleInvalidateUserTokenCacheCommand(command);
           break;
         default:
           throw new Error(`Unknown command type: ${command.command_type}`);
@@ -776,6 +799,81 @@ export class CommandProcessor {
         healthy_servers: healthResults.filter(r => r.health_status === 'healthy').length
       }
     };
+  }
+
+  /**
+   * Handle invalidate_user_token_cache command
+   * Invalidates ONLY the specified user's cached tokens (preserves other users' caches)
+   */
+  private async handleInvalidateUserTokenCacheCommand(command: SatelliteCommand): Promise<CommandResult> {
+    const payload = command.payload;
+    const userId = payload.user_id as string;
+    const userEmail = payload.user_email as string;
+
+    if (!userId) {
+      throw new Error('user_id is required for user token cache invalidation');
+    }
+
+    this.logger.info({
+      operation: 'command_invalidate_user_token_cache',
+      command_id: command.id,
+      user_id: userId,
+      user_email: userEmail
+    }, `Invalidating cached tokens for SPECIFIC user: ${userEmail}`);
+
+    try {
+      let invalidatedCount = 0;
+
+      // Invalidate TokenIntrospectionService cache (Bearer tokens)
+      if (this.tokenIntrospectionService) {
+        const count = this.tokenIntrospectionService.invalidateUserTokens(userId);
+        invalidatedCount += count;
+        this.logger.debug({
+          operation: 'token_introspection_cache_invalidated',
+          user_id: userId,
+          count
+        }, `Invalidated ${count} bearer token cache entries for user ${userId}`);
+      }
+
+      // Invalidate OAuthTokenService cache (MCP OAuth tokens)
+      if (this.oauthTokenService) {
+        const count = this.oauthTokenService.clearUserCache(userId);
+        invalidatedCount += count;
+        this.logger.debug({
+          operation: 'oauth_token_cache_invalidated',
+          user_id: userId,
+          count
+        }, `Invalidated ${count} OAuth token cache entries for user ${userId}`);
+      }
+
+      this.logger.info({
+        operation: 'user_token_cache_invalidated',
+        command_id: command.id,
+        user_id: userId,
+        user_email: userEmail,
+        total_invalidated: invalidatedCount
+      }, `Successfully invalidated ${invalidatedCount} cached tokens for user ${userEmail}`);
+
+      return {
+        command_id: command.id,
+        status: 'completed',
+        result: {
+          user_id: userId,
+          user_email: userEmail,
+          invalidated_count: invalidatedCount,
+          message: `Invalidated ${invalidatedCount} cached tokens for user ${userEmail}`
+        }
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error({
+        operation: 'command_invalidate_user_token_cache_failed',
+        command_id: command.id,
+        user_id: userId,
+        error: errorMessage
+      }, `User token cache invalidation failed: ${errorMessage}`);
+      throw error;
+    }
   }
 
   /**

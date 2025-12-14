@@ -3,7 +3,7 @@ import { BackendClient } from './backend-client';
 
 export interface SatelliteCommand {
   id: string;
-  command_type: 'spawn' | 'kill' | 'restart' | 'configure' | 'health_check';
+  command_type: 'spawn' | 'kill' | 'restart' | 'configure' | 'health_check' | 'invalidate_user_token_cache';
   priority: 'immediate' | 'high' | 'normal' | 'low';
   payload: {
     installation_id?: string;  // Primary identifier for MCP installations
