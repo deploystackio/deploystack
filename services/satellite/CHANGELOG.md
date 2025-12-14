@@ -8,6 +8,14 @@
 * fix(frontend): preserve team permissions after update and improve delete modal UX d7e92dbd2418858141c937f54ac5219bee3b496c
 * fix(satellite): resolve Docker volume permission issues preventing credential persistence 8d4499a2f8cf9816127ab7bc89af9da5ceb242ed, closes #547
 
+## <small>0.14.1 (2025-12-14)</small>
+
+* feat(all): add satellite_url field with auto-detection and first-heartbeat updates 6ec441c8dfecc96bf7c36c9066f8c2d4a7bd2cf2
+* feat(backend): add satellite_url field to team satellites endpoint af13d14c99fd4b5ae25cd73621720fba942e1b29
+* fix(backend): properly delete MCP installations and notify satellites during team deletion 6d82fb3582b519cb44b640479fcd15f0d8e6ed21
+* fix(frontend): preserve team permissions after update and improve delete modal UX d7e92dbd2418858141c937f54ac5219bee3b496c
+* fix(satellite): resolve Docker volume permission issues preventing credential persistence 8d4499a2f8cf9816127ab7bc89af9da5ceb242ed, closes #547
+
 ## 0.14.0 (2025-12-12)
 
 ## 0.14.0 (2025-12-12)
