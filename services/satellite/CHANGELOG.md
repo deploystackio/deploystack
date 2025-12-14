@@ -1,5 +1,10 @@
 # Changelog
 
+## <small>0.14.2 (2025-12-14)</small>
+
+* fix(satellite): resolve Docker volume permission issues preventing credential persistence 6aa532f24650a1e009a0be5e5869c295640e436b
+* feat(all): add satellite selection to MCP client configuration 34d1a7972db2b8099825478998fc300058cddaac, closes #548
+
 ## <small>0.14.1 (2025-12-14)</small>
 
 * feat(all): add satellite_url field with auto-detection and first-heartbeat updates 6ec441c8dfecc96bf7c36c9066f8c2d4a7bd2cf2
