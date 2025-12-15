@@ -4,6 +4,15 @@
 
 * fix(backend): correct satellite command event types for MCP deletion operations 0ca6146ade77a35a90f6c631e608dc5aebe799dd
 * fix(backend): preserve satellite commands during account deletion 6db38fa06448ffa854b7177e759cab62a1c88e00
+* fix(satellite): resolve Docker volume permission issues preventing credential persistence 6aa532f24650a1e009a0be5e5869c295640e436b
+* feat(all): add satellite selection to MCP client configuration 34d1a7972db2b8099825478998fc300058cddaac, closes #548
+* feat(all): add self-service account deletion 9f968f255eacde72b1ed3da56102f1c401a6c4d3
+* feat(frontend): add empty state for no available satellites 002268edc688a01f44dca21a31ffccce9957cd77
+
+## 0.49.0 (2025-12-15)
+
+* fix(backend): correct satellite command event types for MCP deletion operations 0ca6146ade77a35a90f6c631e608dc5aebe799dd
+* fix(backend): preserve satellite commands during account deletion 6db38fa06448ffa854b7177e759cab62a1c88e00
 * fix(backend): properly delete MCP installations and notify satellites during team deletion 6d82fb3582b519cb44b640479fcd15f0d8e6ed21
 * fix(frontend): preserve team permissions after update and improve delete modal UX d7e92dbd2418858141c937f54ac5219bee3b496c
 * fix(satellite): resolve Docker volume permission issues preventing credential persistence 6aa532f24650a1e009a0be5e5869c295640e436b
