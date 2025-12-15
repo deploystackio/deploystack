@@ -128,7 +128,7 @@ jobs:
           echo -e "$RELEASE_NOTES"
         
       - name: Create pull request
-        uses: peter-evans/create-pull-request@v7
+        uses: peter-evans/create-pull-request@v8
         id: cpr
         with:
           token: ${{ secrets.APP_INSTALLATION_TOKEN }}
