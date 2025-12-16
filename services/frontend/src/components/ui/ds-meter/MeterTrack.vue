@@ -14,7 +14,7 @@ const props = defineProps<MeterTrackProps>()
   <div
     :class="
       cn(
-        'relative h-4 w-full overflow-hidden rounded-full bg-secondary',
+        'relative h-3 w-full overflow-hidden rounded-full bg-secondary',
         props.class,
       )
     "

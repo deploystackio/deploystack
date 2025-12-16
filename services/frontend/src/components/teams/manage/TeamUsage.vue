@@ -2,7 +2,6 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Button } from '@/components/ui/button'
-import { Progress } from '@/components/ui/progress'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import {
   AlertTriangle,
@@ -14,6 +13,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { TeamService, type Team, type TeamUsageData } from '@/services/teamService'
 import { DsCard } from '@/components/ui/ds-card'
+import { DsMeter, DsMeterTrack, DsMeterIndicator, DsMeterLabel, DsMeterValue } from '@/components/ui/ds-meter'
 
 const { t } = useI18n()
 
@@ -131,21 +131,20 @@ onMounted(() => {
               {{ t('teams.manage.usage.totalMcpServers') }}
             </dt>
             <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
-              <div class="space-y-2 max-w-md">
+              <DsMeter :value="totalMcpPercentage" class="space-y-2 max-w-md">
                 <div class="flex justify-between text-sm">
-                  <span>{{ usageData.total_installed_mcp_servers }} / {{ usageData.limits.mcp_server_limit }}</span>
-                  <span :class="isAtTotalLimit ? 'text-destructive font-medium' : 'text-muted-foreground'">
-                    {{ Math.round(totalMcpPercentage) }}%
-                  </span>
+                  <DsMeterLabel class="font-normal">
+                    {{ usageData.total_installed_mcp_servers }} / {{ usageData.limits.mcp_server_limit }}
+                  </DsMeterLabel>
+                  <DsMeterValue :class="isAtTotalLimit ? 'text-destructive font-medium' : 'text-muted-foreground'" />
                 </div>
-                <Progress
-                  :model-value="totalMcpPercentage"
-                  :class="isAtTotalLimit ? '[&>div]:bg-destructive' : ''"
-                />
+                <DsMeterTrack>
+                  <DsMeterIndicator :class="isAtTotalLimit ? 'bg-destructive' : ''" />
+                </DsMeterTrack>
                 <p v-if="isAtTotalLimit" class="text-xs text-destructive">
                   {{ t('teams.manage.usage.limitReached') }}
                 </p>
-              </div>
+              </DsMeter>
             </dd>
           </div>
 
@@ -156,24 +155,23 @@ onMounted(() => {
               {{ t('teams.manage.usage.nonHttpMcpServers') }}
             </dt>
             <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
-              <div class="space-y-2 max-w-md">
+              <DsMeter :value="nonHttpMcpPercentage" class="space-y-2 max-w-md">
                 <div class="flex justify-between text-sm">
-                  <span>{{ usageData.non_http_mcp_servers }} / {{ usageData.limits.non_http_mcp_limit }}</span>
-                  <span :class="isAtNonHttpLimit ? 'text-destructive font-medium' : 'text-muted-foreground'">
-                    {{ Math.round(nonHttpMcpPercentage) }}%
-                  </span>
+                  <DsMeterLabel class="font-normal">
+                    {{ usageData.non_http_mcp_servers }} / {{ usageData.limits.non_http_mcp_limit }}
+                  </DsMeterLabel>
+                  <DsMeterValue :class="isAtNonHttpLimit ? 'text-destructive font-medium' : 'text-muted-foreground'" />
                 </div>
-                <Progress
-                  :model-value="nonHttpMcpPercentage"
-                  :class="isAtNonHttpLimit ? '[&>div]:bg-destructive' : ''"
-                />
+                <DsMeterTrack>
+                  <DsMeterIndicator :class="isAtNonHttpLimit ? 'bg-destructive' : ''" />
+                </DsMeterTrack>
                 <p v-if="isAtNonHttpLimit" class="text-xs text-destructive">
                   {{ t('teams.manage.usage.limitReached') }}
                 </p>
                 <p class="text-xs text-muted-foreground">
                   {{ t('teams.manage.usage.nonHttpDescription') }}
                 </p>
-              </div>
+              </DsMeter>
             </dd>
           </div>
 
