@@ -5,7 +5,8 @@ import { useRoute, useRouter } from 'vue-router'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Loader2, AlertTriangle } from 'lucide-vue-next'
+import { Skeleton } from '@/components/ui/skeleton'
+import { AlertTriangle } from 'lucide-vue-next'
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -183,7 +184,8 @@ onUnmounted(() => {
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>{{ team?.name || t('teams.manage.loading') }}</BreadcrumbPage>
+            <BreadcrumbPage v-if="team">{{ team.name }}</BreadcrumbPage>
+            <Skeleton v-else class="h-4 w-32" />
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
@@ -191,10 +193,24 @@ onUnmounted(() => {
 
     <div class="space-y-6 mt-6">
       <!-- Loading State -->
-      <div v-if="isLoading" class="flex items-center justify-center py-12">
-        <div class="flex items-center gap-3 text-muted-foreground">
-          <Loader2 class="h-5 w-5 animate-spin" />
-          {{ t('teams.manage.loading') }}
+      <div v-if="isLoading" class="flex flex-col md:flex-row md:space-x-12">
+        <!-- Sidebar Skeleton -->
+        <aside class="md:w-1/5 mb-6 md:mb-0">
+          <div class="space-y-1">
+            <Skeleton class="h-10 w-full rounded-md" />
+            <Skeleton class="h-10 w-full rounded-md" />
+            <Skeleton class="h-10 w-full rounded-md" />
+          </div>
+        </aside>
+
+        <!-- Content Area Skeleton -->
+        <div class="flex-1 space-y-6">
+          <Skeleton class="h-8 w-48" />
+          <div class="space-y-4">
+            <Skeleton class="h-24 w-full rounded-lg" />
+            <Skeleton class="h-24 w-full rounded-lg" />
+            <Skeleton class="h-24 w-full rounded-lg" />
+          </div>
         </div>
       </div>
 
