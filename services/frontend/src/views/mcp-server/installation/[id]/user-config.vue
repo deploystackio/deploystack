@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { onMounted, onUnmounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { DsPageHeading } from '@/components/ui/ds-page-heading'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -14,131 +13,35 @@ import {
 } from '@/components/ui/breadcrumb'
 import NavbarLayout from '@/components/NavbarLayout.vue'
 import { UserConfiguration, InstallationTabs } from '@/components/mcp-server/installation'
-import { McpInstallationService } from '@/services/mcpInstallationService'
-import { TeamService, type Team } from '@/services/teamService'
-import { useEventBus } from '@/composables/useEventBus'
-import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
-import type { McpInstallation } from '@/types/mcp-installations'
+import { useMcpInstallationCache } from '@/composables/mcp-server/installation'
 
 const { t } = useI18n()
-const route = useRoute()
-const eventBus = useEventBus()
-const { setBreadcrumbs } = useBreadcrumbs()
 
-const installation = ref<McpInstallation | null>(null)
-const currentTeam = ref<Team | null>(null)
-const userTeamRole = ref<'team_admin' | 'team_user' | null>(null)
-const isLoading = ref(true)
-const error = ref<string | null>(null)
+const {
+  installation,
+  currentTeam,
+  userTeamRole,
+  isLoading,
+  error,
+  installationId,
+  loadAndSetInstallation,
+  initializeCache,
+  setupWatchers,
+  cleanupWatchers
+} = useMcpInstallationCache()
 
-const installationId = route.params.id as string
-
-// Check if user can edit installations in this team
 const canEditInstallation = computed(() => {
   return userTeamRole.value === 'team_admin'
 })
 
-// Load installation using current selected team from event bus
-async function loadInstallation(installationId: string): Promise<{ team: Team; installation: McpInstallation; userRole: 'team_admin' | 'team_user' } | null> {
-  try {
-    const selectedTeamId = eventBus.getState<string>('selected_team_id')
-
-    if (!selectedTeamId) {
-      const userTeams = await TeamService.getUserTeams()
-
-      for (const team of userTeams) {
-        try {
-          const installation = await McpInstallationService.getInstallationById(team.id, installationId)
-          if (installation) {
-            eventBus.setState('selected_team_id', team.id)
-            return {
-              team,
-              installation,
-              userRole: team.role || 'team_user'
-            }
-          }
-        } catch {
-          continue
-        }
-      }
-
-      return null
-    }
-
-    const userTeams = await TeamService.getUserTeams()
-    const selectedTeam = userTeams.find(team => team.id === selectedTeamId)
-
-    if (!selectedTeam) {
-      return null
-    }
-
-    const installation = await McpInstallationService.getInstallationById(selectedTeam.id, installationId)
-
-    if (!installation) {
-      return null
-    }
-    return {
-      team: selectedTeam,
-      installation,
-      userRole: selectedTeam.role || 'team_user'
-    }
-  } catch {
-    return null
-  }
-}
-
-// Listen for team changes from event bus
-const handleTeamChanged = async () => {
-  await loadAndSetInstallation()
-}
-
-const loadAndSetInstallation = async () => {
-  try {
-    isLoading.value = true
-    const result = await loadInstallation(installationId)
-
-    if (result) {
-      installation.value = result.installation
-      currentTeam.value = result.team
-      userTeamRole.value = result.userRole
-      error.value = null
-
-      setBreadcrumbs([
-        { label: t('mcpInstallations.title'), href: '/mcp-server' },
-        { label: result.installation.installation_name }
-      ])
-    } else {
-      error.value = 'Installation not found in the selected team or no team selected'
-      installation.value = null
-      currentTeam.value = null
-      userTeamRole.value = null
-    }
-  } catch (err) {
-    error.value = err instanceof Error ? err.message : 'An unknown error occurred'
-    installation.value = null
-    currentTeam.value = null
-    userTeamRole.value = null
-  } finally {
-    isLoading.value = false
-  }
-}
-
 onMounted(async () => {
-  setBreadcrumbs([
-    { label: t('mcpInstallations.title'), href: '/mcp-server' },
-    { label: 'Loading...' }
-  ])
+  initializeCache()
   await loadAndSetInstallation()
-
-  eventBus.on('storage-changed', (data) => {
-    if (data.key === 'selected_team_id') {
-      handleTeamChanged()
-    }
-  })
+  setupWatchers()
 })
 
 onUnmounted(() => {
-  eventBus.off('storage-changed', handleTeamChanged)
+  cleanupWatchers()
 })
 </script>
 
