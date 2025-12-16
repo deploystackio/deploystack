@@ -32,6 +32,7 @@ import {
 } from './db'
 import { GlobalSettingsInitService } from './global-settings'
 import { GlobalSettings } from './global-settings/helpers';
+import { GlobalSettingsCache } from './global-settings/cache';
 import { GlobalSettingsService } from './services/globalSettingsService'; // Import the service
 import { RoleSyncService } from './services/roleSyncService'; // Import the role sync service
 import type { Pool } from 'pg'; // For PostgreSQL connection pool cleanup in onClose
@@ -319,7 +320,7 @@ export async function initializeDatabaseDependentServices(
         // Step 3: Initialize plugin global settings
         server.log.debug('🔌 Step 3: Initializing plugin global settings...');
         const startPluginTime = Date.now();
-        
+
         try {
           await pluginManager.initializePluginGlobalSettings();
           const pluginTime = Date.now() - startPluginTime;
@@ -331,6 +332,23 @@ export async function initializeDatabaseDependentServices(
             stack: pluginError instanceof Error ? pluginError.stack : 'No stack trace'
           }, '❌ Step 3 FAILED - Error initializing plugin settings:');
           throw pluginError;
+        }
+
+        // Step 4: Load global settings into in-memory cache
+        server.log.debug('🗄️ Step 4: Loading global settings into memory cache...');
+        const startCacheTime = Date.now();
+
+        try {
+          await GlobalSettingsCache.load();
+          const cacheTime = Date.now() - startCacheTime;
+          server.log.debug(`✅ Step 4 completed successfully in ${cacheTime}ms - ${GlobalSettingsCache.size()} settings cached`);
+        } catch (cacheError) {
+          server.log.error({
+            error: cacheError,
+            message: cacheError instanceof Error ? cacheError.message : 'Unknown error',
+            stack: cacheError instanceof Error ? cacheError.stack : 'No stack trace'
+          }, '❌ Step 4 FAILED - Error loading settings cache (will fall back to DB):');
+          // Don't throw - cache failure should not block startup, DB fallback will work
         }
 
         server.log.info('🎉 All global settings initialization steps completed successfully!');

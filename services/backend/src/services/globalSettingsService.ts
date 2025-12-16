@@ -1,6 +1,7 @@
 import { getDb, getSchema } from '../db';
 import { eq, like } from 'drizzle-orm';
 import { encrypt, decrypt } from '../utils/encryption';
+import { GlobalSettingsCache } from '../global-settings/cache';
 
 export interface GlobalSetting {
   key: string;
@@ -301,6 +302,11 @@ export class GlobalSettingsService {
           });
       }
 
+      // Invalidate cache after successful write
+      if (GlobalSettingsCache.isInitialized()) {
+        await GlobalSettingsCache.invalidate();
+      }
+
       // Return the setting (with decrypted value)
       const result = await this.get(key);
       if (!result) {
@@ -368,6 +374,11 @@ export class GlobalSettingsService {
         .set(updateData)
         .where(eq(schema.globalSettings.key, key));
 
+      // Invalidate cache after successful write
+      if (GlobalSettingsCache.isInitialized()) {
+        await GlobalSettingsCache.invalidate();
+      }
+
       return await this.get(key);
     } catch (error) {
       throw new Error(`Failed to update setting '${key}': ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -387,7 +398,14 @@ export class GlobalSettingsService {
         .delete(schema.globalSettings)
         .where(eq(schema.globalSettings.key, key));
 
-      return (result.rowCount || 0) > 0;
+      const deleted = (result.rowCount || 0) > 0;
+
+      // Invalidate cache after successful delete
+      if (deleted && GlobalSettingsCache.isInitialized()) {
+        await GlobalSettingsCache.invalidate();
+      }
+
+      return deleted;
     } catch (error) {
       throw new Error(`Failed to delete setting '${key}': ${error instanceof Error ? error.message : 'Unknown error'}`);
     }

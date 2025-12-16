@@ -31,15 +31,17 @@ export class GlobalSettingsInitService {
       
       const files = fs.readdirSync(settingsDir);
       
-      // Filter for .ts/.js files, exclude index, types, and helpers files
-      const settingFiles = files.filter(file => 
-        (file.endsWith('.ts') || file.endsWith('.js')) && 
-        file !== 'index.ts' && 
-        file !== 'index.js' && 
-        file !== 'types.ts' && 
+      // Filter for .ts/.js files, exclude index, types, helpers, and cache files
+      const settingFiles = files.filter(file =>
+        (file.endsWith('.ts') || file.endsWith('.js')) &&
+        file !== 'index.ts' &&
+        file !== 'index.js' &&
+        file !== 'types.ts' &&
         file !== 'types.js' &&
         file !== 'helpers.ts' &&
-        file !== 'helpers.js'
+        file !== 'helpers.js' &&
+        file !== 'cache.ts' &&
+        file !== 'cache.js'
       );
 
       for (const file of settingFiles) {
@@ -751,6 +753,9 @@ export class GlobalSettingsInitService {
 
 // Export the helper class
 export { GlobalSettings } from './helpers';
+
+// Export the cache class
+export { GlobalSettingsCache } from './cache';
 
 // Export types for external use
 export type {

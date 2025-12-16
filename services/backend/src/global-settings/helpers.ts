@@ -1,11 +1,16 @@
 import { GlobalSettingsService } from '../services/globalSettingsService';
+import { GlobalSettingsCache } from './cache';
 
 /**
  * GlobalSettings Helper Methods
- * 
- * Provides simple, type-safe helper methods for retrieving global settings values
- * from the database. Similar to the Email service helper methods pattern.
- * 
+ *
+ * Provides simple, type-safe helper methods for retrieving global settings values.
+ *
+ * PERFORMANCE: All read operations use an in-memory cache that is:
+ * - Loaded once on server startup
+ * - Invalidated (reloaded) when settings are written
+ * - Falls back to database if cache is not initialized
+ *
  * These helpers are designed for common use cases where you just need the value
  * of a setting. For more complex operations (creating, updating, searching),
  * use the GlobalSettingsService directly.
@@ -19,12 +24,15 @@ export class GlobalSettings {
   static async get(key: string, defaultValue: string): Promise<string>;
   static async get(key: string, defaultValue?: string): Promise<string | null> {
     try {
-      const setting = await GlobalSettingsService.get(key);
-      
+      // Use cache if initialized, otherwise fall back to DB
+      const setting = GlobalSettingsCache.isInitialized()
+        ? GlobalSettingsCache.get(key)
+        : await GlobalSettingsService.get(key);
+
       if (!setting || !setting.value || setting.value.trim() === '') {
         return defaultValue ?? null;
       }
-      
+
       return setting.value;
     } catch {
       return defaultValue ?? null;
@@ -151,18 +159,21 @@ export class GlobalSettings {
    */
   static async getGroupValues(groupId: string): Promise<Record<string, string | null>> {
     try {
-      const settings = await GlobalSettingsService.getByGroup(groupId);
+      // Use cache if initialized, otherwise fall back to DB
+      const settings = GlobalSettingsCache.isInitialized()
+        ? GlobalSettingsCache.getByGroup(groupId)
+        : await GlobalSettingsService.getByGroup(groupId);
       const result: Record<string, string | null> = {};
-      
+
       for (const setting of settings) {
         // Extract the key part after the group prefix
         // e.g., 'smtp.host' -> 'host', 'api.openai.key' -> 'openai.key'
         const keyParts = setting.key.split('.');
         const keyWithoutGroup = keyParts.slice(1).join('.');
-        
+
         result[keyWithoutGroup] = setting.value || null;
       }
-      
+
       return result;
     } catch {
       return {};
@@ -176,13 +187,16 @@ export class GlobalSettings {
    */
   static async getGroupValuesWithFullKeys(groupId: string): Promise<Record<string, string | null>> {
     try {
-      const settings = await GlobalSettingsService.getByGroup(groupId);
+      // Use cache if initialized, otherwise fall back to DB
+      const settings = GlobalSettingsCache.isInitialized()
+        ? GlobalSettingsCache.getByGroup(groupId)
+        : await GlobalSettingsService.getByGroup(groupId);
       const result: Record<string, string | null> = {};
-      
+
       for (const setting of settings) {
         result[setting.key] = setting.value || null;
       }
-      
+
       return result;
     } catch {
       return {};
@@ -328,6 +342,10 @@ export class GlobalSettings {
    */
   static async exists(key: string): Promise<boolean> {
     try {
+      // Use cache if initialized, otherwise fall back to DB
+      if (GlobalSettingsCache.isInitialized()) {
+        return GlobalSettingsCache.exists(key);
+      }
       return await GlobalSettingsService.exists(key);
     } catch {
       return false;
@@ -339,15 +357,19 @@ export class GlobalSettings {
    * Use this when you need access to description, encryption status, etc.
    */
   static async getRaw(key: string) {
+    // Use cache if initialized, otherwise fall back to DB
+    if (GlobalSettingsCache.isInitialized()) {
+      return GlobalSettingsCache.get(key);
+    }
     return GlobalSettingsService.get(key);
   }
 
   /**
-   * Refresh any cached configurations
-   * Call this after updating settings that might be cached by other services
+   * Refresh the in-memory cache by reloading from database.
+   * Call this after updating settings outside of GlobalSettingsService
+   * (which automatically invalidates the cache).
    */
   static async refreshCaches(): Promise<void> {
-    // This could be extended to notify other services to refresh their caches
-    // For now, we don't have any caching in the GlobalSettings helpers themselves
+    await GlobalSettingsCache.invalidate();
   }
 }

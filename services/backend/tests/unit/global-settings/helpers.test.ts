@@ -4,6 +4,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 vi.mock('../../../src/services/globalSettingsService', () => ({
   GlobalSettingsService: {
     get: vi.fn(),
+    getAll: vi.fn(),
     getByGroup: vi.fn(),
     exists: vi.fn(),
   }
@@ -15,6 +16,7 @@ import { GlobalSettingsService } from '../../../src/services/globalSettingsServi
 
 // Get references to the mocked functions
 const mockGet = vi.mocked(GlobalSettingsService.get)
+const mockGetAll = vi.mocked(GlobalSettingsService.getAll)
 const mockGetByGroup = vi.mocked(GlobalSettingsService.getByGroup)
 const mockExists = vi.mocked(GlobalSettingsService.exists)
 
@@ -22,6 +24,7 @@ describe('GlobalSettings Helper Class', () => {
   // Helper function to create complete mock settings
   const createMockSetting = (key: string, value: string, type: 'string' | 'number' | 'boolean' = 'string') => ({
     key,
+    name: null,
     value,
     type,
     description: null,
@@ -36,6 +39,8 @@ describe('GlobalSettings Helper Class', () => {
     // Mock console methods to suppress error/warning messages during tests
     vi.spyOn(console, 'error').mockImplementation(() => {})
     vi.spyOn(console, 'warn').mockImplementation(() => {})
+    // Default mock implementation for getAll (used by cache)
+    mockGetAll.mockResolvedValue([])
   })
 
   afterEach(() => {
