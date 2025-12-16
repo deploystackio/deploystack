@@ -65,14 +65,16 @@ const getRoleDisplay = (role: string) => {
       </TableHeader>
       <TableBody>
         <!-- Loading State -->
-        <TableRow v-if="isLoading" v-for="i in 3" :key="`skeleton-${i}`">
-          <TableCell><Skeleton class="h-4 w-32" /></TableCell>
-          <TableCell><Skeleton class="h-4 w-48" /></TableCell>
-          <TableCell><Skeleton class="h-5 w-16 rounded-full" /></TableCell>
-          <TableCell><Skeleton class="h-4 w-24" /></TableCell>
-          <TableCell><Skeleton class="h-8 w-24" /></TableCell>
-          <TableCell><Skeleton class="h-8 w-20" /></TableCell>
-        </TableRow>
+        <template v-if="isLoading">
+          <TableRow v-for="i in 3" :key="`skeleton-${i}`">
+            <TableCell><Skeleton class="h-4 w-32" /></TableCell>
+            <TableCell><Skeleton class="h-4 w-48" /></TableCell>
+            <TableCell><Skeleton class="h-5 w-16 rounded-full" /></TableCell>
+            <TableCell><Skeleton class="h-4 w-24" /></TableCell>
+            <TableCell><Skeleton class="h-8 w-24" /></TableCell>
+            <TableCell><Skeleton class="h-8 w-20" /></TableCell>
+          </TableRow>
+        </template>
 
         <!-- Empty State -->
         <TableRow v-else-if="sortedTeams.length === 0">

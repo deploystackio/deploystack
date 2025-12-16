@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
 import { Button } from '@/components/ui/button'
+import { DsCard } from '@/components/ui/ds-card'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -96,46 +97,40 @@ function closeUninstallModal() {
 <template>
   <div class="space-y-6">
     <!-- Uninstall MCP Server Section -->
-    <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
-      <dt class="text-sm/6 font-medium text-gray-900">
-        {{ t('mcpInstallations.details.dangerZone.uninstall.label') }}
-      </dt>
-      <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
-        <p class="text-sm text-gray-600 mb-4">
-          {{ t('mcpInstallations.details.dangerZone.uninstall.warning') }}
-        </p>
-        <div class="flex items-center justify-between">
-          <div>
-            <TooltipProvider v-if="!canEdit">
-              <Tooltip>
-                <TooltipTrigger as-child>
-                  <Button
-                    variant="destructive"
-                    class="cursor-not-allowed opacity-50"
-                    disabled
-                  >
-                    <Lock class="h-4 w-4 mr-2" />
-                    {{ t('mcpInstallations.details.dangerZone.uninstall.button') }}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{{ t('mcpInstallations.details.dangerZone.uninstall.disabledTooltip') }}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            
-            <Button
-              v-else
-              variant="destructive"
-              @click="openUninstallModal"
-            >
-              <Trash2 class="h-4 w-4 mr-2" />
-              {{ t('mcpInstallations.details.dangerZone.uninstall.button') }}
-            </Button>
-          </div>
-        </div>
-      </dd>
-    </div>
+    <DsCard :title="t('mcpInstallations.details.dangerZone.uninstall.label')">
+      <p class="text-sm text-muted-foreground mb-4">
+        {{ t('mcpInstallations.details.dangerZone.uninstall.warning') }}
+      </p>
+
+      <template #footer-actions>
+        <TooltipProvider v-if="!canEdit">
+          <Tooltip>
+            <TooltipTrigger as-child>
+              <Button
+                variant="destructive"
+                class="cursor-not-allowed opacity-50"
+                disabled
+              >
+                <Lock class="h-4 w-4 mr-2" />
+                {{ t('mcpInstallations.details.dangerZone.uninstall.button') }}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{{ t('mcpInstallations.details.dangerZone.uninstall.disabledTooltip') }}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+
+        <Button
+          v-else
+          variant="destructive"
+          @click="openUninstallModal"
+        >
+          <Trash2 class="h-4 w-4 mr-2" />
+          {{ t('mcpInstallations.details.dangerZone.uninstall.button') }}
+        </Button>
+      </template>
+    </DsCard>
 
     <!-- Uninstall Confirmation Modal -->
     <AlertDialog :open="showUninstallModal" @update:open="closeUninstallModal">

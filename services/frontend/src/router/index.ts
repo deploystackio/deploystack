@@ -1,8 +1,9 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import type { RouteRecordRaw } from 'vue-router'
 import { useDatabaseStore } from '@/stores/database'
 import { UserService } from '@/services/userService'
 
-const routes = [
+const routes: RouteRecordRaw[] = [
   {
     path: '/',
     redirect: '/login',
@@ -124,8 +125,41 @@ const routes = [
   },
   {
     path: '/mcp-server/installation/:id',
-    name: 'McpServerInstallation',
-    component: () => import('../views/mcp-server/installation/[id].vue'),
+    redirect: (to) => {
+      return {
+        name: 'McpServerInstallationInformation',
+        params: to.params
+      }
+    }
+  },
+  {
+    path: '/mcp-server/installation/:id/information',
+    name: 'McpServerInstallationInformation',
+    component: () => import('../views/mcp-server/installation/[id]/information.vue'),
+    meta: { requiresSetup: true },
+  },
+  {
+    path: '/mcp-server/installation/:id/mcp-tools',
+    name: 'McpServerInstallationMcpTools',
+    component: () => import('../views/mcp-server/installation/[id]/mcp-tools.vue'),
+    meta: { requiresSetup: true },
+  },
+  {
+    path: '/mcp-server/installation/:id/user-config',
+    name: 'McpServerInstallationUserConfig',
+    component: () => import('../views/mcp-server/installation/[id]/user-config.vue'),
+    meta: { requiresSetup: true },
+  },
+  {
+    path: '/mcp-server/installation/:id/team-config',
+    name: 'McpServerInstallationTeamConfig',
+    component: () => import('../views/mcp-server/installation/[id]/team-config.vue'),
+    meta: { requiresSetup: true },
+  },
+  {
+    path: '/mcp-server/installation/:id/danger-zone',
+    name: 'McpServerInstallationDangerZone',
+    component: () => import('../views/mcp-server/installation/[id]/danger-zone.vue'),
     meta: { requiresSetup: true },
   },
   {
