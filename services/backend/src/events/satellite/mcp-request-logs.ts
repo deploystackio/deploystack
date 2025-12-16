@@ -45,6 +45,9 @@ export const SCHEMA = {
             type: 'object',
             description: 'Parameters passed to the tool'
           },
+          tool_response: {
+            description: 'The actual response from MCP server'
+          },
           response_time_ms: {
             type: 'number',
             minimum: 0,
@@ -78,6 +81,7 @@ interface RequestEntry {
   user_id?: string;
   tool_name: string;
   tool_params: Record<string, unknown>;
+  tool_response?: unknown;
   response_time_ms: number;
   success: boolean;
   error_message?: string;
@@ -129,6 +133,7 @@ export async function handle(
       user_id: request.user_id || null,
       tool_name: request.tool_name,
       tool_params: request.tool_params,
+      tool_response: request.tool_response || null,
       response_time_ms: request.response_time_ms,
       success: request.success,
       error_message: request.error_message || null,

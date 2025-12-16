@@ -13629,6 +13629,672 @@
         }
       }
     },
+    "/api/teams/{teamId}/mcp/installations/{installationId}/requests": {
+      "get": {
+        "summary": "Get installation request logs",
+        "tags": [
+          "MCP Installations"
+        ],
+        "description": "Retrieves request logs (tool calls with params and responses) for a specific MCP installation. Includes tool_name, tool_params, tool_response, timing, and success status. Requires mcp.installations.view permission. Note: Request logging can be disabled per-installation via settings. Logs are returned newest first.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "description": "Number of request logs to return (max 100)"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            },
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "description": "Pagination offset"
+          },
+          {
+            "schema": {
+              "type": "boolean"
+            },
+            "in": "query",
+            "name": "success",
+            "required": false,
+            "description": "Filter by success status (true = successful requests, false = failed requests)"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "teamId",
+            "required": true,
+            "description": "Team ID that owns the installation"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "installationId",
+            "required": true,
+            "description": "Installation ID"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Installation request logs retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "requests": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "description": "Request log entry unique identifier"
+                              },
+                              "user_id": {
+                                "type": [
+                                  "null",
+                                  "string"
+                                ],
+                                "description": "User who made the request (nullable)"
+                              },
+                              "tool_name": {
+                                "type": "string",
+                                "description": "Name of the tool that was called"
+                              },
+                              "tool_params": {
+                                "description": "Parameters passed to the tool (JSONB)"
+                              },
+                              "tool_response": {
+                                "description": "The actual response from MCP server (JSONB, nullable)"
+                              },
+                              "response_time_ms": {
+                                "type": "integer",
+                                "description": "Response time in milliseconds"
+                              },
+                              "success": {
+                                "type": "boolean",
+                                "description": "Whether the call succeeded"
+                              },
+                              "error_message": {
+                                "type": [
+                                  "null",
+                                  "string"
+                                ],
+                                "description": "Error message if failed (nullable)"
+                              },
+                              "created_at": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "ISO 8601 timestamp when request was made"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "tool_name",
+                              "response_time_ms",
+                              "success",
+                              "created_at"
+                            ]
+                          },
+                          "description": "Array of request log entries"
+                        },
+                        "total": {
+                          "type": "integer",
+                          "description": "Total number of requests matching criteria"
+                        },
+                        "limit": {
+                          "type": "integer",
+                          "description": "Number of requests returned per page"
+                        },
+                        "offset": {
+                          "type": "integer",
+                          "description": "Current pagination offset"
+                        }
+                      },
+                      "required": [
+                        "requests",
+                        "total",
+                        "limit",
+                        "offset"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "description": "Installation request logs retrieved successfully"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates failure"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message detailing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Unauthorized - Authentication required"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Insufficient permissions or not a team member",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates failure"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message detailing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Forbidden - Insufficient permissions or not a team member"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found - Installation does not exist or does not belong to specified team",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates failure"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message detailing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Not Found - Installation does not exist or does not belong to specified team"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates failure"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message detailing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Internal Server Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teams/{teamId}/mcp/installations/{installationId}/settings": {
+      "patch": {
+        "summary": "Update installation settings",
+        "tags": [
+          "MCP Installations"
+        ],
+        "description": "Update generic settings for an MCP server installation. Settings are merged with existing values. Currently supports: request_logging_enabled (boolean). Requires mcp.installations.edit permission (team_admin or global_admin). Requires Content-Type: application/json header when sending request body.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "request_logging_enabled": {
+                    "type": "boolean",
+                    "description": "Whether to enable request/response logging for this installation"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "teamId",
+            "required": true,
+            "description": "Team ID that owns the installation"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "installationId",
+            "required": true,
+            "description": "Installation ID"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Installation settings updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "settings": {
+                          "type": "object",
+                          "description": "Updated installation settings"
+                        },
+                        "command_id": {
+                          "type": "string",
+                          "description": "Satellite command ID for tracking (if satellite available)"
+                        },
+                        "message": {
+                          "type": "string",
+                          "description": "Human-readable status message"
+                        }
+                      },
+                      "required": [
+                        "settings",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "description": "Installation settings updated successfully"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - Invalid settings provided",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates failure"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message detailing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Bad Request - Invalid settings provided"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates failure"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message detailing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Unauthorized - Authentication required"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Insufficient permissions or not a team member",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates failure"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message detailing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Forbidden - Insufficient permissions or not a team member"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found - Installation does not exist or not owned by team",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates failure"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message detailing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Not Found - Installation does not exist or not owned by team"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates failure"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message detailing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Internal Server Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable - No active satellite available",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates failure"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message detailing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Service Unavailable - No active satellite available"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teams/{teamId}/mcp/installations/{installationId}/logs/stream": {
+      "get": {
+        "summary": "Stream installation server logs (SSE)",
+        "tags": [
+          "MCP Installations"
+        ],
+        "description": "Real-time server logs stream via Server-Sent Events. Sends initial snapshot then streams new logs as they arrive. Supports same filtering as REST endpoint. Connection automatically reconnects on disconnect.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "info",
+                "warn",
+                "error",
+                "debug"
+              ]
+            },
+            "in": "query",
+            "name": "level",
+            "required": false,
+            "description": "Filter by log level"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "description": "Initial snapshot size (max 100)"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "teamId",
+            "required": true,
+            "description": "Team ID that owns the installation"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "installationId",
+            "required": true,
+            "description": "Installation ID"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/teams/{teamId}/mcp/installations/{installationId}/requests/stream": {
+      "get": {
+        "summary": "Stream installation request logs (SSE)",
+        "tags": [
+          "MCP Installations"
+        ],
+        "description": "Real-time request logs stream via Server-Sent Events. Sends initial snapshot then streams new requests as they arrive. Includes tool_name, tool_params, tool_response, timing, and success status. Supports same filtering as REST endpoint. Connection automatically reconnects on disconnect.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "boolean"
+            },
+            "in": "query",
+            "name": "success",
+            "required": false,
+            "description": "Filter by success status (true = successful requests, false = failed requests)"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "description": "Initial snapshot size (max 100)"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "teamId",
+            "required": true,
+            "description": "Team ID that owns the installation"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "installationId",
+            "required": true,
+            "description": "Installation ID"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
     "/api/teams/{teamId}/satellites": {
       "get": {
         "summary": "Get available satellites for team",

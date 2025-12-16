@@ -4,20 +4,19 @@ import getTeamMcpToolsStatsRoute from './stats';
 import toggleToolRoute from './toggle-tool';
 import getInstallationStatusRoute from './status';
 import getInstallationLogsRoute from './logs';
+import getInstallationRequestsRoute from './requests';
+import updateInstallationSettingsRoute from './settings';
+import getInstallationLogsStreamRoute from './logs-stream';
+import getInstallationRequestsStreamRoute from './requests-stream';
 
 export default async function mcpInstallationsRoutes(fastify: FastifyInstance) {
-  // Register tool metadata route
   await fastify.register(getInstallationToolsRoute);
-
-  // Register team MCP tools statistics route
   await fastify.register(getTeamMcpToolsStatsRoute);
-
-  // Register tool toggle (enable/disable) route
   await fastify.register(toggleToolRoute);
-
-  // Phase 12: Register status endpoint
   await fastify.register(getInstallationStatusRoute);
-
-  // Phase 12: Register logs endpoint
   await fastify.register(getInstallationLogsRoute);
+  await fastify.register(getInstallationRequestsRoute);
+  await fastify.register(updateInstallationSettingsRoute);
+  await fastify.register(getInstallationLogsStreamRoute);
+  await fastify.register(getInstallationRequestsStreamRoute);
 }

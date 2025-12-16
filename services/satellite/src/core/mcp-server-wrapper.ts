@@ -28,6 +28,7 @@ interface BufferedRequestEntry {
   user_id?: string;
   tool_name: string;
   tool_params: Record<string, unknown>;
+  tool_response?: unknown;
   response_time_ms: number;
   success: boolean;
   error_message?: string;
@@ -385,14 +386,18 @@ export class McpServerWrapper {
     } finally {
       const responseTimeMs = Date.now() - startTime;
 
-      // Buffer request log if we have installation context
-      if (config?.installation_id && config?.team_id) {
+      // Check if request logging is enabled (default: true for backward compatibility)
+      const loggingEnabled = config?.settings?.request_logging_enabled !== false;
+
+      // Buffer request log if we have installation context and logging is enabled
+      if ((config?.installation_id && config?.team_id) && loggingEnabled) {
         this.bufferRequestLogEntry({
           installation_id: config.installation_id,
           team_id: config.team_id,
           user_id: config.user_id,
           tool_name: toolPath,
           tool_params: toolArguments,
+          tool_response: result,
           response_time_ms: responseTimeMs,
           success,
           error_message: errorMessage,
@@ -1287,6 +1292,7 @@ export class McpServerWrapper {
         user_id?: string;
         tool_name: string;
         tool_params: Record<string, unknown>;
+        tool_response?: unknown;
         response_time_ms: number;
         success: boolean;
         error_message?: string;
@@ -1309,6 +1315,7 @@ export class McpServerWrapper {
         user_id: entry.user_id,
         tool_name: entry.tool_name,
         tool_params: entry.tool_params,
+        tool_response: entry.tool_response,
         response_time_ms: entry.response_time_ms,
         success: entry.success,
         error_message: entry.error_message,

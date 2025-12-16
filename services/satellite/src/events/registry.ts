@@ -159,6 +159,7 @@ export interface EventDataMap {
       user_id?: string;
       tool_name: string;
       tool_params: Record<string, unknown>;
+      tool_response?: unknown;
       response_time_ms: number;
       success: boolean;
       error_message?: string;

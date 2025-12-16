@@ -123,6 +123,7 @@ export const mcpServerInstallations = pgTable('mcpServerInstallations', {
   status_updated_at: timestamp('status_updated_at', { withTimezone: true }).notNull().defaultNow(),
   last_health_check_at: timestamp('last_health_check_at', { withTimezone: true }), // When health was last checked
   last_credential_check_at: timestamp('last_credential_check_at', { withTimezone: true }), // When credentials were last validated (for 15-min checks)
+  settings: jsonb('settings').default('{}'), // Generic settings object: {request_logging_enabled: boolean, ...}
 
   // Metadata
   created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -259,6 +260,7 @@ export const mcpRequestLogs = pgTable('mcpRequestLogs', {
   // Request data
   tool_name: text('tool_name').notNull(), // Name of the tool called
   tool_params: jsonb('tool_params'), // Parameters passed to the tool
+  tool_response: jsonb('tool_response'), // The actual response from MCP server (nullable)
   response_time_ms: integer('response_time_ms').notNull(), // How long the call took
   success: boolean('success').notNull(), // Whether the call succeeded
   error_message: text('error_message'), // Error if failed (nullable)

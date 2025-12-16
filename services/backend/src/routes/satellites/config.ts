@@ -158,6 +158,9 @@ interface McpServerConfig {
   // Phase 10: OAuth support for HTTP/SSE MCP servers
   requires_oauth?: boolean;
   user_id?: string;
+  settings?: {
+    request_logging_enabled?: boolean;
+  };
   secret_metadata?: {
     query_params?: string[];
     headers?: string[];
@@ -849,6 +852,11 @@ export default async function satelliteConfigRoute(server: FastifyInstance) {
                 error: error instanceof Error ? error.message : String(error)
               }, 'Failed to extract secret env metadata');
             }
+          }
+
+          // Add installation settings (generic settings object)
+          if (installation.settings) {
+            serverConfig.settings = installation.settings as { request_logging_enabled?: boolean };
           }
 
           mcpServerConfigs[processId] = serverConfig;
