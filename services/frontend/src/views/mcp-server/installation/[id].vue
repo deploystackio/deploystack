@@ -3,6 +3,16 @@ import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { DsTabs, DsTabsItem } from '@/components/ui/ds-tabs'
+import { DsPageHeading } from '@/components/ui/ds-page-heading'
+import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb'
 import NavbarLayout from '@/components/NavbarLayout.vue'
 import { InstallationInfo, McpToolsTab, TeamConfiguration, UserConfiguration, DangerZone } from '@/components/mcp-server/installation'
 import { McpInstallationService } from '@/services/mcpInstallationService'
@@ -164,15 +174,55 @@ const loadAndSetInstallation = async () => {
 
 <template>
   <NavbarLayout>
-    <div class="space-y-6">
-      <!-- Loading State -->
-      <div v-if="isLoading" class="text-muted-foreground">
-        {{ t('mcpInstallations.view.loading') }}
+    <DsPageHeading v-if="installation" :title="installation.installation_name">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink as-child>
+              <RouterLink to="/mcp-server">
+                {{ t('mcpInstallations.title') }}
+              </RouterLink>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>{{ installation.installation_name }}</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+    </DsPageHeading>
+    <DsPageHeading v-else :title="t('mcpInstallations.title')">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink as-child>
+              <RouterLink to="/mcp-server">
+                {{ t('mcpInstallations.title') }}
+              </RouterLink>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <Skeleton class="h-4 w-48" />
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+    </DsPageHeading>
+
+    <div class="space-y-6 mt-6">
+      <!-- Error State -->
+      <div v-if="error" class="text-red-500">
+        {{ t('mcpInstallations.view.errorLoading', { error }) }}
       </div>
 
-      <!-- Error State -->
-      <div v-else-if="error" class="text-red-500">
-        {{ t('mcpInstallations.view.errorLoading', { error }) }}
+      <!-- Loading State -->
+      <div v-else-if="isLoading" class="space-y-6">
+        <Skeleton class="h-12 w-full" />
+        <div class="space-y-4">
+          <Skeleton class="h-32 w-full rounded-lg" />
+          <Skeleton class="h-32 w-full rounded-lg" />
+          <Skeleton class="h-32 w-full rounded-lg" />
+        </div>
       </div>
 
       <!-- Installation Details with Tabs -->
