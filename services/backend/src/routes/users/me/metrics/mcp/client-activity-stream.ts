@@ -111,6 +111,12 @@ export default async function mcpClientActivityMetricsStreamRoute(server: Fastif
           query.auth_identifier
         );
 
+        // Check connection still open after async operation
+        if (!reply.sse.isConnected) {
+          if (updateInterval) clearInterval(updateInterval);
+          return;
+        }
+
         const currentHash = JSON.stringify(result.data);
 
         // Only send if data changed

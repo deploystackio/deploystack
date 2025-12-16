@@ -206,8 +206,20 @@ export default async function getInstallationRequestsStreamRoute(server: Fastify
 						.orderBy(desc(mcpRequestLogs.created_at))
 						.limit(100);
 
+					// Check connection still open after async query
+					if (!reply.sse.isConnected) {
+						clearInterval(pollInterval);
+						return;
+					}
+
 					if (newRequests.length > 0) {
 						for (const req of newRequests.reverse()) { // Reverse to send oldest first
+							// Check connection before each send in loop
+							if (!reply.sse.isConnected) {
+								clearInterval(pollInterval);
+								return;
+							}
+
 							const formattedRequest: RequestEntry = {
 								id: req.id,
 								user_id: req.user_id,

@@ -199,8 +199,20 @@ export default async function getInstallationLogsStreamRoute(server: FastifyInst
 						.orderBy(desc(mcpServerLogs.created_at))
 						.limit(100);
 
+					// Check connection still open after async query
+					if (!reply.sse.isConnected) {
+						clearInterval(pollInterval);
+						return;
+					}
+
 					if (newLogs.length > 0) {
 						for (const log of newLogs.reverse()) { // Reverse to send oldest first
+							// Check connection before each send in loop
+							if (!reply.sse.isConnected) {
+								clearInterval(pollInterval);
+								return;
+							}
+
 							const formattedLog: LogEntry = {
 								id: log.id,
 								level: log.log_level,
