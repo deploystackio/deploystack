@@ -23,9 +23,14 @@ module.exports = {
         transform: (commit) => {
           // Exclude release commits from changelog
           if (commit.type === 'chore' && commit.subject && commit.subject.startsWith('release v')) {
-            return false;
+            return;
           }
-          return commit;
+          // Only include backend and all scoped commits
+          if (commit.scope && (commit.scope === 'backend' || commit.scope === 'all')) {
+            return commit;
+          }
+          // Exclude all other commits
+          return;
         }
       }
     }
