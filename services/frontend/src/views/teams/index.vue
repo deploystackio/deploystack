@@ -192,17 +192,12 @@ onUnmounted(() => {
     </DsPageHeading>
 
     <div class="space-y-6 mt-6">
-      <!-- Loading State -->
-      <div v-if="isLoading" class="text-muted-foreground">
-        {{ t('teams.table.loading') }}
-      </div>
-
       <!-- Error State -->
-      <div v-else-if="error" class="text-red-500">
+      <div v-if="error" class="text-red-500">
         {{ t('teams.table.error', { error }) }}
       </div>
 
-      <!-- Data Table -->
+      <!-- Data Table or Loading -->
       <div v-else class="space-y-4">
         <!-- Search Input -->
         <div class="flex items-center py-4">
@@ -218,6 +213,7 @@ onUnmounted(() => {
           :teams="filteredTeams"
           :selected-team-id="selectedTeam?.id || null"
           :user-permissions="userPermissions"
+          :is-loading="isLoading"
           :on-manage-team="handleManageTeam"
           :on-switch-team="handleSwitchTeam"
         />

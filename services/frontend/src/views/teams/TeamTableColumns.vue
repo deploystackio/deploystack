@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Settings, ArrowRightLeft } from 'lucide-vue-next'
 import type { TeamWithRole } from '@/services/teamService'
 
@@ -18,11 +19,14 @@ interface Props {
   teams: TeamWithRole[]
   selectedTeamId: string | null
   userPermissions: string[]
+  isLoading?: boolean
   onManageTeam: (teamId: string) => void
   onSwitchTeam: (teamId: string) => void
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  isLoading: false
+})
 const { t } = useI18n()
 
 // Sort teams by name for consistency
@@ -60,8 +64,18 @@ const getRoleDisplay = (role: string) => {
         </TableRow>
       </TableHeader>
       <TableBody>
+        <!-- Loading State -->
+        <TableRow v-if="isLoading" v-for="i in 3" :key="`skeleton-${i}`">
+          <TableCell><Skeleton class="h-4 w-32" /></TableCell>
+          <TableCell><Skeleton class="h-4 w-48" /></TableCell>
+          <TableCell><Skeleton class="h-5 w-16 rounded-full" /></TableCell>
+          <TableCell><Skeleton class="h-4 w-24" /></TableCell>
+          <TableCell><Skeleton class="h-8 w-24" /></TableCell>
+          <TableCell><Skeleton class="h-8 w-20" /></TableCell>
+        </TableRow>
+
         <!-- Empty State -->
-        <TableRow v-if="sortedTeams.length === 0">
+        <TableRow v-else-if="sortedTeams.length === 0">
           <TableCell :colspan="6" class="h-24 text-center">
             {{ t('teams.table.noResults') }}
           </TableCell>
@@ -69,6 +83,7 @@ const getRoleDisplay = (role: string) => {
 
         <!-- Data Rows -->
         <TableRow
+          v-else
           v-for="team in sortedTeams"
           :key="team.id"
           :class="{ 'bg-muted/50': selectedTeamId === team.id }"
