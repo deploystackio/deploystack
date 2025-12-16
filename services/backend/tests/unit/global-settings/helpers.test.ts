@@ -560,6 +560,7 @@ describe('GlobalSettings Helper Class', () => {
     it('should return raw setting object', async () => {
       const rawSetting = {
         key: 'test.key',
+        name: 'Test Setting',
         value: 'test value',
         type: 'string' as const,
         description: 'Test setting',
@@ -568,7 +569,7 @@ describe('GlobalSettings Helper Class', () => {
         created_at: new Date(),
         updated_at: new Date()
       }
-      
+
       mockGet.mockResolvedValue(rawSetting)
 
       const result = await GlobalSettings.getRaw('test.key')
