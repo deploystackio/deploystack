@@ -797,6 +797,12 @@ export default {
       error: {
         title: 'Error Loading Requests',
         description: 'Failed to load tool requests: {error}'
+      },
+      viewMode: {
+        switchedToLive: 'Switched to Live view',
+        liveDescription: 'Real-time updates enabled',
+        switchedToApi: 'Switched to API view',
+        apiDescription: 'Using REST endpoint'
       }
     }
   }

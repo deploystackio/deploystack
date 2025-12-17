@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { toast } from 'vue-sonner'
 import { useRequestsStream } from '@/composables/mcp-server/installation'
 import { McpRequestLogsService } from '@/services/mcpRequestLogsService'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -15,6 +16,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card'
+import { Card } from '@/components/ui/card'
 import { AlertCircle, AlertTriangle, Eye, Radio, Copy, Check } from 'lucide-vue-next'
 import type { McpInstallation } from '@/types/mcp-installations'
 import type { McpRequestLog } from '@/types/mcp-request-logs'
@@ -30,7 +32,9 @@ const { t } = useI18n()
 const { requests, isConnected, isLoading, error, connect, disconnect } = useRequestsStream()
 
 type FilterType = 'all' | 'success' | 'failed'
+type ViewMode = 'live' | 'api'
 const filter = ref<FilterType>('all')
+const viewMode = ref<ViewMode>('live')
 const selectedRequest = ref<McpRequestLog | null>(null)
 const showDetailDialog = ref(false)
 const copiedField = ref<string | null>(null)
@@ -67,7 +71,7 @@ function formatLocalTimestamp(dateString: string): string {
     minute: '2-digit',
     second: '2-digit',
     fractionalSecondDigits: 3
-  })
+  } as Intl.DateTimeFormatOptions)
 }
 
 // Format UTC timestamp
@@ -82,7 +86,7 @@ function formatUtcTimestamp(dateString: string): string {
     second: '2-digit',
     fractionalSecondDigits: 3,
     timeZone: 'UTC'
-  })
+  } as Intl.DateTimeFormatOptions)
 }
 
 // Format relative time
@@ -153,6 +157,23 @@ watch(filter, () => {
   // Client-side filtering, no need to reconnect
 })
 
+// Watch for view mode changes and show toast
+watch(viewMode, (newMode, oldMode) => {
+  if (!oldMode) return // Skip initial mount
+
+  if (newMode === 'live') {
+    connectStream()
+    toast.success(t('mcpInstallations.details.requests.viewMode.switchedToLive'), {
+      description: t('mcpInstallations.details.requests.viewMode.liveDescription')
+    })
+  } else if (newMode === 'api') {
+    disconnect()
+    toast(t('mcpInstallations.details.requests.viewMode.switchedToApi'), {
+      description: t('mcpInstallations.details.requests.viewMode.apiDescription')
+    })
+  }
+})
+
 onMounted(() => {
   connectStream()
 })
@@ -164,56 +185,70 @@ onUnmounted(() => {
 
 <template>
   <div>
-    <!-- Header with connection status and filter -->
-    <div class="flex items-center justify-between mb-4">
-      <div class="flex items-center gap-2">
-        <div
-          class="flex items-center gap-1.5 text-sm"
-          :class="isConnected ? 'text-green-600' : 'text-muted-foreground'"
-        >
-          <Radio class="h-3 w-3" :class="{ 'animate-pulse': isConnected }" />
-          <span v-if="isConnected">{{ t('mcpInstallations.details.requests.connection.live') }}</span>
-          <span v-else-if="isLoading">{{ t('mcpInstallations.details.requests.connection.reconnecting') }}</span>
-          <span v-else>{{ t('mcpInstallations.details.requests.connection.disconnected') }}</span>
-        </div>
-      </div>
-
-      <Select v-model="filter">
-        <SelectTrigger class="w-40">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">{{ t('mcpInstallations.details.requests.filter.all') }}</SelectItem>
-          <SelectItem value="success">{{ t('mcpInstallations.details.requests.filter.success') }}</SelectItem>
-          <SelectItem value="failed">{{ t('mcpInstallations.details.requests.filter.failed') }}</SelectItem>
-        </SelectContent>
-      </Select>
-    </div>
-
-    <!-- Loading State -->
-    <div v-if="isLoading && requests.length === 0" class="text-muted-foreground py-8 text-center">
-      {{ t('mcpInstallations.details.requests.loading') }}
-    </div>
-
-    <!-- Error State -->
-    <Alert v-else-if="error" variant="destructive" class="mb-6">
+    <!-- Error State (outside card) -->
+    <Alert v-if="error" variant="destructive" class="mb-6">
       <AlertCircle class="h-4 w-4" />
       <AlertDescription>
         {{ t('mcpInstallations.details.requests.error.description', { error }) }}
       </AlertDescription>
     </Alert>
 
-    <!-- Empty State -->
-    <div v-else-if="filteredRequests.length === 0" class="text-center py-12">
-      <AlertCircle class="mx-auto h-12 w-12 text-muted-foreground" />
-      <h3 class="mt-4 text-lg font-semibold">{{ t('mcpInstallations.details.requests.emptyState.title') }}</h3>
-      <p class="mt-2 text-sm text-muted-foreground max-w-md mx-auto">
-        {{ t('mcpInstallations.details.requests.emptyState.description') }}
-      </p>
-    </div>
+    <!-- Main Card -->
+    <Card v-else class="rounded-lg border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-950 p-0 gap-0">
+      <!-- Header with live indicator, view mode and filter -->
+      <div class="flex items-center justify-between px-6 py-4 border-b border-neutral-200 dark:border-neutral-800">
+        <div class="flex items-center gap-2">
+          <div
+            v-if="viewMode === 'live'"
+            class="flex items-center gap-1.5 text-sm"
+            :class="isConnected ? 'text-green-600' : 'text-muted-foreground'"
+          >
+            <Radio class="h-3 w-3" :class="{ 'animate-pulse': isConnected }" />
+            <span v-if="isConnected">{{ t('mcpInstallations.details.requests.connection.live') }}</span>
+            <span v-else-if="isLoading">{{ t('mcpInstallations.details.requests.connection.reconnecting') }}</span>
+            <span v-else>{{ t('mcpInstallations.details.requests.connection.disconnected') }}</span>
+          </div>
+        </div>
 
-    <!-- Requests Table -->
-    <div v-else class="rounded-md border">
+        <div class="flex items-center gap-2">
+          <Select v-model="viewMode">
+            <SelectTrigger class="w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="live">Live</SelectItem>
+              <SelectItem value="api">API</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select v-model="filter">
+            <SelectTrigger class="w-40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{{ t('mcpInstallations.details.requests.filter.all') }}</SelectItem>
+              <SelectItem value="success">{{ t('mcpInstallations.details.requests.filter.success') }}</SelectItem>
+              <SelectItem value="failed">{{ t('mcpInstallations.details.requests.filter.failed') }}</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <!-- Loading State -->
+      <div v-if="isLoading && requests.length === 0" class="text-muted-foreground py-8 text-center">
+        {{ t('mcpInstallations.details.requests.loading') }}
+      </div>
+
+      <!-- Empty State -->
+      <div v-else-if="filteredRequests.length === 0" class="text-center py-12 px-6">
+        <p class="text-sm">{{ t('mcpInstallations.details.requests.emptyState.title') }}</p>
+        <p class="mt-2 text-sm text-muted-foreground max-w-md mx-auto">
+          {{ t('mcpInstallations.details.requests.emptyState.description') }}
+        </p>
+      </div>
+
+      <!-- Requests Table -->
+      <div v-else>
       <Table>
         <TableHeader>
           <TableRow>
@@ -287,7 +322,8 @@ onUnmounted(() => {
           </TableRow>
         </TableBody>
       </Table>
-    </div>
+      </div>
+    </Card>
 
     <!-- Detail Dialog -->
     <Dialog v-model:open="showDetailDialog">
