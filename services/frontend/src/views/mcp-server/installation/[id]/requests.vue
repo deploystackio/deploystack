@@ -42,7 +42,7 @@ onUnmounted(() => {
 
 <template>
   <NavbarLayout>
-    <DsPageHeading v-if="installation" :title="installation.installation_name">
+    <DsPageHeading v-if="installation" :title="installation.installation_name" :show-border="false">
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
@@ -59,7 +59,7 @@ onUnmounted(() => {
         </BreadcrumbList>
       </Breadcrumb>
     </DsPageHeading>
-    <DsPageHeading v-else :title="t('mcpInstallations.title')">
+    <DsPageHeading v-else :title="t('mcpInstallations.title')" :show-border="false">
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
