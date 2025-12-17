@@ -4,20 +4,13 @@ import { useI18n } from 'vue-i18n'
 import { toast } from 'vue-sonner'
 import { useRequestsStream } from '@/composables/mcp-server/installation'
 import { McpRequestLogsService } from '@/services/mcpRequestLogsService'
+import { RequestDetailSheet } from '@/components/mcp-server/installation'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card'
 import { Card } from '@/components/ui/card'
-import { AlertCircle, AlertTriangle, Eye, Radio, Copy, Check } from 'lucide-vue-next'
+import { AlertTriangle, Eye, Radio } from 'lucide-vue-next'
 import type { McpInstallation } from '@/types/mcp-installations'
 import type { McpRequestLog } from '@/types/mcp-request-logs'
 
@@ -36,8 +29,7 @@ type ViewMode = 'live' | 'api'
 const filter = ref<FilterType>('all')
 const viewMode = ref<ViewMode>('live')
 const selectedRequest = ref<McpRequestLog | null>(null)
-const showDetailDialog = ref(false)
-const copiedField = ref<string | null>(null)
+const showDetailSheet = ref(false)
 
 // Filtered requests based on filter selection
 const filteredRequests = computed(() => {
@@ -115,33 +107,10 @@ function getUserTimezone(): string {
   return Intl.DateTimeFormat().resolvedOptions().timeZone
 }
 
-// Format JSON for display
-function formatJson(value: unknown): string {
-  if (value === null || value === undefined) return 'null'
-  try {
-    return JSON.stringify(value, null, 2)
-  } catch {
-    return String(value)
-  }
-}
-
-// Copy to clipboard
-async function copyToClipboard(value: unknown, field: string) {
-  try {
-    await navigator.clipboard.writeText(formatJson(value))
-    copiedField.value = field
-    setTimeout(() => {
-      copiedField.value = null
-    }, 2000)
-  } catch {
-    console.error('Failed to copy to clipboard')
-  }
-}
-
-// Open detail dialog
+// Open detail sheet
 function openDetail(request: McpRequestLog) {
   selectedRequest.value = request
-  showDetailDialog.value = true
+  showDetailSheet.value = true
 }
 
 // Connect to SSE stream
@@ -261,7 +230,12 @@ onUnmounted(() => {
           </TableRow>
         </TableHeader>
         <TableBody>
-          <TableRow v-for="request in filteredRequests" :key="request.id">
+          <TableRow
+            v-for="request in filteredRequests"
+            :key="request.id"
+            class="cursor-pointer"
+            @click="openDetail(request)"
+          >
             <TableCell class="w-10 pr-0">
               <AlertTriangle
                 v-if="!request.success"
@@ -315,9 +289,7 @@ onUnmounted(() => {
               {{ request.response_time_ms }}ms
             </TableCell>
             <TableCell class="w-12">
-              <Button variant="ghost" size="sm" @click="openDetail(request)">
-                <Eye class="h-4 w-4" />
-              </Button>
+              <Eye class="h-4 w-4 text-muted-foreground" />
             </TableCell>
           </TableRow>
         </TableBody>
@@ -325,94 +297,11 @@ onUnmounted(() => {
       </div>
     </Card>
 
-    <!-- Detail Dialog -->
-    <Dialog v-model:open="showDetailDialog">
-      <DialogContent class="max-w-3xl max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{{ t('mcpInstallations.details.requests.detail.title') }}</DialogTitle>
-          <DialogDescription>
-            {{ selectedRequest?.tool_name }}
-          </DialogDescription>
-        </DialogHeader>
-
-        <div v-if="selectedRequest" class="space-y-4 mt-4">
-          <!-- Status and Timing -->
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <div class="text-sm font-medium text-muted-foreground mb-1">
-                {{ t('mcpInstallations.details.requests.detail.status') }}
-              </div>
-              <div class="flex items-center gap-2 text-sm">
-                <AlertTriangle v-if="!selectedRequest.success" class="h-4 w-4 text-amber-500" />
-                <span>{{ selectedRequest.success ? t('mcpInstallations.details.requests.table.values.success') : t('mcpInstallations.details.requests.table.values.failed') }}</span>
-              </div>
-            </div>
-            <div>
-              <div class="text-sm font-medium text-muted-foreground mb-1">
-                {{ t('mcpInstallations.details.requests.detail.responseTime') }}
-              </div>
-              <div class="text-sm tabular-nums">{{ selectedRequest.response_time_ms }}ms</div>
-            </div>
-          </div>
-
-          <!-- User and Timestamp -->
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <div class="text-sm font-medium text-muted-foreground mb-1">
-                {{ t('mcpInstallations.details.requests.detail.user') }}
-              </div>
-              <div class="text-sm">
-                <div v-if="selectedRequest.user">{{ selectedRequest.user.user_name }}</div>
-                <div v-else class="text-muted-foreground italic">Unknown</div>
-              </div>
-            </div>
-            <div>
-              <div class="text-sm font-medium text-muted-foreground mb-1">
-                {{ t('mcpInstallations.details.requests.detail.timestamp') }}
-              </div>
-              <div class="text-sm font-mono tabular-nums">{{ formatLocalTimestamp(selectedRequest.created_at) }}</div>
-            </div>
-          </div>
-
-          <!-- Error Message (if failed) -->
-          <div v-if="!selectedRequest.success && selectedRequest.error_message">
-            <div class="text-sm font-medium text-muted-foreground mb-1">
-              {{ t('mcpInstallations.details.requests.detail.error') }}
-            </div>
-            <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md p-3 text-sm text-red-800 dark:text-red-300">
-              {{ selectedRequest.error_message }}
-            </div>
-          </div>
-
-          <!-- Parameters -->
-          <div>
-            <div class="flex items-center justify-between mb-1">
-              <div class="text-sm font-medium text-muted-foreground">
-                {{ t('mcpInstallations.details.requests.detail.parameters') }}
-              </div>
-              <Button variant="ghost" size="sm" @click="copyToClipboard(selectedRequest.tool_params, 'params')">
-                <Check v-if="copiedField === 'params'" class="h-3 w-3" />
-                <Copy v-else class="h-3 w-3" />
-              </Button>
-            </div>
-            <pre class="bg-muted rounded-md p-3 text-sm overflow-x-auto max-h-48">{{ formatJson(selectedRequest.tool_params) }}</pre>
-          </div>
-
-          <!-- Response -->
-          <div>
-            <div class="flex items-center justify-between mb-1">
-              <div class="text-sm font-medium text-muted-foreground">
-                {{ t('mcpInstallations.details.requests.detail.response') }}
-              </div>
-              <Button variant="ghost" size="sm" @click="copyToClipboard(selectedRequest.tool_response, 'response')">
-                <Check v-if="copiedField === 'response'" class="h-3 w-3" />
-                <Copy v-else class="h-3 w-3" />
-              </Button>
-            </div>
-            <pre class="bg-muted rounded-md p-3 text-sm overflow-x-auto max-h-64">{{ formatJson(selectedRequest.tool_response) }}</pre>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+    <!-- Detail Sheet -->
+    <RequestDetailSheet
+      :request="selectedRequest"
+      :open="showDetailSheet"
+      @update:open="showDetailSheet = $event"
+    />
   </div>
 </template>
