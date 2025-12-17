@@ -10,7 +10,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card'
 import { Card } from '@/components/ui/card'
-import { AlertTriangle, Eye, Radio } from 'lucide-vue-next'
+import { AlertCircle, AlertTriangle, Eye, Radio } from 'lucide-vue-next'
 import type { McpInstallation } from '@/types/mcp-installations'
 import type { McpRequestLog } from '@/types/mcp-request-logs'
 
@@ -203,13 +203,8 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <!-- Loading State -->
-      <div v-if="isLoading && requests.length === 0" class="text-muted-foreground py-8 text-center">
-        {{ t('mcpInstallations.details.requests.loading') }}
-      </div>
-
       <!-- Empty State -->
-      <div v-else-if="filteredRequests.length === 0" class="text-center py-12 px-6">
+      <div v-if="filteredRequests.length === 0" class="text-center py-12 px-6">
         <p class="text-sm">{{ t('mcpInstallations.details.requests.emptyState.title') }}</p>
         <p class="mt-2 text-sm text-muted-foreground max-w-md mx-auto">
           {{ t('mcpInstallations.details.requests.emptyState.description') }}

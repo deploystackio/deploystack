@@ -622,7 +622,6 @@ export default {
     tools: {
       title: 'Tools',
       description: 'Tools discovered from this MCP server installation',
-      loading: 'Loading tools...',
       noTools: {
         title: 'No Tools Discovered',
         description: 'No tools have been discovered yet for this MCP server installation. Tools are discovered automatically when the satellite starts the MCP server.'

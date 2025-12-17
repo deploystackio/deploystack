@@ -154,14 +154,9 @@ const pieChartOption = computed<EChartsOption>(() => {
 </script>
 
 <template>
-  <div>
-    <!-- Loading State -->
-    <div v-if="isLoading" class="text-muted-foreground">
-      {{ t('mcpInstallations.details.tools.loading') }}
-    </div>
-
+  <div v-if="!isLoading">
     <!-- Error State -->
-    <Alert v-else-if="error" variant="destructive" class="mb-6">
+    <Alert v-if="error" variant="destructive" class="mb-6">
       <AlertCircle class="h-4 w-4" />
       <AlertDescription>
         {{ t('mcpInstallations.details.tools.error.description', { error }) }}
