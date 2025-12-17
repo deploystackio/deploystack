@@ -57,7 +57,7 @@ const activeTab = computed({
 </script>
 
 <template>
-  <DsTabs v-model="activeTab" variant="underlined" class="mb-10">
+  <DsTabs v-model="activeTab" variant="underlined" full-width-border class="mb-10">
     <DsTabsItem value="information" label="Installation Info" />
     <DsTabsItem value="mcp-tools" :label="t('mcpInstallations.details.mcpTools.title')" />
     <DsTabsItem value="user-config" label="User Configuration" />

@@ -131,6 +131,7 @@ interface Props {
   justified?: boolean
   disabled?: boolean
   mobileBreakpoint?: 'sm' | 'md' | 'lg'
+  fullWidthBorder?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -139,7 +140,8 @@ const props = withDefaults(defineProps<Props>(), {
   fullWidth: false,
   justified: false,
   disabled: false,
-  mobileBreakpoint: 'sm'
+  mobileBreakpoint: 'sm',
+  fullWidthBorder: false
 })
 
 const emit = defineEmits<{
@@ -367,8 +369,13 @@ provide('ds-tabs', {
       />
     </div>
 
-    <!-- Desktop navigation -->
-    <div :class="[desktopBreakpointClass, variant === 'underlined' ? 'border-b border-border' : '']">
+    <!-- Desktop navigation (full width border) -->
+    <div
+      v-if="fullWidthBorder && variant === 'underlined'"
+      :class="desktopBreakpointClass"
+      class="relative"
+    >
+      <div class="absolute bottom-0 left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] w-screen border-b border-border"></div>
       <nav
         role="tablist"
         :class="cn(tabListVariants({ variant, justified, fullWidth }))"
@@ -391,6 +398,51 @@ provide('ds-tabs', {
               'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
               'disabled:cursor-not-allowed disabled:opacity-50',
               getTabClasses(tab)
+            ]"
+            @click="handleTabClick(tab, $event)"
+            @keydown="handleKeyDown($event, tab)"
+          >
+            <component v-if="tab.icon" :is="tab.icon" :class="getIconClasses()" />
+            {{ tab.label }}
+            <span
+              v-if="tab.badge"
+              :class="[
+                'rounded-full px-2 py-0.5 text-xs font-medium',
+                getBadgeClasses(tab)
+              ]"
+            >
+              {{ tab.badge }}
+            </span>
+          </component>
+        </slot>
+      </nav>
+    </div>
+
+    <!-- Desktop navigation (normal border) -->
+    <div
+      v-else
+      :class="[desktopBreakpointClass, variant === 'underlined' ? 'border-b border-border' : '']"
+    >
+      <nav
+        role="tablist"
+        :class="cn(tabListVariants({ variant, justified, fullWidth }))"
+        aria-label="Tabs"
+      >
+        <slot>
+          <!-- Render tabs from props if no slots provided -->
+          <component
+            v-for="tab in computedTabs"
+            :key="tab.value"
+            :is="tab.href ? 'a' : 'button'"
+            :href="tab.href"
+            role="tab"
+            :aria-selected="modelValue === tab.value"
+            :aria-controls="`tabpanel-${tab.value}`"
+            :tabindex="modelValue === tab.value ? 0 : -1"
+            :disabled="tab.disabled || disabled"
+            :class="[
+              getTabClasses(tab),
+              (tab.disabled || disabled) && 'cursor-not-allowed opacity-50'
             ]"
             @click="handleTabClick(tab, $event)"
             @keydown="handleKeyDown($event, tab)"
