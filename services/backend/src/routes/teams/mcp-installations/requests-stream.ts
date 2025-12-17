@@ -68,7 +68,6 @@ interface RequestEntry {
 	user: UserObject | null;
 	tool_name: string;
 	tool_params: unknown;
-	tool_response: unknown;
 	response_time_ms: number;
 	success: boolean;
 	error_message: string | null;
@@ -90,7 +89,7 @@ export default async function getInstallationRequestsStreamRoute(server: Fastify
 			tags: ['MCP Installations'],
 			summary: 'Stream installation request logs (SSE)',
 			description:
-				'Real-time request logs stream via Server-Sent Events. Sends initial snapshot then streams new requests as they arrive. Includes tool_name, tool_params, tool_response, timing, and success status. Supports same filtering as REST endpoint. Connection automatically reconnects on disconnect.',
+				'Real-time request logs stream via Server-Sent Events. Sends initial snapshot then streams new requests as they arrive. Includes tool_name, tool_params, timing, and success status. Does NOT include tool_response (use single request endpoint to get full response). Supports same filtering as REST endpoint. Connection automatically reconnects on disconnect.',
 			security: [{ cookieAuth: [] }, { bearerAuth: [] }],
 
 			params: TEAM_AND_INSTALLATION_PARAMS_SCHEMA,
@@ -158,7 +157,6 @@ export default async function getInstallationRequestsStreamRoute(server: Fastify
 					user_id: mcpRequestLogs.user_id,
 					tool_name: mcpRequestLogs.tool_name,
 					tool_params: mcpRequestLogs.tool_params,
-					tool_response: mcpRequestLogs.tool_response,
 					response_time_ms: mcpRequestLogs.response_time_ms,
 					success: mcpRequestLogs.success,
 					error_message: mcpRequestLogs.error_message,
@@ -184,7 +182,6 @@ export default async function getInstallationRequestsStreamRoute(server: Fastify
 					: null,
 				tool_name: req.tool_name,
 				tool_params: req.tool_params,
-				tool_response: req.tool_response,
 				response_time_ms: req.response_time_ms,
 				success: req.success,
 				error_message: req.error_message,
@@ -230,7 +227,6 @@ export default async function getInstallationRequestsStreamRoute(server: Fastify
 							user_id: mcpRequestLogs.user_id,
 							tool_name: mcpRequestLogs.tool_name,
 							tool_params: mcpRequestLogs.tool_params,
-							tool_response: mcpRequestLogs.tool_response,
 							response_time_ms: mcpRequestLogs.response_time_ms,
 							success: mcpRequestLogs.success,
 							error_message: mcpRequestLogs.error_message,
@@ -273,7 +269,6 @@ export default async function getInstallationRequestsStreamRoute(server: Fastify
 									: null,
 								tool_name: req.tool_name,
 								tool_params: req.tool_params,
-								tool_response: req.tool_response,
 								response_time_ms: req.response_time_ms,
 								success: req.success,
 								error_message: req.error_message,

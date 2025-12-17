@@ -9513,11 +9513,12 @@ paths:
       summary: Get installation request logs
       tags:
         - MCP Installations
-      description: "Retrieves request logs (tool calls with params and responses) for
-        a specific MCP installation. Includes tool_name, tool_params,
-        tool_response, timing, and success status. Requires
-        mcp.installations.view permission. Note: Request logging can be disabled
-        per-installation via settings. Logs are returned newest first."
+      description: "Retrieves request logs (tool calls with parameters) for a specific
+        MCP installation. Includes tool_name, tool_params, timing, and success
+        status. Does NOT include tool_response (use single request endpoint to
+        get full response). Requires mcp.installations.view permission. Note:
+        Request logging can be disabled per-installation via settings. Logs are
+        returned newest first."
       parameters:
         - schema:
             type: integer
@@ -9606,8 +9607,6 @@ paths:
                               description: Name of the tool that was called
                             tool_params:
                               description: Parameters passed to the tool (JSONB)
-                            tool_response:
-                              description: The actual response from MCP server (JSONB, nullable)
                             response_time_ms:
                               type: integer
                               description: Response time in milliseconds
@@ -9704,6 +9703,183 @@ paths:
                   - error
                 description: Not Found - Installation does not exist or does not belong to
                   specified team
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates failure
+                  error:
+                    type: string
+                    description: Error message detailing what went wrong
+                required:
+                  - success
+                  - error
+                description: Internal Server Error
+  /api/teams/{teamId}/mcp/installations/{installationId}/requests/{requestId}:
+    get:
+      summary: Get single request by ID with full response
+      tags:
+        - MCP Installations
+      description: Retrieves a single request log entry including the full
+        tool_response. Use this endpoint to fetch complete request details
+        on-demand after viewing the request in the list. Requires
+        mcp.installations.view permission.
+      parameters:
+        - schema:
+            type: string
+            minLength: 1
+          in: path
+          name: teamId
+          required: true
+          description: Team ID that owns the installation
+        - schema:
+            type: string
+            minLength: 1
+          in: path
+          name: installationId
+          required: true
+          description: Installation ID
+        - schema:
+            type: string
+            minLength: 1
+          in: path
+          name: requestId
+          required: true
+          description: Request log entry ID
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Request details retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Indicates if the operation was successful
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        description: Request log entry unique identifier
+                      user:
+                        oneOf:
+                          - type: object
+                            properties:
+                              user_id:
+                                type: string
+                                description: User ID
+                              user_name:
+                                type: string
+                                description: Username
+                              email:
+                                type: string
+                                description: User email address
+                            required:
+                              - user_id
+                              - user_name
+                              - email
+                          - type: "null"
+                        description: User who made the request (nullable)
+                      tool_name:
+                        type: string
+                        description: Name of the tool that was called
+                      tool_params:
+                        description: Parameters passed to the tool (JSONB)
+                      tool_response:
+                        description: The actual response from MCP server (JSONB, nullable)
+                      response_time_ms:
+                        type: integer
+                        description: Response time in milliseconds
+                      success:
+                        type: boolean
+                        description: Whether the call succeeded
+                      error_message:
+                        type:
+                          - "null"
+                          - string
+                        description: Error message if failed (nullable)
+                      created_at:
+                        type: string
+                        format: date-time
+                        description: ISO 8601 timestamp when request was made
+                    required:
+                      - id
+                      - tool_name
+                      - tool_response
+                      - response_time_ms
+                      - success
+                      - created_at
+                required:
+                  - success
+                  - data
+                description: Request details retrieved successfully
+        "401":
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates failure
+                  error:
+                    type: string
+                    description: Error message detailing what went wrong
+                required:
+                  - success
+                  - error
+                description: Unauthorized - Authentication required
+        "403":
+          description: Forbidden - Insufficient permissions or not a team member
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates failure
+                  error:
+                    type: string
+                    description: Error message detailing what went wrong
+                required:
+                  - success
+                  - error
+                description: Forbidden - Insufficient permissions or not a team member
+        "404":
+          description: Not Found - Request does not exist or does not belong to specified
+            installation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates failure
+                  error:
+                    type: string
+                    description: Error message detailing what went wrong
+                required:
+                  - success
+                  - error
+                description: Not Found - Request does not exist or does not belong to specified
+                  installation
         "500":
           description: Internal Server Error
           content:
@@ -9953,7 +10129,8 @@ paths:
         - MCP Installations
       description: Real-time request logs stream via Server-Sent Events. Sends initial
         snapshot then streams new requests as they arrive. Includes tool_name,
-        tool_params, tool_response, timing, and success status. Supports same
+        tool_params, timing, and success status. Does NOT include tool_response
+        (use single request endpoint to get full response). Supports same
         filtering as REST endpoint. Connection automatically reconnects on
         disconnect.
       parameters:

@@ -1,13 +1,13 @@
 import { type FastifyInstance } from 'fastify';
 import { requireTeamPermission } from '../../../middleware/roleMiddleware';
 import { getDb, getSchema } from '../../../db';
-import { eq, and, desc, count } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 
 // =============================================================================
 // PARAMETER SCHEMAS
 // =============================================================================
 
-const TEAM_AND_INSTALLATION_PARAMS_SCHEMA = {
+const PARAMS_SCHEMA = {
 	type: 'object',
 	properties: {
 		teamId: {
@@ -20,32 +20,13 @@ const TEAM_AND_INSTALLATION_PARAMS_SCHEMA = {
 			minLength: 1,
 			description: 'Installation ID',
 		},
-	},
-	required: ['teamId', 'installationId'],
-	additionalProperties: false,
-} as const;
-
-const REQUESTS_QUERY_SCHEMA = {
-	type: 'object',
-	properties: {
-		limit: {
-			type: 'integer',
-			minimum: 1,
-			maximum: 100,
-			default: 50,
-			description: 'Number of request logs to return (max 100)',
-		},
-		offset: {
-			type: 'integer',
-			minimum: 0,
-			default: 0,
-			description: 'Pagination offset',
-		},
-		success: {
-			type: 'boolean',
-			description: 'Filter by success status (true = successful requests, false = failed requests)',
+		requestId: {
+			type: 'string',
+			minLength: 1,
+			description: 'Request log entry ID',
 		},
 	},
+	required: ['teamId', 'installationId', 'requestId'],
 	additionalProperties: false,
 } as const;
 
@@ -63,7 +44,7 @@ const USER_OBJECT_SCHEMA = {
 	required: ['user_id', 'user_name', 'email'],
 } as const;
 
-const REQUEST_ENTRY_SCHEMA = {
+const SINGLE_REQUEST_SCHEMA = {
 	type: 'object',
 	properties: {
 		id: { type: 'string', description: 'Request log entry unique identifier' },
@@ -75,6 +56,9 @@ const REQUEST_ENTRY_SCHEMA = {
 		tool_params: {
 			description: 'Parameters passed to the tool (JSONB)',
 		},
+		tool_response: {
+			description: 'The actual response from MCP server (JSONB, nullable)',
+		},
 		response_time_ms: { type: 'integer', description: 'Response time in milliseconds' },
 		success: { type: 'boolean', description: 'Whether the call succeeded' },
 		error_message: { type: ['string', 'null'], description: 'Error message if failed (nullable)' },
@@ -84,29 +68,14 @@ const REQUEST_ENTRY_SCHEMA = {
 			description: 'ISO 8601 timestamp when request was made',
 		},
 	},
-	required: ['id', 'tool_name', 'response_time_ms', 'success', 'created_at'],
+	required: ['id', 'tool_name', 'tool_response', 'response_time_ms', 'success', 'created_at'],
 } as const;
 
-const REQUESTS_DATA_SCHEMA = {
-	type: 'object',
-	properties: {
-		requests: {
-			type: 'array',
-			items: REQUEST_ENTRY_SCHEMA,
-			description: 'Array of request log entries',
-		},
-		total: { type: 'integer', description: 'Total number of requests matching criteria' },
-		limit: { type: 'integer', description: 'Number of requests returned per page' },
-		offset: { type: 'integer', description: 'Current pagination offset' },
-	},
-	required: ['requests', 'total', 'limit', 'offset'],
-} as const;
-
-const REQUESTS_SUCCESS_RESPONSE_SCHEMA = {
+const SUCCESS_RESPONSE_SCHEMA = {
 	type: 'object',
 	properties: {
 		success: { type: 'boolean', description: 'Indicates if the operation was successful' },
-		data: REQUESTS_DATA_SCHEMA,
+		data: SINGLE_REQUEST_SCHEMA,
 	},
 	required: ['success', 'data'],
 } as const;
@@ -124,15 +93,10 @@ const ERROR_RESPONSE_SCHEMA = {
 // TYPESCRIPT INTERFACES
 // =============================================================================
 
-interface TeamAndInstallationParams {
+interface RequestParams {
 	teamId: string;
 	installationId: string;
-}
-
-interface RequestsQueryParams {
-	limit?: number;
-	offset?: number;
-	success?: boolean;
+	requestId: string;
 }
 
 interface UserObject {
@@ -141,27 +105,21 @@ interface UserObject {
 	email: string;
 }
 
-interface RequestEntry {
+interface SingleRequestData {
 	id: string;
 	user: UserObject | null;
 	tool_name: string;
 	tool_params: unknown;
+	tool_response: unknown;
 	response_time_ms: number;
 	success: boolean;
 	error_message: string | null;
 	created_at: string;
 }
 
-interface RequestsData {
-	requests: RequestEntry[];
-	total: number;
-	limit: number;
-	offset: number;
-}
-
-interface RequestsSuccessResponse {
+interface SuccessResponse {
 	success: boolean;
-	data: RequestsData;
+	data: SingleRequestData;
 }
 
 interface ErrorResponse {
@@ -173,26 +131,24 @@ interface ErrorResponse {
 // ROUTE IMPLEMENTATION
 // =============================================================================
 
-export default async function getInstallationRequestsRoute(server: FastifyInstance) {
+export default async function getRequestByIdRoute(server: FastifyInstance) {
 	server.get<{
-		Params: TeamAndInstallationParams;
-		Querystring: RequestsQueryParams;
-	}>('/teams/:teamId/mcp/installations/:installationId/requests', {
+		Params: RequestParams;
+	}>('/teams/:teamId/mcp/installations/:installationId/requests/:requestId', {
 		preValidation: requireTeamPermission('mcp.installations.view'),
 		schema: {
 			tags: ['MCP Installations'],
-			summary: 'Get installation request logs',
+			summary: 'Get single request by ID with full response',
 			description:
-				'Retrieves request logs (tool calls with parameters) for a specific MCP installation. Includes tool_name, tool_params, timing, and success status. Does NOT include tool_response (use single request endpoint to get full response). Requires mcp.installations.view permission. Note: Request logging can be disabled per-installation via settings. Logs are returned newest first.',
+				'Retrieves a single request log entry including the full tool_response. Use this endpoint to fetch complete request details on-demand after viewing the request in the list. Requires mcp.installations.view permission.',
 			security: [{ cookieAuth: [] }, { bearerAuth: [] }],
 
-			params: TEAM_AND_INSTALLATION_PARAMS_SCHEMA,
-			querystring: REQUESTS_QUERY_SCHEMA,
+			params: PARAMS_SCHEMA,
 
 			response: {
 				200: {
-					...REQUESTS_SUCCESS_RESPONSE_SCHEMA,
-					description: 'Installation request logs retrieved successfully',
+					...SUCCESS_RESPONSE_SCHEMA,
+					description: 'Request details retrieved successfully',
 				},
 				401: {
 					...ERROR_RESPONSE_SCHEMA,
@@ -204,7 +160,7 @@ export default async function getInstallationRequestsRoute(server: FastifyInstan
 				},
 				404: {
 					...ERROR_RESPONSE_SCHEMA,
-					description: 'Not Found - Installation does not exist or does not belong to specified team',
+					description: 'Not Found - Request does not exist or does not belong to specified installation',
 				},
 				500: {
 					...ERROR_RESPONSE_SCHEMA,
@@ -213,72 +169,33 @@ export default async function getInstallationRequestsRoute(server: FastifyInstan
 			},
 		},
 	}, async (request, reply) => {
-		const { teamId, installationId } = request.params as TeamAndInstallationParams;
-		const { limit = 50, offset = 0, success: successFilter } = request.query as RequestsQueryParams;
+		const { teamId, installationId, requestId } = request.params as RequestParams;
 		const userId = request.user!.id;
 
 		request.log.info(
 			{
-				operation: 'get_installation_requests',
+				operation: 'get_request_by_id',
 				teamId,
 				installationId,
+				requestId,
 				userId,
-				limit,
-				offset,
-				successFilter,
 			},
-			'Retrieving request logs for installation'
+			'Retrieving single request log entry'
 		);
 
 		try {
 			const db = getDb();
-			const { mcpServerInstallations, mcpRequestLogs, authUser } = getSchema();
+			const { mcpRequestLogs, authUser } = getSchema();
 
-			// Step 1: Verify installation exists and belongs to the specified team
-			const installation = await db
-				.select({ id: mcpServerInstallations.id })
-				.from(mcpServerInstallations)
-				.where(and(eq(mcpServerInstallations.id, installationId), eq(mcpServerInstallations.team_id, teamId)))
-				.limit(1);
-
-			if (!installation || installation.length === 0) {
-				request.log.warn(
-					{
-						operation: 'get_installation_requests',
-						teamId,
-						installationId,
-						userId,
-					},
-					'Installation not found or does not belong to team'
-				);
-
-				const errorResponse: ErrorResponse = {
-					success: false,
-					error: 'Installation not found or does not belong to specified team',
-				};
-				const jsonString = JSON.stringify(errorResponse);
-				return reply.status(404).type('application/json').send(jsonString);
-			}
-
-			// Step 2: Build query conditions
-			const conditions = [
-				eq(mcpRequestLogs.installation_id, installationId),
-				eq(mcpRequestLogs.team_id, teamId)
-			];
-
-			// Add success filter if provided
-			if (successFilter !== undefined) {
-				conditions.push(eq(mcpRequestLogs.success, successFilter));
-			}
-
-			// Step 3: Query request logs with pagination (LEFT JOIN with authUser)
-			const requests = await db
+			// Query with LEFT JOIN to authUser (same pattern as list endpoints)
+			const result = await db
 				.select({
 					// Request log fields
 					id: mcpRequestLogs.id,
 					user_id: mcpRequestLogs.user_id,
 					tool_name: mcpRequestLogs.tool_name,
 					tool_params: mcpRequestLogs.tool_params,
+					tool_response: mcpRequestLogs.tool_response,
 					response_time_ms: mcpRequestLogs.response_time_ms,
 					success: mcpRequestLogs.success,
 					error_message: mcpRequestLogs.error_message,
@@ -289,21 +206,36 @@ export default async function getInstallationRequestsRoute(server: FastifyInstan
 				})
 				.from(mcpRequestLogs)
 				.leftJoin(authUser, eq(mcpRequestLogs.user_id, authUser.id))
-				.where(and(...conditions))
-				.orderBy(desc(mcpRequestLogs.created_at))
-				.limit(limit)
-				.offset(offset);
+				.where(and(
+					eq(mcpRequestLogs.id, requestId),
+					eq(mcpRequestLogs.installation_id, installationId),
+					eq(mcpRequestLogs.team_id, teamId)
+				))
+				.limit(1);
 
-			// Step 4: Get total count for pagination
-			const totalResult = await db
-				.select({ count: count() })
-				.from(mcpRequestLogs)
-				.where(and(...conditions));
+			// Return 404 if not found or doesn't belong to team/installation
+			if (!result || result.length === 0) {
+				request.log.warn(
+					{
+						operation: 'get_request_by_id',
+						teamId,
+						installationId,
+						requestId,
+						userId,
+					},
+					'Request not found or does not belong to specified installation'
+				);
 
-			const totalCount = totalResult[0]?.count || 0;
+				const errorResponse: ErrorResponse = {
+					success: false,
+					error: 'Request not found or does not belong to specified installation',
+				};
+				const jsonString = JSON.stringify(errorResponse);
+				return reply.status(404).type('application/json').send(jsonString);
+			}
 
-			// Step 5: Format response
-			const formattedRequests: RequestEntry[] = requests.map((req) => ({
+			const req = result[0];
+			const requestData: SingleRequestData = {
 				id: req.id,
 				user: req.user_id && req.user_name && req.user_email
 					? {
@@ -314,31 +246,26 @@ export default async function getInstallationRequestsRoute(server: FastifyInstan
 					: null,
 				tool_name: req.tool_name,
 				tool_params: req.tool_params,
+				tool_response: req.tool_response,
 				response_time_ms: req.response_time_ms,
 				success: req.success,
 				error_message: req.error_message,
 				created_at: req.created_at.toISOString(),
-			}));
+			};
 
-			const successResponse: RequestsSuccessResponse = {
+			const successResponse: SuccessResponse = {
 				success: true,
-				data: {
-					requests: formattedRequests,
-					total: totalCount,
-					limit,
-					offset,
-				},
+				data: requestData,
 			};
 
 			request.log.info(
 				{
-					operation: 'get_installation_requests_success',
+					operation: 'get_request_by_id_success',
 					teamId,
 					installationId,
-					requestCount: formattedRequests.length,
-					total: totalCount,
+					requestId,
 				},
-				'Installation request logs retrieved successfully'
+				'Request log entry retrieved successfully'
 			);
 
 			const jsonString = JSON.stringify(successResponse);
@@ -347,17 +274,18 @@ export default async function getInstallationRequestsRoute(server: FastifyInstan
 		} catch (error) {
 			request.log.error(
 				{
-					operation: 'get_installation_requests_failed',
+					operation: 'get_request_by_id_failed',
 					teamId,
 					installationId,
+					requestId,
 					error: error instanceof Error ? error.message : 'Unknown error',
 				},
-				'Failed to retrieve installation request logs'
+				'Failed to retrieve request log entry'
 			);
 
 			const errorResponse: ErrorResponse = {
 				success: false,
-				error: 'Failed to retrieve installation request logs',
+				error: 'Failed to retrieve request log entry',
 			};
 			const jsonString = JSON.stringify(errorResponse);
 			return reply.status(500).type('application/json').send(jsonString);
