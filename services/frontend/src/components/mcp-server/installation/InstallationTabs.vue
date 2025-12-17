@@ -27,6 +27,7 @@ const routeToTabMap: Record<string, string> = {
   'McpServerInstallationMcpTools': 'mcp-tools',
   'McpServerInstallationUserConfig': 'user-config',
   'McpServerInstallationTeamConfig': 'team-config',
+  'McpServerInstallationRequests': 'requests',
   'McpServerInstallationDangerZone': 'danger-zone',
 }
 
@@ -36,6 +37,7 @@ const tabToRouteMap: Record<string, string> = {
   'mcp-tools': 'McpServerInstallationMcpTools',
   'user-config': 'McpServerInstallationUserConfig',
   'team-config': 'McpServerInstallationTeamConfig',
+  'requests': 'McpServerInstallationRequests',
   'danger-zone': 'McpServerInstallationDangerZone',
 }
 
@@ -64,6 +66,7 @@ const activeTab = computed({
       label="Team Configuration"
       :badge="environmentVariablesCount > 0 ? environmentVariablesCount : undefined"
     />
+    <DsTabsItem value="requests" label="Requests" />
     <DsTabsItem value="danger-zone" label="Danger Zone" />
   </DsTabs>
 </template>

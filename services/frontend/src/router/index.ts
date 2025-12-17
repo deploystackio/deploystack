@@ -157,6 +157,12 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresSetup: true },
   },
   {
+    path: '/mcp-server/installation/:id/requests',
+    name: 'McpServerInstallationRequests',
+    component: () => import('../views/mcp-server/installation/[id]/requests.vue'),
+    meta: { requiresSetup: true },
+  },
+  {
     path: '/mcp-server/installation/:id/danger-zone',
     name: 'McpServerInstallationDangerZone',
     component: () => import('../views/mcp-server/installation/[id]/danger-zone.vue'),

@@ -744,6 +744,58 @@ export default {
           uninstalling: 'Uninstalling...'
         }
       }
+    },
+
+    requests: {
+      title: 'Tool Requests',
+      description: 'View tool execution history for this MCP server',
+      loading: 'Loading requests...',
+      table: {
+        columns: {
+          time: 'Time',
+          tool: 'Tool',
+          duration: 'Duration',
+          status: 'Status',
+          actions: 'Actions'
+        },
+        values: {
+          success: 'Success',
+          failed: 'Failed',
+          viewDetails: 'View Details'
+        }
+      },
+      filter: {
+        all: 'All Requests',
+        success: 'Successful',
+        failed: 'Failed'
+      },
+      connection: {
+        live: 'Live',
+        disconnected: 'Disconnected',
+        reconnecting: 'Reconnecting...'
+      },
+      emptyState: {
+        title: 'No Requests Yet',
+        description: 'Tool execution requests will appear here when tools are called.'
+      },
+      detail: {
+        title: 'Request Details',
+        toolName: 'Tool Name',
+        parameters: 'Parameters',
+        response: 'Response',
+        responseTime: 'Response Time',
+        status: 'Status',
+        error: 'Error Message',
+        timestamp: 'Timestamp',
+        close: 'Close',
+        copyParams: 'Copy Parameters',
+        copyResponse: 'Copy Response',
+        copied: 'Copied!'
+      },
+      error: {
+        title: 'Error Loading Requests',
+        description: 'Failed to load tool requests: {error}'
+      }
     }
   }
 }
