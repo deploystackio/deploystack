@@ -1,6 +1,12 @@
+export interface McpRequestLogUser {
+  user_id: string
+  user_name: string
+  email: string
+}
+
 export interface McpRequestLog {
   id: string
-  user_id: string | null
+  user: McpRequestLogUser | null
   tool_name: string
   tool_params: unknown
   tool_response: unknown

@@ -220,6 +220,7 @@ onUnmounted(() => {
             <TableHead class="w-10"></TableHead>
             <TableHead class="w-40">{{ t('mcpInstallations.details.requests.table.columns.time') }}</TableHead>
             <TableHead>{{ t('mcpInstallations.details.requests.table.columns.tool') }}</TableHead>
+            <TableHead>{{ t('mcpInstallations.details.requests.table.columns.user') }}</TableHead>
             <TableHead class="w-24 text-right">{{ t('mcpInstallations.details.requests.table.columns.duration') }}</TableHead>
             <TableHead class="w-12"></TableHead>
           </TableRow>
@@ -232,6 +233,12 @@ onUnmounted(() => {
                 class="h-4 w-4 text-amber-500"
                 :title="request.error_message || 'Failed'"
               />
+              <span
+                v-else
+                class="text-xs font-medium text-green-600 dark:text-green-500"
+              >
+                OK
+              </span>
             </TableCell>
             <TableCell class="text-sm text-muted-foreground font-mono tabular-nums">
               <HoverCard>
@@ -264,6 +271,10 @@ onUnmounted(() => {
             </TableCell>
             <TableCell class="font-mono text-sm">
               {{ request.tool_name }}
+            </TableCell>
+            <TableCell class="text-sm">
+              <span v-if="request.user">{{ request.user.user_name }}</span>
+              <span v-else class="text-muted-foreground italic">Unknown</span>
             </TableCell>
             <TableCell class="text-sm text-right tabular-nums">
               {{ request.response_time_ms }}ms
@@ -308,12 +319,23 @@ onUnmounted(() => {
             </div>
           </div>
 
-          <!-- Timestamp -->
-          <div>
-            <div class="text-sm font-medium text-muted-foreground mb-1">
-              {{ t('mcpInstallations.details.requests.detail.timestamp') }}
+          <!-- User and Timestamp -->
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <div class="text-sm font-medium text-muted-foreground mb-1">
+                {{ t('mcpInstallations.details.requests.detail.user') }}
+              </div>
+              <div class="text-sm">
+                <div v-if="selectedRequest.user">{{ selectedRequest.user.user_name }}</div>
+                <div v-else class="text-muted-foreground italic">Unknown</div>
+              </div>
             </div>
-            <div class="text-sm">{{ formatFullTimestamp(selectedRequest.created_at) }}</div>
+            <div>
+              <div class="text-sm font-medium text-muted-foreground mb-1">
+                {{ t('mcpInstallations.details.requests.detail.timestamp') }}
+              </div>
+              <div class="text-sm font-mono tabular-nums">{{ formatLocalTimestamp(selectedRequest.created_at) }}</div>
+            </div>
           </div>
 
           <!-- Error Message (if failed) -->

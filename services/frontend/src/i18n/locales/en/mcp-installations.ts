@@ -753,6 +753,7 @@ export default {
       table: {
         columns: {
           time: 'Time',
+          user: 'User',
           tool: 'Tool',
           duration: 'Duration',
           status: 'Status',
@@ -781,6 +782,7 @@ export default {
       detail: {
         title: 'Request Details',
         toolName: 'Tool Name',
+        user: 'User',
         parameters: 'Parameters',
         response: 'Response',
         responseTime: 'Response Time',
