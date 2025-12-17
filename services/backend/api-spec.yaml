@@ -9582,10 +9582,24 @@ paths:
                             id:
                               type: string
                               description: Request log entry unique identifier
-                            user_id:
-                              type:
-                                - "null"
-                                - string
+                            user:
+                              oneOf:
+                                - type: object
+                                  properties:
+                                    user_id:
+                                      type: string
+                                      description: User ID
+                                    user_name:
+                                      type: string
+                                      description: Username
+                                    email:
+                                      type: string
+                                      description: User email address
+                                  required:
+                                    - user_id
+                                    - user_name
+                                    - email
+                                - type: "null"
                               description: User who made the request (nullable)
                             tool_name:
                               type: string

@@ -53,11 +53,24 @@ const REQUESTS_QUERY_SCHEMA = {
 // RESPONSE SCHEMAS
 // =============================================================================
 
+const USER_OBJECT_SCHEMA = {
+	type: 'object',
+	properties: {
+		user_id: { type: 'string', description: 'User ID' },
+		user_name: { type: 'string', description: 'Username' },
+		email: { type: 'string', description: 'User email address' },
+	},
+	required: ['user_id', 'user_name', 'email'],
+} as const;
+
 const REQUEST_ENTRY_SCHEMA = {
 	type: 'object',
 	properties: {
 		id: { type: 'string', description: 'Request log entry unique identifier' },
-		user_id: { type: ['string', 'null'], description: 'User who made the request (nullable)' },
+		user: {
+			oneOf: [USER_OBJECT_SCHEMA, { type: 'null' }],
+			description: 'User who made the request (nullable)',
+		},
 		tool_name: { type: 'string', description: 'Name of the tool that was called' },
 		tool_params: {
 			description: 'Parameters passed to the tool (JSONB)',
@@ -125,9 +138,15 @@ interface RequestsQueryParams {
 	success?: boolean;
 }
 
+interface UserObject {
+	user_id: string;
+	user_name: string;
+	email: string;
+}
+
 interface RequestEntry {
 	id: string;
-	user_id: string | null;
+	user: UserObject | null;
 	tool_name: string;
 	tool_params: unknown;
 	tool_response: unknown;
@@ -217,7 +236,7 @@ export default async function getInstallationRequestsRoute(server: FastifyInstan
 
 		try {
 			const db = getDb();
-			const { mcpServerInstallations, mcpRequestLogs } = getSchema();
+			const { mcpServerInstallations, mcpRequestLogs, authUser } = getSchema();
 
 			// Step 1: Verify installation exists and belongs to the specified team
 			const installation = await db
@@ -256,10 +275,25 @@ export default async function getInstallationRequestsRoute(server: FastifyInstan
 				conditions.push(eq(mcpRequestLogs.success, successFilter));
 			}
 
-			// Step 3: Query request logs with pagination
+			// Step 3: Query request logs with pagination (LEFT JOIN with authUser)
 			const requests = await db
-				.select()
+				.select({
+					// Request log fields
+					id: mcpRequestLogs.id,
+					user_id: mcpRequestLogs.user_id,
+					tool_name: mcpRequestLogs.tool_name,
+					tool_params: mcpRequestLogs.tool_params,
+					tool_response: mcpRequestLogs.tool_response,
+					response_time_ms: mcpRequestLogs.response_time_ms,
+					success: mcpRequestLogs.success,
+					error_message: mcpRequestLogs.error_message,
+					created_at: mcpRequestLogs.created_at,
+					// User fields (nullable)
+					user_name: authUser.username,
+					user_email: authUser.email,
+				})
 				.from(mcpRequestLogs)
+				.leftJoin(authUser, eq(mcpRequestLogs.user_id, authUser.id))
 				.where(and(...conditions))
 				.orderBy(desc(mcpRequestLogs.created_at))
 				.limit(limit)
@@ -276,7 +310,13 @@ export default async function getInstallationRequestsRoute(server: FastifyInstan
 			// Step 5: Format response
 			const formattedRequests: RequestEntry[] = requests.map((req) => ({
 				id: req.id,
-				user_id: req.user_id,
+				user: req.user_id && req.user_name && req.user_email
+					? {
+							user_id: req.user_id,
+							user_name: req.user_name,
+							email: req.user_email,
+					  }
+					: null,
 				tool_name: req.tool_name,
 				tool_params: req.tool_params,
 				tool_response: req.tool_response,

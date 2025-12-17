@@ -57,9 +57,15 @@ interface RequestsQueryParams {
 	limit?: number;
 }
 
+interface UserObject {
+	user_id: string;
+	user_name: string;
+	email: string;
+}
+
 interface RequestEntry {
 	id: string;
-	user_id: string | null;
+	user: UserObject | null;
 	tool_name: string;
 	tool_params: unknown;
 	tool_response: unknown;
@@ -108,7 +114,7 @@ export default async function getInstallationRequestsStreamRoute(server: Fastify
 
 		try {
 			const db = getDb();
-			const { mcpServerInstallations, mcpRequestLogs } = getSchema();
+			const { mcpServerInstallations, mcpRequestLogs, authUser } = getSchema();
 
 			// Step 1: Verify installation exists and belongs to team
 			const installation = await db
@@ -144,17 +150,38 @@ export default async function getInstallationRequestsStreamRoute(server: Fastify
 				conditions.push(eq(mcpRequestLogs.success, successFilter));
 			}
 
-			// Step 3: Send initial snapshot
+			// Step 3: Send initial snapshot (LEFT JOIN with authUser)
 			const initialRequests = await db
-				.select()
+				.select({
+					// Request log fields
+					id: mcpRequestLogs.id,
+					user_id: mcpRequestLogs.user_id,
+					tool_name: mcpRequestLogs.tool_name,
+					tool_params: mcpRequestLogs.tool_params,
+					tool_response: mcpRequestLogs.tool_response,
+					response_time_ms: mcpRequestLogs.response_time_ms,
+					success: mcpRequestLogs.success,
+					error_message: mcpRequestLogs.error_message,
+					created_at: mcpRequestLogs.created_at,
+					// User fields (nullable)
+					user_name: authUser.username,
+					user_email: authUser.email,
+				})
 				.from(mcpRequestLogs)
+				.leftJoin(authUser, eq(mcpRequestLogs.user_id, authUser.id))
 				.where(and(...conditions))
 				.orderBy(desc(mcpRequestLogs.created_at))
 				.limit(limit);
 
 			const formattedInitialRequests: RequestEntry[] = initialRequests.map((req) => ({
 				id: req.id,
-				user_id: req.user_id,
+				user: req.user_id && req.user_name && req.user_email
+					? {
+							user_id: req.user_id,
+							user_name: req.user_name,
+							email: req.user_email,
+					  }
+					: null,
 				tool_name: req.tool_name,
 				tool_params: req.tool_params,
 				tool_response: req.tool_response,
@@ -197,8 +224,23 @@ export default async function getInstallationRequestsStreamRoute(server: Fastify
 
 				try {
 					const newRequests = await db
-						.select()
+						.select({
+							// Request log fields
+							id: mcpRequestLogs.id,
+							user_id: mcpRequestLogs.user_id,
+							tool_name: mcpRequestLogs.tool_name,
+							tool_params: mcpRequestLogs.tool_params,
+							tool_response: mcpRequestLogs.tool_response,
+							response_time_ms: mcpRequestLogs.response_time_ms,
+							success: mcpRequestLogs.success,
+							error_message: mcpRequestLogs.error_message,
+							created_at: mcpRequestLogs.created_at,
+							// User fields (nullable)
+							user_name: authUser.username,
+							user_email: authUser.email,
+						})
 						.from(mcpRequestLogs)
+						.leftJoin(authUser, eq(mcpRequestLogs.user_id, authUser.id))
 						.where(and(
 							...conditions,
 							gt(mcpRequestLogs.created_at, lastSentTimestamp)
@@ -222,7 +264,13 @@ export default async function getInstallationRequestsStreamRoute(server: Fastify
 
 							const formattedRequest: RequestEntry = {
 								id: req.id,
-								user_id: req.user_id,
+								user: req.user_id && req.user_name && req.user_email
+									? {
+											user_id: req.user_id,
+											user_name: req.user_name,
+											email: req.user_email,
+									  }
+									: null,
 								tool_name: req.tool_name,
 								tool_params: req.tool_params,
 								tool_response: req.tool_response,
