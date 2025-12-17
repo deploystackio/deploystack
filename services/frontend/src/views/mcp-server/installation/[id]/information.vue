@@ -19,7 +19,6 @@ const { t } = useI18n()
 
 const {
   installation,
-  currentTeam,
   isLoading,
   error,
   installationId,
@@ -78,30 +77,27 @@ onUnmounted(() => {
     </DsPageHeading>
 
     <div class="space-y-6 mt-6">
+      <!-- Tabs - Always visible when installation is loaded -->
+      <InstallationTabs
+        v-if="installation"
+        :installation="installation"
+        :installation-id="installationId"
+      />
+
       <!-- Error State -->
       <div v-if="error" class="text-red-500">
         {{ t('mcpInstallations.view.errorLoading', { error }) }}
       </div>
 
-      <!-- Loading State -->
-      <div v-else-if="isLoading" class="space-y-6">
-        <Skeleton class="h-12 w-full" />
-        <div class="space-y-4">
-          <Skeleton class="h-32 w-full rounded-lg" />
-          <Skeleton class="h-32 w-full rounded-lg" />
-          <Skeleton class="h-32 w-full rounded-lg" />
-        </div>
+      <!-- Loading State for Content -->
+      <div v-else-if="isLoading" class="space-y-4">
+        <Skeleton class="h-32 w-full rounded-lg" />
+        <Skeleton class="h-32 w-full rounded-lg" />
+        <Skeleton class="h-32 w-full rounded-lg" />
       </div>
 
-      <!-- Installation Details with Tabs -->
-      <div v-else-if="installation && currentTeam">
-        <InstallationTabs
-          :installation="installation"
-          :installation-id="installationId"
-        />
-
-        <InstallationInfo :installation="installation" />
-      </div>
+      <!-- Installation Info Content -->
+      <InstallationInfo v-else-if="installation" :installation="installation" />
     </div>
   </NavbarLayout>
 </template>

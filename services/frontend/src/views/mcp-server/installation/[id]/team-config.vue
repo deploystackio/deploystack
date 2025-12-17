@@ -91,36 +91,34 @@ onUnmounted(() => {
     </DsPageHeading>
 
     <div class="space-y-6 mt-6">
+      <!-- Tabs - Always visible when installation is loaded -->
+      <InstallationTabs
+        v-if="installation"
+        :installation="installation"
+        :installation-id="installationId"
+      />
+
       <!-- Error State -->
       <div v-if="error" class="text-red-500">
         {{ t('mcpInstallations.view.errorLoading', { error }) }}
       </div>
 
-      <!-- Loading State -->
-      <div v-else-if="isLoading" class="space-y-6">
-        <Skeleton class="h-12 w-full" />
-        <div class="space-y-4">
-          <Skeleton class="h-32 w-full rounded-lg" />
-          <Skeleton class="h-32 w-full rounded-lg" />
-          <Skeleton class="h-32 w-full rounded-lg" />
-        </div>
+      <!-- Loading State for Content -->
+      <div v-else-if="isLoading" class="space-y-4">
+        <Skeleton class="h-32 w-full rounded-lg" />
+        <Skeleton class="h-32 w-full rounded-lg" />
+        <Skeleton class="h-32 w-full rounded-lg" />
       </div>
 
-      <!-- Installation Details with Tabs -->
-      <div v-else-if="installation && currentTeam">
-        <InstallationTabs
-          :installation="installation"
-          :installation-id="installationId"
-        />
-
-        <TeamConfiguration
-          :installation="installation"
-          :team-id="currentTeam.id"
-          :can-edit="canEditInstallation"
-          :user-role="userTeamRole"
-          @installation-updated="handleInstallationUpdated"
-        />
-      </div>
+      <!-- Team Configuration Content -->
+      <TeamConfiguration
+        v-else-if="installation && currentTeam"
+        :installation="installation"
+        :team-id="currentTeam.id"
+        :can-edit="canEditInstallation"
+        :user-role="userTeamRole"
+        @installation-updated="handleInstallationUpdated"
+      />
     </div>
   </NavbarLayout>
 </template>
