@@ -127,15 +127,15 @@ const routes: RouteRecordRaw[] = [
     path: '/mcp-server/installation/:id',
     redirect: (to) => {
       return {
-        name: 'McpServerInstallationInformation',
+        name: 'McpServerInstallationGeneral',
         params: to.params
       }
     }
   },
   {
-    path: '/mcp-server/installation/:id/information',
-    name: 'McpServerInstallationInformation',
-    component: () => import('../views/mcp-server/installation/[id]/information.vue'),
+    path: '/mcp-server/installation/:id/general',
+    name: 'McpServerInstallationGeneral',
+    component: () => import('../views/mcp-server/installation/[id]/general.vue'),
     meta: { requiresSetup: true },
   },
   {
