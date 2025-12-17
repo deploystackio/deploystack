@@ -24,7 +24,7 @@ const environmentVariablesCount = computed(() => {
 // Map route names to tab values
 const routeToTabMap: Record<string, string> = {
   'McpServerInstallationInformation': 'information',
-  'McpServerInstallationMcpTools': 'mcp-tools',
+  'McpServerInstallationTools': 'tools',
   'McpServerInstallationUserConfig': 'user-config',
   'McpServerInstallationTeamConfig': 'team-config',
   'McpServerInstallationRequests': 'requests',
@@ -34,7 +34,7 @@ const routeToTabMap: Record<string, string> = {
 // Map tab values to route names
 const tabToRouteMap: Record<string, string> = {
   'information': 'McpServerInstallationInformation',
-  'mcp-tools': 'McpServerInstallationMcpTools',
+  'tools': 'McpServerInstallationTools',
   'user-config': 'McpServerInstallationUserConfig',
   'team-config': 'McpServerInstallationTeamConfig',
   'requests': 'McpServerInstallationRequests',
@@ -59,7 +59,7 @@ const activeTab = computed({
 <template>
   <DsTabs v-model="activeTab" variant="underlined" full-width-border class="mb-10">
     <DsTabsItem value="information" label="Installation Info" />
-    <DsTabsItem value="mcp-tools" :label="t('mcpInstallations.details.mcpTools.title')" />
+    <DsTabsItem value="tools" :label="t('mcpInstallations.details.tools.title')" />
     <DsTabsItem value="user-config" label="User Configuration" />
     <DsTabsItem
       value="team-config"

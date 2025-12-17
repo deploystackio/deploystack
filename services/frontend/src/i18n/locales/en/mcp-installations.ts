@@ -619,8 +619,8 @@ export default {
   },
 
   details: {
-    mcpTools: {
-      title: 'MCP Tools',
+    tools: {
+      title: 'Tools',
       description: 'Tools discovered from this MCP server installation',
       loading: 'Loading tools...',
       noTools: {

@@ -139,9 +139,9 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresSetup: true },
   },
   {
-    path: '/mcp-server/installation/:id/mcp-tools',
-    name: 'McpServerInstallationMcpTools',
-    component: () => import('../views/mcp-server/installation/[id]/mcp-tools.vue'),
+    path: '/mcp-server/installation/:id/tools',
+    name: 'McpServerInstallationTools',
+    component: () => import('../views/mcp-server/installation/[id]/tools.vue'),
     meta: { requiresSetup: true },
   },
   {

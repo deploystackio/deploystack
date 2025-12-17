@@ -1,5 +1,5 @@
 export { default as InstallationInfo } from './InstallationInfo.vue'
-export { default as McpToolsTab } from './McpToolsTab.vue'
+export { default as ToolsTab } from './ToolsTab.vue'
 export { default as TeamConfiguration } from './TeamConfiguration.vue'
 export { default as UserConfiguration } from './UserConfiguration.vue'
 export { default as DangerZone } from './DangerZone.vue'

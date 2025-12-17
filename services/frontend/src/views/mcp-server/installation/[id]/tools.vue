@@ -12,7 +12,7 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb'
 import NavbarLayout from '@/components/NavbarLayout.vue'
-import { McpToolsTab, InstallationTabs } from '@/components/mcp-server/installation'
+import { ToolsTab, InstallationTabs } from '@/components/mcp-server/installation'
 import { useMcpInstallationCache } from '@/composables/mcp-server/installation'
 
 const { t } = useI18n()
@@ -102,8 +102,8 @@ onUnmounted(() => {
         <Skeleton class="h-32 w-full rounded-lg" />
       </div>
 
-      <!-- MCP Tools Content -->
-      <McpToolsTab
+      <!-- Tools Content -->
+      <ToolsTab
         v-else-if="installation && currentTeam"
         :installation="installation"
         :team-id="currentTeam.id"

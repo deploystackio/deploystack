@@ -89,10 +89,10 @@ async function handleToolToggle(toolId: string, toolName: string, currentDisable
     )
 
     const action = newDisabledState
-      ? t('mcpInstallations.details.mcpTools.toggle.disabled')
-      : t('mcpInstallations.details.mcpTools.toggle.enabled')
+      ? t('mcpInstallations.details.tools.toggle.disabled')
+      : t('mcpInstallations.details.tools.toggle.enabled')
 
-    toast.success(t('mcpInstallations.details.mcpTools.toggle.success', { toolName, action }), {
+    toast.success(t('mcpInstallations.details.tools.toggle.success', { toolName, action }), {
       description: response.message
     })
   } catch (err) {
@@ -101,8 +101,8 @@ async function handleToolToggle(toolId: string, toolName: string, currentDisable
       tools.value.tools[toolIndex].is_disabled = currentDisabled
     }
 
-    const errorMessage = err instanceof Error ? err.message : t('mcpInstallations.details.mcpTools.toggle.error')
-    toast.error(t('mcpInstallations.details.mcpTools.toggle.errorTitle'), {
+    const errorMessage = err instanceof Error ? err.message : t('mcpInstallations.details.tools.toggle.error')
+    toast.error(t('mcpInstallations.details.tools.toggle.errorTitle'), {
       description: errorMessage
     })
   } finally {
@@ -157,23 +157,23 @@ const pieChartOption = computed<EChartsOption>(() => {
   <div>
     <!-- Loading State -->
     <div v-if="isLoading" class="text-muted-foreground">
-      {{ t('mcpInstallations.details.mcpTools.loading') }}
+      {{ t('mcpInstallations.details.tools.loading') }}
     </div>
 
     <!-- Error State -->
     <Alert v-else-if="error" variant="destructive" class="mb-6">
       <AlertCircle class="h-4 w-4" />
       <AlertDescription>
-        {{ t('mcpInstallations.details.mcpTools.error.description', { error }) }}
+        {{ t('mcpInstallations.details.tools.error.description', { error }) }}
       </AlertDescription>
     </Alert>
 
     <!-- No Tools State -->
     <div v-else-if="!hasTools" class="text-center py-12">
       <Package class="mx-auto h-12 w-12 text-muted-foreground" />
-      <h3 class="mt-4 text-lg font-semibold">{{ t('mcpInstallations.details.mcpTools.noTools.title') }}</h3>
+      <h3 class="mt-4 text-lg font-semibold">{{ t('mcpInstallations.details.tools.noTools.title') }}</h3>
       <p class="mt-2 text-sm text-muted-foreground max-w-md mx-auto">
-        {{ t('mcpInstallations.details.mcpTools.noTools.description') }}
+        {{ t('mcpInstallations.details.tools.noTools.description') }}
       </p>
     </div>
 
@@ -188,7 +188,7 @@ const pieChartOption = computed<EChartsOption>(() => {
               <Wrench class="h-6 w-6 text-teal-700 dark:text-teal-400" />
             </div>
             <div>
-              <div class="text-sm text-muted-foreground">{{ t('mcpInstallations.details.mcpTools.summary.totalTools') }}</div>
+              <div class="text-sm text-muted-foreground">{{ t('mcpInstallations.details.tools.summary.totalTools') }}</div>
               <div class="text-2xl font-bold">{{ tools.tool_count }}</div>
             </div>
           </div>
@@ -197,7 +197,7 @@ const pieChartOption = computed<EChartsOption>(() => {
               <Coins class="h-6 w-6 text-amber-700 dark:text-amber-400" />
             </div>
             <div>
-              <div class="text-sm text-muted-foreground">{{ t('mcpInstallations.details.mcpTools.summary.totalTokens') }}</div>
+              <div class="text-sm text-muted-foreground">{{ t('mcpInstallations.details.tools.summary.totalTokens') }}</div>
               <div class="text-2xl font-bold">{{ formatTokenCount(tools.total_tokens) }}</div>
             </div>
           </div>
@@ -219,10 +219,10 @@ const pieChartOption = computed<EChartsOption>(() => {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead class="w-20">{{ t('mcpInstallations.details.mcpTools.table.columns.enabled') }}</TableHead>
-              <TableHead>{{ t('mcpInstallations.details.mcpTools.table.columns.toolName') }}</TableHead>
-              <TableHead>{{ t('mcpInstallations.details.mcpTools.table.columns.description') }}</TableHead>
-              <TableHead class="text-right">{{ t('mcpInstallations.details.mcpTools.table.columns.tokenCount') }}</TableHead>
+              <TableHead class="w-20">{{ t('mcpInstallations.details.tools.table.columns.enabled') }}</TableHead>
+              <TableHead>{{ t('mcpInstallations.details.tools.table.columns.toolName') }}</TableHead>
+              <TableHead>{{ t('mcpInstallations.details.tools.table.columns.description') }}</TableHead>
+              <TableHead class="text-right">{{ t('mcpInstallations.details.tools.table.columns.tokenCount') }}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -237,7 +237,7 @@ const pieChartOption = computed<EChartsOption>(() => {
               <TableCell class="text-sm font-medium align-top whitespace-nowrap">{{ tool.tool_name }}</TableCell>
               <TableCell class="text-sm text-muted-foreground max-w-2xl">
                 <div class="whitespace-normal wrap-break-word">
-                  {{ tool.description || t('mcpInstallations.details.mcpTools.table.values.noDescription') }}
+                  {{ tool.description || t('mcpInstallations.details.tools.table.values.noDescription') }}
                 </div>
               </TableCell>
               <TableCell class="text-right align-top whitespace-nowrap text-sm font-medium">
