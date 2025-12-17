@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
   Sheet,
@@ -9,12 +9,16 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Copy, Check } from 'lucide-vue-next'
-import type { McpRequestLog } from '@/types/mcp-request-logs'
+import { McpRequestLogsService } from '@/services/mcpRequestLogsService'
+import type { McpRequestLog, McpRequestLogDetail } from '@/types/mcp-request-logs'
 
 interface Props {
   request: McpRequestLog | null
   open: boolean
+  teamId: string
+  installationId: string
 }
 
 interface Emits {
@@ -26,6 +30,9 @@ const emit = defineEmits<Emits>()
 const { t } = useI18n()
 
 const copiedField = ref<string | null>(null)
+const requestDetail = ref<McpRequestLogDetail | null>(null)
+const isLoadingDetail = ref(false)
+const detailError = ref<string | null>(null)
 
 function handleOpenChange(value: boolean) {
   emit('update:open', value)
@@ -42,6 +49,54 @@ async function copyToClipboard(text: string, field: string) {
     console.error('Failed to copy:', err)
   }
 }
+
+// Fetch full request detail when sheet opens
+async function fetchRequestDetail() {
+  if (!props.request || !props.open) return
+
+  // Check if we already have the detail for this request
+  if (requestDetail.value?.id === props.request.id) return
+
+  isLoadingDetail.value = true
+  detailError.value = null
+
+  try {
+    const url = McpRequestLogsService.getDetailUrl(
+      props.teamId,
+      props.installationId,
+      props.request.id
+    )
+    const response = await fetch(url, {
+      credentials: 'include'
+    })
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch request detail: ${response.statusText}`)
+    }
+
+    const result = await response.json()
+    requestDetail.value = result.data
+  } catch (err) {
+    console.error('Failed to fetch request detail:', err)
+    detailError.value = err instanceof Error ? err.message : 'Unknown error'
+  } finally {
+    isLoadingDetail.value = false
+  }
+}
+
+// Watch for sheet open and fetch detail
+watch(() => props.open, (newValue) => {
+  if (newValue) {
+    fetchRequestDetail()
+  }
+})
+
+// Also watch for request changes
+watch(() => props.request?.id, () => {
+  if (props.open) {
+    fetchRequestDetail()
+  }
+})
 </script>
 
 <template>
@@ -136,15 +191,24 @@ async function copyToClipboard(text: string, field: string) {
               <div class="flex items-center justify-between mb-2">
                 <span class="text-sm font-medium">{{ t('mcpInstallations.details.requests.detail.response') }}</span>
                 <Button
+                  v-if="!isLoadingDetail && requestDetail"
                   size="sm"
                   variant="ghost"
-                  @click="copyToClipboard(JSON.stringify(request.tool_response, null, 2), 'response')"
+                  @click="copyToClipboard(JSON.stringify(requestDetail.tool_response, null, 2), 'response')"
                 >
                   <Check v-if="copiedField === 'response'" class="h-4 w-4" />
                   <Copy v-else class="h-4 w-4" />
                 </Button>
               </div>
-              <pre class="bg-muted p-3 rounded-md text-xs overflow-x-auto">{{ JSON.stringify(request.tool_response, null, 2) }}</pre>
+              <div v-if="isLoadingDetail" class="bg-muted p-3 rounded-md space-y-2">
+                <Skeleton class="h-4 w-full" />
+                <Skeleton class="h-4 w-3/4" />
+                <Skeleton class="h-4 w-5/6" />
+              </div>
+              <div v-else-if="detailError" class="bg-red-50 dark:bg-red-950/20 p-3 rounded-md text-sm text-red-600">
+                {{ detailError }}
+              </div>
+              <pre v-else-if="requestDetail" class="bg-muted p-3 rounded-md text-xs overflow-x-auto">{{ JSON.stringify(requestDetail.tool_response, null, 2) }}</pre>
             </div>
           </div>
 

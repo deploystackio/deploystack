@@ -27,4 +27,12 @@ export class McpRequestLogsService {
     const queryString = params.toString()
     return `${this.baseUrl}/api/teams/${teamId}/mcp/installations/${installationId}/requests${queryString ? `?${queryString}` : ''}`
   }
+
+  static getDetailUrl(
+    teamId: string,
+    installationId: string,
+    requestId: string
+  ): string {
+    return `${this.baseUrl}/api/teams/${teamId}/mcp/installations/${installationId}/requests/${requestId}`
+  }
 }

@@ -301,6 +301,8 @@ onUnmounted(() => {
     <RequestDetailSheet
       :request="selectedRequest"
       :open="showDetailSheet"
+      :team-id="teamId"
+      :installation-id="installation.id"
       @update:open="showDetailSheet = $event"
     />
   </div>
