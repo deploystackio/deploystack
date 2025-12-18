@@ -12,7 +12,7 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb'
 import NavbarLayout from '@/components/NavbarLayout.vue'
-import { TeamConfiguration, InstallationTabs } from '@/components/mcp-server/installation'
+import { ConfigurationView, InstallationTabs } from '@/components/mcp-server/installation'
 import { useMcpInstallationCache } from '@/composables/mcp-server/installation'
 import { useEventBus } from '@/composables/useEventBus'
 import type { McpInstallation } from '@/types/mcp-installations'
@@ -91,27 +91,23 @@ onUnmounted(() => {
     </DsPageHeading>
 
     <div class="space-y-6 mt-6">
-      <!-- Tabs - Always visible when installation is loaded -->
       <InstallationTabs
         v-if="installation"
         :installation="installation"
         :installation-id="installationId"
       />
 
-      <!-- Error State -->
       <div v-if="error" class="text-red-500">
         {{ t('mcpInstallations.view.errorLoading', { error }) }}
       </div>
 
-      <!-- Loading State for Content -->
       <div v-else-if="isLoading" class="space-y-4">
         <Skeleton class="h-32 w-full rounded-lg" />
         <Skeleton class="h-32 w-full rounded-lg" />
         <Skeleton class="h-32 w-full rounded-lg" />
       </div>
 
-      <!-- Team Configuration Content -->
-      <TeamConfiguration
+      <ConfigurationView
         v-else-if="installation && currentTeam"
         :installation="installation"
         :team-id="currentTeam.id"

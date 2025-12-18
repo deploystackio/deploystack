@@ -145,21 +145,15 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresSetup: true },
   },
   {
-    path: '/mcp-server/installation/:id/user-config',
-    name: 'McpServerInstallationUserConfig',
-    component: () => import('../views/mcp-server/installation/[id]/user-config.vue'),
-    meta: { requiresSetup: true },
-  },
-  {
-    path: '/mcp-server/installation/:id/team-config',
-    name: 'McpServerInstallationTeamConfig',
-    component: () => import('../views/mcp-server/installation/[id]/team-config.vue'),
-    meta: { requiresSetup: true },
-  },
-  {
     path: '/mcp-server/installation/:id/requests',
     name: 'McpServerInstallationRequests',
     component: () => import('../views/mcp-server/installation/[id]/requests.vue'),
+    meta: { requiresSetup: true },
+  },
+  {
+    path: '/mcp-server/installation/:id/config',
+    name: 'McpServerInstallationConfig',
+    component: () => import('../views/mcp-server/installation/[id]/config.vue'),
     meta: { requiresSetup: true },
   },
   {

@@ -15,19 +15,12 @@ const route = useRoute()
 const router = useRouter()
 const { t } = useI18n()
 
-// Get environment variables count for badge
-const environmentVariablesCount = computed(() => {
-  if (!props.installation?.user_environment_variables) return 0
-  return Object.keys(props.installation.user_environment_variables).length
-})
-
 // Map route names to tab values
 const routeToTabMap: Record<string, string> = {
   'McpServerInstallationGeneral': 'general',
   'McpServerInstallationTools': 'tools',
-  'McpServerInstallationUserConfig': 'user-config',
-  'McpServerInstallationTeamConfig': 'team-config',
   'McpServerInstallationRequests': 'requests',
+  'McpServerInstallationConfig': 'config',
   'McpServerInstallationDangerZone': 'danger-zone',
 }
 
@@ -35,9 +28,8 @@ const routeToTabMap: Record<string, string> = {
 const tabToRouteMap: Record<string, string> = {
   'general': 'McpServerInstallationGeneral',
   'tools': 'McpServerInstallationTools',
-  'user-config': 'McpServerInstallationUserConfig',
-  'team-config': 'McpServerInstallationTeamConfig',
   'requests': 'McpServerInstallationRequests',
+  'config': 'McpServerInstallationConfig',
   'danger-zone': 'McpServerInstallationDangerZone',
 }
 
@@ -61,12 +53,7 @@ const activeTab = computed({
     <DsTabsItem value="general" label="General" />
     <DsTabsItem value="tools" :label="t('mcpInstallations.details.tools.title')" />
     <DsTabsItem value="requests" label="Requests" />
-    <DsTabsItem value="user-config" label="User Configuration" />
-    <DsTabsItem
-      value="team-config"
-      label="Team Configuration"
-      :badge="environmentVariablesCount > 0 ? environmentVariablesCount : undefined"
-    />
+    <DsTabsItem value="config" label="Configuration" />
     <DsTabsItem value="danger-zone" label="Danger Zone" />
   </DsTabs>
 </template>
