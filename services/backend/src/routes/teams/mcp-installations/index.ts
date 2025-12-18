@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import getInstallationToolsRoute from './tools';
 import getTeamMcpToolsStatsRoute from './stats';
 import toggleToolRoute from './toggle-tool';
+import batchToggleToolsRoute from './batch-toggle-tools';
 import getInstallationStatusRoute from './status';
 import getInstallationLogsRoute from './logs';
 import getInstallationRequestsRoute from './requests';
@@ -14,6 +15,7 @@ export default async function mcpInstallationsRoutes(fastify: FastifyInstance) {
   await fastify.register(getInstallationToolsRoute);
   await fastify.register(getTeamMcpToolsStatsRoute);
   await fastify.register(toggleToolRoute);
+  await fastify.register(batchToggleToolsRoute);
   await fastify.register(getInstallationStatusRoute);
   await fastify.register(getInstallationLogsRoute);
   await fastify.register(getInstallationRequestsRoute);

@@ -12594,6 +12594,403 @@
             }
           }
         }
+      },
+      "patch": {
+        "summary": "Batch toggle tool disabled status",
+        "tags": [
+          "MCP Tools"
+        ],
+        "description": "Enable or disable multiple MCP tools for a specific installation in a single request. Returns detailed results for each tool. Requires mcp.tools.manage permission (team_admin or global_admin). Requires Content-Type: application/json header when sending request body.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "tools": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "tool_id": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "Tool metadata unique identifier"
+                        },
+                        "is_disabled": {
+                          "type": "boolean",
+                          "description": "Whether to disable (true) or enable (false) the tool"
+                        }
+                      },
+                      "required": [
+                        "tool_id",
+                        "is_disabled"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "minItems": 1,
+                    "maxItems": 100,
+                    "description": "Array of tools to toggle (max 100 items)"
+                  }
+                },
+                "required": [
+                  "tools"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": true
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "teamId",
+            "required": true,
+            "description": "Team ID that owns the installation"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "installationId",
+            "required": true,
+            "description": "Installation ID"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "All tools processed successfully (including skipped)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "total_requested": {
+                          "type": "number",
+                          "description": "Total number of tools requested"
+                        },
+                        "total_succeeded": {
+                          "type": "number",
+                          "description": "Number of successfully updated tools"
+                        },
+                        "total_failed": {
+                          "type": "number",
+                          "description": "Number of failed tool updates"
+                        },
+                        "total_skipped": {
+                          "type": "number",
+                          "description": "Number of tools skipped (already in requested state)"
+                        },
+                        "command_ids": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "description": "Array of satellite command IDs for tracking (one per successfully updated tool)"
+                        },
+                        "results": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "tool_id": {
+                                "type": "string",
+                                "description": "Tool metadata unique identifier"
+                              },
+                              "tool_name": {
+                                "type": "string",
+                                "description": "Name of the tool"
+                              },
+                              "is_disabled": {
+                                "type": "boolean",
+                                "description": "Current disabled status"
+                              },
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "success",
+                                  "failed",
+                                  "skipped"
+                                ],
+                                "description": "Result status for this tool"
+                              },
+                              "message": {
+                                "type": "string",
+                                "description": "Status message"
+                              }
+                            },
+                            "required": [
+                              "tool_id",
+                              "status",
+                              "message"
+                            ]
+                          },
+                          "description": "Detailed results for each tool"
+                        }
+                      },
+                      "required": [
+                        "total_requested",
+                        "total_succeeded",
+                        "total_failed",
+                        "total_skipped",
+                        "results"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "description": "All tools processed successfully (including skipped)"
+                }
+              }
+            }
+          },
+          "207": {
+            "description": "Multi-Status - Some tools succeeded, some failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "total_requested": {
+                          "type": "number",
+                          "description": "Total number of tools requested"
+                        },
+                        "total_succeeded": {
+                          "type": "number",
+                          "description": "Number of successfully updated tools"
+                        },
+                        "total_failed": {
+                          "type": "number",
+                          "description": "Number of failed tool updates"
+                        },
+                        "total_skipped": {
+                          "type": "number",
+                          "description": "Number of tools skipped (already in requested state)"
+                        },
+                        "command_ids": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "description": "Array of satellite command IDs for tracking (one per successfully updated tool)"
+                        },
+                        "results": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "tool_id": {
+                                "type": "string",
+                                "description": "Tool metadata unique identifier"
+                              },
+                              "tool_name": {
+                                "type": "string",
+                                "description": "Name of the tool"
+                              },
+                              "is_disabled": {
+                                "type": "boolean",
+                                "description": "Current disabled status"
+                              },
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "success",
+                                  "failed",
+                                  "skipped"
+                                ],
+                                "description": "Result status for this tool"
+                              },
+                              "message": {
+                                "type": "string",
+                                "description": "Status message"
+                              }
+                            },
+                            "required": [
+                              "tool_id",
+                              "status",
+                              "message"
+                            ]
+                          },
+                          "description": "Detailed results for each tool"
+                        }
+                      },
+                      "required": [
+                        "total_requested",
+                        "total_succeeded",
+                        "total_failed",
+                        "total_skipped",
+                        "results"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "description": "Multi-Status - Some tools succeeded, some failed"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - All tools failed or validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates failure"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message detailing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Bad Request - All tools failed or validation error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates failure"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message detailing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Unauthorized - Authentication required"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Insufficient permissions or not a team member",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates failure"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message detailing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Forbidden - Insufficient permissions or not a team member"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found - Installation does not exist",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates failure"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message detailing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Not Found - Installation does not exist"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates failure"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message detailing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Internal Server Error"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/teams/{teamId}/mcp/tools/stats": {
