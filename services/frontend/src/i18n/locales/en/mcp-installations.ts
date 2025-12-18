@@ -631,11 +631,18 @@ export default {
           enabled: 'Enabled',
           toolName: 'Tool Name',
           description: 'Description',
+          status: 'Status',
           tokenCount: 'Token Count'
         },
         values: {
-          noDescription: 'No description provided'
+          noDescription: 'No description provided',
+          enabled: 'Enabled',
+          disabled: 'Disabled'
         }
+      },
+      bulkActions: {
+        enable: 'Enable',
+        disable: 'Disable'
       },
       toggle: {
         success: 'Tool "{toolName}" {action}',
@@ -643,6 +650,14 @@ export default {
         disabled: 'disabled',
         errorTitle: 'Failed to update tool',
         error: 'An error occurred while updating the tool status'
+      },
+      bulkToggle: {
+        allSuccess: '{count} tool(s) {action} successfully',
+        partialSuccess: '{succeeded} tool(s) {action} successfully, {failed} failed',
+        errorTitle: 'Bulk Toggle Failed'
+      },
+      selection: {
+        rowsSelected: '{selected} of {total} row(s) selected.'
       },
       summary: {
         totalTools: 'Total Tools',

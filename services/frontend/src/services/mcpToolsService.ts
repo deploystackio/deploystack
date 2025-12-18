@@ -23,6 +23,28 @@ export interface ToggleToolResponse {
   message: string
 }
 
+export interface BatchToggleToolRequest {
+  tool_id: string
+  is_disabled: boolean
+}
+
+export interface BatchToggleToolResult {
+  tool_id: string
+  tool_name?: string
+  is_disabled?: boolean
+  status: 'success' | 'failed' | 'skipped'
+  message: string
+}
+
+export interface BatchToggleToolResponse {
+  total_requested: number
+  total_succeeded: number
+  total_failed: number
+  total_skipped: number
+  command_ids?: string[]
+  results: BatchToggleToolResult[]
+}
+
 export interface InstallationToolsResponse {
   installation_id: string
   installation_name: string
@@ -116,6 +138,38 @@ export class McpToolsService {
         throw new Error('Tool not found')
       }
       throw new Error(errorData.error || `Failed to update tool status: ${response.status}`)
+    }
+
+    const data = await response.json()
+    return data.data || data
+  }
+
+  /**
+   * Batch toggle tool enabled/disabled status for multiple tools
+   */
+  static async batchToggleTools(
+    teamId: string,
+    installationId: string,
+    tools: BatchToggleToolRequest[]
+  ): Promise<BatchToggleToolResponse> {
+    const response = await fetch(
+      `${this.baseUrl}/api/teams/${teamId}/mcp/installations/${installationId}/tools`,
+      {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ tools }),
+      }
+    )
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      if (response.status === 403) {
+        throw new Error('You don\'t have permission to manage tools')
+      }
+      throw new Error(errorData.error || `Failed to batch toggle tools: ${response.status}`)
     }
 
     const data = await response.json()

@@ -5,10 +5,14 @@ import { toast } from 'vue-sonner'
 import { useMcpToolsStore } from '@/stores/mcpToolsStore'
 import { McpToolsService } from '@/services/mcpToolsService'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Switch } from '@/components/ui/switch'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Button } from '@/components/ui/button'
+import { ButtonGroup } from '@/components/ui/button-group'
+import { Badge } from '@/components/ui/badge'
+import { Spinner } from '@/components/ui/spinner'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Chart } from '@/components/ui/chart'
-import { AlertCircle, Package, Wrench, Coins } from 'lucide-vue-next'
+import { AlertCircle, Package, Wrench, Coins, CircleCheck, CircleMinus } from 'lucide-vue-next'
 import { use } from 'echarts/core'
 import { PieChart } from 'echarts/charts'
 import { TooltipComponent, LegendComponent } from 'echarts/components'
@@ -37,7 +41,8 @@ const mcpToolsStore = useMcpToolsStore()
 const tools = ref<any>(null)
 const isLoading = ref(true)
 const error = ref<string | null>(null)
-const togglingToolId = ref<string | null>(null)
+const selectedToolIds = ref<string[]>([])
+const isBulkToggling = ref(false)
 
 // Format token count with commas
 const formatTokenCount = (count: number) => {
@@ -67,46 +72,115 @@ const hasTools = computed(() => {
   return tools.value && tools.value.tools && tools.value.tools.length > 0
 })
 
-// Handle tool toggle
-async function handleToolToggle(toolId: string, toolName: string, currentDisabled: boolean) {
-  if (!props.canEdit) return
+// Check if all tools are selected
+const allToolsSelected = computed(() => {
+  return hasTools.value && selectedToolIds.value.length === tools.value.tools.length
+})
 
-  const newDisabledState = !currentDisabled
-  togglingToolId.value = toolId
+// Check if some (but not all) tools are selected
+const someToolsSelected = computed(() => {
+  return selectedToolIds.value.length > 0 && !allToolsSelected.value
+})
+
+// Toggle all tools selection
+const toggleAllTools = () => {
+  if (allToolsSelected.value) {
+    selectedToolIds.value = []
+  } else {
+    selectedToolIds.value = tools.value.tools.map((t: { id: string }) => t.id)
+  }
+}
+
+// Toggle individual tool selection
+const toggleToolSelection = (toolId: string) => {
+  const index = selectedToolIds.value.indexOf(toolId)
+  if (index > -1) {
+    selectedToolIds.value.splice(index, 1)
+  } else {
+    selectedToolIds.value.push(toolId)
+  }
+}
+
+// Check if tool is selected
+const isToolSelected = (toolId: string) => {
+  return selectedToolIds.value.includes(toolId)
+}
+
+// Handle bulk enable
+async function handleBulkEnable() {
+  if (selectedToolIds.value.length === 0) return
+  await handleBulkToggle(false) // false = enabled
+}
+
+// Handle bulk disable
+async function handleBulkDisable() {
+  if (selectedToolIds.value.length === 0) return
+  await handleBulkToggle(true) // true = disabled
+}
+
+// Batch toggle selected tools
+async function handleBulkToggle(isDisabled: boolean) {
+  if (!props.canEdit || selectedToolIds.value.length === 0) return
+
+  isBulkToggling.value = true
+
+  // Prepare batch request
+  const toolsToToggle = selectedToolIds.value.map(toolId => ({
+    tool_id: toolId,
+    is_disabled: isDisabled
+  }))
 
   // Optimistic update
-  const toolIndex = tools.value.tools.findIndex((t: { id: string }) => t.id === toolId)
-  if (toolIndex !== -1) {
-    tools.value.tools[toolIndex].is_disabled = newDisabledState
-  }
+  const originalTools = JSON.parse(JSON.stringify(tools.value.tools))
+  selectedToolIds.value.forEach(toolId => {
+    const tool = tools.value.tools.find((t: { id: string }) => t.id === toolId)
+    if (tool) {
+      tool.is_disabled = isDisabled
+    }
+  })
 
   try {
-    const response = await McpToolsService.toggleToolStatus(
+    const response = await McpToolsService.batchToggleTools(
       props.teamId,
       props.installation.id,
-      toolId,
-      newDisabledState
+      toolsToToggle
     )
 
-    const action = newDisabledState
+    const action = isDisabled
       ? t('mcpInstallations.details.tools.toggle.disabled')
       : t('mcpInstallations.details.tools.toggle.enabled')
 
-    toast.success(t('mcpInstallations.details.tools.toggle.success', { toolName, action }), {
-      description: response.message
-    })
-  } catch (err) {
-    // Revert optimistic update on error
-    if (toolIndex !== -1) {
-      tools.value.tools[toolIndex].is_disabled = currentDisabled
+    // Show success toast
+    if (response.total_failed === 0) {
+      toast.success(
+        t('mcpInstallations.details.tools.bulkToggle.allSuccess', {
+          count: response.total_succeeded,
+          action
+        })
+      )
+    } else if (response.total_succeeded > 0) {
+      toast.warning(
+        t('mcpInstallations.details.tools.bulkToggle.partialSuccess', {
+          succeeded: response.total_succeeded,
+          failed: response.total_failed,
+          action
+        })
+      )
     }
 
+    // Clear selection (optimistic update already applied)
+    selectedToolIds.value = []
+
+  } catch (err) {
+    // Revert optimistic update on error
+    tools.value.tools = originalTools
+
     const errorMessage = err instanceof Error ? err.message : t('mcpInstallations.details.tools.toggle.error')
-    toast.error(t('mcpInstallations.details.tools.toggle.errorTitle'), {
+    toast.error(t('mcpInstallations.details.tools.bulkToggle.errorTitle'), {
       description: errorMessage
     })
   } finally {
-    togglingToolId.value = null
+    isBulkToggling.value = false
   }
 }
 
@@ -209,12 +283,44 @@ const pieChartOption = computed<EChartsOption>(() => {
         </div>
       </div>
 
+      <!-- Bulk Actions -->
+      <div class="flex items-center justify-end gap-2 mb-4">
+        <ButtonGroup aria-label="Bulk tool actions">
+          <Button
+            variant="outline"
+            class="w-24"
+            :disabled="!props.canEdit || selectedToolIds.length === 0 || isBulkToggling"
+            @click="handleBulkEnable"
+          >
+            <Spinner v-if="isBulkToggling" />
+            <span v-else>{{ t('mcpInstallations.details.tools.bulkActions.enable') }}</span>
+          </Button>
+          <Button
+            variant="outline"
+            class="w-24"
+            :disabled="!props.canEdit || selectedToolIds.length === 0 || isBulkToggling"
+            @click="handleBulkDisable"
+          >
+            <Spinner v-if="isBulkToggling" />
+            <span v-else>{{ t('mcpInstallations.details.tools.bulkActions.disable') }}</span>
+          </Button>
+        </ButtonGroup>
+      </div>
+
       <!-- Tools Table -->
       <div class="rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead class="w-20">{{ t('mcpInstallations.details.tools.table.columns.enabled') }}</TableHead>
+              <TableHead class="w-12">
+                <Checkbox
+                  :checked="allToolsSelected"
+                  :indeterminate="someToolsSelected"
+                  :disabled="!props.canEdit"
+                  @update:checked="toggleAllTools"
+                />
+              </TableHead>
+              <TableHead>{{ t('mcpInstallations.details.tools.table.columns.status') }}</TableHead>
               <TableHead>{{ t('mcpInstallations.details.tools.table.columns.toolName') }}</TableHead>
               <TableHead>{{ t('mcpInstallations.details.tools.table.columns.description') }}</TableHead>
               <TableHead class="text-right">{{ t('mcpInstallations.details.tools.table.columns.tokenCount') }}</TableHead>
@@ -222,25 +328,55 @@ const pieChartOption = computed<EChartsOption>(() => {
           </TableHeader>
           <TableBody>
             <TableRow v-for="tool in tools.tools" :key="tool.id">
-              <TableCell class="align-top">
-                <Switch
-                  :model-value="!tool.is_disabled"
-                  :disabled="!props.canEdit || togglingToolId === tool.id"
-                  @update:model-value="handleToolToggle(tool.id, tool.tool_name, tool.is_disabled)"
+              <TableCell>
+                <Checkbox
+                  :checked="isToolSelected(tool.id)"
+                  :disabled="!props.canEdit"
+                  @update:checked="() => toggleToolSelection(tool.id)"
                 />
               </TableCell>
-              <TableCell class="text-sm font-medium align-top whitespace-nowrap">{{ tool.tool_name }}</TableCell>
+              <TableCell>
+                <div
+                  class="inline-flex items-center justify-center rounded-full border px-1.5 py-0.5 text-xs font-medium text-muted-foreground gap-1"
+                >
+                  <CircleCheck
+                    v-if="!tool.is_disabled"
+                    class="size-3 fill-green-500 text-green-500 dark:fill-green-400 dark:text-green-400"
+                  />
+                  <CircleMinus
+                    v-else
+                    class="size-3 text-muted-foreground"
+                  />
+                  <span>
+                    {{ tool.is_disabled
+                      ? t('mcpInstallations.details.tools.table.values.disabled')
+                      : t('mcpInstallations.details.tools.table.values.enabled')
+                    }}
+                  </span>
+                </div>
+              </TableCell>
+              <TableCell class="text-sm font-medium">{{ tool.tool_name }}</TableCell>
               <TableCell class="text-sm text-muted-foreground max-w-2xl">
                 <div class="whitespace-normal wrap-break-word">
                   {{ tool.description || t('mcpInstallations.details.tools.table.values.noDescription') }}
                 </div>
               </TableCell>
-              <TableCell class="text-right align-top whitespace-nowrap text-sm font-medium">
+              <TableCell class="text-right whitespace-nowrap text-sm font-medium">
                 {{ formatTokenCount(tool.token_count) }}
               </TableCell>
             </TableRow>
           </TableBody>
         </Table>
+      </div>
+
+      <!-- Selection Counter (outside table, matching catalog layout) -->
+      <div class="flex items-center justify-between px-4 py-4">
+        <div class="flex-1 text-sm text-muted-foreground">
+          {{ t('mcpInstallations.details.tools.selection.rowsSelected', {
+            selected: selectedToolIds.length,
+            total: tools.tools.length
+          }) }}
+        </div>
       </div>
     </div>
   </div>
