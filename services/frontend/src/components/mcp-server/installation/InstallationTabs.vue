@@ -60,13 +60,13 @@ const activeTab = computed({
   <DsTabs v-model="activeTab" variant="underlined" full-width-border class="mb-10">
     <DsTabsItem value="general" label="General" />
     <DsTabsItem value="tools" :label="t('mcpInstallations.details.tools.title')" />
+    <DsTabsItem value="requests" label="Requests" />
     <DsTabsItem value="user-config" label="User Configuration" />
     <DsTabsItem
       value="team-config"
       label="Team Configuration"
       :badge="environmentVariablesCount > 0 ? environmentVariablesCount : undefined"
     />
-    <DsTabsItem value="requests" label="Requests" />
     <DsTabsItem value="danger-zone" label="Danger Zone" />
   </DsTabs>
 </template>
