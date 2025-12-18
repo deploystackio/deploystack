@@ -10,9 +10,10 @@ import { Button } from '@/components/ui/button'
 import { ButtonGroup } from '@/components/ui/button-group'
 import { Spinner } from '@/components/ui/spinner'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { AlertCircle, Package, CircleCheck, CircleMinus } from 'lucide-vue-next'
+import { AlertCircle, Package, CircleCheck, CircleMinus, ChevronRight, ChevronDown } from 'lucide-vue-next'
 import type { McpInstallation } from '@/types/mcp-installations'
 import ToolsMetricsPanel from './ToolsMetricsPanel.vue'
+import { CodeHighlight } from '@/components/ui/code-highlight'
 
 interface Props {
   installation: McpInstallation
@@ -34,6 +35,18 @@ const isLoading = ref(true)
 const error = ref<string | null>(null)
 const selectedToolIds = ref<string[]>([])
 const isBulkToggling = ref(false)
+
+// Track expanded rows
+const expandedRows = ref<Set<string>>(new Set())
+
+// Toggle row expansion
+const toggleRow = (toolId: string) => {
+  if (expandedRows.value.has(toolId)) {
+    expandedRows.value.delete(toolId)
+  } else {
+    expandedRows.value.add(toolId)
+  }
+}
 
 // Format token count with commas
 const formatTokenCount = (count: number) => {
@@ -262,55 +275,92 @@ async function handleBulkToggle(isDisabled: boolean) {
                   @update:checked="toggleAllTools"
                 />
               </TableHead>
+              <TableHead class="w-12"></TableHead>
               <TableHead>{{ t('mcpInstallations.details.tools.table.columns.status') }}</TableHead>
               <TableHead>{{ t('mcpInstallations.details.tools.table.columns.toolName') }}</TableHead>
-              <TableHead>{{ t('mcpInstallations.details.tools.table.columns.description') }}</TableHead>
+              <TableHead class="w-96">{{ t('mcpInstallations.details.tools.table.columns.description') }}</TableHead>
               <TableHead class="text-right">{{ t('mcpInstallations.details.tools.table.columns.tokenCount') }}</TableHead>
               <TableHead class="text-right">{{ t('mcpInstallations.details.tools.table.columns.distribution') }}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            <TableRow v-for="tool in tools.tools" :key="tool.id">
-              <TableCell>
-                <Checkbox
-                  :checked="isToolSelected(tool.id)"
-                  :disabled="!props.canEdit"
-                  @update:checked="() => toggleToolSelection(tool.id)"
-                />
-              </TableCell>
-              <TableCell>
-                <div
-                  class="inline-flex items-center justify-center rounded-full border px-1.5 py-0.5 text-xs font-medium text-muted-foreground gap-1"
-                >
-                  <CircleCheck
-                    v-if="!tool.is_disabled"
-                    class="size-3 fill-green-500 text-green-500 dark:fill-green-400 dark:text-green-400"
+            <template v-for="tool in tools.tools" :key="tool.id">
+              <!-- Main Tool Row (clickable) -->
+              <TableRow
+                class="cursor-pointer hover:bg-muted/50"
+                @click.stop="toggleRow(tool.id)"
+              >
+                <TableCell @click.stop>
+                  <Checkbox
+                    :checked="isToolSelected(tool.id)"
+                    :disabled="!props.canEdit"
+                    @update:checked="() => toggleToolSelection(tool.id)"
                   />
-                  <CircleMinus
-                    v-else
-                    class="size-3 text-muted-foreground"
-                  />
-                  <span>
-                    {{ tool.is_disabled
-                      ? t('mcpInstallations.details.tools.table.values.disabled')
-                      : t('mcpInstallations.details.tools.table.values.enabled')
-                    }}
-                  </span>
-                </div>
-              </TableCell>
-              <TableCell class="text-sm font-medium">{{ tool.tool_name }}</TableCell>
-              <TableCell class="text-sm text-muted-foreground max-w-2xl">
-                <div class="whitespace-normal wrap-break-word">
-                  {{ tool.description || t('mcpInstallations.details.tools.table.values.noDescription') }}
-                </div>
-              </TableCell>
-              <TableCell class="text-right whitespace-nowrap text-sm font-medium">
-                {{ formatTokenCount(tool.token_count) }}
-              </TableCell>
-              <TableCell class="text-right whitespace-nowrap text-sm text-muted-foreground">
-                {{ calculateTokenPercentage(tool.token_count) }}
-              </TableCell>
-            </TableRow>
+                </TableCell>
+                <TableCell>
+                  <Button variant="ghost" size="icon" class="h-6 w-6">
+                    <ChevronRight v-if="!expandedRows.has(tool.id)" class="h-4 w-4" />
+                    <ChevronDown v-else class="h-4 w-4" />
+                  </Button>
+                </TableCell>
+                <TableCell>
+                  <div
+                    class="inline-flex items-center justify-center rounded-full border px-1.5 py-0.5 text-xs font-medium text-muted-foreground gap-1"
+                  >
+                    <CircleCheck
+                      v-if="!tool.is_disabled"
+                      class="size-3 fill-green-500 text-green-500 dark:fill-green-400 dark:text-green-400"
+                    />
+                    <CircleMinus
+                      v-else
+                      class="size-3 text-muted-foreground"
+                    />
+                    <span>
+                      {{ tool.is_disabled
+                        ? t('mcpInstallations.details.tools.table.values.disabled')
+                        : t('mcpInstallations.details.tools.table.values.enabled')
+                      }}
+                    </span>
+                  </div>
+                </TableCell>
+                <TableCell class="text-sm font-medium">{{ tool.tool_name }}</TableCell>
+                <TableCell class="text-sm text-muted-foreground w-96">
+                  <div class="truncate">
+                    {{ tool.description || t('mcpInstallations.details.tools.table.values.noDescription') }}
+                  </div>
+                </TableCell>
+                <TableCell class="text-right whitespace-nowrap text-sm font-medium">
+                  {{ formatTokenCount(tool.token_count) }}
+                </TableCell>
+                <TableCell class="text-right whitespace-nowrap text-sm text-muted-foreground">
+                  {{ calculateTokenPercentage(tool.token_count) }}
+                </TableCell>
+              </TableRow>
+
+              <!-- Expanded Detail Row -->
+              <TableRow v-if="expandedRows.has(tool.id)" class="bg-muted/30">
+                <TableCell colspan="7" class="p-6">
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Left: Full Description -->
+                    <div>
+                      <h4 class="text-sm font-semibold mb-2">{{ t('mcpInstallations.details.tools.detail.description') }}</h4>
+                      <p class="text-sm text-muted-foreground">
+                        {{ tool.description || t('mcpInstallations.details.tools.table.values.noDescription') }}
+                      </p>
+                    </div>
+
+                    <!-- Right: Input Schema -->
+                    <div>
+                      <h4 class="text-sm font-semibold mb-2">{{ t('mcpInstallations.details.tools.detail.inputSchema') }}</h4>
+                      <CodeHighlight
+                        :code="JSON.stringify(tool.input_schema, null, 2)"
+                        language="json"
+                      />
+                    </div>
+                  </div>
+                </TableCell>
+              </TableRow>
+            </template>
           </TableBody>
         </Table>
       </div>

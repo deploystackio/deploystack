@@ -641,6 +641,10 @@ export default {
           disabled: 'Disabled'
         }
       },
+      detail: {
+        description: 'Description',
+        inputSchema: 'Input Schema'
+      },
       bulkActions: {
         enable: 'Enable',
         disable: 'Disable'
