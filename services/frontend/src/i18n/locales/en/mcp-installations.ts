@@ -632,7 +632,8 @@ export default {
           toolName: 'Tool Name',
           description: 'Description',
           status: 'Status',
-          tokenCount: 'Token Count'
+          tokenCount: 'Token Count',
+          distribution: '% of Total'
         },
         values: {
           noDescription: 'No description provided',

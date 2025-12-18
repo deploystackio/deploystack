@@ -8,20 +8,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Checkbox } from '@/components/ui/checkbox'
 import { Button } from '@/components/ui/button'
 import { ButtonGroup } from '@/components/ui/button-group'
-import { Badge } from '@/components/ui/badge'
 import { Spinner } from '@/components/ui/spinner'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Chart } from '@/components/ui/chart'
-import { AlertCircle, Package, Wrench, Coins, CircleCheck, CircleMinus } from 'lucide-vue-next'
-import { use } from 'echarts/core'
-import { PieChart } from 'echarts/charts'
-import { TooltipComponent, LegendComponent } from 'echarts/components'
-import { CanvasRenderer } from 'echarts/renderers'
-import type { EChartsOption } from 'echarts'
+import { AlertCircle, Package, CircleCheck, CircleMinus } from 'lucide-vue-next'
 import type { McpInstallation } from '@/types/mcp-installations'
-
-// Register ECharts components for pie chart
-use([TooltipComponent, LegendComponent, PieChart, CanvasRenderer])
+import ToolsMetricsPanel from './ToolsMetricsPanel.vue'
 
 interface Props {
   installation: McpInstallation
@@ -49,6 +40,15 @@ const formatTokenCount = (count: number) => {
   return count.toLocaleString()
 }
 
+// Calculate percentage of total tokens
+const calculateTokenPercentage = (tokenCount: number) => {
+  if (!tools.value || !tools.value.total_tokens || tools.value.total_tokens === 0) {
+    return '0.0%'
+  }
+  const percentage = (tokenCount / tools.value.total_tokens) * 100
+  return `${percentage.toFixed(1)}%`
+}
+
 // Load tools on component mount
 onMounted(async () => {
   await loadTools()
@@ -70,6 +70,17 @@ async function loadTools() {
 // Check if we have tools
 const hasTools = computed(() => {
   return tools.value && tools.value.tools && tools.value.tools.length > 0
+})
+
+// Count enabled and disabled tools
+const enabledToolsCount = computed(() => {
+  if (!hasTools.value) return 0
+  return tools.value.tools.filter((t: { is_disabled: boolean }) => !t.is_disabled).length
+})
+
+const disabledToolsCount = computed(() => {
+  if (!hasTools.value) return 0
+  return tools.value.tools.filter((t: { is_disabled: boolean }) => t.is_disabled).length
 })
 
 // Check if all tools are selected
@@ -183,48 +194,6 @@ async function handleBulkToggle(isDisabled: boolean) {
     isBulkToggling.value = false
   }
 }
-
-// Pie chart configuration for token distribution
-const pieChartOption = computed<EChartsOption>(() => {
-  if (!hasTools.value) return {}
-
-  const pieData = tools.value.tools.map((tool: { tool_name: string; token_count: number }) => ({
-    name: tool.tool_name,
-    value: tool.token_count
-  }))
-
-  return {
-    tooltip: {
-      trigger: 'item',
-      formatter: '{b}: {c} tokens ({d}%)'
-    },
-    legend: {
-      show: false
-    },
-    series: [
-      {
-        name: 'Token Distribution',
-        type: 'pie',
-        radius: ['40%', '70%'],
-        avoidLabelOverlap: true,
-        itemStyle: {
-          borderRadius: 4,
-          borderColor: '#fff',
-          borderWidth: 2
-        },
-        label: {
-          show: true,
-          formatter: '{b}',
-          fontSize: 11
-        },
-        labelLine: {
-          show: true
-        },
-        data: pieData
-      }
-    ]
-  }
-})
 </script>
 
 <template>
@@ -248,40 +217,13 @@ const pieChartOption = computed<EChartsOption>(() => {
 
     <!-- Tools Display -->
     <div v-else class="space-y-6">
-      <!-- Summary Cards with Pie Chart -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <!-- Left: Stats with Icons -->
-        <div class="bg-white dark:bg-card border rounded-lg p-6 space-y-6">
-          <div class="flex items-center gap-4">
-            <div class="flex h-12 w-12 items-center justify-center rounded-lg bg-teal-100 dark:bg-teal-900/30">
-              <Wrench class="h-6 w-6 text-teal-700 dark:text-teal-400" />
-            </div>
-            <div>
-              <div class="text-sm text-muted-foreground">{{ t('mcpInstallations.details.tools.summary.totalTools') }}</div>
-              <div class="text-2xl font-bold">{{ tools.tool_count }}</div>
-            </div>
-          </div>
-          <div class="flex items-center gap-4">
-            <div class="flex h-12 w-12 items-center justify-center rounded-lg bg-amber-100 dark:bg-amber-900/30">
-              <Coins class="h-6 w-6 text-amber-700 dark:text-amber-400" />
-            </div>
-            <div>
-              <div class="text-sm text-muted-foreground">{{ t('mcpInstallations.details.tools.summary.totalTokens') }}</div>
-              <div class="text-2xl font-bold">{{ formatTokenCount(tools.total_tokens) }}</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Right: Pie Chart for Token Distribution -->
-        <div class="bg-white dark:bg-card border rounded-lg p-4">
-          <div class="text-sm font-medium mb-2">Token Distribution</div>
-          <Chart
-            :option="pieChartOption"
-            variant="pie"
-            size="sm"
-          />
-        </div>
-      </div>
+      <!-- Metrics Panel -->
+      <ToolsMetricsPanel
+        :tool-count="tools.tool_count"
+        :total-tokens="tools.total_tokens"
+        :enabled-count="enabledToolsCount"
+        :disabled-count="disabledToolsCount"
+      />
 
       <!-- Bulk Actions -->
       <div class="flex items-center justify-end gap-2 mb-4">
@@ -324,6 +266,7 @@ const pieChartOption = computed<EChartsOption>(() => {
               <TableHead>{{ t('mcpInstallations.details.tools.table.columns.toolName') }}</TableHead>
               <TableHead>{{ t('mcpInstallations.details.tools.table.columns.description') }}</TableHead>
               <TableHead class="text-right">{{ t('mcpInstallations.details.tools.table.columns.tokenCount') }}</TableHead>
+              <TableHead class="text-right">{{ t('mcpInstallations.details.tools.table.columns.distribution') }}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -363,6 +306,9 @@ const pieChartOption = computed<EChartsOption>(() => {
               </TableCell>
               <TableCell class="text-right whitespace-nowrap text-sm font-medium">
                 {{ formatTokenCount(tool.token_count) }}
+              </TableCell>
+              <TableCell class="text-right whitespace-nowrap text-sm text-muted-foreground">
+                {{ calculateTokenPercentage(tool.token_count) }}
               </TableCell>
             </TableRow>
           </TableBody>
