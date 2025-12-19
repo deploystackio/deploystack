@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.54.0 (2025-12-19)
+
+* feat(all): Add MCP installation settings, request logs API, and SSE streaming 5f44e43c5fa95527676acc3302c1ac8e764cefe5
+* feat(backend): add batch toggle tool disabled status endpoint 2b654884f44e75b0abfd1cceb81113179d6d9619
+* feat(backend): add endpoint to retrieve single request by ID with full response 5b6a7cc9808ddf140b34bf150ec88958470ede74
+* feat(backend): check connection status in logs and requests streams bc290e5ecdf99187c097e207b6e2baacab36a5bf
+* feat(backend): enhance user information in request logs with details 61a4370f75f5ac433db48a0d007ea136d9260723
+* feat(backend): implement in-memory cache for global settings 0d53fb19eaebc5417d5a50f4afba30fc7d859d81
+* fix(backend): add name property to raw setting object in tests 36345bd37be4d210724cd1f64571dfbcdeced937
+* refactor(all): update changelog transformation to filter commits a6e71765c1f8ae2c37ae4bb58ce31aa0b11f6eda
+
 ## 0.53.0 (2025-12-15)
 
 * fix(backend): correct satellite command event types for MCP deletion operations 0ca6146ade77a35a90f6c631e608dc5aebe799dd
