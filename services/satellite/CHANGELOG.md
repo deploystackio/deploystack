@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.15.0 (2025-12-19)
+
+* refactor(all): update changelog transformation to filter commits a6e71765c1f8ae2c37ae4bb58ce31aa0b11f6eda
+* feat(all): Add MCP installation settings, request logs API, and SSE streaming 5f44e43c5fa95527676acc3302c1ac8e764cefe5
+* feat(all): add self-service account deletion 9f968f255eacde72b1ed3da56102f1c401a6c4d3
+
 ## <small>0.14.2 (2025-12-14)</small>
 
 * fix(backend): properly delete MCP installations and notify satellites during team deletion 6d82fb3582b519cb44b640479fcd15f0d8e6ed21
