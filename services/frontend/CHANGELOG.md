@@ -28,6 +28,34 @@
 * refactor(frontend): simplify installation data handling with cache 3bf1ce3f43ecc98deb963a1489d1bac63af46eda
 * refactor(frontend): update import paths for event bus and breadcrumbs 21cc4cecf34e86b0bb31537018770f1640569eb7
 
+## 0.50.0 (2025-12-19)
+
+* feat(all): Add MCP installation settings, request logs API, and SSE streaming 5f44e43c5fa95527676acc3302c1ac8e764cefe5
+* feat(frontend): add ConfigurationHeaders and ConfigurationQueryParams components for managing installation headers and query parameters 0e13f3684171b28c95c739b3ec95b6899895713e
+* feat(frontend): add full-width border option to tabs and fix loading states 2562b1587ce6c571cb0c7c1da7b9c53f12b7053b
+* feat(frontend): add loading state with skeleton components in table 850c8ab9e64db4c5ed68f8ad4976791d71e17614
+* feat(frontend): add requests tab and implement request streaming 2f5a78228a437c20e43bc4419ead94c8df629147
+* feat(frontend): add showBorder prop to DsPageHeading component eea3b1165b391c5d6f54b57f3b1eedd3346f0d7d
+* feat(frontend): add tools metrics panel and update token distribution 39d0b65b4f485696e2228f7df7a0278045317ce9
+* feat(frontend): add user information to requests table and details a75b0aeff5a7f379920b3b6a7e55371a4b15b538
+* feat(frontend): add view mode toggle with toast notifications for mcp requests b429b28582b3aa6050c03770eb05509e6ee160c3
+* feat(frontend): enhance installation views with loading and error states 2934f86c4d8761a0fc4104da8301322b2ccc02b2
+* feat(frontend): enhance loading state with skeleton components and breadcrumbs for mcp server view c1ff0973f530d40c10d85fc117b166a29dd43f69
+* feat(frontend): fetch full request details in RequestDetailSheet 6e17ab1ce2bbfa46436a8b8986d5bfd38d77e664
+* feat(frontend): implement bulk toggle for tool enable/disable 4dace87f784d5ebb38fe862c1747394d3c7b6e15
+* feat(frontend): implement expandable rows in ToolsTab for detailed view b55c2a41441fb32a56fa345e1b9f8f6a3d2c9b47
+* feat(frontend): implement meter component with accessibility features a978051e3edc89d40be17f8772b639a3d383e270
+* feat(frontend): implement RequestDetailSheet for request details display f88b7958782399ef8ae9526bf8483970e71b8389
+* feat(frontend): improve loading state with skeleton components 01a5b7b0ccb1ba9757942f4857f4ed75646a82e5
+* feat(frontend): move requests tab to correct position in InstallationTabs 110d52d3e14b42600316fe8d4ca64817f3bc3681
+* feat(frontend): rename installation information route to general and update tabs 7295e6c0f7c3fbf0bfa6c1ca60ae18119772029d
+* feat(frontend): rename McpToolsTab to ToolsTab and update routes 2a0866d064c8a31b0f73c62e318e78590beaf650
+* feat(frontend): replace Progress component with DsMeter for usage display a5a7514d739c3af1b394185d205a9f3f272e3a9e
+* feat(frontend): update loading and error states in RequestsTab and ToolsTab 37a77816466c9d3e2db734da7337e63c8e6cd679
+* refactor(all): update changelog transformation to filter commits a6e71765c1f8ae2c37ae4bb58ce31aa0b11f6eda
+* refactor(frontend): simplify installation data handling with cache 3bf1ce3f43ecc98deb963a1489d1bac63af46eda
+* refactor(frontend): update import paths for event bus and breadcrumbs 21cc4cecf34e86b0bb31537018770f1640569eb7
+
 ## 0.49.0 (2025-12-15)
 
 * fix(backend): correct satellite command event types for MCP deletion operations 0ca6146ade77a35a90f6c631e608dc5aebe799dd
