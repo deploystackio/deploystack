@@ -619,6 +619,13 @@ export default {
   },
 
   details: {
+    config: {
+      noConfig: {
+        title: 'No Configuration Required',
+        description: 'This MCP server does not require any configuration parameters.'
+      }
+    },
+
     tools: {
       title: 'Tools',
       description: 'Tools discovered from this MCP server installation',

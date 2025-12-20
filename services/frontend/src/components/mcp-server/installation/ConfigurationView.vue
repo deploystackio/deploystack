@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { McpCatalogService } from '@/services/mcpCatalogService'
 import { McpInstallationService } from '@/services/mcpInstallationService'
-import { Spinner } from '@/components/ui/spinner'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@/components/ui/empty'
+import { Settings } from 'lucide-vue-next'
 import {
   ConfigurationArgs,
   ConfigurationEnv,
@@ -28,6 +31,8 @@ const emit = defineEmits<{
   'configuration-updated': [config: UserConfiguration]
 }>()
 
+const { t } = useI18n()
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const serverData = ref<any>(null)
 const isLoadingServer = ref(true)
@@ -45,6 +50,50 @@ const isStdio = computed(() => {
 const isRemote = computed(() => {
   const transport = props.installation.server?.transport_type || serverData.value?.transport_type
   return transport === 'http' || transport === 'sse'
+})
+
+// Helper function to safely parse schema
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const getSchema = (schema: any) => {
+  if (!schema) return []
+  try {
+    return Array.isArray(schema) ? schema : JSON.parse(schema)
+  } catch {
+    return []
+  }
+}
+
+// Check if any configuration schema exists
+const hasAnyConfiguration = computed(() => {
+  if (!serverData.value) return false
+
+  // Check STDIO schemas
+  if (isStdio.value) {
+    const teamArgsSchema = getSchema(serverData.value.team_args_schema)
+    const userArgsSchema = getSchema(serverData.value.user_args_schema)
+    const teamEnvSchema = getSchema(serverData.value.team_env_schema)
+    const userEnvSchema = getSchema(serverData.value.user_env_schema)
+
+    return teamArgsSchema.length > 0 ||
+           userArgsSchema.length > 0 ||
+           teamEnvSchema.length > 0 ||
+           userEnvSchema.length > 0
+  }
+
+  // Check HTTP/SSE schemas
+  if (isRemote.value) {
+    const teamHeadersSchema = getSchema(serverData.value.team_headers_schema)
+    const userHeadersSchema = getSchema(serverData.value.user_headers_schema)
+    const teamQueryParamsSchema = getSchema(serverData.value.team_url_query_params_schema)
+    const userQueryParamsSchema = getSchema(serverData.value.user_url_query_params_schema)
+
+    return teamHeadersSchema.length > 0 ||
+           userHeadersSchema.length > 0 ||
+           teamQueryParamsSchema.length > 0 ||
+           userQueryParamsSchema.length > 0
+  }
+
+  return false
 })
 
 onMounted(async () => {
@@ -96,59 +145,78 @@ const handleConfigurationUpdated = async (config: UserConfiguration) => {
 </script>
 
 <template>
-  <div v-if="isLoadingServer || isLoadingUserConfig" class="flex items-center justify-center py-12">
-    <Spinner class="h-8 w-8" />
+  <!-- Loading State with Skeleton -->
+  <div v-if="isLoadingServer || isLoadingUserConfig" class="space-y-4">
+    <Skeleton class="h-32 w-full rounded-lg" />
+    <Skeleton class="h-32 w-full rounded-lg" />
+    <Skeleton class="h-32 w-full rounded-lg" />
   </div>
 
   <div v-else class="space-y-0">
-    <!-- STDIO TRANSPORT: Arguments + Environment Variables -->
-    <ConfigurationArgs
-      v-if="isStdio"
-      :installation="installation"
-      :server-data="serverData"
-      :current-user-config="currentUserConfig"
-      :team-id="teamId"
-      :can-edit="canEdit"
-      :is-team-admin="isTeamAdmin"
-      @installation-updated="handleInstallationUpdated"
-      @configuration-updated="handleConfigurationUpdated"
-    />
+    <!-- Empty State: No Configuration -->
+    <Empty v-if="!hasAnyConfiguration">
+      <EmptyHeader>
+        <EmptyMedia variant="icon">
+          <Settings />
+        </EmptyMedia>
+        <EmptyTitle>{{ t('mcpInstallations.details.config.noConfig.title') }}</EmptyTitle>
+        <EmptyDescription>
+          {{ t('mcpInstallations.details.config.noConfig.description') }}
+        </EmptyDescription>
+      </EmptyHeader>
+    </Empty>
 
-    <ConfigurationEnv
-      v-if="isStdio"
-      :installation="installation"
-      :server-data="serverData"
-      :current-user-config="currentUserConfig"
-      :team-id="teamId"
-      :can-edit="canEdit"
-      :is-team-admin="isTeamAdmin"
-      @installation-updated="handleInstallationUpdated"
-      @configuration-updated="handleConfigurationUpdated"
-    />
+    <!-- Configuration sections (only shown when config exists) -->
+    <template v-else>
+      <!-- STDIO TRANSPORT: Arguments + Environment Variables -->
+      <ConfigurationArgs
+        v-if="isStdio"
+        :installation="installation"
+        :server-data="serverData"
+        :current-user-config="currentUserConfig"
+        :team-id="teamId"
+        :can-edit="canEdit"
+        :is-team-admin="isTeamAdmin"
+        @installation-updated="handleInstallationUpdated"
+        @configuration-updated="handleConfigurationUpdated"
+      />
 
-    <!-- HTTP/SSE TRANSPORT: Headers + URL Query Parameters -->
-    <ConfigurationHeaders
-      v-if="isRemote"
-      :installation="installation"
-      :server-data="serverData"
-      :current-user-config="currentUserConfig"
-      :team-id="teamId"
-      :can-edit="canEdit"
-      :is-team-admin="isTeamAdmin"
-      @installation-updated="handleInstallationUpdated"
-      @configuration-updated="handleConfigurationUpdated"
-    />
+      <ConfigurationEnv
+        v-if="isStdio"
+        :installation="installation"
+        :server-data="serverData"
+        :current-user-config="currentUserConfig"
+        :team-id="teamId"
+        :can-edit="canEdit"
+        :is-team-admin="isTeamAdmin"
+        @installation-updated="handleInstallationUpdated"
+        @configuration-updated="handleConfigurationUpdated"
+      />
 
-    <ConfigurationQueryParams
-      v-if="isRemote"
-      :installation="installation"
-      :server-data="serverData"
-      :current-user-config="currentUserConfig"
-      :team-id="teamId"
-      :can-edit="canEdit"
-      :is-team-admin="isTeamAdmin"
-      @installation-updated="handleInstallationUpdated"
-      @configuration-updated="handleConfigurationUpdated"
-    />
+      <!-- HTTP/SSE TRANSPORT: Headers + URL Query Parameters -->
+      <ConfigurationHeaders
+        v-if="isRemote"
+        :installation="installation"
+        :server-data="serverData"
+        :current-user-config="currentUserConfig"
+        :team-id="teamId"
+        :can-edit="canEdit"
+        :is-team-admin="isTeamAdmin"
+        @installation-updated="handleInstallationUpdated"
+        @configuration-updated="handleConfigurationUpdated"
+      />
+
+      <ConfigurationQueryParams
+        v-if="isRemote"
+        :installation="installation"
+        :server-data="serverData"
+        :current-user-config="currentUserConfig"
+        :team-id="teamId"
+        :can-edit="canEdit"
+        :is-team-admin="isTeamAdmin"
+        @installation-updated="handleInstallationUpdated"
+        @configuration-updated="handleConfigurationUpdated"
+      />
+    </template>
   </div>
 </template>
