@@ -9599,6 +9599,35 @@ paths:
                   - success
                   - error
                 description: Internal Server Error
+  /api/teams/{teamId}/mcp/installations/{installationId}/status/stream:
+    get:
+      summary: Stream installation status (SSE)
+      tags:
+        - MCP Installations
+      description: Real-time installation status stream via Server-Sent Events. Sends
+        initial snapshot then streams status changes as they occur. Connection
+        automatically reconnects on disconnect.
+      parameters:
+        - schema:
+            type: string
+            minLength: 1
+          in: path
+          name: teamId
+          required: true
+          description: Team ID that owns the installation
+        - schema:
+            type: string
+            minLength: 1
+          in: path
+          name: installationId
+          required: true
+          description: Installation ID
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Default Response
   /api/teams/{teamId}/mcp/installations/{installationId}/logs:
     get:
       summary: Get installation logs
