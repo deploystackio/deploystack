@@ -248,6 +248,12 @@ export class StdioToolDiscoveryManager {
         this.logger.warn({ error }, 'Failed to emit mcp.tools.discovered event (non-fatal)');
       }
 
+      // Emit status change event to backend
+      const config = processInfo.config;
+      if (config.installation_id && config.team_id) {
+        this.emitStatusChange(config.installation_id, config.team_id, 'online');
+      }
+
       // Phase 10: Notify about successful discovery (set status to 'online')
       if (this.statusCallback) {
         this.statusCallback(serverSlug, 'online');

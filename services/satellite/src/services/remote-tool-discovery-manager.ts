@@ -530,6 +530,11 @@ export class RemoteToolDiscoveryManager {
         sdk_used: true
       }, `Successfully discovered ${cachedTools.length} tools from ${serverName} using MCP SDK in ${responseTime}ms`);
 
+      // Emit status change event to backend
+      if (config.installation_id && config.team_id) {
+        this.emitStatusChange(config.installation_id, config.team_id, 'online');
+      }
+
       // Phase 10: Notify about successful discovery (set status to 'online')
       if (this.statusCallback) {
         this.statusCallback(serverSlug, 'online');
