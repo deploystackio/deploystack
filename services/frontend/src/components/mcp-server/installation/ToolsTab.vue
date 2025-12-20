@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { ButtonGroup } from '@/components/ui/button-group'
 import { Spinner } from '@/components/ui/spinner'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@/components/ui/empty'
 import { AlertCircle, Package, CircleCheck, CircleMinus, ChevronRight, ChevronDown } from 'lucide-vue-next'
 import type { McpInstallation } from '@/types/mcp-installations'
 import ToolsMetricsPanel from './ToolsMetricsPanel.vue'
@@ -220,13 +221,17 @@ async function handleBulkToggle(isDisabled: boolean) {
     </Alert>
 
     <!-- No Tools State -->
-    <div v-else-if="!hasTools" class="text-center py-12">
-      <Package class="mx-auto h-12 w-12 text-muted-foreground" />
-      <h3 class="mt-4 text-lg font-semibold">{{ t('mcpInstallations.details.tools.noTools.title') }}</h3>
-      <p class="mt-2 text-sm text-muted-foreground max-w-md mx-auto">
-        {{ t('mcpInstallations.details.tools.noTools.description') }}
-      </p>
-    </div>
+    <Empty v-else-if="!hasTools">
+      <EmptyHeader>
+        <EmptyMedia variant="icon">
+          <Package />
+        </EmptyMedia>
+        <EmptyTitle>{{ t('mcpInstallations.details.tools.noTools.title') }}</EmptyTitle>
+        <EmptyDescription>
+          {{ t('mcpInstallations.details.tools.noTools.description') }}
+        </EmptyDescription>
+      </EmptyHeader>
+    </Empty>
 
     <!-- Tools Display -->
     <div v-else class="space-y-6">
