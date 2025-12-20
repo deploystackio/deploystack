@@ -752,10 +752,9 @@ const handleDelete = (index: number) => {
 }
 
 const updateData = (newData: ConfigItem[]) => {
-  isUpdatingFromStorage.value = true
   localData.value = newData
-  assembleSchemaAndSave()
   isUpdatingFromStorage.value = false
+  assembleSchemaAndSave()
 }
 
 // Get category info for display with safe fallback
