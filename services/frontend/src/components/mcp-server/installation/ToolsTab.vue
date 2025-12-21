@@ -131,6 +131,13 @@ const isToolSelected = (toolId: string) => {
   return selectedToolIds.value.includes(toolId)
 }
 
+// Truncate description for table display
+const truncateDescription = (description: string | null, maxLength = 40) => {
+  if (!description) return t('mcpInstallations.details.tools.table.values.noDescription')
+  if (description.length <= maxLength) return description
+  return description.substring(0, maxLength) + '...'
+}
+
 // Handle bulk enable
 async function handleBulkEnable() {
   if (selectedToolIds.value.length === 0) return
@@ -331,7 +338,7 @@ async function handleBulkToggle(isDisabled: boolean) {
                 <TableCell class="text-sm font-medium">{{ tool.tool_name }}</TableCell>
                 <TableCell class="text-sm text-muted-foreground w-96">
                   <div class="truncate">
-                    {{ tool.description || t('mcpInstallations.details.tools.table.values.noDescription') }}
+                    {{ truncateDescription(tool.description) }}
                   </div>
                 </TableCell>
                 <TableCell class="text-right whitespace-nowrap text-sm font-medium">
@@ -349,7 +356,7 @@ async function handleBulkToggle(isDisabled: boolean) {
                     <!-- Left: Full Description -->
                     <div>
                       <h4 class="text-sm font-semibold mb-2">{{ t('mcpInstallations.details.tools.detail.description') }}</h4>
-                      <p class="text-sm text-muted-foreground">
+                      <p class="text-sm text-muted-foreground whitespace-pre-wrap wrap-break-word">
                         {{ tool.description || t('mcpInstallations.details.tools.table.values.noDescription') }}
                       </p>
                     </div>
