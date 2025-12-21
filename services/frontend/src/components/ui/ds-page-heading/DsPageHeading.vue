@@ -21,9 +21,12 @@ const props = withDefaults(defineProps<Props>(), {
       <!-- Left: Title, description, and optional content -->
       <div class="flex flex-col items-stretch justify-start flex-1 w-full gap-4">
         <div class="flex flex-col gap-1">
-          <h1 class="text-[32px] tracking-[-0.79px] font-medium leading-10 text-neutral-900">
-            {{ title }}
-          </h1>
+          <div class="flex items-center gap-3">
+            <slot name="icon" />
+            <h1 class="text-[32px] tracking-[-0.79px] font-medium leading-10 text-neutral-900">
+              {{ title }}
+            </h1>
+          </div>
           <p v-if="description" class="text-muted-foreground">
             {{ description }}
           </p>

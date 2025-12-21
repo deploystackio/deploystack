@@ -1,21 +1,13 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, computed } from 'vue'
-import { useI18n } from 'vue-i18n'
-import { DsPageHeading } from '@/components/ui/ds-page-heading'
+import { onMounted, onUnmounted, computed, watch } from 'vue'
 import { Skeleton } from '@/components/ui/skeleton'
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from '@/components/ui/breadcrumb'
 import NavbarLayout from '@/components/NavbarLayout.vue'
-import { ConfigurationView, InstallationTabs } from '@/components/mcp-server/installation'
-import { useMcpInstallationCache } from '@/composables/mcp-server/installation'
+import { ConfigurationView, InstallationTabs, InstallationPageHeading } from '@/components/mcp-server/installation'
+import { useMcpInstallationCache, useStatusStream } from '@/composables/mcp-server/installation'
 import { useEventBus } from '@/composables/useEventBus'
 import type { McpInstallation } from '@/types/mcp-installations'
+import { getEnv } from '@/utils/env'
+import { useI18n } from 'vue-i18n'
 
 const { t } = useI18n()
 const eventBus = useEventBus()
@@ -42,53 +34,37 @@ const handleInstallationUpdated = (updatedInstallation: McpInstallation) => {
   eventBus.emit('mcp-installations-updated')
 }
 
+const { statusData, connect, disconnect } = useStatusStream()
+
+let currentStreamUrl: string | null = null
+
 onMounted(async () => {
   initializeCache()
   await loadAndSetInstallation()
   setupWatchers()
 })
 
+watch(installation, (newInstallation) => {
+  if (newInstallation?.team_id && newInstallation?.id) {
+    const baseUrl = getEnv('VITE_DEPLOYSTACK_BACKEND_URL')
+    const url = `${baseUrl}/api/teams/${newInstallation.team_id}/mcp/installations/${newInstallation.id}/status/stream`
+
+    if (url !== currentStreamUrl) {
+      currentStreamUrl = url
+      connect(url)
+    }
+  }
+})
+
 onUnmounted(() => {
   cleanupWatchers()
+  disconnect()
 })
 </script>
 
 <template>
   <NavbarLayout>
-    <DsPageHeading v-if="installation" :title="installation.installation_name" :show-border="false">
-      <Breadcrumb>
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink as-child>
-              <RouterLink to="/mcp-server">
-                {{ t('mcpInstallations.title') }}
-              </RouterLink>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>{{ installation.installation_name }}</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
-    </DsPageHeading>
-    <DsPageHeading v-else :title="t('mcpInstallations.title')" :show-border="false">
-      <Breadcrumb>
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink as-child>
-              <RouterLink to="/mcp-server">
-                {{ t('mcpInstallations.title') }}
-              </RouterLink>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <Skeleton class="h-4 w-48" />
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
-    </DsPageHeading>
+    <InstallationPageHeading :installation="installation" :status-data="statusData" />
 
     <div class="space-y-6 mt-6">
       <InstallationTabs

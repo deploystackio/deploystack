@@ -3,7 +3,6 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Badge } from '@/components/ui/badge'
 import { Github, ExternalLink, Calendar, Tag } from 'lucide-vue-next'
-import McpServerAvatar from '@/components/mcp-server/McpServerAvatar.vue'
 import InstallationStatusBadge from './InstallationStatusBadge.vue'
 import type { McpInstallation, InstallationStatusData } from '@/types/mcp-installations'
 
@@ -65,17 +64,9 @@ const statusUpdatedAt = computed(() => props.statusData?.status_updated_at || nu
 
 <template>
   <div v-if="installation && server">
-    <div class="px-4 sm:px-0 flex items-center gap-4">
-      <McpServerAvatar
-        :icon-url="server.icon_url"
-        :server-name="server.name"
-        size="md"
-        rounded="lg"
-      />
-      <div>
-        <h3 class="text-base/7 font-semibold text-gray-900">{{ t('mcpInstallations.details.installationDetails.title') }}</h3>
-        <p class="mt-1 max-w-2xl text-sm/6 text-gray-500">{{ t('mcpInstallations.details.installationDetails.description') }}</p>
-      </div>
+    <div class="px-4 sm:px-0">
+      <h3 class="text-base/7 font-semibold text-gray-900">{{ t('mcpInstallations.details.installationDetails.title') }}</h3>
+      <p class="mt-1 max-w-2xl text-sm/6 text-gray-500">{{ t('mcpInstallations.details.installationDetails.description') }}</p>
     </div>
     <div class="mt-6 border-t border-gray-100">
       <dl class="divide-y divide-gray-100">
