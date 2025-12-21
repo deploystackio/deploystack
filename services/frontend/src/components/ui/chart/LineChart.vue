@@ -25,6 +25,8 @@ export interface LineChartProps extends Omit<ChartProps, 'option' | 'variant'> {
   name?: string
   smooth?: boolean
   showArea?: boolean
+  showSymbol?: boolean
+  showAxis?: boolean
   color?: string
   areaColor?: string
 }
@@ -33,6 +35,8 @@ const props = withDefaults(defineProps<LineChartProps>(), {
   name: 'Data',
   smooth: true,
   showArea: true,
+  showSymbol: true,
+  showAxis: true,
   color: '#0f766e',
   areaColor: 'rgba(15, 118, 110, 0.3)',
 })
@@ -65,11 +69,13 @@ const chartOption = computed<EChartsOption>(() => ({
     data: props.labels,
     boundaryGap: false,
     axisLine: {
+      show: props.showAxis,
       lineStyle: {
         color: '#6b7280',
       },
     },
     axisLabel: {
+      show: props.showAxis,
       color: '#6b7280',
       fontSize: 12,
     },
@@ -77,15 +83,18 @@ const chartOption = computed<EChartsOption>(() => ({
   yAxis: {
     type: 'value',
     axisLine: {
+      show: props.showAxis,
       lineStyle: {
         color: '#6b7280',
       },
     },
     axisLabel: {
+      show: props.showAxis,
       color: '#6b7280',
       fontSize: 12,
     },
     splitLine: {
+      show: props.showAxis,
       lineStyle: {
         color: '#f3f4f6',
       },
@@ -96,6 +105,7 @@ const chartOption = computed<EChartsOption>(() => ({
       name: props.name,
       type: 'line',
       smooth: props.smooth,
+      showSymbol: props.showSymbol,
       data: props.data,
       lineStyle: {
         color: props.color,

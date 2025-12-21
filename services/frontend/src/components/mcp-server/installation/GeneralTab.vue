@@ -77,8 +77,8 @@ onMounted(async () => {
     <!-- Metrics Panel -->
     <GeneralMetricsPanel
       :status-data="statusData"
-      :installation-type="installation.installation_type"
-      :runtime="server.runtime"
+      :team-id="installation.team_id"
+      :installation-id="installation.id"
       :tool-count="toolCount"
     />
 
