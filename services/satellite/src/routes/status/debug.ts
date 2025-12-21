@@ -25,6 +25,9 @@ interface ServerInfo {
   restart_count?: number;
   url?: string;
   message?: string;
+  backend_status?: string;
+  backend_status_message?: string;
+  backend_status_last_emitted?: string;
 }
 
 interface TeamServers {
@@ -52,7 +55,10 @@ const serverInfoSchema = {
     last_activity: { type: 'string' },
     restart_count: { type: 'number' },
     url: { type: 'string' },
-    message: { type: 'string' }
+    message: { type: 'string' },
+    backend_status: { type: 'string' },
+    backend_status_message: { type: 'string' },
+    backend_status_last_emitted: { type: 'string' }
   }
 };
 
@@ -228,6 +234,16 @@ export async function registerDebugRoutes(server: FastifyInstance) {
         return { serverSlug: 'unknown', teamSlug: 'unknown', installationId: 'unknown' };
       };
 
+      // Helper function to get backend status for an installation
+      const getBackendStatus = (installationId: string) => {
+        const backendStatus = toolDiscoveryManager?.getBackendStatus(installationId);
+        return backendStatus ? {
+          backend_status: backendStatus.status,
+          backend_status_message: backendStatus.status_message,
+          backend_status_last_emitted: backendStatus.lastEmitted.toISOString()
+        } : {};
+      };
+
       const serversByTeam: Record<string, TeamServers> = {};
 
       for (const processInfo of allProcesses) {
@@ -238,6 +254,7 @@ export async function registerDebugRoutes(server: FastifyInstance) {
 
         const status = runtimeStatus[processInfo.config.installation_name];
         const teamInfo = extractTeamInfoSafely(processInfo.config.installation_name);
+        const backendStatusData = getBackendStatus(processInfo.config.installation_id);
 
         serversByTeam[teamId].running.push({
           installation_name: processInfo.config.installation_name,
@@ -246,7 +263,8 @@ export async function registerDebugRoutes(server: FastifyInstance) {
           team_slug: teamInfo.teamSlug,
           server_slug: teamInfo.serverSlug,
           transport_type: 'stdio',
-          status: status?.status || processInfo.status,
+          // Use backend_status if available, otherwise fall back to process status
+          status: backendStatusData.backend_status || status?.status || processInfo.status,
           pid: processInfo.process.pid,
           uptime_ms: Date.now() - processInfo.startTime,
           message_count: processInfo.messageCount,
@@ -254,7 +272,8 @@ export async function registerDebugRoutes(server: FastifyInstance) {
           command: processInfo.config.command,
           args: processInfo.config.args,
           last_activity: new Date(processInfo.lastActivity).toISOString(),
-          restart_count: status?.restart_count || 0
+          restart_count: status?.restart_count || 0,
+          ...backendStatusData
         });
       }
 
@@ -265,6 +284,7 @@ export async function registerDebugRoutes(server: FastifyInstance) {
         }
 
         const teamInfo = extractTeamInfoSafely(installationName);
+        const backendStatusData = getBackendStatus(config.installation_id);
 
         serversByTeam[teamId].dormant.push({
           installation_name: installationName,
@@ -273,10 +293,12 @@ export async function registerDebugRoutes(server: FastifyInstance) {
           team_slug: teamInfo.teamSlug,
           server_slug: teamInfo.serverSlug,
           transport_type: 'stdio',
-          status: 'dormant',
+          // Use backend_status if available, otherwise 'dormant'
+          status: backendStatusData.backend_status || 'dormant',
           command: config.command,
           args: config.args,
-          message: 'Process terminated due to inactivity, will respawn on next request'
+          message: 'Process terminated due to inactivity, will respawn on next request',
+          ...backendStatusData
         });
       }
 
@@ -294,19 +316,31 @@ export async function registerDebugRoutes(server: FastifyInstance) {
 
         const teamInfo = extractTeamInfoSafely(serverName);
 
-        serversByTeam[teamId].configured.push({
+        // Check backend status to determine if HTTP/SSE server is online
+        const backendStatusData = serverConfig.installation_id ? getBackendStatus(serverConfig.installation_id) : {};
+        const isOnline = backendStatusData.backend_status === 'online';
+
+        const serverInfo: ServerInfo = {
           installation_name: serverName,
           installation_id: serverConfig.installation_id || 'unknown',
           team_id: teamId,
           team_slug: teamInfo.teamSlug,
           server_slug: teamInfo.serverSlug,
           transport_type: serverConfig.transport_type || serverConfig.type || 'unknown',
-          status: 'configured',
+          status: backendStatusData.backend_status || 'configured',
           command: serverConfig.command || serverConfig.url || '',
           args: serverConfig.args || [],
           url: serverConfig.url,
-          message: 'Server configured but not yet started'
-        });
+          message: isOnline ? 'Server is online and ready' : (backendStatusData.backend_status ? `Server status: ${backendStatusData.backend_status}` : 'Server configured but not yet started'),
+          ...backendStatusData
+        };
+
+        // Put online HTTP/SSE servers in "running" category, others in "configured"
+        if (isOnline) {
+          serversByTeam[teamId].running.push(serverInfo);
+        } else {
+          serversByTeam[teamId].configured.push(serverInfo);
+        }
       }
 
       let totalRunning = 0;

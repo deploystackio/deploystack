@@ -35,6 +35,7 @@ export class CommandProcessor {
   private processes: Map<string, ProcessInfo> = new Map();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private onConfigurationUpdate?: (config: any) => Promise<void>;
+  private backendStatusCallback?: (installationId: string, status: string, statusMessage?: string) => void;
 
   constructor(
     logger: FastifyBaseLogger, 
@@ -89,6 +90,13 @@ export class CommandProcessor {
   }
 
   /**
+   * Set callback for tracking backend status emissions
+   */
+  setBackendStatusCallback(callback: (installationId: string, status: string, statusMessage?: string) => void): void {
+    this.backendStatusCallback = callback;
+  }
+
+  /**
    * Emit status change event to backend
    */
   private emitStatusChange(
@@ -113,6 +121,11 @@ export class CommandProcessor {
       status_message: statusMessage,
       timestamp: new Date().toISOString()
     });
+
+    // Track backend status emission
+    if (this.backendStatusCallback) {
+      this.backendStatusCallback(installationId, status, statusMessage);
+    }
 
     this.logger.debug({
       operation: 'status_change_emitted',

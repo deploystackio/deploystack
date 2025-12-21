@@ -41,6 +41,9 @@ export class ProcessManager extends EventEmitter {
   private readonly LOG_BATCH_INTERVAL_MS = 3000; // 3 seconds
   private readonly LOG_BATCH_MAX_SIZE = 20; // Max logs before forced flush
 
+  // Backend status tracking callback
+  private backendStatusCallback?: (installationId: string, status: string, statusMessage?: string) => void;
+
   constructor(logger: Logger, eventBus?: EventBus, runtimeState?: RuntimeState) {
     super();
     this.logger = logger;
@@ -126,7 +129,14 @@ export class ProcessManager extends EventEmitter {
     // Clear the buffer
     this.logBuffer = [];
   }
-  
+
+  /**
+   * Set callback for tracking backend status emissions
+   */
+  setBackendStatusCallback(callback: (installationId: string, status: string, statusMessage?: string) => void): void {
+    this.backendStatusCallback = callback;
+  }
+
   /**
    * Resolve command to full path for nsjail execution
    * nsjail has limited PATH, so we need full paths for common commands
@@ -267,6 +277,15 @@ export class ProcessManager extends EventEmitter {
           status_message: `Process crashed ${(this.restartAttempts.get(installationName) || []).length} times in 5 minutes. Manual restart required.`,
           timestamp: new Date().toISOString()
         });
+
+        // Track backend status emission
+        if (this.backendStatusCallback) {
+          this.backendStatusCallback(
+            processInfo.config.installation_id,
+            'permanently_failed',
+            `Process crashed ${(this.restartAttempts.get(installationName) || []).length} times in 5 minutes. Manual restart required.`
+          );
+        }
       } catch (error) {
         this.logger.warn({ error }, 'Failed to emit mcp.server.status_changed event (non-fatal)');
       }

@@ -37,6 +37,7 @@ export class StdioToolDiscoveryManager {
   private toolCache = new Map<string, CachedStdioTool>();
   private toolsByServer = new Map<string, Set<string>>();
   private statusCallback?: StdioServerStatusCallback;
+  private backendStatusCallback?: (installationId: string, status: string, statusMessage?: string) => void;
 
   constructor(
     private processManager: ProcessManager,
@@ -55,6 +56,13 @@ export class StdioToolDiscoveryManager {
    */
   setStatusCallback(callback: StdioServerStatusCallback): void {
     this.statusCallback = callback;
+  }
+
+  /**
+   * Set callback for tracking backend status emissions
+   */
+  setBackendStatusCallback(callback: (installationId: string, status: string, statusMessage?: string) => void): void {
+    this.backendStatusCallback = callback;
   }
 
   /**
@@ -77,6 +85,11 @@ export class StdioToolDiscoveryManager {
       status_message: statusMessage,
       timestamp: new Date().toISOString()
     });
+
+    // Track backend status emission
+    if (this.backendStatusCallback) {
+      this.backendStatusCallback(installationId, status, statusMessage);
+    }
 
     this.logger.debug({
       operation: 'status_change_emitted',

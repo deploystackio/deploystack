@@ -275,6 +275,18 @@ export async function createServer() {
   );
   toolDiscoveryManager.setConfigManager(dynamicConfigManager);
 
+  // Wire up backend status tracking callbacks (for debug endpoint visibility)
+  const backendStatusCallback = (installationId: string, status: string, statusMessage?: string) => {
+    toolDiscoveryManager.setBackendStatus(installationId, status as any, statusMessage);
+  };
+
+  remoteToolDiscoveryManager.setBackendStatusCallback(backendStatusCallback);
+  stdioToolDiscoveryManager.setBackendStatusCallback(backendStatusCallback);
+
+  server.log.info({
+    operation: 'backend_status_tracking_configured'
+  }, 'Backend status tracking callbacks configured for debug endpoint');
+
   // Initialize Tool Search Service for hierarchical router (discover_mcp_tools meta-tool)
   const toolSearchService = new ToolSearchService(toolDiscoveryManager, server.log);
   toolSearchService.setConfigManager(dynamicConfigManager);
@@ -510,6 +522,10 @@ export async function createServer() {
 
   // Set UnifiedToolDiscoveryManager for disabled tools tracking
   commandProcessor.setUnifiedToolDiscoveryManager(toolDiscoveryManager);
+
+  // Wire up backend status tracking callbacks for CommandProcessor and ProcessManager
+  commandProcessor.setBackendStatusCallback(backendStatusCallback);
+  processManager.setBackendStatusCallback(backendStatusCallback);
 
   server.log.info({
     operation: 'command_processor_initialized',

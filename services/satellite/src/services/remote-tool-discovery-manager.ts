@@ -54,6 +54,7 @@ export class RemoteToolDiscoveryManager {
   private eventBus?: EventBus;
   private oauthTokenService?: OAuthTokenService;
   private statusCallback?: ServerStatusCallback;
+  private backendStatusCallback?: (installationId: string, status: string, statusMessage?: string) => void;
 
   constructor(logger: FastifyBaseLogger, eventBus?: EventBus) {
     this.logger = logger.child({ component: 'RemoteToolDiscoveryManager' });
@@ -65,6 +66,13 @@ export class RemoteToolDiscoveryManager {
    */
   setStatusCallback(callback: ServerStatusCallback): void {
     this.statusCallback = callback;
+  }
+
+  /**
+   * Set callback for tracking backend status emissions
+   */
+  setBackendStatusCallback(callback: (installationId: string, status: string, statusMessage?: string) => void): void {
+    this.backendStatusCallback = callback;
   }
 
   /**
@@ -107,6 +115,11 @@ export class RemoteToolDiscoveryManager {
       status_message: statusMessage,
       timestamp: new Date().toISOString()
     });
+
+    // Track backend status emission
+    if (this.backendStatusCallback) {
+      this.backendStatusCallback(installationId, status, statusMessage);
+    }
 
     this.logger.debug({
       operation: 'status_change_emitted',

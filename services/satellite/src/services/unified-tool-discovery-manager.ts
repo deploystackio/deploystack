@@ -28,6 +28,16 @@ export interface ServerStatusEntry {
 }
 
 /**
+ * Backend status entry (tracks what status/status_message was last emitted to backend)
+ */
+export interface BackendStatusEntry {
+  status: 'provisioning' | 'command_received' | 'connecting' | 'discovering_tools' |
+          'syncing_tools' | 'online' | 'offline' | 'error' | 'requires_reauth' | 'permanently_failed';
+  status_message?: string;
+  lastEmitted: Date;
+}
+
+/**
  * Unified cached tool interface that merges both remote and stdio tool types
  */
 export interface UnifiedCachedTool {
@@ -66,6 +76,12 @@ export class UnifiedToolDiscoveryManager {
    * Key: serverSlug, Value: ServerStatusEntry
    */
   private serverStatus: Map<string, ServerStatusEntry> = new Map();
+
+  /**
+   * Tracks backend status emissions for debug visibility
+   * Key: installation_id, Value: BackendStatusEntry
+   */
+  private backendStatus: Map<string, BackendStatusEntry> = new Map();
 
   constructor(
     remoteToolManager: RemoteToolDiscoveryManager,
@@ -607,5 +623,58 @@ export class UnifiedToolDiscoveryManager {
     }
 
     return stats;
+  }
+
+  // =========================================================================
+  // BACKEND STATUS TRACKING (for debug endpoint visibility)
+  // =========================================================================
+
+  /**
+   * Track backend status emission (called when emitting mcp.server.status_changed)
+   */
+  setBackendStatus(
+    installationId: string,
+    status: BackendStatusEntry['status'],
+    statusMessage?: string
+  ): void {
+    this.backendStatus.set(installationId, {
+      status,
+      status_message: statusMessage,
+      lastEmitted: new Date()
+    });
+
+    this.logger.debug({
+      operation: 'backend_status_tracked',
+      installation_id: installationId,
+      status,
+      status_message: statusMessage
+    }, `Tracked backend status emission for installation ${installationId}: ${status}`);
+  }
+
+  /**
+   * Get backend status by installation_id
+   */
+  getBackendStatus(installationId: string): BackendStatusEntry | null {
+    return this.backendStatus.get(installationId) || null;
+  }
+
+  /**
+   * Get all backend statuses
+   */
+  getAllBackendStatuses(): Map<string, BackendStatusEntry> {
+    return new Map(this.backendStatus);
+  }
+
+  /**
+   * Clear backend status (on uninstall)
+   */
+  clearBackendStatus(installationId: string): void {
+    if (this.backendStatus.has(installationId)) {
+      this.backendStatus.delete(installationId);
+      this.logger.debug({
+        operation: 'backend_status_cleared',
+        installation_id: installationId
+      }, `Cleared backend status for installation: ${installationId}`);
+    }
   }
 }
