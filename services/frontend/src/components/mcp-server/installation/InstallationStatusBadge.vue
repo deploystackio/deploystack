@@ -80,7 +80,7 @@ const sizeClasses = computed(() => {
 
 <template>
   <Skeleton v-if="!statusData" :class="sizeClasses.skeleton" />
-  <div v-else-if="statusIcon && statusLabel" :class="['inline-flex items-center justify-center rounded-full border font-medium text-muted-foreground', sizeClasses.container]">
+  <div v-else-if="statusIcon && statusLabel" :class="['inline-flex items-center justify-center rounded-full font-medium text-muted-foreground', sizeClasses.container]">
     <component :is="statusIcon.component" :class="[sizeClasses.icon, statusIcon.class]" />
     <span>{{ statusLabel }}</span>
   </div>
