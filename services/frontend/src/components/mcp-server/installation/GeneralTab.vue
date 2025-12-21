@@ -2,10 +2,12 @@
 import { computed, ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Badge } from '@/components/ui/badge'
+import { DsCard } from '@/components/ui/ds-card'
 import { Github, ExternalLink, Calendar, Tag } from 'lucide-vue-next'
 import InstallationStatusBadge from './InstallationStatusBadge.vue'
 import GeneralMetricsPanel from './GeneralMetricsPanel.vue'
 import { useMcpToolsStore } from '@/stores/mcpToolsStore'
+import { getEnv } from '@/utils/env'
 import type { McpInstallation, InstallationStatusData } from '@/types/mcp-installations'
 
 interface Props {
@@ -19,6 +21,7 @@ const mcpToolsStore = useMcpToolsStore()
 
 // Tools data
 const toolCount = ref(0)
+const serverDescription = ref<string | null>(null)
 
 // Computed properties for display (using installation.server data)
 const server = computed(() => props.installation?.server || null)
@@ -58,7 +61,34 @@ const showLanguageSeparately = computed(() => {
   return server.value.language?.toLowerCase() !== server.value.runtime?.toLowerCase()
 })
 
-// Fetch tools count on mount
+// Fetch server description
+async function fetchServerDescription() {
+  if (!props.installation.server?.id) return
+
+  try {
+    const baseUrl = getEnv('VITE_DEPLOYSTACK_BACKEND_URL')
+    const url = `${baseUrl}/api/mcp/servers/${props.installation.server.id}`
+
+    const response = await fetch(url, {
+      method: 'GET',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch server description: ${response.status}`)
+    }
+
+    const result = await response.json()
+    serverDescription.value = result.data?.description || null
+  } catch (error) {
+    console.error('Failed to fetch server description:', error)
+  }
+}
+
+// Fetch tools count and server description on mount
 onMounted(async () => {
   try {
     const response = await mcpToolsStore.fetchInstallationTools(
@@ -69,6 +99,9 @@ onMounted(async () => {
   } catch (error) {
     console.error('Failed to fetch tools count:', error)
   }
+
+  // Fetch server description
+  fetchServerDescription()
 })
 </script>
 
@@ -82,10 +115,31 @@ onMounted(async () => {
       :tool-count="toolCount"
     />
 
-    <div>
+    <!-- MCP Status Card -->
+    <DsCard title="MCP Status">
+      <div class="space-y-3">
+        <div class="flex items-center gap-2">
+          <InstallationStatusBadge :status-data="statusData" />
+        </div>
+        <div v-if="statusMessage" class="text-sm text-muted-foreground">
+          {{ statusMessage }}
+        </div>
+      </div>
+    </DsCard>
+
+    <!-- Installation Details Card -->
+    <DsCard title="Details">
       <dl class="divide-y divide-gray-100">
+        <!-- MCP Server Description -->
+        <div v-if="serverDescription" class="py-4 sm:grid sm:grid-cols-3 sm:gap-4">
+          <dt class="text-sm/6 font-medium text-gray-900">MCP Server Description</dt>
+          <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
+            {{ serverDescription }}
+          </dd>
+        </div>
+
         <!-- Satellite -->
-        <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+        <div class="py-4 sm:grid sm:grid-cols-3 sm:gap-4">
           <dt class="text-sm/6 font-medium text-gray-900">Satellite</dt>
           <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
             <Badge :variant="installation.installation_type === 'global' ? 'default' : 'secondary'">
@@ -94,25 +148,8 @@ onMounted(async () => {
           </dd>
         </div>
 
-        <!-- MCP Status -->
-        <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
-          <dt class="text-sm/6 font-medium text-gray-900">
-            MCP Status
-          </dt>
-          <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
-            <div class="space-y-2">
-              <div class="flex items-center gap-2">
-                <InstallationStatusBadge :status-data="statusData" />
-              </div>
-              <div v-if="statusMessage" class="text-sm text-muted-foreground">
-                {{ statusMessage }}
-              </div>
-            </div>
-          </dd>
-        </div>
-
         <!-- Technical Specifications -->
-        <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+        <div class="py-4 sm:grid sm:grid-cols-3 sm:gap-4">
           <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpInstallations.details.installationDetails.fields.technicalDetails') }}</dt>
           <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
             <div class="space-y-2">
@@ -131,7 +168,7 @@ onMounted(async () => {
         </div>
 
         <!-- Repository Links -->
-        <div v-if="server.repository_url || server.website_url" class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+        <div v-if="server.repository_url || server.website_url" class="py-4 sm:grid sm:grid-cols-3 sm:gap-4">
           <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpInstallations.details.installationDetails.fields.links') }}</dt>
           <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
             <div class="space-y-2">
@@ -164,7 +201,7 @@ onMounted(async () => {
         </div>
 
         <!-- Author Information -->
-        <div v-if="server.author_name" class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+        <div v-if="server.author_name" class="py-4 sm:grid sm:grid-cols-3 sm:gap-4">
           <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpInstallations.details.installationDetails.fields.author') }}</dt>
           <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
             {{ server.author_name }}
@@ -172,7 +209,7 @@ onMounted(async () => {
         </div>
 
         <!-- Tags -->
-        <div v-if="displayTags.length > 0" class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+        <div v-if="displayTags.length > 0" class="py-4 sm:grid sm:grid-cols-3 sm:gap-4">
           <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpInstallations.details.installationDetails.fields.tags') }}</dt>
           <dd class="mt-2 text-sm text-gray-900 sm:col-span-2 sm:mt-0">
             <div class="flex flex-wrap gap-2">
@@ -189,8 +226,8 @@ onMounted(async () => {
           </dd>
         </div>
 
-        <!-- Installation Dates -->
-        <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+        <!-- Installation Info -->
+        <div class="py-4 sm:grid sm:grid-cols-3 sm:gap-4">
           <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpInstallations.details.installationDetails.fields.installationInfo') }}</dt>
           <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
             <div class="space-y-2">
@@ -211,6 +248,6 @@ onMounted(async () => {
           </dd>
         </div>
       </dl>
-    </div>
+    </DsCard>
   </div>
 </template>
