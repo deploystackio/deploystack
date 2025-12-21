@@ -26,7 +26,8 @@ export function useMcpInstallationCache() {
   const error = ref<string | null>(null)
 
   const installationId = route.params.id as string
-  const storageKey = `mcp_installation_name_${installationId}`
+  const storageKeyName = `mcp_installation_name_${installationId}`
+  const storageKeyIcon = `mcp_installation_icon_${installationId}`
 
   async function loadInstallation(installationId: string): Promise<InstallationLoadResult | null> {
     try {
@@ -89,7 +90,15 @@ export function useMcpInstallationCache() {
         error.value = null
 
         // Cache the installation name for instant loading on tab switches
-        eventBus.setState(storageKey, result.installation.installation_name)
+        eventBus.setState(storageKeyName, result.installation.installation_name)
+
+        // Cache the server icon data for instant loading on tab switches
+        if (result.installation.server) {
+          eventBus.setState(storageKeyIcon, {
+            icon_url: result.installation.server.icon_url,
+            name: result.installation.server.name
+          })
+        }
 
         setBreadcrumbs([
           { label: t('mcpInstallations.title'), href: '/mcp-server' },
@@ -101,8 +110,9 @@ export function useMcpInstallationCache() {
         currentTeam.value = null
         userTeamRole.value = null
 
-        // Clear cached name if installation not found
-        eventBus.clearState(storageKey)
+        // Clear cached data if installation not found
+        eventBus.clearState(storageKeyName)
+        eventBus.clearState(storageKeyIcon)
       }
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'An unknown error occurred'
@@ -110,8 +120,9 @@ export function useMcpInstallationCache() {
       currentTeam.value = null
       userTeamRole.value = null
 
-      // Clear cached name on error
-      eventBus.clearState(storageKey)
+      // Clear cached data on error
+      eventBus.clearState(storageKeyName)
+      eventBus.clearState(storageKeyIcon)
     } finally {
       isLoading.value = false
     }
@@ -123,22 +134,29 @@ export function useMcpInstallationCache() {
       { label: 'Loading...' }
     ])
 
-    // Load cached installation name immediately to prevent flicker
-    const cachedName = eventBus.getState<string>(storageKey)
+    // Load cached installation data immediately to prevent flicker
+    const cachedName = eventBus.getState<string>(storageKeyName)
+    const cachedIcon = eventBus.getState<{ icon_url: string; name: string }>(storageKeyIcon)
+
     if (cachedName && !installation.value) {
-      installation.value = { installation_name: cachedName } as McpInstallation
+      installation.value = {
+        installation_name: cachedName,
+        server: cachedIcon || undefined
+      } as McpInstallation
     }
   }
 
   function setupWatchers(onTeamChanged?: () => Promise<void>) {
-    // Watch for installation ID changes to clear cached name
+    // Watch for installation ID changes to clear cached data
     watch(
       () => route.params.id,
       (newId, oldId) => {
         if (newId && oldId && newId !== oldId) {
-          // Clear old installation's cached name
-          const oldStorageKey = `mcp_installation_name_${oldId}`
-          eventBus.clearState(oldStorageKey)
+          // Clear old installation's cached data
+          const oldStorageKeyName = `mcp_installation_name_${oldId}`
+          const oldStorageKeyIcon = `mcp_installation_icon_${oldId}`
+          eventBus.clearState(oldStorageKeyName)
+          eventBus.clearState(oldStorageKeyIcon)
 
           // Reset installation to null to trigger loading state
           installation.value = null
