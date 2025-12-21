@@ -3,7 +3,7 @@ import { onMounted, onUnmounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Skeleton } from '@/components/ui/skeleton'
 import NavbarLayout from '@/components/NavbarLayout.vue'
-import { InstallationInfo, InstallationTabs, InstallationPageHeading } from '@/components/mcp-server/installation'
+import { GeneralTab, InstallationTabs, InstallationPageHeading } from '@/components/mcp-server/installation'
 import { useMcpInstallationCache, useStatusStream } from '@/composables/mcp-server/installation'
 import { getEnv } from '@/utils/env'
 
@@ -74,8 +74,8 @@ onUnmounted(() => {
         <Skeleton class="h-32 w-full rounded-lg" />
       </div>
 
-      <!-- Installation Info Content -->
-      <InstallationInfo v-else-if="installation" :installation="installation" :status-data="statusData" />
+      <!-- General Tab Content -->
+      <GeneralTab v-else-if="installation" :installation="installation" :status-data="statusData" />
     </div>
   </NavbarLayout>
 </template>

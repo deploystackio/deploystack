@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Badge } from '@/components/ui/badge'
 import { Github, ExternalLink, Calendar, Tag } from 'lucide-vue-next'
 import InstallationStatusBadge from './InstallationStatusBadge.vue'
+import GeneralMetricsPanel from './GeneralMetricsPanel.vue'
+import { useMcpToolsStore } from '@/stores/mcpToolsStore'
 import type { McpInstallation, InstallationStatusData } from '@/types/mcp-installations'
 
 interface Props {
@@ -13,6 +15,10 @@ interface Props {
 
 const props = defineProps<Props>()
 const { t } = useI18n()
+const mcpToolsStore = useMcpToolsStore()
+
+// Tools data
+const toolCount = ref(0)
 
 // Computed properties for display (using installation.server data)
 const server = computed(() => props.installation?.server || null)
@@ -21,20 +27,6 @@ const displayTags = computed(() => {
   if (!server.value?.tags || server.value.tags.length === 0) return []
   return Array.isArray(server.value.tags) ? server.value.tags : []
 })
-
-// Get status badge variant
-const getStatusVariant = (status: string) => {
-  switch (status) {
-    case 'active':
-      return 'default'
-    case 'deprecated':
-      return 'destructive'
-    case 'maintenance':
-      return 'secondary'
-    default:
-      return 'outline'
-  }
-}
 
 // Get language badge color
 const getLanguageBadgeClass = (language: string | undefined) => {
@@ -59,36 +51,42 @@ const formatDate = (dateString: string) => {
 
 // Status data from parent component
 const statusMessage = computed(() => props.statusData?.status_message || null)
-const statusUpdatedAt = computed(() => props.statusData?.status_updated_at || null)
+
+// Check if language and runtime are different
+const showLanguageSeparately = computed(() => {
+  if (!server.value) return false
+  return server.value.language?.toLowerCase() !== server.value.runtime?.toLowerCase()
+})
+
+// Fetch tools count on mount
+onMounted(async () => {
+  try {
+    const response = await mcpToolsStore.fetchInstallationTools(
+      props.installation.team_id,
+      props.installation.id
+    )
+    toolCount.value = response.tool_count
+  } catch (error) {
+    console.error('Failed to fetch tools count:', error)
+  }
+})
 </script>
 
 <template>
-  <div v-if="installation && server">
-    <div class="px-4 sm:px-0">
-      <h3 class="text-base/7 font-semibold text-gray-900">{{ t('mcpInstallations.details.installationDetails.title') }}</h3>
-      <p class="mt-1 max-w-2xl text-sm/6 text-gray-500">{{ t('mcpInstallations.details.installationDetails.description') }}</p>
-    </div>
-    <div class="mt-6 border-t border-gray-100">
+  <div v-if="installation && server" class="space-y-6">
+    <!-- Metrics Panel -->
+    <GeneralMetricsPanel
+      :status-data="statusData"
+      :installation-type="installation.installation_type"
+      :runtime="server.runtime"
+      :tool-count="toolCount"
+    />
+
+    <div>
       <dl class="divide-y divide-gray-100">
-        <!-- Server Name -->
+        <!-- Satellite -->
         <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
-          <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpInstallations.details.installationDetails.fields.server') }}</dt>
-          <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
-            {{ server.name }}
-          </dd>
-        </div>
-
-        <!-- Description -->
-        <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
-          <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpInstallations.details.installationDetails.fields.description') }}</dt>
-          <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
-            {{ server.description || t('mcpInstallations.details.installationDetails.values.noDescription') }}
-          </dd>
-        </div>
-
-        <!-- Installation Type -->
-        <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
-          <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpInstallations.details.installationDetails.fields.installationType') }}</dt>
+          <dt class="text-sm/6 font-medium text-gray-900">Satellite</dt>
           <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
             <Badge :variant="installation.installation_type === 'global' ? 'default' : 'secondary'">
               {{ installation.installation_type }}
@@ -96,10 +94,10 @@ const statusUpdatedAt = computed(() => props.statusData?.status_updated_at || nu
           </dd>
         </div>
 
-        <!-- Real-Time Installation Status -->
+        <!-- MCP Status -->
         <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
           <dt class="text-sm/6 font-medium text-gray-900">
-            {{ t('mcpInstallations.details.installationDetails.fields.installationStatus') }}
+            MCP Status
           </dt>
           <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
             <div class="space-y-2">
@@ -108,9 +106,6 @@ const statusUpdatedAt = computed(() => props.statusData?.status_updated_at || nu
               </div>
               <div v-if="statusMessage" class="text-sm text-muted-foreground">
                 {{ statusMessage }}
-              </div>
-              <div v-if="statusUpdatedAt" class="text-xs text-muted-foreground">
-                Last updated: {{ formatDate(statusUpdatedAt) }}
               </div>
             </div>
           </dd>
@@ -121,7 +116,7 @@ const statusUpdatedAt = computed(() => props.statusData?.status_updated_at || nu
           <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpInstallations.details.installationDetails.fields.technicalDetails') }}</dt>
           <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
             <div class="space-y-2">
-              <div class="flex items-center gap-2">
+              <div v-if="showLanguageSeparately" class="flex items-center gap-2">
                 <span class="font-medium">{{ t('mcpInstallations.details.installationDetails.fields.language') }}</span>
                 <Badge
                   variant="outline"
@@ -131,12 +126,6 @@ const statusUpdatedAt = computed(() => props.statusData?.status_updated_at || nu
                 </Badge>
               </div>
               <div><span class="font-medium">{{ t('mcpInstallations.details.installationDetails.fields.runtime') }}</span> {{ server.runtime }}</div>
-              <div class="flex items-center gap-2">
-                <span class="font-medium">{{ t('mcpInstallations.details.installationDetails.fields.status') }}</span>
-                <Badge :variant="getStatusVariant(server.status)">
-                  {{ server.status }}
-                </Badge>
-              </div>
             </div>
           </dd>
         </div>
