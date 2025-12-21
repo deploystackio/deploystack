@@ -23,6 +23,7 @@ const mcpToolsStore = useMcpToolsStore()
 // Tools data
 const toolCount = ref(0)
 const serverDescription = ref<string | null>(null)
+const lastRequestAt = ref<string | null>(null)
 
 // Computed properties for display (using installation.server data)
 const server = computed(() => props.installation?.server || null)
@@ -52,6 +53,30 @@ const getLanguageBadgeClass = (language: string | undefined) => {
 const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleDateString()
 }
+
+// Format time ago
+const formatTimeAgo = (dateString: string) => {
+  const now = new Date()
+  const date = new Date(dateString)
+  const seconds = Math.floor((now.getTime() - date.getTime()) / 1000)
+
+  if (seconds < 60) return `${seconds} seconds ago`
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return `${minutes} minute${minutes === 1 ? '' : 's'} ago`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`
+  const days = Math.floor(hours / 24)
+  return `${days} day${days === 1 ? '' : 's'} ago`
+}
+
+// Format last request time
+const lastRequestTime = computed(() => {
+  if (!lastRequestAt.value) return null
+  const date = new Date(lastRequestAt.value)
+  const time = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  const timeAgo = formatTimeAgo(lastRequestAt.value)
+  return `${time} (${timeAgo})`
+})
 
 // Status data from parent component
 const statusMessage = computed(() => props.statusData?.status_message || null)
@@ -89,6 +114,35 @@ async function fetchServerDescription() {
   }
 }
 
+// Fetch last request time
+async function fetchLastRequest() {
+  try {
+    const baseUrl = getEnv('VITE_DEPLOYSTACK_BACKEND_URL')
+    const url = `${baseUrl}/api/teams/${props.installation.team_id}/mcp/installations/${props.installation.id}/requests?limit=1`
+
+    const response = await fetch(url, {
+      method: 'GET',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch requests: ${response.status}`)
+    }
+
+    const result = await response.json()
+    const requests = result.data?.requests || []
+
+    if (requests.length > 0) {
+      lastRequestAt.value = requests[0].created_at
+    }
+  } catch (error) {
+    console.error('Failed to fetch last request:', error)
+  }
+}
+
 // Fetch tools count and server description on mount
 onMounted(async () => {
   try {
@@ -103,6 +157,9 @@ onMounted(async () => {
 
   // Fetch server description
   fetchServerDescription()
+
+  // Fetch last request
+  fetchLastRequest()
 })
 </script>
 
@@ -110,22 +167,39 @@ onMounted(async () => {
   <div v-if="installation && server" class="space-y-6">
     <!-- Metrics Panel -->
     <GeneralMetricsPanel
-      :status-data="statusData"
       :team-id="installation.team_id"
       :installation-id="installation.id"
       :tool-count="toolCount"
     />
 
-    <!-- MCP Status Card -->
-    <DsCard title="MCP Status">
-      <div class="space-y-3">
-        <div class="flex items-center gap-2">
-          <InstallationStatusBadge :status-data="statusData" />
+    <!-- MCP Status Card (no title) -->
+    <DsCard>
+      <dl class="divide-y divide-gray-100">
+        <!-- MCP Status -->
+        <div class="py-4 sm:grid sm:grid-cols-3 sm:gap-4">
+          <dt class="text-sm/6 font-medium text-gray-900">MCP Status</dt>
+          <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
+            <InstallationStatusBadge :status-data="statusData" />
+          </dd>
         </div>
-        <div v-if="statusMessage" class="text-sm text-muted-foreground">
-          {{ statusMessage }}
+
+        <!-- Status Message -->
+        <div v-if="statusMessage" class="py-4 sm:grid sm:grid-cols-3 sm:gap-4">
+          <dt class="text-sm/6 font-medium text-gray-900">Status Message</dt>
+          <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
+            {{ statusMessage }}
+          </dd>
         </div>
-      </div>
+
+        <!-- Last Request -->
+        <div class="py-4 sm:grid sm:grid-cols-3 sm:gap-4">
+          <dt class="text-sm/6 font-medium text-gray-900">Last Request</dt>
+          <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
+            <span v-if="lastRequestTime">{{ lastRequestTime }}</span>
+            <span v-else class="text-muted-foreground">No recent requests found</span>
+          </dd>
+        </div>
+      </dl>
     </DsCard>
 
     <!-- Installation Details Card -->

@@ -1,12 +1,9 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { LineChart } from '@/components/ui/chart'
-import InstallationStatusBadge from './InstallationStatusBadge.vue'
 import { getEnv } from '@/utils/env'
-import type { InstallationStatusData } from '@/types/mcp-installations'
 
 interface Props {
-  statusData: InstallationStatusData | null
   teamId: string
   installationId: string
   toolCount: number
@@ -18,6 +15,7 @@ const props = defineProps<Props>()
 const requestsData = ref<number[]>([])
 const requestsLabels = ref<string[]>([])
 const isLoadingRequests = ref(true)
+const totalRequests = ref(0)
 
 // Fetch requests from API
 async function fetchRequests() {
@@ -40,6 +38,9 @@ async function fetchRequests() {
 
     const result = await response.json()
     const requests = result.data?.requests || []
+
+    // Store total count
+    totalRequests.value = requests.length
 
     // Group requests by minute for the graph
     const timeMap = new Map<string, number>()
@@ -72,13 +73,15 @@ onMounted(() => {
 <template>
   <div class="border rounded-lg p-6">
     <div class="grid grid-cols-2 md:grid-cols-4 gap-8">
-      <!-- MCP Status Metric -->
+      <!-- Total Requests Metric -->
       <div class="flex flex-col gap-1">
         <span class="text-sm text-muted-foreground font-medium">
-          MCP Status
+          Total Requests
         </span>
         <div class="flex items-baseline gap-1">
-          <InstallationStatusBadge :status-data="statusData" />
+          <span class="text-xl font-normal">
+            {{ totalRequests }}
+          </span>
         </div>
       </div>
 
