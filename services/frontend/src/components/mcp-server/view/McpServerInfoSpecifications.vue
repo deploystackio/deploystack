@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { Badge } from '@/components/ui/badge'
+import { CodeHighlight } from '@/components/ui/code-highlight'
 import { Shield, Package, Globe } from 'lucide-vue-next'
 
 interface Props {
@@ -9,14 +11,28 @@ interface Props {
   packages?: any | null
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   remotes?: any | null
+  showHeading?: boolean
 }
 
-defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  showHeading: true
+})
+
+// Format JSON for display
+const formattedPackages = computed(() => {
+  if (!props.packages) return ''
+  return JSON.stringify(props.packages, null, 2)
+})
+
+const formattedRemotes = computed(() => {
+  if (!props.remotes) return ''
+  return JSON.stringify(props.remotes, null, 2)
+})
 </script>
 
 <template>
   <div class="space-y-3">
-    <h3 class="text-sm font-semibold">Specifications</h3>
+    <h3 v-if="showHeading" class="text-sm font-semibold">Specifications</h3>
 
     <div class="space-y-3">
       <!-- Requires OAuth -->
@@ -39,7 +55,7 @@ defineProps<Props>()
           Packages
         </dt>
         <dd class="text-sm">
-          <pre class="bg-muted border rounded p-3 text-xs overflow-x-auto">{{ JSON.stringify(packages, null, 2) }}</pre>
+          <CodeHighlight :code="formattedPackages" language="json" />
         </dd>
       </div>
 
@@ -50,7 +66,7 @@ defineProps<Props>()
           Remotes
         </dt>
         <dd class="text-sm">
-          <pre class="bg-muted border rounded p-3 text-xs overflow-x-auto">{{ JSON.stringify(remotes, null, 2) }}</pre>
+          <CodeHighlight :code="formattedRemotes" language="json" />
         </dd>
       </div>
     </div>

@@ -6,6 +6,7 @@ import { DsCard } from '@/components/ui/ds-card'
 import { Github, ExternalLink, Calendar, Tag } from 'lucide-vue-next'
 import InstallationStatusBadge from './InstallationStatusBadge.vue'
 import GeneralMetricsPanel from './GeneralMetricsPanel.vue'
+import McpServerInfoSpecifications from '@/components/mcp-server/view/McpServerInfoSpecifications.vue'
 import { useMcpToolsStore } from '@/stores/mcpToolsStore'
 import { getEnv } from '@/utils/env'
 import type { McpInstallation, InstallationStatusData } from '@/types/mcp-installations'
@@ -164,6 +165,19 @@ onMounted(async () => {
               </div>
               <div><span class="font-medium">{{ t('mcpInstallations.details.installationDetails.fields.runtime') }}</span> {{ server.runtime }}</div>
             </div>
+          </dd>
+        </div>
+
+        <!-- MCP Specifications (Packages/Remotes) -->
+        <div v-if="(server.runtime !== 'http' && server.packages) || (server.runtime === 'http' && server.remotes)" class="py-4 sm:grid sm:grid-cols-3 sm:gap-4">
+          <dt class="text-sm/6 font-medium text-gray-900">Specifications</dt>
+          <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
+            <McpServerInfoSpecifications
+              :runtime="server.runtime"
+              :packages="server.packages"
+              :remotes="server.remotes"
+              :show-heading="false"
+            />
           </dd>
         </div>
 

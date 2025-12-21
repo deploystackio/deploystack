@@ -18,6 +18,8 @@ export interface McpServer {
   category_id?: string
   transport_type: 'stdio' | 'http' | 'sse'
   installation_methods: any[]
+  packages?: any | null
+  remotes?: any | null
   // Three-tier configuration schema fields
   template_args?: any[] | null
   template_env?: Record<string, string> | null
