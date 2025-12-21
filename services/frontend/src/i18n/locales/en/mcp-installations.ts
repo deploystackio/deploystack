@@ -690,6 +690,7 @@ export default {
         server: 'Server',
         description: 'Description',
         installationType: 'Installation Type',
+        installationStatus: 'Installation Status',
         technicalDetails: 'Technical Details',
         links: 'Links',
         author: 'Author',

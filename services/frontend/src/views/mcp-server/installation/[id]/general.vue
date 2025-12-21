@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted } from 'vue'
+import { onMounted, onUnmounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { DsPageHeading } from '@/components/ui/ds-page-heading'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -12,8 +12,9 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb'
 import NavbarLayout from '@/components/NavbarLayout.vue'
-import { InstallationInfo, InstallationTabs } from '@/components/mcp-server/installation'
-import { useMcpInstallationCache } from '@/composables/mcp-server/installation'
+import { InstallationInfo, InstallationTabs, InstallationStatusBadge } from '@/components/mcp-server/installation'
+import { useMcpInstallationCache, useStatusStream } from '@/composables/mcp-server/installation'
+import { getEnv } from '@/utils/env'
 
 const { t } = useI18n()
 
@@ -28,14 +29,33 @@ const {
   cleanupWatchers
 } = useMcpInstallationCache()
 
+const { statusData, connect, disconnect } = useStatusStream()
+
+let currentStreamUrl: string | null = null
+
 onMounted(async () => {
   initializeCache()
   await loadAndSetInstallation()
   setupWatchers()
 })
 
+watch(installation, (newInstallation) => {
+  // Only connect if installation has required fields
+  if (newInstallation?.team_id && newInstallation?.id) {
+    const baseUrl = getEnv('VITE_DEPLOYSTACK_BACKEND_URL')
+    const url = `${baseUrl}/api/teams/${newInstallation.team_id}/mcp/installations/${newInstallation.id}/status/stream`
+
+    // Only connect if URL changed
+    if (url !== currentStreamUrl) {
+      currentStreamUrl = url
+      connect(url)
+    }
+  }
+})
+
 onUnmounted(() => {
   cleanupWatchers()
+  disconnect()
 })
 </script>
 
@@ -57,6 +77,10 @@ onUnmounted(() => {
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
+
+      <template #actions>
+        <InstallationStatusBadge :status-data="statusData" size="default" />
+      </template>
     </DsPageHeading>
     <DsPageHeading v-else :title="t('mcpInstallations.title')" :show-border="false">
       <Breadcrumb>
@@ -97,7 +121,7 @@ onUnmounted(() => {
       </div>
 
       <!-- Installation Info Content -->
-      <InstallationInfo v-else-if="installation" :installation="installation" />
+      <InstallationInfo v-else-if="installation" :installation="installation" :status-data="statusData" />
     </div>
   </NavbarLayout>
 </template>

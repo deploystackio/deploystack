@@ -4,10 +4,12 @@ import { useI18n } from 'vue-i18n'
 import { Badge } from '@/components/ui/badge'
 import { Github, ExternalLink, Calendar, Tag } from 'lucide-vue-next'
 import McpServerAvatar from '@/components/mcp-server/McpServerAvatar.vue'
-import type { McpInstallation } from '@/types/mcp-installations'
+import InstallationStatusBadge from './InstallationStatusBadge.vue'
+import type { McpInstallation, InstallationStatusData } from '@/types/mcp-installations'
 
 interface Props {
   installation: McpInstallation
+  statusData: InstallationStatusData | null
 }
 
 const props = defineProps<Props>()
@@ -55,6 +57,10 @@ const getLanguageBadgeClass = (language: string | undefined) => {
 const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleDateString()
 }
+
+// Status data from parent component
+const statusMessage = computed(() => props.statusData?.status_message || null)
+const statusUpdatedAt = computed(() => props.statusData?.status_updated_at || null)
 </script>
 
 <template>
@@ -96,6 +102,26 @@ const formatDate = (dateString: string) => {
             <Badge :variant="installation.installation_type === 'global' ? 'default' : 'secondary'">
               {{ installation.installation_type }}
             </Badge>
+          </dd>
+        </div>
+
+        <!-- Real-Time Installation Status -->
+        <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+          <dt class="text-sm/6 font-medium text-gray-900">
+            {{ t('mcpInstallations.details.installationDetails.fields.installationStatus') }}
+          </dt>
+          <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
+            <div class="space-y-2">
+              <div class="flex items-center gap-2">
+                <InstallationStatusBadge :status-data="statusData" />
+              </div>
+              <div v-if="statusMessage" class="text-sm text-muted-foreground">
+                {{ statusMessage }}
+              </div>
+              <div v-if="statusUpdatedAt" class="text-xs text-muted-foreground">
+                Last updated: {{ formatDate(statusUpdatedAt) }}
+              </div>
+            </div>
           </dd>
         </div>
 

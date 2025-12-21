@@ -41,6 +41,26 @@ export interface EnvironmentVariable {
   placeholder?: string
 }
 
+export type InstallationStatus =
+  | 'provisioning'
+  | 'command_received'
+  | 'connecting'
+  | 'discovering_tools'
+  | 'syncing_tools'
+  | 'online'
+  | 'offline'
+  | 'error'
+  | 'requires_reauth'
+  | 'permanently_failed'
+
+export interface InstallationStatusData {
+  installation_id: string
+  status: InstallationStatus
+  status_message: string | null
+  status_updated_at: string
+  last_health_check_at: string | null
+}
+
 export interface McpInstallation {
   id: string
   installation_name: string
@@ -57,6 +77,10 @@ export interface McpInstallation {
   created_at: string
   updated_at: string
   last_used_at: string | null
+  status: InstallationStatus
+  status_message: string | null
+  status_updated_at: string
+  last_health_check_at: string | null
 }
 
 export interface InstallServerRequest {
