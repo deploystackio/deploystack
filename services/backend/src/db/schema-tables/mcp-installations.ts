@@ -118,7 +118,7 @@ export const mcpServerInstallations = pgTable('mcpServerInstallations', {
   oauth_token_endpoint_auth_method: text('oauth_token_endpoint_auth_method'), // Auth method for token exchange
 
   // Installation Status Tracking
-  status: text('status').notNull().default('provisioning'), // 'provisioning' | 'command_received' | 'connecting' | 'discovering_tools' | 'syncing_tools' | 'online' | 'offline' | 'error' | 'requires_reauth' | 'permanently_failed'
+  status: text('status').notNull().default('provisioning'), // 'provisioning' | 'command_received' | 'connecting' | 'discovering_tools' | 'syncing_tools' | 'online' | 'restarting' | 'offline' | 'error' | 'requires_reauth' | 'permanently_failed'
   status_message: text('status_message'), // Human-readable status message or error details
   status_updated_at: timestamp('status_updated_at', { withTimezone: true }).notNull().defaultNow(),
   last_health_check_at: timestamp('last_health_check_at', { withTimezone: true }), // When health was last checked

@@ -48,6 +48,12 @@ const showPassword = ref(false)
 const isSubmitting = ref(false)
 const formErrors = ref<Record<string, string>>({})
 
+// Batch update state: track pending changes not yet saved to backend
+const pendingTeamChanges = ref<string[]>([])
+const pendingUserChanges = ref<Record<string, string>>({})
+const isSavingTeam = ref(false)
+const isSavingUser = ref(false)
+
 const teamArgsSchema = computed(() => {
   const schema = props.installation.server?.team_args_schema || props.serverData?.team_args_schema
   if (!schema) return []
@@ -76,25 +82,47 @@ const currentUserArgs = computed(() => {
   return (props.currentUserConfig?.user_args as Record<string, any>) || {}
 })
 
+// Merged values: combine original with pending changes
+const mergedTeamArgs = computed(() => {
+  return pendingTeamChanges.value.length > 0
+    ? pendingTeamChanges.value
+    : currentTeamArgs.value
+})
+
+const mergedUserArgs = computed(() => {
+  return { ...currentUserArgs.value, ...pendingUserChanges.value }
+})
+
+// Check if there are unsaved changes
+const hasTeamChanges = computed(() => pendingTeamChanges.value.length > 0)
+const hasUserChanges = computed(() => Object.keys(pendingUserChanges.value).length > 0)
+
 const teamArgsWithData = computed(() => {
   return teamArgsSchema.value.map((argSchema: any, index: number) => ({
     ...argSchema,
     index,
-    currentValue: currentTeamArgs.value[index] || ''
+    currentValue: mergedTeamArgs.value[index] || ''
   }))
 })
 
 const userArgsWithData = computed(() => {
   return userArgsSchema.value.map((argSchema: any) => ({
     ...argSchema,
-    currentValue: currentUserArgs.value[argSchema.name] || ''
+    currentValue: mergedUserArgs.value[argSchema.name] || ''
   }))
 })
 
 const openEditModal = (item: any, scope: 'team' | 'user') => {
   editingItem.value = item
   editingScope.value = scope
-  editingValue.value = scope === 'team' ? item.currentValue : (currentUserArgs.value[item.name] || '')
+
+  // Show pending value if exists, otherwise original value
+  if (scope === 'team') {
+    editingValue.value = (pendingTeamChanges.value.length > 0 ?  pendingTeamChanges.value[item.index] : currentTeamArgs.value[item.index]) || ''
+  } else {
+    editingValue.value = pendingUserChanges.value[item.name] ?? currentUserArgs.value[item.name] ?? ''
+  }
+
   showPassword.value = false
   formErrors.value = {}
   isEditModalOpen.value = true
@@ -140,68 +168,96 @@ const validateForm = () => {
 const handleSubmit = async () => {
   if (!validateForm()) return
 
-  isSubmitting.value = true
+  // Store item name BEFORE closing modal (closeEditModal sets editingItem to null)
+  const itemName = editingScope.value === 'team' ?
+    (editingItem.value.name || `Argument #${editingItem.value.index + 1}`) :
+    editingItem.value.name
+
+  // Save to pending changes (NO API CALL)
+  if (editingScope.value === 'team') {
+    const newArgs = [...(pendingTeamChanges.value.length > 0 ? pendingTeamChanges.value : currentTeamArgs.value)]
+    newArgs[editingItem.value.index] = editingValue.value
+    pendingTeamChanges.value = newArgs
+  } else {
+    pendingUserChanges.value = {
+      ...pendingUserChanges.value,
+      [editingItem.value.name]: editingValue.value
+    }
+  }
+
+  closeEditModal()
+
+  // Show feedback
+  toast.info('Change saved', {
+    description: `${itemName} will be updated when you click "Save & Restart"`
+  })
+}
+
+const saveTeamChanges = async () => {
+  if (!hasTeamChanges.value) return
+
+  isSavingTeam.value = true
+  formErrors.value = {}
 
   try {
-    if (editingScope.value === 'team') {
-      const updatedArgs = [...currentTeamArgs.value]
-      updatedArgs[editingItem.value.index] = editingValue.value
+    const updatedInstallation = await McpInstallationService.updateTeamArgs(
+      props.teamId,
+      props.installation.id,
+      pendingTeamChanges.value
+    )
 
-      const updatedInstallation = await McpInstallationService.updateTeamArgs(
-        props.teamId,
-        props.installation.id,
-        updatedArgs
-      )
-
-      emit('installation-updated', updatedInstallation)
-
-      const itemName = editingItem.value.name || `Argument #${editingItem.value.index + 1}`
-      toast.success(`Team argument updated`, {
-        description: `${itemName} has been updated successfully`
-      })
-    } else {
-      if (!props.currentUserConfig) {
-        const createData = {
-          user_args: {
-            [editingItem.value.name]: editingValue.value
-          }
-        }
-
-        const newConfig = await McpInstallationService.createUserConfiguration(
-          props.teamId,
-          props.installation.id,
-          createData
-        )
-
-        emit('configuration-updated', newConfig)
-      } else {
-        const updatedArgs = { ...(props.currentUserConfig.user_args as Record<string, any> || {}) }
-        updatedArgs[editingItem.value.name] = editingValue.value
-
-        const updatedConfig = await McpInstallationService.updateUserConfiguration(
-          props.teamId,
-          props.installation.id,
-          props.currentUserConfig.id,
-          { user_args: updatedArgs }
-        )
-
-        emit('configuration-updated', updatedConfig)
-      }
-
-      toast.success('User argument updated', {
-        description: `${editingItem.value.name} has been updated successfully`
-      })
-    }
-
-    closeEditModal()
+    pendingTeamChanges.value = []
+    emit('installation-updated', updatedInstallation)
+    toast.success('Team arguments updated', {
+      description: 'Server is restarting with new configuration...'
+    })
   } catch (error) {
-    console.error('Error updating argument:', error)
-    toast.error('Failed to update argument', {
+    toast.error('Failed to update team arguments', {
       description: error instanceof Error ? error.message : 'An error occurred'
     })
-    formErrors.value.general = error instanceof Error ? error.message : 'Failed to update configuration'
   } finally {
-    isSubmitting.value = false
+    isSavingTeam.value = false
+  }
+}
+
+const saveUserChanges = async () => {
+  if (!hasUserChanges.value) return
+
+  isSavingUser.value = true
+  formErrors.value = {}
+
+  try {
+    if (!props.currentUserConfig) {
+      const createData = {
+        installation_id: props.installation.id,
+        user_args: pendingUserChanges.value
+      }
+      const newConfig = await McpInstallationService.createUserConfiguration(
+        props.teamId,
+        props.installation.id,
+        createData
+      )
+      emit('configuration-updated', newConfig)
+    } else {
+      const updatedConfig = await McpInstallationService.updateUserConfiguration(
+        props.teamId,
+        props.installation.id,
+        props.currentUserConfig.id,
+        { user_args: pendingUserChanges.value }
+      )
+      emit('configuration-updated', updatedConfig)
+    }
+
+    pendingUserChanges.value = {}
+    toast.success('Your arguments updated', {
+      description: 'Server is restarting with new configuration...'
+    })
+  } catch (error) {
+    toast.error('Failed to update user arguments', {
+      description: error instanceof Error ? error.message : 'An error occurred'
+    })
+  } finally {
+    isSavingUser.value = false
   }
 }
 
@@ -281,6 +337,16 @@ const modalTitle = computed(() => {
           </div>
         </li>
       </ul>
+
+    <template #footer-actions>
+      <Button
+        :disabled="!hasTeamChanges || isSavingTeam"
+        @click="saveTeamChanges"
+      >
+        <Spinner v-if="isSavingTeam" class="mr-2" />
+        Save & Restart
+      </Button>
+    </template>
   </DsCard>
 
   <!-- User Arguments Card (visible to all) -->
@@ -336,6 +402,16 @@ const modalTitle = computed(() => {
           </div>
         </li>
       </ul>
+
+    <template #footer-actions>
+      <Button
+        :disabled="!hasUserChanges || isSavingUser"
+        @click="saveUserChanges"
+      >
+        <Spinner v-if="isSavingUser" class="mr-2" />
+        Save & Restart
+      </Button>
+    </template>
   </DsCard>
 
   <!-- Edit Modal -->
@@ -422,7 +498,7 @@ const modalTitle = computed(() => {
               :disabled="isSubmitting"
             >
               <Spinner v-if="isSubmitting" class="mr-2" />
-              Save
+              Apply
             </Button>
           </AlertDialogFooter>
         </form>

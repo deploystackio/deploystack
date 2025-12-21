@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { marked } from 'marked'
+import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@/components/ui/empty'
+import { FileText } from 'lucide-vue-next'
 
 interface Props {
   readmeBase64?: string | null
@@ -14,25 +16,29 @@ marked.setOptions({
   breaks: true,
 })
 
+const hasReadme = computed(() => {
+  return !!props.readmeBase64
+})
+
 const renderedMarkdown = computed(() => {
   if (!props.readmeBase64) {
-    return '<p class="text-muted-foreground">No README available for this server.</p>'
+    return null
   }
 
   try {
     // Decode base64 to binary string
     const binaryString = atob(props.readmeBase64)
-    
+
     // Convert binary string to UTF-8
     const bytes = new Uint8Array(binaryString.length)
     for (let i = 0; i < binaryString.length; i++) {
       bytes[i] = binaryString.charCodeAt(i)
     }
-    
+
     // Decode as UTF-8
     const decoder = new TextDecoder('utf-8')
     const decodedMarkdown = decoder.decode(bytes)
-    
+
     return marked.parse(decodedMarkdown)
   } catch (error) {
     console.error('Failed to parse README:', error)
@@ -43,8 +49,21 @@ const renderedMarkdown = computed(() => {
 
 <template>
   <div class="readme-container min-h-[400px]">
-    <article 
-      class="markdown-body prose prose-slate max-w-none" 
+    <Empty v-if="!hasReadme">
+      <EmptyHeader>
+        <EmptyMedia variant="icon">
+          <FileText />
+        </EmptyMedia>
+        <EmptyTitle>No README available</EmptyTitle>
+        <EmptyDescription>
+          This server does not have a README file.
+        </EmptyDescription>
+      </EmptyHeader>
+    </Empty>
+
+    <article
+      v-else
+      class="markdown-body prose prose-slate max-w-none"
       v-html="renderedMarkdown"
     />
   </div>

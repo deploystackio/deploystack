@@ -48,6 +48,12 @@ const showPassword = ref(false)
 const isSubmitting = ref(false)
 const formErrors = ref<Record<string, string>>({})
 
+// Batch update state: track pending changes not yet saved to backend
+const pendingTeamChanges = ref<Record<string, string>>({})
+const pendingUserChanges = ref<Record<string, string>>({})
+const isSavingTeam = ref(false)
+const isSavingUser = ref(false)
+
 const teamHeadersSchema = computed(() => {
   const schema = props.installation.server?.team_headers_schema || props.serverData?.team_headers_schema
   if (!schema) return []
@@ -76,24 +82,44 @@ const currentUserHeaders = computed(() => {
   return (props.currentUserConfig?.user_headers as Record<string, any>) || {}
 })
 
+// Merged values: combine original with pending changes
+const mergedTeamHeaders = computed(() => {
+  return { ...currentTeamHeaders.value, ...pendingTeamChanges.value }
+})
+
+const mergedUserHeaders = computed(() => {
+  return { ...currentUserHeaders.value, ...pendingUserChanges.value }
+})
+
+// Check if there are unsaved changes
+const hasTeamChanges = computed(() => Object.keys(pendingTeamChanges.value).length > 0)
+const hasUserChanges = computed(() => Object.keys(pendingUserChanges.value).length > 0)
+
 const teamHeadersWithData = computed(() => {
   return teamHeadersSchema.value.map((headerSchema: any) => ({
     ...headerSchema,
-    currentValue: currentTeamHeaders.value[headerSchema.name] || ''
+    currentValue: mergedTeamHeaders.value[headerSchema.name] || ''
   }))
 })
 
 const userHeadersWithData = computed(() => {
   return userHeadersSchema.value.map((headerSchema: any) => ({
     ...headerSchema,
-    currentValue: currentUserHeaders.value[headerSchema.name] || ''
+    currentValue: mergedUserHeaders.value[headerSchema.name] || ''
   }))
 })
 
 const openEditModal = (item: any, scope: 'team' | 'user') => {
   editingItem.value = item
   editingScope.value = scope
-  editingValue.value = scope === 'team' ? (currentTeamHeaders.value[item.name] || '') : (currentUserHeaders.value[item.name] || '')
+
+  // Show pending value if exists, otherwise original value
+  if (scope === 'team') {
+    editingValue.value = pendingTeamChanges.value[item.name] ?? currentTeamHeaders.value[item.name] ?? ''
+  } else {
+    editingValue.value = pendingUserChanges.value[item.name] ?? currentUserHeaders.value[item.name] ?? ''
+  }
+
   showPassword.value = false
   formErrors.value = {}
   isEditModalOpen.value = true
@@ -139,69 +165,97 @@ const validateForm = () => {
 const handleSubmit = async () => {
   if (!validateForm()) return
 
-  isSubmitting.value = true
+  // Store item name BEFORE closing modal (closeEditModal sets editingItem to null)
+  const itemName = editingItem.value.name
+
+  // Save to pending changes (NO API CALL)
+  if (editingScope.value === 'team') {
+    pendingTeamChanges.value = {
+      ...pendingTeamChanges.value,
+      [editingItem.value.name]: editingValue.value
+    }
+  } else {
+    pendingUserChanges.value = {
+      ...pendingUserChanges.value,
+      [editingItem.value.name]: editingValue.value
+    }
+  }
+
+  closeEditModal()
+
+  // Show feedback
+  toast.info('Change saved', {
+    description: `${itemName} will be updated when you click "Save & Restart"`
+  })
+}
+
+const saveTeamChanges = async () => {
+  if (!hasTeamChanges.value) return
+
+  isSavingTeam.value = true
+  formErrors.value = {}
 
   try {
-    if (editingScope.value === 'team') {
-      const updatedHeaders = {
-        ...currentTeamHeaders.value,
-        [editingItem.value.name]: editingValue.value
-      }
+    const updatedHeaders = { ...currentTeamHeaders.value, ...pendingTeamChanges.value }
+    const updatedInstallation = await McpInstallationService.updateTeamHeaders(
+      props.teamId,
+      props.installation.id,
+      updatedHeaders
+    )
 
-      const updatedInstallation = await McpInstallationService.updateTeamHeaders(
-        props.teamId,
-        props.installation.id,
-        updatedHeaders
-      )
-
-      emit('installation-updated', updatedInstallation)
-
-      toast.success('Team header updated', {
-        description: `${editingItem.value.name} has been updated successfully`
-      })
-    } else {
-      if (!props.currentUserConfig) {
-        const createData = {
-          user_headers: {
-            [editingItem.value.name]: editingValue.value
-          }
-        }
-
-        const newConfig = await McpInstallationService.createUserConfiguration(
-          props.teamId,
-          props.installation.id,
-          createData
-        )
-
-        emit('configuration-updated', newConfig)
-      } else {
-        const updatedHeaders = { ...(props.currentUserConfig.user_headers as Record<string, any> || {}) }
-        updatedHeaders[editingItem.value.name] = editingValue.value
-
-        const updatedConfig = await McpInstallationService.updateUserHeaders(
-          props.teamId,
-          props.installation.id,
-          props.currentUserConfig.id,
-          updatedHeaders
-        )
-
-        emit('configuration-updated', updatedConfig)
-      }
-
-      toast.success('User header updated', {
-        description: `${editingItem.value.name} has been updated successfully`
-      })
-    }
-
-    closeEditModal()
+    pendingTeamChanges.value = {}
+    emit('installation-updated', updatedInstallation)
+    toast.success('Team headers updated', {
+      description: 'Server is restarting with new configuration...'
+    })
   } catch (error) {
-    console.error('Error updating header:', error)
-    toast.error('Failed to update header', {
+    toast.error('Failed to update team headers', {
       description: error instanceof Error ? error.message : 'An error occurred'
     })
-    formErrors.value.general = error instanceof Error ? error.message : 'Failed to update configuration'
   } finally {
-    isSubmitting.value = false
+    isSavingTeam.value = false
+  }
+}
+
+const saveUserChanges = async () => {
+  if (!hasUserChanges.value) return
+
+  isSavingUser.value = true
+  formErrors.value = {}
+
+  try {
+    if (!props.currentUserConfig) {
+      const createData = {
+        installation_id: props.installation.id,
+        user_headers: pendingUserChanges.value
+      }
+      const newConfig = await McpInstallationService.createUserConfiguration(
+        props.teamId,
+        props.installation.id,
+        createData
+      )
+      emit('configuration-updated', newConfig)
+    } else {
+      const updatedHeaders = { ...(props.currentUserConfig.user_headers as Record<string, any> || {}), ...pendingUserChanges.value }
+      const updatedConfig = await McpInstallationService.updateUserHeaders(
+        props.teamId,
+        props.installation.id,
+        props.currentUserConfig.id,
+        updatedHeaders
+      )
+      emit('configuration-updated', updatedConfig)
+    }
+
+    pendingUserChanges.value = {}
+    toast.success('Your headers updated', {
+      description: 'Server is restarting with new configuration...'
+    })
+  } catch (error) {
+    toast.error('Failed to update user headers', {
+      description: error instanceof Error ? error.message : 'An error occurred'
+    })
+  } finally {
+    isSavingUser.value = false
   }
 }
 
@@ -276,6 +330,16 @@ const modalTitle = computed(() => {
           </div>
         </li>
       </ul>
+
+    <template #footer-actions>
+      <Button
+        :disabled="!hasTeamChanges || isSavingTeam"
+        @click="saveTeamChanges"
+      >
+        <Spinner v-if="isSavingTeam" class="mr-2" />
+        Save & Restart
+      </Button>
+    </template>
   </DsCard>
 
   <!-- User Headers Card (visible to all) -->
@@ -331,6 +395,16 @@ const modalTitle = computed(() => {
           </div>
         </li>
       </ul>
+
+    <template #footer-actions>
+      <Button
+        :disabled="!hasUserChanges || isSavingUser"
+        @click="saveUserChanges"
+      >
+        <Spinner v-if="isSavingUser" class="mr-2" />
+        Save & Restart
+      </Button>
+    </template>
   </DsCard>
 
   <!-- Edit Modal -->
@@ -417,7 +491,7 @@ const modalTitle = computed(() => {
               :disabled="isSubmitting"
             >
               <Spinner v-if="isSubmitting" class="mr-2" />
-              Save
+              Apply
             </Button>
           </AlertDialogFooter>
         </form>

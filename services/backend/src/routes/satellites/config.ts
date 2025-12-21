@@ -572,7 +572,7 @@ export default async function satelliteConfigRoute(server: FastifyInstance) {
                 { maskSecrets: false }, // Decrypt secrets for satellite
                 request.log
               );
-              
+
               // Merge decrypted team environment variables
               finalEnv = { ...finalEnv, ...decryptedTeamEnv };
             } catch (error) {
@@ -580,6 +580,57 @@ export default async function satelliteConfigRoute(server: FastifyInstance) {
                 serverId: server.id,
                 error: error instanceof Error ? error.message : String(error)
               }, 'Failed to decrypt and process team_env');
+            }
+          }
+
+          // Fetch and apply user-level environment variables (Tier 3) for stdio transport
+          // User config overrides team config for environment variables
+          if (created_by_user_id) {
+            try {
+              const stdioUserConfigs = await db
+                .select()
+                .from(mcpUserConfigurations)
+                .where(
+                  and(
+                    eq(mcpUserConfigurations.installation_id, installation.id),
+                    eq(mcpUserConfigurations.user_id, created_by_user_id)
+                  )
+                )
+                .limit(1);
+
+              const stdioUserConfig = stdioUserConfigs[0];
+
+              // Process user environment variables (overrides team env)
+              if (stdioUserConfig?.user_env) {
+                try {
+                  const userEnvSchema = JSON.parse(server.user_env_schema || '[]');
+                  const decryptedUserEnv = await McpEnvStorage.retrieveUserEnv(
+                    stdioUserConfig.user_env,
+                    userEnvSchema,
+                    { maskSecrets: false }, // Decrypt secrets for satellite
+                    request.log
+                  );
+                  finalEnv = { ...finalEnv, ...decryptedUserEnv };
+
+                  request.log.debug({
+                    serverId: server.id,
+                    userId: created_by_user_id,
+                    userEnvCount: Object.keys(decryptedUserEnv).length
+                  }, 'Added user environment variables to stdio configuration');
+                } catch (error) {
+                  request.log.warn({
+                    serverId: server.id,
+                    userId: created_by_user_id,
+                    error: error instanceof Error ? error.message : String(error)
+                  }, 'Failed to decrypt and parse user_env');
+                }
+              }
+            } catch (error) {
+              request.log.warn({
+                serverId: server.id,
+                userId: created_by_user_id,
+                error: error instanceof Error ? error.message : String(error)
+              }, 'Failed to fetch user configuration for stdio transport');
             }
           }
 

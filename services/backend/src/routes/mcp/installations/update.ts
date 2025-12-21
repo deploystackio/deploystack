@@ -4,6 +4,8 @@ import { requireTeamPermission } from '../../../middleware/roleMiddleware';
 import { McpInstallationService } from '../../../services/mcpInstallationService';
 import { SatelliteCommandService } from '../../../services/satelliteCommandService';
 import { getDb } from '../../../db';
+import { mcpServerInstallations } from '../../../db/schema';
+import { eq, and } from 'drizzle-orm';
 import {
   TEAM_AND_INSTALLATION_PARAMS_SCHEMA,
   UPDATE_INSTALLATION_REQUEST_SCHEMA,
@@ -106,6 +108,28 @@ export default async function updateInstallationRoute(server: FastifyInstance) {
         userId,
         authType
       }, 'Successfully updated MCP installation');
+
+      // Check if configuration requiring server restart was changed
+      const requiresRestart = !!(
+        updateData.team_env ||
+        updateData.team_args
+      );
+
+      // Set status to 'restarting' if configuration changed
+      if (requiresRestart) {
+        await db.update(mcpServerInstallations)
+          .set({
+            status: 'restarting',
+            status_message: 'Configuration updated, server restarting...',
+            status_updated_at: new Date()
+          })
+          .where(
+            and(
+              eq(mcpServerInstallations.id, installationId),
+              eq(mcpServerInstallations.team_id, teamId)
+            )
+          );
+      }
 
       // Create satellite commands for immediate notification (3-second response goal)
       try {

@@ -48,6 +48,12 @@ const showPassword = ref(false)
 const isSubmitting = ref(false)
 const formErrors = ref<Record<string, string>>({})
 
+// Batch update state: track pending changes not yet saved to backend
+const pendingTeamChanges = ref<Record<string, string>>({})
+const pendingUserChanges = ref<Record<string, string>>({})
+const isSavingTeam = ref(false)
+const isSavingUser = ref(false)
+
 const teamQueryParamsSchema = computed(() => {
   const schema = props.installation.server?.team_url_query_params_schema || props.serverData?.team_url_query_params_schema
   if (!schema) return []
@@ -76,24 +82,44 @@ const currentUserQueryParams = computed(() => {
   return (props.currentUserConfig?.user_url_query_params as Record<string, any>) || {}
 })
 
+// Merged values: combine original with pending changes
+const mergedTeamQueryParams = computed(() => {
+  return { ...currentTeamQueryParams.value, ...pendingTeamChanges.value }
+})
+
+const mergedUserQueryParams = computed(() => {
+  return { ...currentUserQueryParams.value, ...pendingUserChanges.value }
+})
+
+// Check if there are unsaved changes
+const hasTeamChanges = computed(() => Object.keys(pendingTeamChanges.value).length > 0)
+const hasUserChanges = computed(() => Object.keys(pendingUserChanges.value).length > 0)
+
 const teamQueryParamsWithData = computed(() => {
   return teamQueryParamsSchema.value.map((paramSchema: any) => ({
     ...paramSchema,
-    currentValue: currentTeamQueryParams.value[paramSchema.name] || ''
+    currentValue: mergedTeamQueryParams.value[paramSchema.name] || ''
   }))
 })
 
 const userQueryParamsWithData = computed(() => {
   return userQueryParamsSchema.value.map((paramSchema: any) => ({
     ...paramSchema,
-    currentValue: currentUserQueryParams.value[paramSchema.name] || ''
+    currentValue: mergedUserQueryParams.value[paramSchema.name] || ''
   }))
 })
 
 const openEditModal = (item: any, scope: 'team' | 'user') => {
   editingItem.value = item
   editingScope.value = scope
-  editingValue.value = scope === 'team' ? (currentTeamQueryParams.value[item.name] || '') : (currentUserQueryParams.value[item.name] || '')
+
+  // Show pending value if exists, otherwise original value
+  if (scope === 'team') {
+    editingValue.value = pendingTeamChanges.value[item.name] ?? currentTeamQueryParams.value[item.name] ?? ''
+  } else {
+    editingValue.value = pendingUserChanges.value[item.name] ?? currentUserQueryParams.value[item.name] ?? ''
+  }
+
   showPassword.value = false
   formErrors.value = {}
   isEditModalOpen.value = true
@@ -139,69 +165,97 @@ const validateForm = () => {
 const handleSubmit = async () => {
   if (!validateForm()) return
 
-  isSubmitting.value = true
+  // Store item name BEFORE closing modal (closeEditModal sets editingItem to null)
+  const itemName = editingItem.value.name
+
+  // Save to pending changes (NO API CALL)
+  if (editingScope.value === 'team') {
+    pendingTeamChanges.value = {
+      ...pendingTeamChanges.value,
+      [editingItem.value.name]: editingValue.value
+    }
+  } else {
+    pendingUserChanges.value = {
+      ...pendingUserChanges.value,
+      [editingItem.value.name]: editingValue.value
+    }
+  }
+
+  closeEditModal()
+
+  // Show feedback
+  toast.info('Change saved', {
+    description: `${itemName} will be updated when you click "Save & Restart"`
+  })
+}
+
+const saveTeamChanges = async () => {
+  if (!hasTeamChanges.value) return
+
+  isSavingTeam.value = true
+  formErrors.value = {}
 
   try {
-    if (editingScope.value === 'team') {
-      const updatedQueryParams = {
-        ...currentTeamQueryParams.value,
-        [editingItem.value.name]: editingValue.value
-      }
+    const updatedQueryParams = { ...currentTeamQueryParams.value, ...pendingTeamChanges.value }
+    const updatedInstallation = await McpInstallationService.updateTeamQueryParams(
+      props.teamId,
+      props.installation.id,
+      updatedQueryParams
+    )
 
-      const updatedInstallation = await McpInstallationService.updateTeamQueryParams(
-        props.teamId,
-        props.installation.id,
-        updatedQueryParams
-      )
-
-      emit('installation-updated', updatedInstallation)
-
-      toast.success('Team query parameter updated', {
-        description: `${editingItem.value.name} has been updated successfully`
-      })
-    } else {
-      if (!props.currentUserConfig) {
-        const createData = {
-          user_url_query_params: {
-            [editingItem.value.name]: editingValue.value
-          }
-        }
-
-        const newConfig = await McpInstallationService.createUserConfiguration(
-          props.teamId,
-          props.installation.id,
-          createData
-        )
-
-        emit('configuration-updated', newConfig)
-      } else {
-        const updatedQueryParams = { ...(props.currentUserConfig.user_url_query_params as Record<string, any> || {}) }
-        updatedQueryParams[editingItem.value.name] = editingValue.value
-
-        const updatedConfig = await McpInstallationService.updateUserQueryParams(
-          props.teamId,
-          props.installation.id,
-          props.currentUserConfig.id,
-          updatedQueryParams
-        )
-
-        emit('configuration-updated', updatedConfig)
-      }
-
-      toast.success('User query parameter updated', {
-        description: `${editingItem.value.name} has been updated successfully`
-      })
-    }
-
-    closeEditModal()
+    pendingTeamChanges.value = {}
+    emit('installation-updated', updatedInstallation)
+    toast.success('Team query parameters updated', {
+      description: 'Server is restarting with new configuration...'
+    })
   } catch (error) {
-    console.error('Error updating query parameter:', error)
-    toast.error('Failed to update query parameter', {
+    toast.error('Failed to update team query parameters', {
       description: error instanceof Error ? error.message : 'An error occurred'
     })
-    formErrors.value.general = error instanceof Error ? error.message : 'Failed to update configuration'
   } finally {
-    isSubmitting.value = false
+    isSavingTeam.value = false
+  }
+}
+
+const saveUserChanges = async () => {
+  if (!hasUserChanges.value) return
+
+  isSavingUser.value = true
+  formErrors.value = {}
+
+  try {
+    if (!props.currentUserConfig) {
+      const createData = {
+        installation_id: props.installation.id,
+        user_url_query_params: pendingUserChanges.value
+      }
+      const newConfig = await McpInstallationService.createUserConfiguration(
+        props.teamId,
+        props.installation.id,
+        createData
+      )
+      emit('configuration-updated', newConfig)
+    } else {
+      const updatedQueryParams = { ...(props.currentUserConfig.user_url_query_params as Record<string, any> || {}), ...pendingUserChanges.value }
+      const updatedConfig = await McpInstallationService.updateUserQueryParams(
+        props.teamId,
+        props.installation.id,
+        props.currentUserConfig.id,
+        updatedQueryParams
+      )
+      emit('configuration-updated', updatedConfig)
+    }
+
+    pendingUserChanges.value = {}
+    toast.success('Your query parameters updated', {
+      description: 'Server is restarting with new configuration...'
+    })
+  } catch (error) {
+    toast.error('Failed to update user query parameters', {
+      description: error instanceof Error ? error.message : 'An error occurred'
+    })
+  } finally {
+    isSavingUser.value = false
   }
 }
 
@@ -276,6 +330,16 @@ const modalTitle = computed(() => {
           </div>
         </li>
       </ul>
+
+    <template #footer-actions>
+      <Button
+        :disabled="!hasTeamChanges || isSavingTeam"
+        @click="saveTeamChanges"
+      >
+        <Spinner v-if="isSavingTeam" class="mr-2" />
+        Save & Restart
+      </Button>
+    </template>
   </DsCard>
 
   <!-- User Query Parameters Card (visible to all) -->
@@ -331,6 +395,16 @@ const modalTitle = computed(() => {
           </div>
         </li>
       </ul>
+
+    <template #footer-actions>
+      <Button
+        :disabled="!hasUserChanges || isSavingUser"
+        @click="saveUserChanges"
+      >
+        <Spinner v-if="isSavingUser" class="mr-2" />
+        Save & Restart
+      </Button>
+    </template>
   </DsCard>
 
   <!-- Edit Modal -->
@@ -417,7 +491,7 @@ const modalTitle = computed(() => {
               :disabled="isSubmitting"
             >
               <Spinner v-if="isSubmitting" class="mr-2" />
-              Save
+              Apply
             </Button>
           </AlertDialogFooter>
         </form>

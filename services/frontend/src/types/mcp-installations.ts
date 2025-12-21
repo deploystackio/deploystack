@@ -50,6 +50,7 @@ export type InstallationStatus =
   | 'discovering_tools'
   | 'syncing_tools'
   | 'online'
+  | 'restarting'
   | 'offline'
   | 'error'
   | 'requires_reauth'

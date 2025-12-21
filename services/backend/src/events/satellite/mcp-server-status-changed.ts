@@ -21,6 +21,7 @@ const VALID_STATUSES = [
   'discovering_tools',
   'syncing_tools',
   'online',
+  'restarting',
   'offline',
   'error',
   'requires_reauth',

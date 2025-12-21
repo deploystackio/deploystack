@@ -3,6 +3,8 @@ import { requireAuthenticationAny } from '../../../middleware/oauthMiddleware';
 import { McpUserConfigurationService } from '../../../services/mcpUserConfigurationService';
 import { SatelliteCommandService } from '../../../services/satelliteCommandService';
 import { getDb } from '../../../db';
+import { mcpServerInstallations } from '../../../db/schema';
+import { eq, and } from 'drizzle-orm';
 import {
   updateUserConfigurationSchema,
   formatUserConfigResponse,
@@ -81,6 +83,30 @@ export default async function updateUserConfigurationRoute(server: FastifyInstan
           userId,
           authType
         }, 'Successfully updated MCP user configuration');
+
+        // Check if configuration requiring server restart was changed
+        const requiresRestart = !!(
+          updateData.user_env ||
+          updateData.user_args ||
+          updateData.user_headers ||
+          updateData.user_url_query_params
+        );
+
+        // Set status to 'restarting' if configuration changed
+        if (requiresRestart) {
+          await db.update(mcpServerInstallations)
+            .set({
+              status: 'restarting',
+              status_message: 'Configuration updated, server restarting...',
+              status_updated_at: new Date()
+            })
+            .where(
+              and(
+                eq(mcpServerInstallations.id, installationId),
+                eq(mcpServerInstallations.team_id, teamId)
+              )
+            );
+        }
 
         // Create satellite commands for immediate notification (restart MCP server with new config)
         try {

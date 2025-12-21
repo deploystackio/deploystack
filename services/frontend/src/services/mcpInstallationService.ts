@@ -145,14 +145,14 @@ export class McpInstallationService {
     installationId: string,
     teamArgs: string[]
   ): Promise<McpInstallation> {
-    const response = await fetch(`${this.baseUrl}/api/teams/${teamId}/mcp/installations/${installationId}`, {
-      method: 'PUT',
+    const response = await fetch(`${this.baseUrl}/api/teams/${teamId}/mcp/installations/${installationId}/args`, {
+      method: 'PATCH',
       credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        team_args: teamArgs
+        args: teamArgs
       }),
     })
 
@@ -173,8 +173,8 @@ export class McpInstallationService {
     installationId: string,
     teamEnv: Record<string, string>
   ): Promise<McpInstallation> {
-    const response = await fetch(`${this.baseUrl}/api/teams/${teamId}/mcp/installations/${installationId}`, {
-      method: 'PUT',
+    const response = await fetch(`${this.baseUrl}/api/teams/${teamId}/mcp/installations/${installationId}/environment-variables`, {
+      method: 'PATCH',
       credentials: 'include',
       headers: {
         'Content-Type': 'application/json',

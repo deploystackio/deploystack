@@ -27,6 +27,7 @@ const statusIcon = computed(() => {
     case 'connecting':
     case 'discovering_tools':
     case 'syncing_tools':
+    case 'restarting':
       return { component: Loader, class: 'fill-blue-500 text-blue-500 dark:fill-blue-400 dark:text-blue-400 animate-spin' }
     case 'offline':
     case 'requires_reauth':
@@ -52,6 +53,7 @@ const statusLabel = computed(() => {
     discovering_tools: 'Discovering Tools',
     syncing_tools: 'Syncing Tools',
     online: 'Online',
+    restarting: 'Restarting',
     offline: 'Offline',
     error: 'Error',
     requires_reauth: 'Reauth Required',

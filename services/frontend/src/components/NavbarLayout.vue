@@ -9,7 +9,7 @@ import { DsContentWrapper } from '@/components/ui/ds-content-wrapper'
     <DsNavbar />
 
     <!-- Main Content -->
-    <main class="pb-6">
+    <main class="py-8">
       <DsContentWrapper>
         <slot />
       </DsContentWrapper>
