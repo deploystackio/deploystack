@@ -21,7 +21,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "echarts": "^6.0.0",
-    "lucide-vue-next": "^0.556.0",
+    "lucide-vue-next": "^0.562.0",
     "marked": "^17.0.1",
     "mitt": "^3.0.1",
     "pinia": "^3.0.4",
