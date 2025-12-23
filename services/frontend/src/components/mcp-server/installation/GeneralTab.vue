@@ -323,7 +323,7 @@ onMounted(async () => {
                 <Calendar class="h-4 w-4 text-muted-foreground" />
                 <span class="font-medium">{{ t('mcpInstallations.details.installationDetails.fields.installed') }}</span> {{ formatDate(installation.created_at) }}
               </div>
-              <div class="flex items-center gap-1">
+              <div v-if="installation.updated_at" class="flex items-center gap-1">
                 <Calendar class="h-4 w-4 text-muted-foreground" />
                 <span class="font-medium">{{ t('mcpInstallations.details.installationDetails.fields.updated') }}</span> {{ formatDate(installation.updated_at) }}
               </div>

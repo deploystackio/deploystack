@@ -727,6 +727,46 @@ export interface InstallationResponse {
   server?: ServerDetails;
 }
 
+// Raw installation data from database (before formatting)
+interface RawInstallationListItem {
+  id: string;
+  installation_name: string;
+  installation_type: 'global' | 'team';
+  team_id: string;
+  created_at: Date;
+  last_used_at: Date | null;
+  status?: string;
+  status_message?: string | null;
+  status_updated_at?: Date | null;
+  last_health_check_at?: Date | null;
+  server?: {
+    id: string;
+    icon_url: string | null;
+    category_id: string | null;
+    runtime: string;
+  };
+}
+
+// Minimal response interface for list views (optimized)
+export interface InstallationListItemResponse {
+  id: string;
+  installation_name: string;
+  installation_type: 'global' | 'team';
+  team_id: string;
+  created_at: string;
+  last_used_at: string | null;
+  status?: string;
+  status_message?: string | null;
+  status_updated_at?: string;
+  last_health_check_at?: string | null;
+  server?: {
+    id: string;
+    icon_url: string | null;
+    category_id: string | null;
+    runtime: string;
+  };
+}
+
 export interface InstallationSuccessResponse {
   success: boolean;
   data: InstallationResponse;
@@ -734,7 +774,7 @@ export interface InstallationSuccessResponse {
 
 export interface InstallationListSuccessResponse {
   success: boolean;
-  data: InstallationResponse[];
+  data: InstallationListItemResponse[];
 }
 
 export interface InstallationUpdateSuccessResponse {
@@ -827,8 +867,21 @@ export function formatInstallationResponse(installation: InstallationData): Inst
 }
 
 /**
- * Converts array of InstallationData to array of InstallationResponse
+ * Converts array of minimal installation data to array of InstallationListItemResponse
+ * Optimized for list views - returns only essential fields including status
  */
-export function formatInstallationListResponse(installations: InstallationData[]): InstallationResponse[] {
-  return installations.map(formatInstallationResponse);
+export function formatInstallationListResponse(installations: RawInstallationListItem[]): InstallationListItemResponse[] {
+  return installations.map(installation => ({
+    id: installation.id,
+    installation_name: installation.installation_name,
+    installation_type: installation.installation_type,
+    team_id: installation.team_id,
+    created_at: installation.created_at.toISOString(),
+    last_used_at: installation.last_used_at?.toISOString() || null,
+    status: installation.status,
+    status_message: installation.status_message,
+    status_updated_at: installation.status_updated_at?.toISOString(),
+    last_health_check_at: installation.last_health_check_at?.toISOString() || null,
+    server: installation.server
+  }));
 }

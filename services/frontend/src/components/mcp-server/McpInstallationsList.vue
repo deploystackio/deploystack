@@ -23,6 +23,7 @@ import { McpInstallationService } from '@/services/mcpInstallationService'
 import { TeamService } from '@/services/teamService'
 import CategoryDisplay from '@/components/mcp-server/CategoryDisplay.vue'
 import McpServerAvatar from '@/components/mcp-server/McpServerAvatar.vue'
+import InstallationStatusBadge from '@/components/mcp-server/installation/InstallationStatusBadge.vue'
 import { useEventBus } from '@/composables/useEventBus'
 
 interface Props {
@@ -238,7 +239,7 @@ onUnmounted(() => {
             <div class="flex gap-x-4 items-center w-full">
               <!-- MCP Server Icon -->
               <McpServerAvatar
-                :icon-url="installation.server.icon_url"
+                :icon-url="installation.server?.icon_url"
                 :server-name="installation.installation_name"
                 size="sm"
                 rounded="md"
@@ -254,7 +255,7 @@ onUnmounted(() => {
                   <dt class="font-medium text-gray-700">{{ t('mcpInstallations.table.columns.category') }}</dt>
                   <dd>
                     <CategoryDisplay
-                      :category-id="installation.server.category_id"
+                      :category-id="installation.server?.category_id"
                       :show-not-provided="true"
                       text-class="text-xs"
                       icon-class="h-3 w-3 text-gray-600"
@@ -263,7 +264,7 @@ onUnmounted(() => {
                 </div>
                 <div>
                   <dt class="font-medium text-gray-700">{{ t('mcpInstallations.table.columns.runtime') }}</dt>
-                  <dd>{{ installation.server.runtime }}</dd>
+                  <dd>{{ installation.server?.runtime }}</dd>
                 </div>
                 <div>
                   <dt class="font-medium text-gray-700">{{ t('mcpInstallations.table.columns.installed') }}</dt>
@@ -277,15 +278,20 @@ onUnmounted(() => {
             class="flex shrink-0 items-center gap-x-4"
           >
             <div class="hidden sm:flex sm:flex-col sm:items-end">
+              <InstallationStatusBadge
+                :status-data="installation.status ? {
+                  installation_id: installation.id,
+                  status: installation.status,
+                  status_message: installation.status_message || null,
+                  status_updated_at: installation.status_updated_at || '',
+                  last_health_check_at: installation.last_health_check_at || null
+                } : null"
+                size="sm"
+                class="mt-1"
+              />
               <p v-if="installation.last_used_at" class="mt-1 text-xs/5 text-gray-500">
                 {{ t('mcpInstallations.table.values.lastUsed') }} <time :datetime="installation.last_used_at">{{ formatDate(installation.last_used_at) }}</time>
               </p>
-              <div v-else class="mt-1 flex items-center gap-x-1.5">
-                <div class="flex-none rounded-full bg-emerald-500/20 p-1">
-                  <div class="size-1.5 rounded-full bg-emerald-500" />
-                </div>
-                <p class="text-xs/5 text-gray-500">{{ t('mcpInstallations.table.values.available') }}</p>
-              </div>
             </div>
 
             <ChevronRight class="size-5 flex-none text-gray-400" aria-hidden="true" />

@@ -1,23 +1,26 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export interface McpServer {
+  // Fields always present (list view)
   id: string
-  name: string
-  description: string
-  language: string
   runtime: string
-  status: 'active' | 'deprecated' | 'maintenance'
+  icon_url?: string | null
+  category_id?: string
+
+  // Fields only present in detail view (optional)
+  name?: string
+  description?: string
+  language?: string
+  status?: 'active' | 'deprecated' | 'maintenance'
   author_name?: string | null
   website_url?: string | null
-  icon_url?: string | null
   repository_url?: string | null
   repository_source?: string | null
   repository_id?: string | null
   repository_subfolder?: string | null
   tags?: string[] | null
   environment_variables?: EnvironmentVariable[]
-  category_id?: string
-  transport_type: 'stdio' | 'http' | 'sse'
-  installation_methods: any[]
+  transport_type?: 'stdio' | 'http' | 'sse'
+  installation_methods?: any[]
   packages?: any | null
   remotes?: any | null
   // Three-tier configuration schema fields
@@ -65,25 +68,28 @@ export interface InstallationStatusData {
 }
 
 export interface McpInstallation {
+  // Fields always present (list view)
   id: string
   installation_name: string
-  server_id: string
-  server: McpServer
   installation_type: 'global' | 'team'
-  user_environment_variables: Record<string, string>
+  team_id: string
+  created_at: string
+  last_used_at: string | null
+  server?: McpServer
+
+  // Fields only present in detail view (optional)
+  server_id?: string
+  user_environment_variables?: Record<string, string>
   team_args?: string[]
   team_env?: Record<string, string>
   team_headers?: Record<string, string>
   team_url_query_params?: Record<string, string>
-  team_id: string
-  user_id: string
-  created_at: string
-  updated_at: string
-  last_used_at: string | null
-  status: InstallationStatus
-  status_message: string | null
-  status_updated_at: string
-  last_health_check_at: string | null
+  user_id?: string
+  updated_at?: string
+  status?: InstallationStatus
+  status_message?: string | null
+  status_updated_at?: string
+  last_health_check_at?: string | null
 }
 
 export interface InstallServerRequest {

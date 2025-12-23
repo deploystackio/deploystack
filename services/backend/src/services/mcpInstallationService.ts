@@ -105,10 +105,28 @@ export class McpInstallationService {
       userId
     }, 'Getting MCP installations for team');
 
+    // Optimized query: Select only the minimal columns needed for list view
     const installations = await this.db
       .select({
-        installation: this.mcpServerInstallations,
-        server: this.mcpServers
+        // Installation columns - minimal for list view
+        id: this.mcpServerInstallations.id,
+        installation_name: this.mcpServerInstallations.installation_name,
+        installation_type: this.mcpServerInstallations.installation_type,
+        team_id: this.mcpServerInstallations.team_id,
+        created_at: this.mcpServerInstallations.created_at,
+        last_used_at: this.mcpServerInstallations.last_used_at,
+
+        // Status fields for list display
+        status: this.mcpServerInstallations.status,
+        status_message: this.mcpServerInstallations.status_message,
+        status_updated_at: this.mcpServerInstallations.status_updated_at,
+        last_health_check_at: this.mcpServerInstallations.last_health_check_at,
+
+        // Server columns - minimal for list display
+        server_id: this.mcpServers.id,
+        server_icon_url: this.mcpServers.icon_url,
+        server_category_id: this.mcpServers.category_id,
+        server_runtime: this.mcpServers.runtime,
       })
       .from(this.mcpServerInstallations)
       .leftJoin(this.mcpServers, eq(this.mcpServerInstallations.server_id, this.mcpServers.id))
@@ -121,73 +139,25 @@ export class McpInstallationService {
       installationsFound: installations.length
     }, 'Retrieved MCP installations for team');
 
-    const processedInstallations = [];
-    
-    for (const row of installations) {
-      const teamEnv = row.installation.team_env 
-        ? await this.maskEnvironmentVariables(
-            row.installation.team_env, 
-            this.parseJsonField(row.server?.team_env_schema, [])
-          )
-        : null;
-
-      const teamArgs = row.installation.team_args 
-        ? await McpArgsStorage.retrieveTeamArgs(
-            row.installation.team_args,
-            this.parseJsonField(row.server?.team_args_schema, []),
-            { maskSecrets: true, decryptSecrets: false },
-            this.logger
-          )
-        : null;
-
-      processedInstallations.push({
-        ...row.installation,
-        installation_type: row.installation.installation_type as 'global' | 'team',
-        last_used_at: row.installation.last_used_at ?? undefined,
-        team_args: teamArgs,
-        team_env: teamEnv,
-        team_headers: row.installation.team_headers
-          ? this.parseJsonField(row.installation.team_headers, {})
-          : null,
-        team_url_query_params: row.installation.team_url_query_params
-          ? this.parseJsonField(row.installation.team_url_query_params, {})
-          : null,
-        server: row.server ? {
-          id: row.server.id,
-          name: row.server.name,
-          description: row.server.description,
-          language: row.server.language,
-          runtime: row.server.runtime,
-          status: row.server.status,
-          author_name: row.server.author_name,
-          website_url: row.server.website_url,
-          icon_url: row.server.icon_url,
-          repository_url: row.server.repository_url,
-        repository_source: row.server.repository_source,
-        repository_id: row.server.repository_id,
-        repository_subfolder: row.server.repository_subfolder,
-          tags: this.parseJsonField(row.server.tags, []),
-          packages: this.parseJsonField(row.server.packages, []),
-          remotes: this.parseJsonField(row.server.remotes, null),
-          template_args: this.parseJsonField(row.server.template_args, []),
-          template_env: this.parseJsonField(row.server.template_env, {}),
-          template_headers: this.parseJsonField(row.server.template_headers, []),
-          template_url_query_params: this.parseJsonField(row.server.template_url_query_params, []),
-          team_args_schema: this.parseJsonField(row.server.team_args_schema, []),
-          team_env_schema: this.parseJsonField(row.server.team_env_schema, []),
-          team_headers_schema: this.parseJsonField(row.server.team_headers_schema, []),
-          team_url_query_params_schema: this.parseJsonField(row.server.team_url_query_params_schema, []),
-          user_args_schema: this.parseJsonField(row.server.user_args_schema, []),
-          user_env_schema: this.parseJsonField(row.server.user_env_schema, []),
-          user_headers_schema: this.parseJsonField(row.server.user_headers_schema, []),
-          user_url_query_params_schema: this.parseJsonField(row.server.user_url_query_params_schema, []),
-          transport_type: row.server.transport_type,
-          requires_oauth: row.server.requires_oauth || false
-        } : undefined
-      });
-    }
-
-    return processedInstallations;
+    // Return simple mapped array without heavy processing (no env masking, no args decryption)
+    return installations.map(row => ({
+      id: row.id,
+      installation_name: row.installation_name,
+      installation_type: row.installation_type as 'global' | 'team',
+      team_id: row.team_id,
+      created_at: row.created_at,
+      last_used_at: row.last_used_at ?? undefined,
+      status: row.status,
+      status_message: row.status_message ?? undefined,
+      status_updated_at: row.status_updated_at ?? undefined,
+      last_health_check_at: row.last_health_check_at ?? undefined,
+      server: row.server_id ? {
+        id: row.server_id,
+        icon_url: row.server_icon_url,
+        category_id: row.server_category_id,
+        runtime: row.server_runtime,
+      } : undefined
+    } as any)); // Type assertion needed due to minimal response structure
   }
 
   async getInstallationById(installationId: string, teamId: string): Promise<McpInstallation | null> {
