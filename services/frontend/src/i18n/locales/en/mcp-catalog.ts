@@ -33,6 +33,7 @@ export default {
       edit: 'Edit',
       delete: 'Delete',
       view: 'View Details',
+      install: 'Install',
       manage: 'Manage',
       feature: 'Feature',
       unfeature: 'Unfeature',

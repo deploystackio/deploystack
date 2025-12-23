@@ -347,10 +347,10 @@ export default async function satelliteConfigRoute(server: FastifyInstance) {
       
       // Fetch MCP server installations for this satellite
       const mcpServerConfigs: Record<string, McpServerConfig> = {};
-      
+
       // Get ALL MCP server installations with server details (adapted from gateway logic)
       // Global satellites get all teams, team satellites get only their team
-      const whereClause = satelliteData.satellite_type === 'global' 
+      const whereClause = satelliteData.satellite_type === 'global'
         ? eq(mcpServers.status, 'active')
         : and(
             eq(mcpServers.status, 'active'),
@@ -371,7 +371,15 @@ export default async function satelliteConfigRoute(server: FastifyInstance) {
 
       // Process each installation using proven gateway logic
       for (const { installation, server, team_slug, created_by_user_id } of installations) {
-        if (!server || !team_slug) continue;
+        if (!server || !team_slug) {
+          request.log.warn({
+            operation: 'config_installation_skipped_missing_data',
+            installation_id: installation.id,
+            has_server: !!server,
+            has_team_slug: !!team_slug
+          }, 'Skipping installation - missing server or team_slug');
+          continue;
+        }
 
         try {
           // Create unique process identifier: {server_slug}-{team_slug}-{installation_id}
@@ -391,8 +399,11 @@ export default async function satelliteConfigRoute(server: FastifyInstance) {
 
             if (!packages || packages.length === 0) {
               request.log.warn({
+                operation: 'config_installation_skipped_no_packages',
+                installation_id: installation.id,
                 serverId: server.id,
-                serverName: server.name
+                serverName: server.name,
+                transport_type: server.transport_type
               }, 'No packages configuration found for stdio transport');
               continue;
             }
@@ -538,6 +549,8 @@ export default async function satelliteConfigRoute(server: FastifyInstance) {
 
             if (!remotes || remotes.length === 0) {
               request.log.warn({
+                operation: 'config_installation_skipped_no_remotes',
+                installation_id: installation.id,
                 serverId: server.id,
                 serverName: server.name,
                 transportType: server.transport_type
@@ -548,6 +561,8 @@ export default async function satelliteConfigRoute(server: FastifyInstance) {
             const remoteConfig = remotes[0];
             if (!remoteConfig || !remoteConfig.url) {
               request.log.warn({
+                operation: 'config_installation_skipped_no_url',
+                installation_id: installation.id,
                 serverId: server.id,
                 serverName: server.name,
                 hasRemoteConfig: !!remoteConfig

@@ -373,6 +373,16 @@ export class RemoteToolDiscoveryManager {
     // Phase 10: OAuth token injection for tool discovery
     let headers: Record<string, string> = {};
 
+    // Add regular headers from config (API keys, custom headers, etc.)
+    if (config.headers) {
+      Object.assign(headers, config.headers);
+      this.logger.debug({
+        operation: 'config_headers_added_tool_discovery',
+        server_name: serverName,
+        header_keys: Object.keys(config.headers)
+      }, `Added ${Object.keys(config.headers).length} headers from config for tool discovery`);
+    }
+
     if (config.requires_oauth && this.oauthTokenService) {
       if (!config.installation_id || !config.user_id || !config.team_id) {
         throw new Error(
@@ -491,10 +501,10 @@ export class RemoteToolDiscoveryManager {
       };
 
       this.logger.debug({
-        operation: 'oauth_headers_patched_global_fetch',
+        operation: 'headers_patched_global_fetch_tool_discovery',
         server_name: serverName,
         headers_to_inject: Object.keys(headers)
-      }, 'Patched global fetch to inject OAuth headers for tool discovery');
+      }, `Patched global fetch to inject ${Object.keys(headers).length} headers for tool discovery`);
     }
 
     try {

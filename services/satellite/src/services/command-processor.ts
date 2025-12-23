@@ -412,7 +412,7 @@ export class CommandProcessor {
     if (command.payload.transport_type === 'stdio') {
       return await this.handleSpawnStdioProcess(command);
     }
-    
+
     // Otherwise handle as HTTP proxy
     this.logger.debug({
       operation: 'command_spawn',
@@ -483,9 +483,9 @@ export class CommandProcessor {
     }
 
     const payload = command.payload;
-    
+
     // Validate required fields
-    if (!payload.installation_id || !payload.installation_name || !payload.team_id || 
+    if (!payload.installation_id || !payload.installation_name || !payload.team_id ||
         !payload.command || !payload.args) {
       throw new Error('Missing required fields in spawn command payload');
     }

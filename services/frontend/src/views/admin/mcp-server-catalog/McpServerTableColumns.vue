@@ -290,6 +290,11 @@ const handleEditServer = (serverId: string) => {
   router.push(`/admin/mcp-server-catalog/edit/${serverId}`)
 }
 
+// Navigate to install page
+const handleInstallServer = (serverId: string) => {
+  router.push(`/mcp-server/install/${serverId}`)
+}
+
 // Get repository icon based on platform
 const getRepositoryIcon = (platform?: string) => {
   switch (platform) {
@@ -637,6 +642,9 @@ const getRepositoryLabel = (platform?: string) => {
                 </DropdownMenuItem>
                 <DropdownMenuItem @click="handleEditServer(server.id)">
                   {{ t('mcpCatalog.table.actions.edit') }}
+                </DropdownMenuItem>
+                <DropdownMenuItem @click="handleInstallServer(server.id)">
+                  {{ t('mcpCatalog.table.actions.install') }}
                 </DropdownMenuItem>
                 <DropdownMenuItem @click="handleStatusClick(server)">
                   {{ server.status === 'disabled' ? t('mcpCatalog.table.actions.enable') : t('mcpCatalog.table.actions.disable') }}

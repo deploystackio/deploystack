@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n'
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
 import { toast } from 'vue-sonner'
 import { Button } from '@/components/ui/button'
+import { ButtonGroup } from '@/components/ui/button-group'
 import { Badge } from '@/components/ui/badge'
 import CategoryDisplay from '@/components/mcp-server/CategoryDisplay.vue'
 import ContentWrapper from '@/components/ContentWrapper.vue'
@@ -352,6 +353,11 @@ const handleEditServer = () => {
   router.push(`/admin/mcp-server-catalog/edit/${serverId}`)
 }
 
+// Navigate to install page
+const handleInstallServer = () => {
+  router.push(`/mcp-server/install/${serverId}`)
+}
+
 // Get repository icon based on platform
 const getRepositoryIcon = (platform: string | undefined) => {
   switch (platform) {
@@ -402,9 +408,14 @@ const getRepositoryLabel = (platform: string | undefined) => {
 
       <template #actions>
         <div v-if="server" class="flex items-center gap-2">
-          <Button variant="outline" @click="handleEditServer">
-            Edit
-          </Button>
+          <ButtonGroup>
+            <Button variant="outline" @click="handleInstallServer">
+              Install
+            </Button>
+            <Button variant="outline" @click="handleEditServer">
+              Edit
+            </Button>
+          </ButtonGroup>
           <span class="text-neutral-300">|</span>
           <Button variant="outline" :disabled="isDeleting" @click="showDeleteDialog = true" class="text-red-600 hover:text-red-600">
             Delete
