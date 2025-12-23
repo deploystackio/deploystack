@@ -7,9 +7,9 @@ import { DsPageHeading } from '@/components/ui/ds-page-heading'
 import { Button } from '@/components/ui/button'
 import { toast } from 'vue-sonner'
 import { useEventBus } from '@/composables/useEventBus'
+import { useInstallationsStream } from '@/composables/mcp-server'
 import McpInstallationsCard from '@/components/mcp-server/McpInstallationsCard.vue'
 import McpInstallationsEmptyState from '@/components/mcp-server/McpInstallationsEmptyState.vue'
-import type { McpInstallation } from '@/types/mcp-installations'
 import { McpInstallationService } from '@/services/mcpInstallationService'
 import { TeamService, type Team } from '@/services/teamService'
 import TeamUsageIndicator from '@/components/teams/TeamUsageIndicator.vue'
@@ -18,10 +18,14 @@ const { t } = useI18n()
 const router = useRouter()
 const eventBus = useEventBus()
 
-// State
-const installations = ref<McpInstallation[]>([])
-const isLoading = ref(true)
-const error = ref<string | null>(null)
+// SSE Stream for installations
+const {
+  installations,
+  isLoading,
+  error,
+  connect: connectInstallationsStream,
+  disconnect: disconnectInstallationsStream
+} = useInstallationsStream()
 
 // Team context using event bus storage
 const selectedTeam = ref<Team | null>(null)
@@ -75,29 +79,20 @@ const handleTeamSelected = async (data: { teamId: string; teamName: string }) =>
       selectedTeam.value = { id: data.teamId, name: data.teamName } as Team
     }
 
-    fetchInstallations() // Reload installations for new team
+    // Reconnect stream for new team
+    if (selectedTeam.value) {
+      const url = McpInstallationService.getStreamUrl(selectedTeam.value.id)
+      connectInstallationsStream(url)
+    }
   } catch (error) {
     console.error('Error handling team selection:', error)
     selectedTeam.value = { id: data.teamId, name: data.teamName } as Team
-    fetchInstallations()
-  }
-}
 
-// Methods
-const fetchInstallations = async (): Promise<void> => {
-  if (!selectedTeam.value) return
-
-  try {
-    isLoading.value = true
-    error.value = null
-
-    installations.value = await McpInstallationService.getTeamInstallations(selectedTeam.value.id)
-
-  } catch (err) {
-    error.value = err instanceof Error ? err.message : 'An unknown error occurred'
-    installations.value = []
-  } finally {
-    isLoading.value = false
+    // Reconnect stream for new team even if team fetch failed
+    if (selectedTeam.value) {
+      const url = McpInstallationService.getStreamUrl(selectedTeam.value.id)
+      connectInstallationsStream(url)
+    }
   }
 }
 
@@ -138,7 +133,8 @@ const handleRemoveInstallation = async (installationId: string) => {
 
 // Event handlers
 const handleInstallationsUpdate = () => {
-  fetchInstallations()
+  // Stream will automatically receive updates
+  // This handler can now trigger UI notifications if needed
 }
 
 const handleNotificationShow = (data: { message: string; type: string }) => {
@@ -215,9 +211,10 @@ onMounted(async () => {
   // Initialize team context first
   await initializeSelectedTeam()
 
-  // Initial fetch after team is set
+  // Connect SSE stream
   if (selectedTeam.value) {
-    await fetchInstallations()
+    const url = McpInstallationService.getStreamUrl(selectedTeam.value.id)
+    connectInstallationsStream(url)
   }
 
   // Check for pending notifications from storage
@@ -237,6 +234,9 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
+  // Disconnect SSE stream
+  disconnectInstallationsStream()
+
   // Clean up event listeners to prevent memory leaks
   eventBus.off('team-selected', handleTeamSelected)
   eventBus.off('mcp-installations-updated', handleInstallationsUpdate)

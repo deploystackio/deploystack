@@ -728,7 +728,7 @@ export interface InstallationResponse {
 }
 
 // Raw installation data from database (before formatting)
-interface RawInstallationListItem {
+export interface RawInstallationListItem {
   id: string;
   installation_name: string;
   installation_type: 'global' | 'team';

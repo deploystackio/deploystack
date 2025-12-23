@@ -24648,6 +24648,40 @@
         }
       }
     },
+    "/api/teams/{teamId}/mcp/installations/stream": {
+      "get": {
+        "summary": "Stream MCP installations (SSE)",
+        "tags": [
+          "MCP Installations"
+        ],
+        "description": "Real-time installations list stream via Server-Sent Events. Sends initial snapshot then streams list changes as they occur (new installations, deletions, status updates). Connection automatically reconnects on disconnect.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "teamId",
+            "required": true,
+            "description": "Team ID is required"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
     "/api/teams/{teamId}/mcp/installations/{installationId}": {
       "get": {
         "summary": "Get MCP installation by ID",

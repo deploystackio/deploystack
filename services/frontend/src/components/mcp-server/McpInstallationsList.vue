@@ -246,7 +246,7 @@ onUnmounted(() => {
                 class="shrink-0 hidden sm:flex"
               />
 
-              <dl class="flex-1 grid grid-cols-2 gap-x-8 gap-y-1 text-xs/5 text-gray-500 sm:grid-cols-4">
+              <dl class="flex-1 grid grid-cols-2 gap-x-8 gap-y-1 text-xs/5 text-gray-500 sm:grid-cols-3">
                 <div>
                   <dt class="font-medium text-gray-700">Satellite</dt>
                   <dd>{{ installation.installation_type }}</dd>
@@ -265,10 +265,6 @@ onUnmounted(() => {
                 <div>
                   <dt class="font-medium text-gray-700">{{ t('mcpInstallations.table.columns.runtime') }}</dt>
                   <dd>{{ installation.server?.runtime }}</dd>
-                </div>
-                <div>
-                  <dt class="font-medium text-gray-700">{{ t('mcpInstallations.table.columns.installed') }}</dt>
-                  <dd>{{ formatDate(installation.created_at) }}</dd>
                 </div>
               </dl>
             </div>

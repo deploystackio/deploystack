@@ -32,6 +32,13 @@ export class McpInstallationService {
   }
 
   /**
+   * Get SSE stream URL for team's MCP installations
+   */
+  static getStreamUrl(teamId: string): string {
+    return `${this.baseUrl}/api/teams/${teamId}/mcp/installations/stream`
+  }
+
+  /**
    * Get a specific MCP installation by ID
    */
   static async getInstallationById(teamId: string, installationId: string): Promise<McpInstallation> {
