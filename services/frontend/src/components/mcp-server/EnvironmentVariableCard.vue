@@ -224,7 +224,7 @@ watch(() => environmentVariables.value, (newVariables) => {
                   >
                     <!-- Horizontal line separator -->
                     <div
-                      v-if="index > 0 && requiredVariables.length > 1"
+                      v-if="Number(index) > 0 && requiredVariables.length > 1"
                       class="border-t border-gray-200 my-8"
                     ></div>
             <Label :for="env.name" class="text-sm font-medium">
@@ -309,7 +309,7 @@ watch(() => environmentVariables.value, (newVariables) => {
                   >
                     <!-- Horizontal line separator -->
                     <div
-                      v-if="index > 0 && optionalVariables.length > 1"
+                      v-if="Number(index) > 0 && optionalVariables.length > 1"
                       class="border-t border-gray-200 my-8"
                     ></div>
             <Label :for="env.name" class="text-sm font-medium">
