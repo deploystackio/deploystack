@@ -132,8 +132,9 @@ export class RemoteToolDiscoveryManager {
 
   /**
    * Determine status based on error type
+   * Made static to allow usage from McpServerWrapper for tool execution failures
    */
-  private getStatusFromError(errorMessage: string): {
+  public static getStatusFromError(errorMessage: string): {
     status: 'offline' | 'error' | 'requires_reauth';
     message: string;
   } {
@@ -145,7 +146,8 @@ export class RemoteToolDiscoveryManager {
         lowerError.includes('etimedout') ||
         lowerError.includes('timeout') ||
         lowerError.includes('connection refused') ||
-        lowerError.includes('network error')) {
+        lowerError.includes('network error') ||
+        lowerError.includes('fetch failed')) {
       return { status: 'offline', message: `Server not responding: ${errorMessage}` };
     }
 
@@ -335,8 +337,9 @@ export class RemoteToolDiscoveryManager {
 
   /**
    * Discover tools from a specific remote MCP server using official MCP SDK
+   * Made public to allow re-discovery from McpServerWrapper on server recovery
    */
-  private async discoverServerTools(serverName: string): Promise<CachedTool[]> {
+  public async discoverServerTools(serverName: string): Promise<CachedTool[]> {
     if (!this.configManager) {
       throw new Error('Configuration manager not available');
     }
@@ -580,14 +583,14 @@ export class RemoteToolDiscoveryManager {
 
       // Emit status change based on error type
       if (config.installation_id && config.team_id) {
-        const { status, message } = this.getStatusFromError(errorMessage);
+        const { status, message } = RemoteToolDiscoveryManager.getStatusFromError(errorMessage);
         this.emitStatusChange(config.installation_id, config.team_id, status, message);
       }
 
       // Phase 10: Notify about discovery failure
       if (this.statusCallback) {
         const serverSlug = config.server_slug || config.server_name || serverName;
-        const { status, message } = this.getStatusFromError(errorMessage);
+        const { status, message } = RemoteToolDiscoveryManager.getStatusFromError(errorMessage);
         this.statusCallback(serverSlug, status, message);
       }
 
@@ -834,13 +837,13 @@ export class RemoteToolDiscoveryManager {
             continue;
           }
 
-          // Remove existing tools for this server
+          // Discover new tools first (don't remove old tools until discovery succeeds)
+          const serverTools = await this.discoverServerTools(serverName);
+
+          // Only remove old tools after successful discovery
           this.cachedTools = this.cachedTools.filter(tool => tool.serverName !== serverName);
 
-          // Discover new tools
-          const serverTools = await this.discoverServerTools(serverName);
-          
-          // Add to cached tools
+          // Add newly discovered tools
           this.cachedTools.push(...serverTools);
           
           // Update server tool state

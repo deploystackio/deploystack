@@ -50,6 +50,9 @@ export class McpServerWrapper {
   private transports = new Map<string, { transport: StreamableHTTPServerTransport; server: Server }>();
   private registeredTools = new Set<string>();
 
+  // Track servers currently undergoing recovery to prevent concurrent re-discoveries
+  private recoveryInProgress = new Set<string>();
+
   // Request log batching for mcp.request.logs events
   private requestLogBuffer: BufferedRequestEntry[] = [];
   private requestLogFlushTimeout: NodeJS.Timeout | null = null;
@@ -338,15 +341,31 @@ export class McpServerWrapper {
     // Phase 10: Check if server is available before executing tool
     const serverStatus = this.toolDiscoveryManager.getServerStatus(cachedTool.serverSlug);
     if (serverStatus && serverStatus.status !== 'online') {
-      this.logger.warn({
-        operation: 'execute_mcp_tool_server_unavailable',
-        tool_path: toolPath,
-        server_slug: cachedTool.serverSlug,
-        server_status: serverStatus.status,
-        status_message: serverStatus.message
-      }, `Tool execution blocked - server is ${serverStatus.status}: ${toolPath}`);
+      // Allow execution attempts for 'offline' and 'error' states to detect recovery
+      // Block execution only for transitional states and permanent failures
+      const allowRecoveryAttempt = serverStatus.status === 'offline' || serverStatus.status === 'error';
+      const shouldBlock = !allowRecoveryAttempt;
 
-      return this.createUnavailableServerResponse(toolPath, cachedTool.serverSlug, serverStatus.status, serverStatus.message);
+      if (shouldBlock) {
+        this.logger.warn({
+          operation: 'execute_mcp_tool_server_unavailable',
+          tool_path: toolPath,
+          server_slug: cachedTool.serverSlug,
+          server_status: serverStatus.status,
+          status_message: serverStatus.message
+        }, `Tool execution blocked - server is ${serverStatus.status}: ${toolPath}`);
+
+        return this.createUnavailableServerResponse(toolPath, cachedTool.serverSlug, serverStatus.status, serverStatus.message);
+      } else {
+        // Server is offline/error - allow execution attempt to detect recovery
+        this.logger.info({
+          operation: 'execute_mcp_tool_recovery_attempt',
+          tool_path: toolPath,
+          server_slug: cachedTool.serverSlug,
+          server_status: serverStatus.status,
+          status_message: serverStatus.message
+        }, `Allowing tool execution to detect potential server recovery: ${toolPath}`);
+      }
     }
 
     // Get config for disabled check and request logging context
@@ -377,11 +396,47 @@ export class McpServerWrapper {
     let errorMessage: string | undefined;
     let result: any;
 
+    // Get server status BEFORE execution to detect recovery
+    const serverStatusBefore = this.toolDiscoveryManager.getServerStatus(cachedTool.serverSlug);
+    const wasOfflineOrError = serverStatusBefore?.status === 'offline' ||
+                              serverStatusBefore?.status === 'error' ||
+                              serverStatusBefore?.status === 'requires_reauth';
+
     try {
       result = await this.executeToolCall(namespacedToolName, toolArguments);
       success = true;
+
+      // SUCCESS PATH: Check if server was previously offline/error
+      if (wasOfflineOrError) {
+        this.logger.info({
+          operation: 'server_recovery_detected',
+          server_slug: cachedTool.serverSlug,
+          server_name: cachedTool.serverName,
+          previous_status: serverStatusBefore?.status,
+          tool_name: namespacedToolName
+        }, `Server ${cachedTool.serverSlug} recovered - triggering re-discovery`);
+
+        // Trigger re-discovery asynchronously (don't block tool response)
+        this.handleServerRecovery(cachedTool.serverName, cachedTool.serverSlug, config).catch(error => {
+          this.logger.error({
+            operation: 'server_recovery_failed',
+            server_slug: cachedTool.serverSlug,
+            error: error instanceof Error ? error.message : String(error)
+          }, `Failed to re-discover tools after recovery: ${error}`);
+        });
+      }
+
     } catch (error) {
       errorMessage = error instanceof Error ? error.message : String(error);
+
+      // FAILURE PATH: Emit status change after retries exhausted
+      await this.handleToolExecutionFailure(
+        cachedTool.serverName,
+        cachedTool.serverSlug,
+        config,
+        errorMessage
+      );
+
       throw error;
     } finally {
       const responseTimeMs = Date.now() - startTime;
@@ -583,7 +638,14 @@ export class McpServerWrapper {
         content: result.content || [{ type: 'text', text: JSON.stringify(result) }]
       };
     } else {
-      const result = await this.handleHttpToolCall(serverName, originalToolName, namespacedToolName, jsonRpcRequest);
+      // Use retry wrapper for HTTP/SSE tool calls
+      const result = await this.executeHttpToolCallWithRetry(
+        serverName,
+        originalToolName,
+        namespacedToolName,
+        jsonRpcRequest,
+        3 // maxRetries
+      );
       // MCP SDK expects content array format
       return {
         content: result.content || [{ type: 'text', text: JSON.stringify(result) }]
@@ -939,6 +1001,223 @@ export class McpServerWrapper {
           error: closeError instanceof Error ? closeError.message : String(closeError)
         }, `Failed to close HTTP client connection for ${serverName}`);
       }
+    }
+  }
+
+  /**
+   * Execute HTTP tool call with retry logic
+   * Retries connection errors 2-3 times with exponential backoff
+   * Does NOT retry auth errors or OAuth errors
+   */
+  private async executeHttpToolCallWithRetry(
+    serverName: string,
+    originalToolName: string,
+    namespacedToolName: string,
+    jsonRpcRequest: any,
+    maxRetries: number = 3
+  ): Promise<any> {
+    const retryableErrors = ['ECONNREFUSED', 'ETIMEDOUT', 'ENOTFOUND', 'fetch failed', 'network error'];
+    const nonRetryableErrors = ['401', '403', 'unauthorized', 'forbidden', 'oauth', 'authorization required'];
+
+    let lastError: Error | null = null;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        // Call existing handleHttpToolCall method
+        return await this.handleHttpToolCall(serverName, originalToolName, namespacedToolName, jsonRpcRequest);
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+        const errorMessage = lastError.message.toLowerCase();
+
+        // Check if error is non-retryable (auth/OAuth errors)
+        const isNonRetryable = nonRetryableErrors.some(pattern => errorMessage.includes(pattern));
+        if (isNonRetryable) {
+          this.logger.warn({
+            operation: 'http_tool_call_non_retryable_error',
+            server_name: serverName,
+            attempt,
+            error: lastError.message
+          }, `Non-retryable error on attempt ${attempt}/${maxRetries} - giving up`);
+          throw lastError;
+        }
+
+        // Check if error is retryable (connection errors)
+        const isRetryable = retryableErrors.some(pattern => errorMessage.includes(pattern));
+        if (!isRetryable) {
+          this.logger.warn({
+            operation: 'http_tool_call_unknown_error',
+            server_name: serverName,
+            attempt,
+            error: lastError.message
+          }, `Unknown error on attempt ${attempt}/${maxRetries} - not retrying`);
+          throw lastError;
+        }
+
+        // Last attempt - don't wait, just throw
+        if (attempt === maxRetries) {
+          this.logger.error({
+            operation: 'http_tool_call_retries_exhausted',
+            server_name: serverName,
+            total_attempts: maxRetries,
+            error: lastError.message
+          }, `All ${maxRetries} retry attempts exhausted for ${serverName}`);
+          throw lastError;
+        }
+
+        // Calculate exponential backoff: 500ms, 1000ms, 2000ms
+        const backoffMs = 500 * Math.pow(2, attempt - 1);
+
+        this.logger.warn({
+          operation: 'http_tool_call_retry',
+          server_name: serverName,
+          attempt,
+          max_retries: maxRetries,
+          backoff_ms: backoffMs,
+          error: lastError.message
+        }, `Retryable error on attempt ${attempt}/${maxRetries} - retrying in ${backoffMs}ms`);
+
+        // Wait before next attempt
+        await new Promise(resolve => setTimeout(resolve, backoffMs));
+      }
+    }
+
+    // Should never reach here, but TypeScript needs it
+    throw lastError || new Error('Retry logic failed unexpectedly');
+  }
+
+  /**
+   * Handle tool execution failure - emit status change events
+   * Called after retry attempts are exhausted
+   */
+  private async handleToolExecutionFailure(
+    serverName: string,
+    serverSlug: string,
+    config: any | undefined,
+    errorMessage: string
+  ): Promise<void> {
+    if (!this.toolDiscoveryManager) {
+      return;
+    }
+
+    this.logger.error({
+      operation: 'tool_execution_failed_emitting_status',
+      server_name: serverName,
+      server_slug: serverSlug,
+      error: errorMessage
+    }, `Tool execution failed after retries - updating server status`);
+
+    // Import getStatusFromError from RemoteToolDiscoveryManager
+    const { RemoteToolDiscoveryManager } = await import('../services/remote-tool-discovery-manager');
+    const { status, message } = RemoteToolDiscoveryManager.getStatusFromError(errorMessage);
+
+    // Update local status tracking
+    this.toolDiscoveryManager.setServerStatus(serverSlug, status, message);
+
+    // Emit status change to backend (if we have installation context)
+    if (config?.installation_id && config?.team_id && this.eventBus) {
+      this.eventBus.emit('mcp.server.status_changed', {
+        installation_id: config.installation_id,
+        team_id: config.team_id,
+        status,
+        status_message: message,
+        timestamp: new Date().toISOString()
+      });
+
+      this.logger.info({
+        operation: 'server_status_emitted_on_failure',
+        server_slug: serverSlug,
+        installation_id: config.installation_id,
+        status,
+        status_message: message
+      }, `Emitted status change to backend: ${status}`);
+    }
+  }
+
+  /**
+   * Handle server recovery - trigger tool re-discovery
+   * Called when tool succeeds but server was previously offline/error
+   */
+  private async handleServerRecovery(
+    serverName: string,
+    serverSlug: string,
+    config: any | undefined
+  ): Promise<void> {
+    if (!this.toolDiscoveryManager) {
+      return;
+    }
+
+    // Debounce: skip if already recovering
+    if (this.recoveryInProgress.has(serverSlug)) {
+      this.logger.debug({
+        operation: 'server_recovery_skipped_already_in_progress',
+        server_slug: serverSlug
+      }, 'Skipping re-discovery - already in progress');
+      return;
+    }
+
+    this.recoveryInProgress.add(serverSlug);
+
+    try {
+      this.logger.info({
+        operation: 'server_recovery_rediscovery_start',
+        server_name: serverName,
+        server_slug: serverSlug
+      }, `Starting tool re-discovery after server recovery: ${serverSlug}`);
+
+      // Emit "connecting" status to backend
+      if (config?.installation_id && config?.team_id && this.eventBus) {
+        this.eventBus.emit('mcp.server.status_changed', {
+          installation_id: config.installation_id,
+          team_id: config.team_id,
+          status: 'connecting',
+          status_message: 'Server recovered, re-discovering tools',
+          timestamp: new Date().toISOString()
+        });
+      }
+
+      // Update local status
+      this.toolDiscoveryManager.setServerStatus(serverSlug, 'connecting', 'Server recovered, re-discovering tools');
+
+      // Get RemoteToolDiscoveryManager instance from UnifiedToolDiscoveryManager
+      const remoteToolManager = (this.toolDiscoveryManager as any).remoteToolManager;
+
+      if (!remoteToolManager) {
+        throw new Error('RemoteToolDiscoveryManager not available');
+      }
+
+      // Trigger tool re-discovery (this will emit "discovering_tools" → "online" statuses)
+      await remoteToolManager.discoverServerTools(serverName);
+
+      this.logger.info({
+        operation: 'server_recovery_rediscovery_success',
+        server_slug: serverSlug
+      }, `Tool re-discovery successful after recovery: ${serverSlug}`);
+
+    } catch (error) {
+      const errMsg = error instanceof Error ? error.message : String(error);
+
+      this.logger.error({
+        operation: 'server_recovery_rediscovery_failed',
+        server_slug: serverSlug,
+        error: errMsg
+      }, `Tool re-discovery failed after recovery: ${errMsg}`);
+
+      // Emit error status
+      if (config?.installation_id && config?.team_id && this.eventBus) {
+        this.eventBus.emit('mcp.server.status_changed', {
+          installation_id: config.installation_id,
+          team_id: config.team_id,
+          status: 'error',
+          status_message: `Re-discovery failed: ${errMsg}`,
+          timestamp: new Date().toISOString()
+        });
+      }
+
+      this.toolDiscoveryManager.setServerStatus(serverSlug, 'error', `Re-discovery failed: ${errMsg}`);
+
+      // Don't throw - recovery failure is non-fatal (tool execution already succeeded)
+    } finally {
+      this.recoveryInProgress.delete(serverSlug);
     }
   }
 
