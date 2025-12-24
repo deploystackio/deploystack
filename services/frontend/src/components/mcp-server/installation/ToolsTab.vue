@@ -6,6 +6,7 @@ import { useMcpToolsStore } from '@/stores/mcpToolsStore'
 import { McpToolsService } from '@/services/mcpToolsService'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { ButtonGroup } from '@/components/ui/button-group'
 import { Spinner } from '@/components/ui/spinner'
@@ -36,6 +37,7 @@ const isLoading = ref(true)
 const error = ref<string | null>(null)
 const selectedToolIds = ref<string[]>([])
 const isBulkToggling = ref(false)
+const searchQuery = ref('')
 
 // Track expanded rows
 const expandedRows = ref<Set<string>>(new Set())
@@ -62,6 +64,19 @@ const calculateTokenPercentage = (tokenCount: number) => {
   const percentage = (tokenCount / tools.value.total_tokens) * 100
   return `${percentage.toFixed(1)}%`
 }
+
+// Filter tools based on search query
+const filteredTools = computed(() => {
+  if (!hasTools.value) return []
+  if (!searchQuery.value) return tools.value.tools
+
+  const query = searchQuery.value.toLowerCase()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return tools.value.tools.filter((tool: any) =>
+    tool.tool_name.toLowerCase().includes(query) ||
+    (tool.description && tool.description.toLowerCase().includes(query))
+  )
+})
 
 // Load tools on component mount
 onMounted(async () => {
@@ -250,8 +265,14 @@ async function handleBulkToggle(isDisabled: boolean) {
         :disabled-count="disabledToolsCount"
       />
 
-      <!-- Bulk Actions -->
-      <div class="flex items-center justify-end gap-2 mb-4">
+      <!-- Search and Bulk Actions -->
+      <div class="flex items-center justify-between gap-4 mb-4">
+        <Input
+          :placeholder="t('mcpInstallations.details.tools.table.search')"
+          v-model="searchQuery"
+          class="max-w-sm"
+        />
+
         <ButtonGroup aria-label="Bulk tool actions">
           <Button
             variant="outline"
@@ -296,7 +317,7 @@ async function handleBulkToggle(isDisabled: boolean) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            <template v-for="tool in tools.tools" :key="tool.id">
+            <template v-for="tool in filteredTools" :key="tool.id">
               <!-- Main Tool Row (clickable) -->
               <TableRow
                 class="cursor-pointer hover:bg-muted/50"
@@ -382,7 +403,7 @@ async function handleBulkToggle(isDisabled: boolean) {
         <div class="flex-1 text-sm text-muted-foreground">
           {{ t('mcpInstallations.details.tools.selection.rowsSelected', {
             selected: selectedToolIds.length,
-            total: tools.tools.length
+            total: filteredTools.length
           }) }}
         </div>
       </div>

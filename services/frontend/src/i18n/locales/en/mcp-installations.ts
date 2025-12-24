@@ -634,6 +634,7 @@ export default {
         description: 'No tools have been discovered yet for this MCP server installation. Tools are discovered automatically when the satellite starts the MCP server.'
       },
       table: {
+        search: 'Search tools...',
         columns: {
           enabled: 'Enabled',
           toolName: 'Tool Name',
