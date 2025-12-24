@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.55.0 (2025-12-24)
+
+* feat(all): add real-time SSE streaming for MCP installations list ([420b99e99af44ae12cd04dca5a05eb60a130aad2](https://github.com/deploystackio/deploystack/commit/420b99e99af44ae12cd04dca5a05eb60a130aad2))
+* feat(backend): add SSE endpoint for real-time MCP installation status streaming ([198bd9eaba4123a184752f9c77c1746766ad91b3](https://github.com/deploystackio/deploystack/commit/198bd9eaba4123a184752f9c77c1746766ad91b3))
+* feat(backend): optimize installation data retrieval for list views ([85ffc4c4bdd9a0fe43bdf86eb3dd48d93f645ae2](https://github.com/deploystackio/deploystack/commit/85ffc4c4bdd9a0fe43bdf86eb3dd48d93f645ae2))
+* chore(all): bump vite from 7.2.7 to 7.3.0 ([35da3c2261eb8218b9b81f0815f54fc62f8c4e27](https://github.com/deploystackio/deploystack/commit/35da3c2261eb8218b9b81f0815f54fc62f8c4e27))
+
 ## 0.54.0 (2025-12-19)
 
 * feat(all): Add MCP installation settings, request logs API, and SSE streaming 5f44e43c5fa95527676acc3302c1ac8e764cefe5
