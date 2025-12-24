@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.51.0 (2025-12-24)
+
+* feat(all): add real-time SSE streaming for MCP installations list ([420b99e99af44ae12cd04dca5a05eb60a130aad2](https://github.com/deploystackio/deploystack/commit/420b99e99af44ae12cd04dca5a05eb60a130aad2))
+* feat(frontend): add install action to MCP server catalog and details ([17cbef9afe0aa4c55f3118eff968a129f497cd16](https://github.com/deploystackio/deploystack/commit/17cbef9afe0aa4c55f3118eff968a129f497cd16))
+* feat(frontend): add installation metrics panel with requests graph ([006955f2e95c5704ca5942940b6e8c302e0ebcf7](https://github.com/deploystackio/deploystack/commit/006955f2e95c5704ca5942940b6e8c302e0ebcf7))
+* feat(frontend): add real-time SSE status streaming for MCP installations ([8c02a5256b44ec270eb503c7d6c767926eea55d0](https://github.com/deploystackio/deploystack/commit/8c02a5256b44ec270eb503c7d6c767926eea55d0))
+* feat(frontend): add refresh button to installation detail pages ([dd7ca02d680fd566e83ab0ba7f30ca493c49b1d5](https://github.com/deploystackio/deploystack/commit/dd7ca02d680fd566e83ab0ba7f30ca493c49b1d5))
+* feat(frontend): add specifications display and requests graph to installation general tab ([fa47a3143d59adb7dff72954140f9fa04ab7e02b](https://github.com/deploystackio/deploystack/commit/fa47a3143d59adb7dff72954140f9fa04ab7e02b))
+* feat(frontend): improve MCP server configuration UX ([4cdb89bb7fb84b8db51a7a387b8d9e80ccdc28a5](https://github.com/deploystackio/deploystack/commit/4cdb89bb7fb84b8db51a7a387b8d9e80ccdc28a5))
+* feat(frontend): redesign installation general tab with requests tracking and card layout ([727102435b9cac6f12cddf0746ef15cd9a8151ac](https://github.com/deploystackio/deploystack/commit/727102435b9cac6f12cddf0746ef15cd9a8151ac))
+* feat(frontend): redesign mcp installation general tab with cards and requests graph ([8a7b00a1ca505a06133bac7003c080399a808089](https://github.com/deploystackio/deploystack/commit/8a7b00a1ca505a06133bac7003c080399a808089))
+* feat(frontend): replace InstallationInfo with GeneralTab and add metrics panel ([63a242fd8fa297737cfcdf77de42fb11ca9cfc93](https://github.com/deploystackio/deploystack/commit/63a242fd8fa297737cfcdf77de42fb11ca9cfc93))
+* chore(all): bump vite from 7.2.7 to 7.3.0 ([35da3c2261eb8218b9b81f0815f54fc62f8c4e27](https://github.com/deploystackio/deploystack/commit/35da3c2261eb8218b9b81f0815f54fc62f8c4e27))
+* fix(frontend): add empty state to mcp server config page ([84b39435a6a45e7d912310ef39a15dfcb2a246fa](https://github.com/deploystackio/deploystack/commit/84b39435a6a45e7d912310ef39a15dfcb2a246fa))
+* fix(frontend): save configuration schema deletions to storage ([0ce9af2308ac86c97bdf320d4c91f674d196d3b6](https://github.com/deploystackio/deploystack/commit/0ce9af2308ac86c97bdf320d4c91f674d196d3b6))
+* fix(frontend): truncate tool descriptions to 40 chars in table view ([5dfc8a32c0288e10428811f028ffb7bc43bdca59](https://github.com/deploystackio/deploystack/commit/5dfc8a32c0288e10428811f028ffb7bc43bdca59))
+* feature(frontend): cache server icon to prevent flicker on tab switch ([7b072a919bf14c3cc766724be5fe01b30b284a03](https://github.com/deploystackio/deploystack/commit/7b072a919bf14c3cc766724be5fe01b30b284a03))
+* refactor(frontend): create reusable InstallationPageHeading with skeleton loading ([62753b95aca332c70952ade082d21d3735ff0f9a](https://github.com/deploystackio/deploystack/commit/62753b95aca332c70952ade082d21d3735ff0f9a))
+* refactor(frontend): use shadcn Empty component for no-tools state ([87c39b4441bc1bdd62c0ae934e911722273d761f](https://github.com/deploystackio/deploystack/commit/87c39b4441bc1bdd62c0ae934e911722273d761f))
+
 ## 0.50.0 (2025-12-19)
 
 * feat(all): Add MCP installation settings, request logs API, and SSE streaming 5f44e43c5fa95527676acc3302c1ac8e764cefe5
