@@ -2,6 +2,8 @@
 
 ## 0.16.0 (2025-12-24)
 
+## 0.16.0 (2025-12-24)
+
 * feat(all): add real-time SSE streaming for MCP installations list ([420b99e99af44ae12cd04dca5a05eb60a130aad2](https://github.com/deploystackio/deploystack/commit/420b99e99af44ae12cd04dca5a05eb60a130aad2))
 * feat(satellite): add backend status tracking to debug endpoint ([3ce04acd430670ef6d46a9d4fe6d3db87042111d](https://github.com/deploystackio/deploystack/commit/3ce04acd430670ef6d46a9d4fe6d3db87042111d))
 * feat(satellite): add immediate status updates on tool execution ([d33d49567802ad3253f28aa547b4dd5482eaedc1](https://github.com/deploystackio/deploystack/commit/d33d49567802ad3253f28aa547b4dd5482eaedc1))
