@@ -1,4 +1,4 @@
-# DeployStack
+# DeployStack - MCP Management Platform
 
 <p align="center">
     <a href="https://deploystack.io">
@@ -16,7 +16,7 @@
 
 ---
 
-DeployStack is **The First MCP-as-a-Service Platform**. We turn MCP from "complex to set up" into "just add a URL" - eliminating adoption friction for developers of all experience levels.
+Centralized MCP server management, credential vault, governance, and token optimization for developers and enterprises.
 
 ## The Problem
 
