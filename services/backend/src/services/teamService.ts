@@ -134,11 +134,11 @@ export class TeamService {
     // Get the default MCP limits from global settings if not provided
     const nonHttpMcpLimit = data.non_http_mcp_limit !== undefined
       ? data.non_http_mcp_limit
-      : await GlobalSettings.getNumber('global.default_non_http_mcp_limit', 1);
+      : await GlobalSettings.getNumber('team.default_non_http_mcp_limit', 1);
 
     const mcpServerLimit = data.mcp_server_limit !== undefined
       ? data.mcp_server_limit
-      : await GlobalSettings.getNumber('global.default_mcp_server_limit', 5);
+      : await GlobalSettings.getNumber('team.default_mcp_server_limit', 5);
 
     // Create the team
     const teamData = {
@@ -253,7 +253,7 @@ export class TeamService {
    */
   static async canUserCreateTeam(userId: string): Promise<boolean> {
     const teamCount = await this.getUserTeamCount(userId);
-    const teamLimit = await GlobalSettings.getNumber('global.team_creation_limit', 3);
+    const teamLimit = await GlobalSettings.getNumber('team.creation_limit', 3);
     return teamCount < teamLimit;
   }
 
@@ -722,8 +722,8 @@ export class TeamService {
     }
 
     // Get team member limit from global settings
-    const memberLimit = await GlobalSettings.getNumber('global.team_member_limit', 3);
-    
+    const memberLimit = await GlobalSettings.getNumber('team.member_limit', 3);
+
     // Check if team has less than the configured limit
     const memberCount = await this.getTeamMemberCount(teamId);
     return memberCount < memberLimit;
@@ -829,7 +829,7 @@ export class TeamService {
         throw new Error('Cannot add members to default teams');
       } else {
         // Get the actual limit for the error message
-        const memberLimit = await GlobalSettings.getNumber('global.team_member_limit', 3);
+        const memberLimit = await GlobalSettings.getNumber('team.member_limit', 3);
         throw new Error(`Team has reached maximum capacity (${memberLimit} members)`);
       }
     }

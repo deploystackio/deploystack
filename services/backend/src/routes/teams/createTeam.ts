@@ -78,7 +78,7 @@ export default async function createTeamRoute(server: FastifyInstance) {
       if (!canCreate) {
         // Get the current team limit for a proper error message
         const { GlobalSettings } = await import('../../global-settings/helpers');
-        const teamLimit = await GlobalSettings.getNumber('global.team_creation_limit', 3);
+        const teamLimit = await GlobalSettings.getNumber('team.creation_limit', 3);
         const errorResponse: ErrorResponse = {
           success: false,
           error: `You have reached the maximum limit of ${teamLimit} teams`

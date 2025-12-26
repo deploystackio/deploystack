@@ -64,24 +64,6 @@ export const globalSettings: GlobalSettingsModule = {
       required: false
     },
     {
-      key: 'global.team_member_limit',
-      name: 'Team Member Limit',
-      defaultValue: 3,
-      type: 'number',
-      description: 'Maximum number of members allowed in non-default teams. Default teams are always limited to 1 member (the owner).',
-      encrypted: false,
-      required: false
-    },
-    {
-      key: 'global.team_creation_limit',
-      name: 'Team Creation Limit',
-      defaultValue: 3,
-      type: 'number',
-      description: 'Maximum number of teams a user can create, including both default and custom teams.',
-      encrypted: false,
-      required: false
-    },
-    {
       key: 'global.send_welcome_email',
       name: 'Send Welcome Email',
       defaultValue: false,
@@ -96,24 +78,6 @@ export const globalSettings: GlobalSettingsModule = {
       defaultValue: false,
       type: 'boolean',
       description: 'Display onboarding walkthrough for users who have not completed or cancelled it.',
-      encrypted: false,
-      required: false
-    },
-    {
-      key: 'global.default_non_http_mcp_limit',
-      name: 'Default Non-HTTP MCP Limit',
-      defaultValue: 1,
-      type: 'number',
-      description: 'Maximum number of non-HTTP (stdio) MCP servers per team. Applied when a new team is created. HTTP and SSE servers are not affected.',
-      encrypted: false,
-      required: false
-    },
-    {
-      key: 'global.default_mcp_server_limit',
-      name: 'Default MCP Server Limit',
-      defaultValue: 5,
-      type: 'number',
-      description: 'Maximum total number of MCP server installations per team. Applied when a new team is created. Includes all transport types (HTTP, SSE, stdio).',
       encrypted: false,
       required: false
     }
