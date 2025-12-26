@@ -170,6 +170,38 @@ const validateConfiguration = () => {
     }
   })
 
+  // Validate user arguments
+  userArgsSchema.value.forEach((arg) => {
+    if (arg.required && !modelValue.value.user_args[arg.name]?.trim()) {
+      missingFields.push(arg.name)
+      isValid = false
+    }
+  })
+
+  // Validate user environment variables
+  userEnvSchema.value.forEach((envVar) => {
+    if (envVar.required && !modelValue.value.user_env[envVar.name]?.trim()) {
+      missingFields.push(envVar.name)
+      isValid = false
+    }
+  })
+
+  // Validate user headers
+  userHeadersSchema.value.forEach((header) => {
+    if (header.required && !modelValue.value.user_headers[header.name]?.trim()) {
+      missingFields.push(header.name)
+      isValid = false
+    }
+  })
+
+  // Validate user query params
+  userQueryParamsSchema.value.forEach((param) => {
+    if (param.required && !modelValue.value.user_url_query_params[param.name]?.trim()) {
+      missingFields.push(param.name)
+      isValid = false
+    }
+  })
+
   emit('validation-change', isValid, missingFields)
   return isValid
 }
@@ -187,6 +219,22 @@ watch(() => modelValue.value.team_headers, () => {
 }, { deep: true })
 
 watch(() => modelValue.value.team_url_query_params, () => {
+  validateConfiguration()
+}, { deep: true })
+
+watch(() => modelValue.value.user_args, () => {
+  validateConfiguration()
+}, { deep: true })
+
+watch(() => modelValue.value.user_env, () => {
+  validateConfiguration()
+}, { deep: true })
+
+watch(() => modelValue.value.user_headers, () => {
+  validateConfiguration()
+}, { deep: true })
+
+watch(() => modelValue.value.user_url_query_params, () => {
   validateConfiguration()
 }, { deep: true })
 
