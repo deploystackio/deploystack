@@ -33929,6 +33929,10 @@
                             "type": "integer",
                             "description": "Total MCP server limit"
                           },
+                          "member_limit": {
+                            "type": "integer",
+                            "description": "Team member limit"
+                          },
                           "created_at": {
                             "type": "string",
                             "description": "ISO8601 timestamp"
@@ -33946,6 +33950,7 @@
                           "is_default",
                           "non_http_mcp_limit",
                           "mcp_server_limit",
+                          "member_limit",
                           "created_at",
                           "updated_at"
                         ]
@@ -34117,6 +34122,10 @@
                           "type": "integer",
                           "description": "Total MCP server limit"
                         },
+                        "member_limit": {
+                          "type": "integer",
+                          "description": "Team member limit"
+                        },
                         "created_at": {
                           "type": "string",
                           "description": "ISO8601 timestamp"
@@ -34134,6 +34143,7 @@
                         "is_default",
                         "non_http_mcp_limit",
                         "mcp_server_limit",
+                        "member_limit",
                         "created_at",
                         "updated_at"
                       ]
@@ -34288,6 +34298,11 @@
                     "type": "integer",
                     "minimum": 0,
                     "description": "Maximum total number of MCP servers the team can install (all transport types)"
+                  },
+                  "member_limit": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "Maximum number of members allowed in this team"
                   }
                 },
                 "additionalProperties": false
@@ -34363,6 +34378,10 @@
                           "type": "integer",
                           "description": "Total MCP server limit"
                         },
+                        "member_limit": {
+                          "type": "integer",
+                          "description": "Team member limit"
+                        },
                         "created_at": {
                           "type": "string",
                           "description": "ISO8601 timestamp"
@@ -34380,6 +34399,7 @@
                         "is_default",
                         "non_http_mcp_limit",
                         "mcp_server_limit",
+                        "member_limit",
                         "created_at",
                         "updated_at"
                       ]

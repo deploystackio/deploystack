@@ -11,6 +11,7 @@ export const TeamSchema = z.object({
   is_default: z.boolean(),
   non_http_mcp_limit: z.number(),
   mcp_server_limit: z.number(),
+  member_limit: z.number(),
   created_at: z.string(),
   updated_at: z.string(),
   role: z.enum(['team_admin', 'team_user']).optional(),

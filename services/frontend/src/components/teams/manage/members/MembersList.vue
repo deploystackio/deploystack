@@ -85,7 +85,7 @@ const members = computed(() => {
 })
 
 const memberCount = computed(() => members.value.length)
-const canAddMembers = computed(() => props.canManageMembers && !isDefaultTeam.value && memberCount.value < 3)
+const canAddMembers = computed(() => props.canManageMembers && !isDefaultTeam.value && memberCount.value < (props.team.member_limit || 3))
 
 // API helper function
 const getApiUrl = () => {
@@ -189,11 +189,11 @@ defineExpose({
 <template>
   <div>
     <DsCard :title="t('teams.manage.members.title')">
-      <p class="text-sm text-muted-foreground">
-        {{ t('teams.manage.members.memberCount', { current: memberCount, max: 3 }) }}
+      <p v-if="!isDefaultTeam" class="text-sm text-muted-foreground">
+        {{ t('teams.manage.members.memberCount', { current: memberCount, max: team.member_limit || 3 }) }}
       </p>
 
-      <div class="text-sm text-muted-foreground mt-4 mb-6 space-y-1">
+      <div v-if="!isDefaultTeam" class="text-sm text-muted-foreground mt-4 mb-6 space-y-1">
         <p>• {{ t('teams.manage.members.info.maxMembers') }}</p>
         <p>• {{ t('teams.manage.members.info.adminAccess') }}</p>
         <p>• {{ t('teams.manage.members.info.userAccess') }}</p>

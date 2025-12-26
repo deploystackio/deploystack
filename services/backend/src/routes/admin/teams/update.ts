@@ -102,6 +102,18 @@ export default async function updateTeamAdminRoute(server: FastifyInstance) {
         }
       }
 
+      // Validate member_limit if provided
+      if (updateData.member_limit !== undefined) {
+        if (!Number.isInteger(updateData.member_limit) || updateData.member_limit < 1) {
+          const errorResponse: ErrorResponse = {
+            success: false,
+            error: 'member_limit must be a positive integer'
+          };
+          const jsonString = JSON.stringify(errorResponse);
+          return reply.status(400).type('application/json').send(jsonString);
+        }
+      }
+
       // Update the team
       const updatedTeam = await TeamService.updateTeam(id, updateData);
 
@@ -127,6 +139,7 @@ export default async function updateTeamAdminRoute(server: FastifyInstance) {
           is_default: updatedTeam.is_default,
           non_http_mcp_limit: updatedTeam.non_http_mcp_limit,
           mcp_server_limit: updatedTeam.mcp_server_limit,
+          member_limit: updatedTeam.member_limit,
           created_at: updatedTeam.created_at.toISOString(),
           updated_at: updatedTeam.updated_at.toISOString()
         }

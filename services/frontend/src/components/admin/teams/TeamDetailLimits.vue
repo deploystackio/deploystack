@@ -23,6 +23,7 @@ const { t } = useI18n()
 // Form state
 const mcpServerLimit = ref(props.team.mcp_server_limit)
 const nonHttpMcpLimit = ref(props.team.non_http_mcp_limit)
+const memberLimit = ref(props.team.member_limit)
 const isSaving = ref(false)
 const errors = ref<Record<string, string>>({})
 
@@ -30,12 +31,14 @@ const errors = ref<Record<string, string>>({})
 watch(() => props.team, (newTeam) => {
   mcpServerLimit.value = newTeam.mcp_server_limit
   nonHttpMcpLimit.value = newTeam.non_http_mcp_limit
+  memberLimit.value = newTeam.member_limit
 }, { deep: true })
 
 // Check if form has changes
 const hasChanges = () => {
   return mcpServerLimit.value !== props.team.mcp_server_limit ||
-         nonHttpMcpLimit.value !== props.team.non_http_mcp_limit
+         nonHttpMcpLimit.value !== props.team.non_http_mcp_limit ||
+         memberLimit.value !== props.team.member_limit
 }
 
 // Save limits
@@ -51,6 +54,10 @@ const saveLimits = async () => {
     errors.value.non_http_mcp_limit = t('adminTeams.teamEdit.form.mcpLimitMin')
     return
   }
+  if (memberLimit.value < 1) {
+    errors.value.member_limit = 'Member limit must be at least 1'
+    return
+  }
 
   // Skip if unchanged
   if (!hasChanges()) {
@@ -59,13 +66,16 @@ const saveLimits = async () => {
 
   try {
     isSaving.value = true
-    const updates: { mcp_server_limit?: number; non_http_mcp_limit?: number } = {}
+    const updates: { mcp_server_limit?: number; non_http_mcp_limit?: number; member_limit?: number } = {}
 
     if (mcpServerLimit.value !== props.team.mcp_server_limit) {
       updates.mcp_server_limit = mcpServerLimit.value
     }
     if (nonHttpMcpLimit.value !== props.team.non_http_mcp_limit) {
       updates.non_http_mcp_limit = nonHttpMcpLimit.value
+    }
+    if (memberLimit.value !== props.team.member_limit) {
+      updates.member_limit = memberLimit.value
     }
 
     const updatedTeam = await TeamService.updateTeamAsAdmin(props.team.id, updates)
@@ -126,6 +136,27 @@ const saveLimits = async () => {
         </p>
         <p v-if="errors.non_http_mcp_limit" class="text-sm text-red-500">
           {{ errors.non_http_mcp_limit }}
+        </p>
+      </div>
+
+      <!-- Member Limit -->
+      <div class="space-y-2">
+        <Label for="member_limit">
+          Member Limit
+        </Label>
+        <Input
+          id="member_limit"
+          v-model.number="memberLimit"
+          type="number"
+          min="1"
+          :disabled="isSaving"
+          :class="{ 'border-red-500': errors.member_limit }"
+        />
+        <p class="text-sm text-muted-foreground">
+          Maximum number of members allowed in this team
+        </p>
+        <p v-if="errors.member_limit" class="text-sm text-red-500">
+          {{ errors.member_limit }}
         </p>
       </div>
     </div>

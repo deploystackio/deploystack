@@ -16,6 +16,7 @@ export interface Team {
   is_default: boolean;
   non_http_mcp_limit: number;
   mcp_server_limit: number;
+  member_limit: number;
   created_at: Date;
   updated_at: Date;
 }
@@ -36,6 +37,7 @@ export interface CreateTeamData {
   is_default?: boolean;
   non_http_mcp_limit?: number;
   mcp_server_limit?: number;
+  member_limit?: number;
 }
 
 export interface UpdateTeamData {
@@ -44,6 +46,7 @@ export interface UpdateTeamData {
   description?: string | null;
   non_http_mcp_limit?: number;
   mcp_server_limit?: number;
+  member_limit?: number;
 }
 
 export interface TeamMemberWithUser {
@@ -140,6 +143,10 @@ export class TeamService {
       ? data.mcp_server_limit
       : await GlobalSettings.getNumber('team.default_mcp_server_limit', 5);
 
+    const memberLimit = data.member_limit !== undefined
+      ? data.member_limit
+      : await GlobalSettings.getNumber('team.default_member_limit', 3);
+
     // Create the team
     const teamData = {
       id: teamId,
@@ -150,6 +157,7 @@ export class TeamService {
       is_default: data.is_default || false,
       non_http_mcp_limit: nonHttpMcpLimit,
       mcp_server_limit: mcpServerLimit,
+      member_limit: memberLimit,
       created_at: now,
       updated_at: now,
     };
@@ -271,6 +279,7 @@ export class TeamService {
     if (data.description !== undefined) updateData.description = data.description;
     if (data.non_http_mcp_limit !== undefined) updateData.non_http_mcp_limit = data.non_http_mcp_limit;
     if (data.mcp_server_limit !== undefined) updateData.mcp_server_limit = data.mcp_server_limit;
+    if (data.member_limit !== undefined) updateData.member_limit = data.member_limit;
 
     await (db as any)
       .update(schema.teams)
@@ -721,12 +730,15 @@ export class TeamService {
       return false;
     }
 
-    // Get team member limit from global settings
-    const memberLimit = await GlobalSettings.getNumber('team.member_limit', 3);
+    // Get the team to access its member_limit
+    const team = await this.getTeamById(teamId);
+    if (!team) {
+      return false;
+    }
 
     // Check if team has less than the configured limit
     const memberCount = await this.getTeamMemberCount(teamId);
-    return memberCount < memberLimit;
+    return memberCount < team.member_limit;
   }
 
   /**
@@ -829,7 +841,8 @@ export class TeamService {
         throw new Error('Cannot add members to default teams');
       } else {
         // Get the actual limit for the error message
-        const memberLimit = await GlobalSettings.getNumber('team.member_limit', 3);
+        const team = await this.getTeamById(teamId);
+        const memberLimit = team?.member_limit || 3;
         throw new Error(`Team has reached maximum capacity (${memberLimit} members)`);
       }
     }

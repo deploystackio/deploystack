@@ -24,6 +24,11 @@ export const UPDATE_TEAM_ADMIN_SCHEMA = {
       type: 'integer',
       minimum: 0,
       description: 'Maximum total number of MCP servers the team can install (all transport types)'
+    },
+    member_limit: {
+      type: 'integer',
+      minimum: 1,
+      description: 'Maximum number of members allowed in this team'
     }
   },
   additionalProperties: false
@@ -40,10 +45,11 @@ export const TEAM_RESPONSE_SCHEMA = {
     is_default: { type: 'boolean', description: 'Whether this is the default team' },
     non_http_mcp_limit: { type: 'integer', description: 'Non-HTTP MCP server limit' },
     mcp_server_limit: { type: 'integer', description: 'Total MCP server limit' },
+    member_limit: { type: 'integer', description: 'Team member limit' },
     created_at: { type: 'string', description: 'ISO8601 timestamp' },
     updated_at: { type: 'string', description: 'ISO8601 timestamp' }
   },
-  required: ['id', 'name', 'slug', 'owner_id', 'is_default', 'non_http_mcp_limit', 'mcp_server_limit', 'created_at', 'updated_at']
+  required: ['id', 'name', 'slug', 'owner_id', 'is_default', 'non_http_mcp_limit', 'mcp_server_limit', 'member_limit', 'created_at', 'updated_at']
 } as const;
 
 export const SUCCESS_RESPONSE_SCHEMA = {
@@ -83,6 +89,7 @@ export interface UpdateTeamAdminRequest {
   description?: string | null;
   non_http_mcp_limit?: number;
   mcp_server_limit?: number;
+  member_limit?: number;
 }
 
 export interface TeamResponse {
@@ -94,6 +101,7 @@ export interface TeamResponse {
   is_default: boolean;
   non_http_mcp_limit: number;
   mcp_server_limit: number;
+  member_limit: number;
   created_at: string;
   updated_at: string;
 }

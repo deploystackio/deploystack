@@ -10,11 +10,11 @@ export const teamSettings: GlobalSettingsModule = {
   },
   settings: [
     {
-      key: 'team.member_limit',
-      name: 'Team Member Limit',
+      key: 'team.default_member_limit',
+      name: 'Default Team Member Limit',
       defaultValue: 3,
       type: 'number',
-      description: 'Maximum number of members allowed in non-default teams. Default teams are always limited to 1 member (the owner).',
+      description: 'Maximum number of members allowed in non-default teams. Applied when a new team is created. Default teams are always limited to 1 member (the owner).',
       encrypted: false,
       required: false
     },

@@ -99,7 +99,7 @@ export default {
         },
         info: {
           title: 'Team Collaboration',
-          maxMembers: 'Teams can have up to 3 members maximum',
+          maxMembers: 'Team member limit is configurable per team',
           adminAccess: 'Team administrators can manage all team resources',
           userAccess: 'Team users have read-only access to team resources',
           defaultTeamNote: 'Default teams remain personal workspaces'

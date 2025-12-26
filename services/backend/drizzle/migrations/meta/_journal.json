@@ -92,6 +92,13 @@
       "when": 1765829745838,
       "tag": "0012_quiet_pride",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1766739806283,
+      "tag": "0013_loud_white_tiger",
+      "breakpoints": true
     }
   ]
 }
