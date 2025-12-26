@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Spinner } from '@/components/ui/spinner'
+import { Checkbox } from '@/components/ui/checkbox'
 import { DsCard } from '@/components/ui/ds-card'
 import { TeamService } from '@/services/teamService'
 import type { Team } from '@/views/admin/teams/types'
@@ -31,10 +32,15 @@ const descriptionValue = ref(props.team.description || '')
 const descriptionError = ref<string | null>(null)
 const isDescriptionSaving = ref(false)
 
+// Form state for allow_remote_mcp
+const allowRemoteMcp = ref(props.team.allow_remote_mcp)
+const isSavingRemoteMcp = ref(false)
+
 // Watch for team prop changes
 watch(() => props.team, (newTeam) => {
   nameValue.value = newTeam.name
   descriptionValue.value = newTeam.description || ''
+  allowRemoteMcp.value = newTeam.allow_remote_mcp
 }, { deep: true })
 
 // Format date for display
@@ -106,6 +112,28 @@ const saveDescription = async () => {
     isDescriptionSaving.value = false
   }
 }
+
+// Save allow_remote_mcp
+const saveRemoteMcp = async () => {
+  // Skip if unchanged
+  if (allowRemoteMcp.value === props.team.allow_remote_mcp) {
+    return
+  }
+
+  try {
+    isSavingRemoteMcp.value = true
+    const updatedTeam = await TeamService.updateTeamAsAdmin(props.team.id, {
+      allow_remote_mcp: allowRemoteMcp.value
+    })
+    toast.success(t('adminTeams.teamEdit.success'))
+    emit('updated', updatedTeam)
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+    toast.error(t('adminTeams.teamEdit.error', { error: errorMessage }))
+  } finally {
+    isSavingRemoteMcp.value = false
+  }
+}
 </script>
 
 <template>
@@ -159,6 +187,37 @@ const saveDescription = async () => {
     <template #footer-actions>
       <Button :disabled="isDescriptionSaving || descriptionValue === (team.description || '')" @click="saveDescription">
         <Spinner v-if="isDescriptionSaving" class="mr-2" />
+        {{ t('adminTeams.teamEdit.form.submit') }}
+      </Button>
+    </template>
+  </DsCard>
+
+  <!-- Remote MCP Servers Card -->
+  <DsCard title="Remote MCP Servers" class="mt-6">
+    <p class="text-sm text-muted-foreground mb-4">
+      Allow this team to install MCP servers from remote sources not in the DeployStack catalog
+    </p>
+
+    <div class="flex items-center space-x-2">
+      <Checkbox
+        v-model:checked="allowRemoteMcp"
+        id="allow_remote_mcp"
+        :disabled="isSavingRemoteMcp"
+      />
+      <label
+        for="allow_remote_mcp"
+        class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+      >
+        Allow remote MCP servers
+      </label>
+    </div>
+
+    <template #footer-actions>
+      <Button
+        :disabled="isSavingRemoteMcp || allowRemoteMcp === team.allow_remote_mcp"
+        @click="saveRemoteMcp"
+      >
+        <Spinner v-if="isSavingRemoteMcp" class="mr-2" />
         {{ t('adminTeams.teamEdit.form.submit') }}
       </Button>
     </template>

@@ -8,6 +8,7 @@ export interface Team {
   non_http_mcp_limit: number
   mcp_server_limit: number
   member_limit: number
+  allow_remote_mcp: boolean
   created_at: string
   updated_at: string
 }
@@ -23,6 +24,7 @@ export interface UpdateTeamAdminRequest {
   non_http_mcp_limit?: number
   mcp_server_limit?: number
   member_limit?: number
+  allow_remote_mcp?: boolean
 }
 
 export interface UpdateTeamResponse {

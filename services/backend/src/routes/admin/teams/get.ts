@@ -77,6 +77,7 @@ export default async function getTeamAdminRoute(server: FastifyInstance) {
           non_http_mcp_limit: team.non_http_mcp_limit,
           mcp_server_limit: team.mcp_server_limit,
           member_limit: team.member_limit,
+          allow_remote_mcp: team.allow_remote_mcp,
           created_at: team.created_at.toISOString(),
           updated_at: team.updated_at.toISOString()
         }

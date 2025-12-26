@@ -19,6 +19,15 @@ export const teamSettings: GlobalSettingsModule = {
       required: false
     },
     {
+      key: 'team.allow_remote_mcp',
+      name: 'Allow Remote MCP Servers',
+      defaultValue: false,
+      type: 'boolean',
+      description: 'Allow teams to install MCP servers from remote sources not in the DeployStack catalog',
+      encrypted: false,
+      required: false
+    },
+    {
       key: 'team.creation_limit',
       name: 'Team Creation Limit',
       defaultValue: 3,

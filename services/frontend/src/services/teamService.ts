@@ -1,5 +1,6 @@
 import { getEnv } from '@/utils/env'
 import { z } from 'zod'
+import type { UpdateTeamAdminRequest } from '@/views/admin/teams/types'
 
 // Zod schemas for validation
 export const TeamSchema = z.object({
@@ -12,6 +13,7 @@ export const TeamSchema = z.object({
   non_http_mcp_limit: z.number(),
   mcp_server_limit: z.number(),
   member_limit: z.number(),
+  allow_remote_mcp: z.boolean(),
   created_at: z.string(),
   updated_at: z.string(),
   role: z.enum(['team_admin', 'team_user']).optional(),
@@ -428,7 +430,7 @@ export class TeamService {
   /**
    * Update team as global admin
    */
-  static async updateTeamAsAdmin(teamId: string, teamData: { name?: string; description?: string | null; non_http_mcp_limit?: number; mcp_server_limit?: number }): Promise<Team> {
+  static async updateTeamAsAdmin(teamId: string, teamData: UpdateTeamAdminRequest): Promise<Team> {
     try {
       const apiUrl = this.getApiUrl()
 

@@ -24010,6 +24010,9 @@ paths:
                         member_limit:
                           type: integer
                           description: Team member limit
+                        allow_remote_mcp:
+                          type: boolean
+                          description: Allow remote MCP servers
                         created_at:
                           type: string
                           description: ISO8601 timestamp
@@ -24025,6 +24028,7 @@ paths:
                         - non_http_mcp_limit
                         - mcp_server_limit
                         - member_limit
+                        - allow_remote_mcp
                         - created_at
                         - updated_at
                 required:
@@ -24145,6 +24149,9 @@ paths:
                       member_limit:
                         type: integer
                         description: Team member limit
+                      allow_remote_mcp:
+                        type: boolean
+                        description: Allow remote MCP servers
                       created_at:
                         type: string
                         description: ISO8601 timestamp
@@ -24160,6 +24167,7 @@ paths:
                       - non_http_mcp_limit
                       - mcp_server_limit
                       - member_limit
+                      - allow_remote_mcp
                       - created_at
                       - updated_at
                 required:
@@ -24274,6 +24282,10 @@ paths:
                   type: integer
                   minimum: 1
                   description: Maximum number of members allowed in this team
+                allow_remote_mcp:
+                  type: boolean
+                  description: Allow team to install MCP servers from remote sources not in the
+                    catalog
               additionalProperties: false
       parameters:
         - schema:
@@ -24329,6 +24341,9 @@ paths:
                       member_limit:
                         type: integer
                         description: Team member limit
+                      allow_remote_mcp:
+                        type: boolean
+                        description: Allow remote MCP servers
                       created_at:
                         type: string
                         description: ISO8601 timestamp
@@ -24344,6 +24359,7 @@ paths:
                       - non_http_mcp_limit
                       - mcp_server_limit
                       - member_limit
+                      - allow_remote_mcp
                       - created_at
                       - updated_at
                 required:

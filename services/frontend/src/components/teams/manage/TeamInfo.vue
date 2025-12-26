@@ -250,6 +250,24 @@ watch(() => props.team, () => {
             </dd>
           </div>
 
+          <!-- Remote MCP Servers -->
+          <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+            <dt class="text-sm/6 font-medium text-gray-900">
+              Remote MCP Servers
+            </dt>
+            <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
+              <Badge :variant="team.allow_remote_mcp ? 'default' : 'secondary'" class="gap-1">
+                {{ team.allow_remote_mcp ? 'Allowed' : 'Not Allowed' }}
+              </Badge>
+              <p class="text-xs text-muted-foreground mt-2">
+                {{ team.allow_remote_mcp
+                  ? 'This team can install MCP servers from remote sources not in the catalog'
+                  : 'This team can only install MCP servers from the DeployStack catalog'
+                }}
+              </p>
+            </dd>
+          </div>
+
           <!-- Team ID -->
           <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
             <dt class="text-sm/6 font-medium text-gray-900 flex items-center gap-2">

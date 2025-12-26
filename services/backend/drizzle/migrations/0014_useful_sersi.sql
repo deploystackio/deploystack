@@ -1,0 +1,1 @@
+ALTER TABLE "teams" ADD COLUMN "allow_remote_mcp" boolean DEFAULT false NOT NULL;

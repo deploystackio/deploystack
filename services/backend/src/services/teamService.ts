@@ -17,6 +17,7 @@ export interface Team {
   non_http_mcp_limit: number;
   mcp_server_limit: number;
   member_limit: number;
+  allow_remote_mcp: boolean;
   created_at: Date;
   updated_at: Date;
 }
@@ -38,6 +39,7 @@ export interface CreateTeamData {
   non_http_mcp_limit?: number;
   mcp_server_limit?: number;
   member_limit?: number;
+  allow_remote_mcp?: boolean;
 }
 
 export interface UpdateTeamData {
@@ -47,6 +49,7 @@ export interface UpdateTeamData {
   non_http_mcp_limit?: number;
   mcp_server_limit?: number;
   member_limit?: number;
+  allow_remote_mcp?: boolean;
 }
 
 export interface TeamMemberWithUser {
@@ -147,6 +150,10 @@ export class TeamService {
       ? data.member_limit
       : await GlobalSettings.getNumber('team.default_member_limit', 3);
 
+    const allowRemoteMcp = data.allow_remote_mcp !== undefined
+      ? data.allow_remote_mcp
+      : await GlobalSettings.getBoolean('team.allow_remote_mcp', false);
+
     // Create the team
     const teamData = {
       id: teamId,
@@ -158,6 +165,7 @@ export class TeamService {
       non_http_mcp_limit: nonHttpMcpLimit,
       mcp_server_limit: mcpServerLimit,
       member_limit: memberLimit,
+      allow_remote_mcp: allowRemoteMcp,
       created_at: now,
       updated_at: now,
     };
@@ -280,6 +288,7 @@ export class TeamService {
     if (data.non_http_mcp_limit !== undefined) updateData.non_http_mcp_limit = data.non_http_mcp_limit;
     if (data.mcp_server_limit !== undefined) updateData.mcp_server_limit = data.mcp_server_limit;
     if (data.member_limit !== undefined) updateData.member_limit = data.member_limit;
+    if (data.allow_remote_mcp !== undefined) updateData.allow_remote_mcp = data.allow_remote_mcp;
 
     await (db as any)
       .update(schema.teams)

@@ -15,6 +15,7 @@ export const teams = pgTable('teams', {
   non_http_mcp_limit: integer('non_http_mcp_limit').notNull().default(1),
   mcp_server_limit: integer('mcp_server_limit').notNull().default(5),
   member_limit: integer('member_limit').notNull().default(3),
+  allow_remote_mcp: boolean('allow_remote_mcp').notNull().default(false),
   created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });

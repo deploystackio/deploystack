@@ -114,6 +114,18 @@ export default async function updateTeamAdminRoute(server: FastifyInstance) {
         }
       }
 
+      // Validate allow_remote_mcp if provided
+      if (updateData.allow_remote_mcp !== undefined) {
+        if (typeof updateData.allow_remote_mcp !== 'boolean') {
+          const errorResponse: ErrorResponse = {
+            success: false,
+            error: 'allow_remote_mcp must be a boolean value'
+          };
+          const jsonString = JSON.stringify(errorResponse);
+          return reply.status(400).type('application/json').send(jsonString);
+        }
+      }
+
       // Update the team
       const updatedTeam = await TeamService.updateTeam(id, updateData);
 
@@ -140,6 +152,7 @@ export default async function updateTeamAdminRoute(server: FastifyInstance) {
           non_http_mcp_limit: updatedTeam.non_http_mcp_limit,
           mcp_server_limit: updatedTeam.mcp_server_limit,
           member_limit: updatedTeam.member_limit,
+          allow_remote_mcp: updatedTeam.allow_remote_mcp,
           created_at: updatedTeam.created_at.toISOString(),
           updated_at: updatedTeam.updated_at.toISOString()
         }
