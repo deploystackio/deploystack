@@ -1,5 +1,5 @@
 import { type FastifyInstance } from 'fastify';
-import { requireAuthenticationAny, requireOAuthScope } from '../../../middleware/oauthMiddleware';
+import { requireAuthenticationAny } from '../../../middleware/oauthMiddleware';
 import { requireTeamPermission } from '../../../middleware/roleMiddleware';
 import { McpInstallationService } from '../../../services/mcpInstallationService';
 import { SatelliteCommandService } from '../../../services/satelliteCommandService';
@@ -20,13 +20,12 @@ export default async function deleteInstallationRoute(server: FastifyInstance) {
   server.delete('/teams/:teamId/mcp/installations/:installationId', {
     preValidation: [
       requireAuthenticationAny(),
-      requireOAuthScope('mcp:read'),
       requireTeamPermission('mcp.installations.delete')
     ],
     schema: {
       tags: ['MCP Installations'],
       summary: 'Delete MCP installation',
-      description: 'Removes an MCP server installation from the specified team. No Content-Type header required for this DELETE request. Supports both cookie-based authentication (for web users) and OAuth2 Bearer token authentication (for CLI users). Requires mcp:read scope for OAuth2 access.',
+      description: 'Removes an MCP server installation from the specified team. No Content-Type header required for this DELETE request.',
       security: DUAL_AUTH_SECURITY,
       
       // Fastify validation schema

@@ -1,5 +1,5 @@
 import { type FastifyInstance } from 'fastify';
-import { requireAuthenticationAny, requireOAuthScope } from '../../../middleware/oauthMiddleware';
+import { requireAuthenticationAny } from '../../../middleware/oauthMiddleware';
 import { requireTeamPermission } from '../../../middleware/roleMiddleware';
 import { OAuthDiscoveryService } from '../../../services/OAuthDiscoveryService';
 import { OAuthClientRegistrationService } from '../../../services/OAuthClientRegistrationService';
@@ -23,13 +23,12 @@ export default async function reauthRoute(server: FastifyInstance) {
   server.post('/teams/:teamId/mcp/installations/:installationId/reauth', {
     preValidation: [
       requireAuthenticationAny(),
-      requireOAuthScope('mcp:read'),
       requireTeamPermission('mcp.installations.view')
     ],
     schema: {
       tags: ['MCP Installations', 'OAuth'],
       summary: 'Re-authenticate MCP server installation',
-      description: 'Initiates OAuth re-authorization for existing installation with expired or invalid tokens. Supports both cookie-based authentication (for web users) and OAuth2 Bearer token authentication (for CLI users). Requires mcp:read scope for OAuth2 access.',
+      description: 'Initiates OAuth re-authorization for existing installation with expired or invalid tokens.',
       security: DUAL_AUTH_SECURITY,
 
       // Fastify validation schema

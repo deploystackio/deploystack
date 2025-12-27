@@ -1,5 +1,5 @@
 import { type FastifyInstance } from 'fastify';
-import { requireAuthenticationAny, requireOAuthScope } from '../../../middleware/oauthMiddleware';
+import { requireAuthenticationAny } from '../../../middleware/oauthMiddleware';
 import { requireTeamPermission } from '../../../middleware/roleMiddleware';
 import { McpInstallationService } from '../../../services/mcpInstallationService';
 import { getDb } from '../../../db';
@@ -17,13 +17,12 @@ export default async function getClientConfigRoute(server: FastifyInstance) {
   server.get('/teams/:teamId/mcp/installations/:installationId/config/:clientType', {
     preValidation: [
       requireAuthenticationAny(),
-      requireOAuthScope('mcp:read'),
       requireTeamPermission('mcp.installations.view')
     ],
     schema: {
       tags: ['MCP Installations'],
       summary: 'Get client configuration for installation',
-      description: 'Generates client-specific configuration for an MCP server installation. Supports claude-desktop, vscode, and cursor clients. No Content-Type header required for this GET request. Supports both cookie-based authentication (for web users) and OAuth2 Bearer token authentication (for CLI users). Requires mcp:read scope for OAuth2 access.',
+      description: 'Generates client-specific configuration for an MCP server installation. Supports claude-desktop, vscode, and cursor clients. No Content-Type header required for this GET request.',
       security: DUAL_AUTH_SECURITY,
       
       // Fastify validation schema

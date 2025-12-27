@@ -23,8 +23,6 @@ import mcpRoutes from './mcp'
 import { oauth2DiscoveryRoutes, oauth2ApiRoutes } from './oauth2'
 // Import admin routes
 import adminRoutes from './admin'
-// Import gateway routes (transitional - config moved to satellite)
-import gatewayRoutes from './gateway'
 // Import satellite routes
 import satellitesRoutes from './satellites'
 
@@ -74,9 +72,6 @@ export const registerRoutes = (server: FastifyInstance): void => {
 
     // Register admin routes
     await apiInstance.register(adminRoutes);
-
-    // Register remaining gateway routes (transitional)
-    await apiInstance.register(gatewayRoutes);
 
     // Register satellite routes
     await apiInstance.register(satellitesRoutes);

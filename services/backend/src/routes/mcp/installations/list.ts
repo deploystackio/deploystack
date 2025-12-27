@@ -1,5 +1,5 @@
 import { type FastifyInstance } from 'fastify';
-import { requireAuthenticationAny, requireOAuthScope } from '../../../middleware/oauthMiddleware';
+import { requireAuthenticationAny } from '../../../middleware/oauthMiddleware';
 import { requireTeamPermission } from '../../../middleware/roleMiddleware';
 import { McpInstallationService } from '../../../services/mcpInstallationService';
 import { getDb } from '../../../db';
@@ -19,14 +19,13 @@ export default async function listInstallationsRoute(server: FastifyInstance) {
     Params: TeamIdParams;
   }>('/teams/:teamId/mcp/installations', {
     preValidation: [
-      requireAuthenticationAny(),     // ✅ Accept either auth method
-      requireOAuthScope('mcp:read'),  // ✅ Enforce OAuth2 scope
-      requireTeamPermission('mcp.installations.view') // ✅ Team permission required
+      requireAuthenticationAny(),
+      requireTeamPermission('mcp.installations.view')
     ],
     schema: {
       tags: ['MCP Installations'],
       summary: 'List team MCP installations',
-      description: 'Retrieves all MCP server installations for the specified team. Supports both cookie-based authentication (for web users) and OAuth2 Bearer token authentication (for CLI users). Requires mcp:read scope for OAuth2 access.',
+      description: 'Retrieves all MCP server installations for the specified team.',
       security: DUAL_AUTH_SECURITY,
       
       // Fastify validation schema

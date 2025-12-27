@@ -367,7 +367,6 @@ export const OAUTH2_SCOPE_DESCRIPTIONS: Record<string, string> = {
 /**
  * OAuth2 client name mapping
  * Used by: consent.ts for client display names
+ * Note: Gateway CLI removed after strategic pivot to Satellite architecture
  */
-export const OAUTH2_CLIENT_NAMES: Record<string, string> = {
-  'deploystack-gateway-cli': 'DeployStack Gateway CLI'
-} as const;
+export const OAUTH2_CLIENT_NAMES: Record<string, string> = {} as const;

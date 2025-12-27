@@ -1,5 +1,5 @@
 import { type FastifyInstance } from 'fastify';
-import { requireAuthenticationAny, requireOAuthScope } from '../../../middleware/oauthMiddleware';
+import { requireAuthenticationAny } from '../../../middleware/oauthMiddleware';
 import { requireTeamPermission } from '../../../middleware/roleMiddleware';
 import { McpInstallationService } from '../../../services/mcpInstallationService';
 import { SatelliteCommandService } from '../../../services/satelliteCommandService';
@@ -27,13 +27,12 @@ export default async function updateArgsRoute(server: FastifyInstance) {
   }>('/teams/:teamId/mcp/installations/:installationId/args', {
     preValidation: [
       requireAuthenticationAny(),
-      requireOAuthScope('mcp:read'),
       requireTeamPermission('mcp.installations.edit')
     ],
     schema: {
       tags: ['MCP Installations'],
       summary: 'Update MCP installation command line arguments',
-      description: 'Updates the command line arguments for an existing MCP server installation. This endpoint specifically handles args updates only. Requires Content-Type: application/json header when sending request body. Supports both cookie-based authentication (for web users) and OAuth2 Bearer token authentication (for CLI users). Requires mcp:read scope for OAuth2 access.',
+      description: 'Updates the command line arguments for an existing MCP server installation. This endpoint specifically handles args updates only. Requires Content-Type: application/json header when sending request body.',
       security: DUAL_AUTH_SECURITY,
       
       // Fastify validation schema

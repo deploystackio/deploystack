@@ -47,7 +47,6 @@ export const ROLE_DEFINITIONS = {
     'email.test',
     'preferences.view',
     'preferences.edit',
-    'gateway.config:read',
     'satellites.view',
     'satellites.manage',
     'satellites.revoke',
@@ -69,7 +68,6 @@ export const ROLE_DEFINITIONS = {
     'mcp.categories.view',
     'preferences.view',
     'preferences.edit',
-    'gateway.config:read',
     'metrics.mcp_client_activity_metrics.view',
   ],
   team_admin: [

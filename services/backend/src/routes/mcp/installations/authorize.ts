@@ -1,5 +1,5 @@
 import { type FastifyInstance } from 'fastify';
-import { requireAuthenticationAny, requireOAuthScope } from '../../../middleware/oauthMiddleware';
+import { requireAuthenticationAny } from '../../../middleware/oauthMiddleware';
 import { requireTeamPermission } from '../../../middleware/roleMiddleware';
 import { OAuthDiscoveryService } from '../../../services/OAuthDiscoveryService';
 import { OAuthClientRegistrationService } from '../../../services/OAuthClientRegistrationService';
@@ -25,13 +25,12 @@ export default async function authorizeRoute(server: FastifyInstance) {
   server.post('/teams/:teamId/mcp/installations/authorize', {
     preValidation: [
       requireAuthenticationAny(),
-      requireOAuthScope('mcp:read'),
       requireTeamPermission('mcp.installations.create')
     ],
     schema: {
       tags: ['MCP Installations', 'OAuth'],
       summary: 'Initiate OAuth flow for MCP server installation',
-      description: 'Creates a pending MCP server installation and returns OAuth authorization URL for user authentication. Requires Content-Type: application/json header when sending request body. Supports both cookie-based authentication (for web users) and OAuth2 Bearer token authentication (for CLI users). Requires mcp:read scope for OAuth2 access.',
+      description: 'Creates a pending MCP server installation and returns OAuth authorization URL for user authentication. Requires Content-Type: application/json header when sending request body.',
       security: DUAL_AUTH_SECURITY,
 
       // Fastify validation schema

@@ -1,5 +1,5 @@
 import { type FastifyInstance } from 'fastify';
-import { requireAuthenticationAny, requireOAuthScope } from '../../../middleware/oauthMiddleware';
+import { requireAuthenticationAny } from '../../../middleware/oauthMiddleware';
 import { requireTeamPermission } from '../../../middleware/roleMiddleware';
 import { McpInstallationService } from '../../../services/mcpInstallationService';
 import { McpUserConfigurationService } from '../../../services/mcpUserConfigurationService';
@@ -26,13 +26,12 @@ export default async function createInstallationRoute(server: FastifyInstance) {
   server.post('/teams/:teamId/mcp/installations', {
     preValidation: [
       requireAuthenticationAny(),
-      requireOAuthScope('mcp:read'),
       requireTeamPermission('mcp.installations.create')
     ],
     schema: {
       tags: ['MCP Installations'],
       summary: 'Install MCP server for team',
-      description: 'Creates a new MCP server installation for the specified team. Requires Content-Type: application/json header when sending request body. Supports both cookie-based authentication (for web users) and OAuth2 Bearer token authentication (for CLI users). Requires mcp:read scope for OAuth2 access.',
+      description: 'Creates a new MCP server installation for the specified team. Requires Content-Type: application/json header when sending request body.',
       security: DUAL_AUTH_SECURITY,
       
       // Fastify validation schema

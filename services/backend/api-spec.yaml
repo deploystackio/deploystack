@@ -16759,9 +16759,7 @@ paths:
         - MCP Installations
       description: "Creates a new MCP server installation for the specified team.
         Requires Content-Type: application/json header when sending request
-        body. Supports both cookie-based authentication (for web users) and
-        OAuth2 Bearer token authentication (for CLI users). Requires mcp:read
-        scope for OAuth2 access."
+        body."
       requestBody:
         content:
           application/json:
@@ -17126,9 +17124,6 @@ paths:
       tags:
         - MCP Installations
       description: Retrieves all MCP server installations for the specified team.
-        Supports both cookie-based authentication (for web users) and OAuth2
-        Bearer token authentication (for CLI users). Requires mcp:read scope for
-        OAuth2 access.
       parameters:
         - schema:
             type: string
@@ -17438,9 +17433,6 @@ paths:
         - MCP Installations
       description: Retrieves a specific MCP server installation by ID for the
         specified team. No Content-Type header required for this GET request.
-        Supports both cookie-based authentication (for web users) and OAuth2
-        Bearer token authentication (for CLI users). Requires mcp:read scope for
-        OAuth2 access.
       parameters:
         - schema:
             type: string
@@ -17729,10 +17721,7 @@ paths:
         - MCP Installations
       description: "Updates an existing MCP server installation. Can update
         installation name and environment variables. Requires Content-Type:
-        application/json header when sending request body. Supports both
-        cookie-based authentication (for web users) and OAuth2 Bearer token
-        authentication (for CLI users). Requires mcp:read scope for OAuth2
-        access."
+        application/json header when sending request body."
       requestBody:
         content:
           application/json:
@@ -18045,10 +18034,7 @@ paths:
       tags:
         - MCP Installations
       description: Removes an MCP server installation from the specified team. No
-        Content-Type header required for this DELETE request. Supports both
-        cookie-based authentication (for web users) and OAuth2 Bearer token
-        authentication (for CLI users). Requires mcp:read scope for OAuth2
-        access.
+        Content-Type header required for this DELETE request.
       parameters:
         - schema:
             type: string
@@ -18192,9 +18178,7 @@ paths:
       description: "Updates the environment variables for an existing MCP server
         installation. This endpoint specifically handles environment variable
         updates only. Requires Content-Type: application/json header when
-        sending request body. Supports both cookie-based authentication (for web
-        users) and OAuth2 Bearer token authentication (for CLI users). Requires
-        mcp:read scope for OAuth2 access."
+        sending request body."
       requestBody:
         content:
           application/json:
@@ -18503,10 +18487,7 @@ paths:
         - MCP Installations
       description: "Updates the headers for an existing MCP server installation. This
         endpoint specifically handles headers updates only. Requires
-        Content-Type: application/json header when sending request body.
-        Supports both cookie-based authentication (for web users) and OAuth2
-        Bearer token authentication (for CLI users). Requires mcp:read scope for
-        OAuth2 access."
+        Content-Type: application/json header when sending request body."
       requestBody:
         content:
           application/json:
@@ -18816,9 +18797,7 @@ paths:
       description: "Updates the URL query parameters for an existing MCP server
         installation. This endpoint specifically handles query parameters
         updates only. Requires Content-Type: application/json header when
-        sending request body. Supports both cookie-based authentication (for web
-        users) and OAuth2 Bearer token authentication (for CLI users). Requires
-        mcp:read scope for OAuth2 access."
+        sending request body."
       requestBody:
         content:
           application/json:
@@ -19128,9 +19107,7 @@ paths:
       description: "Updates the command line arguments for an existing MCP server
         installation. This endpoint specifically handles args updates only.
         Requires Content-Type: application/json header when sending request
-        body. Supports both cookie-based authentication (for web users) and
-        OAuth2 Bearer token authentication (for CLI users). Requires mcp:read
-        scope for OAuth2 access."
+        body."
       requestBody:
         content:
           application/json:
@@ -19439,10 +19416,7 @@ paths:
         - MCP Installations
       description: Generates client-specific configuration for an MCP server
         installation. Supports claude-desktop, vscode, and cursor clients. No
-        Content-Type header required for this GET request. Supports both
-        cookie-based authentication (for web users) and OAuth2 Bearer token
-        authentication (for CLI users). Requires mcp:read scope for OAuth2
-        access.
+        Content-Type header required for this GET request.
       parameters:
         - schema:
             type: string
@@ -19587,10 +19561,7 @@ paths:
         - OAuth
       description: "Creates a pending MCP server installation and returns OAuth
         authorization URL for user authentication. Requires Content-Type:
-        application/json header when sending request body. Supports both
-        cookie-based authentication (for web users) and OAuth2 Bearer token
-        authentication (for CLI users). Requires mcp:read scope for OAuth2
-        access."
+        application/json header when sending request body."
       requestBody:
         content:
           application/json:
@@ -19758,9 +19729,7 @@ paths:
         - MCP Installations
         - OAuth
       description: Initiates OAuth re-authorization for existing installation with
-        expired or invalid tokens. Supports both cookie-based authentication
-        (for web users) and OAuth2 Bearer token authentication (for CLI users).
-        Requires mcp:read scope for OAuth2 access.
+        expired or invalid tokens.
       parameters:
         - schema:
             type: string
@@ -25597,151 +25566,6 @@ paths:
                 required:
                   - success
                   - error
-                description: Internal Server Error
-  /api/gateway/me/mcp-configurations:
-    get:
-      summary: Get merged MCP configurations for gateway
-      tags:
-        - Gateway
-      description: Retrieves all MCP server configurations for the authenticated user
-        with merged template, team, and user-specific values. Supports both
-        cookie-based authentication (for web users) and OAuth2 Bearer token
-        authentication (for CLI users). Requires mcp:read scope for OAuth2
-        access.
-      security:
-        - cookieAuth: []
-        - bearerAuth: []
-      responses:
-        "200":
-          description: MCP configurations retrieved successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    default: true
-                  data:
-                    type: object
-                    properties:
-                      servers:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            id:
-                              type: string
-                              description: Server identifier
-                            name:
-                              type: string
-                              description: Server name
-                            command:
-                              type: string
-                              description: Command to execute
-                            args:
-                              type: array
-                              items:
-                                type: string
-                              description: Command arguments with user values merged
-                            env:
-                              type: object
-                              additionalProperties:
-                                type: string
-                              description: Environment variables with user values merged
-                            status:
-                              type: string
-                              enum:
-                                - ready
-                                - invalid
-                              description: Server configuration status
-                          required:
-                            - id
-                            - name
-                            - command
-                            - args
-                            - env
-                            - status
-                          additionalProperties: false
-                    required:
-                      - servers
-                    additionalProperties: false
-                required:
-                  - success
-                  - data
-                additionalProperties: false
-                description: MCP configurations retrieved successfully
-        "400":
-          description: Bad Request - Invalid parameters
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    default: false
-                  error:
-                    type: string
-                    description: Error message
-                required:
-                  - success
-                  - error
-                additionalProperties: false
-                description: Bad Request - Invalid parameters
-        "401":
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    default: false
-                  error:
-                    type: string
-                    description: Error message
-                required:
-                  - success
-                  - error
-                additionalProperties: false
-                description: Unauthorized
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    default: false
-                  error:
-                    type: string
-                    description: Error message
-                required:
-                  - success
-                  - error
-                additionalProperties: false
-                description: Forbidden
-        "500":
-          description: Internal Server Error
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    default: false
-                  error:
-                    type: string
-                    description: Error message
-                required:
-                  - success
-                  - error
-                additionalProperties: false
                 description: Internal Server Error
   /api/satellites/register:
     post:

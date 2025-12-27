@@ -18,7 +18,6 @@ vi.mock('../../../src/routes/health');
 vi.mock('../../../src/routes/mcp');
 vi.mock('../../../src/routes/oauth2');
 vi.mock('../../../src/routes/admin');
-vi.mock('../../../src/routes/gateway');
 vi.mock('../../../src/routes/satellites');
 
 // Mock the GlobalSettings helper
@@ -40,7 +39,6 @@ import healthRoute from '../../../src/routes/health';
 import mcpRoutes from '../../../src/routes/mcp';
 import { oauth2DiscoveryRoutes, oauth2ApiRoutes } from '../../../src/routes/oauth2';
 import adminRoutes from '../../../src/routes/admin';
-import gatewayRoutes from '../../../src/routes/gateway';
 import satellitesRoutes from '../../../src/routes/satellites';
 import { GlobalSettings } from '../../../src/global-settings/helpers';
 
@@ -57,7 +55,6 @@ const mockMcpRoutes = mcpRoutes as MockedFunction<typeof mcpRoutes>;
 const mockOAuth2DiscoveryRoutes = oauth2DiscoveryRoutes as MockedFunction<typeof oauth2DiscoveryRoutes>;
 const mockOAuth2ApiRoutes = oauth2ApiRoutes as MockedFunction<typeof oauth2ApiRoutes>;
 const mockAdminRoutes = adminRoutes as MockedFunction<typeof adminRoutes>;
-const mockGatewayRoutes = gatewayRoutes as MockedFunction<typeof gatewayRoutes>;
 const mockSatellitesRoutes = satellitesRoutes as MockedFunction<typeof satellitesRoutes>;
 
 describe('Main Routes Registration', () => {
@@ -112,7 +109,6 @@ describe('Main Routes Registration', () => {
     mockOAuth2DiscoveryRoutes.mockResolvedValue(undefined);
     mockOAuth2ApiRoutes.mockResolvedValue(undefined);
     mockAdminRoutes.mockResolvedValue(undefined);
-    mockGatewayRoutes.mockResolvedValue(undefined);
     mockSatellitesRoutes.mockResolvedValue(undefined);
   });
 
