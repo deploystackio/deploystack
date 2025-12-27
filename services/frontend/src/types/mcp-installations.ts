@@ -23,6 +23,7 @@ export interface McpServer {
   installation_methods?: any[]
   packages?: any | null
   remotes?: any | null
+  requires_oauth?: boolean
   // Three-tier configuration schema fields
   template_args?: any[] | null
   template_env?: Record<string, string> | null

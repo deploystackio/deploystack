@@ -218,6 +218,19 @@ export default {
     uninstallSuccess: 'MCP server uninstalled successfully'
   },
 
+  reauth: {
+    button: 'Re-authenticate',
+    popup_title: 'Re-authenticating',
+    opening: 'Opening authentication window',
+    opening_description: 'Please authorize DeployStack to access your account',
+    success: 'Re-authentication successful',
+    success_description: '{name} has been re-authenticated and is reconnecting',
+    error: 'Re-authentication failed',
+    error_description: 'Failed to re-authenticate. Please try again.',
+    popup_blocked: 'Popup was blocked',
+    popup_blocked_description: 'Please allow popups for this site and try again.'
+  },
+
   removal: {
     modal: {
       title: 'Remove MCP Server Installation',

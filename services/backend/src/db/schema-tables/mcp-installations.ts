@@ -52,6 +52,11 @@ export const oauthPendingFlows = pgTable('oauthPendingFlows', {
   server_id: text('server_id').notNull().references(() => mcpServers.id, { onDelete: 'cascade' }),
   created_by: text('created_by').notNull().references(() => authUser.id, { onDelete: 'cascade' }),
 
+  // RE-AUTH SUPPORT: Link to existing installation for re-authentication flows
+  // NULL = new installation flow (existing behavior)
+  // NOT NULL = re-authentication flow (updates existing installation tokens)
+  installation_id: text('installation_id').references(() => mcpServerInstallations.id, { onDelete: 'cascade' }),
+
   // OAuth Flow State
   oauth_state: text('oauth_state').notNull(), // State parameter for CSRF protection
   oauth_code_verifier: text('oauth_code_verifier').notNull(), // PKCE verifier
@@ -81,6 +86,7 @@ export const oauthPendingFlows = pgTable('oauthPendingFlows', {
   expiresAtIdx: index('oauth_pending_flows_expires_at_idx').on(table.expires_at), // Fast cleanup query
   teamServerIdx: index('oauth_pending_flows_team_server_idx').on(table.team_id, table.server_id),
   createdByIdx: index('oauth_pending_flows_created_by_idx').on(table.created_by),
+  installationIdIdx: index('oauth_pending_flows_installation_id_idx').on(table.installation_id), // Re-auth flow lookups
 }));
 
 // MCP Server Installations - Team installations (Tier 2)

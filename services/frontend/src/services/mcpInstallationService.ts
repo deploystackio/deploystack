@@ -525,4 +525,53 @@ export class McpInstallationService {
     const data = await response.json()
     return data
   }
+
+  /**
+   * Start OAuth re-authentication for existing installation
+   *
+   * Used when installation status is 'requires_reauth' due to expired/invalid tokens.
+   * Initiates OAuth flow that updates existing installation instead of creating new one.
+   *
+   * @param teamId - Team ID
+   * @param installationId - Installation ID to re-authenticate
+   * @returns OAuth authorization flow data
+   */
+  static async startReAuth(
+    teamId: string,
+    installationId: string
+  ): Promise<{
+    flow_id: string
+    authorization_url: string
+    requires_authorization: boolean
+    expires_at: string
+  }> {
+    const response = await fetch(
+      `${this.baseUrl}/api/teams/${teamId}/mcp/installations/${installationId}/reauth`,
+      {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Accept': 'application/json'
+        }
+      }
+    )
+
+    if (!response.ok) {
+      // Try to extract error message from response
+      let errorMessage = 'Failed to start re-authentication'
+      try {
+        const errorData = await response.json()
+        if (errorData.error) {
+          errorMessage = errorData.error
+        }
+      } catch {
+        // Use default error message if JSON parsing fails
+      }
+
+      throw new Error(errorMessage)
+    }
+
+    const data = await response.json()
+    return data
+  }
 }

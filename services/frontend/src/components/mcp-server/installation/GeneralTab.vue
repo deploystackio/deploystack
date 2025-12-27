@@ -1,13 +1,18 @@
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Spinner } from '@/components/ui/spinner'
 import { DsCard } from '@/components/ui/ds-card'
-import { Github, ExternalLink, Calendar, Tag } from 'lucide-vue-next'
+import { ExternalLink, Calendar, Tag, RefreshCw } from 'lucide-vue-next'
+import { toast } from 'vue-sonner'
 import InstallationStatusBadge from './InstallationStatusBadge.vue'
 import GeneralMetricsPanel from './GeneralMetricsPanel.vue'
 import McpServerInfoSpecifications from '@/components/mcp-server/view/McpServerInfoSpecifications.vue'
 import { useMcpToolsStore } from '@/stores/mcpToolsStore'
+// import { useMcpInstallationCache } from '@/composables/mcp-server/installation'
+import { McpInstallationService } from '@/services/mcpInstallationService'
 import { getEnv } from '@/utils/env'
 import type { McpInstallation, InstallationStatusData } from '@/types/mcp-installations'
 
@@ -17,16 +22,34 @@ interface Props {
 }
 
 const props = defineProps<Props>()
+const emit = defineEmits<{
+  refresh: []
+}>()
 const { t } = useI18n()
 const mcpToolsStore = useMcpToolsStore()
+// const { currentTeam, userTeamRole } = useMcpInstallationCache()
+
+// User can edit if they are team_admin
+// const canEditInstallation = computed(() => userTeamRole.value === 'team_admin')
 
 // Tools data
 const toolCount = ref(0)
 const serverDescription = ref<string | null>(null)
 const lastRequestAt = ref<string | null>(null)
 
+// Re-authentication state
+const isReAuthenticating = ref(false)
+const oauthPopup = ref<Window | null>(null)
+
 // Computed properties for display (using installation.server data)
 const server = computed(() => props.installation?.server || null)
+
+// Show re-auth button when status is 'requires_reauth' and server requires OAuth
+// OAuth is per-user, so all team members should be able to re-authenticate
+const showReAuthButton = computed(() => {
+  return props.statusData?.status === 'requires_reauth' &&
+         server.value?.requires_oauth === true
+})
 
 const displayTags = computed(() => {
   if (!server.value?.tags || server.value.tags.length === 0) return []
@@ -86,6 +109,106 @@ const showLanguageSeparately = computed(() => {
   if (!server.value) return false
   return server.value.language?.toLowerCase() !== server.value.runtime?.toLowerCase()
 })
+
+/**
+ * Handle re-authentication flow
+ * Opens OAuth popup and waits for completion
+ */
+const handleReAuthentication = async () => {
+  try {
+    isReAuthenticating.value = true
+
+    if (!props.installation.team_id || !props.installation.id) {
+      throw new Error('Missing team ID or installation ID')
+    }
+
+    // Call backend to start re-auth
+    const response = await McpInstallationService.startReAuth(
+      props.installation.team_id,
+      props.installation.id
+    )
+
+    // Calculate popup position (centered on screen)
+    const popupWidth = 600
+    const popupHeight = 700
+    const left = window.screenX + (window.outerWidth - popupWidth) / 2
+    const top = window.screenY + (window.outerHeight - popupHeight) / 2
+
+    // Open OAuth popup
+    oauthPopup.value = window.open(
+      response.authorization_url,
+      'OAuth Re-authentication',
+      `width=${popupWidth},height=${popupHeight},left=${left},top=${top},toolbar=no,menubar=no,location=no,status=no`
+    )
+
+    if (!oauthPopup.value) {
+      throw new Error(t('mcpInstallations.reauth.popup_blocked'))
+    }
+
+    // Show info toast
+    toast.info(t('mcpInstallations.reauth.opening'), {
+      description: t('mcpInstallations.reauth.opening_description')
+    })
+
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    toast.error(t('mcpInstallations.reauth.error'), {
+      description: errorMessage
+    })
+  } finally {
+    isReAuthenticating.value = false
+  }
+}
+
+/**
+ * Handle OAuth popup messages
+ * Listens for oauth_reauth_success or oauth_error messages
+ */
+const handleReAuthMessage = (event: MessageEvent) => {
+  // Verify origin
+  const backendUrl = new URL(getEnv('VITE_DEPLOYSTACK_BACKEND_URL') || 'http://localhost:3000')
+  const allowedOrigins = [window.location.origin, backendUrl.origin]
+
+  if (!allowedOrigins.includes(event.origin)) {
+    console.warn('Rejected postMessage from unauthorized origin:', event.origin)
+    return
+  }
+
+  // Handle success message
+  if (event.data.type === 'oauth_reauth_success') {
+    // Close popup
+    if (oauthPopup.value && !oauthPopup.value.closed) {
+      oauthPopup.value.close()
+    }
+    oauthPopup.value = null
+
+    // Show success toast
+    toast.success(t('mcpInstallations.reauth.success'), {
+      description: t('mcpInstallations.reauth.success_description', {
+        name: props.installation.installation_name || 'Server'
+      })
+    })
+
+    // Emit refresh event to parent
+    emit('refresh')
+  }
+
+  // Handle error message
+  else if (event.data.type === 'oauth_error') {
+    const { error } = event.data
+
+    // Close popup
+    if (oauthPopup.value && !oauthPopup.value.closed) {
+      oauthPopup.value.close()
+    }
+    oauthPopup.value = null
+
+    // Show error toast
+    toast.error(t('mcpInstallations.reauth.error'), {
+      description: error || t('mcpInstallations.reauth.error_description')
+    })
+  }
+}
 
 // Fetch server description
 async function fetchServerDescription() {
@@ -160,6 +283,19 @@ onMounted(async () => {
 
   // Fetch last request
   fetchLastRequest()
+
+  // Add message listener for OAuth popup
+  window.addEventListener('message', handleReAuthMessage)
+})
+
+onUnmounted(() => {
+  // Remove message listener
+  window.removeEventListener('message', handleReAuthMessage)
+
+  // Close popup if still open
+  if (oauthPopup.value && !oauthPopup.value.closed) {
+    oauthPopup.value.close()
+  }
 })
 </script>
 
@@ -188,6 +324,23 @@ onMounted(async () => {
           <dt class="text-sm/6 font-medium text-gray-900">Status Message</dt>
           <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
             {{ statusMessage }}
+          </dd>
+        </div>
+
+        <!-- Re-authenticate Button -->
+        <div v-if="showReAuthButton" class="py-4 sm:grid sm:grid-cols-3 sm:gap-4">
+          <dt class="text-sm/6 font-medium text-gray-900">Action Required</dt>
+          <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
+            <Button
+              @click="handleReAuthentication"
+              :disabled="isReAuthenticating"
+              variant="default"
+              size="default"
+            >
+              <Spinner v-if="isReAuthenticating" class="mr-2 h-4 w-4" />
+              <RefreshCw v-else class="mr-2 h-4 w-4" />
+              {{ $t('mcpInstallations.reauth.button') }}
+            </Button>
           </dd>
         </div>
 

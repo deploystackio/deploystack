@@ -27861,6 +27861,215 @@
         }
       }
     },
+    "/api/teams/{teamId}/mcp/installations/{installationId}/reauth": {
+      "post": {
+        "summary": "Re-authenticate MCP server installation",
+        "tags": [
+          "MCP Installations",
+          "OAuth"
+        ],
+        "description": "Initiates OAuth re-authorization for existing installation with expired or invalid tokens. Supports both cookie-based authentication (for web users) and OAuth2 Bearer token authentication (for CLI users). Requires mcp:read scope for OAuth2 access.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "teamId",
+            "required": true,
+            "description": "Team ID that owns the installation"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "installationId",
+            "required": true,
+            "description": "Installation ID"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Re-authentication OAuth authorization URL generated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "flow_id": {
+                      "type": "string",
+                      "description": "Unique flow ID for the pending OAuth flow"
+                    },
+                    "authorization_url": {
+                      "type": "string",
+                      "format": "uri",
+                      "description": "OAuth authorization URL to redirect user to for authentication"
+                    },
+                    "requires_authorization": {
+                      "type": "boolean",
+                      "description": "Indicates that OAuth authorization is required (always true for this endpoint)"
+                    },
+                    "expires_at": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "ISO 8601 timestamp when the OAuth state expires"
+                    }
+                  },
+                  "required": [
+                    "flow_id",
+                    "authorization_url",
+                    "requires_authorization",
+                    "expires_at"
+                  ],
+                  "description": "Re-authentication OAuth authorization URL generated successfully"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Installation does not require re-authorization or does not use OAuth",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates the operation failed"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Installation does not require re-authorization or does not use OAuth"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required or invalid token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates the operation failed"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Unauthorized - Authentication required or invalid token"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Insufficient permissions or scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates the operation failed"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Forbidden - Insufficient permissions or scope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Installation not found or does not belong to team",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates the operation failed"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Installation not found or does not belong to team"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates the operation failed"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Internal Server Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/teams/{teamId}/mcp/oauth/callback/{flowId}": {
       "get": {
         "tags": [

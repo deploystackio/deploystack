@@ -1,0 +1,3 @@
+ALTER TABLE "oauthPendingFlows" ADD COLUMN "installation_id" text;--> statement-breakpoint
+ALTER TABLE "oauthPendingFlows" ADD CONSTRAINT "oauthPendingFlows_installation_id_mcpServerInstallations_id_fk" FOREIGN KEY ("installation_id") REFERENCES "public"."mcpServerInstallations"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+CREATE INDEX "oauth_pending_flows_installation_id_idx" ON "oauthPendingFlows" USING btree ("installation_id");

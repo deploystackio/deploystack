@@ -122,6 +122,17 @@ export default async function oauthCallbackRoute(server: FastifyInstance) {
 				return reply.code(404).send({ error: 'Flow not found or OAuth state invalid' });
 			}
 
+			// Determine if this is re-auth or new installation
+			const isReAuth = flow.installation_id !== null;
+
+			request.log.info({
+				operation: 'oauth_callback',
+				flowId,
+				teamId,
+				isReAuth,
+				installationId: flow.installation_id || 'new'
+			}, isReAuth ? 'Processing re-authentication callback' : 'Processing new installation callback');
+
 			// Check if expired
 			if (flow.expires_at < new Date()) {
 				request.log.warn({ flowId }, 'OAuth pending flow expired');
@@ -195,6 +206,235 @@ export default async function oauthCallbackRoute(server: FastifyInstance) {
 					? new Date(Date.now() + tokenResponse.expires_in * 1000)
 					: null;
 
+				// Encrypt tokens (needed for both re-auth and new install)
+				const encryptedAccessToken = encrypt(tokenResponse.access_token, request.log);
+				const encryptedRefreshToken = tokenResponse.refresh_token
+					? encrypt(tokenResponse.refresh_token, request.log)
+					: null;
+
+				// ============================================================================
+				// RE-AUTHENTICATION PATH
+				// ============================================================================
+				if (isReAuth) {
+					request.log.info({
+						operation: 'oauth_reauth',
+						installationId: flow.installation_id,
+						teamId: flow.team_id
+					}, 'Updating existing installation tokens');
+
+					// Find existing token record
+					const [existingToken] = await db
+						.select()
+						.from(mcpOauthTokens)
+						.where(eq(mcpOauthTokens.installation_id, flow.installation_id!))
+						.limit(1);
+
+					if (!existingToken) {
+						request.log.error({
+							operation: 'oauth_reauth',
+							installationId: flow.installation_id
+						}, 'Token record not found for installation');
+
+						// Delete pending flow
+						await db.delete(oauthPendingFlows).where(eq(oauthPendingFlows.id, flow.id));
+
+						// Return error page
+						const frontendUrl = await GlobalSettingsInitService.getPageUrl();
+						return reply.type('text/html').send(`
+							<!DOCTYPE html>
+							<html>
+								<head>
+									<title>Re-authentication Failed</title>
+									<meta charset="utf-8">
+									<style>
+										body {
+											font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+											display: flex;
+											align-items: center;
+											justify-content: center;
+											height: 100vh;
+											margin: 0;
+											background: #f5f5f5;
+										}
+										.container {
+											text-align: center;
+											padding: 40px;
+											background: white;
+											border-radius: 8px;
+											box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+										}
+										.error-icon {
+											font-size: 48px;
+											color: #ef4444;
+											margin-bottom: 16px;
+										}
+										h1 {
+											font-size: 24px;
+											margin: 0 0 8px 0;
+											color: #1f2937;
+										}
+										p {
+											color: #6b7280;
+											margin: 0;
+										}
+									</style>
+								</head>
+								<body>
+									<div class="container">
+										<div class="error-icon">✗</div>
+										<h1>Re-authentication Failed</h1>
+										<p>Token record not found. Please contact support.</p>
+										<p style="margin-top: 16px; font-size: 14px;">This window will close automatically...</p>
+									</div>
+									<script>
+										if (window.opener) {
+											window.opener.postMessage({
+												type: 'oauth_error',
+												error: 'Token record not found'
+											}, '${frontendUrl}');
+										}
+										setTimeout(() => {
+											window.close();
+										}, 2000);
+									</script>
+								</body>
+							</html>
+						`);
+					}
+
+					// UPDATE existing token record
+					await db
+						.update(mcpOauthTokens)
+						.set({
+							access_token: encryptedAccessToken,
+							refresh_token: encryptedRefreshToken || existingToken.refresh_token, // Keep old if not rotated
+							expires_at: expiresAt,
+							scope: tokenResponse.scope || existingToken.scope,
+							updated_at: new Date()
+						})
+						.where(eq(mcpOauthTokens.id, existingToken.id));
+
+					request.log.info({
+						operation: 'oauth_reauth',
+						installationId: flow.installation_id,
+						tokenId: existingToken.id,
+						expiresAt
+					}, 'Tokens updated successfully');
+
+					// UPDATE installation status
+					await db
+						.update(mcpServerInstallations)
+						.set({
+							status: 'connecting',
+							status_message: 'Re-authenticated successfully, reconnecting to server',
+							status_updated_at: new Date(),
+							oauth_pending: false
+						})
+						.where(eq(mcpServerInstallations.id, flow.installation_id!));
+
+					request.log.info({
+						operation: 'oauth_reauth',
+						installationId: flow.installation_id
+					}, 'Installation status updated to connecting');
+
+					// Notify satellites to reconnect
+					try {
+						const { SatelliteCommandService } = await import('../../../services/satelliteCommandService');
+						const satelliteCommandService = new SatelliteCommandService(db, request.log);
+						await satelliteCommandService.notifyMcpInstallation(
+							flow.installation_id!,
+							flow.team_id,
+							flow.created_by
+						);
+
+						request.log.info({
+							operation: 'oauth_reauth',
+							installationId: flow.installation_id
+						}, 'Satellite notified of token update');
+					} catch (commandError) {
+						request.log.error(commandError, `Failed to create satellite commands for re-auth ${flow.installation_id}:`);
+						// Don't fail re-auth if command creation fails
+					}
+
+					// Delete pending flow
+					await db.delete(oauthPendingFlows).where(eq(oauthPendingFlows.id, flow.id));
+
+					request.log.info({
+						operation: 'oauth_reauth',
+						installationId: flow.installation_id,
+						flowId: flow.id,
+						serverId: mcpServer.id,
+						teamId: flow.team_id
+					}, 'OAuth re-authentication completed successfully');
+
+					// Return success page with postMessage
+					const frontendUrl = await GlobalSettingsInitService.getPageUrl();
+					return reply.type('text/html').send(`
+						<!DOCTYPE html>
+						<html>
+							<head>
+								<title>Re-authentication Successful</title>
+								<meta charset="utf-8">
+								<style>
+									body {
+										font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+										display: flex;
+										align-items: center;
+										justify-content: center;
+										height: 100vh;
+										margin: 0;
+										background: #f5f5f5;
+									}
+									.container {
+										text-align: center;
+										padding: 40px;
+										background: white;
+										border-radius: 8px;
+										box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+									}
+									.success-icon {
+										font-size: 48px;
+										color: #10b981;
+										margin-bottom: 16px;
+									}
+									h1 {
+										font-size: 24px;
+										margin: 0 0 8px 0;
+										color: #1f2937;
+									}
+									p {
+										color: #6b7280;
+										margin: 0;
+									}
+								</style>
+							</head>
+							<body>
+								<div class="container">
+									<div class="success-icon">✓</div>
+									<h1>Success!</h1>
+									<p>Re-authentication successful! Reconnecting to server...</p>
+									<p style="margin-top: 16px; font-size: 14px;">This window will close automatically...</p>
+								</div>
+								<script>
+									if (window.opener) {
+										window.opener.postMessage({
+											type: 'oauth_reauth_success',
+											installation_id: '${flow.installation_id}'
+										}, '${frontendUrl}');
+									}
+									setTimeout(() => {
+										window.close();
+									}, 500);
+								</script>
+							</body>
+						</html>
+					`);
+				}
+
+				// ============================================================================
+				// NEW INSTALLATION PATH (existing behavior)
+				// ============================================================================
+
 				// Parse team config
 				const teamConfig = flow.team_config ? JSON.parse(flow.team_config) : {};
 
@@ -229,13 +469,7 @@ export default async function oauthCallbackRoute(server: FastifyInstance) {
 					last_used_at: null,
 				});
 
-				// Encrypt tokens
-				const encryptedAccessToken = encrypt(tokenResponse.access_token, request.log);
-				const encryptedRefreshToken = tokenResponse.refresh_token
-					? encrypt(tokenResponse.refresh_token, request.log)
-					: null;
-
-				// Store encrypted tokens
+				// Store encrypted tokens (already encrypted above for both re-auth and new install)
 				await db.insert(mcpOauthTokens).values({
 					id: nanoid(),
 					installation_id: installationId,

@@ -11,6 +11,7 @@ import updateArgsRoute from './updateArgs';
 import getClientConfigRoute from './config';
 import deleteInstallationRoute from './delete';
 import authorizeRoute from './authorize';
+import reauthRoute from './reauth';
 import callbackRoute from './callback';
 
 export default async function installationsRoutes(fastify: FastifyInstance) {
@@ -26,5 +27,6 @@ export default async function installationsRoutes(fastify: FastifyInstance) {
   await fastify.register(getClientConfigRoute);
   await fastify.register(deleteInstallationRoute);
   await fastify.register(authorizeRoute);
+  await fastify.register(reauthRoute);
   await fastify.register(callbackRoute);
 }
