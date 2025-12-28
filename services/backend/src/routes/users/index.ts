@@ -1,11 +1,11 @@
 import type { FastifyInstance } from 'fastify';
 import listUsersRoute from './listUsers';
+import searchUsersRoute from './search';
 import getUserByIdRoute from './getUserById';
 import updateUserRoute from './updateUser';
 import deleteUserRoute from './deleteUser';
 import assignRoleRoute from './assignRole';
 import getUserStatsRoute from './getUserStats';
-import getUsersByRoleRoute from './getUsersByRole';
 import getCurrentUserRoute from './getCurrentUser';
 import getCurrentUserTeamsRoute from './getCurrentUserTeams';
 import deleteMyAccountRoute from './deleteMyAccount';
@@ -19,12 +19,12 @@ import metricsRoutes from './me/metrics';
 export default async function usersRoute(server: FastifyInstance) {
   // Register individual user route handlers
   await server.register(listUsersRoute);
+  await server.register(searchUsersRoute);
   await server.register(getUserByIdRoute);
   await server.register(updateUserRoute);
   await server.register(deleteUserRoute);
   await server.register(assignRoleRoute);
   await server.register(getUserStatsRoute);
-  await server.register(getUsersByRoleRoute);
   await server.register(getCurrentUserRoute);
   await server.register(getCurrentUserTeamsRoute);
   await server.register(deleteMyAccountRoute);

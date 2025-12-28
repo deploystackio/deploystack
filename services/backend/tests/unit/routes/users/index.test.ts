@@ -135,6 +135,7 @@ describe('Users Route', () => {
     mockRequest = {
       params: {},
       body: {},
+      query: {},
       user: {
         id: 'current-user-123',
         username: 'testuser',
@@ -158,12 +159,12 @@ describe('Users Route', () => {
       await usersRoute(mockFastify as FastifyInstance);
 
       expect(mockFastify.get).toHaveBeenCalledWith('/users', expect.any(Object), expect.any(Function));
+      expect(mockFastify.get).toHaveBeenCalledWith('/users/search', expect.any(Object), expect.any(Function));
       expect(mockFastify.get).toHaveBeenCalledWith('/users/:id', expect.any(Object), expect.any(Function));
       expect(mockFastify.put).toHaveBeenCalledWith('/users/:id', expect.any(Object), expect.any(Function));
       expect(mockFastify.delete).toHaveBeenCalledWith('/users/:id', expect.any(Object), expect.any(Function));
       expect(mockFastify.put).toHaveBeenCalledWith('/users/:id/role', expect.any(Object), expect.any(Function));
       expect(mockFastify.get).toHaveBeenCalledWith('/users/stats', expect.any(Object), expect.any(Function));
-      expect(mockFastify.get).toHaveBeenCalledWith('/users/role/:roleId', expect.any(Object), expect.any(Function));
       expect(mockFastify.get).toHaveBeenCalledWith('/users/me', expect.any(Object), expect.any(Function));
       expect(mockFastify.get).toHaveBeenCalledWith('/users/me/teams', expect.any(Object), expect.any(Function));
       expect(mockFastify.get).toHaveBeenCalledWith('/users/:id/teams', expect.any(Object), expect.any(Function));
@@ -184,10 +185,10 @@ describe('Users Route', () => {
       await usersRoute(mockFastify as FastifyInstance);
     });
 
-    it('should return all users successfully', async () => {
+    it('should return all users successfully with pagination', async () => {
       const mockUsers = [
-        { id: '1', username: 'user1', email: 'user1@example.com' },
-        { id: '2', username: 'user2', email: 'user2@example.com' },
+        { id: '1', username: 'user1', email: 'user1@example.com', auth_type: 'email' },
+        { id: '2', username: 'user2', email: 'user2@example.com', auth_type: 'email' },
       ];
       mockUserService.getAllUsers.mockResolvedValue(mockUsers);
 
@@ -199,28 +200,36 @@ describe('Users Route', () => {
       expect(mockReply.send).toHaveBeenCalledWith(
         JSON.stringify({
           success: true,
-          data: [
-            {
-              id: '1',
-              username: 'user1',
-              email: 'user1@example.com',
-              auth_type: 'undefined',
-              first_name: null,
-              last_name: null,
-              github_id: null,
-              role_id: null
-            },
-            {
-              id: '2',
-              username: 'user2',
-              email: 'user2@example.com',
-              auth_type: 'undefined',
-              first_name: null,
-              last_name: null,
-              github_id: null,
-              role_id: null
+          data: {
+            users: [
+              {
+                id: '1',
+                username: 'user1',
+                email: 'user1@example.com',
+                auth_type: 'email',
+                first_name: null,
+                last_name: null,
+                github_id: null,
+                role_id: null
+              },
+              {
+                id: '2',
+                username: 'user2',
+                email: 'user2@example.com',
+                auth_type: 'email',
+                first_name: null,
+                last_name: null,
+                github_id: null,
+                role_id: null
+              }
+            ],
+            pagination: {
+              total: 2,
+              limit: 20,
+              offset: 0,
+              has_more: false
             }
-          ]
+          }
         })
       );
     });

@@ -3,37 +3,37 @@ import { UserService } from '../../services/userService';
 import { requirePermission } from '../../middleware/roleMiddleware';
 import {
   ERROR_RESPONSE_SCHEMA,
-  PAGINATION_QUERY_SCHEMA,
+  SEARCH_USERS_QUERY_SCHEMA,
   USERS_LIST_PAGINATED_RESPONSE_SCHEMA,
   type ErrorResponse,
   type UsersListPaginatedResponse,
   type User,
-  type PaginationQuery,
+  type SearchUsersQuery,
   validatePaginationParams
 } from './schemas';
 
-export default async function listUsersRoute(server: FastifyInstance) {
+export default async function searchUsersRoute(server: FastifyInstance) {
   const userService = new UserService();
 
-  // GET /users - List all users (admin only) with pagination
-  server.get('/users', {
+  // GET /users/search - Search users with filters and pagination
+  server.get('/users/search', {
     preValidation: requirePermission('users.list'),
     schema: {
       tags: ['Users'],
-      summary: 'List all users',
-      description: 'Retrieves a paginated list of all users in the system. Requires admin permissions. Supports pagination with limit (1-100, default: 20) and offset (default: 0) parameters.',
+      summary: 'Search users',
+      description: 'Search and filter users with pagination support. Requires admin permissions. Supports filtering by username (partial, case-insensitive), email (partial, case-insensitive), auth_type (exact), and role_id (exact). Results are paginated with limit (1-100, default: 20) and offset (default: 0) parameters.',
       security: [{ cookieAuth: [] }],
 
-      querystring: PAGINATION_QUERY_SCHEMA,
+      querystring: SEARCH_USERS_QUERY_SCHEMA,
 
       response: {
         200: {
           ...USERS_LIST_PAGINATED_RESPONSE_SCHEMA,
-          description: 'Successfully retrieved users list'
+          description: 'Successfully retrieved filtered users'
         },
         400: {
           ...ERROR_RESPONSE_SCHEMA,
-          description: 'Bad Request - Invalid pagination parameters'
+          description: 'Bad Request - Invalid parameters'
         },
         401: {
           ...ERROR_RESPONSE_SCHEMA,
@@ -52,13 +52,13 @@ export default async function listUsersRoute(server: FastifyInstance) {
   }, async (request, reply) => {
     try {
       // Parse and validate pagination parameters
-      const query = request.query as PaginationQuery;
+      const query = request.query as SearchUsersQuery;
       const { limit, offset } = validatePaginationParams(query);
 
-      const users = await userService.getAllUsers();
+      const allUsers = await userService.getAllUsers();
 
-      // Convert users to proper response format following getCurrentUser pattern
-      const serializedUsers: User[] = users.map(user => ({
+      // Convert users to proper response format
+      let serializedUsers: User[] = allUsers.map(user => ({
         id: String(user.id),
         username: String(user.username),
         email: String(user.email),
@@ -74,16 +74,47 @@ export default async function listUsersRoute(server: FastifyInstance) {
         } : undefined
       }));
 
+      // Apply filters
+      if (query.username) {
+        serializedUsers = serializedUsers.filter(u =>
+          u.username.toLowerCase().includes(query.username!.toLowerCase())
+        );
+      }
+
+      if (query.email) {
+        serializedUsers = serializedUsers.filter(u =>
+          u.email.toLowerCase().includes(query.email!.toLowerCase())
+        );
+      }
+
+      if (query.auth_type) {
+        serializedUsers = serializedUsers.filter(u =>
+          u.auth_type === query.auth_type
+        );
+      }
+
+      if (query.role_id) {
+        serializedUsers = serializedUsers.filter(u =>
+          u.role_id === query.role_id
+        );
+      }
+
       // Apply pagination
       const total = serializedUsers.length;
       const paginatedUsers = serializedUsers.slice(offset, offset + limit);
 
       server.log.info({
-        operation: 'list_users',
+        operation: 'search_users',
         totalResults: total,
         returnedResults: paginatedUsers.length,
+        filters: {
+          username: query.username,
+          email: query.email,
+          auth_type: query.auth_type,
+          role_id: query.role_id
+        },
         pagination: { limit, offset }
-      }, 'Users list completed');
+      }, 'User search completed');
 
       const successResponse: UsersListPaginatedResponse = {
         success: true,
@@ -102,7 +133,7 @@ export default async function listUsersRoute(server: FastifyInstance) {
     } catch (error) {
       // Check if it's a validation error
       if (error instanceof Error && error.message.includes('must be')) {
-        server.log.warn({ error: error.message }, 'Invalid pagination parameters');
+        server.log.warn({ error: error.message }, 'Invalid search parameters');
         const errorResponse: ErrorResponse = {
           success: false,
           error: error.message
@@ -111,10 +142,10 @@ export default async function listUsersRoute(server: FastifyInstance) {
         return reply.status(400).type('application/json').send(jsonString);
       }
 
-      server.log.error(error, 'Error fetching users');
+      server.log.error(error, 'Error searching users');
       const errorResponse: ErrorResponse = {
         success: false,
-        error: 'Failed to fetch users'
+        error: 'Failed to search users'
       };
       const jsonString = JSON.stringify(errorResponse);
       return reply.status(500).type('application/json').send(jsonString);

@@ -222,11 +222,88 @@ export const ASSIGN_ROLE_REQUEST_SCHEMA = {
   additionalProperties: false
 } as const;
 
+// ===== PAGINATION SCHEMAS =====
+export const PAGINATION_QUERY_SCHEMA = {
+  type: 'object',
+  properties: {
+    limit: {
+      type: 'string',
+      pattern: '^\\d+$',
+      description: 'Maximum number of items to return (1-100, default: 20)'
+    },
+    offset: {
+      type: 'string',
+      pattern: '^\\d+$',
+      description: 'Number of items to skip (≥0, default: 0)'
+    }
+  },
+  additionalProperties: false
+} as const;
+
+const PAGINATION_SCHEMA = {
+  type: 'object',
+  properties: {
+    total: {
+      type: 'number',
+      description: 'Total number of users'
+    },
+    limit: {
+      type: 'number',
+      description: 'Number of users per page'
+    },
+    offset: {
+      type: 'number',
+      description: 'Number of users skipped'
+    },
+    has_more: {
+      type: 'boolean',
+      description: 'Whether there are more users beyond this page'
+    }
+  },
+  required: ['total', 'limit', 'offset', 'has_more']
+} as const;
+
+export const SEARCH_USERS_QUERY_SCHEMA = {
+  type: 'object',
+  properties: {
+    // Search filters (all optional)
+    username: {
+      type: 'string',
+      description: 'Filter by username (partial match, case-insensitive)'
+    },
+    email: {
+      type: 'string',
+      description: 'Filter by email (partial match, case-insensitive)'
+    },
+    auth_type: {
+      type: 'string',
+      enum: ['email', 'github'],
+      description: 'Filter by authentication type'
+    },
+    role_id: {
+      type: 'string',
+      description: 'Filter by role ID (exact match)'
+    },
+    // Pagination
+    limit: {
+      type: 'string',
+      pattern: '^\\d+$',
+      description: 'Maximum number of items to return (1-100, default: 20)'
+    },
+    offset: {
+      type: 'string',
+      pattern: '^\\d+$',
+      description: 'Number of items to skip (≥0, default: 0)'
+    }
+  },
+  additionalProperties: false
+} as const;
+
 // ===== RESPONSE SCHEMAS =====
 export const USERS_LIST_RESPONSE_SCHEMA = {
   type: 'object',
   properties: {
-    success: { 
+    success: {
       type: 'boolean',
       description: 'Indicates if the operation was successful'
     },
@@ -234,6 +311,29 @@ export const USERS_LIST_RESPONSE_SCHEMA = {
       type: 'array',
       items: USER_SCHEMA,
       description: 'Array of users'
+    }
+  },
+  required: ['success', 'data']
+} as const;
+
+export const USERS_LIST_PAGINATED_RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    success: {
+      type: 'boolean',
+      description: 'Indicates if the operation was successful'
+    },
+    data: {
+      type: 'object',
+      properties: {
+        users: {
+          type: 'array',
+          items: USER_SCHEMA,
+          description: 'Array of users for current page'
+        },
+        pagination: PAGINATION_SCHEMA
+      },
+      required: ['users', 'pagination']
     }
   },
   required: ['success', 'data']
@@ -328,12 +428,55 @@ export interface AssignRoleRequest {
   role_id: string;
 }
 
+export interface PaginationQuery {
+  limit?: string;
+  offset?: string;
+}
+
+export interface SearchUsersQuery extends PaginationQuery {
+  username?: string;
+  email?: string;
+  auth_type?: 'email' | 'github';
+  role_id?: string;
+}
+
+export interface PaginationMetadata {
+  total: number;
+  limit: number;
+  offset: number;
+  has_more: boolean;
+}
+
 export interface UsersListResponse {
   success: boolean;
   data: User[];
 }
 
+export interface UsersListPaginatedResponse {
+  success: boolean;
+  data: {
+    users: User[];
+    pagination: PaginationMetadata;
+  };
+}
+
 export interface UserTeamsResponse {
   success: boolean;
   teams: TeamItem[];
+}
+
+// Validation helper function
+export function validatePaginationParams(query: PaginationQuery): { limit: number; offset: number } {
+  const limit = query.limit ? parseInt(query.limit, 10) : 20;
+  const offset = query.offset ? parseInt(query.offset, 10) : 0;
+
+  if (isNaN(limit) || limit < 1 || limit > 100) {
+    throw new Error('Limit must be between 1 and 100');
+  }
+
+  if (isNaN(offset) || offset < 0) {
+    throw new Error('Offset must be non-negative');
+  }
+
+  return { limit, offset };
 }
