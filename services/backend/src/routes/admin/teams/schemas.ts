@@ -224,3 +224,56 @@ export function validatePaginationParams(query: PaginationQuery): { limit: numbe
 
   return { limit, offset };
 }
+
+// ===== MCP INSTALLATIONS SCHEMAS =====
+export const MCP_INSTALLATION_SCHEMA = {
+  type: 'object',
+  properties: {
+    id: { type: 'string', description: 'Installation unique identifier' },
+    installation_name: { type: 'string', description: 'User-defined installation name' },
+    server_name: { type: 'string', description: 'MCP server name' },
+    server_slug: { type: 'string', description: 'MCP server slug' },
+    status: { type: 'string', description: 'Installation status (provisioning|online|offline|error|...)' },
+    created_at: { type: 'string', description: 'ISO8601 timestamp' },
+    last_used_at: { type: 'string', nullable: true, description: 'ISO8601 timestamp or null' }
+  },
+  required: ['id', 'installation_name', 'server_name', 'server_slug', 'status', 'created_at']
+} as const;
+
+export const MCP_INSTALLATIONS_RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    success: { type: 'boolean', description: 'Indicates operation success' },
+    data: {
+      type: 'object',
+      properties: {
+        installations: {
+          type: 'array',
+          items: MCP_INSTALLATION_SCHEMA
+        },
+        pagination: PAGINATION_SCHEMA
+      },
+      required: ['installations', 'pagination']
+    }
+  },
+  required: ['success', 'data']
+} as const;
+
+// TypeScript interfaces for MCP installations
+export interface McpInstallation {
+  id: string;
+  installation_name: string;
+  server_name: string;
+  server_slug: string;
+  status: string;
+  created_at: string;
+  last_used_at: string | null;
+}
+
+export interface McpInstallationsResponse {
+  success: boolean;
+  data: {
+    installations: McpInstallation[];
+    pagination: PaginationMetadata;
+  };
+}

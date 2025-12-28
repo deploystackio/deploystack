@@ -35336,6 +35336,285 @@
         }
       }
     },
+    "/api/admin/teams/{id}/mcp/installations": {
+      "get": {
+        "summary": "Get team MCP installations (Global Admin)",
+        "tags": [
+          "Admin - Teams"
+        ],
+        "description": "Allows global administrators to view all MCP server installations for a specific team with pagination.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d+$"
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "description": "Maximum number of items to return (1-100, default: 20)"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d+$"
+            },
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "description": "Number of items to skip (≥0, default: 0)"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "description": "Team ID"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated list of MCP installations for the team",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates operation success"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "installations": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "description": "Installation unique identifier"
+                              },
+                              "installation_name": {
+                                "type": "string",
+                                "description": "User-defined installation name"
+                              },
+                              "server_name": {
+                                "type": "string",
+                                "description": "MCP server name"
+                              },
+                              "server_slug": {
+                                "type": "string",
+                                "description": "MCP server slug"
+                              },
+                              "status": {
+                                "type": "string",
+                                "description": "Installation status (provisioning|online|offline|error|...)"
+                              },
+                              "created_at": {
+                                "type": "string",
+                                "description": "ISO8601 timestamp"
+                              },
+                              "last_used_at": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "ISO8601 timestamp or null"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "installation_name",
+                              "server_name",
+                              "server_slug",
+                              "status",
+                              "created_at"
+                            ]
+                          }
+                        },
+                        "pagination": {
+                          "type": "object",
+                          "properties": {
+                            "total": {
+                              "type": "number",
+                              "description": "Total number of teams"
+                            },
+                            "limit": {
+                              "type": "number",
+                              "description": "Number of teams per page"
+                            },
+                            "offset": {
+                              "type": "number",
+                              "description": "Number of teams skipped"
+                            },
+                            "has_more": {
+                              "type": "boolean",
+                              "description": "Whether there are more teams beyond this page"
+                            }
+                          },
+                          "required": [
+                            "total",
+                            "limit",
+                            "offset",
+                            "has_more"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "installations",
+                        "pagination"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "description": "Paginated list of MCP installations for the team"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - Invalid pagination parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates operation failure"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Bad Request - Invalid pagination parameters"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates operation failure"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Unauthorized"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Global admin required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates operation failure"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Forbidden - Global admin required"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Team not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates operation failure"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Team not found"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates operation failure"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Internal Server Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/admin/oauth-providers": {
       "get": {
         "summary": "List all OAuth providers (Global Admin)",
