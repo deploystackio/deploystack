@@ -2124,6 +2124,7 @@
               "type": "string",
               "enum": [
                 "email",
+                "email_signup",
                 "github"
               ]
             },

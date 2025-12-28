@@ -2,6 +2,21 @@ export default {
   adminUsers: {
     title: 'User Management',
     description: 'Manage all users in the system.',
+    filters: {
+      button: 'Filters',
+      authType: {
+        label: 'Auth Type',
+        placeholder: 'Select auth type...',
+        all: 'All Users',
+        email: 'Email',
+        github: 'GitHub'
+      },
+      role: {
+        label: 'Role',
+        placeholder: 'Select role...',
+        all: 'All Roles'
+      }
+    },
     table: {
       columns: {
         registration: 'Registration',
@@ -11,7 +26,10 @@ export default {
         actions: 'Actions'
       },
       search: {
-        placeholder: 'Search users...'
+        placeholder: 'Search...',
+        searching: 'Searching...',
+        byUsername: 'Username',
+        byEmail: 'Email'
       },
       actions: {
         resetPassword: 'Reset Password',
@@ -28,6 +46,12 @@ export default {
       error: 'Error loading users: {error}'
     },
     pagination: {
+      rowsPerPage: 'Users per page',
+      pageInfo: 'Page {current} of {total}',
+      firstPage: 'Go to first page',
+      previousPage: 'Go to previous page',
+      nextPage: 'Go to next page',
+      lastPage: 'Go to last page',
       previous: 'Previous',
       next: 'Next',
       rowsSelected: '{selected} of {total} row(s) selected.'

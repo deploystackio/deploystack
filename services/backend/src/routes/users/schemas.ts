@@ -277,7 +277,7 @@ export const SEARCH_USERS_QUERY_SCHEMA = {
     },
     auth_type: {
       type: 'string',
-      enum: ['email', 'github'],
+      enum: ['email', 'email_signup', 'github'],
       description: 'Filter by authentication type'
     },
     role_id: {

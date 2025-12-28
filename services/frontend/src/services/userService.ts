@@ -425,4 +425,104 @@ export class UserService {
       throw error;
     }
   }
+
+  /**
+   * Get paginated list of users (admin only)
+   */
+  static async getUsersPaginated(pagination?: { limit?: number; offset?: number }): Promise<{
+    users: User[];
+    pagination: {
+      total: number;
+      limit: number;
+      offset: number;
+      has_more: boolean;
+    };
+  }> {
+    try {
+      const apiUrl = this.getApiUrl();
+      const url = new URL(`${apiUrl}/api/users`);
+
+      if (pagination) {
+        if (pagination.limit !== undefined) {
+          url.searchParams.append('limit', String(pagination.limit));
+        }
+        if (pagination.offset !== undefined) {
+          url.searchParams.append('offset', String(pagination.offset));
+        }
+      }
+
+      const response = await fetch(url.toString(), {
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch users: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+
+      return {
+        users: result.data.users,
+        pagination: result.data.pagination,
+      };
+    } catch (error) {
+      console.error('Get users paginated error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Search users with filters and pagination (admin only)
+   */
+  static async searchUsers(params: {
+    username?: string;
+    email?: string;
+    auth_type?: 'email' | 'github';
+    role_id?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<{
+    users: User[];
+    pagination: {
+      total: number;
+      limit: number;
+      offset: number;
+      has_more: boolean;
+    };
+  }> {
+    try {
+      const apiUrl = this.getApiUrl();
+      const url = new URL(`${apiUrl}/api/users/search`);
+
+      if (params.username) url.searchParams.append('username', params.username);
+      if (params.email) url.searchParams.append('email', params.email);
+      if (params.auth_type) url.searchParams.append('auth_type', params.auth_type);
+      if (params.role_id) url.searchParams.append('role_id', params.role_id);
+
+      if (params.limit !== undefined) {
+        url.searchParams.append('limit', String(params.limit));
+      }
+      if (params.offset !== undefined) {
+        url.searchParams.append('offset', String(params.offset));
+      }
+
+      const response = await fetch(url.toString(), {
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to search users: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+
+      return {
+        users: result.data.users,
+        pagination: result.data.pagination,
+      };
+    } catch (error) {
+      console.error('Search users error:', error);
+      throw error;
+    }
+  }
 }

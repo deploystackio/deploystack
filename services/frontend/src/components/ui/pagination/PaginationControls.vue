@@ -86,7 +86,7 @@ function handlePageSizeChange(newPageSize: unknown) {
 </script>
 
 <template>
-  <div class="flex items-center justify-between px-4 py-4">
+  <div class="flex items-center px-4 py-4" :class="hasSelection ? 'justify-between' : 'justify-end'">
     <!-- Left side: Selection info (only shown when selection is enabled) -->
     <div
       v-if="hasSelection"

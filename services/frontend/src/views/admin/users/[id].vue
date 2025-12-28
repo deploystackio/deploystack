@@ -171,8 +171,10 @@ onMounted(async () => {
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbLink href="/admin/users">
-              {{ t('adminUsers.title') }}
+            <BreadcrumbLink as-child>
+              <RouterLink to="/admin/users">
+                {{ t('adminUsers.title') }}
+              </RouterLink>
             </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
