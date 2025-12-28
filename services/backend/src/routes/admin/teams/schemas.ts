@@ -76,13 +76,72 @@ export const ERROR_RESPONSE_SCHEMA = {
   required: ['success', 'error']
 } as const;
 
+// ===== PAGINATION SCHEMAS =====
+export const PAGINATION_QUERY_SCHEMA = {
+  type: 'object',
+  properties: {
+    limit: {
+      type: 'string',
+      pattern: '^\\d+$',
+      description: 'Maximum number of items to return (1-100, default: 20)'
+    },
+    offset: {
+      type: 'string',
+      pattern: '^\\d+$',
+      description: 'Number of items to skip (≥0, default: 0)'
+    }
+  },
+  additionalProperties: false
+} as const;
+
+export const SEARCH_TEAMS_QUERY_SCHEMA = {
+  type: 'object',
+  properties: {
+    // Search filter
+    name: {
+      type: 'string',
+      description: 'Filter by team name (partial match, case-insensitive)'
+    },
+    // Pagination
+    limit: {
+      type: 'string',
+      pattern: '^\\d+$',
+      description: 'Maximum number of items to return (1-100, default: 20)'
+    },
+    offset: {
+      type: 'string',
+      pattern: '^\\d+$',
+      description: 'Number of items to skip (≥0, default: 0)'
+    }
+  },
+  additionalProperties: false
+} as const;
+
+const PAGINATION_SCHEMA = {
+  type: 'object',
+  properties: {
+    total: { type: 'number', description: 'Total number of teams' },
+    limit: { type: 'number', description: 'Number of teams per page' },
+    offset: { type: 'number', description: 'Number of teams skipped' },
+    has_more: { type: 'boolean', description: 'Whether there are more teams beyond this page' }
+  },
+  required: ['total', 'limit', 'offset', 'has_more']
+} as const;
+
 export const LIST_TEAMS_RESPONSE_SCHEMA = {
   type: 'object',
   properties: {
     success: { type: 'boolean', description: 'Indicates operation success' },
     data: {
-      type: 'array',
-      items: TEAM_RESPONSE_SCHEMA
+      type: 'object',
+      properties: {
+        teams: {
+          type: 'array',
+          items: TEAM_RESPONSE_SCHEMA
+        },
+        pagination: PAGINATION_SCHEMA
+      },
+      required: ['teams', 'pagination']
     }
   },
   required: ['success', 'data']
@@ -119,12 +178,49 @@ export interface SuccessResponse {
   data: TeamResponse;
 }
 
+export interface PaginationQuery {
+  limit?: string;
+  offset?: string;
+}
+
+export interface SearchTeamsQuery {
+  name?: string;
+  limit?: string;
+  offset?: string;
+}
+
+export interface PaginationMetadata {
+  total: number;
+  limit: number;
+  offset: number;
+  has_more: boolean;
+}
+
 export interface ListTeamsResponse {
   success: boolean;
-  data: TeamResponse[];
+  data: {
+    teams: TeamResponse[];
+    pagination: PaginationMetadata;
+  };
 }
 
 export interface ErrorResponse {
   success: boolean;
   error: string;
+}
+
+// Validation helper function
+export function validatePaginationParams(query: PaginationQuery): { limit: number; offset: number } {
+  const limit = query.limit ? parseInt(query.limit, 10) : 20;
+  const offset = query.offset ? parseInt(query.offset, 10) : 0;
+
+  if (isNaN(limit) || limit < 1 || limit > 100) {
+    throw new Error('Limit must be between 1 and 100');
+  }
+
+  if (isNaN(offset) || offset < 0) {
+    throw new Error('Offset must be non-negative');
+  }
+
+  return { limit, offset };
 }

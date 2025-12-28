@@ -34276,11 +34276,33 @@
     },
     "/api/admin/teams": {
       "get": {
-        "summary": "List all teams (Global Admin)",
+        "summary": "List all teams (Global Admin) with pagination",
         "tags": [
           "Admin - Teams"
         ],
-        "description": "Allows global administrators to retrieve a list of all teams in the system.",
+        "description": "Allows global administrators to retrieve a paginated list of all teams in the system.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d+$"
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "description": "Maximum number of items to return (1-100, default: 20)"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d+$"
+            },
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "description": "Number of items to skip (≥0, default: 0)"
+          }
+        ],
         "security": [
           {
             "cookieAuth": []
@@ -34288,7 +34310,7 @@
         ],
         "responses": {
           "200": {
-            "description": "List of all teams",
+            "description": "Paginated list of teams",
             "content": {
               "application/json": {
                 "schema": {
@@ -34299,81 +34321,421 @@
                       "description": "Indicates operation success"
                     },
                     "data": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "id": {
-                            "type": "string",
-                            "description": "Team unique identifier"
-                          },
-                          "name": {
-                            "type": "string",
-                            "description": "Team name"
-                          },
-                          "slug": {
-                            "type": "string",
-                            "description": "Team URL slug"
-                          },
-                          "description": {
-                            "type": "string",
-                            "nullable": true,
-                            "description": "Team description"
-                          },
-                          "owner_id": {
-                            "type": "string",
-                            "description": "Team owner user ID"
-                          },
-                          "is_default": {
-                            "type": "boolean",
-                            "description": "Whether this is the default team"
-                          },
-                          "non_http_mcp_limit": {
-                            "type": "integer",
-                            "description": "Non-HTTP MCP server limit"
-                          },
-                          "mcp_server_limit": {
-                            "type": "integer",
-                            "description": "Total MCP server limit"
-                          },
-                          "member_limit": {
-                            "type": "integer",
-                            "description": "Team member limit"
-                          },
-                          "allow_remote_mcp": {
-                            "type": "boolean",
-                            "description": "Allow remote MCP servers"
-                          },
-                          "created_at": {
-                            "type": "string",
-                            "description": "ISO8601 timestamp"
-                          },
-                          "updated_at": {
-                            "type": "string",
-                            "description": "ISO8601 timestamp"
+                      "type": "object",
+                      "properties": {
+                        "teams": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "description": "Team unique identifier"
+                              },
+                              "name": {
+                                "type": "string",
+                                "description": "Team name"
+                              },
+                              "slug": {
+                                "type": "string",
+                                "description": "Team URL slug"
+                              },
+                              "description": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "Team description"
+                              },
+                              "owner_id": {
+                                "type": "string",
+                                "description": "Team owner user ID"
+                              },
+                              "is_default": {
+                                "type": "boolean",
+                                "description": "Whether this is the default team"
+                              },
+                              "non_http_mcp_limit": {
+                                "type": "integer",
+                                "description": "Non-HTTP MCP server limit"
+                              },
+                              "mcp_server_limit": {
+                                "type": "integer",
+                                "description": "Total MCP server limit"
+                              },
+                              "member_limit": {
+                                "type": "integer",
+                                "description": "Team member limit"
+                              },
+                              "allow_remote_mcp": {
+                                "type": "boolean",
+                                "description": "Allow remote MCP servers"
+                              },
+                              "created_at": {
+                                "type": "string",
+                                "description": "ISO8601 timestamp"
+                              },
+                              "updated_at": {
+                                "type": "string",
+                                "description": "ISO8601 timestamp"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name",
+                              "slug",
+                              "owner_id",
+                              "is_default",
+                              "non_http_mcp_limit",
+                              "mcp_server_limit",
+                              "member_limit",
+                              "allow_remote_mcp",
+                              "created_at",
+                              "updated_at"
+                            ]
                           }
                         },
-                        "required": [
-                          "id",
-                          "name",
-                          "slug",
-                          "owner_id",
-                          "is_default",
-                          "non_http_mcp_limit",
-                          "mcp_server_limit",
-                          "member_limit",
-                          "allow_remote_mcp",
-                          "created_at",
-                          "updated_at"
-                        ]
-                      }
+                        "pagination": {
+                          "type": "object",
+                          "properties": {
+                            "total": {
+                              "type": "number",
+                              "description": "Total number of teams"
+                            },
+                            "limit": {
+                              "type": "number",
+                              "description": "Number of teams per page"
+                            },
+                            "offset": {
+                              "type": "number",
+                              "description": "Number of teams skipped"
+                            },
+                            "has_more": {
+                              "type": "boolean",
+                              "description": "Whether there are more teams beyond this page"
+                            }
+                          },
+                          "required": [
+                            "total",
+                            "limit",
+                            "offset",
+                            "has_more"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "teams",
+                        "pagination"
+                      ]
                     }
                   },
                   "required": [
                     "success",
                     "data"
                   ],
-                  "description": "List of all teams"
+                  "description": "Paginated list of teams"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - Invalid pagination parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates operation failure"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Bad Request - Invalid pagination parameters"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates operation failure"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Unauthorized"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Global admin required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates operation failure"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Forbidden - Global admin required"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates operation failure"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Internal Server Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/teams/search": {
+      "get": {
+        "summary": "Search teams (Global Admin)",
+        "tags": [
+          "Admin - Teams"
+        ],
+        "description": "Search and filter teams with pagination support. Requires global admin permissions. Supports filtering by team name (partial, case-insensitive). Results are paginated with limit (1-100, default: 20) and offset (default: 0) parameters.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "name",
+            "required": false,
+            "description": "Filter by team name (partial match, case-insensitive)"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d+$"
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "description": "Maximum number of items to return (1-100, default: 20)"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d+$"
+            },
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "description": "Number of items to skip (≥0, default: 0)"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved filtered teams",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates operation success"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "teams": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "description": "Team unique identifier"
+                              },
+                              "name": {
+                                "type": "string",
+                                "description": "Team name"
+                              },
+                              "slug": {
+                                "type": "string",
+                                "description": "Team URL slug"
+                              },
+                              "description": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "Team description"
+                              },
+                              "owner_id": {
+                                "type": "string",
+                                "description": "Team owner user ID"
+                              },
+                              "is_default": {
+                                "type": "boolean",
+                                "description": "Whether this is the default team"
+                              },
+                              "non_http_mcp_limit": {
+                                "type": "integer",
+                                "description": "Non-HTTP MCP server limit"
+                              },
+                              "mcp_server_limit": {
+                                "type": "integer",
+                                "description": "Total MCP server limit"
+                              },
+                              "member_limit": {
+                                "type": "integer",
+                                "description": "Team member limit"
+                              },
+                              "allow_remote_mcp": {
+                                "type": "boolean",
+                                "description": "Allow remote MCP servers"
+                              },
+                              "created_at": {
+                                "type": "string",
+                                "description": "ISO8601 timestamp"
+                              },
+                              "updated_at": {
+                                "type": "string",
+                                "description": "ISO8601 timestamp"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name",
+                              "slug",
+                              "owner_id",
+                              "is_default",
+                              "non_http_mcp_limit",
+                              "mcp_server_limit",
+                              "member_limit",
+                              "allow_remote_mcp",
+                              "created_at",
+                              "updated_at"
+                            ]
+                          }
+                        },
+                        "pagination": {
+                          "type": "object",
+                          "properties": {
+                            "total": {
+                              "type": "number",
+                              "description": "Total number of teams"
+                            },
+                            "limit": {
+                              "type": "number",
+                              "description": "Number of teams per page"
+                            },
+                            "offset": {
+                              "type": "number",
+                              "description": "Number of teams skipped"
+                            },
+                            "has_more": {
+                              "type": "boolean",
+                              "description": "Whether there are more teams beyond this page"
+                            }
+                          },
+                          "required": [
+                            "total",
+                            "limit",
+                            "offset",
+                            "has_more"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "teams",
+                        "pagination"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "description": "Successfully retrieved filtered teams"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - Invalid pagination parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates operation failure"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Bad Request - Invalid pagination parameters"
                 }
               }
             }

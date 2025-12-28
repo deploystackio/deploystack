@@ -4,26 +4,26 @@ import { TeamService } from '../../../services/teamService';
 import {
   LIST_TEAMS_RESPONSE_SCHEMA,
   ERROR_RESPONSE_SCHEMA,
-  PAGINATION_QUERY_SCHEMA,
+  SEARCH_TEAMS_QUERY_SCHEMA,
   validatePaginationParams,
   type ListTeamsResponse,
   type ErrorResponse,
-  type PaginationQuery
+  type SearchTeamsQuery
 } from './schemas';
 
-export default async function listTeamsAdminRoute(server: FastifyInstance) {
-  server.get('/teams', {
+export default async function searchTeamsAdminRoute(server: FastifyInstance) {
+  server.get('/teams/search', {
     preValidation: requireGlobalAdmin(),
     schema: {
       tags: ['Admin - Teams'],
-      summary: 'List all teams (Global Admin) with pagination',
-      description: 'Allows global administrators to retrieve a paginated list of all teams in the system.',
+      summary: 'Search teams (Global Admin)',
+      description: 'Search and filter teams with pagination support. Requires global admin permissions. Supports filtering by team name (partial, case-insensitive). Results are paginated with limit (1-100, default: 20) and offset (default: 0) parameters.',
       security: [{ cookieAuth: [] }],
-      querystring: PAGINATION_QUERY_SCHEMA,
+      querystring: SEARCH_TEAMS_QUERY_SCHEMA,
       response: {
         200: {
           ...LIST_TEAMS_RESPONSE_SCHEMA,
-          description: 'Paginated list of teams'
+          description: 'Successfully retrieved filtered teams'
         },
         400: {
           ...ERROR_RESPONSE_SCHEMA,
@@ -45,15 +45,15 @@ export default async function listTeamsAdminRoute(server: FastifyInstance) {
     }
   }, async (request, reply) => {
     try {
-      // Validate pagination parameters
-      const query = request.query as PaginationQuery;
+      // Parse and validate pagination parameters
+      const query = request.query as SearchTeamsQuery;
       const { limit, offset } = validatePaginationParams(query);
 
       // Get all teams
       const allTeams = await TeamService.getAllTeams();
 
       // Serialize teams
-      const serializedTeams = allTeams.map(team => ({
+      let serializedTeams = allTeams.map(team => ({
         id: team.id,
         name: team.name,
         slug: team.slug,
@@ -68,20 +68,30 @@ export default async function listTeamsAdminRoute(server: FastifyInstance) {
         updated_at: team.updated_at.toISOString()
       }));
 
+      // Apply name filter
+      if (query.name) {
+        serializedTeams = serializedTeams.filter(team =>
+          team.name.toLowerCase().includes(query.name!.toLowerCase())
+        );
+      }
+
       // Apply pagination
       const total = serializedTeams.length;
       const paginatedTeams = serializedTeams.slice(offset, offset + limit);
 
-      // Log pagination info
+      // Log search info
       server.log.info({
-        operation: 'list_teams_admin',
-        totalTeams: total,
-        returnedTeams: paginatedTeams.length,
+        operation: 'search_teams_admin',
+        totalResults: total,
+        returnedResults: paginatedTeams.length,
+        filters: {
+          name: query.name
+        },
         pagination: { limit, offset }
-      }, 'Teams list completed');
+      }, 'Team search completed');
 
       // Build success response
-      const listResponse: ListTeamsResponse = {
+      const successResponse: ListTeamsResponse = {
         success: true,
         data: {
           teams: paginatedTeams,
@@ -94,13 +104,13 @@ export default async function listTeamsAdminRoute(server: FastifyInstance) {
         }
       };
 
-      const jsonString = JSON.stringify(listResponse);
+      const jsonString = JSON.stringify(successResponse);
       return reply.status(200).type('application/json').send(jsonString);
     } catch (error) {
       // Handle validation errors
       if (error instanceof Error &&
           (error.message.includes('Limit must') || error.message.includes('Offset must'))) {
-        server.log.warn({ error: error.message }, 'Invalid pagination parameters');
+        server.log.warn({ error: error.message }, 'Invalid search parameters');
 
         const errorResponse: ErrorResponse = {
           success: false,
@@ -111,11 +121,11 @@ export default async function listTeamsAdminRoute(server: FastifyInstance) {
       }
 
       // Handle other errors
-      server.log.error({ error }, 'Failed to list teams');
+      server.log.error({ error }, 'Failed to search teams');
 
       const errorResponse: ErrorResponse = {
         success: false,
-        error: error instanceof Error ? error.message : 'An unexpected error occurred'
+        error: error instanceof Error ? error.message : 'Failed to search teams'
       };
       const jsonString = JSON.stringify(errorResponse);
       return reply.status(500).type('application/json').send(jsonString);
