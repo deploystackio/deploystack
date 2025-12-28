@@ -25026,9 +25026,12 @@ paths:
                         items:
                           type: object
                           properties:
-                            id:
+                            installation_id:
                               type: string
                               description: Installation unique identifier
+                            server_id:
+                              type: string
+                              description: MCP server unique identifier
                             installation_name:
                               type: string
                               description: User-defined installation name
@@ -25049,7 +25052,8 @@ paths:
                               nullable: true
                               description: ISO8601 timestamp or null
                           required:
-                            - id
+                            - installation_id
+                            - server_id
                             - installation_name
                             - server_name
                             - server_slug

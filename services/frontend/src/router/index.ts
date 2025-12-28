@@ -294,6 +294,12 @@ const routes: RouteRecordRaw[] = [
         name: 'AdminTeamDetailMembers',
         component: () => import('../views/admin/teams/[id]/members.vue'),
       },
+      // MCP Servers tab
+      {
+        path: 'teams/:id/mcp-server',
+        name: 'AdminTeamDetailMcpServer',
+        component: () => import('../views/admin/teams/[id]/mcp-server.vue'),
+      },
       {
         path: 'mcp-server-catalog',
         name: 'AdminMcpServerCatalog',

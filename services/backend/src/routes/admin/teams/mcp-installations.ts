@@ -82,7 +82,8 @@ export default async function getTeamMcpInstallationsAdminRoute(server: FastifyI
 
       const installations = await db
         .select({
-          id: schema.mcpServerInstallations.id,
+          installation_id: schema.mcpServerInstallations.id,
+          server_id: schema.mcpServerInstallations.server_id,
           installation_name: schema.mcpServerInstallations.installation_name,
           server_name: schema.mcpServers.name,
           server_slug: schema.mcpServers.slug,
@@ -100,7 +101,8 @@ export default async function getTeamMcpInstallationsAdminRoute(server: FastifyI
 
       // 4. Serialize installations
       const serializedInstallations = installations.map(inst => ({
-        id: inst.id,
+        installation_id: inst.installation_id,
+        server_id: inst.server_id,
         installation_name: inst.installation_name,
         server_name: inst.server_name ?? 'Unknown Server',
         server_slug: inst.server_slug ?? 'unknown',

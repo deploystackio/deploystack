@@ -17,7 +17,8 @@ const router = useRouter()
 const menuItems = computed(() => [
   { id: 'general', label: 'General', path: `/admin/teams/${props.teamId}/general` },
   { id: 'limits', label: 'Limits', path: `/admin/teams/${props.teamId}/limits` },
-  { id: 'members', label: 'Members', path: `/admin/teams/${props.teamId}/members` }
+  { id: 'members', label: 'Members', path: `/admin/teams/${props.teamId}/members` },
+  { id: 'mcp-server', label: 'MCP Servers', path: `/admin/teams/${props.teamId}/mcp-server` }
 ])
 
 // Map route names to section IDs
@@ -25,6 +26,7 @@ const routeToSectionMap: Record<string, string> = {
   'AdminTeamDetailGeneral': 'general',
   'AdminTeamDetailLimits': 'limits',
   'AdminTeamDetailMembers': 'members',
+  'AdminTeamDetailMcpServer': 'mcp-server',
 }
 
 // Get current section from route name

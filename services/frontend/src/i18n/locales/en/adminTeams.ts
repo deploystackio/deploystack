@@ -47,6 +47,7 @@ export default {
         teamDetails: 'Team Details',
         limits: 'Limits',
         members: 'Members',
+        mcpServers: 'MCP Servers',
       },
       values: {
         noDescription: 'No description provided',
@@ -60,6 +61,18 @@ export default {
       },
       actions: {
         edit: 'Edit Team',
+      },
+    },
+    mcpServers: {
+      loading: 'Loading MCP installations...',
+      errorLoading: 'Error loading MCP installations: {error}',
+      noInstallations: 'No MCP installations found for this team.',
+      table: {
+        serverName: 'Server Name',
+        status: 'Status',
+        createdAt: 'Created',
+        lastUsedAt: 'Last Used',
+        never: 'Never',
       },
     },
     teamEdit: {

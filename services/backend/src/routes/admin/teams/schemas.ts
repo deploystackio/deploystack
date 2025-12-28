@@ -229,7 +229,8 @@ export function validatePaginationParams(query: PaginationQuery): { limit: numbe
 export const MCP_INSTALLATION_SCHEMA = {
   type: 'object',
   properties: {
-    id: { type: 'string', description: 'Installation unique identifier' },
+    installation_id: { type: 'string', description: 'Installation unique identifier' },
+    server_id: { type: 'string', description: 'MCP server unique identifier' },
     installation_name: { type: 'string', description: 'User-defined installation name' },
     server_name: { type: 'string', description: 'MCP server name' },
     server_slug: { type: 'string', description: 'MCP server slug' },
@@ -237,7 +238,7 @@ export const MCP_INSTALLATION_SCHEMA = {
     created_at: { type: 'string', description: 'ISO8601 timestamp' },
     last_used_at: { type: 'string', nullable: true, description: 'ISO8601 timestamp or null' }
   },
-  required: ['id', 'installation_name', 'server_name', 'server_slug', 'status', 'created_at']
+  required: ['installation_id', 'server_id', 'installation_name', 'server_name', 'server_slug', 'status', 'created_at']
 } as const;
 
 export const MCP_INSTALLATIONS_RESPONSE_SCHEMA = {
@@ -261,7 +262,8 @@ export const MCP_INSTALLATIONS_RESPONSE_SCHEMA = {
 
 // TypeScript interfaces for MCP installations
 export interface McpInstallation {
-  id: string;
+  installation_id: string;
+  server_id: string;
   installation_name: string;
   server_name: string;
   server_slug: string;
