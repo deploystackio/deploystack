@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { Badge } from '@/components/ui/badge'
 import { DsCard } from '@/components/ui/ds-card'
 import { Users, Crown, UserCheck } from 'lucide-vue-next'
@@ -26,6 +27,7 @@ const props = defineProps<{
   userId: string
 }>()
 
+const router = useRouter()
 const apiUrl = getEnv('VITE_DEPLOYSTACK_BACKEND_URL') || ''
 
 const teams = ref<Team[]>([])
@@ -48,6 +50,11 @@ async function fetchUserTeams(id: string): Promise<TeamsResponse> {
   }
 
   return await response.json()
+}
+
+// Navigate to team detail page
+const handleTeamClick = (teamId: string) => {
+  router.push(`/admin/teams/${teamId}`)
 }
 
 onMounted(async () => {
@@ -91,7 +98,8 @@ onMounted(async () => {
       <li
         v-for="team in teams"
         :key="team.id"
-        class="flex items-center justify-between py-4 pr-5 pl-4 text-sm"
+        @click="handleTeamClick(team.id)"
+        class="flex items-center justify-between py-4 pr-5 pl-4 text-sm cursor-pointer hover:bg-gray-50 transition-colors"
       >
         <div class="flex w-0 flex-1 items-center">
           <Users class="size-5 shrink-0 text-gray-400" aria-hidden="true" />

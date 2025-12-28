@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { Badge } from '@/components/ui/badge'
 import { DsCard } from '@/components/ui/ds-card'
@@ -29,6 +30,7 @@ const props = defineProps<{
 }>()
 
 const { t } = useI18n()
+const router = useRouter()
 const apiUrl = getEnv('VITE_DEPLOYSTACK_BACKEND_URL') || ''
 
 const members = ref<TeamMember[]>([])
@@ -64,6 +66,11 @@ const getMemberDisplayName = (member: TeamMember) => {
 // Format date for display
 const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleDateString()
+}
+
+// Navigate to user detail page
+const handleMemberClick = (userId: string) => {
+  router.push(`/admin/users/${userId}`)
 }
 
 onMounted(async () => {
@@ -107,7 +114,8 @@ onMounted(async () => {
       <li
         v-for="member in members"
         :key="member.id"
-        class="flex items-center justify-between py-4 pr-5 pl-4 text-sm"
+        @click="handleMemberClick(member.user_id)"
+        class="flex items-center justify-between py-4 pr-5 pl-4 text-sm cursor-pointer hover:bg-gray-50 transition-colors"
       >
         <div class="flex w-0 flex-1 items-center">
           <Users class="size-5 shrink-0 text-gray-400" aria-hidden="true" />
