@@ -13,9 +13,33 @@ export interface Team {
   updated_at: string
 }
 
+export interface PaginationParams {
+  limit?: number
+  offset?: number
+}
+
+export interface PaginationMeta {
+  total: number
+  limit: number
+  offset: number
+  has_more: boolean
+}
+
+export interface TeamSearchParams extends PaginationParams {
+  name?: string
+}
+
+export interface PaginatedTeamsResponse {
+  teams: Team[]
+  pagination: PaginationMeta
+}
+
 export interface TeamsApiResponse {
   success: boolean
-  data: Team[]
+  data: {
+    teams: Team[]
+    pagination: PaginationMeta
+  }
 }
 
 export interface UpdateTeamAdminRequest {

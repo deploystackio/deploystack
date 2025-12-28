@@ -20,6 +20,7 @@ export default {
       },
       search: {
         placeholder: 'Search teams by name, slug, or description...',
+        button: 'Search',
       },
       actions: {
         view: 'View',

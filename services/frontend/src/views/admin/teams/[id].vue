@@ -102,8 +102,10 @@ const handleTeamUpdated = (updatedTeam: Team) => {
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbLink href="/admin/teams">
-              {{ t('adminTeams.title') }}
+            <BreadcrumbLink as-child>
+              <RouterLink to="/admin/teams">
+                {{ t('adminTeams.title') }}
+              </RouterLink>
             </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />

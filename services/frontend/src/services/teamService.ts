@@ -1,6 +1,11 @@
 import { getEnv } from '@/utils/env'
 import { z } from 'zod'
-import type { UpdateTeamAdminRequest } from '@/views/admin/teams/types'
+import type {
+  UpdateTeamAdminRequest,
+  PaginationParams,
+  PaginatedTeamsResponse,
+  TeamSearchParams
+} from '@/views/admin/teams/types'
 
 // Zod schemas for validation
 export const TeamSchema = z.object({
@@ -507,6 +512,103 @@ export class TeamService {
       }
     } catch (error) {
       console.error('Error fetching team usage:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Get teams as global admin with pagination support
+   */
+  static async getTeamsAdminPaginated(
+    pagination?: PaginationParams
+  ): Promise<PaginatedTeamsResponse> {
+    try {
+      const apiUrl = this.getApiUrl()
+      const url = new URL(`${apiUrl}/api/admin/teams`)
+
+      if (pagination) {
+        if (pagination.limit !== undefined) {
+          url.searchParams.append('limit', String(pagination.limit))
+        }
+        if (pagination.offset !== undefined) {
+          url.searchParams.append('offset', String(pagination.offset))
+        }
+      }
+
+      const response = await fetch(url.toString(), {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+      })
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Unauthorized - please log in')
+        }
+        if (response.status === 403) {
+          throw new Error('Forbidden - Global admin access required')
+        }
+        throw new Error(`Failed to fetch teams: ${response.status}`)
+      }
+
+      const data = await response.json()
+
+      if (data.success && data.data) {
+        return {
+          teams: data.data.teams,
+          pagination: data.data.pagination,
+        }
+      } else {
+        throw new Error('Invalid response format')
+      }
+    } catch (error) {
+      console.error('Error fetching teams as admin (paginated):', error)
+      throw error
+    }
+  }
+
+  /**
+   * Search teams as global admin with pagination
+   */
+  static async searchTeamsAdmin(
+    params: TeamSearchParams
+  ): Promise<PaginatedTeamsResponse> {
+    try {
+      const apiUrl = this.getApiUrl()
+      const url = new URL(`${apiUrl}/api/admin/teams/search`)
+
+      if (params.name) url.searchParams.append('name', params.name)
+      if (params.limit !== undefined) url.searchParams.append('limit', String(params.limit))
+      if (params.offset !== undefined) url.searchParams.append('offset', String(params.offset))
+
+      const response = await fetch(url.toString(), {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+      })
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Unauthorized - please log in')
+        }
+        if (response.status === 403) {
+          throw new Error('Forbidden - Global admin access required')
+        }
+        throw new Error(`Failed to search teams: ${response.status}`)
+      }
+
+      const data = await response.json()
+
+      if (data.success && data.data) {
+        return {
+          teams: data.data.teams,
+          pagination: data.data.pagination,
+        }
+      } else {
+        throw new Error('Invalid response format')
+      }
+    } catch (error) {
+      console.error('Error searching teams as admin:', error)
       throw error
     }
   }
