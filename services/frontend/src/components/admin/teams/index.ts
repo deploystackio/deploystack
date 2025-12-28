@@ -1,0 +1,5 @@
+export { default as TeamDetailTabs } from './TeamDetailTabs.vue'
+export { default as TeamDetailPageHeading } from './TeamDetailPageHeading.vue'
+export { default as GeneralTab } from './TeamDetailGeneral.vue'
+export { default as LimitsTab } from './TeamDetailLimits.vue'
+export { default as MembersTab } from './TeamDetailMembers.vue'

@@ -266,10 +266,33 @@ const routes: RouteRecordRaw[] = [
         name: 'AdminTeams',
         component: () => import('../views/admin/teams/index.vue'),
       },
+      // Redirect base path to /general
       {
         path: 'teams/:id',
-        name: 'AdminTeamDetail',
-        component: () => import('../views/admin/teams/[id].vue'),
+        redirect: (to) => {
+          return {
+            name: 'AdminTeamDetailGeneral',
+            params: to.params
+          }
+        }
+      },
+      // General tab (default)
+      {
+        path: 'teams/:id/general',
+        name: 'AdminTeamDetailGeneral',
+        component: () => import('../views/admin/teams/[id]/general.vue'),
+      },
+      // Limits tab
+      {
+        path: 'teams/:id/limits',
+        name: 'AdminTeamDetailLimits',
+        component: () => import('../views/admin/teams/[id]/limits.vue'),
+      },
+      // Members tab
+      {
+        path: 'teams/:id/members',
+        name: 'AdminTeamDetailMembers',
+        component: () => import('../views/admin/teams/[id]/members.vue'),
       },
       {
         path: 'mcp-server-catalog',
