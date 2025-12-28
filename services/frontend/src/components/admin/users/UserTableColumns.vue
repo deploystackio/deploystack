@@ -12,7 +12,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Mail, Github, Eye } from 'lucide-vue-next'
-import type { User } from './types'
+import type { User } from '@/views/admin/users/types'
 
 const { t } = useI18n()
 

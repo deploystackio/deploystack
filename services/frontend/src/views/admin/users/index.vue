@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { DsPageHeading } from '@/components/ui/ds-page-heading'
 import NavbarLayout from '@/components/NavbarLayout.vue'
 import { getEnv } from '@/utils/env'
-import UserTableColumns from './UserTableColumns.vue'
+import { UserTableColumns } from '@/components/admin/users'
 import type { User, UsersApiResponse } from './types'
 
 const { t } = useI18n()

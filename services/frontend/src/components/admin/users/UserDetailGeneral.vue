@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { Badge } from '@/components/ui/badge'
 import { DsCard } from '@/components/ui/ds-card'
 import { Mail, Github, Shield } from 'lucide-vue-next'
-import type { User } from '../types'
+import type { User } from '@/views/admin/users/types'
 
 const props = defineProps<{
   user: User

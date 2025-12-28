@@ -30,8 +30,7 @@ import { SettingsMenu, SettingsMenuGroup, SettingsMenuItem } from '@/components/
 import NavbarLayout from '@/components/NavbarLayout.vue'
 import { getEnv } from '@/utils/env'
 import { UserService } from '@/services/userService'
-import UserDetailGeneral from './components/UserDetailGeneral.vue'
-import UserDetailTeams from './components/UserDetailTeams.vue'
+import { UserDetailGeneral, UserDetailTeams } from '@/components/admin/users'
 import type { User as UserType } from './types'
 
 const { t } = useI18n()
