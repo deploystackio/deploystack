@@ -8,7 +8,8 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { Badge } from '@/components/ui/badge'
-import { Globe, Github, Package, Code, User, Layers, Shield } from 'lucide-vue-next'
+import { Globe, Github, Code, User, Layers } from 'lucide-vue-next'
+import McpServerInfoSpecifications from '@/components/mcp-server/view/McpServerInfoSpecifications.vue'
 import type { McpServer } from '@/views/admin/mcp-server-catalog/types'
 
 interface Props {
@@ -124,43 +125,28 @@ const open = defineModel<boolean>('open', { required: true })
         </div>
 
         <!-- Specifications Section -->
-        <div class="space-y-4 pt-4 border-t border-gray-200">
-          <h3 class="text-sm font-semibold text-gray-900">Specifications</h3>
+        <div v-if="server.requires_oauth || (server.runtime !== 'http' && server.packages) || (server.runtime === 'http' && server.remotes)" class="pt-4 border-t border-gray-200">
+          <McpServerInfoSpecifications
+            :requires-oauth="server.requires_oauth"
+            :runtime="server.runtime"
+            :packages="server.packages"
+            :remotes="server.remotes"
 
-          <!-- Requires OAuth -->
-          <div v-if="server.requires_oauth" class="space-y-1">
-            <dt class="text-xs font-medium text-gray-500 flex items-center gap-1">
-              <Shield class="h-3 w-3" />
-              Authentication
-            </dt>
-            <dd class="text-sm">
-              <Badge variant="default" class="text-xs">
-                Requires OAuth
-              </Badge>
-            </dd>
-          </div>
+            :template-args="server.template_args"
+            :template-env="server.template_env"
+            :template-headers="server.template_headers"
+            :template-url-query-params="server.template_url_query_params"
 
-          <!-- Packages (if runtime !== 'http') -->
-          <div v-if="server.runtime !== 'http' && server.packages" class="space-y-1">
-            <dt class="text-xs font-medium text-gray-500 flex items-center gap-1">
-              <Package class="h-3 w-3" />
-              Packages
-            </dt>
-            <dd class="text-sm">
-              <pre class="bg-gray-50 border border-gray-200 rounded p-3 text-xs overflow-x-auto">{{ JSON.stringify(server.packages, null, 2) }}</pre>
-            </dd>
-          </div>
+            :team-args-schema="server.team_args_schema"
+            :team-env-schema="server.team_env_schema"
+            :team-headers-schema="server.team_headers_schema"
+            :team-url-query-params-schema="server.team_url_query_params_schema"
 
-          <!-- Remotes (if runtime === 'http') -->
-          <div v-if="server.runtime === 'http' && server.remotes" class="space-y-1">
-            <dt class="text-xs font-medium text-gray-500 flex items-center gap-1">
-              <Globe class="h-3 w-3" />
-              Remotes
-            </dt>
-            <dd class="text-sm">
-              <pre class="bg-gray-50 border border-gray-200 rounded p-3 text-xs overflow-x-auto">{{ JSON.stringify(server.remotes, null, 2) }}</pre>
-            </dd>
-          </div>
+            :user-args-schema="server.user_args_schema"
+            :user-env-schema="server.user_env_schema"
+            :user-headers-schema="server.user_headers_schema"
+            :user-url-query-params-schema="server.user_url_query_params_schema"
+          />
         </div>
       </div>
 

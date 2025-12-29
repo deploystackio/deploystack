@@ -65,13 +65,7 @@ onMounted(async () => {
 })
 
 const installServer = () => {
-  router.push({
-    path: '/mcp-server/install',
-    query: {
-      serverId: serverId,
-      step: '2'
-    }
-  })
+  router.push(`/mcp-server/install/${serverId}`)
 }
 </script>
 
