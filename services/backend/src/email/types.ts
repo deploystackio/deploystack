@@ -163,6 +163,34 @@ export interface TeamDeletedEmailVariables {
   teamName: string;
 }
 
+export interface GlobalAdminPromotedEmailVariables {
+  userName: string;
+  promotedByName: string;
+  dashboardUrl?: string;
+}
+
+export interface GlobalAdminDemotedEmailVariables {
+  userName: string;
+  newRoleName: string;
+  changedByName: string;
+  supportEmail?: string;
+}
+
+export interface GlobalAdminUserPromotedNotificationVariables {
+  adminName: string;
+  promotedUserName: string;
+  promotedByName: string;
+  dashboardUrl?: string;
+}
+
+export interface GlobalAdminUserDemotedNotificationVariables {
+  adminName: string;
+  demotedUserName: string;
+  newRoleName: string;
+  changedByName: string;
+  dashboardUrl?: string;
+}
+
 // Template registry for type safety
 export interface TemplateVariableMap {
   welcome: WelcomeEmailVariables;
@@ -175,6 +203,10 @@ export interface TemplateVariableMap {
   'mcp-installation-deleted': McpInstallationDeletedEmailVariables;
   'team-created': TeamCreatedEmailVariables;
   'team-deleted': TeamDeletedEmailVariables;
+  'global-admin-promoted': GlobalAdminPromotedEmailVariables;
+  'global-admin-demoted': GlobalAdminDemotedEmailVariables;
+  'global-admin-user-promoted-notification': GlobalAdminUserPromotedNotificationVariables;
+  'global-admin-user-demoted-notification': GlobalAdminUserDemotedNotificationVariables;
 }
 
 export type TemplateNames = keyof TemplateVariableMap;

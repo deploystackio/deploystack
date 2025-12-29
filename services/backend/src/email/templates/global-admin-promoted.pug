@@ -1,0 +1,31 @@
+//- @description Email notification when a user is promoted to global administrator
+//- @variables userName, promotedByName, dashboardUrl
+extends layouts/base.pug
+
+block content
+  h1 You're now a Global Administrator
+
+  p Hi #{userName},
+
+  p #{promotedByName} just made you a global administrator. You now have full access to manage users, teams, and all platform settings.
+
+  h2 What this means
+
+  p As a global admin, you can:
+
+  ul
+    li Manage all users and their roles
+    li Access the admin dashboard
+    li Configure platform settings
+    li View system logs and analytics
+
+  if dashboardUrl
+    .text-center
+      a.button(href=dashboardUrl) Go to Admin Dashboard
+
+  p Questions? Just reach out to your team.
+
+  p.text-muted
+    | Best regards,
+    br
+    | The DeployStack Team

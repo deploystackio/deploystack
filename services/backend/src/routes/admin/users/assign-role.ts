@@ -96,6 +96,21 @@ export default async function assignRoleAdminRoute(server: FastifyInstance) {
       const { id } = request.params as ParamsWithId;
       const { role_id } = request.body as AssignRoleRequest;
 
+      // Get user's current role before making changes
+      const userBeforeChange = await userService.getUserById(id);
+      if (!userBeforeChange) {
+        const errorResponse: ErrorResponse = {
+          success: false,
+          error: 'User not found'
+        };
+        const jsonString = JSON.stringify(errorResponse);
+        return reply.status(404).type('application/json').send(jsonString);
+      }
+
+      const oldRoleId = userBeforeChange.role_id;
+      const isPromotionToGlobalAdmin = role_id === 'global_admin' && oldRoleId !== 'global_admin';
+      const isDemotionFromGlobalAdmin = oldRoleId === 'global_admin' && role_id !== 'global_admin';
+
       // Prevent users from changing their own role
       if (request.user?.id === id) {
         const errorResponse: ErrorResponse = {
@@ -119,6 +134,96 @@ export default async function assignRoleAdminRoute(server: FastifyInstance) {
 
       // Get updated user data
       const user = await userService.getUserById(id);
+
+      // Send email notifications for global_admin role changes
+      if (isPromotionToGlobalAdmin || isDemotionFromGlobalAdmin) {
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const jobQueueService = (server as any).jobQueueService;
+          if (jobQueueService && userBeforeChange.email && request.user) {
+            const currentUser = request.user as { id: string; username?: string; email?: string };
+            const actorName = currentUser.username || currentUser.email || 'Administrator';
+            const targetUserName = userBeforeChange.username || userBeforeChange.email;
+
+            // Email 1: Notify the user whose role changed
+            if (isPromotionToGlobalAdmin) {
+              await jobQueueService.createJob('send_email', {
+                to: userBeforeChange.email,
+                subject: 'You\'ve been promoted to Global Administrator',
+                template: 'global-admin-promoted',
+                variables: {
+                  userName: targetUserName,
+                  promotedByName: actorName,
+                  dashboardUrl: process.env.FRONTEND_URL || undefined
+                }
+              });
+              server.log.info({ operation: 'global_admin_promoted', userId: id }, 'Global admin promotion email queued');
+            } else if (isDemotionFromGlobalAdmin) {
+              const newRole = await userService.getUserById(id);
+              const newRoleName = newRole?.role?.name || 'Standard User';
+
+              await jobQueueService.createJob('send_email', {
+                to: userBeforeChange.email,
+                subject: 'Your role has been updated',
+                template: 'global-admin-demoted',
+                variables: {
+                  userName: targetUserName,
+                  newRoleName: newRoleName,
+                  changedByName: actorName,
+                  supportEmail: process.env.SUPPORT_EMAIL || undefined
+                }
+              });
+              server.log.info({ operation: 'global_admin_demoted', userId: id }, 'Global admin demotion email queued');
+            }
+
+            // Email 2: Notify OTHER global admins (exclude actor and target user)
+            const allGlobalAdmins = await userService.getUsersByRole('global_admin');
+            const otherAdmins = allGlobalAdmins.filter(admin =>
+              admin.id !== request.user!.id && admin.email && admin.id !== id
+            );
+
+            if (otherAdmins.length > 0) {
+              for (const admin of otherAdmins) {
+                const adminDisplayName = admin.username || admin.email;
+
+                if (isPromotionToGlobalAdmin) {
+                  await jobQueueService.createJob('send_email', {
+                    to: admin.email,
+                    subject: 'New Global Administrator Added',
+                    template: 'global-admin-user-promoted-notification',
+                    variables: {
+                      adminName: adminDisplayName,
+                      promotedUserName: targetUserName,
+                      promotedByName: actorName,
+                      dashboardUrl: process.env.FRONTEND_URL || undefined
+                    }
+                  });
+                } else if (isDemotionFromGlobalAdmin) {
+                  const newRole = await userService.getUserById(id);
+                  const newRoleName = newRole?.role?.name || 'Standard User';
+
+                  await jobQueueService.createJob('send_email', {
+                    to: admin.email,
+                    subject: 'Global Administrator Removed',
+                    template: 'global-admin-user-demoted-notification',
+                    variables: {
+                      adminName: adminDisplayName,
+                      demotedUserName: targetUserName,
+                      newRoleName: newRoleName,
+                      changedByName: actorName,
+                      dashboardUrl: process.env.FRONTEND_URL || undefined
+                    }
+                  });
+                }
+              }
+              server.log.info({ notifiedCount: otherAdmins.length }, 'Notified other global admins');
+            }
+          }
+        } catch (emailError) {
+          server.log.error(emailError, 'Failed to queue emails - role change succeeded');
+          // Don't fail role assignment if email queueing fails
+        }
+      }
 
       const successResponse: AssignRoleSuccessResponse = {
         success: true,

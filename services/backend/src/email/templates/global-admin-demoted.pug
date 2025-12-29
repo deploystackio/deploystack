@@ -1,0 +1,34 @@
+//- @description Email notification when a user's global administrator role is removed
+//- @variables userName, newRoleName, changedByName, supportEmail
+extends layouts/base.pug
+
+block content
+  h1 Your Role Has Been Updated
+
+  p Hi #{userName},
+
+  p #{changedByName} changed your role from Global Administrator to #{newRoleName}.
+
+  .role-info
+    p
+      strong Previous Role:
+      |  Global Administrator
+
+    p
+      strong New Role:
+      |  #{newRoleName}
+
+  h2 What changed
+
+  p Your access level has been adjusted. You may have reduced permissions for certain platform operations.
+
+  if supportEmail
+    p
+      | If you believe this change was made in error, please contact support at&nbsp;
+      a(href=`mailto:${supportEmail}`)= supportEmail
+      | .
+
+  p.text-muted
+    | Best regards,
+    br
+    | The DeployStack Team

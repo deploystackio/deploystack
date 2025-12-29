@@ -1,0 +1,34 @@
+//- @description Email notification to other admins when a user is promoted to global administrator
+//- @variables adminName, promotedUserName, promotedByName, dashboardUrl
+extends layouts/base.pug
+
+block content
+  h1 New Global Administrator Added
+
+  p Hi #{adminName},
+
+  p #{promotedByName} just added #{promotedUserName} as a global administrator.
+
+  .admin-info
+    p
+      strong User Promoted:
+      |  #{promotedUserName}
+
+    p
+      strong Promoted By:
+      |  #{promotedByName}
+
+    p
+      strong New Role:
+      |  Global Administrator
+
+  p This user now has full access to manage users, teams, and platform settings.
+
+  if dashboardUrl
+    .text-center
+      a.button(href=dashboardUrl) View User Management
+
+  p.text-muted
+    | Best regards,
+    br
+    | The DeployStack Team

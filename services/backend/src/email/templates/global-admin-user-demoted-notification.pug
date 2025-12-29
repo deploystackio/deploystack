@@ -1,0 +1,38 @@
+//- @description Email notification to other admins when a user's global administrator role is removed
+//- @variables adminName, demotedUserName, newRoleName, changedByName, dashboardUrl
+extends layouts/base.pug
+
+block content
+  h1 Global Administrator Removed
+
+  p Hi #{adminName},
+
+  p #{changedByName} changed #{demotedUserName}'s role from Global Administrator to #{newRoleName}.
+
+  .admin-info
+    p
+      strong User:
+      |  #{demotedUserName}
+
+    p
+      strong Changed By:
+      |  #{changedByName}
+
+    p
+      strong Previous Role:
+      |  Global Administrator
+
+    p
+      strong New Role:
+      |  #{newRoleName}
+
+  p This user no longer has global administrator access.
+
+  if dashboardUrl
+    .text-center
+      a.button(href=dashboardUrl) View User Management
+
+  p.text-muted
+    | Best regards,
+    br
+    | The DeployStack Team
