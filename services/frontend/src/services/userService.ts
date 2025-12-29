@@ -525,4 +525,26 @@ export class UserService {
       throw error;
     }
   }
+
+  /**
+   * Get user by ID (admin only)
+   */
+  static async getById(userId: string): Promise<User> {
+    try {
+      const apiUrl = this.getApiUrl();
+      const response = await fetch(`${apiUrl}/api/users/${userId}`, {
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to fetch user: ${response.statusText} (status: ${response.status})`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Get user by ID error:', error);
+      throw error;
+    }
+  }
 }

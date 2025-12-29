@@ -1,3 +1,6 @@
 export { default as UserDetailGeneral } from './UserDetailGeneral.vue'
 export { default as UserDetailTeams } from './UserDetailTeams.vue'
 export { default as UserTableColumns } from './UserTableColumns.vue'
+export { default as UserDetailTabs } from './UserDetailTabs.vue'
+export { default as UserDetailPageHeading } from './UserDetailPageHeading.vue'
+export { default as ForceResetPasswordButton } from './ForceResetPasswordButton.vue'

@@ -256,10 +256,27 @@ const routes: RouteRecordRaw[] = [
         name: 'AdminUsers',
         component: () => import('../views/admin/users/index.vue'),
       },
+      // Redirect base path to /general
       {
         path: 'users/:id',
-        name: 'AdminUserDetail',
-        component: () => import('../views/admin/users/[id].vue'),
+        redirect: (to) => {
+          return {
+            name: 'AdminUserDetailGeneral',
+            params: to.params
+          }
+        }
+      },
+      // General tab (default)
+      {
+        path: 'users/:id/general',
+        name: 'AdminUserDetailGeneral',
+        component: () => import('../views/admin/users/[id]/general.vue'),
+      },
+      // Teams tab
+      {
+        path: 'users/:id/teams',
+        name: 'AdminUserDetailTeams',
+        component: () => import('../views/admin/users/[id]/teams.vue'),
       },
       {
         path: 'teams',
