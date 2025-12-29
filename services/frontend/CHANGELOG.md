@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.52.0 (2025-12-29)
+
+* feat(all): add MCP servers page to admin teams detail with pagination ([6186e7bb519b493e2d4e7354d9ae694beb2b1186](https://github.com/deploystackio/deploystack/commit/6186e7bb519b493e2d4e7354d9ae694beb2b1186))
+* feat(all): add OAuth re-authentication for MCP installations ([f08e92a29ba06850def5a9dac17f5cc19be6a5a5](https://github.com/deploystackio/deploystack/commit/f08e92a29ba06850def5a9dac17f5cc19be6a5a5))
+* feat(all): add per-team remote MCP server permission - global setting ([69ace9d7f15c1b26857f3c6528a4d161e58d2466](https://github.com/deploystackio/deploystack/commit/69ace9d7f15c1b26857f3c6528a4d161e58d2466))
+* feat(all): make team member limits configurable per-team ([1c70523ce3d0e83ea4c1032ca4dce7fca48ca869](https://github.com/deploystackio/deploystack/commit/1c70523ce3d0e83ea4c1032ca4dce7fca48ca869))
+* feat(frontend): add navigation to user and team detail pages ([e4ce9319542542f2774c6b08ba8ff6732baca38f](https://github.com/deploystackio/deploystack/commit/e4ce9319542542f2774c6b08ba8ff6732baca38f))
+* feat(frontend): add pagination and filters to admin users table ([fde953a8d38cd62e96cd7e8de7c3432d75c387ca](https://github.com/deploystackio/deploystack/commit/fde953a8d38cd62e96cd7e8de7c3432d75c387ca))
+* feat(frontend): add pagination and search to admin teams view ([576915678480ed5e2714b9b402d79897fa907932](https://github.com/deploystackio/deploystack/commit/576915678480ed5e2714b9b402d79897fa907932))
+* feat(frontend): add search input to tools table ([e8638c3ddc726e886f93bad9c6ba58f54355a860](https://github.com/deploystackio/deploystack/commit/e8638c3ddc726e886f93bad9c6ba58f54355a860))
+* feat(frontend): add validation for user arguments and environment variables ([0d540a0e1231ba827a20cf7a1d22ca777f2c7f41](https://github.com/deploystackio/deploystack/commit/0d540a0e1231ba827a20cf7a1d22ca777f2c7f41))
+* refactor(frontend): migrate admin teams detail page to route-based navigation ([335715bdabfe6bb62018d79dde10f93030cec79d](https://github.com/deploystackio/deploystack/commit/335715bdabfe6bb62018d79dde10f93030cec79d))
+* refactor(frontend): reorganize user components and update imports for admin/users ([96e864adbb59cbec0de9d0d4e17e517cd3a6d762](https://github.com/deploystackio/deploystack/commit/96e864adbb59cbec0de9d0d4e17e517cd3a6d762))
+* docs(all): update project description for clarity and focus ([cbbfcf6f1392f8a357075b4c0447357bd647cac9](https://github.com/deploystackio/deploystack/commit/cbbfcf6f1392f8a357075b4c0447357bd647cac9))
+
 ## 0.51.0 (2025-12-24)
 
 * feat(all): add real-time SSE streaming for MCP installations list ([420b99e99af44ae12cd04dca5a05eb60a130aad2](https://github.com/deploystackio/deploystack/commit/420b99e99af44ae12cd04dca5a05eb60a130aad2))
