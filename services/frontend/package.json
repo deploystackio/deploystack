@@ -26,7 +26,7 @@
     "mitt": "^3.0.1",
     "pinia": "^3.0.4",
     "prismjs": "^1.30.0",
-    "reka-ui": "^2.6.1",
+    "reka-ui": "^2.7.0",
     "tailwind-merge": "^3.4.0",
     "tailwindcss-animate": "^1.0.7",
     "vee-validate": "^4.15.1",
