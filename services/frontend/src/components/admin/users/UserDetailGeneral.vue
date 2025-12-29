@@ -1,16 +1,44 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { toast } from 'vue-sonner'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { DsCard } from '@/components/ui/ds-card'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Mail, Github, Shield } from 'lucide-vue-next'
+import { getEnv } from '@/utils/env'
 import type { User } from '@/views/admin/users/types'
 
 const props = defineProps<{
   user: User
 }>()
 
+const emit = defineEmits<{
+  roleChanged: []
+}>()
+
 const { t } = useI18n()
+
+// Dialog state
+const isDialogOpen = ref(false)
+const selectedRole = ref(props.user.role_id || 'global_user')
+const isChangingRole = ref(false)
 
 // Computed properties for display
 const displayName = computed(() => {
@@ -28,6 +56,64 @@ const authTypeBadge = computed(() => {
     text: isEmail ? t('adminUsers.userDetail.values.email') : t('adminUsers.userDetail.values.github')
   }
 })
+
+// Role options
+const roleOptions = [
+  { value: 'global_admin', label: 'Global Administrator' },
+  { value: 'global_user', label: 'Global User' }
+]
+
+// Change role handler
+async function handleChangeRole() {
+  if (!selectedRole.value || selectedRole.value === props.user.role_id) {
+    isDialogOpen.value = false
+    return
+  }
+
+  try {
+    isChangingRole.value = true
+    const apiUrl = getEnv('VITE_DEPLOYSTACK_BACKEND_URL')
+
+    const response = await fetch(`${apiUrl}/api/admin/users/${props.user.id}/role`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify({
+        role_id: selectedRole.value
+      })
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to change role')
+    }
+
+    toast.success('Role changed successfully', {
+      description: `User role updated to ${roleOptions.find(r => r.value === selectedRole.value)?.label}`
+    })
+
+    isDialogOpen.value = false
+    emit('roleChanged')
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    toast.error('Failed to change role', {
+      description: errorMessage
+    })
+  } finally {
+    isChangingRole.value = false
+  }
+}
+
+// Reset selected role when dialog opens
+function handleDialogOpen(open: boolean) {
+  isDialogOpen.value = open
+  if (open) {
+    selectedRole.value = props.user.role_id || 'global_user'
+  }
+}
 </script>
 
 <template>
@@ -57,14 +143,6 @@ const authTypeBadge = computed(() => {
         <div class="py-4 sm:grid sm:grid-cols-3 sm:gap-4">
           <dt class="text-sm font-medium text-gray-900">{{ t('adminUsers.userDetail.fields.emailAddress') }}</dt>
           <dd class="mt-1 text-sm text-gray-700 sm:col-span-2 sm:mt-0">{{ user.email }}</dd>
-        </div>
-
-        <!-- Role -->
-        <div class="py-4 sm:grid sm:grid-cols-3 sm:gap-4">
-          <dt class="text-sm font-medium text-gray-900">{{ t('adminUsers.userDetail.fields.role') }}</dt>
-          <dd class="mt-1 text-sm text-gray-700 sm:col-span-2 sm:mt-0">
-            {{ user.role ? user.role.name : t('adminUsers.userDetail.values.noRoleAssigned') }}
-          </dd>
         </div>
 
         <!-- Registration Method -->
@@ -101,6 +179,75 @@ const authTypeBadge = computed(() => {
           </dd>
         </div>
       </dl>
+    </DsCard>
+
+    <!-- Role Card -->
+    <DsCard :title="t('adminUsers.userDetail.fields.role')">
+      <p class="text-sm text-muted-foreground mb-6">
+        User role and permissions within the DeployStack system
+      </p>
+
+      <dl class="divide-y divide-gray-100">
+        <!-- Role ID -->
+        <div class="py-4 sm:grid sm:grid-cols-3 sm:gap-4">
+          <dt class="text-sm font-medium text-gray-900">Role</dt>
+          <dd class="mt-1 text-sm text-gray-700 sm:col-span-2 sm:mt-0">
+            {{ user.role_id || t('adminUsers.userDetail.values.noRoleAssigned') }}
+          </dd>
+        </div>
+      </dl>
+
+      <template #footer-actions>
+        <Dialog :open="isDialogOpen" @update:open="handleDialogOpen">
+          <DialogTrigger as-child>
+            <Button>
+              Change Role
+            </Button>
+          </DialogTrigger>
+          <DialogContent class="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Change User Role</DialogTitle>
+              <DialogDescription>
+                Update the role for {{ user.username }}. This will affect their permissions across the system.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div class="space-y-4 py-4">
+              <div class="space-y-2">
+                <label class="text-sm font-medium">Select Role</label>
+                <Select v-model="selectedRole">
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem
+                      v-for="option in roleOptions"
+                      :key="option.value"
+                      :value="option.value"
+                    >
+                      {{ option.label }}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" @click="isDialogOpen = false" :disabled="isChangingRole">
+                Cancel
+              </Button>
+              <Button
+                @click="handleChangeRole"
+                :loading="isChangingRole"
+                loading-text="Changing..."
+                :disabled="isChangingRole || selectedRole === user.role_id"
+              >
+                Change Role
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </template>
     </DsCard>
 
     <!-- Permissions Card -->

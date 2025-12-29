@@ -138,6 +138,15 @@ const displayName = computed(() => {
   return fullName || user.value.username
 })
 
+// Handler for role change event
+async function handleRoleChanged() {
+  try {
+    user.value = await fetchUser(userId)
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : 'An unknown error occurred'
+  }
+}
+
 // Load user on component mount
 onMounted(async () => {
   setBreadcrumbs([
@@ -278,7 +287,11 @@ onMounted(async () => {
 
         <!-- Content Area -->
         <div class="flex-1">
-          <UserDetailGeneral v-if="currentSection === 'general'" :user="user" />
+          <UserDetailGeneral
+            v-if="currentSection === 'general'"
+            :user="user"
+            @role-changed="handleRoleChanged"
+          />
           <UserDetailTeams v-else-if="currentSection === 'teams'" :user-id="userId" />
         </div>
       </div>
