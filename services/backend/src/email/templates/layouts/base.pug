@@ -13,9 +13,15 @@ html(lang="en")
         .preheader { display: none !important; visibility: hidden; opacity: 0; color: transparent; height: 0; width: 0; }
     style.
       /* Reset styles */
+      *, *::after, *::before {
+        box-sizing: border-box;
+      }
       body, table, td, p, a, li, blockquote {
         -webkit-text-size-adjust: 100%;
         -ms-text-size-adjust: 100%;
+      }
+      table {
+        border-spacing: 0;
       }
       table, td {
         mso-table-lspace: 0pt;
@@ -29,130 +35,147 @@ html(lang="en")
         outline: none;
         text-decoration: none;
       }
-      
+
       /* Base styles */
       body {
         margin: 0 !important;
         padding: 0 !important;
-        background-color: #ffffff;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-        font-size: 16px;
-        line-height: 1.6;
-        color: #1A1A1A;
+        width: 100% !important;
+        background: #F9F8F9;
+        font-family: Inter, "SF Pro", -apple-system, BlinkMacSystemFont, ui-sans-serif, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+        font-size: 15px;
+        line-height: 1.4;
+        color: #3C4149;
+        min-width: 100%;
       }
-      
-      /* Container */
-      .email-container {
-        max-width: 600px;
-        margin: 0 auto;
-        background-color: #ffffff;
+
+      /* Typography */
+      h1, h2, h3, h4, h5, h6 {
+        font-family: "Inter Display", Inter, "SF Pro", -apple-system, BlinkMacSystemFont, ui-sans-serif, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
       }
-      
-      /* Header - now table-based */
-      
-      /* Content styles matching Neon email */
+      h1 {
+        font-size: 24px;
+        line-height: 1.2;
+        font-weight: 700;
+        margin-top: 0;
+        margin-bottom: 24px;
+        color: #282A30;
+      }
       h2 {
-        color: #111827;
-        font-size: 1.5rem;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+        font-size: 20px;
+        line-height: 1.3;
         font-weight: 600;
-        padding: 0;
-        margin-top: 1.8666667em;
-        line-height: 1.3333333;
+        margin-top: 24px;
+        margin-bottom: 16px;
+        color: #282A30;
       }
       p {
-        margin-bottom: 1em;
-        font-size: 14px;
-        line-height: 24px;
-        margin: 16px 0;
-        color: #1A1A1A;
-        margin-top: 1.3333333em;
+        margin-top: 0;
+        margin-bottom: 16px;
+        font-size: 15px;
+        line-height: 1.4;
+        color: #3C4149;
       }
-      ul {
-        list-style-type: circle;
-        padding-left: 1.5rem;
-        color: #1A1A1A;
-        font-size: 0.875rem;
-        line-height: 24px;
+      p > strong {
+        color: #282A30;
       }
-      li {
-        margin: 0.6666667em 0;
+      p:last-child {
+        margin-bottom: 0;
+      }
+      ul, ol {
+        margin-top: 16px;
+        margin-bottom: 16px;
+        padding-left: 16px;
+      }
+      ul li, ol li {
+        margin-top: 6px;
+        margin-left: 0;
       }
       a {
-        color: #0f766e;
-        text-decoration: underline;
+        color: #6666FF;
+        text-decoration: none;
       }
-      a:hover {
-        color: #115e59;
+
+      /* Section dividers */
+      hr {
+        display: inline-block;
+        background: #EFF1F4;
+        margin-top: 24px;
+        width: 42px;
+        min-height: 1px;
+        border: none;
       }
-      
+
       /* Buttons */
       .button {
         display: inline-block;
-        padding: 14px 28px;
-        background-color: #0f766e;
+        padding: 12px 16px;
         color: #ffffff !important;
+        background: #5E6AD2;
+        border-radius: 5px;
+        font-size: 13px;
+        line-height: 1.2;
+        font-weight: 500;
         text-decoration: none;
-        border-radius: 6px;
-        font-weight: 600;
-        margin: 20px 0;
-        text-align: center;
+        cursor: pointer;
+        margin-top: 8px;
+        margin-bottom: 24px;
       }
       .button:hover {
-        background-color: #115e59;
+        background: #4E5AC2;
       }
-      .button-secondary {
-        background-color: #6b7280;
+
+      /* Content card */
+      .content-card {
+        border: 1px solid #EFF1F4;
+        border-radius: 5px;
+        padding: 32px 28px 24px 28px;
+        background: #ffffff;
+        color: #3C4149;
       }
-      .button-secondary:hover {
-        background-color: #4b5563;
+
+      /* Link styling */
+      .section-link {
+        font-size: 15px;
+        font-weight: 500;
+        line-height: 24px;
+        padding: 0px 16px 20px 0px;
       }
-      .button-destructive {
-        background-color: #dc2626;
-      }
-      .button-destructive:hover {
-        background-color: #b91c1c;
-      }
-      
-      /* Footer - now table-based */
-      
+
       /* Utility classes */
       .text-center { text-align: center; }
       .text-muted { color: #6b7280; }
-      .mb-0 { margin-bottom: 0 !important; }
-      .mt-0 { margin-top: 0 !important; }
-      
+
       /* Responsive */
       @media only screen and (max-width: 600px) {
-        .email-container {
-          width: 100% !important;
+        .content-card {
+          padding: 24px 20px !important;
         }
-        .content {
-          padding: 30px 20px !important;
-        }
-        .content h1 {
-          font-size: 24px !important;
+        h1 {
+          font-size: 20px !important;
         }
         .button {
           display: block !important;
           width: 100% !important;
-          box-sizing: border-box;
+          text-align: center !important;
         }
       }
 
   body
     if preheader
-      .preheader= preheader
-    
-    table(role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="font-size:16px;background-color:#ffffff")
+      span(style="display: none !important; color: #F9F8F9; margin: 0; padding: 0; font-size: 1px; line-height: 1px")= preheader
+
+    table(bgcolor="#F9F8F9" width="100%" style="width: 100% !important; background: #F9F8F9; margin: 0; padding: 0; min-width: 100%")
       tr
-        td
+        td(align="center")
           include header.pug
-          
-          table(align="center" width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation" style="max-width:500px;min-width:280px;width:100%;margin-left:auto;margin-right:auto;border-collapse:collapse;border-spacing:0;padding-bottom:48px;padding-top:16px")
-            tbody
-              tr(style="width:100%")
-                td
-                  block content
-          
+
+          table(width="602" style="width: 602px; margin: 24px" border="0" cellspacing="0" cellpadding="0")
+            tr
+              td(align="left")
+                table(width="100%" class="content-card" border="0" cellspacing="0" cellpadding="0")
+                  tr
+                    td
+                      block content
+
           include footer.pug
