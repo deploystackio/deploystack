@@ -440,7 +440,7 @@ export class UserService {
   }> {
     try {
       const apiUrl = this.getApiUrl();
-      const url = new URL(`${apiUrl}/api/users`);
+      const url = new URL(`${apiUrl}/api/admin/users`);
 
       if (pagination) {
         if (pagination.limit !== undefined) {
@@ -492,7 +492,7 @@ export class UserService {
   }> {
     try {
       const apiUrl = this.getApiUrl();
-      const url = new URL(`${apiUrl}/api/users/search`);
+      const url = new URL(`${apiUrl}/api/admin/users/search`);
 
       if (params.username) url.searchParams.append('username', params.username);
       if (params.email) url.searchParams.append('email', params.email);

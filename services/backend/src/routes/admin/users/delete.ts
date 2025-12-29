@@ -1,54 +1,33 @@
 import type { FastifyInstance } from 'fastify';
-import { UserService } from '../../services/userService';
-import { requirePermission } from '../../middleware/roleMiddleware';
-import { 
-  ERROR_RESPONSE_SCHEMA, 
+import { UserService } from '../../../services/userService';
+import { requireGlobalAdmin } from '../../../middleware/roleMiddleware';
+import {
+  ERROR_RESPONSE_SCHEMA,
+  SUCCESS_MESSAGE_RESPONSE_SCHEMA,
   PARAMS_WITH_ID_SCHEMA,
   type ErrorResponse,
+  type SuccessMessageResponse,
   type ParamsWithId
 } from './schemas';
 
-// Route-specific Schema Constants
-
-const DELETE_USER_SUCCESS_RESPONSE_SCHEMA = {
-  type: 'object',
-  properties: {
-    success: { 
-      type: 'boolean',
-      description: 'Indicates if the user deletion was successful'
-    },
-    message: { 
-      type: 'string',
-      description: 'Success message'
-    }
-  },
-  required: ['success', 'message']
-} as const;
-
-// TypeScript interfaces for route-specific types
-interface DeleteUserSuccessResponse {
-  success: boolean;
-  message: string;
-}
-
-export default async function deleteUserRoute(server: FastifyInstance) {
+export default async function deleteUserAdminRoute(server: FastifyInstance) {
   const userService = new UserService();
 
-  // DELETE /users/:id - Delete user (admin only)
+  // DELETE /admin/users/:id - Delete user (Global Admin only)
   server.delete('/users/:id', {
-    preValidation: requirePermission('users.delete'), // ✅ Authorization BEFORE validation
+    preValidation: requireGlobalAdmin(),
     schema: {
-      tags: ['Users'],
-      summary: 'Delete user',
-      description: 'Deletes a user from the system. Requires admin permissions. Users cannot delete themselves.',
+      tags: ['Admin - Users'],
+      summary: 'Delete user (Global Admin)',
+      description: 'Allows global administrators to delete a user from the system. Users cannot delete themselves. Cannot delete the last global administrator.',
       security: [{ cookieAuth: [] }],
-      
+
       // Fastify validation schema
       params: PARAMS_WITH_ID_SCHEMA,
-      
+
       response: {
         200: {
-          ...DELETE_USER_SUCCESS_RESPONSE_SCHEMA,
+          ...SUCCESS_MESSAGE_RESPONSE_SCHEMA,
           description: 'User deleted successfully'
         },
         401: {
@@ -57,7 +36,7 @@ export default async function deleteUserRoute(server: FastifyInstance) {
         },
         403: {
           ...ERROR_RESPONSE_SCHEMA,
-          description: 'Forbidden - Insufficient permissions or cannot delete own account'
+          description: 'Forbidden - Cannot delete own account or last global administrator'
         },
         404: {
           ...ERROR_RESPONSE_SCHEMA,
@@ -73,7 +52,7 @@ export default async function deleteUserRoute(server: FastifyInstance) {
     try {
       // TypeScript type assertion (Fastify has already validated)
       const { id } = request.params as ParamsWithId;
-      
+
       // Prevent users from deleting themselves
       if (request.user?.id === id) {
         const errorResponse: ErrorResponse = {
@@ -83,9 +62,9 @@ export default async function deleteUserRoute(server: FastifyInstance) {
         const jsonString = JSON.stringify(errorResponse);
         return reply.status(403).type('application/json').send(jsonString);
       }
-      
+
       const success = await userService.deleteUser(id);
-      
+
       if (!success) {
         const errorResponse: ErrorResponse = {
           success: false,
@@ -95,7 +74,7 @@ export default async function deleteUserRoute(server: FastifyInstance) {
         return reply.status(404).type('application/json').send(jsonString);
       }
 
-      const successResponse: DeleteUserSuccessResponse = {
+      const successResponse: SuccessMessageResponse = {
         success: true,
         message: 'User deleted successfully'
       };
@@ -110,8 +89,8 @@ export default async function deleteUserRoute(server: FastifyInstance) {
         const jsonString = JSON.stringify(errorResponse);
         return reply.status(403).type('application/json').send(jsonString);
       }
-      
-      server.log.error(error, 'Error deleting user');
+
+      server.log.error(error, 'Error deleting user in admin route');
       const errorResponse: ErrorResponse = {
         success: false,
         error: 'Failed to delete user'

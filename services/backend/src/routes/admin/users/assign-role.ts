@@ -1,9 +1,9 @@
 import type { FastifyInstance } from 'fastify';
-import { UserService } from '../../services/userService';
-import { requirePermission } from '../../middleware/roleMiddleware';
-import { 
-  ERROR_RESPONSE_SCHEMA, 
-  PARAMS_WITH_ID_SCHEMA, 
+import { UserService } from '../../../services/userService';
+import { requireGlobalAdmin } from '../../../middleware/roleMiddleware';
+import {
+  ERROR_RESPONSE_SCHEMA,
+  PARAMS_WITH_ID_SCHEMA,
   ASSIGN_ROLE_REQUEST_SCHEMA,
   type ErrorResponse,
   type ParamsWithId,
@@ -11,19 +11,18 @@ import {
 } from './schemas';
 
 // Route-specific Schema Constants
-
 const ASSIGN_ROLE_SUCCESS_RESPONSE_SCHEMA = {
   type: 'object',
   properties: {
-    success: { 
+    success: {
       type: 'boolean',
       description: 'Indicates if the role assignment was successful'
     },
-    data: { 
+    data: {
       type: 'object',
       description: 'Updated user data with new role'
     },
-    message: { 
+    message: {
       type: 'string',
       description: 'Success message'
     }
@@ -38,22 +37,22 @@ interface AssignRoleSuccessResponse {
   message: string;
 }
 
-export default async function assignRoleRoute(server: FastifyInstance) {
+export default async function assignRoleAdminRoute(server: FastifyInstance) {
   const userService = new UserService();
 
-  // PUT /users/:id/role - Assign role to user (admin only)
+  // PUT /admin/users/:id/role - Assign role to user (Global Admin only)
   server.put('/users/:id/role', {
-    preValidation: requirePermission('users.edit'), // ✅ Authorization BEFORE validation
+    preValidation: requireGlobalAdmin(),
     schema: {
-      tags: ['Users'],
-      summary: 'Assign role to user',
-      description: 'Assigns a role to a specific user. Requires admin permissions. Users cannot change their own role. Requires Content-Type: application/json header when sending request body.',
+      tags: ['Admin - Users'],
+      summary: 'Assign role to user (Global Admin)',
+      description: 'Allows global administrators to assign a role to a specific user. Users cannot change their own role. Requires Content-Type: application/json header when sending request body.',
       security: [{ cookieAuth: [] }],
-      
+
       // Fastify validation schemas
       params: PARAMS_WITH_ID_SCHEMA,
       body: ASSIGN_ROLE_REQUEST_SCHEMA,
-      
+
       // OpenAPI documentation (same schemas, reused)
       requestBody: {
         required: true,
@@ -63,7 +62,7 @@ export default async function assignRoleRoute(server: FastifyInstance) {
           }
         }
       },
-      
+
       response: {
         200: {
           ...ASSIGN_ROLE_SUCCESS_RESPONSE_SCHEMA,
@@ -79,7 +78,7 @@ export default async function assignRoleRoute(server: FastifyInstance) {
         },
         403: {
           ...ERROR_RESPONSE_SCHEMA,
-          description: 'Forbidden - Insufficient permissions or cannot change own role'
+          description: 'Forbidden - Cannot change own role'
         },
         404: {
           ...ERROR_RESPONSE_SCHEMA,
@@ -96,7 +95,7 @@ export default async function assignRoleRoute(server: FastifyInstance) {
       // TypeScript type assertions (Fastify has already validated)
       const { id } = request.params as ParamsWithId;
       const { role_id } = request.body as AssignRoleRequest;
-      
+
       // Prevent users from changing their own role
       if (request.user?.id === id) {
         const errorResponse: ErrorResponse = {
@@ -106,9 +105,9 @@ export default async function assignRoleRoute(server: FastifyInstance) {
         const jsonString = JSON.stringify(errorResponse);
         return reply.status(403).type('application/json').send(jsonString);
       }
-      
+
       const success = await userService.assignRole(id, role_id);
-      
+
       if (!success) {
         const errorResponse: ErrorResponse = {
           success: false,
@@ -129,7 +128,7 @@ export default async function assignRoleRoute(server: FastifyInstance) {
       const jsonString = JSON.stringify(successResponse);
       return reply.status(200).type('application/json').send(jsonString);
     } catch (error) {
-      server.log.error(error, 'Error assigning role');
+      server.log.error(error, 'Error assigning role in admin route');
       const errorResponse: ErrorResponse = {
         success: false,
         error: 'Failed to assign role'

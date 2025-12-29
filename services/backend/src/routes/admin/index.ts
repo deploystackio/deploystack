@@ -3,6 +3,7 @@ import emailRoutes from './email';
 import jobsRoutes from './jobs';
 import mcpRegistryRoutes from './mcp-registry';
 import teamsRoutes from './teams';
+import usersRoutes from './users';
 import oauthProvidersRoutes from './oauth-providers';
 
 export default async function adminRoutes(fastify: FastifyInstance) {
@@ -10,5 +11,6 @@ export default async function adminRoutes(fastify: FastifyInstance) {
   await fastify.register(jobsRoutes);
   await fastify.register(mcpRegistryRoutes);
   await fastify.register(teamsRoutes, { prefix: '/admin' });
+  await fastify.register(usersRoutes, { prefix: '/admin' });
   await fastify.register(oauthProvidersRoutes, { prefix: '/admin' });
 }

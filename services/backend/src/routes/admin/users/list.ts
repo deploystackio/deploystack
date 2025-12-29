@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
-import { UserService } from '../../services/userService';
-import { requirePermission } from '../../middleware/roleMiddleware';
+import { UserService } from '../../../services/userService';
+import { requireGlobalAdmin } from '../../../middleware/roleMiddleware';
 import {
   ERROR_RESPONSE_SCHEMA,
   PAGINATION_QUERY_SCHEMA,
@@ -12,16 +12,16 @@ import {
   validatePaginationParams
 } from './schemas';
 
-export default async function listUsersRoute(server: FastifyInstance) {
+export default async function listUsersAdminRoute(server: FastifyInstance) {
   const userService = new UserService();
 
-  // GET /users - List all users (admin only) with pagination
+  // GET /admin/users - List all users (Global Admin only) with pagination
   server.get('/users', {
-    preValidation: requirePermission('users.list'),
+    preValidation: requireGlobalAdmin(),
     schema: {
-      tags: ['Users'],
-      summary: 'List all users',
-      description: 'Retrieves a paginated list of all users in the system. Requires admin permissions. Supports pagination with limit (1-100, default: 20) and offset (default: 0) parameters.',
+      tags: ['Admin - Users'],
+      summary: 'List all users (Global Admin)',
+      description: 'Allows global administrators to retrieve a paginated list of all users in the system. Supports pagination with limit (1-100, default: 20) and offset (default: 0) parameters.',
       security: [{ cookieAuth: [] }],
 
       querystring: PAGINATION_QUERY_SCHEMA,
@@ -41,7 +41,7 @@ export default async function listUsersRoute(server: FastifyInstance) {
         },
         403: {
           ...ERROR_RESPONSE_SCHEMA,
-          description: 'Forbidden - Insufficient permissions'
+          description: 'Forbidden - Global admin required'
         },
         500: {
           ...ERROR_RESPONSE_SCHEMA,
@@ -79,11 +79,11 @@ export default async function listUsersRoute(server: FastifyInstance) {
       const paginatedUsers = serializedUsers.slice(offset, offset + limit);
 
       server.log.info({
-        operation: 'list_users',
+        operation: 'list_users_admin',
         totalResults: total,
         returnedResults: paginatedUsers.length,
         pagination: { limit, offset }
-      }, 'Users list completed');
+      }, 'Admin users list completed');
 
       const successResponse: UsersListPaginatedResponse = {
         success: true,
@@ -111,7 +111,7 @@ export default async function listUsersRoute(server: FastifyInstance) {
         return reply.status(400).type('application/json').send(jsonString);
       }
 
-      server.log.error(error, 'Error fetching users');
+      server.log.error(error, 'Error fetching users in admin route');
       const errorResponse: ErrorResponse = {
         success: false,
         error: 'Failed to fetch users'

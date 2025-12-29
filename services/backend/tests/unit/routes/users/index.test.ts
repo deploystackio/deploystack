@@ -155,100 +155,37 @@ describe('Users Route', () => {
   });
 
   describe('Route Registration', () => {
-    it('should register all user routes', async () => {
+    it('should register user-accessible routes only', async () => {
       await usersRoute(mockFastify as FastifyInstance);
 
-      expect(mockFastify.get).toHaveBeenCalledWith('/users', expect.any(Object), expect.any(Function));
-      expect(mockFastify.get).toHaveBeenCalledWith('/users/search', expect.any(Object), expect.any(Function));
+      // User-accessible routes (ownership-or-admin)
       expect(mockFastify.get).toHaveBeenCalledWith('/users/:id', expect.any(Object), expect.any(Function));
       expect(mockFastify.put).toHaveBeenCalledWith('/users/:id', expect.any(Object), expect.any(Function));
-      expect(mockFastify.delete).toHaveBeenCalledWith('/users/:id', expect.any(Object), expect.any(Function));
-      expect(mockFastify.put).toHaveBeenCalledWith('/users/:id/role', expect.any(Object), expect.any(Function));
-      expect(mockFastify.get).toHaveBeenCalledWith('/users/stats', expect.any(Object), expect.any(Function));
+      expect(mockFastify.get).toHaveBeenCalledWith('/users/:id/teams', expect.any(Object), expect.any(Function));
+
+      // User self-service routes
       expect(mockFastify.get).toHaveBeenCalledWith('/users/me', expect.any(Object), expect.any(Function));
       expect(mockFastify.get).toHaveBeenCalledWith('/users/me/teams', expect.any(Object), expect.any(Function));
-      expect(mockFastify.get).toHaveBeenCalledWith('/users/:id/teams', expect.any(Object), expect.any(Function));
+      expect(mockFastify.delete).toHaveBeenCalledWith('/users/me', expect.any(Object), expect.any(Function));
+
+      // Admin-only routes should NOT be registered here (moved to /admin/users/)
+      expect(mockFastify.get).not.toHaveBeenCalledWith('/users', expect.any(Object), expect.any(Function));
+      expect(mockFastify.get).not.toHaveBeenCalledWith('/users/search', expect.any(Object), expect.any(Function));
+      expect(mockFastify.get).not.toHaveBeenCalledWith('/users/stats', expect.any(Object), expect.any(Function));
+      expect(mockFastify.delete).not.toHaveBeenCalledWith('/users/:id', expect.any(Object), expect.any(Function));
+      expect(mockFastify.put).not.toHaveBeenCalledWith('/users/:id/role', expect.any(Object), expect.any(Function));
     });
 
-    it('should configure middleware correctly', async () => {
+    it('should configure middleware correctly for user routes', async () => {
       await usersRoute(mockFastify as FastifyInstance);
 
-      expect(mockRequirePermission).toHaveBeenCalledWith('users.list');
-      expect(mockRequirePermission).toHaveBeenCalledWith('users.delete');
-      expect(mockRequirePermission).toHaveBeenCalledWith('users.edit');
+      // Only ownership-or-admin middleware should be used (admin routes moved)
       expect(mockRequireOwnershipOrAdmin).toHaveBeenCalledWith(mockGetUserIdFromParams);
-    });
-  });
 
-  describe('GET /users', () => {
-    beforeEach(async () => {
-      await usersRoute(mockFastify as FastifyInstance);
-    });
-
-    it('should return all users successfully with pagination', async () => {
-      const mockUsers = [
-        { id: '1', username: 'user1', email: 'user1@example.com', auth_type: 'email' },
-        { id: '2', username: 'user2', email: 'user2@example.com', auth_type: 'email' },
-      ];
-      mockUserService.getAllUsers.mockResolvedValue(mockUsers);
-
-      const handler = routeHandlers['GET /users'];
-      await handler(mockRequest, mockReply);
-
-      expect(mockUserService.getAllUsers).toHaveBeenCalled();
-      expect(mockReply.status).toHaveBeenCalledWith(200);
-      expect(mockReply.send).toHaveBeenCalledWith(
-        JSON.stringify({
-          success: true,
-          data: {
-            users: [
-              {
-                id: '1',
-                username: 'user1',
-                email: 'user1@example.com',
-                auth_type: 'email',
-                first_name: null,
-                last_name: null,
-                github_id: null,
-                role_id: null
-              },
-              {
-                id: '2',
-                username: 'user2',
-                email: 'user2@example.com',
-                auth_type: 'email',
-                first_name: null,
-                last_name: null,
-                github_id: null,
-                role_id: null
-              }
-            ],
-            pagination: {
-              total: 2,
-              limit: 20,
-              offset: 0,
-              has_more: false
-            }
-          }
-        })
-      );
-    });
-
-    it('should handle service errors', async () => {
-      const error = new Error('Database error');
-      mockUserService.getAllUsers.mockRejectedValue(error);
-
-      const handler = routeHandlers['GET /users'];
-      await handler(mockRequest, mockReply);
-
-      expect(mockFastify.log!.error).toHaveBeenCalledWith(error, 'Error fetching users');
-      expect(mockReply.status).toHaveBeenCalledWith(500);
-      expect(mockReply.send).toHaveBeenCalledWith(
-        JSON.stringify({
-          success: false,
-          error: 'Failed to fetch users',
-        })
-      );
+      // Admin permission checks should NOT be present (routes moved to /admin/users/)
+      expect(mockRequirePermission).not.toHaveBeenCalledWith('users.list');
+      expect(mockRequirePermission).not.toHaveBeenCalledWith('users.delete');
+      expect(mockRequirePermission).not.toHaveBeenCalledWith('users.edit');
     });
   });
 

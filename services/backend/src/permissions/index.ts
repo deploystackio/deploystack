@@ -8,10 +8,7 @@
 // Define all role permissions in one place
 export const ROLE_DEFINITIONS = {
   global_admin: [
-    'users.list',
     'users.view',
-    'users.edit',
-    'users.delete',
     'users.create',
     'roles.manage',
     'system.admin',

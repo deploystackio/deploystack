@@ -1806,621 +1806,6 @@
         }
       }
     },
-    "/api/users": {
-      "get": {
-        "summary": "List all users",
-        "tags": [
-          "Users"
-        ],
-        "description": "Retrieves a paginated list of all users in the system. Requires admin permissions. Supports pagination with limit (1-100, default: 20) and offset (default: 0) parameters.",
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "pattern": "^\\d+$"
-            },
-            "in": "query",
-            "name": "limit",
-            "required": false,
-            "description": "Maximum number of items to return (1-100, default: 20)"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "pattern": "^\\d+$"
-            },
-            "in": "query",
-            "name": "offset",
-            "required": false,
-            "description": "Number of items to skip (≥0, default: 0)"
-          }
-        ],
-        "security": [
-          {
-            "cookieAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successfully retrieved users list",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "description": "Indicates if the operation was successful"
-                    },
-                    "data": {
-                      "type": "object",
-                      "properties": {
-                        "users": {
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "properties": {
-                              "id": {
-                                "type": "string",
-                                "description": "User ID"
-                              },
-                              "username": {
-                                "type": "string",
-                                "description": "Username"
-                              },
-                              "email": {
-                                "type": "string",
-                                "format": "email",
-                                "description": "User email address"
-                              },
-                              "auth_type": {
-                                "type": "string",
-                                "description": "Authentication type (email, github)"
-                              },
-                              "first_name": {
-                                "type": [
-                                  "null",
-                                  "string"
-                                ],
-                                "description": "User first name"
-                              },
-                              "last_name": {
-                                "type": [
-                                  "null",
-                                  "string"
-                                ],
-                                "description": "User last name"
-                              },
-                              "github_id": {
-                                "type": [
-                                  "null",
-                                  "string"
-                                ],
-                                "description": "GitHub user ID"
-                              },
-                              "role_id": {
-                                "type": [
-                                  "null",
-                                  "string"
-                                ],
-                                "description": "User role ID"
-                              },
-                              "role": {
-                                "type": "object",
-                                "properties": {
-                                  "id": {
-                                    "type": "string",
-                                    "description": "Role ID"
-                                  },
-                                  "name": {
-                                    "type": "string",
-                                    "description": "Role name"
-                                  },
-                                  "permissions": {
-                                    "type": "array",
-                                    "items": {
-                                      "type": "string"
-                                    },
-                                    "description": "Array of role permissions"
-                                  }
-                                },
-                                "required": [
-                                  "id",
-                                  "name",
-                                  "permissions"
-                                ],
-                                "nullable": true,
-                                "description": "User role information"
-                              }
-                            },
-                            "required": [
-                              "id",
-                              "username",
-                              "email",
-                              "auth_type"
-                            ],
-                            "additionalProperties": false
-                          },
-                          "description": "Array of users for current page"
-                        },
-                        "pagination": {
-                          "type": "object",
-                          "properties": {
-                            "total": {
-                              "type": "number",
-                              "description": "Total number of users"
-                            },
-                            "limit": {
-                              "type": "number",
-                              "description": "Number of users per page"
-                            },
-                            "offset": {
-                              "type": "number",
-                              "description": "Number of users skipped"
-                            },
-                            "has_more": {
-                              "type": "boolean",
-                              "description": "Whether there are more users beyond this page"
-                            }
-                          },
-                          "required": [
-                            "total",
-                            "limit",
-                            "offset",
-                            "has_more"
-                          ]
-                        }
-                      },
-                      "required": [
-                        "users",
-                        "pagination"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "success",
-                    "data"
-                  ],
-                  "description": "Successfully retrieved users list"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request - Invalid pagination parameters",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "default": false,
-                      "description": "Indicates the operation failed"
-                    },
-                    "error": {
-                      "type": "string",
-                      "description": "Error message describing what went wrong"
-                    }
-                  },
-                  "required": [
-                    "success",
-                    "error"
-                  ],
-                  "description": "Bad Request - Invalid pagination parameters"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized - Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "default": false,
-                      "description": "Indicates the operation failed"
-                    },
-                    "error": {
-                      "type": "string",
-                      "description": "Error message describing what went wrong"
-                    }
-                  },
-                  "required": [
-                    "success",
-                    "error"
-                  ],
-                  "description": "Unauthorized - Authentication required"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden - Insufficient permissions",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "default": false,
-                      "description": "Indicates the operation failed"
-                    },
-                    "error": {
-                      "type": "string",
-                      "description": "Error message describing what went wrong"
-                    }
-                  },
-                  "required": [
-                    "success",
-                    "error"
-                  ],
-                  "description": "Forbidden - Insufficient permissions"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "default": false,
-                      "description": "Indicates the operation failed"
-                    },
-                    "error": {
-                      "type": "string",
-                      "description": "Error message describing what went wrong"
-                    }
-                  },
-                  "required": [
-                    "success",
-                    "error"
-                  ],
-                  "description": "Internal Server Error"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/users/search": {
-      "get": {
-        "summary": "Search users",
-        "tags": [
-          "Users"
-        ],
-        "description": "Search and filter users with pagination support. Requires admin permissions. Supports filtering by username (partial, case-insensitive), email (partial, case-insensitive), auth_type (exact), and role_id (exact). Results are paginated with limit (1-100, default: 20) and offset (default: 0) parameters.",
-        "parameters": [
-          {
-            "schema": {
-              "type": "string"
-            },
-            "in": "query",
-            "name": "username",
-            "required": false,
-            "description": "Filter by username (partial match, case-insensitive)"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "in": "query",
-            "name": "email",
-            "required": false,
-            "description": "Filter by email (partial match, case-insensitive)"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "enum": [
-                "email",
-                "email_signup",
-                "github"
-              ]
-            },
-            "in": "query",
-            "name": "auth_type",
-            "required": false,
-            "description": "Filter by authentication type"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "in": "query",
-            "name": "role_id",
-            "required": false,
-            "description": "Filter by role ID (exact match)"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "pattern": "^\\d+$"
-            },
-            "in": "query",
-            "name": "limit",
-            "required": false,
-            "description": "Maximum number of items to return (1-100, default: 20)"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "pattern": "^\\d+$"
-            },
-            "in": "query",
-            "name": "offset",
-            "required": false,
-            "description": "Number of items to skip (≥0, default: 0)"
-          }
-        ],
-        "security": [
-          {
-            "cookieAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successfully retrieved filtered users",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "description": "Indicates if the operation was successful"
-                    },
-                    "data": {
-                      "type": "object",
-                      "properties": {
-                        "users": {
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "properties": {
-                              "id": {
-                                "type": "string",
-                                "description": "User ID"
-                              },
-                              "username": {
-                                "type": "string",
-                                "description": "Username"
-                              },
-                              "email": {
-                                "type": "string",
-                                "format": "email",
-                                "description": "User email address"
-                              },
-                              "auth_type": {
-                                "type": "string",
-                                "description": "Authentication type (email, github)"
-                              },
-                              "first_name": {
-                                "type": [
-                                  "null",
-                                  "string"
-                                ],
-                                "description": "User first name"
-                              },
-                              "last_name": {
-                                "type": [
-                                  "null",
-                                  "string"
-                                ],
-                                "description": "User last name"
-                              },
-                              "github_id": {
-                                "type": [
-                                  "null",
-                                  "string"
-                                ],
-                                "description": "GitHub user ID"
-                              },
-                              "role_id": {
-                                "type": [
-                                  "null",
-                                  "string"
-                                ],
-                                "description": "User role ID"
-                              },
-                              "role": {
-                                "type": "object",
-                                "properties": {
-                                  "id": {
-                                    "type": "string",
-                                    "description": "Role ID"
-                                  },
-                                  "name": {
-                                    "type": "string",
-                                    "description": "Role name"
-                                  },
-                                  "permissions": {
-                                    "type": "array",
-                                    "items": {
-                                      "type": "string"
-                                    },
-                                    "description": "Array of role permissions"
-                                  }
-                                },
-                                "required": [
-                                  "id",
-                                  "name",
-                                  "permissions"
-                                ],
-                                "nullable": true,
-                                "description": "User role information"
-                              }
-                            },
-                            "required": [
-                              "id",
-                              "username",
-                              "email",
-                              "auth_type"
-                            ],
-                            "additionalProperties": false
-                          },
-                          "description": "Array of users for current page"
-                        },
-                        "pagination": {
-                          "type": "object",
-                          "properties": {
-                            "total": {
-                              "type": "number",
-                              "description": "Total number of users"
-                            },
-                            "limit": {
-                              "type": "number",
-                              "description": "Number of users per page"
-                            },
-                            "offset": {
-                              "type": "number",
-                              "description": "Number of users skipped"
-                            },
-                            "has_more": {
-                              "type": "boolean",
-                              "description": "Whether there are more users beyond this page"
-                            }
-                          },
-                          "required": [
-                            "total",
-                            "limit",
-                            "offset",
-                            "has_more"
-                          ]
-                        }
-                      },
-                      "required": [
-                        "users",
-                        "pagination"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "success",
-                    "data"
-                  ],
-                  "description": "Successfully retrieved filtered users"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request - Invalid parameters",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "default": false,
-                      "description": "Indicates the operation failed"
-                    },
-                    "error": {
-                      "type": "string",
-                      "description": "Error message describing what went wrong"
-                    }
-                  },
-                  "required": [
-                    "success",
-                    "error"
-                  ],
-                  "description": "Bad Request - Invalid parameters"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized - Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "default": false,
-                      "description": "Indicates the operation failed"
-                    },
-                    "error": {
-                      "type": "string",
-                      "description": "Error message describing what went wrong"
-                    }
-                  },
-                  "required": [
-                    "success",
-                    "error"
-                  ],
-                  "description": "Unauthorized - Authentication required"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden - Insufficient permissions",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "default": false,
-                      "description": "Indicates the operation failed"
-                    },
-                    "error": {
-                      "type": "string",
-                      "description": "Error message describing what went wrong"
-                    }
-                  },
-                  "required": [
-                    "success",
-                    "error"
-                  ],
-                  "description": "Forbidden - Insufficient permissions"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "default": false,
-                      "description": "Indicates the operation failed"
-                    },
-                    "error": {
-                      "type": "string",
-                      "description": "Error message describing what went wrong"
-                    }
-                  },
-                  "required": [
-                    "success",
-                    "error"
-                  ],
-                  "description": "Internal Server Error"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/users/{id}": {
       "get": {
         "summary": "Get user by ID",
@@ -2886,518 +2271,6 @@
                     "error"
                   ],
                   "description": "Conflict - Username or email already exists"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "default": false,
-                      "description": "Indicates the operation failed"
-                    },
-                    "error": {
-                      "type": "string",
-                      "description": "Error message describing what went wrong"
-                    }
-                  },
-                  "required": [
-                    "success",
-                    "error"
-                  ],
-                  "description": "Internal Server Error"
-                }
-              }
-            }
-          }
-        }
-      },
-      "delete": {
-        "summary": "Delete user",
-        "tags": [
-          "Users"
-        ],
-        "description": "Deletes a user from the system. Requires admin permissions. Users cannot delete themselves.",
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "minLength": 1
-            },
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "description": "User ID"
-          }
-        ],
-        "security": [
-          {
-            "cookieAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "User deleted successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "description": "Indicates if the user deletion was successful"
-                    },
-                    "message": {
-                      "type": "string",
-                      "description": "Success message"
-                    }
-                  },
-                  "required": [
-                    "success",
-                    "message"
-                  ],
-                  "description": "User deleted successfully"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized - Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "default": false,
-                      "description": "Indicates the operation failed"
-                    },
-                    "error": {
-                      "type": "string",
-                      "description": "Error message describing what went wrong"
-                    }
-                  },
-                  "required": [
-                    "success",
-                    "error"
-                  ],
-                  "description": "Unauthorized - Authentication required"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden - Insufficient permissions or cannot delete own account",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "default": false,
-                      "description": "Indicates the operation failed"
-                    },
-                    "error": {
-                      "type": "string",
-                      "description": "Error message describing what went wrong"
-                    }
-                  },
-                  "required": [
-                    "success",
-                    "error"
-                  ],
-                  "description": "Forbidden - Insufficient permissions or cannot delete own account"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found - User not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "default": false,
-                      "description": "Indicates the operation failed"
-                    },
-                    "error": {
-                      "type": "string",
-                      "description": "Error message describing what went wrong"
-                    }
-                  },
-                  "required": [
-                    "success",
-                    "error"
-                  ],
-                  "description": "Not Found - User not found"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "default": false,
-                      "description": "Indicates the operation failed"
-                    },
-                    "error": {
-                      "type": "string",
-                      "description": "Error message describing what went wrong"
-                    }
-                  },
-                  "required": [
-                    "success",
-                    "error"
-                  ],
-                  "description": "Internal Server Error"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/users/{id}/role": {
-      "put": {
-        "summary": "Assign role to user",
-        "tags": [
-          "Users"
-        ],
-        "description": "Assigns a role to a specific user. Requires admin permissions. Users cannot change their own role. Requires Content-Type: application/json header when sending request body.",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "role_id": {
-                    "type": "string",
-                    "minLength": 1,
-                    "description": "Role ID to assign to the user"
-                  }
-                },
-                "required": [
-                  "role_id"
-                ],
-                "additionalProperties": false
-              }
-            }
-          },
-          "required": true
-        },
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "minLength": 1
-            },
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "description": "User ID"
-          }
-        ],
-        "security": [
-          {
-            "cookieAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Role assigned successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "description": "Indicates if the role assignment was successful"
-                    },
-                    "data": {
-                      "type": "object",
-                      "description": "Updated user data with new role"
-                    },
-                    "message": {
-                      "type": "string",
-                      "description": "Success message"
-                    }
-                  },
-                  "required": [
-                    "success",
-                    "data",
-                    "message"
-                  ],
-                  "description": "Role assigned successfully"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request - Validation error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "default": false,
-                      "description": "Indicates the operation failed"
-                    },
-                    "error": {
-                      "type": "string",
-                      "description": "Error message describing what went wrong"
-                    }
-                  },
-                  "required": [
-                    "success",
-                    "error"
-                  ],
-                  "description": "Bad Request - Validation error"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized - Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "default": false,
-                      "description": "Indicates the operation failed"
-                    },
-                    "error": {
-                      "type": "string",
-                      "description": "Error message describing what went wrong"
-                    }
-                  },
-                  "required": [
-                    "success",
-                    "error"
-                  ],
-                  "description": "Unauthorized - Authentication required"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden - Insufficient permissions or cannot change own role",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "default": false,
-                      "description": "Indicates the operation failed"
-                    },
-                    "error": {
-                      "type": "string",
-                      "description": "Error message describing what went wrong"
-                    }
-                  },
-                  "required": [
-                    "success",
-                    "error"
-                  ],
-                  "description": "Forbidden - Insufficient permissions or cannot change own role"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found - User or role not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "default": false,
-                      "description": "Indicates the operation failed"
-                    },
-                    "error": {
-                      "type": "string",
-                      "description": "Error message describing what went wrong"
-                    }
-                  },
-                  "required": [
-                    "success",
-                    "error"
-                  ],
-                  "description": "Not Found - User or role not found"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "default": false,
-                      "description": "Indicates the operation failed"
-                    },
-                    "error": {
-                      "type": "string",
-                      "description": "Error message describing what went wrong"
-                    }
-                  },
-                  "required": [
-                    "success",
-                    "error"
-                  ],
-                  "description": "Internal Server Error"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/users/stats": {
-      "get": {
-        "summary": "Get user statistics",
-        "tags": [
-          "Users"
-        ],
-        "description": "Retrieves user statistics including count by role. Requires admin permissions.",
-        "security": [
-          {
-            "cookieAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "User statistics retrieved successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "description": "Indicates if the operation was successful"
-                    },
-                    "data": {
-                      "type": "object",
-                      "properties": {
-                        "user_count_by_role": {
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "properties": {
-                              "role_id": {
-                                "type": "string",
-                                "description": "Role identifier"
-                              },
-                              "count": {
-                                "type": "number",
-                                "description": "Number of users with this role"
-                              }
-                            },
-                            "required": [
-                              "role_id",
-                              "count"
-                            ],
-                            "additionalProperties": false
-                          },
-                          "description": "Array of user counts grouped by role"
-                        }
-                      },
-                      "required": [
-                        "user_count_by_role"
-                      ],
-                      "additionalProperties": false,
-                      "description": "User statistics data"
-                    }
-                  },
-                  "required": [
-                    "success",
-                    "data"
-                  ],
-                  "additionalProperties": false,
-                  "description": "User statistics retrieved successfully"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized - Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "default": false,
-                      "description": "Indicates the operation failed"
-                    },
-                    "error": {
-                      "type": "string",
-                      "description": "Error message describing what went wrong"
-                    }
-                  },
-                  "required": [
-                    "success",
-                    "error"
-                  ],
-                  "description": "Unauthorized - Authentication required"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden - Insufficient permissions",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "default": false,
-                      "description": "Indicates the operation failed"
-                    },
-                    "error": {
-                      "type": "string",
-                      "description": "Error message describing what went wrong"
-                    }
-                  },
-                  "required": [
-                    "success",
-                    "error"
-                  ],
-                  "description": "Forbidden - Insufficient permissions"
                 }
               }
             }
@@ -35606,6 +34479,1131 @@
                     "error": {
                       "type": "string",
                       "description": "Error message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Internal Server Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/users": {
+      "get": {
+        "summary": "List all users (Global Admin)",
+        "tags": [
+          "Admin - Users"
+        ],
+        "description": "Allows global administrators to retrieve a paginated list of all users in the system. Supports pagination with limit (1-100, default: 20) and offset (default: 0) parameters.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d+$"
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "description": "Maximum number of items to return (1-100, default: 20)"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d+$"
+            },
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "description": "Number of items to skip (≥0, default: 0)"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved users list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "users": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "description": "User ID"
+                              },
+                              "username": {
+                                "type": "string",
+                                "description": "Username"
+                              },
+                              "email": {
+                                "type": "string",
+                                "format": "email",
+                                "description": "User email address"
+                              },
+                              "auth_type": {
+                                "type": "string",
+                                "description": "Authentication type (email, github)"
+                              },
+                              "first_name": {
+                                "type": [
+                                  "null",
+                                  "string"
+                                ],
+                                "description": "User first name"
+                              },
+                              "last_name": {
+                                "type": [
+                                  "null",
+                                  "string"
+                                ],
+                                "description": "User last name"
+                              },
+                              "github_id": {
+                                "type": [
+                                  "null",
+                                  "string"
+                                ],
+                                "description": "GitHub user ID"
+                              },
+                              "role_id": {
+                                "type": [
+                                  "null",
+                                  "string"
+                                ],
+                                "description": "User role ID"
+                              },
+                              "role": {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "description": "Role ID"
+                                  },
+                                  "name": {
+                                    "type": "string",
+                                    "description": "Role name"
+                                  },
+                                  "permissions": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string"
+                                    },
+                                    "description": "Array of role permissions"
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "name",
+                                  "permissions"
+                                ],
+                                "nullable": true,
+                                "description": "User role information"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "username",
+                              "email",
+                              "auth_type"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "description": "Array of users for current page"
+                        },
+                        "pagination": {
+                          "type": "object",
+                          "properties": {
+                            "total": {
+                              "type": "number",
+                              "description": "Total number of users"
+                            },
+                            "limit": {
+                              "type": "number",
+                              "description": "Number of users per page"
+                            },
+                            "offset": {
+                              "type": "number",
+                              "description": "Number of users skipped"
+                            },
+                            "has_more": {
+                              "type": "boolean",
+                              "description": "Whether there are more users beyond this page"
+                            }
+                          },
+                          "required": [
+                            "total",
+                            "limit",
+                            "offset",
+                            "has_more"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "users",
+                        "pagination"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "description": "Successfully retrieved users list"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - Invalid pagination parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates the operation failed"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Bad Request - Invalid pagination parameters"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates the operation failed"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Unauthorized - Authentication required"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Global admin required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates the operation failed"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Forbidden - Global admin required"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates the operation failed"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Internal Server Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/users/search": {
+      "get": {
+        "summary": "Search users (Global Admin)",
+        "tags": [
+          "Admin - Users"
+        ],
+        "description": "Allows global administrators to search and filter users with pagination support. Supports filtering by username (partial, case-insensitive), email (partial, case-insensitive), auth_type (exact), and role_id (exact). Results are paginated with limit (1-100, default: 20) and offset (default: 0) parameters.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "username",
+            "required": false,
+            "description": "Filter by username (partial match, case-insensitive)"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "email",
+            "required": false,
+            "description": "Filter by email (partial match, case-insensitive)"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "email",
+                "email_signup",
+                "github"
+              ]
+            },
+            "in": "query",
+            "name": "auth_type",
+            "required": false,
+            "description": "Filter by authentication type"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "role_id",
+            "required": false,
+            "description": "Filter by role ID (exact match)"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d+$"
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "description": "Maximum number of items to return (1-100, default: 20)"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d+$"
+            },
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "description": "Number of items to skip (≥0, default: 0)"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved filtered users",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "users": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "description": "User ID"
+                              },
+                              "username": {
+                                "type": "string",
+                                "description": "Username"
+                              },
+                              "email": {
+                                "type": "string",
+                                "format": "email",
+                                "description": "User email address"
+                              },
+                              "auth_type": {
+                                "type": "string",
+                                "description": "Authentication type (email, github)"
+                              },
+                              "first_name": {
+                                "type": [
+                                  "null",
+                                  "string"
+                                ],
+                                "description": "User first name"
+                              },
+                              "last_name": {
+                                "type": [
+                                  "null",
+                                  "string"
+                                ],
+                                "description": "User last name"
+                              },
+                              "github_id": {
+                                "type": [
+                                  "null",
+                                  "string"
+                                ],
+                                "description": "GitHub user ID"
+                              },
+                              "role_id": {
+                                "type": [
+                                  "null",
+                                  "string"
+                                ],
+                                "description": "User role ID"
+                              },
+                              "role": {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "description": "Role ID"
+                                  },
+                                  "name": {
+                                    "type": "string",
+                                    "description": "Role name"
+                                  },
+                                  "permissions": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string"
+                                    },
+                                    "description": "Array of role permissions"
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "name",
+                                  "permissions"
+                                ],
+                                "nullable": true,
+                                "description": "User role information"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "username",
+                              "email",
+                              "auth_type"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "description": "Array of users for current page"
+                        },
+                        "pagination": {
+                          "type": "object",
+                          "properties": {
+                            "total": {
+                              "type": "number",
+                              "description": "Total number of users"
+                            },
+                            "limit": {
+                              "type": "number",
+                              "description": "Number of users per page"
+                            },
+                            "offset": {
+                              "type": "number",
+                              "description": "Number of users skipped"
+                            },
+                            "has_more": {
+                              "type": "boolean",
+                              "description": "Whether there are more users beyond this page"
+                            }
+                          },
+                          "required": [
+                            "total",
+                            "limit",
+                            "offset",
+                            "has_more"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "users",
+                        "pagination"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "description": "Successfully retrieved filtered users"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - Invalid parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates the operation failed"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Bad Request - Invalid parameters"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates the operation failed"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Unauthorized - Authentication required"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Global admin required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates the operation failed"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Forbidden - Global admin required"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates the operation failed"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Internal Server Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/users/stats": {
+      "get": {
+        "summary": "Get user statistics (Global Admin)",
+        "tags": [
+          "Admin - Users"
+        ],
+        "description": "Allows global administrators to retrieve user statistics including count by role.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User statistics retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "user_count_by_role": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "role_id": {
+                                "type": "string",
+                                "description": "Role ID"
+                              },
+                              "count": {
+                                "type": "number",
+                                "description": "Number of users with this role"
+                              }
+                            },
+                            "required": [
+                              "role_id",
+                              "count"
+                            ]
+                          },
+                          "description": "User count grouped by role"
+                        }
+                      },
+                      "required": [
+                        "user_count_by_role"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "description": "User statistics retrieved successfully"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates the operation failed"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Unauthorized - Authentication required"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Global admin required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates the operation failed"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Forbidden - Global admin required"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates the operation failed"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Internal Server Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/users/{id}": {
+      "delete": {
+        "summary": "Delete user (Global Admin)",
+        "tags": [
+          "Admin - Users"
+        ],
+        "description": "Allows global administrators to delete a user from the system. Users cannot delete themselves. Cannot delete the last global administrator.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "description": "User ID"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Success message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "message"
+                  ],
+                  "description": "User deleted successfully"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates the operation failed"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Unauthorized - Authentication required"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Cannot delete own account or last global administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates the operation failed"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Forbidden - Cannot delete own account or last global administrator"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found - User not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates the operation failed"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Not Found - User not found"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates the operation failed"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Internal Server Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/users/{id}/role": {
+      "put": {
+        "summary": "Assign role to user (Global Admin)",
+        "tags": [
+          "Admin - Users"
+        ],
+        "description": "Allows global administrators to assign a role to a specific user. Users cannot change their own role. Requires Content-Type: application/json header when sending request body.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "role_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Role ID to assign to the user"
+                  }
+                },
+                "required": [
+                  "role_id"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": true
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "description": "User ID"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Role assigned successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the role assignment was successful"
+                    },
+                    "data": {
+                      "type": "object",
+                      "description": "Updated user data with new role"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Success message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data",
+                    "message"
+                  ],
+                  "description": "Role assigned successfully"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates the operation failed"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Bad Request - Validation error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates the operation failed"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Unauthorized - Authentication required"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Cannot change own role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates the operation failed"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Forbidden - Cannot change own role"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found - User or role not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates the operation failed"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Not Found - User or role not found"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates the operation failed"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message describing what went wrong"
                     }
                   },
                   "required": [

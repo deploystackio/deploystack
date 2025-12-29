@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
-import { UserService } from '../../services/userService';
-import { requirePermission } from '../../middleware/roleMiddleware';
+import { UserService } from '../../../services/userService';
+import { requireGlobalAdmin } from '../../../middleware/roleMiddleware';
 import {
   ERROR_RESPONSE_SCHEMA,
   SEARCH_USERS_QUERY_SCHEMA,
@@ -12,16 +12,16 @@ import {
   validatePaginationParams
 } from './schemas';
 
-export default async function searchUsersRoute(server: FastifyInstance) {
+export default async function searchUsersAdminRoute(server: FastifyInstance) {
   const userService = new UserService();
 
-  // GET /users/search - Search users with filters and pagination
+  // GET /admin/users/search - Search users with filters and pagination (Global Admin only)
   server.get('/users/search', {
-    preValidation: requirePermission('users.list'),
+    preValidation: requireGlobalAdmin(),
     schema: {
-      tags: ['Users'],
-      summary: 'Search users',
-      description: 'Search and filter users with pagination support. Requires admin permissions. Supports filtering by username (partial, case-insensitive), email (partial, case-insensitive), auth_type (exact), and role_id (exact). Results are paginated with limit (1-100, default: 20) and offset (default: 0) parameters.',
+      tags: ['Admin - Users'],
+      summary: 'Search users (Global Admin)',
+      description: 'Allows global administrators to search and filter users with pagination support. Supports filtering by username (partial, case-insensitive), email (partial, case-insensitive), auth_type (exact), and role_id (exact). Results are paginated with limit (1-100, default: 20) and offset (default: 0) parameters.',
       security: [{ cookieAuth: [] }],
 
       querystring: SEARCH_USERS_QUERY_SCHEMA,
@@ -41,7 +41,7 @@ export default async function searchUsersRoute(server: FastifyInstance) {
         },
         403: {
           ...ERROR_RESPONSE_SCHEMA,
-          description: 'Forbidden - Insufficient permissions'
+          description: 'Forbidden - Global admin required'
         },
         500: {
           ...ERROR_RESPONSE_SCHEMA,
@@ -104,7 +104,7 @@ export default async function searchUsersRoute(server: FastifyInstance) {
       const paginatedUsers = serializedUsers.slice(offset, offset + limit);
 
       server.log.info({
-        operation: 'search_users',
+        operation: 'search_users_admin',
         totalResults: total,
         returnedResults: paginatedUsers.length,
         filters: {
@@ -114,7 +114,7 @@ export default async function searchUsersRoute(server: FastifyInstance) {
           role_id: query.role_id
         },
         pagination: { limit, offset }
-      }, 'User search completed');
+      }, 'Admin user search completed');
 
       const successResponse: UsersListPaginatedResponse = {
         success: true,
@@ -142,7 +142,7 @@ export default async function searchUsersRoute(server: FastifyInstance) {
         return reply.status(400).type('application/json').send(jsonString);
       }
 
-      server.log.error(error, 'Error searching users');
+      server.log.error(error, 'Error searching users in admin route');
       const errorResponse: ErrorResponse = {
         success: false,
         error: 'Failed to search users'
