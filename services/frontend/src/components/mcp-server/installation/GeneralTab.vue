@@ -404,6 +404,20 @@ onUnmounted(() => {
               :packages="server.packages"
               :remotes="server.remotes"
               :show-heading="false"
+
+              :template-args="server.template_args"
+              :template-env="server.template_env"
+              :template-headers="server.template_headers"
+
+              :team-args-schema="server.team_args_schema"
+              :team-env-schema="server.team_env_schema"
+              :team-headers-schema="server.team_headers_schema"
+              :team-url-query-params-schema="server.team_url_query_params_schema"
+
+              :user-args-schema="server.user_args_schema"
+              :user-env-schema="server.user_env_schema"
+              :user-headers-schema="server.user_headers_schema"
+              :user-url-query-params-schema="server.user_url_query_params_schema"
             />
           </dd>
         </div>
