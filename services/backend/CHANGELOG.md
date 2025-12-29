@@ -1,5 +1,35 @@
 # Changelog
 
+## 0.56.0 (2025-12-29)
+
+* feat(all): add MCP servers page to admin teams detail with pagination ([6186e7bb519b493e2d4e7354d9ae694beb2b1186](https://github.com/deploystackio/deploystack/commit/6186e7bb519b493e2d4e7354d9ae694beb2b1186))
+* feat(all): add OAuth re-authentication for MCP installations ([f08e92a29ba06850def5a9dac17f5cc19be6a5a5](https://github.com/deploystackio/deploystack/commit/f08e92a29ba06850def5a9dac17f5cc19be6a5a5))
+* feat(all): add per-team remote MCP server permission - global setting ([69ace9d7f15c1b26857f3c6528a4d161e58d2466](https://github.com/deploystackio/deploystack/commit/69ace9d7f15c1b26857f3c6528a4d161e58d2466))
+* feat(all): make team member limits configurable per-team ([1c70523ce3d0e83ea4c1032ca4dce7fca48ca869](https://github.com/deploystackio/deploystack/commit/1c70523ce3d0e83ea4c1032ca4dce7fca48ca869))
+* feat(backend): add endpoint to retrieve team MCP installations with pagination for global_admin ([765b4555d1ef0ee4096a8c43e9e712d14af69645](https://github.com/deploystackio/deploystack/commit/765b4555d1ef0ee4096a8c43e9e712d14af69645))
+* feat(backend): add pagination and search to admin teams endpoints ([35c79a17ad807fcad7f688d2a1264421cc47b478](https://github.com/deploystackio/deploystack/commit/35c79a17ad807fcad7f688d2a1264421cc47b478))
+* feat(backend): add pagination and search to user endpoints ([dca989fcdf9199968ef6ce0e6c745c16b80dcca9](https://github.com/deploystackio/deploystack/commit/dca989fcdf9199968ef6ce0e6c745c16b80dcca9))
+* refactor(backend): remove deprecated Gateway CLI code after Satellite pivot ([87a28186e21504a6abe5f6487aaf4bee05a43639](https://github.com/deploystackio/deploystack/commit/87a28186e21504a6abe5f6487aaf4bee05a43639))
+* refactor(backend): separate team settings into dedicated settings group ([86a25126afc1fb44afce07bc496250b97fc83022](https://github.com/deploystackio/deploystack/commit/86a25126afc1fb44afce07bc496250b97fc83022))
+* docs(all): update project description for clarity and focus ([cbbfcf6f1392f8a357075b4c0447357bd647cac9](https://github.com/deploystackio/deploystack/commit/cbbfcf6f1392f8a357075b4c0447357bd647cac9))
+
+
+### BREAKING CHANGE
+
+* Admin teams list endpoint response structure changed from flat array to paginated format
+
+- Add pagination support to GET /api/admin/teams endpoint
+  - Query params: limit (1-100, default 20), offset (default 0)
+  - Response now includes data.teams and data.pagination metadata
+  - Pagination metadata: total, limit, offset, has_more
+- Create new GET /api/admin/teams/search endpoint
+  - Filter by team name (partial, case-insensitive)
+  - Includes same pagination support as list endpoint
+- Add pagination schemas and validation helper to admin/teams/schemas.ts
+- Register search route in admin teams index
+- Update API specs (api-spec.json, api-spec.yaml)
+* GET /users response format changed from { success, data: [...] } to { success, data: { users: [...], pagination: {...} } }
+
 ## 0.56.0 (2025-12-28)
 
 * feat(all): add MCP servers page to admin teams detail with pagination ([6186e7bb519b493e2d4e7354d9ae694beb2b1186](https://github.com/deploystackio/deploystack/commit/6186e7bb519b493e2d4e7354d9ae694beb2b1186))
